@@ -26,7 +26,7 @@ body{font-family:var(--ja);color:var(--ink);background:linear-gradient(160deg,va
   background:#1a0806 url(launcher-bg.jpg) center top/cover no-repeat;border:4px solid #d9b25a;
   box-shadow:0 0 0 4px #fffafc,0 10px 0 #e6d3ea,0 20px 40px rgba(107,74,122,.25)}
 .stage .sub{align-self:center}
-.window{height:clamp(220px,52vw,380px);flex:none}
+.window{height:clamp(220px,min(92vw,46vh),520px);flex:none}
 #sky{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
 .wrap{position:relative;z-index:1;max-width:540px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
 
@@ -62,40 +62,35 @@ header{display:flex;flex-direction:column;align-items:center;gap:10px;padding-to
 .music.on .sw::after{transform:translateX(12px)}
 @keyframes eq{0%,100%{height:4px}50%{height:14px}}
 
-/* カード: キャンディのように色分け。横にアイコン、右に名前と説明 */
-.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:16px}
+/* カード: 1行のコンパクトな札。アイコン・名前とひとこと・向いている端末・矢印。背景の絵が透けて見える */
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
 .app{--c:var(--pink);--cD:var(--pinkD);--cL:#ffe9f1;
-  position:relative;display:grid;grid-template-columns:auto 1fr;gap:4px 16px;align-items:center;padding:16px 18px 16px 16px;
-  background:rgba(255,250,252,.8);border-radius:26px;color:inherit;text-decoration:none;border:3px solid var(--cL);
-  box-shadow:0 6px 0 var(--cL),0 14px 28px rgba(107,74,122,.12);transition:transform .18s cubic-bezier(.3,1.6,.5,1),box-shadow .18s,border-color .18s;
+  position:relative;display:flex;align-items:center;gap:12px;padding:9px 12px 9px 9px;
+  background:rgba(255,250,252,.5);border-radius:20px;color:inherit;text-decoration:none;border:2px solid rgba(255,255,255,.7);
+  box-shadow:0 4px 0 rgba(255,255,255,.35),0 10px 22px rgba(20,4,8,.25);transition:transform .18s cubic-bezier(.3,1.6,.5,1),box-shadow .18s,border-color .18s,background .18s;
   opacity:0;transform:translateY(14px) scale(.97)}
 .app.mint{--c:var(--mint);--cD:var(--mintD);--cL:#dcf6ee}
 .app.lav{--c:var(--lav);--cD:var(--lavD);--cL:#ece5ff}
 .app.lemon{--c:var(--lemon);--cD:var(--lemonD);--cL:#fff3cf}
-.app.show{opacity:1;transform:none;transition:opacity .35s,transform .45s cubic-bezier(.3,1.6,.5,1),box-shadow .18s,border-color .18s}
-.app.sel,.app:hover,.app:focus-visible{border-color:var(--c);transform:translateY(-3px) rotate(-.4deg);box-shadow:0 9px 0 var(--cL),0 18px 32px rgba(107,74,122,.18);outline:none}
-.app:active{transform:translateY(2px);box-shadow:0 2px 0 var(--cL)}
-.icon{grid-row:1/4;width:76px;height:76px;border-radius:22px;background:var(--c);display:grid;place-items:center;box-shadow:inset 0 -6px 0 var(--cD)}
-.icon svg{width:50px;height:50px}
-.nm{font-size:20px;font-weight:800;letter-spacing:.04em;line-height:1.3;min-width:0}
-.en{font-size:11px;font-weight:700;color:var(--ink2);letter-spacing:.16em}
-.ds{font-size:13px;line-height:1.65;color:#8a6f96;min-width:0}
-.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
-.tag{font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:var(--cL);color:var(--cD);letter-spacing:.06em}
-.rec{position:absolute;top:-10px;right:16px;padding:4px 12px;border-radius:999px;background:var(--lemon);color:#7a5a10;font-size:11px;font-weight:800;
-  letter-spacing:.08em;box-shadow:0 3px 0 var(--lemonD);transform:rotate(3deg)}
-.go{position:absolute;right:16px;bottom:14px;width:30px;height:30px;border-radius:50%;background:var(--c);display:grid;place-items:center;box-shadow:0 3px 0 var(--cD)}
-.go svg{width:14px;height:14px}
-.app .ds{padding-right:34px}
+.app.show{opacity:1;transform:none;transition:opacity .35s,transform .45s cubic-bezier(.3,1.6,.5,1),box-shadow .18s,border-color .18s,background .18s}
+.app.sel,.app:hover,.app:focus-visible{border-color:var(--c);background:rgba(255,250,252,.72);transform:translateY(-2px);outline:none}
+.app:active{transform:translateY(2px)}
+.icon{flex:none;width:48px;height:48px;border-radius:15px;background:var(--c);display:grid;place-items:center;box-shadow:inset 0 -4px 0 var(--cD)}
+.icon svg{width:32px;height:32px}
+.txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.en{font-size:10px;font-weight:700;color:#5a3a68;letter-spacing:.08em;line-height:1.3}
+.ds{font-size:15px;font-weight:700;color:#3e2448;letter-spacing:.04em}
+.tag{flex:none;font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:var(--cL);color:var(--cD);letter-spacing:.06em}
+.rec{position:absolute;top:-9px;right:48px;padding:2px 10px;border-radius:999px;background:var(--lemon);color:#7a5a10;font-size:10px;font-weight:800;
+  letter-spacing:.06em;box-shadow:0 2px 0 var(--lemonD);transform:rotate(2deg)}
+.go{flex:none;width:28px;height:28px;border-radius:50%;background:var(--c);display:grid;place-items:center;box-shadow:0 3px 0 var(--cD)}
+.go svg{width:13px;height:13px}
 
 footer{text-align:center;font-size:12px;font-weight:700;color:var(--ink2);letter-spacing:.08em;display:flex;flex-direction:column;gap:4px}
 footer .keys{opacity:.8}
 @media (max-width:480px){
-  .app{grid-template-columns:auto 1fr;gap:3px 12px;padding:14px 14px 14px 12px;border-radius:22px}
-  .icon{width:62px;height:62px;border-radius:18px}
-  .icon svg{width:40px;height:40px}
-  .nm{font-size:17px}
-  .ds{font-size:12px}
+  .app{gap:10px}
+  .ds{font-size:14px}
   footer .keys{display:none}
   .music{padding:7px 12px 7px 10px;font-size:12px}
   header{padding-top:46px}
@@ -125,11 +120,11 @@ footer .keys{opacity:.8}
 //   for  … 'pc' / 'mobile' / 'both'   color … 'pink' / 'mint' / 'lav' / 'lemon'   icon … 下の ICONS の名前
 const APPS=[
   {path:'typing-pc/', ja:'CMDタイピング', name:'CMD TYPING', for:'pc', color:'mint', icon:'keyboard',
-   desc:'ハッキング攻撃を英単語の入力で防御・追跡・反撃する。キーボードで遊ぶ'},
+   desc:'キーボード使用'},
   {path:'typing-mobile/', ja:'CMDタイピング スマホ版', name:'CMD TYPING MOBILE', for:'mobile', color:'lav', icon:'phone',
-   desc:'漢字・カタカナの語句を、ひらがなのフリック入力で打つ。縦画面向け'},
+   desc:'フリック'},
   {path:'tori-to-kemono/', ja:'鳥と獣の戦い', name:'BIRDS VS BEASTS', for:'mobile', color:'pink', icon:'bird',
-   desc:'スマホを机に置いて2人で向かい合う対戦ゲーム。コンピュータとも対戦できる'},
+   desc:'机に置いて対戦'},
 ];
 // アイコン（白で描く）
 const ICONS={
@@ -151,12 +146,11 @@ const items=APPS.map((a,i)=>{
   el.className='app '+(a.color||'pink'); el.href=a.path;
   const ic=document.createElement('span'); ic.className='icon'; ic.innerHTML=ICONS[a.icon]||ICONS.star;
   const en=document.createElement('span'); en.className='en'; en.textContent=a.name;
-  const nm=document.createElement('span'); nm.className='nm'; nm.textContent=a.ja;
   const ds=document.createElement('span'); ds.className='ds'; ds.textContent=a.desc;
-  const tg=document.createElement('span'); tg.className='tags';
-  (a.for==='both'?['pc','mobile']:[a.for]).forEach(f=>{ const t=document.createElement('span'); t.className='tag'; t.textContent=LABEL[f]+'むけ'; tg.appendChild(t); });
-  ds.appendChild(tg);
-  el.append(ic,en,nm,ds);
+  const tx=document.createElement('span'); tx.className='txt'; tx.append(en,ds);
+  el.setAttribute('aria-label',a.ja+'（'+a.desc+'）');
+  el.append(ic,tx);
+  (a.for==='both'?['pc','mobile']:[a.for]).forEach(f=>{ const t=document.createElement('span'); t.className='tag'; t.textContent=LABEL[f]+'むけ'; el.appendChild(t); });
   if(a.for===myDev||a.for==='both'){ const r=document.createElement('span'); r.className='rec'; r.textContent='この端末におすすめ'; el.appendChild(r); }
   const go=document.createElement('span'); go.className='go'; go.innerHTML=GO; el.appendChild(go);
   el.addEventListener('mouseenter',()=>{ sel=i; mark(); pop(560+i*80); });
