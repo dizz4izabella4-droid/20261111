@@ -221,12 +221,15 @@ const APPS=[
    desc:'フリック'},
   {path:'tori-to-kemono/', ja:'鳥と獣の戦い', name:'BIRDS VS BEASTS', for:'mobile', color:'pink', icon:'bird',
    desc:'置いて対戦'},
+  {path:'kumiwake-bou/', ja:'組み分け帽', name:'KUMIWAKE-BOU', for:'both', color:'lemon', icon:'loop',
+   desc:'輪っか作り'},
 ];
 // アイコン（白で描く）
 const ICONS={
   keyboard:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="13" width="38" height="24" rx="6"/><path d="M12 21h.01M18 21h.01M24 21h.01M30 21h.01M36 21h.01M12 27h.01M36 27h.01M17 30h14" stroke-width="4"/></svg>',
   phone:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><rect x="13" y="4" width="22" height="40" rx="6"/><path d="M21 38h6"/><text x="24" y="27" text-anchor="middle" fill="#fff" stroke="none" font-size="14" font-weight="800" font-family="sans-serif">あ</text></svg>',
   bird:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 28c0-9 7-15 16-15 6 0 10 3 12 7l6 1-5 4c0 9-7 14-16 14-7 0-13-4-13-11z" fill="rgba(255,255,255,.25)"/><path d="M14 25c4 4 10 4 14 0"/><circle cx="31" cy="20" r="1.6" fill="#fff"/></svg>',
+  loop:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 10h14v14h14v14H10z" fill="rgba(255,255,255,.25)"/><path d="M38 10h.01" stroke-width="5"/></svg>',
   star:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M24 6l5.5 11.6 12.5 1.7-9.2 8.7 2.3 12.5L24 34.4 12.9 40.5l2.3-12.5L6 19.3l12.5-1.7z"/></svg>'
 };
 const GO='<svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l5 5-5 5"/></svg>';
@@ -246,7 +249,7 @@ const items=APPS.map((a,i)=>{
   const tx=document.createElement('span'); tx.className='txt'; tx.append(en,ds);
   el.setAttribute('aria-label',a.ja+'（'+a.desc+'）');
   el.append(ic,tx);
-  (a.for==='both'?['pc','mobile']:[a.for]).forEach(f=>{ const t=document.createElement('span'); t.className='tag'; t.textContent=LABEL[f]+'むけ'; el.appendChild(t); });
+  { const t=document.createElement('span'); t.className='tag'; t.textContent=a.for==='both'?'どちらも':LABEL[a.for]+'むけ'; el.appendChild(t); }
   if(a.for===myDev||a.for==='both'){ const r=document.createElement('span'); r.className='rec'; r.textContent='この端末におすすめ'; el.appendChild(r); }
   const go=document.createElement('span'); go.className='go'; go.innerHTML=GO; el.appendChild(go);
   el.addEventListener('mouseenter',()=>{ sel=i; mark(); pop(560+i*80); });

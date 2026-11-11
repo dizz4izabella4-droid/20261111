@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f3eee3">
+<title>組み分け帽</title>
+<style>
+/* 組み分け帽: 数字をたよりに1本の輪を作るパズル。紙とインクの落ち着いた見た目。HTML/CSS/JS すべてこの1ファイル */
+:root{
+  --paper:#f3eee3; --card:#fbf8f1; --ink:#1e2b3f; --ink2:#5f6b7c; --rule:#d9d1c0; --dot:#1e2b3f;
+  --line:#1e2b3f; --done:#a9a394; --err:#c8442e; --hint:#e08a00; --hintbg:rgba(224,138,0,.16);
+  --acc:#2f7d5b; --accbg:rgba(47,125,91,.17); --btn:#fffdf8; --shadow:rgba(30,43,63,.12);
+  --ja:"Yu Gothic UI","游ゴシック","YuGothic","Hiragino Sans","ヒラギノ角ゴシック","Hiragino Kaku Gothic ProN",Meiryo,"Noto Sans JP",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){ :root{
+  --paper:#151a22; --card:#1d2430; --ink:#e8e4d8; --ink2:#9aa3b0; --rule:#2e3746; --dot:#e8e4d8;
+  --line:#e8e4d8; --done:#5d6675; --err:#ff7a62; --hint:#ffb84a; --hintbg:rgba(255,184,74,.16);
+  --acc:#5cc39a; --accbg:rgba(92,195,154,.16); --btn:#252d3b; --shadow:rgba(0,0,0,.4); color-scheme:dark; } }
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{font-family:var(--ja);color:var(--ink);background:var(--paper);line-height:1.6;-webkit-tap-highlight-color:transparent;
+  padding:max(10px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(20px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+button{font:inherit;color:inherit}
+.app{max-width:520px;margin:0 auto}
+.app,.col{display:flex;flex-direction:column;gap:14px}
+[hidden]{display:none!important}
+
+/* 上の帯 */
+.top{display:flex;align-items:center;gap:10px;min-height:40px}
+.top a,.top button{flex:none;display:inline-flex;align-items:center;gap:4px;height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--rule);background:var(--btn);
+  font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--ink2);text-decoration:none;cursor:pointer}
+.top a:focus-visible,button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.top h1{flex:1;margin:0;text-align:center;font-size:20px;font-weight:800;letter-spacing:.28em;text-indent:.28em}
+#snd[aria-pressed="false"]{opacity:.55}
+
+/* 問題をえらぶ画面 */
+.lead{margin:6px 0 0;text-align:center;font-size:14px;color:var(--ink2);letter-spacing:.04em;text-wrap:balance}
+.lead b{color:var(--ink)}
+.homebar{display:flex;justify-content:center;align-items:center;gap:12px;flex-wrap:wrap}
+.pill{height:38px;padding:0 18px;border-radius:999px;border:1px solid var(--rule);background:var(--btn);font-size:14px;font-weight:700;letter-spacing:.06em;cursor:pointer}
+.total{font-size:13px;font-weight:700;color:var(--ink2);letter-spacing:.06em;font-variant-numeric:tabular-nums}
+.level{background:var(--card);border:1px solid var(--rule);border-radius:16px;padding:14px 14px 16px;box-shadow:0 2px 0 var(--shadow)}
+.level h2{margin:0;display:flex;align-items:baseline;gap:10px;font-size:17px;font-weight:800;letter-spacing:.12em}
+.level h2 small{font-size:12px;font-weight:700;color:var(--ink2);letter-spacing:.06em}
+.level p{margin:2px 0 12px;font-size:12.5px;color:var(--ink2)}
+.pz{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.pz button{position:relative;aspect-ratio:1/1;min-height:52px;border-radius:12px;border:1.5px solid var(--rule);background:var(--btn);cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:0}
+.pz button .n{font-size:19px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+.pz button .t{font-size:10.5px;font-weight:700;color:var(--ink2);line-height:1.2;font-variant-numeric:tabular-nums;min-height:13px}
+.pz button.done{border-color:var(--acc);background:var(--accbg)}
+.pz button.done .t{color:var(--acc)}
+.pz button.going::after{content:"";position:absolute;top:7px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--hint)}
+.pz button:active{transform:translateY(1px)}
+.foot{text-align:center;font-size:11.5px;color:var(--ink2);letter-spacing:.04em}
+
+/* あそぶ画面 */
+.bar{display:flex;align-items:center;gap:10px}
+.bar .name{flex:1;font-size:16px;font-weight:800;letter-spacing:.1em}
+.bar .name small{font-size:12px;font-weight:700;color:var(--ink2);margin-left:8px;letter-spacing:.04em}
+.bar .time{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:.04em}
+.boardwrap{display:flex;justify-content:center}
+.board{display:block;width:100%;width:min(100%,max(240px,calc(100dvh - 346px)));max-width:520px;height:auto;background:var(--card);border:1px solid var(--rule);border-radius:16px;box-shadow:0 2px 0 var(--shadow);
+  touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:pointer}
+.board text{font-family:var(--ja);font-weight:700;font-size:31px;fill:var(--ink);text-anchor:middle;pointer-events:none;transition:fill .15s}
+.board text.ok{fill:var(--done)}
+.board text.over{fill:var(--err)}
+.board .dot{fill:var(--dot)}
+.board .dot.bad{fill:var(--err)}
+.board .tint{fill:var(--accbg);opacity:0;transition:opacity .6s}
+.board.won .tint.in{opacity:1}
+.board .ln{stroke:var(--line);stroke-width:7;stroke-linecap:round;opacity:0}
+.board .x{stroke:var(--ink2);stroke-width:2.4;stroke-linecap:round;fill:none;opacity:0}
+.board .e[data-s="1"] .ln{opacity:1}
+.board .e[data-s="2"] .x{opacity:.75}
+.board .e.pop .ln{animation:pop .18s ease-out}
+@keyframes pop{from{stroke-width:13}to{stroke-width:7}}
+.board.won .ln{stroke:var(--acc)}
+.board.won .e .x{opacity:0}
+.board.won text.ok{fill:var(--ink)}
+.board .hv{stroke:var(--ink2);stroke-width:7;stroke-linecap:round;opacity:0;pointer-events:none}
+.board .hv.on{opacity:.22}
+/* ヒントの印 */
+.board .hl{stroke:var(--hint);stroke-width:13;stroke-linecap:round;opacity:0}
+.board .e.hint .hl{opacity:.55;animation:glow 1.1s ease-in-out infinite}
+.board .e.wrong .hl{stroke:var(--err);opacity:.6;animation:glow .7s ease-in-out infinite}
+@keyframes glow{50%{opacity:.25}}
+.board .hcell{fill:var(--hintbg);stroke:var(--hint);stroke-width:2;opacity:0}
+.board .hcell.on{opacity:1}
+.board .hring{fill:none;stroke:var(--hint);stroke-width:3;opacity:0}
+.board .hring.on{opacity:1}
+.msg{min-height:88px;padding:10px 14px;border-radius:12px;background:var(--card);border:1px solid var(--rule);font-size:13.5px;line-height:1.65}
+.msg b{color:var(--acc)}
+.msg .res{display:flex;flex-direction:column;gap:6px}
+.msg .res strong{font-size:16px;letter-spacing:.12em;color:var(--acc);margin-right:10px}
+.msg .res .row{display:flex;gap:8px;flex-wrap:wrap}
+.msg .res .row button{flex:1;min-width:120px}
+.tools{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.tools button{height:52px;border-radius:12px;border:1px solid var(--rule);background:var(--btn);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  font-size:12px;font-weight:700;letter-spacing:.08em;cursor:pointer}
+.tools button svg{width:20px;height:20px}
+.tools button:disabled{opacity:.38;cursor:default}
+.tools button:not(:disabled):active,.pill:active,.go:active{transform:translateY(1px)}
+.tools #bHint{border-color:var(--hint)}
+.go{height:42px;padding:0 16px;border-radius:12px;border:1px solid var(--acc);background:var(--acc);color:#fff;font-size:14px;font-weight:800;letter-spacing:.08em;cursor:pointer}
+.go.sub{background:var(--btn);color:var(--ink);border-color:var(--rule)}
+@media (prefers-color-scheme:dark){ .go{color:#10201a} .go.sub{color:var(--ink)} }
+.ops{margin:0;text-align:center;font-size:11.5px;color:var(--ink2)}
+#play.won .tools,#play.won .ops{display:none}
+
+/* あそびかた・確認の窓 */
+dialog{border:1px solid var(--rule);border-radius:18px;background:var(--card);color:var(--ink);padding:20px 18px 16px;width:min(440px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto}
+dialog::backdrop{background:rgba(20,26,36,.5)}
+dialog h2{margin:0 0 10px;font-size:17px;letter-spacing:.14em}
+dialog h3{margin:14px 0 4px;font-size:13.5px;letter-spacing:.08em;color:var(--acc)}
+dialog ol,dialog ul{margin:0;padding-left:1.4em;font-size:13.5px}
+dialog li{margin:3px 0}
+dialog p{margin:6px 0;font-size:13.5px}
+dialog .ex{display:flex;align-items:center;gap:14px;margin-top:6px}
+dialog .ex svg{flex:none;width:132px;height:auto;border-radius:12px;cursor:default}
+dialog .ex p{font-size:12.5px;color:var(--ink2);margin:0}
+dialog .row{display:flex;gap:8px;margin-top:16px}
+dialog .row button{flex:1}
+/* スマホ: 押しやすさを優先して盤を大きく保つ。背の低い画面では余白と説明を詰める */
+@media (pointer:coarse){ .board{width:min(100%,max(300px,calc(100dvh - 342px)))} }
+@media (max-height:620px){ .app,.col{gap:10px} .ops{display:none} body.playing .top{display:none} .msg{min-height:76px;padding:7px 12px;font-size:13px;line-height:1.55} .tools button{height:46px} }
+@media (max-height:620px) and (pointer:coarse){ .board{width:min(100%,max(300px,calc(100dvh - 232px)))} }
+@media (prefers-reduced-motion:reduce){ .board .e.pop .ln,.board .e.hint .hl,.board .e.wrong .hl{animation:none} .board .tint{transition:none} }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <a href="../" aria-label="アプリ選択画面へ戻る">&lt; APPS</a>
+    <h1>組み分け帽</h1>
+    <button type="button" id="snd" aria-pressed="true">音 ON</button>
+  </header>
+
+  <main id="home" class="col">
+    <p class="lead">数字をたよりに<b>1本の輪</b>を引いて、<br>マスを「内」と「外」に組み分けるパズル</p>
+    <div class="homebar"><button type="button" class="pill" id="bHow">あそびかた</button><span class="total" id="total"></span></div>
+    <div id="levels" class="col"></div>
+    <p class="foot">どの問題も答えは1つだけ。あてずっぽうなしで、理詰めで解けます。</p>
+  </main>
+
+  <main id="play" class="col" hidden>
+    <div class="bar"><button type="button" class="pill" id="bList">&lt; 一覧</button><div class="name" id="pName"></div><div class="time" id="pTime" aria-label="経過時間">0:00</div></div>
+    <div class="boardwrap"><svg class="board" id="board" role="img" aria-label="パズルの盤面"></svg></div>
+    <div class="msg" id="msg" role="status" aria-live="polite"></div>
+    <div class="tools">
+      <button type="button" id="bUndo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 13L4 8l5-5"/><path d="M4 8h10a6 6 0 010 12h-4"/></svg>戻す</button>
+      <button type="button" id="bRedo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 13l5-5-5-5"/><path d="M20 8H10a6 6 0 000 12h4"/></svg>進む</button>
+      <button type="button" id="bHint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0012 3z"/></svg>ヒント</button>
+      <button type="button" id="bReset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></svg>全部消す</button>
+    </div>
+    <p class="ops" id="ops"></p>
+  </main>
+</div>
+
+<dialog id="dHow" aria-labelledby="howT">
+  <h2 id="howT">あそびかた</h2>
+  <h3>ルール</h3>
+  <ol>
+    <li>となり合う点と点を、たて・よこの線でつないで、<b>全体で1つの輪</b>を作ります。</li>
+    <li>数字は、そのマスのまわり4辺のうち<b>線になる辺の本数</b>です。</li>
+    <li>数字のないマスは、何本でもかまいません。</li>
+    <li>線は、交差も枝分かれもしません。行き止まりもありません。</li>
+  </ol>
+  <div class="ex"><svg class="board" id="exBoard" aria-label="完成した例"></svg><p>完成した例。輪の内側に色が付きます。数字のまわりの線の本数を数えてみてください。</p></div>
+  <h3>操作</h3>
+  <ul>
+    <li>スマホ：辺をタップするたびに「線 → × → 消す」。長押しで×。</li>
+    <li>PC：左クリックで線、右クリックで×。Z で戻す、Y で進む、H でヒント。</li>
+    <li>×は「ここに線はない」の目印です。付けなくても正解になります。</li>
+    <li>数字は、線の本数がそろうと薄く、多すぎると赤くなります。</li>
+  </ul>
+  <h3>ヒント</h3>
+  <p>いま理詰めで決まる辺を1か所、理由つきで示します。まちがった辺があるときは、先にそれを知らせます。</p>
+  <div class="row"><button type="button" class="go" data-close>とじる</button></div>
+</dialog>
+<dialog id="dReset" aria-labelledby="rsT">
+  <h2 id="rsT">全部消す</h2>
+  <p>この問題の線と×を、すべて消して最初からにします。タイムも0に戻ります。</p>
+  <div class="row"><button type="button" class="go sub" data-close>やめる</button><button type="button" class="go" id="bResetOk">消す</button></div>
+</dialog>
+
+<script>
+/*SOLVER-BEGIN*/
+// ===== 盤の形と、論理だけで解く仕組み（ヒントと問題の検証で同じものを使う） =====
+// 辺の状態: 0 = 未定, 1 = 線, 2 = ×（線なし）
+function makeGrid(R,C){
+  const HN=(R+1)*C, VN=R*(C+1), EN=HN+VN, VW=C+1;
+  const H=(r,c)=>r*C+c, V=(r,c)=>HN+r*(C+1)+c;
+  const cellE=[], cellV=[], vertE=[], edgeV=[];
+  for(let r=0;r<R;r++) for(let c=0;c<C;c++){
+    cellE.push([H(r,c),V(r,c+1),H(r+1,c),V(r,c)]);
+    cellV.push([r*VW+c, r*VW+c+1, (r+1)*VW+c+1, (r+1)*VW+c]);
+  }
+  for(let r=0;r<=R;r++) for(let c=0;c<=C;c++){
+    const a=[]; if(r>0) a.push(V(r-1,c)); if(c<C) a.push(H(r,c)); if(r<R) a.push(V(r,c)); if(c>0) a.push(H(r,c-1));
+    vertE.push(a);
+  }
+  for(let r=0;r<=R;r++) for(let c=0;c<C;c++) edgeV[H(r,c)]=[r*VW+c, r*VW+c+1];
+  for(let r=0;r<R;r++) for(let c=0;c<=C;c++) edgeV[V(r,c)]=[r*VW+c, (r+1)*VW+c];
+  return {R,C,HN,VN,EN,VW,VNUM:(R+1)*(C+1),H,V,cellE,cellV,vertE,edgeV};
+}
+function parseClues(rows){ const a=[]; rows.forEach(s=>{ for(const ch of s) a.push(ch==='.'?-1:+ch); }); return a; }
+
+// 手筋1: 数字のまわりの本数だけで決まる
+function ruleNumber(g,clues,st){
+  const out=[];
+  for(let i=0;i<clues.length;i++){ const n=clues[i]; if(n<0) continue;
+    let L=0,U=0; for(const e of g.cellE[i]){ if(st[e]===1) L++; else if(st[e]===0) U++; }
+    if(!U) continue;
+    if(L===n) for(const e of g.cellE[i]){ if(st[e]===0) out.push({e,v:2,rule:'num',cell:i,n}); }
+    else if(L+U===n) for(const e of g.cellE[i]){ if(st[e]===0) out.push({e,v:1,rule:'num',cell:i,n}); }
+  }
+  return out;
+}
+// 手筋2: 点のまわりだけで決まる（枝分かれしない・行き止まりにしない）
+function ruleVertex(g,clues,st){
+  const out=[];
+  for(let v=0;v<g.VNUM;v++){
+    let L=0,U=0; for(const e of g.vertE[v]){ if(st[e]===1) L++; else if(st[e]===0) U++; }
+    if(!U) continue;
+    if(L===2) for(const e of g.vertE[v]){ if(st[e]===0) out.push({e,v:2,rule:'vert',vert:v,kind:'full'}); }
+    else if(L===1&&U===1) for(const e of g.vertE[v]){ if(st[e]===0) out.push({e,v:1,rule:'vert',vert:v,kind:'go'}); }
+    else if(L===0&&U===1) for(const e of g.vertE[v]){ if(st[e]===0) out.push({e,v:2,rule:'vert',vert:v,kind:'dead'}); }
+  }
+  return out;
+}
+// 数字のマス（1つ、または2つ）のまわりの引き方をすべて試し、角の点で枝分かれ・行き止まりにならないものだけ残す。
+// 残った引き方のすべてで同じになる辺を返す。1つも残らなければ null（矛盾）
+function enumCells(g,clues,st,cells){
+  const S=[], inS=new Set(), verts=new Set();
+  cells.forEach(i=>{ g.cellE[i].forEach(e=>{ if(!inS.has(e)){ inS.add(e); S.push(e); } }); g.cellV[i].forEach(v=>verts.add(v)); });
+  const unk=S.filter(e=>st[e]===0);
+  const poss=new Map(); let valid=0;
+  const val=new Map();
+  for(let m=0;m<(1<<unk.length);m++){
+    S.forEach(e=>val.set(e,st[e])); unk.forEach((e,k)=>val.set(e,(m>>k&1)?1:2));
+    let ok=true;
+    for(const i of cells){ if(clues[i]<0) continue; let L=0; for(const e of g.cellE[i]) if(val.get(e)===1) L++; if(L!==clues[i]){ ok=false; break; } }
+    if(!ok) continue;
+    const am=new Map();
+    for(const v of verts){
+      let k=0,L=0; const ou=[];
+      for(const e of g.vertE[v]){ if(inS.has(e)){ if(val.get(e)===1) k++; } else if(st[e]===1) L++; else if(st[e]===0) ou.push(e); }
+      const b=k+L, U=ou.length;
+      if(b>2){ ok=false; break; }
+      // この点に外から入る線の本数として許されるもの: b=0 → 0本か2本、 b=1 → 1本、 b=2 → 0本
+      const feas=(b===0?[0,2]:b===1?[1]:[0]).filter(u=>u<=U);
+      if(!feas.length){ ok=false; break; }
+      let mask=3;
+      if(feas.length===1){ if(feas[0]===0) mask=1; else if(feas[0]===U) mask=2; }
+      for(const e of ou){ const x=(am.has(e)?am.get(e):3)&mask; if(!x){ ok=false; break; } am.set(e,x); }
+      if(!ok) break;
+    }
+    if(!ok) continue;
+    valid++;
+    unk.forEach(e=>poss.set(e,(poss.get(e)||0)|(val.get(e)===1?2:1)));
+    am.forEach((x,e)=>poss.set(e,(poss.get(e)||0)|x));
+  }
+  if(!valid) return null;
+  const out=[]; poss.forEach((p,e)=>{ if(p===1) out.push({e,v:2}); else if(p===2) out.push({e,v:1}); });
+  return out;
+}
+// 手筋3: 1つの数字と、その角の点を合わせて考える
+function ruleCell(g,clues,st){
+  const out=[];
+  for(let i=0;i<clues.length;i++){ if(clues[i]<0) continue;
+    const d=enumCells(g,clues,st,[i]); if(!d) return null;
+    d.forEach(x=>out.push({e:x.e,v:x.v,rule:'cell',cell:i,n:clues[i],own:g.cellE[i].includes(x.e)}));
+  }
+  return out;
+}
+// 手筋4: 隣り合う3、ななめに並ぶ3
+function rulePair3(g,clues,st){
+  const out=[], R=g.R, C=g.C;
+  for(let r=0;r<R;r++) for(let c=0;c<C;c++){ const i=r*C+c; if(clues[i]!==3) continue;
+    const cand=[]; if(c+1<C) cand.push([i+1,'side']); if(r+1<R) cand.push([i+C,'side']);
+    if(r+1<R&&c+1<C) cand.push([i+C+1,'diag']); if(r+1<R&&c>0) cand.push([i+C-1,'diag']);
+    for(const [j,kind] of cand){ if(clues[j]!==3) continue;
+      const d=enumCells(g,clues,st,[i,j]); if(!d) return null;
+      d.forEach(x=>out.push({e:x.e,v:x.v,rule:'pair',cells:[i,j],kind}));
+    }
+  }
+  return out;
+}
+// 手筋5: 途中で小さな輪を閉じない
+function ruleLoop(g,clues,st){
+  const p=new Int32Array(g.VNUM).map((_,i)=>i), deg=new Uint8Array(g.VNUM), cnt=new Int32Array(g.VNUM);
+  const find=x=>{ while(p[x]!==x){ p[x]=p[p[x]]; x=p[x]; } return x; };
+  let LN=0;
+  for(let e=0;e<g.EN;e++) if(st[e]===1){ LN++; const [a,b]=g.edgeV[e]; deg[a]++; deg[b]++; p[find(a)]=find(b); }
+  for(let e=0;e<g.EN;e++) if(st[e]===1) cnt[find(g.edgeV[e][0])]++;
+  const out=[];
+  for(let e=0;e<g.EN;e++){ if(st[e]!==0) continue; const [a,b]=g.edgeV[e];
+    if(deg[a]!==1||deg[b]!==1||find(a)!==find(b)) continue;
+    let fin=cnt[find(a)]===LN;
+    if(fin) for(let i=0;i<clues.length&&fin;i++){ if(clues[i]<0) continue; let L=0; for(const x of g.cellE[i]) if(st[x]===1||x===e) L++; if(L!==clues[i]) fin=false; }
+    if(!fin) out.push({e,v:2,rule:'loop'});
+  }
+  return out;
+}
+const RULES=[['num',ruleNumber],['vert',ruleVertex],['cell',ruleCell],['pair',rulePair3],['loop',ruleLoop]];
+// いま使える、いちばんやさしい手筋で決まる辺を返す。 allow に無い手筋は使わない。矛盾なら null
+function nextDeductions(g,clues,st,allow){
+  for(const [name,fn] of RULES){ if(allow&&!allow[name]) continue;
+    const d=fn(g,clues,st); if(d===null) return null;
+    const seen=new Set(), u=d.filter(x=>st[x.e]===0&&!seen.has(x.e)&&seen.add(x.e));
+    if(u.length) return u;
+  }
+  return [];
+}
+// 線だけを見て、正解の形（数字どおりの1つの輪）になっているか
+function isComplete(g,clues,st){
+  for(let i=0;i<clues.length;i++){ if(clues[i]<0) continue; let L=0; for(const e of g.cellE[i]) if(st[e]===1) L++; if(L!==clues[i]) return false; }
+  let LN=0, start=-1;
+  for(let v=0;v<g.VNUM;v++){ let L=0; for(const e of g.vertE[v]) if(st[e]===1) L++; if(L!==0&&L!==2) return false; if(L===2&&start<0) start=v; }
+  for(let e=0;e<g.EN;e++) if(st[e]===1) LN++;
+  if(!LN) return false;
+  let v=start, prev=-1, n=0;
+  do{ let nx=-1; for(const e of g.vertE[v]){ if(st[e]===1&&e!==prev){ nx=e; break; } }
+    prev=nx; const [a,b]=g.edgeV[nx]; v=(a===v?b:a); n++; }while(v!==start&&n<=LN);
+  return n===LN;
+}
+// 論理だけで最後まで解く。 solved = 全部の辺が決まり、正解の形になった
+function logicSolve(g,clues,allow,st0){
+  const st=st0?Uint8Array.from(st0):new Uint8Array(g.EN), used={num:0,vert:0,cell:0,pair:0,loop:0}; let rounds=0;
+  for(;;){ const d=nextDeductions(g,clues,st,allow); if(d===null) return {solved:false,contra:true,st,used,rounds};
+    if(!d.length) break; rounds++; d.forEach(x=>{ st[x.e]=x.v; used[x.rule]++; }); }
+  let all=true; for(let e=0;e<g.EN;e++) if(st[e]===0){ all=false; break; }
+  return {solved:all&&isComplete(g,clues,st),st,used,rounds};
+}
+/*SOLVER-END*/
+
+// ===== 問題 =====
+// 数字の並び（. は数字なし）。どの問題も、答えが1つで、下の allow の手筋だけで最後まで解けることを tools/verify.js で確認している
+const LEVELS=[
+  {key:'a',name:'入門',size:'5×5',note:'数字のまわりと、点のまわりを順に見ていけば解けます。',allow:{num:1,vert:1,cell:1}},
+  {key:'b',name:'初級',size:'6×6',note:'となり合う3・ななめに並ぶ3が、手がかりになります。',allow:{num:1,vert:1,cell:1,pair:1}},
+  {key:'c',name:'中級',size:'7×7',note:'「途中で小さな輪を閉じない」も使います。',allow:{num:1,vert:1,cell:1,pair:1,loop:1}},
+];
+const PUZZLES={
+  a1:["2.3..", "30202", "32.12", "32223", "..1.3"],
+  a2:["322.3", "12..3", "13.12", "0..33", "1.211"],
+  a3:["3212.", "...32", "22122", "33...", ".1311"],
+  a4:["22.31", "..21.", "1.3.0", ".32..", "22.23"],
+  a5:["3.32.", "3...3", "31.22", "2...2", ".31.3"],
+  b1:[".3.1.1", ".22.2.", "233233", "211122", ".3.31.", "3.2.1."],
+  b2:[".31..3", "..23.2", "12.121", "211.32", "3.33..", "2..11."],
+  b3:["...223", ".21...", "323332", "121212", "...23.", "012..."],
+  b4:[".22.2.", "20.323", "...2.3", "3.2...", "231.13", ".1.32."],
+  b5:["132.3.", "1..2..", ".31.22", "31.13.", "..3..1", ".3.222"],
+  c1:["..23.22", "2..12.1", "1.2.311", "2..1..2", "313.3.2", "2.11..2", "13.01.."],
+  c2:["3.3.1.3", "22.22.1", "..212..", "1.2.2.2", "..122..", "0.33.11", "1.1.1.2"],
+  c3:["1321.23", "..22...", "...3..2", "3212021", "1..3...", "...12..", "12.2213"],
+  c4:[".122..0", "3.323..", ".13..23", ".2...1.", "22..11.", "..232.1", "2..231."],
+  c5:["3.3.1.2", ".2..1.2", "..23.2.", "13.2.23", ".3.22..", "3.2..3.", "2.2.1.0"]
+};
+const EXAMPLE=["12.","3.1",".23"];
+
+// ===== 保存（この端末のブラウザに残す。使えない環境では、開いている間だけ） =====
+const KEY='kumiwake-bou-v1';
+let SAVE={done:{},prog:{},sound:true};
+try{ const s=JSON.parse(localStorage.getItem(KEY)||'null'); if(s&&typeof s==='object') SAVE=Object.assign(SAVE,s); }catch(e){}
+function persist(){ try{ localStorage.setItem(KEY,JSON.stringify(SAVE)); }catch(e){} }
+
+// ===== 音（Web Audio で合成） =====
+let ac=null;
+function audio(){ if(!SAVE.sound) return null; if(!ac){ try{ ac=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; } } if(ac.state==='suspended') ac.resume(); return ac; }
+function tone(f,t,d,v,type){ const a=audio(); if(!a) return; const o=a.createOscillator(), g=a.createGain(), t0=a.currentTime+t; o.type=type||'triangle'; o.frequency.setValueAtTime(f,t0);
+  g.gain.setValueAtTime(0,t0); g.gain.linearRampToValueAtTime(v,t0+.008); g.gain.exponentialRampToValueAtTime(.0008,t0+d); o.connect(g); g.connect(a.destination); o.start(t0); o.stop(t0+d+.03); }
+const SE={ line:()=>tone(620,0,.09,.09), cross:()=>tone(300,0,.06,.06,'square'), erase:()=>tone(360,0,.07,.05,'sine'), undo:()=>tone(440,0,.06,.05,'sine'),
+  hint:()=>{ tone(784,0,.12,.06,'sine'); tone(1047,.09,.16,.06,'sine'); }, warn:()=>{ tone(240,0,.12,.07,'square'); tone(200,.1,.16,.07,'square'); },
+  win:()=>[523,659,784,1047,1319].forEach((f,k)=>tone(f,k*.09,.35,.08)) };
+
+// ===== 盤面の描画 =====
+const NS='http://www.w3.org/2000/svg', CELL=64, PAD=26;
+const $=id=>document.getElementById(id);
+function el(n,a,p){ const x=document.createElementNS(NS,n); for(const k in a) x.setAttribute(k,a[k]); if(p) p.appendChild(x); return x; }
+function edgeXY(g,e){
+  if(e<g.HN){ const r=(e/g.C|0), c=e%g.C; return [PAD+c*CELL,PAD+r*CELL,PAD+(c+1)*CELL,PAD+r*CELL]; }
+  const k=e-g.HN, r=(k/(g.C+1)|0), c=k%(g.C+1); return [PAD+c*CELL,PAD+r*CELL,PAD+c*CELL,PAD+(r+1)*CELL];
+}
+function buildBoard(svg,g,clues){
+  svg.textContent=''; svg.setAttribute('viewBox','0 0 '+(g.C*CELL+PAD*2)+' '+(g.R*CELL+PAD*2));
+  const B={svg,g,clues,tint:[],hcell:[],num:[],edge:[],dot:[],ring:[]};
+  const gT=el('g',{},svg), gE=el('g',{},svg), gN=el('g',{},svg), gD=el('g',{},svg);
+  for(let r=0;r<g.R;r++) for(let c=0;c<g.C;c++){ const x=PAD+c*CELL, y=PAD+r*CELL, i=r*g.C+c;
+    B.tint.push(el('rect',{class:'tint',x,y,width:CELL,height:CELL},gT));
+    B.hcell.push(el('rect',{class:'hcell',x:x+7,y:y+7,width:CELL-14,height:CELL-14,rx:9},gT));
+    if(clues[i]>=0){ const t=el('text',{x:x+CELL/2,y:y+CELL/2,dy:'.36em'},gN); t.textContent=clues[i]; B.num[i]=t; } }
+  B.hv=el('line',{class:'hv'},gE);
+  for(let e=0;e<g.EN;e++){ const [x1,y1,x2,y2]=edgeXY(g,e), mx=(x1+x2)/2, my=(y1+y2)/2, ge=el('g',{class:'e','data-s':0},gE);
+    el('line',{class:'hl',x1,y1,x2,y2},ge); el('line',{class:'ln',x1,y1,x2,y2},ge);
+    el('path',{class:'x',d:`M${mx-6} ${my-6}l12 12M${mx+6} ${my-6}l-12 12`},ge); B.edge.push(ge); }
+  for(let r=0;r<=g.R;r++) for(let c=0;c<=g.C;c++){ const cx=PAD+c*CELL, cy=PAD+r*CELL;
+    B.ring.push(el('circle',{class:'hring',cx,cy,r:14},gD)); B.dot.push(el('circle',{class:'dot',cx,cy,r:4.6},gD)); }
+  return B;
+}
+// 輪の内側のマス（各行を左から見て、たての線をまたぐたびに内・外が入れ替わる）
+function insideCells(g,st){ const a=[]; for(let r=0;r<g.R;r++){ let f=false; for(let c=0;c<g.C;c++){ if(st[g.V(r,c)]===1) f=!f; a.push(f); } } return a; }
+function paint(B,st,won){
+  const g=B.g;
+  for(let e=0;e<g.EN;e++) B.edge[e].setAttribute('data-s',st[e]);
+  for(let i=0;i<B.clues.length;i++){ if(!B.num[i]) continue; let L=0; for(const e of g.cellE[i]) if(st[e]===1) L++;
+    B.num[i].setAttribute('class',L>B.clues[i]?'over':L===B.clues[i]?'ok':''); }
+  for(let v=0;v<g.VNUM;v++){ let L=0; for(const e of g.vertE[v]) if(st[e]===1) L++; B.dot[v].setAttribute('class',L>2?'dot bad':'dot'); }
+  B.svg.classList.toggle('won',!!won);
+  const ins=won?insideCells(g,st):null; B.tint.forEach((t,i)=>t.setAttribute('class',ins&&ins[i]?'tint in':'tint'));
+}
+
+// ===== 画面の切り替え =====
+function fmtTime(ms){ const s=Math.floor(ms/1000); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+const IDS=[]; LEVELS.forEach(l=>{ for(let k=1;k<=5;k++) if(PUZZLES[l.key+k]) IDS.push(l.key+k); });
+function renderHome(){
+  const box=$('levels'); box.textContent='';
+  LEVELS.forEach(l=>{ const sec=document.createElement('section'); sec.className='level';
+    const h=document.createElement('h2'); h.textContent=l.name; const sm=document.createElement('small'); sm.textContent=l.size; h.appendChild(sm);
+    const p=document.createElement('p'); p.textContent=l.note; const row=document.createElement('div'); row.className='pz';
+    for(let k=1;k<=5;k++){ const id=l.key+k; if(!PUZZLES[id]) continue; const b=document.createElement('button'); b.type='button'; b.dataset.id=id;
+      const d=SAVE.done[id], pr=SAVE.prog[id];
+      const n=document.createElement('span'); n.className='n'; n.textContent=k; const t=document.createElement('span'); t.className='t'; t.textContent=d?fmtTime(d.t):'';
+      if(d) b.classList.add('done'); else if(pr&&/[12]/.test(pr.s)) b.classList.add('going');
+      b.setAttribute('aria-label',l.name+' '+k+(d?'（クリア '+fmtTime(d.t)+'）':pr&&/[12]/.test(pr.s)?'（途中）':''));
+      b.append(n,t); b.addEventListener('click',()=>{ audio(); openPuzzle(id); }); row.appendChild(b); }
+    sec.append(h,p,row); box.appendChild(sec); });
+  $('total').textContent=IDS.length+'問中 '+IDS.filter(id=>SAVE.done[id]).length+'問クリア';
+}
+function showHome(){ stopClock(); cur=null; $('play').hidden=true; $('home').hidden=false; document.body.classList.remove('playing'); renderHome(); scrollTo(0,0); }
+
+// ===== あそぶ =====
+let cur=null, B=null, clock=0;
+const touchUI=matchMedia('(pointer:coarse)').matches;
+function openPuzzle(id){
+  const lv=LEVELS.find(l=>l.key===id[0]), rows=PUZZLES[id], g=makeGrid(rows.length,rows[0].length), clues=parseClues(rows);
+  const sol=logicSolve(g,clues,null).st, pr=SAVE.prog[id];
+  cur={id,lv,g,clues,sol,st:new Uint8Array(g.EN),undo:[],redo:[],ms:0,from:0,hints:0,hintKey:'',won:false};
+  if(pr&&pr.s&&pr.s.length===g.EN){ for(let e=0;e<g.EN;e++) cur.st[e]=+pr.s[e]||0; cur.ms=pr.ms||0; cur.hints=pr.h||0; }
+  B=buildBoard($('board'),g,clues);
+  $('pName').textContent=lv.name+' '+id.slice(1); const sm=document.createElement('small'); sm.textContent=lv.size; $('pName').appendChild(sm);
+  $('ops').textContent=touchUI?'辺をタップ：線 → × → 消す　／　長押し：×':'左クリック：線　／　右クリック：×　／　Z 戻す・Y 進む・H ヒント';
+  $('home').hidden=true; $('play').hidden=false; document.body.classList.add('playing'); scrollTo(0,0);
+  cur.won=isComplete(g,clues,lineOnly(cur.st));
+  clearHint(); paint(B,cur.st,cur.won); syncButtons(); $('pTime').textContent=fmtTime(cur.ms);
+  if(cur.won) showResult(false); else say(cur.st.some(x=>x)?'つづきから再開します。':'辺をえらんで線を引き、1つの輪を作りましょう。こまったら「ヒント」をどうぞ。');
+}
+function lineOnly(st){ return st.map(x=>x===1?1:0); }
+function say(html){ $('msg').innerHTML=html; }
+function syncButtons(){ $('play').classList.toggle('won',cur.won); $('bUndo').disabled=!cur.undo.length||cur.won; $('bRedo').disabled=!cur.redo.length||cur.won; $('bHint').disabled=cur.won; $('bReset').disabled=!cur.st.some(x=>x); }
+function startClock(){ if(cur.from||cur.won) return; cur.from=performance.now(); clearInterval(clock); clock=setInterval(()=>{ if(cur&&cur.from) $('pTime').textContent=fmtTime(elapsed()); },250); }
+function stopClock(){ clearInterval(clock); if(cur&&cur.from){ cur.ms+=performance.now()-cur.from; cur.from=0; } }
+function elapsed(){ return cur.ms+(cur.from?performance.now()-cur.from:0); }
+function store(){ SAVE.prog[cur.id]={s:Array.from(cur.st).join(''),ms:Math.round(elapsed()),h:cur.hints}; persist(); }
+document.addEventListener('visibilitychange',()=>{ if(!cur||cur.won) return; if(document.hidden){ stopClock(); store(); } else if(cur.st.some(x=>x)) startClock(); });
+
+// 辺の状態を変える（to: 0 未定 / 1 線 / 2 ×）
+function setEdge(e,to,quiet){
+  const from=cur.st[e]; if(from===to||cur.won) return;
+  cur.undo.push([e,from,to]); cur.redo.length=0; apply(e,to,quiet);
+}
+function apply(e,to,quiet){
+  cur.st[e]=to; startClock(); clearHint();
+  if(!quiet) (to===1?SE.line:to===2?SE.cross:SE.erase)();
+  if(to===1){ const ge=B.edge[e]; ge.classList.remove('pop'); void ge.getBBox(); ge.classList.add('pop'); }
+  if(isComplete(cur.g,cur.clues,lineOnly(cur.st))){ win(); return; }
+  paint(B,cur.st,false); syncButtons(); store();
+  if($('msg').dataset.keep!=='1') say('');
+}
+function undo(){ if(cur.won||!cur.undo.length) return; const [e,from,to]=cur.undo.pop(); cur.redo.push([e,from,to]); SE.undo(); apply(e,from,true); }
+function redo(){ if(cur.won||!cur.redo.length) return; const [e,from,to]=cur.redo.pop(); cur.undo.push([e,from,to]); SE.undo(); apply(e,to,true); }
+function win(){
+  stopClock(); cur.won=true; cur.ms=Math.round(cur.ms);
+  const old=SAVE.done[cur.id]; cur.best=!old||cur.ms<old.t;
+  if(cur.best) SAVE.done[cur.id]={t:cur.ms,h:cur.hints};
+  SAVE.prog[cur.id]={s:Array.from(cur.st).join(''),ms:cur.ms,h:cur.hints}; persist();
+  paint(B,cur.st,true); syncButtons(); $('pTime').textContent=fmtTime(cur.ms); SE.win(); showResult(true);
+}
+function showResult(fresh){
+  const ins=insideCells(cur.g,cur.st).filter(Boolean).length, all=cur.g.R*cur.g.C, i=IDS.indexOf(cur.id);
+  const next=IDS.slice(i+1).concat(IDS.slice(0,i)).find(id=>!SAVE.done[id])||IDS[i+1];
+  const d=SAVE.done[cur.id];
+  say('<div class="res"><span><strong>組み分け完了</strong>内 '+ins+' マス ／ 外 '+(all-ins)+' マス　タイム <b>'+fmtTime(cur.ms)+'</b>'+(cur.hints?'　ヒント '+cur.hints+' 回':'　ヒントなし')
+    +(d&&d.t<cur.ms?'　（最高 '+fmtTime(d.t)+'）':'')+'</span><div class="row">'
+    +(next?'<button type="button" class="go" id="bNext">つぎの問題へ</button>':'')+'<button type="button" class="go sub" id="bAgain">もう一度</button></div></div>');
+  if(next) $('bNext').addEventListener('click',()=>openPuzzle(next));
+  $('bAgain').addEventListener('click',resetPuzzle);
+}
+function resetPuzzle(){
+  stopClock(); cur.st.fill(0); cur.undo.length=0; cur.redo.length=0; cur.ms=0; cur.from=0; cur.hints=0; cur.hintKey=''; cur.won=false;
+  delete SAVE.prog[cur.id]; persist(); clearHint(); paint(B,cur.st,false); syncButtons(); $('pTime').textContent='0:00'; say('最初からにしました。');
+}
+
+// ===== ヒント: いま論理で決まる辺を、理由つきで1か所示す =====
+function clearHint(){ if(!B) return; B.edge.forEach(x=>x.classList.remove('hint','wrong')); B.hcell.forEach(x=>x.classList.remove('on')); B.ring.forEach(x=>x.classList.remove('on')); $('msg').dataset.keep=''; }
+function hint(){
+  if(!cur||cur.won) return;
+  const g=cur.g, st=cur.st, key=Array.from(st).join('');
+  clearHint();
+  const wrong=[]; for(let e=0;e<g.EN;e++) if(st[e]&&st[e]!==cur.sol[e]) wrong.push(e);
+  if(wrong.length){ wrong.forEach(e=>B.edge[e].classList.add('wrong')); SE.warn();
+    say('赤く光っている辺（'+wrong.length+' か所）が、正解とちがっています。まずそこを直しましょう。'); $('msg').dataset.keep='1'; return; }
+  if(key!==cur.hintKey){ cur.hints++; cur.hintKey=key; store(); }
+  SE.hint();
+  const d=nextDeductions(g,cur.clues,st,null);
+  if(!d||!d.length){ // 念のための予備（通常はここに来ない）: 正解の線を1本示す
+    let e=-1; for(let x=0;x<g.EN;x++) if(!st[x]&&cur.sol[x]===1){ e=x; break; } if(e<0) for(let x=0;x<g.EN;x++) if(!st[x]){ e=x; break; }
+    if(e<0) return; B.edge[e].classList.add('hint'); say('光っている辺は'+(cur.sol[e]===1?'<b>線</b>です。':'<b>×</b>（線なし）です。')); return; }
+  const d0=d.find(x=>x.v===1)||d[0];
+  const same=x=>x.rule===d0.rule&&x.v===d0.v&&(d0.rule==='loop'?x.e===d0.e:d0.rule==='vert'?x.vert===d0.vert:d0.rule==='pair'?x.cells.join()===d0.cells.join():x.cell===d0.cell);
+  const grp=d.filter(same);
+  grp.forEach(x=>B.edge[x.e].classList.add('hint'));
+  (d0.rule==='pair'?d0.cells:d0.cell!=null?[d0.cell]:[]).forEach(i=>B.hcell[i].classList.add('on'));
+  if(d0.rule==='vert') B.ring[d0.vert].classList.add('on');
+  // 理由の文（短く。スマホで3行ほどに収める）
+  const R=d0.v===1?'<b>線</b>です。':'<b>×</b>（線なし）です。', opp=d0.v===1?'線なし':'線';
+  let why='';
+  if(d0.rule==='num'){
+    if(d0.v===2) why=(d0.n===0?'「0」のまわりには線がありません。':'「'+d0.n+'」のまわりには、もう線が '+d0.n+' 本あります。')+'光っている辺は'+R;
+    else why='「'+d0.n+'」には線が '+d0.n+' 本いります。残っている辺がちょうどその本数なので、光っている辺は'+R;
+  } else if(d0.rule==='vert'){
+    why=(d0.kind==='full'?'丸で囲んだ点には、もう線が2本あります。輪は枝分かれしないので、'
+      :d0.kind==='go'?'丸で囲んだ点まで来た線は、行き止まりにできません。進める辺は1つだけなので、'
+      :'丸で囲んだ点から出られる辺は1つだけです。線を引くと行き止まりになるので、')+'光っている辺は'+R;
+  } else if(d0.rule==='cell'){
+    why='光っている辺を「'+opp+'」と仮定すると、「'+d0.n+'」に線を '+d0.n+' 本引くどの方法でも、角の点で枝分かれか行き止まりが起きます。だから'+R;
+  } else if(d0.rule==='pair'){
+    why=(d0.kind==='side'?'となり合う':'ななめに並ぶ')+'「3」2つを見ます。光っている辺が「'+opp+'」だと、どう引いても角の点で枝分かれか行き止まりが起きます。だから'+R;
+  } else {
+    why='光っている辺に線を引くと、そこで小さな輪が閉じてしまいます。輪は全体で1つだけなので、光っている辺は'+R;
+  }
+  say(why); $('msg').dataset.keep='1';
+}
+
+// ===== 入力: いちばん近い辺をえらぶ =====
+function pick(ev){
+  const g=cur.g, pt=B.svg.createSVGPoint(); pt.x=ev.clientX; pt.y=ev.clientY; const p=pt.matrixTransform(B.svg.getScreenCTM().inverse());
+  const gx=(p.x-PAD)/CELL, gy=(p.y-PAD)/CELL;
+  if(gx<-.4||gy<-.4||gx>g.C+.4||gy>g.R+.4) return -1;
+  const cl=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const hr=cl(Math.round(gy),0,g.R), hc=cl(Math.floor(gx),0,g.C-1), vr=cl(Math.floor(gy),0,g.R-1), vc=cl(Math.round(gx),0,g.C);
+  // マスのまんなか付近は、どの辺かあいまいなので反応しない
+  if(Math.abs(gx-(hc+.5))<.17&&Math.abs(gy-(vr+.5))<.17) return -1;
+  const dh=Math.hypot(gx-(hc+.5),gy-hr), dv=Math.hypot(gx-vc,gy-(vr+.5));
+  return dh<=dv?g.H(hr,hc):g.V(vr,vc);
+}
+let press=null;
+const board=$('board');
+board.addEventListener('pointerdown',ev=>{
+  if(!cur||cur.won) return; audio();
+  const e=pick(ev); if(e<0) return;
+  if(ev.pointerType==='mouse'){ if(ev.button===0) setEdge(e,cur.st[e]===1?0:1); else if(ev.button===2) setEdge(e,cur.st[e]===2?0:2); return; }
+  press={e,x:ev.clientX,y:ev.clientY,id:ev.pointerId,long:false,
+    timer:setTimeout(()=>{ if(!press) return; press.long=true; setEdge(press.e,cur.st[press.e]===2?0:2); if(navigator.vibrate) navigator.vibrate(12); },430)};
+});
+board.addEventListener('pointermove',ev=>{
+  if(press&&ev.pointerId===press.id&&Math.hypot(ev.clientX-press.x,ev.clientY-press.y)>12){ clearTimeout(press.timer); press=null; }
+  if(ev.pointerType==='mouse'&&cur&&!cur.won&&B){ const e=pick(ev); if(e<0){ B.hv.classList.remove('on'); return; }
+    const [x1,y1,x2,y2]=edgeXY(cur.g,e); B.hv.setAttribute('x1',x1); B.hv.setAttribute('y1',y1); B.hv.setAttribute('x2',x2); B.hv.setAttribute('y2',y2); B.hv.classList.toggle('on',cur.st[e]===0); }
+});
+board.addEventListener('pointerup',ev=>{ if(!press||ev.pointerId!==press.id) return; clearTimeout(press.timer); const p=press; press=null;
+  if(!p.long&&cur&&!cur.won) setEdge(p.e,(cur.st[p.e]+1)%3); });
+board.addEventListener('pointercancel',()=>{ if(press){ clearTimeout(press.timer); press=null; } });
+board.addEventListener('pointerleave',()=>{ if(B) B.hv.classList.remove('on'); });
+board.addEventListener('contextmenu',ev=>ev.preventDefault());
+
+// ===== ボタンとキー =====
+$('bUndo').addEventListener('click',undo); $('bRedo').addEventListener('click',redo); $('bHint').addEventListener('click',()=>{ audio(); hint(); });
+$('bReset').addEventListener('click',()=>$('dReset').showModal());
+$('bResetOk').addEventListener('click',()=>{ $('dReset').close(); resetPuzzle(); });
+$('bList').addEventListener('click',()=>{ if(cur&&!cur.won&&cur.st.some(x=>x)){ stopClock(); store(); } showHome(); });
+$('bHow').addEventListener('click',()=>{ const g=makeGrid(3,3), c=parseClues(EXAMPLE), X=buildBoard($('exBoard'),g,c); paint(X,logicSolve(g,c,null).st,true); $('dHow').showModal(); });
+document.querySelectorAll('dialog').forEach(d=>{ d.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>d.close()));
+  d.addEventListener('click',ev=>{ if(ev.target===d) d.close(); }); });
+function syncSound(){ $('snd').textContent=SAVE.sound?'音 ON':'音 OFF'; $('snd').setAttribute('aria-pressed',String(!!SAVE.sound)); }
+$('snd').addEventListener('click',()=>{ SAVE.sound=!SAVE.sound; persist(); syncSound(); if(SAVE.sound) SE.line(); });
+document.addEventListener('keydown',ev=>{ if(!cur||ev.ctrlKey||ev.metaKey||ev.altKey||document.querySelector('dialog[open]')) return;
+  const k=ev.key.toLowerCase(); if(k==='z') undo(); else if(k==='y') redo(); else if(k==='h') hint(); });
+addEventListener('pageshow',ev=>{ if(ev.persisted&&!cur) renderHome(); });
+syncSound(); renderHome();
+</script>
+</body>
+</html>
