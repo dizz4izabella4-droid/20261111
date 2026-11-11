@@ -1,0 +1,992 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>鳥と獣の戦い</title>
+<style>
+/* 机に置いて向かい合う：上の帯は獣の人向け（逆さ）、下の帯は鳥の人向け、間に縦長の菱形の盤。1画面に収める。決着後は背景が勝者の色になる */
+:root{
+  --bg:#e9ece6; --fg:#1d2420; --muted:#5f6b63; --card:#ffffff; --btn:#2f6b2f; --accent:#d08a2a;
+  --bird:#3b7ddd; --beast:#d9762b; --win1:#b9d6ff; --win2:#ffd2a6; --turn1:#a9c8f4; --turn2:#f5c49a;
+  --font:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","YuGothic","Meiryo","Noto Sans JP",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --bg:#121614; --fg:#e6ebe7; --muted:#9aa69e; --card:#1c221f; --btn:#3a7a3a; --accent:#e6a650; --win1:#16305a; --win2:#5a2e10; --turn1:#13284a; --turn2:#43260f; color-scheme:dark }
+}
+:root[data-theme="dark"]{ --bg:#121614; --fg:#e6ebe7; --muted:#9aa69e; --card:#1c221f; --btn:#3a7a3a; --accent:#e6a650; --win1:#16305a; --win2:#5a2e10; --turn1:#13284a; --turn2:#43260f; color-scheme:dark }
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{transition:background-color .8s}
+/* 手番の人の色を画面全体の背景に（決着後は勝者の色が優先） */
+body.turn1{background:var(--turn1)} body.turn2{background:var(--turn2)}
+body.win1{background:var(--win1)} body.win2{background:var(--win2)}
+/* はじめのメニュー */
+.menu{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(8,14,30,.72)}
+.mbox{background:var(--card);border-radius:14px;padding:18px 18px 16px;width:min(300px,86vw);display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 6px 0 rgba(0,0,0,.3)}
+.mbox h1{margin:0 0 4px;font-size:22px;letter-spacing:.08em}
+.micos{display:flex;gap:14px}
+.mbox canvas{width:54px;height:54px;image-rendering:pixelated;display:inline-block}
+.mbtn{font:inherit;width:100%;font-size:17px;font-weight:800;padding:12px 10px;border-radius:10px;border:0;cursor:pointer;color:#fff;background:var(--btn);display:flex;flex-direction:column;align-items:center;gap:2px}
+.mmusic{display:flex;align-items:center;gap:4px;width:100%;font-size:12px;font-weight:700;color:var(--muted)}
+.mmusic button{font:inherit;flex:1;font-size:clamp(10px,3.1vw,12px);white-space:nowrap;padding:7px 2px;border-radius:8px;border:2px solid var(--muted);background:transparent;color:var(--fg);cursor:pointer}
+.mmusic button.mnone{flex:.6}
+.mmusic button[aria-checked="true"]{border-color:#e0a020;background:#e0a020;color:#fff}
+.mbtn.cpu{background:#6a4a9a} .mbtn small{font-size:11px;font-weight:600;opacity:.9}
+.mbtn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+/* 手番が替わった瞬間の全面告知：手番の人に向けて（獣は逆さ）。下の盤の操作は邪魔しない */
+.turnfx{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;visibility:hidden}
+.turnfx.t1{background:rgba(40,100,200,.82)} .turnfx.t2{background:rgba(205,100,30,.82)}
+.turnfx .tin{display:flex;flex-direction:column;align-items:center;gap:10px;color:#fff;font-weight:900;text-shadow:4px 4px 0 rgba(0,0,0,.35)}
+.turnfx.t2 .tin{transform:rotate(180deg)}
+body.vscpu .turnfx.t2 .tin{transform:none} body.vscpu .turnfx.t2.show .tin{animation:tpop .3s steps(4)}
+body.vscpu .turnfx .tname{font-size:clamp(28px,9vw,44px)}
+.turnfx canvas{width:108px;height:108px;image-rendering:pixelated}
+.turnfx .tname{font-size:clamp(40px,14vw,64px);letter-spacing:.08em;white-space:nowrap}
+.turnfx .tleft{display:flex;align-items:baseline;gap:6px;line-height:1}
+.turnfx .tleft b{font-size:clamp(72px,26vw,120px);font-variant-numeric:tabular-nums}
+.turnfx .tleft small{font-size:clamp(18px,6vw,26px)}
+.turnfx .tsub{font-size:clamp(13px,4vw,17px);letter-spacing:.1em;min-height:1.2em}
+.turnfx.show{visibility:visible;animation:tfx .8s steps(12) forwards}
+.turnfx.show .tin{animation:tpop .3s steps(4)}
+.turnfx.t2.show .tin{animation:tpop2 .3s steps(4)}
+@keyframes tfx{0%{opacity:0}12%{opacity:1}75%{opacity:1}100%{opacity:0;visibility:hidden}}
+@keyframes tpop{0%{transform:scale(.4)}100%{transform:scale(1)}}
+@keyframes tpop2{0%{transform:rotate(180deg) scale(.4)}100%{transform:rotate(180deg) scale(1)}}
+@media (prefers-reduced-motion:reduce){.turnfx.show,.turnfx.show .tin{animation:tfxr .8s steps(1) forwards}.turnfx.t2.show .tin{animation:none}
+  @keyframes tfxr{0%{opacity:1}99%{opacity:1}100%{opacity:0;visibility:hidden}}}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:14px;overflow:hidden;
+  -webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;
+  padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px))}
+.wrap{height:100%;max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:6px;padding-block:6px}
+/* 各プレイヤーの手元の帯：1行に収める */
+.panel{background:var(--card);border-radius:8px;border:2px solid transparent;padding:3px 5px;display:flex;align-items:center;gap:4px;flex:none;
+  font-variant-numeric:tabular-nums;font-size:11px;min-height:32px}
+.panel.top{transform:rotate(180deg)}
+body.vscpu .panel.top{transform:none}
+body.vscpu #bb2{display:none}
+.cpuname{display:none;font-size:11px;font-weight:800;color:var(--beast);white-space:nowrap} body.vscpu .cpuname{display:inline}
+.panel.turn{border-color:var(--accent)}
+.p1 .pname{color:var(--bird)} .p2 .pname{color:var(--beast)}
+.ico{width:24px;height:24px;image-rendering:pixelated;flex:none}
+.pname{font-weight:800;font-size:12px}
+.panel b{font-size:15px}
+/* 得点：持ち主の色の札に大きな数字。増減した瞬間に跳ねる */
+.pts{display:inline-flex;align-items:baseline;gap:1px;padding:1px 6px 2px;border-radius:7px;color:#fff;line-height:1.1;box-shadow:inset 0 -3px 0 rgba(0,0,0,.25)}
+.p1 .pts{background:var(--bird)} .p2 .pts{background:var(--beast)}
+.pts b{font-size:22px;font-weight:900;font-variant-numeric:tabular-nums}
+.pts small{font-size:10px;font-weight:700}
+.pbat{display:inline-flex;align-items:center;gap:1px;padding:1px 4px;border-radius:6px;background:#3a2a52;color:#fff;line-height:1.1}
+.pbat b{font-size:16px;font-weight:900}
+.bico{width:18px;height:14px;image-rendering:pixelated}
+.bump{animation:bump .35s steps(4)}
+@keyframes bump{0%{transform:scale(1)}40%{transform:scale(1.35)}100%{transform:scale(1)}}
+.pbats{font-size:10px;color:var(--muted);white-space:nowrap}
+.panel button.gen[aria-pressed="true"]{background:#e0a020;border-color:#e0a020;color:#fff}
+.pturn{min-width:0;overflow:hidden;text-overflow:ellipsis;margin-left:auto;font-weight:700;font-size:10px;padding:2px 5px;border-radius:999px;color:var(--muted);white-space:nowrap}
+.panel.turn .pturn{background:var(--accent);color:#fff}
+.pbtns{display:flex;gap:4px}
+.panel button{font:inherit;font-size:10px;font-weight:600;border-radius:6px;padding:4px 5px;cursor:pointer;background:transparent;color:var(--fg);border:1px solid var(--muted);white-space:nowrap}
+.panel button.main{background:var(--btn);color:#fff;border-color:var(--btn)}
+.panel button:disabled{opacity:.4;cursor:default}
+.panel button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+/* 盤 */
+.stageWrap{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+.stage{position:relative;touch-action:manipulation}
+/* 音のボタン：盤の真ん中（島のくびれ）の右脇、海の上。上下どちらの人からも同じに見える絵 */
+.sndbtn{position:absolute;right:4px;top:50%;transform:translateY(-50%);z-index:2;width:34px;height:34px;padding:0;border-radius:50%;
+  border:2px solid rgba(255,255,255,.85);background:rgba(10,20,40,.55);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.sndbtn svg{width:20px;height:20px}
+/* 最初から：盤の真ん中の左脇。対局中は1回目で赤くなり、もう一度押すと最初から（3秒で元に戻る） */
+.newbtn{right:auto;left:4px}
+.newbtn.ask{background:#c8282a;border-color:#fff;animation:askp .5s steps(2) infinite}
+@keyframes askp{50%{box-shadow:0 0 0 5px rgba(255,80,80,.5)}}
+@media (prefers-reduced-motion:reduce){.newbtn.ask{animation:none}}
+.sndbtn[aria-pressed="false"]{opacity:.7}
+.sndbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#art{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;cursor:pointer}
+.banner{position:absolute;left:50%;display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:8px 18px;background:#000;color:#fff;border:4px solid #fff;outline:4px solid #000;
+  font-weight:900;font-size:clamp(20px,7vw,30px);letter-spacing:.12em;white-space:nowrap;pointer-events:none;text-shadow:3px 3px 0 #5f574f}
+.banner small{font-size:.45em;letter-spacing:.2em;color:#ffec27;text-shadow:none;animation:blink .8s steps(1) infinite}
+#banner1{top:66%;transform:translate(-50%,-50%);animation:pop1 .3s steps(3)}
+#banner2{top:34%;transform:translate(-50%,-50%) rotate(180deg);animation:pop2 .3s steps(3)}
+.banner.w1 span{color:#8fc3ff} .banner.w2 span{color:#ffb066}
+/* 勝利：大きな文字が色を変えながら光る。金の縁、持ち主の色の地 */
+.banner.w1,.banner.w2{font-size:clamp(36px,12vw,54px);padding:8px 22px;border:5px solid #ffd23c;outline:5px solid #6a3c08;
+  box-shadow:0 0 0 9px rgba(255,210,60,.35)}
+.banner.w1{background:#0e2c66} .banner.w2{background:#5c2408}
+.banner.w1 small,.banner.w2 small{font-size:clamp(11px,3.4vw,14px);letter-spacing:.12em}
+.banner.w1 span,.banner.w2 span{letter-spacing:.18em;text-shadow:4px 4px 0 #000,-2px -2px 0 #fff6c0;animation:rainbow .6s steps(1) infinite}
+@keyframes rainbow{0%{color:#ffec27}25%{color:#ff77a8}50%{color:#83e9ff}75%{color:#00e436}}
+/* 敗北：小さく、灰色の地に沈んだ文字、少し傾ける */
+.banner.lose{font-size:clamp(15px,4.6vw,20px);padding:5px 14px;background:#2a2a30;border:3px solid #55555c;outline:3px solid #1a1a1e;text-shadow:none}
+.banner.lose span{display:inline-block;color:#8a8a96;transform:rotate(-14deg) translateY(2px);letter-spacing:.3em}
+.banner.lose small{color:#77777e;animation:none;font-size:clamp(9px,2.8vw,11px);letter-spacing:.1em}
+@keyframes pop1{0%{transform:translate(-50%,-50%) scale(0)}100%{transform:translate(-50%,-50%) scale(1)}}
+@keyframes pop2{0%{transform:translate(-50%,-50%) rotate(180deg) scale(0)}100%{transform:translate(-50%,-50%) rotate(180deg) scale(1)}}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.banner,.banner small,.banner span,.bump{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="menu" id="menu" hidden><div class="mbox"><div class="micos"><canvas id="mico1" width="18" height="18" aria-hidden="true"></canvas><canvas id="mico2" width="18" height="18" aria-hidden="true"></canvas></div>
+  <h1>鳥と獣の戦い</h1>
+  <div class="mmusic" role="radiogroup" aria-label="音楽"><span>音楽</span><button data-bgm="turkish" role="radio">トルコ行進曲</button><button data-bgm="cancan" role="radio">天国と地獄</button><button data-bgm="none" role="radio" class="mnone">なし</button></div>
+  <button data-mode="2p" class="mbtn">ふたりで対戦</button>
+  <button data-mode="cpu" class="mbtn cpu">コンピュータと対戦<small>あなたは鳥（下）・コンピュータは獣</small></button></div></div>
+<div class="turnfx" id="turnfx" aria-live="polite"><div class="tin"><canvas id="tico" width="18" height="18" aria-hidden="true"></canvas><span class="tname"></span><span class="tleft"><small>残り</small><b></b><small>コマ</small></span><span class="tsub"></span></div></div>
+<div class="wrap">
+  <section class="panel top p2" id="pan2" aria-label="獣">
+    <canvas class="ico" id="ico2" width="18" height="18" aria-hidden="true"></canvas><span class="cpuname">コンピュータ</span><span class="pts" aria-label="獣の得点"><b id="n2">0</b><small>点</small></span><span class="pbat" aria-label="味方のコウモリ"><canvas class="bico" id="bico2" width="18" height="14" aria-hidden="true"></canvas><b id="nb2">0</b></span><span class="pbats" id="bt2"></span>
+    <span class="pturn" id="t2"></span>
+    <div class="pbtns" id="bb2"><button data-act="gen" class="gen" aria-pressed="false">大将</button></div>
+  </section>
+
+  <div class="stageWrap" id="stageWrap">
+    <div class="stage" id="stage">
+      <canvas id="art" role="img" aria-label="くびれのある島の盤"></canvas>
+      <button class="sndbtn snd" id="sndbtn" aria-label="音" aria-pressed="true"></button>
+      <button class="sndbtn newbtn" id="newbtn" aria-label="最初から"></button>
+      <div class="banner" id="banner2" hidden><span></span><small></small></div>
+      <div class="banner" id="banner1" hidden><span></span><small></small></div>
+    </div>
+  </div>
+
+  <section class="panel p1" id="pan1" aria-label="鳥">
+    <canvas class="ico" id="ico1" width="18" height="18" aria-hidden="true"></canvas><span class="pts" aria-label="鳥の得点"><b id="n1">0</b><small>点</small></span><span class="pbat" aria-label="味方のコウモリ"><canvas class="bico" id="bico1" width="18" height="14" aria-hidden="true"></canvas><b id="nb1">0</b></span><span class="pbats" id="bt1"></span>
+    <span class="pturn" id="t1"></span>
+    <div class="pbtns" id="bb1"><button data-act="gen" class="gen" aria-pressed="false">大将</button></div>
+  </section>
+</div>
+
+
+<script>
+// ===== 盤と規則（純粋関数） =====
+// くびれのある島（ひょうたん形）：行ごとのマス数が 3,4,5,6,5,4,3,4,5,6,5,4,3 の13行・57マス。真ん中の行（3マス）がくびれ
+// 湖6マスを除いた51マスが、鳥17・獣17・コウモリ17でぴったり埋まる。隣り合う行のマス数は必ず1違い（六角形が半マスずつずれて噛み合う）
+const ROWS=[3,4,5,6,5,4,3,4,5,6,5,4,3], MAXW=Math.max(...ROWS), NROW=ROWS.length, EMPTY=0, BIRD=1, BEAST=2, BAT=3, NAMES=['','鳥','獣'];
+// 枠8ドット（島の砂浜と波打ち際）、マスの横幅20ドット・行の間隔17ドット（六角形の高さ24ドット）、上下に景色用の余白14ドット
+const F=8, HW=20, VS=17, HEXR=HW/Math.sqrt(3), HEXH=24;
+// 上下の景色の余白：画面の縦の空きに合わせて決める（盤の大きさは変えない）
+const VM=(()=>{ try{ const w=document.getElementById('stageWrap'), dpr=window.devicePixelRatio||1;
+  const bw=2*F+MAXW*HW, bh=2*F+(NROW-1)*VS+HEXH, k=Math.max(1,Math.floor(w.clientWidth*dpr/bw));
+  return Math.max(10,Math.min(48,Math.floor((w.clientHeight*dpr/k-bh)/2))); }catch(e){ return 14; } })();
+const AW=2*F+MAXW*HW, AH=2*(F+VM)+(NROW-1)*VS+HEXH;
+const CELL=[]; // {r, x, y}：行と、マスの中心のドット座標
+for(let r=0;r<NROW;r++){ const w=ROWS[r];
+  for(let j=0;j<w;j++) CELL.push({r, x:F+HW/2+(j*HW)+(MAXW-w)*HW/2, y:F+VM+HEXH/2+r*VS}); }
+const N=CELL.length;
+// 隣のマス：同じ行で左右に1マス、上下の行で左右に半マス離れたマス
+const NBS=CELL.map((a,i)=>CELL.map((b,j)=>j).filter(j=>{ const b=CELL[j], dx=Math.abs(a.x-b.x), dy=Math.abs(a.y-b.y);
+  return (dy===0&&dx===HW)||(dy===VS&&dx===HW/2); }));
+// ===== 大将 =====
+// 各自1回だけ、コマを「大将」として置ける。大将は2点で、隣のコウモリの味方決めでも2票
+// ただし大将の隣に、相手のコマ（鳥・獣）が自分のコマより多いと「討ち取られ」、相手の大将（2点・2票）になる。周りが変われば取り返せる
+// gen[p]＝p の大将のマス（まだなら -1）。gen[0] は使わない
+const NOGEN=[-1,-1,-1];
+function genTaken(cells,gen,p){
+  const i=gen[p]; if(i<0) return false;
+  let own=0,en=0; for(const j of NBS[i]){ if(cells[j]===p) own++; else if(cells[j]===3-p) en++; }
+  return en>own;
+}
+const isGen=(gen,i)=> i>=0&&(gen[1]===i||gen[2]===i);
+// コマの今の陣営（討ち取られた大将は相手側）と重み（大将は2）
+function pieceSide(cells,gen,j){ const v=cells[j]; return (gen[v]===j&&genTaken(cells,gen,v))? 3-v : v; }
+// 票を数える：鳥と獣のコマ（大将は2票、討ち取られた大将は相手の票）
+function votes(cells,gen,list){
+  let b=0,s=0;
+  for(const j of list){ const v=cells[j]; if(v!==BIRD&&v!==BEAST) continue;
+    const w=isGen(gen,j)?2:1; if(pieceSide(cells,gen,j)===BIRD) b+=w; else s+=w; }
+  return [b,s];
+}
+// コウモリの陣営：隣の票の多い方。同数なら0（中立）
+function batSide(cells,i,gen=NOGEN){ const [b,s]=votes(cells,gen,NBS[i]); return b>s?BIRD : s>b?BEAST : 0; }
+function sides(cells,gen=NOGEN){ return cells.map((v,i)=> v===BAT?batSide(cells,i,gen) : v===BIRD||v===BEAST?pieceSide(cells,gen,i) : 0); }
+function score(cells,gen=NOGEN){
+  const sd=sides(cells,gen), n=[0,0,0], bats=[0,0,0];
+  cells.forEach((v,i)=>{ if(sd[i]){ n[sd[i]]+=isGen(gen,i)?2:1; if(v===BAT) bats[sd[i]]++; } });
+  return {n,bats};
+}
+// 勝者：多い方。同点なら後手の勝ち
+const winnerOf=(n,starter)=> n[1]>n[2]?BIRD : n[2]>n[1]?BEAST : 3-starter;
+const rnd=n=>{ const u=new Uint32Array(1); crypto.getRandomValues(u); return u[0]%n; };
+// 地形：草地（誰でも置ける）、山（鳥だけ）、森（獣だけ）、湖（誰も置けない、コウモリも降りない）
+// 山と森は同じ数、湖も合わせてランダムに置く
+const GRASS=0, MOUNT=1, FOREST=2, LAKE=3, TERRAIN_EACH=7, LAKES=6;
+function makeTerrain(){
+  const t=Array(N).fill(GRASS), pool=[...Array(N).keys()];
+  for(let k=0;k<TERRAIN_EACH*2+LAKES;k++){ const i=pool.splice(rnd(pool.length),1)[0]; t[i]= k<TERRAIN_EACH?MOUNT : k<TERRAIN_EACH*2?FOREST : LAKE; }
+  return t;
+}
+const allowed=(terrain,p,i)=> terrain[i]!==LAKE && terrain[i]!==(p===BIRD?FOREST:MOUNT);
+// 持ちコマ：1人12個。全部置いたら終わり
+const LIMIT=12;
+const piecesOf=(cells,p)=>{ let c=0; for(const v of cells) if(v===p) c++; return c; };
+const leftOf=(cells,p)=> LIMIT-piecesOf(cells,p);
+// 置けるマス：空いていて、地形が合い、次のコウモリの予告の場所でない
+const placeable=(cells,terrain,next,p,i)=> !cells[i] && allowed(terrain,p,i) && i!==next;
+const canPlace=(cells,terrain,next,p)=> leftOf(cells,p)>0 && cells.some((v,i)=>placeable(cells,terrain,next,p,i));
+// 詰みの判定：負けている側が、この先すべて自分に有利に運んでも勝てないなら、勝つ側の番号を返す（同点は後手の勝ち）
+//  負けている側の最大：今の自分の点（行方の決まらない大将は自分の分に数える）＋味方になり得るコウモリ
+//                      ＋この先置くコマと降りるコウモリ全部＋まだ使っていない大将の分（自分の大将は＋1、相手の大将を討ち取れば＋2）
+//  勝つ側の最小：行方の決まった自分のコマ＋周りがどう埋まっても味方のままのコウモリ
+//  batsLeft＝この先降りるコウモリの数
+function tsumi(cells,terrain,gen,starter,batsLeft){
+  const E=cells.filter((v,i)=>!v&&terrain[i]!==LAKE).length;
+  const genLeft=[0,gen[1]<0?1:0,gen[2]<0?1:0], anyGen=genLeft[1]||genLeft[2];
+  const lo=[0,0,0], hi=[0,0,0], sure=[0,0,0], maybe=[0,0,0];
+  const open=i=> NBS[i].some(j=>!cells[j]&&terrain[j]!==LAKE);
+  const fixed=j=> !isGen(gen,j) || !open(j);       // 討ち取られるかどうかが、もう変わらないコマ
+  cells.forEach((v,i)=>{
+    if(v===BIRD||v===BEAST){ const w=isGen(gen,i)?2:1;
+      if(fixed(i)){ const sd=pieceSide(cells,gen,i); lo[sd]+=w; hi[sd]+=w; } else { hi[1]+=w; hi[2]+=w; }
+      return; }
+    if(v!==BAT) return;
+    const c=[0,0,0]; let e=0;
+    for(const j of NBS[i]){ const w=cells[j];
+      if(w===BIRD||w===BEAST){ if(fixed(j)) c[pieceSide(cells,gen,j)]+=isGen(gen,j)?2:1; else e+=2; }
+      else if(!w&&terrain[j]!==LAKE) e+= anyGen?2:1; }
+    for(const p of [BIRD,BEAST]){ const q=3-p; if(c[p]>c[q]+e) sure[p]++; if(c[p]+e>c[q]) maybe[p]++; }
+  });
+  for(const p of [BIRD,BEAST]){ const q=3-p;
+    const max=hi[p]+maybe[p]+Math.min(E,leftOf(cells,p)+batsLeft)+genLeft[p]+2*genLeft[q], min=lo[q]+sure[q];
+    if(p===starter? max<=min : max<min) return q; }
+  return 0;
+}
+// マスから一番近い山・森までの歩数（隣のマスへ1歩）
+function distFrom(terrain,kind){
+  const d=Array(N).fill(Infinity), q=[];
+  terrain.forEach((t,i)=>{ if(t===kind){ d[i]=0; q.push(i); } });
+  for(let h=0;h<q.length;h++) for(const j of NBS[q[h]]) if(d[j]===Infinity){ d[j]=d[q[h]]+1; q.push(j); }
+  return d;
+}
+// コウモリの出現場所：空きマスのうち「一番近い山」と「一番近い森」までの歩数の差が最も小さい所からランダムに選ぶ
+function batSpot(cells,terrain,dM,dF){
+  let best=Infinity, cand=[];
+  cells.forEach((v,i)=>{ if(v||terrain[i]===LAKE) return; const d=Math.abs(dM[i]-dF[i]);
+    if(d<best){ best=d; cand=[i]; } else if(d===best) cand.push(i); });
+  return cand.length? cand[rnd(cand.length)] : -1;
+}
+
+// ===== 8ビット風効果音 =====
+const sfx=(()=>{
+  let ctx=null, on=true;
+  try{ on=localStorage.getItem('o3-sound')!=='off'; }catch(e){}
+  function ac(){
+    if(!ctx){ const A=window.AudioContext||window.webkitAudioContext; if(!A) return null; ctx=new A(); }
+    if(ctx.state==='suspended') ctx.resume();
+    return ctx;
+  }
+  function tone(f,t,d,type='square',v=.12,f2){
+    const a=ac(); if(!a||!on) return;
+    const o=a.createOscillator(), g=a.createGain(), s=a.currentTime+t;
+    o.type=type; o.frequency.setValueAtTime(f,s);
+    if(f2) o.frequency.exponentialRampToValueAtTime(f2,s+d);
+    g.gain.setValueAtTime(v,s); g.gain.setValueAtTime(v,s+d*.7); g.gain.linearRampToValueAtTime(0,s+d);
+    o.connect(g).connect(a.destination); o.start(s); o.stop(s+d+.02);
+  }
+  // ===== 音楽：2曲から選ぶ（どちらも矩形波でくり返す）。f=0 は休み、d はミリ秒 =====
+  // トルコ行進曲（モーツァルト）：16分音符130ミリ秒
+  const TM=130, TQ={B3:493.88,C4:523.25,D4:587.33,E4:659.25,Fs4:739.99,G4:783.99,A4:880,B4:987.77,C5:1046.5,D5:1174.66,E5:1318.51,Fs5:1479.98,G5:1567.98,A5:1760,B5:1975};
+  const TURKISH=[
+    [TQ.B4,TM],[TQ.A4,TM],[TQ.G4,TM],[TQ.A4,TM],[TQ.C5,TM*2],[0,TM*2],
+    [TQ.D5,TM],[TQ.C5,TM],[TQ.B4,TM],[TQ.C5,TM],[TQ.E5,TM*2],[0,TM*2],
+    [TQ.Fs5,TM],[TQ.E5,TM],[TQ.D5,TM],[TQ.E5,TM],[TQ.B5,TM],[TQ.A5,TM],[TQ.G5,TM],[TQ.A5,TM],
+    [TQ.B5,TM],[TQ.A5,TM],[TQ.G5,TM],[TQ.Fs5,TM],[TQ.E5,TM*2],[0,TM*2],
+    [TQ.E5,TM*2],[TQ.G5,TM*2],[TQ.Fs5,TM],[TQ.E5,TM],[TQ.D5,TM],[TQ.E5,TM],[TQ.Fs5,TM*2],[TQ.D5,TM*2],
+    [TQ.E5,TM*2],[TQ.G5,TM*2],[TQ.Fs5,TM],[TQ.E5,TM],[TQ.D5,TM],[TQ.E5,TM],[TQ.Fs5,TM*4],
+    [TQ.B4,TM],[TQ.A4,TM],[TQ.G4,TM],[TQ.A4,TM],[TQ.C5,TM*2],[0,TM*2],
+    [TQ.D5,TM],[TQ.C5,TM],[TQ.B4,TM],[TQ.C5,TM],[TQ.E5,TM*2],[0,TM*2],
+    [TQ.Fs5,TM],[TQ.E5,TM],[TQ.D5,TM],[TQ.E5,TM],[TQ.A5,TM*2],[TQ.G5,TM*2],[TQ.Fs5,TM*2],[TQ.E5,TM*2],[TQ.A4,TM*4]];
+  // 天国と地獄（オッフェンバック）のカンカン：16分音符100ミリ秒
+  const TO=100;
+  const CANCAN=[
+    [TQ.G4,TO],[TQ.B4,TO],[TQ.G4,TO],[TQ.B4,TO],[TQ.G4,TO],[TQ.B4,TO],[TQ.G4,TO],[TQ.B4,TO],
+    [TQ.C5,TO],[TQ.E5,TO],[TQ.C5,TO],[TQ.E5,TO],[TQ.D5,TO*2],[TQ.B4,TO*2],
+    [TQ.G4,TO],[TQ.B4,TO],[TQ.G4,TO],[TQ.B4,TO],[TQ.G4,TO],[TQ.B4,TO],[TQ.G4,TO],[TQ.B4,TO],
+    [TQ.C5,TO],[TQ.D5,TO],[TQ.E5,TO],[TQ.Fs5,TO],[TQ.G5,TO*4],
+    [TQ.D5,TO],[TQ.Fs5,TO],[TQ.D5,TO],[TQ.Fs5,TO],[TQ.D5,TO],[TQ.Fs5,TO],[TQ.D5,TO],[TQ.Fs5,TO],
+    [TQ.E5,TO],[TQ.G5,TO],[TQ.E5,TO],[TQ.G5,TO],[TQ.Fs5,TO*2],[TQ.D5,TO*2],
+    [TQ.B4,TO],[TQ.D5,TO],[TQ.B4,TO],[TQ.D5,TO],[TQ.C5,TO],[TQ.E5,TO],[TQ.C5,TO],[TQ.E5,TO],
+    [TQ.D5,TO],[TQ.C5,TO],[TQ.B4,TO],[TQ.A4,TO],[TQ.G4,TO*4],[0,TO*2]];
+  const TRACKS={turkish:{notes:TURKISH,vol:.03,decay:.9}, cancan:{notes:CANCAN,vol:.028,decay:.85}};
+  let track='turkish'; try{ const t=localStorage.getItem('o3-bgm'); if(TRACKS[t]||t==='none') track=t; }catch(e){} // 'none'＝音楽なし
+  let bgmOn=false, bgmIdx=0, bgmAt=0, bgmTimer=0, bgmGain=null;
+  function bgmNote(f,t,d){
+    if(!f) return; // 休み
+    const T=TRACKS[track], o=ctx.createOscillator(), g=ctx.createGain();
+    o.type='square'; o.frequency.value=f;
+    g.gain.setValueAtTime(T.vol,t); g.gain.exponentialRampToValueAtTime(.001,t+d*T.decay);
+    o.connect(g).connect(bgmGain); o.start(t); o.stop(t+d);
+  }
+  // 少し先まで前もって予約しておく（タイマーのぶれで拍が乱れないように）
+  function bgmPump(){
+    if(!bgmOn||!ctx) return;
+    const ns=TRACKS[track].notes;
+    while(bgmAt<ctx.currentTime+.25){ const [f,d]=ns[bgmIdx]; bgmNote(f,bgmAt,d/1000); bgmAt+=d/1000; bgmIdx=(bgmIdx+1)%ns.length; }
+    bgmTimer=setTimeout(bgmPump,60);
+  }
+  function bgmStop(){ if(!bgmOn) return; bgmOn=false; clearTimeout(bgmTimer);
+    if(ctx&&bgmGain){ const t=ctx.currentTime, gn=bgmGain; gn.gain.setValueAtTime(gn.gain.value,t); gn.gain.linearRampToValueAtTime(0,t+.08); setTimeout(()=>gn.disconnect(),400); bgmGain=null; } }
+  // 流す。restart なら曲の頭から（曲を替えたときなど）
+  function bgmStart(restart=false){ const a=ac(); if(!a||!on) return;
+    if(bgmOn&&!restart) return; bgmStop(); if(track==='none') return; // 音楽なし
+    bgmGain=a.createGain(); bgmGain.connect(a.destination); // 予約済みの音を確実に消せるよう、流すたびに新しい音量のつまみを使う
+    bgmOn=true; bgmIdx=0; bgmAt=a.currentTime+.05; bgmPump(); }
+  function setTrack(t){ if(!TRACKS[t]&&t!=='none') return; track=t; try{localStorage.setItem('o3-bgm',t);}catch(e){} }
+  function noise(t,d,v=.08){
+    const a=ac(); if(!a||!on) return;
+    const len=Math.floor(a.sampleRate*d), buf=a.createBuffer(1,len,a.sampleRate), ch=buf.getChannelData(0);
+    for(let i=0;i<len;i++) ch[i]=(Math.random()*2-1)*(1-i/len);
+    const src=a.createBufferSource(), g=a.createGain(); g.gain.value=v;
+    src.buffer=buf; src.connect(g).connect(a.destination); src.start(a.currentTime+t);
+  }
+  const STEPS=[0,2,4,5,7,9,11];
+  const scale=d=>130.81*Math.pow(2,(Math.floor(d/7)*12+STEPS[d%7])/12);
+  const deg=i=> i<5 ? 7+[0,1,2,4,5][i] : 14+7*Math.floor((i-5)/3)+[0,2,4][(i-5)%3];
+  return {
+    get on(){return on;},
+    set(v){ on=v; try{localStorage.setItem('o3-sound',v?'on':'off');}catch(e){} if(v) ac(); else bgmStop(); },
+    bgmStart, bgmStop, setTrack, get track(){return track;}, get bgmOn(){return bgmOn;},
+    bird(){ tone(1568,0,.05,'square',.07,2093); tone(2093,.07,.06,'square',.07,2637); },   // ピピッ
+    beast(){ noise(0,.12,.07); tone(110,0,.16,'square',.12,70); },                         // ガウッ
+    bat(t=0){ for(let i=0;i<6;i++) tone(i%2?1760:1320,t+i*.035,.03,'square',.04); tone(880,t+.22,.12,'triangle',.08,440); }, // パタパタ
+    // n番目に寝返ったコウモリの音。上がっていき、2匹ごとに和音を1音足す
+    turn(i,t){
+      const extra=Math.min(Math.floor((i+1)/2),4), offs=[0,2,4,7,9].slice(0,1+extra), v=.07/Math.sqrt(offs.length);
+      for(const o of offs) tone(Math.min(scale(deg(i)+o),4000),t,.06,'square',v);
+    },
+    blackout(i,t){ tone(196/Math.pow(1.05,i),t,.08,'triangle',.1); },
+    lift(t=0){ tone(220,t,.6,'triangle',.07,440); tone(330,t+.1,.5,'square',.025,660); },                // ふわっ（浮く）
+    crack(t=0,k=0){ noise(t,.09,.09); tone(1400-((k*97)%500),t,.07,'square',.045,500); },               // パリン（割れる）
+    fill(r,t=0){ tone(scale(14+r),t,.07,'square',.05); tone(scale(14+r)/2,t,.07,'triangle',.06); },     // 塗り替わる音階
+    launch(t=0){ tone(220,t,.35,'square',.035,1100); },
+    boom(t=0){ noise(t,.5,.16); tone(90,t,.3,'triangle',.22,35); },
+    no(){ tone(98,0,.12,'square',.1); tone(92,.13,.12,'square',.1); }, // ブブー（置けない）
+    general(t=0){ [392,523.25,659.25,783.99].forEach((f,i)=>{ tone(f,t+i*.06,.09,'square',.07); tone(f/2,t+i*.06,.09,'triangle',.08); }); }, // 大将の出陣（ジャジャジャーン）
+    taken(t=0){ noise(t,.25,.1); tone(330,t,.3,'square',.08,82); },                 // 大将が討ち取られる・取り返す（ドドーン）
+    arm(){ tone(880,0,.04,'square',.06); tone(1175,.05,.05,'square',.06); },
+    coin(){ for(let i=0;i<12;i++) tone(1760+(i%2)*440,i*.1*(1+i*.04),.03,'square',.04); }, // チリチリと回る音
+    coinLand(){ tone(1975,0,.08,'square',.08); tone(2637,.08,.25,'square',.07); }, // チャリーン
+    yourTurn(p){ const m= p===1? [1046.5,1318.5,1568] : [196,261.6,329.6]; m.forEach((f,i)=>tone(f,i*.08,.08,'square',.07)); }, // 手番の合図
+    start(){ [523.25,659.25,783.99].forEach((f,i)=>tone(f,i*.07,.07,'square',.08)); },
+    end(){
+      const m=[[523.25,.0,.1],[523.25,.12,.1],[523.25,.24,.1],[659.25,.36,.3],[587.33,.7,.1],[659.25,.82,.1],[783.99,.94,.45]];
+      for(const [f,t,d] of m){ tone(f,t,d,'square',.1); tone(f/2,t,d,'triangle',.14); }
+    }
+  };
+})();
+
+// ===== ドット絵の素材 =====
+// ドット絵（16ビット級）：絵ごとに色の段階を持たせ、左上から光を当てて陰影を付けている
+// 鳥＝横から見た丸い青い小鳥（羽を上げた絵・下ろした絵）、獣＝正面のライオン（獣の王）、コウモリ＝大きな耳と膜の羽（羽を上げた絵・下げた絵）、山・森・湖
+const ART={
+  bird:{pal:{"k": "#1a1c2c", "1": "#142a5e", "2": "#2250a8", "3": "#3576d8", "4": "#5e9cf0", "5": "#a8d4ff", "6": "#e8f4ff", "w": "#fbfaf2", "s": "#cfd5e3", "t": "#9aa4bc", "e": "#0a0a14", "i": "#ffffff", "y": "#ffd23c", "Y": "#d08a10", "c": "#ff8fa0", "f": "#e09a20"},rows:["....kk............", "...k65k...........", "..k6543k..........", "..k5443k...kkkk...", "..k54332k.k6554k..", "...k5432kk655443k.", "...k5432k5544ie3k.", "kk.k5432k4444ee3yy", "k3kk4432k4443c3kYk", "k23kk43k4443333k..", "k223kkkk3333wwwwk.", ".k1223k33322wwwwsk", "..kk1222221tssssk.", "....kkkkkkkkkkkk..", "........f..f......"]},
+  birdB:{pal:{"k": "#1a1c2c", "1": "#142a5e", "2": "#2250a8", "3": "#3576d8", "4": "#5e9cf0", "5": "#a8d4ff", "6": "#e8f4ff", "w": "#fbfaf2", "s": "#cfd5e3", "t": "#9aa4bc", "e": "#0a0a14", "i": "#ffffff", "y": "#ffd23c", "Y": "#d08a10", "c": "#ff8fa0", "f": "#e09a20"},rows:["..................", "..................", "..................", "...........kkkk...", "..........k6554k..", ".........k655443k.", "....kkkkk5544ie3k.", "kk.k554444444ee3yy", "k3kk3kkkkk443c3kYk", "k23kk54432k3333k..", "k223k54321kwwwwk..", ".k12k4321kswwwsk..", "..kkk432kttsssk...", ".....k21kkkkkk....", "......kk..f..f...."]},
+  beast:{pal:{"k": "#1a1c2c", "m": "#4e2208", "n": "#7e3c12", "o": "#b45c1e", "p": "#de8a36", "q": "#f6b860", "1": "#b8801e", "2": "#dca63c", "3": "#f2c85e", "4": "#ffe8a0", "w": "#fbf6ea", "s": "#d8ccb6", "e": "#14141c", "i": "#ffffff", "N": "#3a1a10", "r": "#d04848", "R": "#8a2a2a"},rows:[".....kk.kk.kk.....", "....kqqkppkook....", "..kqqqppppooonnk..", ".kqqpkkkkkkkkonnk.", "kqppk44333322konnk", "kppk4333332221konk", "kpok3113322112konk", "kpok43ie32ie21konk", "konk33ee32ee21knmk", "konk332sNNN211knmk", "konk3wwwNNwss1knmk", "konk2wswkkwss1knmk", "konnkswkrRkssknnmk", ".knnnk1skks1knnmk.", ".knmnnkkkkkknnmmk.", "..kmmnmnnnnmnmmk..", "...kk.kk..kk.kk..."]},
+  batA:{pal:{"k": "#1a1c2c", "1": "#24182e", "2": "#3a2a52", "3": "#544070", "4": "#76609a", "5": "#a08ac4", "q": "#5c4882", "Q": "#7e6aa8", "U": "#a08cc8", "b": "#2e2244", "e": "#ff3a3a", "i": "#ffe0e0", "w": "#f8f8f8", "p": "#e88aa0", "P": "#b8607a"},rows:["k.....k....k.....k", "kk...kpk..kpk...kk", "kbk..kpPkkPpk..kbk", "kUbk.k443322k.kbqk", "kUQbkk4e33e2kkbqqk", "kUQQbk32kk21kbqqqk", "kQQQQk54ww21kqqqqk", "kkQQbk543321kbqqkk", "..kQbk433221kbqk..", "...kkk432211kkk...", ".....k332211k.....", "......k2211k......", ".......kkkk.......", ".................."]},
+  batB:{pal:{"k": "#1a1c2c", "1": "#24182e", "2": "#3a2a52", "3": "#544070", "4": "#76609a", "5": "#a08ac4", "q": "#5c4882", "Q": "#7e6aa8", "U": "#a08cc8", "b": "#2e2244", "e": "#ff3a3a", "i": "#ffe0e0", "w": "#f8f8f8", "p": "#e88aa0", "P": "#b8607a"},rows:["..................", "......k....k......", ".....kpk..kpk.....", ".....kpPkkPpk.....", "...kkk443322kkk...", ".kkUQk4e33e2kqqkk.", "kUQQbk32kk21kbqqqk", "kUQbQk54ww21kqbqqk", "kUbQQk543321kqqbqk", "kbQQQk433221kqqqbk", "kQQkQk432211kqkqqk", "kQk.kk332211kk.kqk", "kk....k2211k....kk", ".......kkkk......."]},
+  mount:{pal:{"k": "#1a1c2c", "w": "#fbfdff", "s": "#c4d0e4", "g": "#b4b4c4", "G": "#86869a", "d": "#5c5c72", "D": "#3e3e52", "n": "#8ab84a"},rows:["......k.......", ".....kwk......", "....kwwsk..k..", "...kwgwsdk.kwk", "..kgggsGdkkwsk", ".kgGgGGddDgsdk", "kgGgGGdGdDGdDk", "knnnnnnnnnnnnk"]},
+  tree:{pal:{"k": "#1a1c2c", "L": "#a6ee74", "F": "#5cc244", "f": "#2f8f34", "D": "#1c5e26", "E": "#0e3416", "t": "#8a5426", "T": "#4e2c12", "g": "#6aa83a"},rows:[".......kk.......", "......kLfk......", "..kk.kFfDEk.kk..", ".kFEk.kLfk.kFEk.", "kfDDEkFffDkfDDEk", ".kFDkFffDDEkFDk.", "kFffDkLFfDkFffDk", "kFfDkFFffDDkffDk", "kDEkfffDDDEEkDEk", ".kkkkkkkkkkkkkk.", "..tT...tT...tT..", ".gtTg.gtTg.gtTg."]},
+  lake:{pal:{"z": "#145474", "A": "#8fcbea", "a": "#e2f6ff", "w": "#ffffff"},rows:["....w.......", ".AaA...AaA..", "A.zzA.A.zzA.", "..........w.", "..AaA...AaA.", ".A.zzA.A.zzA"]},
+};
+// mode: 0=通常、1=真っ暗（負けた駒）、2=灰色（決着後のコウモリ）。暗・灰は元の色の明るさから作るので、陰影は残る
+const lum=hex=>{const v=parseInt(hex.slice(1),16);return .3*(v>>16)+.59*((v>>8)&255)+.11*(v&255);};
+const grayHex=v=>{v=Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0');return '#'+v+v+v;};
+function sprite(def,mode){
+  const {pal,rows}=def;
+  const c=document.createElement('canvas'); c.width=rows[0].length; c.height=rows.length; const g=c.getContext('2d');
+  rows.forEach((row,y)=>[...row].forEach((ch,x)=>{ if(ch==='.') return;
+    const col=pal[ch];
+    g.fillStyle= mode===1? (ch==='k'?'#000000':grayHex(22+lum(col)*.16)) : mode===2? (ch==='k'?'#26262a':grayHex(58+lum(col)*.62)) : col;
+    g.fillRect(x,y,1,1); }));
+  return c;
+}
+// 大将の王冠（コマの頭の上に、コマと同じ向きで重ねる）
+ART.crown={pal:{"k":"#5a3a08","y":"#ffd23c","Y":"#d89a10","w":"#fff6c0","r":"#e04848","b":"#4a9cf0"},rows:["k..k..k..k","kwkkyk.kyk","kyykyykyYk","kyrYybYrYk","kkkkkkkkkk"]};
+const SPR={};
+for(const k of Object.keys(ART)){ SPR[k]=sprite(ART[k],0); SPR[k+'_x']=sprite(ART[k],1); SPR[k+'_g']=sprite(ART[k],2); }
+// マスの色（影・地・ハイライト）
+const TILE={block:[0x9cab80,0xbcc8a0,0xd2dcbc], lake:[0x0e3a52,0x1f6e94,0x3f9cc4], gray:[0x38383c,0x5c5c62,0x7c7c84], empty:[0xb2cc7e,0xd8ebaa,0xeef7cf], mount:[0x5a5048,0x8c7e6e,0xb6a894], forest:[0x123a1a,0x1f5a28,0x2f7a38], bad:[0x8a1010,0xd02a2a,0xff6a6a], 1:[0x1f4f8f,0x4a8fe0,0x9fcbff], 2:[0x8a3d12,0xd9762b,0xffb066],
+  neutral:[0x4b3f5c,0x7a6a90,0xa898c0], preview:[0x8a7ea6,0xbcb2d4,0xdcd6ec], dark:[0x050506,0x121216,0x1e1e24], flash:[0xc8c8c8,0xffffff,0xffffff], last:[0xffcd38,0xffcd38,0xffcd38]};
+// 盤の各ドットがどのマスに属し、縁のどちら側か（左上＝明るい縁、右下＝暗い縁）を前もって計算
+const CELLPX=Array.from({length:N},()=>[]); // マスごとのドット [x,y,縁]
+const OWN=new Int16Array(AW*AH).fill(-1), EDGE=new Uint8Array(AW*AH);
+(()=>{
+  const R=HEXR+.05;
+  for(let y=0;y<AH;y++)for(let x=0;x<AW;x++){
+    let best=-1, bd=1e9;
+    for(let i=0;i<N;i++){
+      const dx=x+.5-CELL[i].x, dy=y+.5-CELL[i].y;
+      if(Math.abs(dx)>HW/2||Math.abs(dy)>R-Math.abs(dx)/Math.sqrt(3)) continue;
+      const d=dx*dx+dy*dy; if(d<bd){bd=d;best=i;}
+    }
+    OWN[y*AW+x]=best;
+  }
+  const at=(xx,yy)=> xx<0||yy<0||xx>=AW||yy>=AH?-1:OWN[yy*AW+xx];
+  for(let y=0;y<AH;y++)for(let x=0;x<AW;x++){
+    const o=OWN[y*AW+x]; if(o<0) continue;
+    if(at(x+1,y)!==o||at(x,y+1)!==o||at(x+1,y+1)!==o) EDGE[y*AW+x]=0;       // 暗い縁
+    else if(at(x-1,y)!==o||at(x,y-1)!==o) EDGE[y*AW+x]=2;                     // 明るい縁
+    else EDGE[y*AW+x]=1;                                                      // 地
+  }
+  for(let y=0;y<AH;y++)for(let x=0;x<AW;x++){ const o=OWN[y*AW+x]; if(o>=0) CELLPX[o].push([x,y,EDGE[y*AW+x]]); }
+})();
+// ===== 背景：海に浮かぶ島。盤が島の上の草地で、まわりに砂浜、打ち寄せる波、沖の海 =====
+// 下（鳥の人）側は昼の海、上（獣の人）側は月夜の海、真ん中は夕焼けの海。波は島に向かって寄せ、波打ち際は満ち引きする
+const BAYER=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
+// 色：[島の縁の草, 乾いた砂(明), 乾いた砂(暗), 濡れた砂, 白波, 白波(影), 浅瀬(明), 浅瀬(暗), 中ほど, 沖(明), 沖(暗), 波頭, きらめき]
+const SEA_PAL=[
+  [0x24402a,0x8c8cae,0x727296,0x58567c,0xc8d2f2,0x8a96c8,0x2c4c7e,0x24406e,0x1c325e,0x16284e,0x101e3e,0x4a6aa8,0xfff0c0], // 月夜
+  [0x5a7a3a,0xf2cc9c,0xdaac7c,0xb08262,0xfff0e0,0xe8b8a8,0xd894a0,0xc4808e,0x9c6a96,0x7c5488,0x664478,0xffc890,0xfff4c8], // 夕焼け
+  [0x4f8a36,0xf6e6b0,0xe6cc8a,0xc8ac72,0xffffff,0xc8ecff,0x64dcd8,0x48c6d4,0x32a2d4,0x2482c6,0x1c68b0,0xa8ecff,0xffffff]  // 昼
+];
+const SEA_RGBA=SEA_PAL.map(p=>p.map(h=>((0xff<<24)|((h&0xff)<<16)|(h&0xff00)|((h>>16)&0xff))>>>0));
+const SEA=(()=>{
+  const n=AW*AH, D=new Float32Array(n), S=new Float32Array(n), PH=new Float32Array(n), DS=new Float32Array(n), PI=new Uint8Array(n);
+  // 盤からの距離（ドット）。前後2回のなぞりで近似
+  for(let p=0;p<n;p++) D[p]= OWN[p]>=0?0:1e9;
+  const r2=Math.SQRT2;
+  for(let y=0;y<AH;y++)for(let x=0;x<AW;x++){ const p=y*AW+x; let d=D[p];
+    if(x>0) d=Math.min(d,D[p-1]+1); if(y>0){ d=Math.min(d,D[p-AW]+1); if(x>0) d=Math.min(d,D[p-AW-1]+r2); if(x<AW-1) d=Math.min(d,D[p-AW+1]+r2); } D[p]=d; }
+  for(let y=AH-1;y>=0;y--)for(let x=AW-1;x>=0;x--){ const p=y*AW+x; let d=D[p];
+    if(x<AW-1) d=Math.min(d,D[p+1]+1); if(y<AH-1){ d=Math.min(d,D[p+AW]+1); if(x<AW-1) d=Math.min(d,D[p+AW+1]+r2); if(x>0) d=Math.min(d,D[p+AW-1]+r2); } D[p]=d; }
+  for(let y=0;y<AH;y++)for(let x=0;x<AW;x++){ const p=y*AW+x;
+    // 海岸線をでこぼこにする（なめらかな揺らぎ）
+    const nz=1.1*Math.sin(x*.23+y*.11)+.8*Math.sin(x*.09-y*.21+1.3)+.5*Math.sin((x+y)*.37+.7);
+    S[p]=D[p]-nz*.55;
+    PH[p]=x*.045+y*.032;                                   // 満ち引きのずれ（岸に沿って波が渡る）
+    DS[p]=Math.sin(x*.16-y*.05+S[p]*.3)+.5*Math.sin(x*.05+y*.09);                    // 波頭を途切れ途切れにする模様
+    // 上ほど夜、下ほど昼、間は夕焼け（網点でつなぐ）
+    const t=Math.max(0,Math.min(.9999,(y-AH*.36)/(AH*.28)))*2, i=Math.floor(t);
+    PI[p]= (t-i)*16>BAYER[y&3][x&3]+.5? i+1 : i;
+  }
+  return {D,S,PH,DS,PI,buf:new Uint32Array(n),tick:-1};
+})();
+// 1コマ分の海を描く。T＝時間（秒）
+function seaPaint(T){
+  const {D,S,PH,DS,PI,buf}=SEA, SH0=5;
+  const tq=Math.floor(T*4);
+  for(let y=0;y<AH;y++)for(let x=0;x<AW;x++){
+    const p=y*AW+x; if(OWN[p]>=0) continue;
+    const C=SEA_RGBA[PI[p]], s=S[p], bay=BAYER[y&3][x&3];
+    if(D[p]<1.6){ buf[p]=C[0]; continue; }                              // 島の縁の草
+    const shore=SH0+1.3*Math.sin(T*.8+PH[p]);                           // 波打ち際（満ち引き）
+    if(s<shore-1.2){ buf[p]= ((x*7+y*13)%9===0)? C[2] : (s>3.2&&bay<6? C[2] : C[1]); continue; } // 乾いた砂（つぶつぶ）
+    if(s<shore){ buf[p]=C[3]; continue; }                                // 濡れた砂
+    const w=s-shore;
+    if(w<1.3){ buf[p]= w<.7? C[4] : C[5]; continue; }                    // 白波
+    if(w<2.6&&DS[p]>.2){ buf[p]= ((x+y+tq)&1)? C[5] : C[6]; continue; }  // 引いていく泡
+    // 島へ寄せる波頭（岸に沿った輪が内へ進む）
+    // きらめき（沖でときどき光る）
+    if(w>6&&(((x*73856093)^(y*19349663)^(tq*83492791))>>>0)%997===0){ buf[p]=C[12]; continue; }
+    // 水の深さ：浅瀬→中ほど→沖（網点でつなぐ）
+    const f= w<4? (w/4)*16 : w<10? 16+(w-4)/6*16 : 32+Math.min(1,(w-10)/12)*16;
+    const k=Math.min(4,Math.floor(f/16)+((f%16)>bay+.5?1:0));
+    buf[p]= C[[6,7,8,9,10][k]];
+  }
+  // 沖の小さな波：網目状に散らした波の記号が、ゆらゆら横に揺れ、ときどき形を変える
+  for(let gy=-1,row=0;gy<AH;gy+=11,row++)for(let gx=-8+(row&1)*8;gx<AW;gx+=16){
+    const h=((gx*374761393)^(gy*668265263))>>>0, ph=(h%628)/100;
+    const x0=gx+(h>>>10)%6+Math.round(Math.sin(T*.9+ph)*1.5), y0=gy+(h>>>14)%5;
+    const sh=WAVE[((T*1.2+ph)|0)%2], shape= y0<AH/2? sh.slice().reverse() : sh; // 上側は獣の人から見て正しい向きに
+    for(let yy=0;yy<shape.length;yy++)for(let xx=0;xx<shape[yy].length;xx++){
+      const ch=shape[yy][xx]; if(ch==='.') continue;
+      const x=x0+xx, y=y0+yy; if(x<0||y<0||x>=AW||y>=AH) continue;
+      const p=y*AW+x; if(OWN[p]>=0||S[p]<SH0+6) continue;            // 砂浜と波打ち際の近くには描かない
+      buf[p]=SEA_RGBA[PI[p]][ch==='a'?11:8];
+    }
+  }
+}
+// 波の記号（a＝波頭、b＝その下の明るい水）。2コマで形が少し変わる
+const WAVE=[["..aa..",".a..a.","b....b"],["..aaa.",".a...a","b.....",]];
+
+// ===== 状態 =====
+let cells, terrain, dM, dF, gen=[-1,-1,-1], arm=[false,false,false], nextBat=-1, turn, starter=BIRD, tossUntil=0, last, over, endReason='', passed=0, placed=0, timers=[], note='';
+const freshAnim=()=>({end:null, drops:new Map(), turns:new Map(), dark:null, bad:null, coin:null});
+let anim=freshAnim();
+const $=id=>document.getElementById(id);
+function newGame(toss=true){ if(toss) sfx.bgmStart(); cells=Array(N).fill(EMPTY); terrain=makeTerrain(); dM=distFrom(terrain,MOUNT); dF=distFrom(terrain,FOREST);
+  gen=[-1,-1,-1]; arm=[false,false,false]; nextBat=batSpot(cells,terrain,dM,dF); // 最初のコウモリの降り先は始めから見えている
+  starter= rnd(2)? BIRD:BEAST; turn=starter; // 先手はコイントスで決める
+  clearTimeout(cpuTimer); last=-1; over=false; endReason=''; passed=0; placed=0; anim=freshAnim(); note=''; stopAnnounce(); render();
+  if(toss) coinToss(); else tossUntil=Infinity; } // メニューの裏で盤だけ用意するときはコイントスしない
+// ===== コンピュータ（獣を受け持つ） =====
+// 考え方：自分の手ごとに、相手の一番いやな返し手まで読んで（2手読み）、得点差が一番よくなる手を選ぶ
+// ただし人間らしく、4回に1回くらいは目先の得だけを見て打つ（1手読み）。評価に少しゆらぎも入れる
+const CPU=BEAST;
+let vsCPU=false, cpuTimer=0;
+// 読みのための盤の写し。コウモリの降り先は、くじではなく候補の最初の場所と決めて読む
+function batSpotFirst(cells){
+  let best=Infinity, pick=-1;
+  for(let i=0;i<N;i++){ if(cells[i]||terrain[i]===LAKE) continue; const d=Math.abs(dM[i]-dF[i]); if(d<best){ best=d; pick=i; } }
+  return pick;
+}
+function simMoves(st){ const p=st.turn, r=[];
+  if(st.over||leftOf(st.cells,p)<=0) return r;
+  for(let i=0;i<N;i++) if(placeable(st.cells,terrain,st.next,p,i)){ r.push(i); if(st.gen[p]<0) r.push(i+1000); }
+  return r; }
+function simApply(st0,m){
+  const st={cells:st0.cells.slice(),gen:st0.gen.slice(),next:st0.next,turn:st0.turn,over:false};
+  const p=st.turn, i=m%1000; st.cells[i]=p; if(m>=1000) st.gen[p]=i;
+  if(p!==starter){ const b= st.next>=0&&!st.cells[st.next]? st.next : batSpotFirst(st.cells); if(b>=0) st.cells[b]=BAT; st.next=batSpotFirst(st.cells); }
+  if(tsumi(st.cells,terrain,st.gen,starter,leftOf(st.cells,3-starter))) st.over=true;
+  else { const nx=3-p; if(canPlace(st.cells,terrain,st.next,nx)) st.turn=nx; else if(!canPlace(st.cells,terrain,st.next,p)) st.over=true; }
+  return st;
+}
+// 自分から見た形勢：得点差（同点は後手の勝ちなので、後手側に0.5を足す）。決着していれば大きく
+function simValue(st,me){
+  const {n}=score(st.cells,st.gen); const d=n[me]-n[3-me]+(me===starter?-.5:.5);
+  return st.over? (d>0?1000:-1000)+d : d;
+}
+function cpuChoose(){
+  const st={cells:cells.slice(),gen:gen.slice(),next:nextBat,turn,over:false}, me=turn;
+  const ms=simMoves(st); if(!ms.length) return -1;
+  const shortSighted= Math.random()<.25;          // 目先の得にとらわれる番
+  let best=-Infinity, pick=ms[0];
+  for(const m of ms){
+    const t=simApply(st,m); let v;
+    if(t.over||t.turn===me||shortSighted) v=simValue(t,me);
+    else { v=Infinity; for(const r of simMoves(t)){ const u=simValue(simApply(t,r),me); if(u<v) v=u; } if(v===Infinity) v=simValue(t,me); }
+    v+= (Math.random()-.5)*.6;                    // 少しの迷い
+    if(m>=1000&&placed<4) v-=.4;                  // 大将は序盤すぎには出し渋る
+    if(v>best){ best=v; pick=m; }
+  }
+  return pick;
+}
+// コンピュータの番なら、告知と演出が終わってから考えて置く
+function cpuMaybe(delay=1.9){
+  clearTimeout(cpuTimer);
+  if(!vsCPU||over||turn!==CPU) return;
+  cpuTimer=setTimeout(()=>{
+    if(!vsCPU||over||turn!==CPU) return;
+    if(performance.now()<tossUntil){ cpuMaybe(.3); return; }
+    const m=cpuChoose(); if(m<0) return;
+    if(m>=1000) arm[CPU]=true;
+    play(m%1000,true);
+  },delay*1000);
+}
+// 手番の告知：画面全体を手番の人の色で覆い、「鳥のターン」「獣のターン」を手番の人に向けて大きく出す
+let annTimer=0;
+function announce(p,sub=''){
+  const el=$('turnfx'), c=$('tico').getContext('2d'), k=p===BIRD?'bird':'beast';
+  c.imageSmoothingEnabled=false; c.clearRect(0,0,18,18); c.drawImage(SPR[k],(18-SPR[k].width)>>1,(18-SPR[k].height)>>1);
+  el.querySelector('.tname').textContent= vsCPU? (p===CPU?'コンピュータのターン':'あなたのターン') : NAMES[p]+'のターン';
+  el.querySelector('.tleft b').textContent=leftOf(cells,p); // 手番の人の残りのコマ数
+  el.querySelector('.tsub').textContent=sub;
+  el.className='turnfx t'+p; void el.offsetWidth; el.classList.add('show');
+  sfx.yourTurn(p);
+}
+function announceLater(sec,p,sub){ clearTimeout(annTimer); annTimer=setTimeout(()=>announce(p,sub),sec*1000); }
+function stopAnnounce(){ clearTimeout(annTimer); $('turnfx').className='turnfx'; }
+// コイントス：盤の真ん中で金貨が回り、表（鳥）か裏（獣）で止まる。止まるまでは置けない
+const TOSS_MS=1400;
+function coinToss(){
+  const t0=performance.now(); tossUntil=t0+TOSS_MS+900;
+  anim.coin={t0,result:starter};
+  render(); // 帯に「コイントス中…」を出す（予約を消すので、この後で予約する）
+  sfx.coin();
+  timers.push(setTimeout(()=>{
+    render(); // 帯の「コイントス中…」を戻す（ここで予約が消えるので、看板を消す予約は後で入れ直す）
+    for(const id of ['banner1','banner2']){ const b=$(id); b.className='banner w'+starter; b.hidden=false;
+      b.querySelector('span').textContent=NAMES[starter]+'が先手'; b.querySelector('small').textContent='コイントス'; }
+    sfx.coinLand();
+    timers.push(setTimeout(()=>{ $('banner1').hidden=true; $('banner2').hidden=true; anim.coin=null; announce(starter,'先手'); cpuMaybe(1.2); },900));
+  },TOSS_MS));
+}
+function drawCoin(now){
+  const c=anim.coin; if(!c) return;
+  const p=Math.min(1,(now-c.t0)/TOSS_MS);
+  const ang=(1-(1-p)*(1-p))*(6*Math.PI+(c.result===BIRD?0:Math.PI));
+  const cs=Math.cos(ang), w=Math.max(1,Math.round(30*Math.abs(cs))), h=30;
+  const cx=AW>>1, cy=(AH>>1)-Math.round(Math.sin(p*Math.PI)*18); // 放り上げて落ちる
+  const x0=cx-(w>>1), y0=cy-(h>>1);
+  for(let yy=0;yy<h;yy++){ const dy=(yy+.5-h/2)/(h/2), half=Math.sqrt(Math.max(0,1-dy*dy))*w/2;
+    const a=Math.round(cx-half), b=Math.round(cx+half); if(b<=a) continue;
+    g.fillStyle='#6a3c08'; g.fillRect(a,y0+yy,b-a,1);                                  // 縁
+    if(b-a>2){ const t=yy/h;
+      g.fillStyle= t<.3?'#fff0a8' : t<.55?'#ffd84a' : t<.8?'#e8b020' : '#b8800c'; g.fillRect(a+1,y0+yy,b-a-2,1);
+      if(b-a>6&&t>.12&&t<.9){ g.fillStyle='#fff8d0'; g.fillRect(a+2,y0+yy,1,1); }      // 左側の光の筋
+      if(b-a>6){ g.fillStyle='#9a6a0a'; g.fillRect(b-2,y0+yy,1,1); } } }               // 右側の厚み
+  if(w>10&&((now/90|0)%6===0)){ g.fillStyle='#ffffff'; g.fillRect(cx-(w>>2),y0+4,1,1); g.fillRect(cx-(w>>2)-1,y0+5,3,1); g.fillRect(cx-(w>>2),y0+6,1,1); } // きらめき
+  if(w>8){ const sp=SPR[cs>=0?'bird':'beast']; g.drawImage(sp,0,0,sp.width,sp.height,cx-Math.round(sp.width*w/30/2),cy-(sp.height>>1),Math.round(sp.width*w/30),sp.height); }
+}
+
+function play(i,byCPU=false){
+  if(over||cells[i]) return;
+  if(vsCPU&&turn===CPU&&!byCPU) return; // コンピュータの番は待つ
+  if(performance.now()<tossUntil) return; // コイントスの間は置けない
+  // 鳥は森、獣は山に置けない。次のコウモリが降りる予告の場所にも置けない
+  if(!placeable(cells,terrain,nextBat,turn,i)||leftOf(cells,turn)<=0){ anim.bad={i,t:performance.now()}; sfx.no(); return; }
+  wake();
+  placed++;
+  const before=sides(cells,gen);
+  const t0=performance.now();
+  anim=freshAnim();
+  const p=turn, asGen=arm[p];
+  cells[i]=p; last=i; arm=[false,false,false];
+  if(asGen) gen[p]=i;                      // 大将として置いた
+  anim.drops.set(i,t0);
+  (p===BIRD?sfx.bird:sfx.beast)(); if(asGen) sfx.general(.12);
+  note= asGen? NAMES[p]+'の大将が出陣' : ''; let tBat=0, newBat=-1;
+  // 鳥と獣が1回ずつ置いたら（後手の手の後）、予告の場所にコウモリが1匹舞い降り、次の降り先が予告される
+  if(p!==starter){
+    newBat= nextBat>=0&&!cells[nextBat]? nextBat : batSpot(cells,terrain,dM,dF);
+    if(newBat>=0){ cells[newBat]=BAT; tBat=.35; anim.drops.set(newBat,t0+tBat*1000); sfx.bat(tBat); note=(note?note+'・':'')+'コウモリが舞い降りた'; }
+    nextBat=batSpot(cells,terrain,dM,dF);
+  }
+  // 向きが変わったコウモリ（舞い降りてすぐ味方が決まったものも含む）と、討ち取られた・取り返した大将を、置いたマスに近い順に演出する
+  const after=sides(cells,gen);
+  const P=CELL[i];
+  const changed=[];
+  cells.forEach((v,j)=>{ if(v===BAT? (j===newBat? after[j]!==0 : before[j]!==after[j]) : (isGen(gen,j)&&j!==i&&before[j]!==after[j])) changed.push(j); });
+  changed.sort((a,b)=>Math.hypot(CELL[a].x-P.x,CELL[a].y-P.y)-Math.hypot(CELL[b].x-P.x,CELL[b].y-P.y));
+  const tTurn0=Math.max(.12,tBat+.3);
+  changed.forEach((j,n)=>{ const t=tTurn0+n*.09; anim.turns.set(j,{from:j===newBat?0:before[j],t:t0+t*1000});
+    if(cells[j]===BAT) sfx.turn(n,t); else sfx.taken(t); });
+  const moved=changed.filter(j=>cells[j]===BAT&&j!==newBat).length;
+  if(moved) note=(note?note+'・':'')+`コウモリ${moved}匹が寝返った`;
+  for(const q of [BIRD,BEAST]) if(gen[q]>=0&&gen[q]!==i&&before[gen[q]]!==after[gen[q]])
+    note=(note?note+'・':'')+NAMES[q]+(after[gen[q]]===q?'の大将を取り返した':'の大将が討ち取られた');
+  // 次の手番。相手に置ける場所がなければ相手はパスし、同じ人がもう一度置く
+  // 終了の判定：①詰み（逆転の可能性がない）②どちらも置けない（持ちコマを置き切った）
+  passed=0; endReason='';
+  if(tsumi(cells,terrain,gen,starter,leftOf(cells,3-starter))){ over=true; endReason='tsumi'; }
+  else { const nx=3-p; if(canPlace(cells,terrain,nextBat,nx)) turn=nx; else { passed=nx; if(!canPlace(cells,terrain,nextBat,p)) { over=true; passed=0; } } }
+  render();
+  const tDone=Math.min(1.2,tTurn0+changed.length*.09+.15);
+  if(over){ stopAnnounce(); celebrate(tTurn0+changed.length*.09+.3); }
+  else { announceLater(tDone,turn, passed? NAMES[passed]+'は置ける所がないので続けて' : ''); cpuMaybe(tDone+1.1); }
+}
+
+
+// 両方の帯の表示を更新
+function render(){
+  timers.forEach(clearTimeout); timers=[]; stopFx();
+  const {n}=score(cells,gen), w=winnerOf(n,starter);
+  const tossing=anim.coin&&performance.now()<anim.coin.t0+TOSS_MS;
+  for(const p of [1,2]) document.body.classList.toggle('turn'+p, !over&&!tossing&&turn===p);
+  for(const p of [1,2]){
+    const nb=score(cells,gen).bats[p];
+    for(const [id,v] of [['n'+p,n[p]],['nb'+p,nb]]){ const el=$(id); if(el.textContent!==String(v)){ el.textContent=v;
+      const box=el.parentElement; box.classList.remove('bump'); void box.offsetWidth; box.classList.add('bump'); } }
+    $('bt'+p).textContent=`残り${leftOf(cells,p)}`;
+    $('pan'+p).classList.toggle('turn',!over&&turn===p);
+    let t;
+    if(over) t= p===w?'勝利':'敗北';
+    else if(tossing) t='コイントス中…';
+    else if(passed===p) t='置ける所なし';
+    else if(turn===p&&arm[p]) t='大将を置く所を選ぶ';
+    else if(vsCPU) t= turn===CPU? (p===CPU?'考え中…':'相手の番') : (p===CPU?'待ち':'あなたの番');
+    else t= turn===p?'あなたの番':'相手の番';
+    $('t'+p).textContent=t;
+    // 大将：1回だけ。自分の番に押すと次に置くコマが大将になる（もう一度押すと取り消し）
+    const gb=$('pan'+p).querySelector('[data-act="gen"]');
+    gb.textContent= gen[p]>=0? '大将済' : '大将';
+    gb.disabled= over||gen[p]>=0||turn!==p||tossing; gb.hidden=over; // 決着後は隠す
+    gb.setAttribute('aria-pressed',String(!!arm[p]));
+  }
+}
+
+// ===== 描画（毎フレーム） =====
+const art=$('art'); art.width=AW; art.height=AH;
+const g=art.getContext('2d'); g.imageSmoothingEnabled=false;
+const img=g.createImageData(AW,AH), buf=new Uint32Array(img.data.buffer);
+const rgba=hex=>((0xff<<24)|((hex&0xff)<<16)|(hex&0xff00)|((hex>>16)&0xff))>>>0; // ImageDataの並び（ABGR）に変換
+const TILE32={}; for(const k in TILE) TILE32[k]=TILE[k].map(rgba);
+const HOLE32=[0x060c18,0x0a1426,0x101e36].map(rgba); // 割れて消えたマスの穴
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+// 決着後：上の行から順に、負けた側の鳥・獣は真っ暗に、コウモリはどちらの味方でも灰色になる
+const endAt=(i,now)=>{ const d=anim.dark; return d&&now>=d.t0+CELL[i].r*55; };
+const darkAt=(i,now,sd)=> cells[i]!==BAT&&sd[i]===anim.dark?.loser&&endAt(i,now);
+const grayAt=(i,now)=> cells[i]===BAT&&endAt(i,now);
+// 今の手番の人が置けない山・森か（湖は誰も置けないので印は付けない）
+const blockedNow=i=> !over && !cells[i] && terrain[i]!==LAKE && !allowed(terrain,turn,i) && performance.now()>=tossUntil;
+// 次のコウモリが降りる予告の場所（誰も置けない）
+const isPreview=i=> !over && i===nextBat && !cells[i];
+const XMARK=["kk.....kk","krk...krk",".krk.krk.","..krkrk..","...krk...","..krkrk..",".krk.krk.","krk...krk","kk.....kk"];
+function drawX(cx,cy){
+  for(let y=0;y<9;y++)for(let x=0;x<9;x++){ const ch=XMARK[y][x]; if(ch==='.') continue;
+    g.fillStyle= ch==='k'?'#3a0c0c':(x+y<8?'#ff6a5a':'#d82e2e'); g.fillRect(cx-4+x,cy-4+y,1,1); }
+}
+function tileFor(i,now,sd){
+  if(terrain[i]===LAKE) return TILE32.lake;
+  if(darkAt(i,now,sd)) return TILE32.dark;
+  if(grayAt(i,now)) return TILE32.gray;
+  const tr=anim.turns.get(i);
+  if(tr){ if(now<tr.t) return tr.from?TILE32[tr.from]:TILE32.neutral; if(now<tr.t+90) return TILE32.flash; }
+  const bd=anim.bad; if(bd&&bd.i===i&&now<bd.t+250&&((now-bd.t)/60|0)%2===0) return TILE32.bad;
+  const ground= isPreview(i)? TILE32.preview : blockedNow(i)? TILE32.block : TILE32.empty; // 空いたマスは薄い黄緑。今の手番の人が置けないマスは少し暗く
+  const dr=anim.drops.get(i); if(dr!==undefined&&now<dr) return ground;
+  if(!cells[i]) return ground;
+  if(cells[i]===BAT) return !sd[i]? TILE32.neutral : TILE32[sd[i]];
+  return TILE32[sd[i]||cells[i]]; // 討ち取られた大将は相手の色
+}
+// 向き：0=下の鳥の方を向く（そのまま）、2=上の獣の方を向く（逆さ）、1=横向き
+const facing=side=> side===BIRD?0 : side===BEAST?2 : 1;
+function drawRot(s,cx,cy,q){
+  g.save(); g.translate(cx,cy); g.rotate(q*Math.PI/2); g.drawImage(s,-s.width/2,-s.height/2); g.restore();
+}
+// 空いた草地：風になびく草むら2つと、マスによっては花。風は盤の左から右へ波のように渡る
+const GR={root:'#2c5a14',dark:'#3f7a1c',mid:'#5c9a2a',lit:'#7cba3c',tip:'#b4e070',shadow:'#c2d894'};
+const FLOWER=['#ff8fb1','#fff1e8','#ffcd38','#c2a3ff'];
+// 草は横向き（根元が左、穂先が右）にして、上下どちらの人から見ても同じ見え方にする
+function blade(x,y,h,s,lit){
+  g.fillStyle=GR.root; g.fillRect(x,y,1,1);
+  for(let k=1;k<h-1;k++){ g.fillStyle= k<2?GR.dark : (lit&&k>=h-3)?GR.lit : GR.mid; g.fillRect(x+k,y+(k>=h-2?s:0),1,1); }
+  g.fillStyle=GR.tip; g.fillRect(x+h-1,y+s,1,1);
+}
+function drawGrass(i,now){
+  const {x,y}=CELL[i];
+  for(const [ox,oy,ph] of [[-6,-4,0],[-2,3,1.7]]){
+    const bx=x+ox, by=y+oy;
+    const w=Math.sin(now/520 - by*.12 + ph); // 風は上から下へ渡る
+    const s= reduceMotion?0 : w>.35?1 : w<-.35?-1 : 0;
+    g.fillStyle=GR.shadow; g.fillRect(bx-1,by-1,1,3); // 根元の影
+    blade(bx,by-1,4,s-1,true); blade(bx,by,6,s,true); blade(bx,by+1,4,s+1,false); // 外側の葉は扇のように開く。上側の葉に光
+  }
+  const h=(i*2654435761>>>0)%5; // マスごとに決まった花（横向き）
+  if(h<2){ const fx=x+(h?-4:3), fy=y+(h?5:-3), c=FLOWER[(i*7)%FLOWER.length];
+    g.fillStyle=GR.dark; g.fillRect(fx-2,fy,1,1);
+    g.fillStyle=GR.dark; g.fillRect(fx-1,fy+1,1,1); // 葉
+    g.fillStyle=c; g.fillRect(fx,fy-1,1,1); g.fillRect(fx,fy+1,1,1); g.fillRect(fx+1,fy,1,1); g.fillRect(fx-1,fy,1,1);
+    g.fillStyle='#ffffff'; g.fillRect(fx,fy-1,1,1); // 花びらの光
+    g.fillStyle='#e8a010'; g.fillRect(fx,fy,1,1); }
+}
+// 予告の影：次に降りるコウモリが半透明で羽ばたきながら浮かぶ
+function drawShadow(i,now){
+  const {x,y}=CELL[i], k=(reduceMotion||((now/260)|0)%2)?'batA':'batB', bob=reduceMotion?0:Math.round(Math.sin(now/400));
+  g.save(); g.globalAlpha=.45; drawRot(SPR[k],x,y+bob,1); g.restore();
+}
+function frame(now){
+  const sd=sides(cells,gen);
+  const tiles=new Array(N);
+  for(let i=0;i<N;i++) tiles[i]=tileFor(i,now,sd);
+  const ES=new Uint8Array(N); if(anim.end) for(let i=0;i<N;i++) ES[i]=endState(i,now);
+  const WT=anim.end? TILE32[anim.end.w] : null;
+  // 海は1/8秒ごとに描き直す（ドット絵らしいコマ送り）。動きを減らす設定では止める
+  const tick= reduceMotion? 0 : Math.floor(now/125);
+  if(tick!==SEA.tick){ SEA.tick=tick; seaPaint(tick*.125); }
+  buf.set(SEA.buf);
+  for(let p=0;p<buf.length;p++){
+    const o=OWN[p]; if(o<0) continue;
+    const e=EDGE[p];
+    const es=ES[o];
+    buf[p]= es===3? WT[e] : es? HOLE32[e] : (o===last&&!over&&e!==1)? TILE32.last[0] : tiles[o][e];
+  }
+  g.putImageData(img,0,0);
+  // 浮いているマス：元の場所は暗い穴になり、マスだけが少し上に浮かんで揺れる
+  if(anim.end) for(let i=0;i<N;i++){ if(ES[i]!==1) continue; const lift=liftOf(i,now), col=TILE[anim.end.L].map(hexStr);
+    for(const [x,y,e] of CELLPX[i]){ g.fillStyle=col[e]; g.fillRect(x,y-lift,1,1); } }
+  // 空いている山と森には絵を描く（山は下の鳥、森は上の獣から見て正面向き）
+  for(let i=0;i<N;i++){
+    if(ES[i]) continue; // 演出中に消えた・塗り替わったマスには地形を描かない
+    if(isPreview(i)){ drawShadow(i,now); continue; } // 予告の場所にはコウモリの影
+    if(terrain[i]===GRASS){ const dr=anim.drops.get(i); if(!cells[i]||(dr!==undefined&&now<dr)) drawGrass(i,now); continue; }
+    if(terrain[i]===LAKE){ drawRot(SPR.lake,CELL[i].x+(((now/700|0)%2)?1:0),CELL[i].y,1); continue; } // 横向きのさざ波が揺れる
+    const dr=anim.drops.get(i);
+    if(cells[i]&&!(dr!==undefined&&now<dr)) continue;
+    if(terrain[i]===MOUNT) drawRot(SPR.mount,CELL[i].x,CELL[i].y,0); else drawRot(SPR.tree,CELL[i].x,CELL[i].y,2);
+    if(!cells[i]&&blockedNow(i)) drawX(CELL[i].x,CELL[i].y); // 今の手番の人は置けない
+  }
+  // 駒：鳥は下の人、獣は上の人に向けて描く。コウモリは味方の人の方を向く
+  for(let i=0;i<N;i++){
+    const v=cells[i]; if(!v) continue;
+    let cx=CELL[i].x, cy=CELL[i].y;
+    if(ES[i]===2) continue;                                              // 割れて消えた
+    if(ES[i]===3&&(v===BAT||anim.end.sd[i]!==anim.end.w)) continue;    // 塗り替わった後は勝者の鳥・獣だけ残る
+    if(ES[i]===1) cy-=liftOf(i,now);                                      // 浮いている
+    const dr=anim.drops.get(i);
+    if(dr!==undefined){ const p=(now-dr)/220; if(p<0) continue; if(p<1){ const h=Math.round(10*(1-p)*(1-p)); cy+= v===BEAST? h : -h; } }
+    let q, k;
+    if(v===BIRD){ q=0; k= (reduceMotion||((now/220+i*5)|0)%2)? 'bird':'birdB'; } // 羽ばたく
+    else if(v===BEAST){ q=2; k='beast'; }
+    if(isGen(gen,i)){ // 大将は今の味方の方を向く（討ち取られると相手の方を向く）
+      q=facing(sd[i]); const tr=anim.turns.get(i);
+      if(tr){ if(now<tr.t) q=facing(tr.from); else if(now<tr.t+100) q=1; } }
+    if(v===BAT){
+      k= (reduceMotion||((now/260+i*3)|0)%2)? 'batA':'batB'; // 羽ばたく
+      q=facing(sd[i]);
+      const tr=anim.turns.get(i);
+      if(tr){
+        if(now<tr.t) q=facing(tr.from);
+        else if(now<tr.t+100) q=1; // 振り向く途中は一度横を向く
+      }
+    }
+    if(darkAt(i,now,sd)) k+='_x'; else if(grayAt(i,now)) k+='_g';
+    drawRot(SPR[k],cx,cy,q);
+    if(isGen(gen,i)){ const c= darkAt(i,now,sd)? SPR.crown_x : (grayAt(i,now)||sd[i]!==v)? SPR.crown_g : SPR.crown; // 討ち取られた大将の王冠は灰色
+      g.save(); g.translate(cx,cy); g.rotate(q*Math.PI/2); g.drawImage(c,-5,-11); g.restore(); }
+  }
+  drawCoin(now);
+  drawFx();
+  requestAnimationFrame(frame);
+}
+
+// ===== 勝敗の演出 =====
+// ①負けた側のマス（鳥・獣と味方のコウモリ）がふわりと浮き ②次々に割れて消える
+// ③勝った側のコウモリ（と中立のコウモリ）も割れて消える ④上の行から盤全体が勝者のマスに塗り替わる ⑤看板・花火・ファンファーレ
+const fx={parts:[]};
+const BRIGHT=['#ffec27','#fff1e8','#00e436','#ffa300','#83e9ff','#ff77a8'];
+const hexStr=v=>'#'+v.toString(16).padStart(6,'0');
+function stopFx(){ fx.parts=[]; $('banner1').hidden=true; $('banner2').hidden=true; document.body.classList.remove('win1','win2'); }
+// マスの割れたかけら：マスの色のドットと、駒の輪郭の黒が飛び散って落ちる
+function shatter(i,colors,lift){
+  const {x:cx,y:cy}=CELL[i];
+  CELLPX[i].forEach(([x,y,e],k)=>{ if(k%5) return;
+    fx.parts.push({x,y:y-lift,vx:(x-cx)*.09+(Math.random()-.5)*.6,vy:(y-cy)*.05-.9-Math.random()*1.1,gv:.07,sz:Math.random()<.4?2:1,
+      col: Math.random()<.12?'#1a1c2c':colors[e],life:34+Math.random()*24|0}); });
+}
+// 演出の進み具合：0＝そのまま 1＝浮いている 2＝割れて消えた 3＝勝者のマスに塗り替わった
+function endState(i,now){
+  const E=anim.end; if(!E) return 0;
+  if(now>=E.fill[i]) return 3;
+  const ts=E.ts.get(i); if(ts!==undefined&&now>=ts) return 2;
+  const tf=E.tf.get(i); if(tf!==undefined&&now>=tf) return 1;
+  return 0;
+}
+const liftOf=(i,now)=>{ const E=anim.end, tf=E.tf.get(i); if(reduceMotion||tf===undefined) return 0;
+  const e=now-tf; return Math.min(6,Math.round(e/45)) + (e>150? Math.round(Math.sin(e/110+i)) : 0); };
+function celebrate(delay){
+  const {n}=score(cells,gen), sd=sides(cells,gen);
+  const w=winnerOf(n,starter), L=3-w; // 同点は後手の勝ち
+  const T0=performance.now()+delay*1000, now0=performance.now();
+  const at=(ms,fn)=>timers.push(setTimeout(fn,Math.max(0,ms-now0)));
+  const byRow=(a,b)=>CELL[a].r-CELL[b].r||CELL[a].x-CELL[b].x;
+  const losers=[...cells.keys()].filter(i=>cells[i]&&sd[i]===L).sort(byRow);
+  const bats=[...cells.keys()].filter(i=>cells[i]===BAT&&sd[i]!==L).sort(byRow);
+  const E={w,L,sd,tf:new Map(),ts:new Map(),fill:Array(N).fill(Infinity)};
+  // ①浮く
+  losers.forEach((i,k)=>{ E.tf.set(i,T0+k*30); });
+  at(T0,()=>sfx.lift(0));
+  // ②割れる
+  const t2=T0+losers.length*30+380;
+  const loserCol=TILE[L].map(hexStr);
+  losers.forEach((i,k)=>{ const t=t2+k*55; E.ts.set(i,t);
+    at(t,()=>{ if(!reduceMotion) shatter(i,loserCol,6); sfx.crack(0,k); }); });
+  // ③コウモリが割れる
+  const t3=t2+losers.length*55+350;
+  bats.forEach((i,k)=>{ const t=t3+k*90; E.ts.set(i,t);
+    const col=(sd[i]?TILE[sd[i]]:TILE.neutral).map(hexStr);
+    at(t,()=>{ if(!reduceMotion) shatter(i,col,0); sfx.crack(0,k+3); }); });
+  // ④塗り替わる（上の行から）
+  const t4=t3+bats.length*90+300;
+  for(let i=0;i<N;i++) E.fill[i]=t4+CELL[i].r*60;
+  for(let r=0;r<NROW;r++) at(t4+r*60,()=>sfx.fill(r,0));
+  anim.end=E;
+  // ⑤看板と花火
+  const t5=t4+NROW*60+250;
+  at(t5,()=>{
+    for(const id of (vsCPU?['banner1']:['banner1','banner2'])){
+      // 下の看板は鳥の人、上の看板（逆さ）は獣の人に向けたもの。それぞれに勝利・敗北を出す
+      const p= id==='banner1'? BIRD : BEAST;
+      const b=$(id); b.className='banner'+(p===w?' w'+p:' lose'); b.hidden=false;
+      b.querySelector('span').textContent= p===w? '勝利' : '敗北';
+      b.querySelector('small').textContent= (endReason==='tsumi'? '詰み　' : n[1]===n[2]? '同点は後手の勝ち　' : '')+`鳥 ${n[1]} 対 ${n[2]} 獣`;
+    }
+    document.body.classList.add('win'+w);
+    sfx.bgmStop(); sfx.end();
+  });
+  if(reduceMotion) return;
+  for(let i=0;i<7;i++) at(t5+200+i*450,launch);
+}
+function launch(){
+  const x=10+Math.random()*(AW-20), ty=20+Math.random()*(AH-60);
+  const fromTop=Math.random()<.5; // 上下両方から打ち上げる
+  fx.parts.push({x,y:fromTop?0:AH,vx:(Math.random()-.5)*.3,vy:(fromTop?1:-1)*Math.sqrt(2*.05*(fromTop?ty:AH-ty)),g:fromTop?-.05:.05,col:BRIGHT[Math.random()*BRIGHT.length|0],rocket:true,life:999});
+  sfx.launch();
+}
+function drawFx(){
+  const next=[];
+  for(const p of fx.parts){
+    p.x+=p.vx; p.y+=p.vy; p.life--;
+    if(p.rocket){ p.vy+=p.g;
+      if(Math.sign(p.vy)===Math.sign(p.g)){ // 頂点で破裂
+        sfx.boom();
+        for(let i=0;i<32;i++){ const a=i/32*Math.PI*2, sp=.8+Math.random()*.5;
+          next.push({x:p.x,y:p.y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,col:p.col,life:40+Math.random()*14|0}); }
+        continue;
+      }
+    } else if(p.gv){ p.vy+=p.gv; p.vx*=.98; } else { p.vx*=.95; p.vy*=.95; }
+    if(p.life<=0||p.y>AH+4||p.y<-4) continue;
+    next.push(p);
+    if(p.life<14&&p.life%2) continue;
+    g.fillStyle=p.life<8&&!p.gv?'#fff1e8':p.col; g.fillRect(Math.round(p.x),Math.round(p.y),p.sz||1,p.sz||1);
+    if(p.rocket){ g.fillStyle='#ffa300'; g.fillRect(Math.round(p.x),Math.round(p.y)-Math.sign(p.vy),1,1); }
+  }
+  fx.parts=next;
+}
+
+// ===== 操作 =====
+art.addEventListener('click',e=>{
+  const r=art.getBoundingClientRect();
+  const x=Math.floor((e.clientX-r.left)/r.width*AW), y=Math.floor((e.clientY-r.top)/r.height*AH);
+  if(x<0||y<0||x>=AW||y>=AH) return;
+  const i=OWN[y*AW+x]; if(i>=0) play(i);
+});
+// 帯のボタン（どちらの帯からでも操作できる）
+for(const p of [1,2]){
+  $('pan'+p).addEventListener('click',e=>{
+    const act=e.target.closest('button')?.dataset.act; if(!act) return;
+    if(act==='gen'){ if(!over&&turn===p&&gen[p]<0&&performance.now()>=tossUntil){ arm[p]=!arm[p]; sfx.arm(); render(); } }
+  });
+}
+// スピーカーの絵（音あり＝音の波、消音＝×）
+const SPK='<path d="M3 9h4l5-4v14l-5-4H3z" fill="currentColor"/>';
+function sndLabel(){ const b=$('sndbtn');
+  b.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+SPK+(sfx.on? '<path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
+    : '<path d="M16 9l5 6M21 9l-5 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>')+'</svg>';
+  b.setAttribute('aria-pressed',String(sfx.on)); b.setAttribute('aria-label',sfx.on?'音を消す':'音を出す'); }
+// はじめのメニュー：ふたりで／コンピュータと
+function showMenu(){ clearTimeout(cpuTimer); stopAnnounce(); sfx.bgmStop(); $('menu').hidden=false; $('menu').querySelector('.mbtn').focus(); }
+function musicLabel(){ document.querySelectorAll('[data-bgm]').forEach(b=>b.setAttribute('aria-checked',String(b.dataset.bgm===sfx.track))); }
+musicLabel();
+$('menu').addEventListener('click',e=>{
+  const t=e.target.closest('[data-bgm]')?.dataset.bgm;
+  if(t){ sfx.setTrack(t); musicLabel(); sfx.bgmStart(true); return; } // 選ぶとその曲を試しに流す（そのまま対局へ続く）
+  const m=e.target.closest('[data-mode]')?.dataset.mode; if(!m) return;
+  vsCPU= m==='cpu'; document.body.classList.toggle('vscpu',vsCPU); $('menu').hidden=true; sfx.start(); newGame(); });
+for(const [p,k] of [[1,'bird'],[2,'beast']]){ const c=$('mico'+p).getContext('2d'); c.imageSmoothingEnabled=false; c.drawImage(SPR[k],(18-SPR[k].width)>>1,(18-SPR[k].height)>>1); }
+// 最初からのボタン：回る矢印。確かめ中はチェックの絵になり、両方の帯に案内を出す
+const ICON_NEW='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12a7 7 0 1 1-2.05-4.95" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M19.5 3.5v5h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICON_OK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+let askTimer=0;
+function newBtnReset(){ clearTimeout(askTimer); const b=$('newbtn'); b.classList.remove('ask'); b.innerHTML=ICON_NEW; b.setAttribute('aria-label','最初から'); }
+$('newbtn').addEventListener('click',()=>{
+  const b=$('newbtn');
+  if(!placed||over||b.classList.contains('ask')){ newBtnReset(); showMenu(); return; }
+  b.classList.add('ask'); b.innerHTML=ICON_OK; b.setAttribute('aria-label','もう一度押すと最初から'); sfx.no();
+  for(const p of [1,2]) $('t'+p).textContent='もう一度で最初から';
+  askTimer=setTimeout(()=>{ newBtnReset(); render(); },3000);
+});
+newBtnReset();
+$('sndbtn').addEventListener('click',()=>{ sfx.set(!sfx.on); sndLabel(); if(sfx.on){ sfx.bird(); if(!over&&tossUntil!==Infinity) sfx.bgmStart(); } });
+// 画面を離れたら音楽を止め、戻ったら（対局中なら）再開
+document.addEventListener('visibilitychange',()=>{ if(document.hidden) sfx.bgmStop(); else if(sfx.on&&!over&&tossUntil!==Infinity&&$('menu').hidden) sfx.bgmStart(); });
+
+// 机に置いて遊ぶ間、画面が消えないようにする（できない端末では何もしない）
+let lock=null;
+async function wake(){ try{ if(!lock&&navigator.wakeLock){ lock=await navigator.wakeLock.request('screen'); lock.addEventListener('release',()=>{lock=null;}); } }catch(e){} }
+
+// 盤の大きさ：空いている場所に収まる範囲で、画面の画素の整数倍に合わせる（ドットがにじまない）
+function fit(){
+  const dpr=window.devicePixelRatio||1, w=$('stageWrap');
+  const k=Math.max(1,Math.floor(Math.min(w.clientWidth*dpr/AW, w.clientHeight*dpr/AH)));
+  const st=$('stage'); st.style.width=(k*AW/dpr)+'px'; st.style.height=(k*AH/dpr)+'px';
+}
+addEventListener('resize',fit);
+
+// 帯のアイコン：獣のアイコンは帯ごと逆さになるので、ここではそのまま描く
+for(const p of [1,2]){ const c=$('bico'+p).getContext('2d'); c.imageSmoothingEnabled=false; c.drawImage(SPR.batA,0,0); }
+for(const [p,k] of [[1,'bird'],[2,'beast']]){ const c=$('ico'+p).getContext('2d'); c.imageSmoothingEnabled=false; c.drawImage(SPR[k],(18-SPR[k].width)>>1,(18-SPR[k].height)>>1); }
+
+sndLabel();
+newGame(false);
+showMenu();
+fit();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
