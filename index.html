@@ -3,135 +3,233 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#020604">
-<title>Game Launcher</title>
+<meta name="theme-color" content="#ffe3ef">
+<title>ゲームのへや</title>
 <style>
-/* アプリ選択画面。作品を増やすときは、下の <script> にある APPS に1件足すだけでよい */
+/* ゲーム選択画面: パステルのお菓子箱。ふわふわ浮かぶ星とハート、キャンディのようなカード。作品は下の APPS に1件足すと増える */
 :root{
-  --bg:#020604; --win:#030a06; --bar:#0a1a10; --line:#1b3a26;
-  --fg:#b8d8c0; --dim:#4f7d5d; --ok:#d8ffe2; --accent:#22e36a; --gold:#d8f27a; --cyan:#3fd0c0;
-  --mono: Consolas, "Cascadia Mono", "MS Gothic", "Osaka-Mono", "Noto Sans Mono CJK JP", "Hiragino Sans", Meiryo, ui-monospace, monospace;
-  --ja: "Yu Gothic UI","游ゴシック","Hiragino Sans","ヒラギノ角ゴシック",Meiryo,"Noto Sans JP",sans-serif;
-  color-scheme: dark;
+  --sky1:#ffe3ef; --sky2:#efe4ff; --sky3:#dff6f0;
+  --ink:#6b4a7a; --ink2:#9a7fa8; --white:#fffafc;
+  --pink:#ff8fb8; --pinkD:#e8668f; --mint:#6fd6b8; --mintD:#3fb393; --lav:#b39cf2; --lavD:#8e72e0;
+  --lemon:#ffd66b; --lemonD:#f0b93a;
+  --ja: "Yu Gothic UI","游ゴシック","YuGothic","Hiragino Sans","ヒラギノ角ゴシック","Hiragino Kaku Gothic ProN",Meiryo,"Noto Sans JP",sans-serif;
+  color-scheme: light;
 }
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%}
-body{background:radial-gradient(ellipse at 50% 0%,rgba(57,255,136,.1),transparent 55%),var(--bg);color:var(--fg);font-family:var(--mono);
-  padding:max(16px,env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right,0px)) max(20px,env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px));
-  -webkit-tap-highlight-color:transparent}
-.wrap{max-width:760px;margin:0 auto}
-.neon{height:4px;border-radius:4px;margin:0 3%;background:#dcffe9;box-shadow:0 0 3px #fff,0 0 9px #39ff88,0 0 22px #39ff88,0 0 46px rgba(57,255,136,.6)}
-.screen{position:relative;margin:14px 0;border:1px solid var(--line);border-radius:14px/12px;background:#010402;overflow:hidden;
-  box-shadow:inset 0 0 60px rgba(0,0,0,.9),0 0 30px rgba(57,255,136,.08)}
-.screen::after{content:"";position:absolute;inset:0;pointer-events:none;
-  background:repeating-linear-gradient(0deg,rgba(0,0,0,.3) 0 1px,transparent 1px 3px),radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,.55) 100%)}
-.bar{display:flex;align-items:center;gap:10px;padding:6px 12px;background:linear-gradient(90deg,#0d2416,var(--bar));border-bottom:1px solid rgba(57,255,136,.16);font-size:12px;color:#c6e6cf}
-.bar .ico{width:16px;height:12px;border:1px solid #4f7d5d;font-size:9px;line-height:10px;text-align:center;color:#a8d8b6;flex:none}
-.bar .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.body{padding:16px 18px 20px;text-shadow:0 0 4px rgba(90,255,140,.25)}
-.cmd{font-size:13px;color:var(--fg);margin:0 0 4px;white-space:pre-wrap}
-.cmd::after{content:"_";animation:blink 1s steps(1) infinite}
-.cmd.done::after{content:none}
-.title{margin:10px 0 2px;font-size:clamp(20px,5vw,30px);letter-spacing:.2em;color:var(--ok);text-shadow:0 0 12px rgba(57,255,136,.5)}
-.sub{font:12px var(--ja);color:var(--dim);margin-bottom:16px}
-.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
-.app{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:4px 14px;padding:12px 14px;border:1px solid var(--line);background:#03100a;
-  color:inherit;text-decoration:none;opacity:0;transform:translateY(4px);transition:border-color .15s,background .15s,box-shadow .15s}
-.app.show{opacity:1;transform:none;transition:opacity .25s,transform .25s,border-color .15s,background .15s,box-shadow .15s}
-.app .no{grid-row:1/3;font-size:12px;color:var(--dim);align-self:start;padding-top:2px}
-.app .nm{font-size:17px;letter-spacing:.08em;color:var(--ok);min-width:0}
-.app .ja{font:13px var(--ja);color:#9fd6a8;margin-left:.6em;letter-spacing:.02em}
-.app .ds{grid-column:2/4;font:12px/1.6 var(--ja);color:#6f9a7c}
-.app .dv{display:flex;gap:6px;justify-self:end;align-self:start}
-.tag{font-size:10px;letter-spacing:.12em;padding:2px 6px;border:1px solid #2f6b43;color:#7fa98a;white-space:nowrap}
-.tag.rec{border-color:var(--gold);color:var(--gold)}
-.app.sel,.app:hover,.app:focus-visible{border-color:var(--accent);background:#0a2a16;box-shadow:0 0 16px rgba(34,227,106,.25);outline:none}
-.app.sel .no::before{content:"> ";color:var(--accent)}
-.foot{margin-top:16px;font-size:11px;color:#2f6b43;letter-spacing:.1em;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
-@keyframes blink{50%{opacity:0}}
-@media (max-width:520px){
-  .body{padding:12px 12px 16px}
-  .app{grid-template-columns:1fr auto;padding:12px}
-  .app .no{display:none}
-  .app .nm{font-size:15px}
-  .app .ja{display:block;margin:2px 0 0}
-  .app .ds{grid-column:1/3}
-  .foot .keys{display:none}
+body{font-family:var(--ja);color:var(--ink);background:linear-gradient(160deg,var(--sky1) 0%,var(--sky2) 52%,var(--sky3) 100%) fixed;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:max(18px,env(safe-area-inset-top,0px)) max(28px,env(safe-area-inset-bottom,0px));
+  -webkit-tap-highlight-color:transparent;overflow-x:hidden}
+#sky{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.wrap{position:relative;z-index:1;max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+
+/* 見出し: リボンの帯 */
+header{display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:6px;text-align:center}
+.ribbon{position:relative;display:inline-block;padding:12px 34px 14px;background:var(--pink);color:#fff;border-radius:999px;
+  font-weight:800;font-size:clamp(26px,7vw,38px);letter-spacing:.12em;box-shadow:0 6px 0 var(--pinkD),0 12px 24px rgba(232,102,143,.28);
+  text-shadow:0 2px 0 rgba(200,70,120,.35)}
+.ribbon::before,.ribbon::after{content:"";position:absolute;top:50%;width:22px;height:22px;background:var(--white);border-radius:50%;transform:translateY(-50%);
+  box-shadow:inset 0 0 0 5px var(--lemon)}
+.ribbon::before{left:-12px}.ribbon::after{right:-12px}
+.ribbon .t{display:inline-block;animation:bob 3.2s ease-in-out infinite}
+.sub{font-size:14px;font-weight:700;color:var(--ink2);letter-spacing:.1em}
+.sub b{color:var(--pinkD)}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+
+/* 音楽ボタン */
+.music{position:fixed;z-index:5;top:max(12px,env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));
+  display:flex;align-items:center;gap:8px;padding:8px 14px 8px 12px;border:0;border-radius:999px;background:var(--white);color:var(--ink);
+  font:800 13px var(--ja);letter-spacing:.06em;cursor:pointer;box-shadow:0 4px 0 #e6d3ea,0 8px 18px rgba(107,74,122,.15)}
+.music:active{transform:translateY(2px);box-shadow:0 2px 0 #e6d3ea}
+.music:focus-visible{outline:3px solid var(--lav);outline-offset:2px}
+.eq{display:flex;align-items:flex-end;gap:2px;height:14px}
+.eq i{width:3px;height:4px;border-radius:2px;background:var(--pink)}
+.music.on .eq i{animation:eq .8s ease-in-out infinite}
+.music.on .eq i:nth-child(2){animation-delay:-.3s;background:var(--mint)}
+.music.on .eq i:nth-child(3){animation-delay:-.55s;background:var(--lav)}
+.music:not(.on) .eq i{background:#d9c8de}
+@keyframes eq{0%,100%{height:4px}50%{height:14px}}
+
+/* カード: キャンディのように色分け。横にアイコン、右に名前と説明 */
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:16px}
+.app{--c:var(--pink);--cD:var(--pinkD);--cL:#ffe9f1;
+  position:relative;display:grid;grid-template-columns:auto 1fr;gap:4px 16px;align-items:center;padding:16px 18px 16px 16px;
+  background:var(--white);border-radius:26px;color:inherit;text-decoration:none;border:3px solid var(--cL);
+  box-shadow:0 6px 0 var(--cL),0 14px 28px rgba(107,74,122,.12);transition:transform .18s cubic-bezier(.3,1.6,.5,1),box-shadow .18s,border-color .18s;
+  opacity:0;transform:translateY(14px) scale(.97)}
+.app.mint{--c:var(--mint);--cD:var(--mintD);--cL:#dcf6ee}
+.app.lav{--c:var(--lav);--cD:var(--lavD);--cL:#ece5ff}
+.app.lemon{--c:var(--lemon);--cD:var(--lemonD);--cL:#fff3cf}
+.app.show{opacity:1;transform:none;transition:opacity .35s,transform .45s cubic-bezier(.3,1.6,.5,1),box-shadow .18s,border-color .18s}
+.app.sel,.app:hover,.app:focus-visible{border-color:var(--c);transform:translateY(-3px) rotate(-.4deg);box-shadow:0 9px 0 var(--cL),0 18px 32px rgba(107,74,122,.18);outline:none}
+.app:active{transform:translateY(2px);box-shadow:0 2px 0 var(--cL)}
+.icon{grid-row:1/4;width:76px;height:76px;border-radius:22px;background:var(--c);display:grid;place-items:center;box-shadow:inset 0 -6px 0 var(--cD)}
+.icon svg{width:50px;height:50px}
+.nm{font-size:20px;font-weight:800;letter-spacing:.04em;line-height:1.3;min-width:0}
+.en{font-size:11px;font-weight:700;color:var(--ink2);letter-spacing:.16em}
+.ds{font-size:13px;line-height:1.65;color:#8a6f96;min-width:0}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+.tag{font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:var(--cL);color:var(--cD);letter-spacing:.06em}
+.rec{position:absolute;top:-10px;right:16px;padding:4px 12px;border-radius:999px;background:var(--lemon);color:#7a5a10;font-size:11px;font-weight:800;
+  letter-spacing:.08em;box-shadow:0 3px 0 var(--lemonD);transform:rotate(3deg)}
+.go{position:absolute;right:16px;bottom:14px;width:30px;height:30px;border-radius:50%;background:var(--c);display:grid;place-items:center;box-shadow:0 3px 0 var(--cD)}
+.go svg{width:14px;height:14px}
+.app .ds{padding-right:34px}
+
+footer{text-align:center;font-size:12px;font-weight:700;color:var(--ink2);letter-spacing:.08em;display:flex;flex-direction:column;gap:4px}
+footer .keys{opacity:.8}
+@media (max-width:480px){
+  .app{grid-template-columns:auto 1fr;gap:3px 12px;padding:14px 14px 14px 12px;border-radius:22px}
+  .icon{width:62px;height:62px;border-radius:18px}
+  .icon svg{width:40px;height:40px}
+  .nm{font-size:17px}
+  .ds{font-size:12px}
+  footer .keys{display:none}
+  .music{padding:7px 12px 7px 10px;font-size:12px}
+  header{padding-top:46px}
 }
-@media (prefers-reduced-motion:reduce){.cmd::after{animation:none}.app,.app.show{transition:none;opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.ribbon .t,.music.on .eq i{animation:none}.app,.app.show{opacity:1;transform:none;transition:none}}
 </style>
 </head>
 <body>
+<canvas id="sky" aria-hidden="true"></canvas>
+<button type="button" class="music" id="music" aria-pressed="false"><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span><span id="mLabel">おんがく OFF</span></button>
 <div class="wrap">
-  <div class="neon"></div>
-  <div class="screen">
-    <div class="bar"><span class="ico">C:\</span><span class="t">Command Prompt - launcher.exe</span></div>
-    <div class="body">
-      <p class="cmd" id="cmd"></p>
-      <div class="title">SELECT APPLICATION</div>
-      <div class="sub">遊ぶアプリを選んでください</div>
-      <ul class="list" id="list"></ul>
-      <div class="foot"><span id="count"></span><span class="keys">&uarr;&darr; select &nbsp; ENTER launch</span></div>
-    </div>
-  </div>
-  <div class="neon"></div>
+  <header>
+    <div class="ribbon"><span class="t">ゲームのへや</span></div>
+    <div class="sub">あそぶゲームを<b>えらんでね</b></div>
+  </header>
+  <ul class="list" id="list"></ul>
+  <footer><span id="count"></span><span class="keys">↑↓ でえらんで Enter であそぶ</span></footer>
 </div>
+<audio id="bgm" loop preload="auto" src="launcher-bgm.mp3"></audio>
 <script>
 // ===== 作品の一覧 =====
 // 新しい作品を載せるとき: リポジトリに作品のフォルダ（中に index.html）を作り、ここに1件足す
-//   path   … フォルダ名（末尾に / を付ける）
-//   name   … 英語の表示名      ja   … 日本語の名前
-//   desc   … ひとこと説明       for  … 'pc' / 'mobile' / 'both'（どの端末向けか）
+//   path … フォルダ名（末尾に /）   ja … 日本語の名前   name … 英語の名前   desc … ひとこと説明
+//   for  … 'pc' / 'mobile' / 'both'   color … 'pink' / 'mint' / 'lav' / 'lemon'   icon … 下の ICONS の名前
 const APPS=[
-  {path:'typing-pc/', name:'CMD TYPING', ja:'タイピング PC版', for:'pc',
-   desc:'ハッキング攻撃を英単語の入力で防御・追跡・反撃する。キーボードで入力'},
-  {path:'typing-mobile/', name:'CMD TYPING MOBILE', ja:'タイピング スマホ版', for:'mobile',
-   desc:'PC版と同じ筋立てを縦画面に合わせたもの。漢字・カタカナの語句を、ひらがなのフリック入力で打つ'},
-  {path:'tori-to-kemono/', name:'BIRDS VS BEASTS', ja:'鳥と獣の戦い', for:'mobile',
+  {path:'typing-pc/', ja:'CMDタイピング', name:'CMD TYPING', for:'pc', color:'mint', icon:'keyboard',
+   desc:'ハッキング攻撃を英単語の入力で防御・追跡・反撃する。キーボードで遊ぶ'},
+  {path:'typing-mobile/', ja:'CMDタイピング スマホ版', name:'CMD TYPING MOBILE', for:'mobile', color:'lav', icon:'phone',
+   desc:'漢字・カタカナの語句を、ひらがなのフリック入力で打つ。縦画面向け'},
+  {path:'tori-to-kemono/', ja:'鳥と獣の戦い', name:'BIRDS VS BEASTS', for:'mobile', color:'pink', icon:'bird',
    desc:'スマホを机に置いて2人で向かい合う対戦ゲーム。コンピュータとも対戦できる'},
 ];
+// アイコン（白で描く）
+const ICONS={
+  keyboard:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="13" width="38" height="24" rx="6"/><path d="M12 21h.01M18 21h.01M24 21h.01M30 21h.01M36 21h.01M12 27h.01M36 27h.01M17 30h14" stroke-width="4"/></svg>',
+  phone:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><rect x="13" y="4" width="22" height="40" rx="6"/><path d="M21 38h6"/><text x="24" y="27" text-anchor="middle" fill="#fff" stroke="none" font-size="14" font-weight="800" font-family="sans-serif">あ</text></svg>',
+  bird:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 28c0-9 7-15 16-15 6 0 10 3 12 7l6 1-5 4c0 9-7 14-16 14-7 0-13-4-13-11z" fill="rgba(255,255,255,.25)"/><path d="M14 25c4 4 10 4 14 0"/><circle cx="31" cy="20" r="1.6" fill="#fff"/></svg>',
+  star:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M24 6l5.5 11.6 12.5 1.7-9.2 8.7 2.3 12.5L24 34.4 12.9 40.5l2.3-12.5L6 19.3l12.5-1.7z"/></svg>'
+};
+const GO='<svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l5 5-5 5"/></svg>';
+const LABEL={pc:'PC',mobile:'スマホ'};
 
 const $=id=>document.getElementById(id);
-const touch=matchMedia('(pointer:coarse)').matches;
-const LABEL={pc:'PC',mobile:'SMARTPHONE'};
+const touch=matchMedia('(pointer:coarse)').matches, myDev=touch?'mobile':'pc';
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const list=$('list');
 let sel=0;
 const items=APPS.map((a,i)=>{
   const li=document.createElement('li'), el=document.createElement('a');
-  el.className='app'; el.href=a.path;
-  const no=document.createElement('span'); no.className='no'; no.textContent=String(i+1).padStart(2,'0');
-  const nm=document.createElement('span'); nm.className='nm'; nm.textContent=a.name;
-  const ja=document.createElement('span'); ja.className='ja'; ja.textContent=a.ja; nm.appendChild(ja);
-  const dv=document.createElement('span'); dv.className='dv';
-  (a.for==='both'?['pc','mobile']:[a.for]).forEach(f=>{ const t=document.createElement('span'); t.className='tag'; t.textContent=LABEL[f];
-    if(f===(touch?'mobile':'pc')&&a.for!=='both') t.classList.add('rec'); dv.appendChild(t); });
+  el.className='app '+(a.color||'pink'); el.href=a.path;
+  const ic=document.createElement('span'); ic.className='icon'; ic.innerHTML=ICONS[a.icon]||ICONS.star;
+  const en=document.createElement('span'); en.className='en'; en.textContent=a.name;
+  const nm=document.createElement('span'); nm.className='nm'; nm.textContent=a.ja;
   const ds=document.createElement('span'); ds.className='ds'; ds.textContent=a.desc;
-  el.append(no,nm,dv,ds);
-  el.addEventListener('mouseenter',()=>{ sel=i; mark(); });
+  const tg=document.createElement('span'); tg.className='tags';
+  (a.for==='both'?['pc','mobile']:[a.for]).forEach(f=>{ const t=document.createElement('span'); t.className='tag'; t.textContent=LABEL[f]+'むけ'; tg.appendChild(t); });
+  ds.appendChild(tg);
+  el.append(ic,en,nm,ds);
+  if(a.for===myDev||a.for==='both'){ const r=document.createElement('span'); r.className='rec'; r.textContent='この端末におすすめ'; el.appendChild(r); }
+  const go=document.createElement('span'); go.className='go'; go.innerHTML=GO; el.appendChild(go);
+  el.addEventListener('mouseenter',()=>{ sel=i; mark(); pop(560+i*80); });
+  el.addEventListener('click',e=>{ e.preventDefault(); launch(i); });
   li.appendChild(el); list.appendChild(li); return el;
 });
-// 使っている端末に合う作品を最初に選んでおく
-sel=Math.max(0,APPS.findIndex(a=>a.for===(touch?'mobile':'pc')||a.for==='both'));
+sel=Math.max(0,APPS.findIndex(a=>a.for===myDev||a.for==='both'));
 function mark(){ items.forEach((el,i)=>el.classList.toggle('sel',i===sel)); }
-$('count').textContent=APPS.length+' APP(S) FOUND';
+$('count').textContent='ぜんぶで '+APPS.length+' こ';
+items.forEach((el,i)=>setTimeout(()=>el.classList.add('show'),reduce?0:150+i*120));
+mark();
 
-// 起動の演出: コマンドを打ち込んでから一覧を順に出す
-const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
-const CMD='C:\\> dir /apps';
-let k=0;
-(function typeCmd(){
-  $('cmd').textContent=CMD.slice(0,k);
-  if(k<CMD.length&&!reduce){ k++; setTimeout(typeCmd,40); return; }
-  $('cmd').textContent=CMD; $('cmd').classList.add('done');
-  items.forEach((el,i)=>setTimeout(()=>el.classList.add('show'),reduce?0:120+i*110));
-  mark();
-})();
+// ===== 音楽: ブラウザの決まりで、最初に画面を触ったときから流す。ボタンでオン・オフ（設定はこの端末に保存） =====
+const bgm=$('bgm'); bgm.volume=.7;
+let want=true; try{ want=localStorage.getItem('launcher-bgm')!=='off'; }catch(e){}
+function setMusic(on){
+  want=on; try{ localStorage.setItem('launcher-bgm',on?'on':'off'); }catch(e){}
+  if(on){ const p=bgm.play(); if(p&&p.catch) p.catch(()=>show(false)); } else bgm.pause();
+  show(on);
+}
+function show(on){ $('music').classList.toggle('on',on); $('music').setAttribute('aria-pressed',String(on)); $('mLabel').textContent='おんがく '+(on?'ON':'OFF'); }
+bgm.addEventListener('play',()=>show(true)); bgm.addEventListener('pause',()=>show(false));
+$('music').addEventListener('click',e=>{ e.stopPropagation(); audio(); setMusic(bgm.paused); });
+// 最初のタッチ・クリック・キー入力で流しはじめる
+function firstTouch(){ document.removeEventListener('pointerdown',firstTouch,true); document.removeEventListener('keydown',firstTouch,true);
+  audio(); if(want&&bgm.paused) setMusic(true); }
+document.addEventListener('pointerdown',firstTouch,true); document.addEventListener('keydown',firstTouch,true);
+// いちおう自動で流してみる（許可されている環境なら流れる）
+if(want){ const p=bgm.play(); if(p&&p.catch) p.catch(()=>{}); }
 
+// ===== 効果音: ぽわん（選ぶ）、きらりん（決定） =====
+let ac=null;
+function audio(){ if(!ac){ try{ ac=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(ac&&ac.state==='suspended') ac.resume(); return ac; }
+function tone(f,t,d,v,type){ const o=ac.createOscillator(), g=ac.createGain(); o.type=type||'sine'; o.frequency.setValueAtTime(f,ac.currentTime+t);
+  g.gain.setValueAtTime(0,ac.currentTime+t); g.gain.linearRampToValueAtTime(v,ac.currentTime+t+.01); g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+t+d);
+  o.connect(g); g.connect(ac.destination); o.start(ac.currentTime+t); o.stop(ac.currentTime+t+d+.02); }
+let lastPop=0;
+function pop(f){ if(!ac||ac.state!=='running') return; const n=performance.now(); if(n-lastPop<60) return; lastPop=n; tone(f,0,.18,.08,'sine'); tone(f*2,0,.12,.03,'triangle'); }
+function launch(i){
+  sel=i; mark();
+  if(audio()){ [784,988,1319,1568].forEach((f,k)=>tone(f,k*.06,.3,.08,'triangle')); }
+  bgm.pause(); burst(items[i]);
+  setTimeout(()=>{ location.href=APPS[i].path; },reduce?0:420);
+}
 document.addEventListener('keydown',e=>{
   if(e.ctrlKey||e.metaKey||e.altKey) return;
-  if(e.key==='ArrowDown'||e.key==='ArrowUp'){ e.preventDefault(); sel=(sel+(e.key==='ArrowDown'?1:-1)+items.length)%items.length; mark(); items[sel].focus({preventScroll:false}); }
-  else if(e.key==='Enter'&&document.activeElement===document.body){ e.preventDefault(); location.href=APPS[sel].path; }
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){ e.preventDefault(); sel=(sel+(e.key==='ArrowDown'?1:-1)+items.length)%items.length; mark(); items[sel].focus(); audio(); pop(560+sel*80); }
+  else if(e.key==='Enter'&&(document.activeElement===document.body||items.includes(document.activeElement))){ e.preventDefault(); launch(items.includes(document.activeElement)?items.indexOf(document.activeElement):sel); }
 });
+
+// ===== 背景: ふわふわ浮かぶ星・ハート・まる。決定するとカードから飛び散る =====
+const cv=$('sky'), cx=cv.getContext('2d');
+const COLS=['#ff8fb8','#6fd6b8','#b39cf2','#ffd66b','#ffffff'];
+let W=0,H=0,DPR=1, parts=[], sparks=[];
+function size(){ DPR=Math.min(2,window.devicePixelRatio||1); W=innerWidth; H=innerHeight; cv.width=W*DPR; cv.height=H*DPR; cx.setTransform(DPR,0,0,DPR,0,0); }
+function mk(y){ return {x:Math.random()*W,y:y==null?Math.random()*H:y,r:5+Math.random()*9,k:Math.random()*3|0,c:COLS[Math.random()*COLS.length|0],
+  vy:reduce?0:-(6+Math.random()*12),sw:Math.random()*6.28,sp:reduce?0:.6+Math.random()*.8,rot:Math.random()*6.28,vr:reduce?0:(Math.random()-.5)*.6,a:.35+Math.random()*.35}; }
+function shape(k,r){
+  cx.beginPath();
+  if(k===0){ for(let i=0;i<10;i++){ const a=-Math.PI/2+i*Math.PI/5, q=i%2?r*.45:r; cx.lineTo(Math.cos(a)*q,Math.sin(a)*q); } cx.closePath(); }
+  else if(k===1){ cx.moveTo(0,r*.9); cx.bezierCurveTo(-r*1.3,-r*.1,-r*.6,-r*1.1,0,-r*.35); cx.bezierCurveTo(r*.6,-r*1.1,r*1.3,-r*.1,0,r*.9); }
+  else cx.arc(0,0,r*.6,0,6.283);
+  cx.fill();
+}
+function burst(el){
+  if(reduce) return; const b=el.getBoundingClientRect();
+  for(let i=0;i<26;i++){ const a=Math.random()*6.283, s=120+Math.random()*260;
+    sparks.push({x:b.left+b.width*(.2+Math.random()*.6),y:b.top+b.height/2,vx:Math.cos(a)*s,vy:Math.sin(a)*s-120,r:4+Math.random()*7,k:Math.random()*3|0,c:COLS[Math.random()*4|0],t:0,rot:0}); }
+}
+let last=0;
+function frame(t){
+  const dt=Math.min(.05,(t-(last||t))/1000); last=t;
+  cx.clearRect(0,0,W,H);
+  parts.forEach(p=>{
+    p.y+=p.vy*dt; p.sw+=dt*p.sp; p.rot+=p.vr*dt; if(p.y<-20) Object.assign(p,mk(H+20));
+    cx.save(); cx.translate(p.x+Math.sin(p.sw)*14,p.y); cx.rotate(p.rot); cx.globalAlpha=p.a; cx.fillStyle=p.c; shape(p.k,p.r); cx.restore();
+  });
+  sparks=sparks.filter(s=>(s.t+=dt)<.9);
+  sparks.forEach(s=>{ s.vy+=520*dt; s.x+=s.vx*dt; s.y+=s.vy*dt; s.rot+=dt*6;
+    cx.save(); cx.translate(s.x,s.y); cx.rotate(s.rot); cx.globalAlpha=1-s.t/.9; cx.fillStyle=s.c; shape(s.k,s.r); cx.restore(); });
+  requestAnimationFrame(frame);
+}
+size(); addEventListener('resize',size);
+parts=Array.from({length:reduce?14:Math.min(34,Math.round(W*H/22000))},()=>mk());
+if(reduce){ frame(0); } else requestAnimationFrame(frame);
+// ほかのページから戻ってきたとき（ブラウザの戻る）に、飛び散りを消して状態を戻す
+addEventListener('pageshow',e=>{ if(e.persisted){ sparks=[]; if(want&&ac) setMusic(true); } });
 </script>
 </body>
 </html>
