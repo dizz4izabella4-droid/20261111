@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0a0405">
+<meta name="theme-color" content="#ffe3ef">
 <title>ゲームのへや</title>
 <style>
 /* ゲーム選択画面: パステルのお菓子箱。ふわふわ浮かぶ星とハート、キャンディのようなカード。作品は下の APPS に1件足すと増える */
@@ -17,16 +17,18 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%}
-body{font-family:var(--ja);color:var(--ink);background:#0a0405;
+body{font-family:var(--ja);color:var(--ink);background:linear-gradient(160deg,var(--sky1) 0%,var(--sky2) 52%,var(--sky3) 100%) fixed;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
   padding-block:max(18px,env(safe-area-inset-top,0px)) max(28px,env(safe-area-inset-bottom,0px));
   -webkit-tap-highlight-color:transparent;overflow-x:hidden}
-/* 背景の絵（邪神と流血の宗教画）。縦長の画面では全面に、横長の画面では高さに合わせて中央に置く */
-#bg{position:fixed;inset:0;z-index:0;pointer-events:none;background:#0a0405 url(launcher-bg.jpg) center top/cover no-repeat}
-#bg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,4,5,.15) 0%,rgba(10,4,5,.35) 100%)}
-@media (min-aspect-ratio:3/4){ #bg{background-size:auto 100%;background-position:center} }
+/* ゲームを選ぶ枠: 背景に邪神と流血の宗教画。上の部分は絵が見えるように空けて、カードは半透明にする */
+.stage{position:relative;display:flex;flex-direction:column;gap:16px;padding:16px 14px 18px;border-radius:30px;overflow:hidden;
+  background:#1a0806 url(launcher-bg.jpg) center top/cover no-repeat;border:4px solid #d9b25a;
+  box-shadow:0 0 0 4px #fffafc,0 10px 0 #e6d3ea,0 20px 40px rgba(107,74,122,.25)}
+.stage .sub{align-self:center}
+.window{height:clamp(220px,52vw,380px);flex:none}
 #sky{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
-.wrap{position:relative;z-index:1;max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+.wrap{position:relative;z-index:1;max-width:540px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
 
 /* 見出し: リボンの帯 */
 header{display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:6px;text-align:center}
@@ -37,7 +39,7 @@ header{display:flex;flex-direction:column;align-items:center;gap:10px;padding-to
   box-shadow:inset 0 0 0 5px var(--lemon)}
 .ribbon::before{left:-12px}.ribbon::after{right:-12px}
 .ribbon .t{display:inline-block;animation:bob 3.2s ease-in-out infinite}
-.sub{font-size:14px;font-weight:700;color:#fff;letter-spacing:.1em;padding:5px 16px;border-radius:999px;background:rgba(40,10,20,.55)}
+.sub{font-size:14px;font-weight:700;color:#fff;letter-spacing:.1em;padding:6px 18px;border-radius:999px;background:rgba(40,10,20,.62);text-align:center}
 .sub b{color:var(--pink)}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
 
@@ -64,7 +66,7 @@ header{display:flex;flex-direction:column;align-items:center;gap:10px;padding-to
 .list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:16px}
 .app{--c:var(--pink);--cD:var(--pinkD);--cL:#ffe9f1;
   position:relative;display:grid;grid-template-columns:auto 1fr;gap:4px 16px;align-items:center;padding:16px 18px 16px 16px;
-  background:var(--white);border-radius:26px;color:inherit;text-decoration:none;border:3px solid var(--cL);
+  background:rgba(255,250,252,.8);border-radius:26px;color:inherit;text-decoration:none;border:3px solid var(--cL);
   box-shadow:0 6px 0 var(--cL),0 14px 28px rgba(107,74,122,.12);transition:transform .18s cubic-bezier(.3,1.6,.5,1),box-shadow .18s,border-color .18s;
   opacity:0;transform:translateY(14px) scale(.97)}
 .app.mint{--c:var(--mint);--cD:var(--mintD);--cL:#dcf6ee}
@@ -86,7 +88,7 @@ header{display:flex;flex-direction:column;align-items:center;gap:10px;padding-to
 .go svg{width:14px;height:14px}
 .app .ds{padding-right:34px}
 
-footer{text-align:center;font-size:12px;font-weight:700;color:#f6e3ec;text-shadow:0 1px 3px rgba(0,0,0,.8);letter-spacing:.08em;display:flex;flex-direction:column;gap:4px}
+footer{text-align:center;font-size:12px;font-weight:700;color:var(--ink2);letter-spacing:.08em;display:flex;flex-direction:column;gap:4px}
 footer .keys{opacity:.8}
 @media (max-width:480px){
   .app{grid-template-columns:auto 1fr;gap:3px 12px;padding:14px 14px 14px 12px;border-radius:22px}
@@ -102,15 +104,17 @@ footer .keys{opacity:.8}
 </style>
 </head>
 <body>
-<div id="bg" aria-hidden="true"></div>
 <canvas id="sky" aria-hidden="true"></canvas>
 <button type="button" class="music" id="music" role="switch" aria-checked="false"><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span><span id="mLabel">主題歌を流す</span><span class="sw" aria-hidden="true"></span></button>
 <div class="wrap">
   <header>
     <div class="ribbon"><span class="t">ゲームのへや</span></div>
-    <div class="sub">あそぶゲームを<b>えらんでね</b></div>
   </header>
-  <ul class="list" id="list"></ul>
+  <section class="stage" aria-label="ゲームをえらぶ">
+    <div class="sub">あそぶゲームを<b>えらんでね</b></div>
+    <div class="window" aria-hidden="true"></div>
+    <ul class="list" id="list"></ul>
+  </section>
   <footer><span id="count"></span><span class="keys">↑↓ でえらんで Enter であそぶ</span></footer>
 </div>
 <audio id="bgm" loop preload="auto" src="launcher-bgm.mp3"></audio>
