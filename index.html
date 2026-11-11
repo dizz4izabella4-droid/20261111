@@ -110,54 +110,44 @@ html.lock .wrap{contain:paint}
 #flash{position:absolute;inset:0;background:#ff1a2a;opacity:0;pointer-events:none;mix-blend-mode:screen}
 #flash.go{animation:aflash .9s ease-out}
 @keyframes aflash{0%{opacity:.85}100%{opacity:0}}
-/* 題名 */
-#atitle{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;
-  padding:0 max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));opacity:0;pointer-events:none;transition:opacity .8s}
+/* 題名: はじめは画面の中央に大きく、そのあと上部へ小さく移る */
+#atitle{position:absolute;left:0;right:0;top:0;z-index:2;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;pointer-events:none;
+  padding:calc(50vh - 130px) max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));opacity:0;
+  transition:opacity .8s,padding-top 1s cubic-bezier(.6,0,.2,1),gap 1s}
 #atitle.on{opacity:1}
 #atitle h1{margin:0;font:700 clamp(46px,15vw,120px)/.95 "Times New Roman","Liberation Serif",serif;letter-spacing:.06em;color:#f7e3b0;
-  text-shadow:0 0 18px rgba(255,40,40,.75),0 0 46px rgba(200,0,20,.6),3px 3px 0 #3a0008}
+  text-shadow:0 0 18px rgba(255,40,40,.75),0 0 46px rgba(200,0,20,.6),3px 3px 0 #3a0008;transition:font-size 1s cubic-bezier(.6,0,.2,1)}
 #atitle h1 span{display:block}
-#atitle.on h1{animation:tin 1.6s cubic-bezier(.2,.8,.2,1) both}
-#atitle p{margin:0;font:700 clamp(17px,5vw,30px) var(--ja);letter-spacing:.32em;color:#e8b8a0;text-shadow:0 0 12px rgba(255,40,40,.6)}
-#atitle.on p{animation:tin 1.6s .5s cubic-bezier(.2,.8,.2,1) both}
-#atitle.glitch h1{animation:tglitch .35s steps(3) 2}
+#atitle.on:not(.top) h1{animation:tin 1.6s cubic-bezier(.2,.8,.2,1) both}
+#atitle p{margin:0;font:700 clamp(17px,5vw,30px) var(--ja);letter-spacing:.32em;color:#e8b8a0;text-shadow:0 0 12px rgba(255,40,40,.6);transition:font-size 1s cubic-bezier(.6,0,.2,1)}
+#atitle.on:not(.top) p{animation:tin 1.6s .5s cubic-bezier(.2,.8,.2,1) both}
+#atitle.top{padding-top:calc(62px + env(safe-area-inset-top,0px));gap:4px}
+#atitle.top h1{font-size:clamp(28px,8.5vw,46px)}
+#atitle.top h1 span{display:inline;margin:0 .14em}
+#atitle.top p{font-size:clamp(12px,3.4vw,16px);letter-spacing:.24em}
 @keyframes tin{0%{opacity:0;transform:scale(1.35);filter:blur(10px)}100%{opacity:1;transform:none;filter:none}}
-@keyframes tglitch{0%{transform:translate(0,0);clip-path:inset(0 0 0 0)}33%{transform:translate(-6px,2px);clip-path:inset(20% 0 40% 0)}66%{transform:translate(5px,-3px);clip-path:inset(55% 0 5% 0)}100%{transform:none;clip-path:inset(0 0 0 0)}}
-/* 歌詞 */
-#kara{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:clamp(14px,3.5vh,30px);text-align:center;opacity:0;transition:opacity .6s;
-  padding:calc(70px + env(safe-area-inset-top,0px)) max(18px,env(safe-area-inset-right,0px)) calc(80px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px))}
-#kara.on{opacity:1}
-#kara,#atitle{pointer-events:none;z-index:1}
-#abar{z-index:3}
-#atoast{z-index:4}
-#kcal{z-index:3}
-#ksec{align-self:center;white-space:nowrap;font:700 clamp(12px,3.4vw,16px) "Times New Roman","Liberation Serif",serif;letter-spacing:.24em;color:#c9a35a;text-shadow:0 0 10px rgba(255,60,40,.5)}
-#ksec::before,#ksec::after{content:"";display:inline-block;width:2.4em;height:1px;background:currentColor;vertical-align:middle;margin:0 .8em;opacity:.6}
-.kl{align-self:center;font-family:var(--ja);font-weight:800;letter-spacing:.06em;line-height:1.35;white-space:nowrap;transition:opacity .3s}
-#kprev{font-size:clamp(15px,4.4vw,26px);color:rgba(244,230,208,.32);min-height:1.35em}
-#kcur{--p:0%;font-size:clamp(30px,9.4vw,68px);min-height:1.35em;align-self:center;display:inline-block;
-  background:linear-gradient(90deg,#ffe2a0 0%,#ff5a3a calc(var(--p) - 2%),rgba(255,240,220,.38) var(--p));-webkit-background-clip:text;background-clip:text;color:transparent;
-  filter:drop-shadow(0 0 14px rgba(255,40,30,.55)) drop-shadow(0 2px 0 rgba(40,0,6,.9))}
-#kcur.shout{letter-spacing:.04em}
-#kcur.pop{animation:kpop .45s cubic-bezier(.2,1.4,.4,1)}
-@keyframes kpop{0%{transform:scale(.86);opacity:.2}100%{transform:none;opacity:1}}
-#knext{font-size:clamp(16px,4.8vw,28px);color:rgba(244,230,208,.5);min-height:1.35em}
-/* 下の進み具合 */
-#abar{position:absolute;left:max(18px,env(safe-area-inset-left,0px));right:max(18px,env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));
-  display:flex;align-items:center;gap:10px;font:12px "Times New Roman","Liberation Serif",serif;color:#a8845a;font-variant-numeric:tabular-nums}
-#abar .tr{flex:1;height:3px;background:rgba(200,150,90,.22);border-radius:3px;overflow:hidden}
-#abar .tr i{display:block;height:100%;width:0;background:linear-gradient(90deg,#8a0010,#ff4a2a,#ffd27a)}
-#abar button{font:700 11px var(--ja);letter-spacing:.06em;color:#e8c890;background:rgba(40,6,10,.7);border:1px solid rgba(200,150,90,.4);border-radius:999px;padding:6px 12px;cursor:pointer}
-#abar button:focus-visible{outline:2px solid #ffd27a;outline-offset:2px}
-#abar button[hidden]{display:none}
-#atoast{position:absolute;left:50%;bottom:calc(64px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:calc(100% - 36px);padding:10px 16px;border-radius:12px;
-  background:rgba(30,4,8,.92);border:1px solid rgba(220,160,90,.45);font:700 13px/1.6 var(--ja);color:#f4e0c0;text-align:center;opacity:0;transition:opacity .3s;pointer-events:none}
-#atoast.on{opacity:1}
-#atoast.btn{pointer-events:auto}
-#atoast button{margin-top:8px;font:700 12px var(--ja);color:#1a0306;background:#ffd27a;border:0;border-radius:999px;padding:6px 14px;cursor:pointer}
-/* 調整中の表示 */
-#kcal{position:absolute;top:calc(64px + env(safe-area-inset-top,0px));left:0;right:0;text-align:center;font:700 13px var(--ja);color:#ffd27a;letter-spacing:.06em;display:none}
-body.calib #kcal{display:block}
+/* 歌詞の枠: 半透明で、中を自由にスクロールできる。枠の外を押すと主題歌モードを終える */
+#lyr{position:absolute;z-index:3;left:50%;transform:translate(-50%,12px);width:min(560px,calc(100% - 32px));
+  top:calc(150px + env(safe-area-inset-top,0px));bottom:calc(34px + env(safe-area-inset-bottom,0px));
+  overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;border-radius:18px;
+  background:rgba(18,3,7,.55);border:1px solid rgba(220,160,90,.38);box-shadow:0 0 0 1px rgba(0,0,0,.4),0 20px 50px rgba(0,0,0,.6),inset 0 0 40px rgba(120,0,16,.25);
+  -webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);opacity:0;pointer-events:none;transition:opacity .8s,transform .8s cubic-bezier(.2,.8,.2,1);
+  scrollbar-width:thin;scrollbar-color:rgba(220,160,90,.5) transparent}
+#lyr.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+#lyr .in{padding:22px 20px 40px;display:flex;flex-direction:column;gap:26px}
+#lyr section{display:flex;flex-direction:column;gap:6px;text-align:center}
+#lyr h2{margin:0 0 6px;font:700 13px "Times New Roman","Liberation Serif",serif;letter-spacing:.26em;color:#c9a35a;text-shadow:0 0 10px rgba(255,60,40,.45)}
+#lyr h2::before,#lyr h2::after{content:"";display:inline-block;width:1.8em;height:1px;background:currentColor;vertical-align:middle;margin:0 .7em;opacity:.6}
+#lyr p{margin:0;font:700 clamp(16px,4.6vw,21px)/1.75 var(--ja);letter-spacing:.06em;color:#f4e6d0;text-shadow:0 1px 2px rgba(0,0,0,.9)}
+#lyr p.shout{font-size:clamp(20px,6vw,28px);color:#ff7a5a;letter-spacing:.1em;text-shadow:0 0 14px rgba(255,40,30,.7),0 1px 2px #000}
+#lyr .end{font:700 12px "Times New Roman","Liberation Serif",serif;letter-spacing:.3em;color:#8a6a48;text-align:center}
+#lyr:focus-visible{outline:2px solid #ffd27a;outline-offset:2px}
+#ahint{position:absolute;z-index:3;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom,0px));text-align:center;font:700 11px var(--ja);letter-spacing:.08em;
+  color:rgba(240,214,160,.7);opacity:0;transition:opacity .8s;pointer-events:none}
+#ahint.on{opacity:1}
+/* 下の細い再生位置の線 */
+#aprogw{position:absolute;z-index:3;left:0;right:0;bottom:0;height:3px;background:rgba(200,150,90,.15);pointer-events:none}
+#aprogw i{display:block;height:100%;width:0;background:linear-gradient(90deg,#8a0010,#ff4a2a,#ffd27a)}
 /* ひび割れ */
 #crack{position:fixed;inset:0;z-index:9;width:100%;height:100%;pointer-events:none;opacity:0}
 #crack.go{animation:crk 1.2s ease-out forwards}
@@ -170,7 +160,7 @@ body.calib #kcal{display:block}
 body.abyss .music{background:rgba(24,4,8,.85);color:#f0d6a0;box-shadow:0 0 0 1px rgba(220,160,90,.45),0 0 18px rgba(255,40,30,.35)}
 body.abyss .music .sw{background:#5a1018}
 body.abyss .music.on .sw{background:#c41a2a}
-@media (prefers-reduced-motion:reduce){.abg,#atitle.on h1,#atitle.on p,#kcur.pop,.quake{animation:none}}
+@media (prefers-reduced-motion:reduce){.abg,#atitle.on:not(.top) h1,#atitle.on:not(.top) p,.quake{animation:none}#atitle,#atitle h1,#atitle p,#lyr{transition:none}}
 @media (prefers-reduced-motion:reduce){.ribbon .t,.music.on .eq i{animation:none}.app,.app.show{opacity:1;transform:none;transition:none}}
 </style>
 </head>
@@ -188,13 +178,12 @@ body.abyss .music.on .sw{background:#c41a2a}
   </section>
   <footer><span id="count"></span><span class="keys">↑↓ でえらんで Enter であそぶ</span></footer>
 </div>
-<div id="abyss" aria-live="polite">
+<div id="abyss">
   <div class="abg"></div><div class="abg2"></div><div id="flash"></div>
   <div id="atitle"><h1><span>ABYSS</span><span>CODE</span></h1><p>— 深淵の黙示録 —</p></div>
-  <div id="kcal"></div>
-  <div id="kara"><div id="ksec"></div><div class="kl" id="kprev"></div><div class="kl" id="kcur"></div><div class="kl" id="knext"></div></div>
-  <div id="atoast"></div>
-  <div id="abar"><span id="atime">0:00</span><span class="tr"><i id="aprog"></i></span><button type="button" id="acal">タイミングを合わせる</button><button type="button" id="areset" hidden>元に戻す</button></div>
+  <div id="lyr" tabindex="0" aria-label="ABYSS CODE の歌詞"><div class="in" id="lyrIn"></div></div>
+  <div id="ahint">枠の外をタップすると、主題歌を止めて元の画面に戻ります</div>
+  <div id="aprogw" aria-hidden="true"><i id="aprog"></i></div>
 </div>
 <canvas id="crack" aria-hidden="true"></canvas>
 <audio id="bgm" preload="auto" src="launcher-bgm.mp3"></audio>
@@ -249,11 +238,10 @@ items.forEach((el,i)=>setTimeout(()=>el.classList.add('show'),reduce?0:150+i*120
 mark();
 
 // ===== 主題歌モード「ABYSS CODE — 深淵の黙示録 —」 =====
-// スイッチを入れると: かわいい画面が揺れてひび割れ、崩れ落ちる → 暗転して題名 → 曲に合わせて歌詞を大きく表示（カラオケ）
-// スイッチを切る・曲が終わると、元の画面に戻る
+// スイッチを入れると: かわいい画面が揺れてひび割れ、崩れ落ちる → 暗転して題名 → 題名が上へ移り、歌詞の枠が現れる
+// 歌詞の枠は自由にスクロールできる。枠の外をタップするか、スイッチを切るか、曲が終わると、元の画面に戻る
 const bgm=$('bgm'); bgm.volume=.8;
-// 歌詞。各部分の [見出し, 始まり(秒), 終わり(秒), 歌詞]。時刻は曲の構成（120BPM、休止 68・124・148秒付近）からの推定で、
-// 各行の時間は文字数に比例して配る。「タイミングを合わせる」でタップした時刻があれば、そちらを使う
+// 歌詞（[見出し, (未使用), (未使用), 歌詞]）
 const SONG=[
  ['VERSE 1',8,32,`くろき てんくうに きざまれた
 かみの しなりお ひきさけ
@@ -323,20 +311,13 @@ const SONG=[
 てんめいを うらぎれ
 たとえ このみが ほのおに きえても
 われは けっして ひざまずかない`]];
-const DEF=[]; // 推定の歌い出し時刻
-SONG.forEach(([label,a,b,txt])=>{ const ls=txt.split('\n'), w=ls.map(l=>l.replace(/[\s・！]/g,'').length+3), tot=w.reduce((x,y)=>x+y,0);
-  let t=a; ls.forEach((l,k)=>{ DEF.push({label,text:l,start:+t.toFixed(2),secEnd:b}); t+=(b-a)*w[k]/tot; }); });
-const TKEY='abyss-timing-v1';
-let LINES=[];
-function buildLines(){
-  let custom=null; try{ const v=JSON.parse(localStorage.getItem(TKEY)||'null'); if(Array.isArray(v)&&v.length===DEF.length) custom=v; }catch(e){}
-  LINES=DEF.map((d,i)=>({...d,start:custom?custom[i]:d.start}));
-  LINES.forEach((l,i)=>{ const nx=LINES[i+1]; const sameSec=nx&&nx.label===l.label;
-    l.end=nx?(sameSec?nx.start:Math.min(nx.start,l.secEnd+(custom?2:0))):Math.min(l.start+6,l.secEnd+2); });
-  $('areset').hidden=!custom;
-}
-let abyss=false, phase='', calib=false, calIdx=0, calTimes=[], shown=-2, endT=0;
-const fmt=s=>Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');
+// 歌詞の枠を組み立てる
+(()=>{ const box=$('lyrIn');
+  SONG.forEach(([label,,,txt])=>{ const sec=document.createElement('section'); const h=document.createElement('h2'); h.textContent=label; sec.appendChild(h);
+    txt.split('\n').forEach(l=>{ const p=document.createElement('p'); p.textContent=l; if(/アビス・コード/.test(l)) p.className='shout'; sec.appendChild(p); });
+    box.appendChild(sec); });
+  const e=document.createElement('div'); e.className='end'; e.textContent='— FIN —'; box.appendChild(e); })();
+let abyss=false, panelT=0, tickOn=false;
 function show(on){ $('music').classList.toggle('on',on); $('music').setAttribute('aria-checked',String(on)); }
 $('music').addEventListener('click',e=>{ e.stopPropagation(); audio(); abyss?exitAbyss():enterAbyss(); });
 
@@ -385,111 +366,31 @@ function rumble(){ const t=ac.currentTime, o=ac.createOscillator(), g=ac.createG
   [0,.12,.3].forEach(d=>tone(1800+Math.random()*900,d,.12,.04,'square')); }
 
 function enterAbyss(){
-  if(abyss) return; abyss=true; show(true); buildLines(); shown=-2; phase='title';
+  if(abyss) return; abyss=true; show(true);
   try{ bgm.currentTime=0; }catch(e){}
-  const p=bgm.play(); if(p&&p.catch) p.catch(()=>{ toast('曲を再生できませんでした。もう一度スイッチを押してください'); exitAbyss(); });
+  const p=bgm.play(); if(p&&p.catch) p.catch(()=>{ exitAbyss(); });
   collapse(()=>{});
+  const t1=reduce?0:1100;
   setTimeout(()=>{ if(!abyss) return; document.body.classList.add('abyss'); embers(true);
     const f=$('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go');
-    $('atitle').classList.add('on'); $('kara').classList.remove('on'); },reduce?0:1100);
-  requestAnimationFrame(tick);
+    $('atitle').classList.remove('top'); $('atitle').classList.add('on'); },t1);
+  // 題名をしばらく見せてから上へ移し、歌詞の枠を出す
+  clearTimeout(panelT);
+  panelT=setTimeout(()=>{ if(!abyss) return; $('atitle').classList.add('top');
+    setTimeout(()=>{ if(!abyss) return; $('lyr').scrollTop=0; $('lyr').classList.add('on'); $('ahint').classList.add('on'); setTimeout(()=>$('ahint').classList.remove('on'),4500); },reduce?0:600); },t1+(reduce?800:3600));
+  if(!tickOn){ tickOn=true; requestAnimationFrame(tick); }
 }
 function exitAbyss(){
-  if(!abyss) return; abyss=false; calib=false; document.body.classList.remove('calib'); show(false);
+  if(!abyss) return; abyss=false; clearTimeout(panelT); show(false);
   bgm.pause(); try{ bgm.currentTime=0; }catch(e){}
-  $('atitle').classList.remove('on'); $('kara').classList.remove('on'); toast('');
+  $('atitle').classList.remove('on','top'); $('lyr').classList.remove('on'); $('ahint').classList.remove('on');
   document.body.classList.remove('abyss'); embers(false); restoreUI();
 }
-bgm.addEventListener('ended',()=>{ if(!abyss) return; if(calib) finishCalib(); setTimeout(exitAbyss,1800); });
-
-// 毎フレーム: 曲の再生位置に合わせて表示を切り替える
-// 1行に収まるよう文字の大きさを縮める（行の折り返しをなくして、左から右へ色が流れるようにする）
-const KMAX={kprev:26,kcur:68,knext:28,ksec:16}, KMIN={kprev:11,kcur:18,knext:12,ksec:9};
-function fit(id,shout){ const el=$(id); const max=Math.min(KMAX[id]*(shout?1.35:1),innerWidth*(id==='kcur'?(shout?.13:.094):id==='ksec'?.034:.05));
-  el.style.fontSize=max+'px'; const k=$('kara'), cs=getComputedStyle(k), w=k.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight)-8;
-  const inner=el.offsetWidth; if(inner>w) el.style.fontSize=Math.max(KMIN[id],max*w/inner*.98)+'px'; }
-function fitAll(){ fit('ksec'); fit('kprev'); fit('kcur',$('kcur').classList.contains('shout')); fit('knext'); }
-addEventListener('resize',()=>{ if(abyss) fitAll(); });
-function setLine(i){
-  const cur=$('kcur'), L=LINES[i];
-  $('kprev').textContent=i>0&&LINES[i-1].label===(L?L.label:'')?LINES[i-1].text:'';
-  cur.textContent=L?L.text:''; cur.classList.toggle('shout',!!L&&/アビス・コード/.test(L.text));
-  cur.classList.remove('pop'); void cur.offsetWidth; cur.classList.add('pop');
-  const nx=LINES[i+1]; $('knext').textContent=nx?nx.text:'';
-  $('ksec').textContent=L?L.label:'';
-  fitAll();
-}
-function tick(){
-  if(!abyss) return;
-  const t=bgm.currentTime||0, dur=bgm.duration||180.85;
-  $('aprog').style.width=(t/dur*100)+'%'; $('atime').textContent=fmt(t)+' / '+fmt(dur);
-  if(calib){ calView(t); requestAnimationFrame(tick); return; }
-  const first=LINES[0].start, lastL=LINES[LINES.length-1];
-  if(t<first-.4||t>lastL.end+1){ // 前奏と後奏は題名
-    if(phase!=='title'){ phase='title'; $('kara').classList.remove('on'); $('atitle').classList.add('on'); $('atitle').classList.add('glitch'); setTimeout(()=>$('atitle').classList.remove('glitch'),800); }
-  } else {
-    if(phase!=='lyrics'){ phase='lyrics'; $('atitle').classList.remove('on'); $('kara').classList.add('on'); shown=-2; }
-    let i=-1; for(let k=0;k<LINES.length;k++){ if(LINES[k].start<=t+.05) i=k; else break; }
-    if(i<0) i=0;
-    // 休止（間奏）: 次の行が来るまで、次の部分の見出しと次の行だけ出す
-    const L=LINES[i], gap=t>L.end+.3&&LINES[i+1]&&LINES[i+1].start-t>.9;
-    const key=gap?'g'+i:i;
-    if(key!==shown){ shown=key;
-      if(gap){ const nx=LINES[i+1]; $('kprev').textContent=''; $('kcur').textContent='…'; $('kcur').classList.remove('shout'); $('knext').textContent=nx.text; $('ksec').textContent=nx.label; $('kcur').style.setProperty('--p','0%'); fitAll(); }
-      else setLine(i); }
-    if(!gap){ const p=Math.max(0,Math.min(1,(t-L.start)/Math.max(.4,(L.end-L.start)*.9))); $('kcur').style.setProperty('--p',(p*104).toFixed(1)+'%'); }
-  }
-  requestAnimationFrame(tick);
-}
-
-// ===== タイミング合わせ: 曲を頭から流し、各行の歌い出しで画面をタップ。タップした時刻をこの端末に保存する =====
-function startCalib(){
-  calib=true; calIdx=0; calTimes=[]; document.body.classList.add('calib');
-  try{ bgm.currentTime=0; }catch(e){} bgm.play();
-  $('atitle').classList.remove('on'); $('kara').classList.add('on'); phase='calib';
-  toast('歌い出しに合わせて、画面のどこかをタップしてください（パソコンはスペースキーでも可）',4000);
-  calShow();
-}
-function calShow(){
-  const L=LINES[calIdx], P=LINES[calIdx-1];
-  $('kcal').textContent='タイミング合わせ中　'+calIdx+' / '+LINES.length;
-  $('ksec').textContent=L?L.label:'';
-  $('kprev').textContent=P?P.text:'';
-  $('kcur').textContent=L?L.text:'おわり'; $('kcur').classList.toggle('shout',!!L&&/アビス・コード/.test(L.text)); $('kcur').style.setProperty('--p','0%');
-  $('knext').textContent=LINES[calIdx+1]?LINES[calIdx+1].text:'';
-  fitAll();
-}
-function calView(t){ /* 調整中は、次にタップする行を薄く表示しておく */ }
-function calTap(){
-  if(!calib||calIdx>=LINES.length) return;
-  calTimes.push(+(bgm.currentTime).toFixed(2)); $('kcur').style.setProperty('--p','104%');
-  const cur=$('kcur'); cur.classList.remove('pop'); void cur.offsetWidth; cur.classList.add('pop');
-  calIdx++; setTimeout(()=>{ if(calib) calShow(); },220);
-  if(calIdx>=LINES.length) setTimeout(finishCalib,400);
-}
-function finishCalib(){
-  if(!calib) return; calib=false; document.body.classList.remove('calib');
-  if(calTimes.length===LINES.length){
-    try{ localStorage.setItem(TKEY,JSON.stringify(calTimes)); }catch(e){}
-    buildLines();
-    toastCopy('タイミングを保存しました。この端末では次からこのタイミングで表示します。下のボタンでデータをコピーして送ってもらえれば、どの端末でも同じになるよう組み込みます。',JSON.stringify(calTimes));
-  } else toast('最後まで合わせられなかったので、保存しませんでした',4000);
-  shown=-2; phase='';
-}
-$('abyss').addEventListener('pointerdown',e=>{ if(e.target.closest('button')) return; if(calib){ e.preventDefault(); calTap(); } });
-document.addEventListener('keydown',e=>{ if(calib&&(e.key===' '||e.key==='Enter')){ e.preventDefault(); calTap(); } else if(abyss&&e.key==='Escape') exitAbyss(); });
-$('acal').addEventListener('click',e=>{ e.stopPropagation(); startCalib(); });
-$('areset').addEventListener('click',e=>{ e.stopPropagation(); try{ localStorage.removeItem(TKEY); }catch(_){} buildLines(); shown=-2; toast('推定のタイミングに戻しました',2500); });
-
-let toastT=0;
-function toast(msg,ms){ const t=$('atoast'); clearTimeout(toastT); t.classList.remove('btn'); t.textContent=msg; t.classList.toggle('on',!!msg); if(msg&&ms) toastT=setTimeout(()=>t.classList.remove('on'),ms); }
-function toastCopy(msg,data){ const t=$('atoast'); clearTimeout(toastT); t.textContent=msg; t.appendChild(document.createElement('br'));
-  const b=document.createElement('button'); b.type='button'; b.textContent='データをコピー';
-  b.addEventListener('click',e=>{ e.stopPropagation(); const done=()=>{ b.textContent='コピーしました'; setTimeout(()=>t.classList.remove('on'),1500); };
-    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(data).then(done,()=>{ b.textContent='コピーできませんでした'; }); else b.textContent='コピーできませんでした'; });
-  const c=document.createElement('button'); c.type='button'; c.textContent='閉じる'; c.style.marginLeft='8px'; c.addEventListener('click',e=>{ e.stopPropagation(); t.classList.remove('on'); });
-  t.append(b,c); t.classList.add('on','btn'); }
-buildLines();
+bgm.addEventListener('ended',()=>{ if(abyss) setTimeout(exitAbyss,1500); });
+function tick(){ if(!abyss){ tickOn=false; return; } const d=bgm.duration||180.85; $('aprog').style.width=((bgm.currentTime||0)/d*100)+'%'; requestAnimationFrame(tick); }
+// 枠の外をタップすると終わる（題名を見せている間は反応しない）
+$('abyss').addEventListener('click',e=>{ if(!abyss||!$('lyr').classList.contains('on')) return; if(e.target.closest('#lyr')) return; exitAbyss(); });
+document.addEventListener('keydown',e=>{ if(abyss&&e.key==='Escape') exitAbyss(); });
 
 // ===== 効果音: ぽわん（選ぶ）、きらりん（決定） =====
 let ac=null;
