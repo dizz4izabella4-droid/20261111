@@ -335,29 +335,43 @@ body{display:block;padding:0;overflow:hidden;touch-action:manipulation;-webkit-u
 .desk{flex:1;min-height:0;aspect-ratio:auto;border-radius:14px/12px}
 .area{inset:7px}
 /* 窓の配置（重ならない）: 問題文 / 攻撃信号・モニター / 小窓2つ / ログ2つ。反撃フェーズでは下のログ2つが傍受とメモリダンプに入れ替わる */
-#main{left:0;top:0;width:100%;height:45%}
-#wWave{left:0;top:46.4%;width:61%;height:17.6%}
-#wMon{left:62.4%;top:46.4%;width:37.6%;height:17.6%}
-#wCopy{left:0;top:65.4%;width:49.3%;height:10%}
-#wKey{left:50.7%;top:65.4%;width:49.3%;height:10%}
-#wBreach,#wFeed{left:0;top:76.8%;width:49.3%;height:23.2%}
-#wTrace,#wDump{left:50.7%;top:76.8%;width:49.3%;height:23.2%}
+#main{left:0;top:0;width:100%;height:56%}
+#wWave{left:0;top:57.2%;width:64%;height:12%}
+#wMon{left:65.2%;top:57.2%;width:34.8%;height:12%}
+#wCopy{left:0;top:70.4%;width:49.4%;height:8.2%}
+#wKey{left:50.6%;top:70.4%;width:49.4%;height:8.2%}
+#wBreach,#wFeed{left:0;top:79.8%;width:49.4%;height:20.2%}
+#wTrace,#wDump{left:50.6%;top:79.8%;width:49.4%;height:20.2%}
 .swapout{animation:swapout .32s steps(4) forwards}
 @keyframes swapout{0%{transform:none;opacity:1}100%{transform:scaleY(.04);opacity:0}}
 /* 文字の大きさ */
-.bar{font-size:9.5px;padding:3px 6px;gap:5px}
+.bar{font-size:9px;padding:2px 6px;gap:5px}
+.dummy-title,.win:not(#main) .bar{font-size:8px;padding:1px 5px}
 .bar .ico{width:11px;height:8px;font-size:6px;line-height:7px}
 .bar .ctl{display:none}
 .bar button{font-size:9.5px;padding:3px 5px}
 .body{padding:6px 9px 8px;font-size:12px;line-height:1.5}
 .bl{font-size:10.5px}
-.wl{font-size:21px;letter-spacing:.06em}
-.pr{font-size:10px}
+.wl{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:.45em;margin-top:2px}
+.pr{font-size:9px}
+.kj{font:26px/1.25 var(--ja);color:var(--ok);letter-spacing:.06em;text-shadow:0 0 10px rgba(57,255,136,.35)}
+.rd{flex-basis:100%;font:24px/1.35 var(--ja);letter-spacing:.06em}
+.rd span{display:inline-block;min-width:.9em;text-align:center}
+.wl .ent{font-size:.7em;margin-left:.3em}
+.c.pd{background:var(--gold);color:#021006;animation:none}
+.c.miss.pd{background:var(--err);color:#fff}
+.wl.old{margin-top:0;column-gap:.4em}
+.wl.old .pr{font-size:8px}
+.wl.old .kj{font-size:12px;color:#6f9a7c;text-shadow:none}
+.wl.old .rd{flex-basis:auto;font-size:11px;letter-spacing:.02em}
+.wl.old .rd span{min-width:0}
+.wl.old .ent{display:none}
+.mq .kj{font:700 1em var(--ja);color:#d8ffe2;margin-right:.5em;text-shadow:inherit;letter-spacing:.1em}
 .status{font-size:9.5px;gap:1px 9px;padding:3px 8px}
 #banner{height:20px;font-size:10px;letter-spacing:.1em}
 #res{font-size:10px}
-.lg{font-size:8.5px;line-height:1.35;padding:3px 6px}
-#lgDump{font-size:8px;line-height:1.25}
+.lg{font-size:8px;line-height:1.3;padding:2px 5px}
+#lgDump{font-size:7.5px;line-height:1.2}
 #wCopy .in{font-size:8.5px;padding:2px 6px;gap:2px}
 #wCopy .big{font-size:10px}
 #wCopy .pb{height:6px}
@@ -368,7 +382,7 @@ body{display:block;padding:0;overflow:hidden;touch-action:manipulation;-webkit-u
 #wKey .kbody{justify-content:center}
 #wCopy .row{display:none}
 .kbar{height:3px}
-.mhead,.whead{font-size:8px;gap:7px;padding:2px 6px}
+.mhead,.whead{font-size:7.5px;gap:6px;padding:1px 5px}
 .mhead span:nth-child(2){display:none}
 /* 電源・待機・警報 */
 #power{font-size:11px;letter-spacing:.18em;text-align:center;padding:0 10px}
@@ -411,7 +425,8 @@ body{display:block;padding:0;overflow:hidden;touch-action:manipulation;-webkit-u
 .stats dt{font-size:9.5px;letter-spacing:.1em}
 .stats dd{font-size:14px}
 #ov .nm{margin-top:10px}
-#ov .nm i{font-size:16px}
+#ov .nm i{font:16px var(--ja)}
+#ov td.n{font-family:var(--ja)}
 #ov .rk{margin-top:8px}
 #ov .rh{font-size:10px}
 #ov .tabs button{font-size:10px;padding:7px 2px}
@@ -420,29 +435,31 @@ body{display:block;padding:0;overflow:hidden;touch-action:manipulation;-webkit-u
 #ov .hint{font-size:10px;margin-top:8px}
 #ov .fmsg{font-size:11px}
 /* フリックキーボード（スマホの標準キーボードは使わない） */
-.kb{flex:none;display:grid;grid-template-columns:repeat(3,1fr) .85fr;grid-template-rows:repeat(3,var(--kh,52px));gap:6px;
+.kb{flex:none;display:grid;grid-template-columns:repeat(3,1fr) .85fr;grid-template-rows:repeat(4,var(--kh,46px));gap:5px;
   touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;font-family:var(--mono)}
 body.nokb .kb{display:none}
 .k{position:relative;background:#03110a;border:1px solid #1b3a26;border-radius:7px;display:flex;align-items:center;justify-content:center;
-  color:#c6f5d3;font-size:21px;cursor:pointer;touch-action:none;overflow:hidden;box-shadow:inset 0 -2px 0 rgba(0,0,0,.5);text-shadow:0 0 6px rgba(57,255,136,.35)}
-.k .h{position:absolute;font-size:10px;color:#3f7a52;line-height:1;text-shadow:none}
+  color:#c6f5d3;font:18px var(--ja);cursor:pointer;touch-action:none;overflow:hidden;box-shadow:inset 0 -2px 0 rgba(0,0,0,.5);text-shadow:0 0 6px rgba(57,255,136,.35)}
+.k .h{position:absolute;font-size:8.5px;color:#3f7a52;line-height:1;text-shadow:none}
 .k .h1{left:6px;top:50%;transform:translateY(-50%)}
-.k .h2{top:4px;left:50%;transform:translateX(-50%)}
+.k .h2{top:2px;left:50%;transform:translateX(-50%)}
 .k .h3{right:6px;top:50%;transform:translateY(-50%)}
-.k .h4{bottom:3px;left:50%;transform:translateX(-50%)}
+.k .h4{bottom:2px;left:50%;transform:translateX(-50%)}
 .k.fn{background:#020a05;color:#7fa98a;font-size:13px;letter-spacing:.06em}
-.k.ent{grid-column:4;grid-row:2/4;color:var(--accent);font-size:13px;flex-direction:column;gap:2px;border-color:#2f6b43}
+.k.ent{grid-column:4;grid-row:2/5;color:var(--accent);font-size:13px;flex-direction:column;gap:2px;border-color:#2f6b43}
 .k.ent b{font-size:22px;font-weight:normal;line-height:1}
+.k.mod{font:14px var(--ja);letter-spacing:0}
+.k.want{border-color:var(--gold);color:var(--gold);background:#1c2208;box-shadow:0 0 12px rgba(216,242,122,.45)}
 .k.on{background:#0d3a1d;border-color:var(--accent);box-shadow:0 0 12px rgba(34,227,106,.35)}
 body.kbwait .k:not(.ent){opacity:.45}
 #fg{position:absolute;inset:0;pointer-events:none;z-index:60}
 .fc{position:absolute;display:flex;align-items:center;justify-content:center;background:#062012;border:1px solid #2f6b43;border-radius:6px;
-  color:#d8ffe2;font:22px var(--mono);box-shadow:0 4px 14px rgba(0,0,0,.7)}
+  color:#d8ffe2;font:22px var(--ja);box-shadow:0 4px 14px rgba(0,0,0,.7)}
 .fc.sel{background:var(--accent);color:#021006;border-color:var(--accent);box-shadow:0 0 16px rgba(34,227,106,.6)}
 /* 背の低い画面 */
-@media (max-height:700px){ .kb{--kh:48px} }
-@media (max-height:640px){ .mqb.bot{display:none} .kb{--kh:44px;gap:5px} .mqb.top{height:34px} .mqb.top .mq{font-size:22px} .phone{gap:6px} }
-@media (max-height:560px){ .kb{--kh:40px} }
+@media (max-height:740px){ .mqb.bot{display:none} .kb{--kh:43px} .mqb.top{height:34px} .mqb.top .mq{font-size:22px} .phone{gap:6px} .crt{gap:6px} }
+@media (max-height:640px){ .kb{--kh:40px;gap:4px} .mqb.top{height:28px} .mqb.top .mq{font-size:18px} .kj{font-size:22px} .rd{font-size:20px} }
+@media (max-height:560px){ .kb{--kh:36px} .k{font-size:15px} .k .h{font-size:7.5px} .k .h2{top:1px} .k .h4{bottom:1px} #keyStr{font-size:9px} }
 /* 横向きのスマホでは縦向きをお願いする */
 #rot{display:none;position:fixed;inset:0;z-index:90;background:#010402;color:#8dffb5;align-items:center;justify-content:center;flex-direction:column;gap:8px;
   font:13px var(--mono);letter-spacing:.2em;text-align:center}
@@ -596,13 +613,22 @@ const ATK='203.0.113.47';
 const hopIp=()=>'198.51.100.'+(R(250)+2);
 const lan=()=>'10.0.'+R(255)+'.'+(R(254)+1);
 
-// ---- 問題: 中学校で習う英単語。難易度に応じた単語から毎回ランダムに出題、直前と同じ組み合わせにはしない ----
-const WORDS='apple りんご|book 本|school 学校|teacher 先生|student 生徒|friend 友達|family 家族|mother 母|father 父|house 家|room 部屋|window 窓|door ドア|desk 机|chair いす|pencil 鉛筆|picture 絵、写真|music 音楽|soccer サッカー|tennis テニス|baseball 野球|library 図書館|park 公園|station 駅|hospital 病院|river 川|mountain 山|sea 海|sky 空|flower 花|tree 木|animal 動物|dog 犬|cat ねこ|bird 鳥|water 水|milk 牛乳|bread パン|breakfast 朝食|lunch 昼食|dinner 夕食|morning 朝|afternoon 午後|evening 夕方|night 夜|today 今日|tomorrow 明日|yesterday 昨日|week 週|month 月|year 年|spring 春|summer 夏|autumn 秋|winter 冬|weather 天気|rain 雨|snow 雪|happy 幸せな|sad 悲しい|busy 忙しい|beautiful 美しい|interesting おもしろい|important 大切な|different 違う|easy 簡単な|difficult 難しい|young 若い|always いつも|usually ふつうは|sometimes ときどき|together いっしょに|study 勉強する|write 書く|read 読む|speak 話す|listen 聞く|swim 泳ぐ|cook 料理する|visit 訪れる|travel 旅行する|answer 答える|question 質問|country 国|city 都市|world 世界|people 人々|money お金|time 時間|history 歴史|science 科学|math 数学|homework 宿題|vacation 休暇|birthday 誕生日'.split('|').map(x=>x.split(' '));
+// ---- 問題: 重厚・禁忌・神話の語句（59語）。表示は漢字・カタカナ、入力は読みのひらがな。難易度に応じた語句から毎回ランダムに出題、直前と同じ組み合わせにはしない ----
+// 各要素は [読み, 表示]。words[wi][0] が入力する読み
+const WORDS='こくえん 黒焔|しゅうえん 終焉|たそがれ 黄昏|れいめい 黎明|しんえん 深淵|きょむ 虚無|ならく 奈落|めいふ 冥府|れんごく 煉獄|てんけい 天啓|しんばつ 神罰|だんざい 断罪|めっきゃく 滅却|かくせい 覚醒|ぼうぎゃく 暴虐|ぜったいれいど 絶対零度|てんちかいびゃく 天地開闢|むげんりんね 無限輪廻|えいごうかいき 永劫回帰|しゅうまつせかい 終末世界|たぶー 禁忌|はいとく 背徳|くろれきし 黒歴史|きんだんりょういき 禁断領域|しんえんのもん 深淵の門|くろきけいやく 黒き契約|だてん 堕天|じゅばく 呪縛|じゅそ 呪詛|しんしょく 侵蝕|おせん 汚染|こっか 黒化|ふういん 封印|ふういんかいじょ 封印解除|きんしょ 禁書|ひとく 秘匿|いたん 異端|はんぎゃく 反逆|はいしん 背信|もくしろく 黙示録|あぽかりぷす アポカリプス|あるまげどん アルマゲドン|るしふぁー ルシファー|べりある ベリアル|めふぃすとふぇれす メフィストフェレス|あざぜる アザゼル|りゔぁいあさん リヴァイアサン|べひーもす ベヒーモス|けるべろす ケルベロス|ばはむーと バハムート|ねめしす ネメシス|あるかな アルカナ|せらふぃむ セラフィム|けるびむ ケルビム|ぐりもわーる グリモワール|かたすとろふぃ カタストロフィ|えでん エデン|のあ ノア|はるまげどん ハルマゲドン'.split('|').map(x=>x.split(' '));
+// 濁点・半濁点・小書きは「小゛゜」キーで直前の文字を切り替えて作る（例: せ→ぜ、は→ば→ぱ、つ→っ→づ、う→ぅ→ゔ）
+// 1文字ぶんの打鍵の並び: ぜ = [せ, MOD]、ぱ = [は, MOD, MOD]、っ = [つ, MOD]
+const CYC='あぁ いぃ うぅゔ えぇ おぉ かが きぎ くぐ けげ こご さざ しじ すず せぜ そぞ ただ ちぢ つっづ てで とど はばぱ ひびぴ ふぶぷ へべぺ ほぼぽ やゃ ゆゅ よょ わゎ'.split(' ');
+const CYCMAP={}, MODOF={};
+CYC.forEach(x=>{ const a=[...x]; a.forEach((c,i)=>{ CYCMAP[c]=a[(i+1)%a.length]; if(i) MODOF[c]=[a[0],i]; }); });
+function seqOf(ch){ if(ch==='\n') return ['\n']; const m=MODOF[ch]; return m?[m[0],...Array(m[1]).fill('MOD')]:[ch]; }
+// 1語の打鍵数（最後の Enter を含む）
+const strokesOf=r=>[...r].reduce((a,c)=>a+seqOf(c).length,0)+1;
 // 難易度と問題数（開始前の画面で選ぶ）。問題数は3フェーズにほぼ均等に分ける
 const DIFF={
-  easy:{label:'EASY',desc:'短い単語（5文字以下）・攻撃信号の増え方がゆるやか',pool:w=>w.length<=5,grow:.7,missUp:.08},
-  normal:{label:'NORMAL',desc:'すべての単語・標準の攻撃',pool:()=>true,grow:1,missUp:.12},
-  hard:{label:'HARD',desc:'長い単語（6文字以上）・攻撃信号の増え方が速く、ミスに厳しい',pool:w=>w.length>=6,grow:1.45,missUp:.17}};
+  easy:{label:'EASY',desc:'短い語句（Enterを含め6打以下）・攻撃信号の増え方がゆるやか',pool:w=>strokesOf(w)<=6,grow:.7,missUp:.08},
+  normal:{label:'NORMAL',desc:'すべての語句・標準の攻撃',pool:()=>true,grow:1,missUp:.12},
+  hard:{label:'HARD',desc:'長い語句（Enterを含め7打以上）・攻撃信号の増え方が速く、ミスに厳しい',pool:w=>strokesOf(w)>=7,grow:1.25,missUp:.15}};
 const COUNTS=[9,14,20];
 let diff='normal', TOTAL=14, BOUNDS=[0,5,9,14];
 function setCount(n){ TOTAL=n; BOUNDS=[0,Math.round(n/3),Math.round(2*n/3),n]; }
@@ -979,7 +1005,7 @@ let aAmp=.05, wRed=0, wPhase=0, wLast=0, ripples=[], fin=null;
 const WAVES=[{f:1,a:1},{f:2.3,a:.62},{f:3.7,a:.46},{f:5.9,a:.32},{f:.5,a:.8}];
 const LIMIT=.85;
 function sizeWave(){ const r=wv.getBoundingClientRect(), d=window.devicePixelRatio||1; wv.width=Math.max(1,r.width*d|0); wv.height=Math.max(1,r.height*d|0); }
-function waveOk(){ aAmp=Math.max(.04,aAmp-.028); ripples.push(performance.now()); }
+function waveOk(){ aAmp=Math.max(.04,aAmp-.05); ripples.push(performance.now()); }
 function waveMiss(){ wRed=1; aAmp=Math.min(1,aAmp+DIFF[diff].missUp); }
 function waveReset(){ aAmp=.05; wRed=0; ripples=[]; fin=null; }
 // 最後の一撃: 攻撃信号が最大まで膨らんだあと、緑の打ち消し波が左から右へ走って平らにする
@@ -992,7 +1018,7 @@ function waveFrame(ts){
     if(finT<.8) aAmp=Math.min(1,aAmp+dt*1.6);
     front=Math.max(0,Math.min(1,(finT-.8)/1.3));
     if(finT>2.3&&fin.cb){ const cb=fin.cb; fin.cb=null; cb(); }
-  } else if(state==='play'||state==='boot'){ aAmp=Math.min(1,aAmp+dt*(.07+phase*.055)*DIFF[diff].grow); }
+  } else if(state==='play'||state==='boot'){ aAmp=Math.min(1,aAmp+dt*(.05+phase*.035)*DIFF[diff].grow); }
   if(state==='play') fwTick(dt);
   else if(state==='done'||state==='idle'||state==='off'){ aAmp=Math.max(.02,aAmp-dt*.5); }
   wRed=Math.max(0,wRed-dt*1.6);
@@ -1223,7 +1249,7 @@ requestAnimationFrame(lightFrame);
 // 攻撃信号が危険ライン（85%）を超えている間は耐久値が減り続ける（入力が遅すぎる）。
 // ミスが3回以上続くと、続いた回数に応じてさらに削られる。信号を低く抑えていると少しずつ回復する。0%でハッキングされる
 let fw=100, missRun=0, fwWarnAt=0, fwLowShown=false;
-const FW_DRAIN={easy:9,normal:13,hard:18};
+const FW_DRAIN={easy:9,normal:13,hard:18};   // 攻撃信号の増え方・抑え方はスマホ版用に調整（フリックはキーボードより遅いため）
 function fwSet(v){
   fw=Math.max(0,Math.min(100,v));
   const el=$('sFw'); el.textContent=Math.ceil(fw)+'%'; el.dataset.lv=fw<30?2:fw<60?1:0;
@@ -1374,13 +1400,13 @@ function respond(){
   if(state!=='alert') return;
   token++; state='boot'; sirenStop(); $('alert').hidden=true; document.body.classList.remove('alert'); audio(); mqClear(); bgmStart();
   const m=$('main'); m.hidden=false; m.classList.remove('appear'); void m.offsetWidth; m.classList.add('appear'); playOpen();
-  words=pickWords(); N=words.reduce((a,w)=>a+w[0].length+1,0);   // 各単語の最後に Enter（1打）
+  words=pickWords(); N=words.reduce((a,w)=>a+strokesOf(w[0]),0);   // 打鍵数（各語の最後の Enter を含む）
   wi=0;ci=0;ti=0;miss=0;streak=0;maxStreak=0;t0=null;missHere=false;phase=0; missRun=0; fwLowShown=false; fwSet(100);
   con.textContent=''; $('res').hidden=true; $('banner').hidden=true;
   dummiesReset(); startPhaseStats(); update();
   typeLines(BOOT,()=>{ startPhase(0); });
 }
-function startPhaseStats(){ phMiss=0; phTyped=0; xfer=0; phLen=words.slice(BOUNDS[phase],BOUNDS[phase+1]).reduce((a,w)=>a+w[0].length+1,0); }
+function startPhaseStats(){ phMiss=0; phTyped=0; xfer=0; phLen=words.slice(BOUNDS[phase],BOUNDS[phase+1]).reduce((a,w)=>a+strokesOf(w[0]),0); }
 function startPhase(p){
   phase=p; Lb.q=[]; startPhaseStats();
   const P=PH[p];
@@ -1396,12 +1422,17 @@ function startPhase(p){
   state='boot';
   typeLines(P.intro,()=>{ state='play'; newWord(); });
 }
+// 1語の表示: 1行目に漢字・カタカナ、2行目に入力する読み（ひらがな）。打ち終えた語は小さく1行にまとめる
+let sub=0;
 function newWord(){
-  const [w,ja]=words[wi]; const d=document.createElement('div'); d.className='wl';
-  const pr=document.createElement('span'); pr.className='pr'; pr.textContent=PH[phase].prompt; d.appendChild(pr);
-  // 単語の後ろに Enter（↵）を置き、押して確定するまで次へ進まない
-  cur=[...w,'\n'].map(ch=>{ const s=document.createElement('span'); s.className='u'; s.textContent=ch==='\n'?'\u21B5':ch; s._ch=ch; if(ch==='\n') s.classList.add('ent'); d.appendChild(s); return s; });
-  con.appendChild(d); ci=0; cur[0].className='c'; body.scrollTop=body.scrollHeight; d.classList.add('appear');
+  const [r,disp]=words[wi]; const d=document.createElement('div'); d.className='wl';
+  const pr=document.createElement('span'); pr.className='pr'; pr.textContent=PH[phase].prompt;
+  const kj=document.createElement('span'); kj.className='kj'; kj.textContent=disp; d.append(pr,kj);
+  const rd=document.createElement('div'); rd.className='rd'; d.appendChild(rd);
+  // 読みの後ろに Enter（↵）を置き、押して確定するまで次へ進まない
+  cur=[...r,'\n'].map(ch=>{ const s=document.createElement('span'); s.className='u'; s.textContent=ch==='\n'?'\u21B5':ch; s._ch=ch; s._seq=seqOf(ch); if(ch==='\n') s.classList.add('ent'); rd.appendChild(s); return s; });
+  if(newWord.line) newWord.line.classList.add('old');
+  con.appendChild(d); ci=0; sub=0; cur[0].className='c'; wantMod(false); body.scrollTop=body.scrollHeight; d.classList.add('appear');
   newWord.line=d;
 }
 function elapsed(){ return t0?(performance.now()-t0)/1000:0; }
@@ -1425,16 +1456,19 @@ function drawXfer(d){
 function key(ch){
   if(state!=='play') return;
   if(!t0){ t0=performance.now(); timer=setInterval(update,100); }
-  const exp=cur[ci]._ch;
-  if(ch===exp||(ch!=='\n'&&exp!=='\n'&&ch.toLowerCase()===exp.toLowerCase())){
-    cur[ci].className=(missHere?'w':'d')+(exp==='\n'?' ent':''); missHere=false;
-    missRun=0; noteKey(); lightKey(); ci++; ti++; phTyped++; streak++; maxStreak=Math.max(maxStreak,streak); xfer=Math.min(phLen,xfer+1);
+  // 1打ずつ判定する。濁点などの文字は、元の文字の打鍵のあと「小゛゜」が必要（それまで金色で待つ）
+  const exp=cur[ci]._seq[sub], ent=cur[ci]._ch==='\n'?' ent':'';
+  if(ch===exp){
+    missRun=0; noteKey(); lightKey(); ti++; phTyped++; streak++; maxStreak=Math.max(maxStreak,streak); xfer=Math.min(phLen,xfer+1);
+    sub++;
+    if(sub>=cur[ci]._seq.length){ cur[ci].className=(missHere?'w':'d')+ent; missHere=false; ci++; sub=0; }
     drawXfer(1); dummiesOk();
     if(streak>0&&streak%15===0){ playStinger(); banner(['FIREWALL HOLDING','SIGNAL LOCKED','PROXY STRIPPED','UPLINK SEIZED','SYSTEM BREACHED'][(streak/15-1)%5]); }
     setTension(ti/N);
-    if(ci>=cur.length) wordDone(); else cur[ci].className='c'+(cur[ci]._ch==='\n'?' ent':'');
+    if(ci>=cur.length){ wantMod(false); wordDone(); }
+    else { cur[ci].className='c'+(sub?' pd':'')+(cur[ci]._ch==='\n'?' ent':''); wantMod(sub>0); }
   } else {
-    miss++; phMiss++; streak=0; missHere=true; cur[ci].className='c miss'+(cur[ci]._ch==='\n'?' ent':'');
+    miss++; phMiss++; streak=0; missHere=true; cur[ci].className='c miss'+(sub?' pd':'')+ent;
     const before=xfer; xfer=Math.max(0,xfer-2); drawXfer(xfer-before);
     playMiss(); dummiesMiss(); fwMiss(); lightMiss(); buzz(30);
   }
@@ -1442,8 +1476,8 @@ function key(ch){
 }
 // 単語の入力完了: 日本語の意味を暗く表示 → 次の単語 / 次のフェーズ
 function wordDone(){
-  const w=words[wi][0]; playChord(w.length);
-  mqTop('<span class="en">'+esc(w.toUpperCase())+'</span>'+esc(words[wi][1]));
+  const [w,disp]=words[wi]; playChord([...w].length);
+  mqTop('<span class="kj">'+esc(disp)+'</span>'+esc(w));
   wi++;
   if(wi>=TOTAL){ ending(); return; }
   if(wi===BOUNDS[phase+1]){ musicSuccess(); state='boot'; typeLines(PH[phase].end,()=>later(()=>startPhase(phase+1),250)); return; }
@@ -1483,11 +1517,11 @@ const METRIC={
 };
 const boardName=b=>{ const [d,n]=b.split('-'); return DIFF[d].label+' / '+n+' WORDS'; };
 const rankOf=(rec,k)=>{ const l=SCORES.filter(d=>d.board===rec.board).sort(METRIC[k].cmp); return [l.indexOf(rec)+1,l.length,l]; };
-const gradeOf=sc=>sc>=350?'S':sc>=250?'A':sc>=160?'B':sc>=90?'C':'D';
+const gradeOf=sc=>sc>=220?'S':sc>=170?'A':sc>=120?'B':sc>=80?'C':'D';   // スマホ版の仮の基準
 let naming=null, nameBuf='', rankTab='total', lastRec=null;
 function finish(){
   state='done'; update();
-  mqList=words.map(([w,ja])=>'<span class="en">'+esc(w.toUpperCase())+'</span>'+esc(ja)).join('<span class="sep">／</span>');
+  mqList=words.map(([w,disp])=>'<span class="kj">'+esc(disp)+'</span>'+esc(w)).join('<span class="sep">／</span>');
   later(()=>marquee('反撃完了　攻撃元のシステムを停止しました','gold'),300);
   const s=endT0||elapsed(), acc=N/(N+miss)*100, cpm=Math.round(N/s*60), score=Math.round(cpm*(acc/100)**2);
   const r=$('res'); r.hidden=false;
@@ -1504,7 +1538,7 @@ function finish(){
  MAX COMBO: ${maxStreak}
  SCORE    : ${score} pts  RANK ${gradeOf(score)}
 -------------------------------------
-${words.map(([w,ja])=>' '+w.padEnd(12)+ja).join('\n')}
+${words.map(([w,disp])=>' '+disp+'（'+w+'）').join('\n')}
 -------------------------------------`;
   body.scrollTop=body.scrollHeight;
   const rec={id:SCORES.length,board:diff+'-'+TOTAL,name:'',cpm,time:+s.toFixed(1),miss,acc:+acc.toFixed(1),score,combo:maxStreak};
@@ -1533,7 +1567,7 @@ function renderResult(){
   const lab=document.createElement('span'); lab.textContent='NAME'; nm.appendChild(lab);
   const ch=[...(naming?nameBuf:rec.name)];
   for(let i=0;i<3;i++){ const b=document.createElement('i'); b.textContent=ch[i]||(naming?'_':''); if(naming&&i===Math.min(ch.length,2)&&ch.length<3) b.className='cur'; nm.appendChild(b); }
-  $('rHint').textContent=naming?'Flick your name (3 letters) and press ENTER':'ENTER: mission select  /  Tap outside: view log';
+  $('rHint').textContent=naming?'Flick your name (up to 3 kana) and press ENTER':'ENTER: mission select  /  Tap outside: view log';
   const tabs=$('rTabs'); tabs.textContent='';
   Object.keys(METRIC).forEach(k=>{ const [r]=rankOf(rec,k), bt=document.createElement('button'); bt.type='button';
     bt.textContent=METRIC[k].label+' #'+r; if(k===rankTab) bt.className='on';
@@ -1566,7 +1600,7 @@ window.addEventListener('keydown',e=>{
   if(state!=='play') return;
   if(e.key==='Process'||e.isComposing||e.keyCode===229){ $('ime').hidden=false; return; }
   if(e.key==='Enter'){ e.preventDefault(); if(!e.repeat){ playKey(true); key('\n'); } return; }
-  if(e.key.length===1){ e.preventDefault(); $('ime').hidden=true; if(!e.repeat) playKey(e.key===' '); key(e.key); }
+  if(/^[\u3041-\u3096\u30FC]$/.test(e.key)){ e.preventDefault(); if(!e.repeat) playKey(false); key(e.key); }
 });
 $('power').addEventListener('click',powerOn);
 $('alert').addEventListener('click',respond);
@@ -1578,18 +1612,23 @@ $('se').addEventListener('click',()=>setSe(!seOn)); $('dSe').addEventListener('c
 $('bgm').addEventListener('click',()=>setBgm(!bgmOn)); $('dBgm').addEventListener('click',()=>setBgm(!bgmOn));
 
 
-// ---- スマホ用: 画面上のフリックキーボード（英字のフリック配列。タップで中央の文字、フリックした方向の文字） ----
-// 各キーは [中央, 左, 上, 右, 下]。配列はスマホの英字テンキーと同じ（ABC は上段の中央）
-const FKEYS=[['@','#','/','&','_'],['a','b','c','',''],['d','e','f','',''],
-  ['g','h','i','',''],['j','k','l','',''],['m','n','o','',''],
-  ['p','q','r','s',''],['t','u','v','',''],['w','x','y','z','']];
+// ---- スマホ用: 画面上のフリックキーボード（ひらがなのフリック配列。タップで中央の文字、フリックした方向の文字） ----
+// 各キーは [中央, 左, 上, 右, 下]。配列はスマホのかなテンキーと同じ。'MOD' は「小゛゜」キー
+const FKEYS=[['あ','い','う','え','お'],['か','き','く','け','こ'],['さ','し','す','せ','そ'],
+  ['た','ち','つ','て','と'],['な','に','ぬ','ね','の'],['は','ひ','ふ','へ','ほ'],
+  ['ま','み','む','め','も'],['や','「','ゆ','」','よ'],['ら','り','る','れ','ろ'],
+  ['MOD'],['わ','を','ん','ー',''],['、','。','？','！','']];
 const kbEl=$('kb'), fg=$('fg');
+let modKey=null;
+// 次に「小゛゜」が必要なとき、そのキーを光らせる
+function wantMod(on){ if(modKey) modKey.classList.toggle('want',!!on); }
 function buzz(ms){ try{ if(navigator.vibrate) navigator.vibrate(ms); }catch(e){} }
 function kbShow(on){ document.body.classList.toggle('nokb',!on); }
 function mkKey(cls,col,row){ const k=document.createElement('div'); k.className='k'+(cls?' '+cls:''); if(col) k.style.gridColumn=col; if(row) k.style.gridRow=row; kbEl.appendChild(k); return k; }
 function renderKB(){
   kbEl.textContent='';
-  FKEYS.forEach((ch,i)=>{ const k=mkKey('',i%3+1,(i/3|0)+1); k.dataset.i=i;
+  FKEYS.forEach((ch,i)=>{ if(ch[0]==='MOD'){ modKey=mkKey('fn mod',i%3+1,(i/3|0)+1); modKey.dataset.fn='MOD'; modKey.textContent='小゛゜'; return; }
+    const k=mkKey('',i%3+1,(i/3|0)+1); k.dataset.i=i;
     const c=document.createElement('span'); c.textContent=ch[0]; k.appendChild(c);
     for(let d=1;d<5;d++) if(ch[d]){ const h=document.createElement('span'); h.className='h h'+d; h.textContent=ch[d]; k.appendChild(h); } });
   const del=mkKey('fn',4,1); del.textContent='\u232B'; del.dataset.fn='Backspace';
@@ -1623,13 +1662,14 @@ kbEl.addEventListener('pointerup',e=>{ if(!act||e.pointerId!==act.id) return; co
   else fkey(k.dataset.fn); });
 kbEl.addEventListener('pointercancel',e=>{ if(act&&e.pointerId===act.id) endPress(); });
 kbEl.addEventListener('contextmenu',e=>e.preventDefault());
-// フリックキーボードからの入力（物理キーボードと同じ扱い。Backspace は名前入力のときだけ使う）
+// フリックキーボードからの入力（Backspace は名前入力のときだけ使う。名前はかな3文字まで）
 function fkey(k){
   if(state==='alert'){ if(k==='Enter') respond(); return; }
   if(state==='done'&&naming){
     if(k==='Enter') finishNaming();
     else if(k==='Backspace'){ nameBuf=[...nameBuf].slice(0,-1).join(''); playKey(false); renderResult(); }
-    else if(/^[a-z]$/.test(k)&&[...nameBuf].length<3){ nameBuf+=k.toUpperCase(); playKey(false); renderResult(); }
+    else if(k==='MOD'){ const nx=CYCMAP[nameBuf.slice(-1)]; playKey(false); if(nx){ nameBuf=nameBuf.slice(0,-1)+nx; renderResult(); } }
+    else if(/^[\u3041-\u3096\u30FC]$/.test(k)&&[...nameBuf].length<3){ nameBuf+=k; playKey(false); renderResult(); }
     return; }
   if(state==='done'||state==='overres'){ if(k==='Enter'){ playKey(true); toMenu(); } return; }
   if(state!=='play'){ if(k!=='Backspace') playKey(k==='Enter'); return; }
