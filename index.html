@@ -8,6 +8,7 @@
 <style>
 /* Layout: 4:3 CRT screen between two green neon light bars. Inside, tiled windows (left / center console / right) that never overlap */
 :root{
+  --beat:0; --ncA:57,255,136; --coreA:220,255,233; --brA:1; --ncB:57,255,136; --coreB:220,255,233; --brB:1;
   --bg:#020604; --win:#030a06; --bar:#0a1a10; --line:#1b3a26; --nc:57,255,136; --core:220,255,233; --neon:rgb(var(--nc));
   --fg:#b8d8c0; --dim:#2f5a3c; --ok:#d8ffe2; --cursor:#7dffa8;
   --err:#ff4d5e; --accent:#22e36a; --gold:#d8f27a; --teal:#3fd0c0; --jp:#22402c;
@@ -20,7 +21,7 @@ html,body{height:100%}
 body{color:var(--fg);font-family:var(--mono);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
   padding-block:16px;box-sizing:border-box;overflow-x:hidden;display:flex;align-items:center;justify-content:center;
-  background:radial-gradient(ellipse at 50% 0%,rgba(var(--nc),.13),transparent 55%),radial-gradient(ellipse at 50% 100%,rgba(var(--nc),.11),transparent 55%),var(--bg);
+  background:radial-gradient(ellipse at 50% 0%,rgba(var(--ncA),calc(.08 + var(--brA) * .07)),transparent 55%),radial-gradient(ellipse at 50% 100%,rgba(var(--ncB),calc(.07 + var(--brB) * .06)),transparent 55%),var(--bg);
   transition:background .3s}
 body.alert{background:radial-gradient(ellipse at 50% 0%,rgba(255,60,80,.2),transparent 55%),radial-gradient(ellipse at 50% 100%,rgba(255,60,80,.16),transparent 55%),var(--bg)}
 
@@ -55,15 +56,26 @@ body.alert{background:radial-gradient(ellipse at 50% 0%,rgba(255,60,80,.2),trans
 .neon{height:6px;border-radius:6px;margin:0 2%;background:rgb(var(--core));animation:buzz 7s steps(70) infinite;transition:background 1.2s,box-shadow 1.2s;
   box-shadow:0 0 3px #fff,0 0 9px var(--neon),0 0 22px var(--neon),0 0 46px var(--neon),0 0 90px rgba(var(--nc),.45)}
 .neon.flick{opacity:.35!important}
+.neon{filter:brightness(calc(.8 + var(--beat) * .9))}
+.mqb .mq{filter:brightness(calc(.85 + var(--beat) * .6))}
+.area .win{box-shadow:0 0 0 1px rgba(var(--ncB),calc(.03 + var(--beat) * .22)),0 10px 26px rgba(0,0,0,.65)}
+.area #wWave.focus{box-shadow:0 0 0 1px rgba(141,255,181,.5),0 0 30px rgba(57,255,136,.35)}
 .neon.bot{animation-delay:-3.1s}
-body.alert .neon,body.hit .neon{background:#ffdfe2;box-shadow:0 0 3px #fff,0 0 9px #ff3c50,0 0 22px #ff3c50,0 0 46px #ff3c50,0 0 90px rgba(255,60,80,.5)}
+/* 上のネオン = 外部からの攻撃 / 下のネオン = こちらの攻撃（色と明るさは JS が毎フレーム設定） */
+.crt .neon{transition:none}
+.crt .neon.top{background:rgb(var(--coreA));filter:brightness(calc(var(--brA) + var(--beat) * .45));
+  box-shadow:0 0 3px #fff,0 0 9px rgb(var(--ncA)),0 0 22px rgb(var(--ncA)),0 0 46px rgb(var(--ncA)),0 0 90px rgba(var(--ncA),.45)}
+.crt .neon.bot{background:rgb(var(--coreB));filter:brightness(calc(var(--brB) + var(--beat) * .45));
+  box-shadow:0 0 3px #fff,0 0 9px rgb(var(--ncB)),0 0 22px rgb(var(--ncB)),0 0 46px rgb(var(--ncB)),0 0 90px rgba(var(--ncB),.45)}
+body.alert .crt .neon{background:#ffdfe2;box-shadow:0 0 3px #fff,0 0 9px #ff3c50,0 0 22px #ff3c50,0 0 46px #ff3c50,0 0 90px rgba(255,60,80,.5);animation:alarm .5s steps(1) infinite}
+body.alert .neon{background:#ffdfe2;box-shadow:0 0 3px #fff,0 0 9px #ff3c50,0 0 22px #ff3c50,0 0 46px #ff3c50,0 0 90px rgba(255,60,80,.5)}
 body.alert .neon{animation:alarm .5s steps(1) infinite}
 @keyframes buzz{0%,100%{opacity:1}31%{opacity:1}32%{opacity:.5}33%{opacity:1}34%{opacity:.75}35%{opacity:1}78%{opacity:1}79%{opacity:.65}80%{opacity:1}}
 @keyframes alarm{50%{opacity:.25}}
 
 /* screen */
 .desk{position:relative;aspect-ratio:4/3;width:100%;border-radius:18px/14px;overflow:hidden;background:#010402;
-  box-shadow:inset 0 0 70px rgba(0,0,0,.95),0 -14px 40px rgba(var(--nc),.16),0 14px 40px rgba(var(--nc),.14);transition:box-shadow 1.2s}
+  box-shadow:inset 0 0 70px rgba(0,0,0,.95),0 -14px 40px rgba(var(--ncA),calc(.06 + var(--brA) * .08 + var(--beat) * .3)),0 14px 40px rgba(var(--ncB),calc(.05 + var(--brB) * .08 + var(--beat) * .3))}
 .area{position:absolute;inset:12px}
 .desk::after{content:"";position:absolute;inset:0;z-index:40;pointer-events:none;border-radius:inherit;
   background:repeating-linear-gradient(0deg,rgba(0,0,0,.34) 0 1px,transparent 1px 3px),
@@ -196,11 +208,65 @@ body.alert .neon{animation:alarm .5s steps(1) infinite}
 #noise{position:absolute;inset:0;width:100%;height:100%;z-index:39;pointer-events:none}
 .mq.red2{color:#ff6b78;text-shadow:0 0 6px rgba(255,60,80,.95),0 0 18px rgba(255,60,80,.55)}
 .mq.ok2{color:#8dffb5}
+/* mission select */
+#menu{position:absolute;inset:0;z-index:25;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:0 6%}
+#menu .mbox{width:min(560px,100%);border:1px solid var(--accent);background:rgba(1,8,4,.92);padding:20px 24px 16px;box-shadow:0 0 30px rgba(34,227,106,.2)}
+#menu .mt{font-size:clamp(18px,2.4vw,26px);letter-spacing:.22em;color:var(--ok);text-shadow:0 0 10px rgba(57,255,136,.5)}
+#menu .ms{font-size:11px;letter-spacing:.24em;color:#4f7d5d;margin:4px 0 14px}
+#menu .opt{display:grid;grid-template-columns:8.5em 1fr;align-items:center;gap:4px 12px;padding:8px 10px;border:1px solid transparent;margin-bottom:6px}
+#menu .opt.sel{border-color:#2f6b43;background:rgba(34,227,106,.06)}
+#menu .ol{font-size:11px;letter-spacing:.16em;color:#6f9a7c}
+#menu .oc{display:flex;gap:6px;flex-wrap:wrap}
+#menu .oc button{background:#03100a;border:1px solid var(--line);color:#7fa98a;font:13px var(--mono);padding:5px 12px;cursor:pointer;letter-spacing:.08em}
+#menu .oc button.on{border-color:var(--accent);color:var(--ok);background:#0a2a16;box-shadow:0 0 10px rgba(34,227,106,.25)}
+#menu .od{grid-column:2;font:11px var(--ja);color:#4f7d5d}
+#menu .start{display:block;width:100%;margin-top:10px;padding:10px;background:#03100a;border:1px solid #2f6b43;color:var(--ok);font:15px var(--mono);letter-spacing:.3em;cursor:pointer}
+#menu .start.sel,#menu .start:hover{border-color:var(--accent);background:#0d3a1d;box-shadow:0 0 18px rgba(34,227,106,.35)}
+#menu .start.sel{animation:blink2 1.2s steps(1) infinite}
+#menu .mh{margin-top:10px;font-size:10px;letter-spacing:.14em;color:#2f6b43;text-align:center}
+#menu button:focus-visible{outline:1px solid var(--gold)}
+/* audio deck (cyan / pink) */
+.cyber-deck{--neon-cyan:#00f0ff;--neon-pink:#ff0055;position:relative;width:min(340px,100%);border:1px solid var(--neon-cyan);background:rgba(0,240,255,.03);padding:18px 20px 14px;
+  color:var(--neon-cyan);box-shadow:0 0 20px rgba(0,240,255,.15),inset 0 0 15px rgba(0,240,255,.05);text-shadow:0 0 4px rgba(0,240,255,.35)}
+.cyber-deck::before{content:"[AUDIO_DECK_v2.4]";position:absolute;top:-8px;left:15px;background:#010402;padding:0 5px;font-size:10px;letter-spacing:2px;color:var(--neon-pink)}
+.track-info{font-size:12px;letter-spacing:1px;line-height:1.6}
+.track-info span{color:#fff}
+.track-info small{font-size:10px;color:#ff0055;letter-spacing:.5px}
+#trkStatus.live{color:var(--neon-pink)}
+.waveform-sim{height:20px;margin-top:10px;display:flex;align-items:flex-end;gap:2px}
+.waveform-sim i{flex:1;background:var(--neon-cyan);height:4px;opacity:.3}
+.waveform-sim i{transition:height .06s linear}
+@keyframes pulse{0%,100%{height:4px;opacity:.3}50%{height:18px;opacity:1}}
+.deck-btns{display:flex;gap:6px;margin-top:12px}
+.deck-btns button{flex:1;min-width:0;background:transparent;border:1px solid rgba(0,240,255,.45);color:var(--neon-cyan);font:11px var(--mono);padding:5px 2px;cursor:pointer;white-space:nowrap}
+.deck-btns button:hover{border-color:var(--neon-pink);color:var(--neon-pink)}
+/* game over */
+#impact.red{background:radial-gradient(ellipse at center,#fff0f2,rgba(255,80,100,.65) 40%,rgba(255,45,70,0) 75%)}
+body.danger .crt .neon.top{animation:alarm .4s steps(1) infinite}
+#sFw[data-lv="1"]{color:var(--gold)} #sFw[data-lv="2"]{color:var(--err);animation:blink2 .5s steps(1) infinite}
+.win.kill.lost::after{content:"ACCESS REVOKED"}
+.win.owned{border-color:var(--err)!important}
+.win.owned>.bar{background:#3a0f14}
+.win.owned .lg,.win.owned .body{color:#ff8a94!important}
+#hacked{position:absolute;inset:0;z-index:36;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(12,0,2,.88);text-align:center;padding:0 6%}
+#hacked .hk1{position:relative;font-size:clamp(30px,6.5vw,72px);letter-spacing:.14em;color:#ff4d5e;text-shadow:0 0 18px rgba(255,60,80,.8);animation:hkjit .18s steps(2) infinite}
+#hacked .hk1::before,#hacked .hk1::after{content:attr(data-t);position:absolute;inset:0;pointer-events:none}
+#hacked .hk1::before{color:#3fd0c0;transform:translate(-4px,0);clip-path:inset(0 0 55% 0);opacity:.7}
+#hacked .hk1::after{color:#fff;transform:translate(4px,2px);clip-path:inset(60% 0 0 0);opacity:.5}
+#hacked .hk2{font-size:13px;color:#ffb3ba;letter-spacing:.08em}
+#hacked .hk3{font:14px var(--ja);color:#a35a62}
+@keyframes hkjit{0%{transform:translate(0,0)}50%{transform:translate(-2px,1px)}100%{transform:translate(2px,-1px)}}
+#ov.fail .box{border-color:var(--err);box-shadow:0 0 40px rgba(255,60,80,.35)}
+#ov.fail .g{color:var(--err);border-color:var(--err);text-shadow:0 0 14px rgba(255,60,80,.6)}
+#ov.fail .grade.on{color:var(--err);border-color:var(--err);text-shadow:0 0 18px rgba(255,60,80,.7);box-shadow:0 0 24px rgba(255,60,80,.3)}
+#ov.fail .nm,#ov.fail .rk{display:none}
+#ov .fmsg{display:none;margin-top:14px;font:12px var(--ja);color:#ff8a94;letter-spacing:.06em}
+#ov.fail .fmsg{display:block}
 /* impact flash */
 #impact{position:absolute;inset:0;z-index:35;pointer-events:none;background:radial-gradient(ellipse at center,#f4fff7,rgba(120,255,170,.6) 40%,rgba(57,255,136,0) 75%);opacity:0}
 #impact.go{animation:impact 1.1s ease-out}
 @keyframes impact{0%{opacity:0}6%{opacity:1}30%{opacity:.6}100%{opacity:0}}
-body.strike .neon{background:#fff;box-shadow:0 0 6px #fff,0 0 18px #39ff88,0 0 40px #39ff88,0 0 90px #39ff88,0 0 160px rgba(57,255,136,.7)}
+body.strike .crt .neon.bot,body.strike .crt .neon.top{background:#fff;box-shadow:0 0 6px #fff,0 0 18px #39ff88,0 0 40px #39ff88,0 0 90px #39ff88,0 0 160px rgba(57,255,136,.7)}
 /* window cut-off on the final strike */
 .win.kill{border-color:var(--err);animation:kill .52s steps(6) forwards}
 .win.kill::after{content:"CONNECTION TERMINATED";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(30,0,4,.92);
@@ -218,7 +284,7 @@ body.strike .neon{background:#fff;box-shadow:0 0 6px #fff,0 0 18px #39ff88,0 0 4
 #ov.in .g{animation:type 1s steps(11) .5s forwards,caret .8s steps(1) infinite}
 #ov .s{margin-top:14px;font-size:13px;opacity:0;color:var(--fg)}
 #ov.in .s{animation:fade .4s 1.4s forwards}
-@keyframes type{to{width:calc(11ch + 2.4em)}}
+@keyframes type{to{width:calc(var(--n,11) * (1ch + .22em))}}
 @keyframes caret{50%{border-color:transparent}}
 @keyframes fade{to{opacity:1}}
 .rtop{display:flex;align-items:center;gap:22px;justify-content:center}
@@ -260,7 +326,7 @@ body.strike .neon{background:#fff;box-shadow:0 0 6px #fff,0 0 18px #39ff88,0 0 4
   #wMon,#wDump{height:140px}
   #wWave{height:140px;order:-1}
 }
-@media (prefers-reduced-motion:reduce){.desk::before,.desk::after,.neon,body.alert .neon,#alert,#alert .hd,.c,.lg::after,.pb .f::after{animation:none}
+@media (prefers-reduced-motion:reduce){#hacked .hk1,body.danger .neon,#sFw[data-lv="2"]{animation:none}.cyber-deck.live .waveform-sim i,#menu .start.sel{animation:none}.desk::before,.desk::after,.neon,body.alert .neon,#alert,#alert .hd,.c,.lg::after,.pb .f::after{animation:none}
   .pb .f{transition:none}#banner.show{animation:none;opacity:1}#ov .g,#ov.in .g{animation:none;width:auto;border:0}#ov .s,#ov.in .s{animation:none;opacity:1}#impact.go,.win.kill,#ov.in .box{animation:none}}
 </style>
 <style>html,body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
@@ -272,7 +338,24 @@ body.strike .neon{background:#fff;box-shadow:0 0 6px #fff,0 0 18px #39ff88,0 0 4
 <div id="power"><span>[ PRESS ANY KEY TO POWER ON ]</span></div>
 <div id="flash"></div>
 <div id="impact"></div>
+<div id="hacked" hidden><div class="hk1" data-t="SYSTEM HACKED">SYSTEM HACKED</div><div class="hk2">Remote user 203.0.113.47 has taken control of NODE7.</div><div class="hk3">システムの制御を奪われました</div></div>
 <div id="idle" hidden></div>
+<div id="menu" hidden>
+  <div class="mbox">
+    <div class="mt">NODE7 DEFENSE SYSTEM</div>
+    <div class="ms">SELECT MISSION PARAMETERS</div>
+    <div class="opt" data-row="0"><span class="ol">DIFFICULTY</span><span class="oc" id="optDiff"></span><span class="od" id="diffDesc"></span></div>
+    <div class="opt" data-row="1"><span class="ol">QUESTIONS</span><span class="oc" id="optCount"></span><span class="od" id="countDesc"></span></div>
+    <button type="button" class="start" id="mStart" data-row="2">START MISSION</button>
+    <div class="mh">&uarr;&darr; select &nbsp; &larr;&rarr; change &nbsp; ENTER start</div>
+  </div>
+  <div class="cyber-deck">
+    <div class="track-info">TARGET: <span id="trkName">The_Glass_Perimeter</span><br>STATUS: <span id="trkStatus">STANDBY</span><br>MISSION: <span id="gTrk">Iron Skyline Pursuit</span> <small>150 BPM [HIGH_TENSION]</small></div>
+    <div class="waveform-sim" id="viz"></div>
+    <div class="deck-btns"><button type="button" id="dBgm">BGM: ON</button><button type="button" id="dSe">SE: ON</button><button type="button" id="dLoad">LOAD TRACK</button><button type="button" id="dLoadG">LOAD MISSION</button></div>
+    <input type="file" id="trkFile" accept="audio/*" hidden><input type="file" id="gTrkFile" accept="audio/*" hidden>
+  </div>
+</div>
 <div id="alert" hidden>
   <div class="box">
     <div class="hd"><i></i>SECURITY ALERT</div>
@@ -298,6 +381,7 @@ body.strike .neon{background:#fff;box-shadow:0 0 6px #fff,0 0 18px #39ff88,0 0 4
     <span>Speed <b id="sW">0</b> CPM</span>
     <span>Miss <b id="sM">0</b></span>
     <span>Combo <b id="sC">0</b> (Max <b id="sX">0</b>)</span>
+    <span>Firewall <b id="sFw">100%</b></span>
   </div>
 </div>
 
@@ -355,14 +439,17 @@ body.strike .neon{background:#fff;box-shadow:0 0 6px #fff,0 0 18px #39ff88,0 0 4
 </div>
 
 </div></div><div class="neon bot"></div><div class="mqb bot" id="mqBot" aria-hidden="true"></div></div>
+<audio id="menuAudio" loop preload="auto" src="The_Glass_Perimeter.mp3"></audio>
+<audio id="gameAudio" loop preload="auto" src="Iron_Skyline_Pursuit.mp3"></audio>
 <div id="ov" hidden><div class="box">
-  <div class="g">TARGET DOWN</div>
+  <div class="g" id="rTitle">TARGET DOWN</div>
   <div class="s">
     <div class="rtop"><div class="grade" id="rGrade">-</div>
       <dl class="stats">
         <dt>SPEED</dt><dd id="rSpd">--</dd><dt>ACCURACY</dt><dd id="rAcc">--</dd><dt>TIME</dt><dd id="rTime">--</dd>
-        <dt>MISS</dt><dd id="rMiss">--</dd><dt>MAX COMBO</dt><dd id="rCombo">--</dd><dt>SCORE</dt><dd id="rScore" class="sc">--</dd>
+        <dt>MISS</dt><dd id="rMiss">--</dd><dt>MAX COMBO</dt><dd id="rCombo">--</dd><dt id="rScoreL">SCORE</dt><dd id="rScore" class="sc">--</dd>
       </dl></div>
+    <div class="fmsg" id="rFail">MISSION FAILED　/　この結果はランキングに記録されません</div>
     <div class="nm" id="rName"></div>
     <div class="rk"><div class="rh" id="rRankH">RANKING</div><div class="tabs" id="rTabs"></div><table id="rRank"></table></div>
     <div class="hint" id="rHint"></div>
@@ -379,14 +466,22 @@ const ATK='203.0.113.47';
 const hopIp=()=>'198.51.100.'+(R(250)+2);
 const lan=()=>'10.0.'+R(255)+'.'+(R(254)+1);
 
-// ---- 問題: 中学校で習う英単語。毎回ランダムに14語、直前と同じ組み合わせにはしない ----
+// ---- 問題: 中学校で習う英単語。難易度に応じた単語から毎回ランダムに出題、直前と同じ組み合わせにはしない ----
 const WORDS='apple りんご|book 本|school 学校|teacher 先生|student 生徒|friend 友達|family 家族|mother 母|father 父|house 家|room 部屋|window 窓|door ドア|desk 机|chair いす|pencil 鉛筆|picture 絵、写真|music 音楽|soccer サッカー|tennis テニス|baseball 野球|library 図書館|park 公園|station 駅|hospital 病院|river 川|mountain 山|sea 海|sky 空|flower 花|tree 木|animal 動物|dog 犬|cat ねこ|bird 鳥|water 水|milk 牛乳|bread パン|breakfast 朝食|lunch 昼食|dinner 夕食|morning 朝|afternoon 午後|evening 夕方|night 夜|today 今日|tomorrow 明日|yesterday 昨日|week 週|month 月|year 年|spring 春|summer 夏|autumn 秋|winter 冬|weather 天気|rain 雨|snow 雪|happy 幸せな|sad 悲しい|busy 忙しい|beautiful 美しい|interesting おもしろい|important 大切な|different 違う|easy 簡単な|difficult 難しい|young 若い|always いつも|usually ふつうは|sometimes ときどき|together いっしょに|study 勉強する|write 書く|read 読む|speak 話す|listen 聞く|swim 泳ぐ|cook 料理する|visit 訪れる|travel 旅行する|answer 答える|question 質問|country 国|city 都市|world 世界|people 人々|money お金|time 時間|history 歴史|science 科学|math 数学|homework 宿題|vacation 休暇|birthday 誕生日'.split('|').map(x=>x.split(' '));
-// 問題数: 14語（フェーズごとに 4 / 5 / 5 語）
-const BOUNDS=[0,4,9,14], TOTAL=14;
+// 難易度と問題数（開始前の画面で選ぶ）。問題数は3フェーズにほぼ均等に分ける
+const DIFF={
+  easy:{label:'EASY',desc:'短い単語（5文字以下）・攻撃信号の増え方がゆるやか',pool:w=>w.length<=5,grow:.7,missUp:.08},
+  normal:{label:'NORMAL',desc:'すべての単語・標準の攻撃',pool:()=>true,grow:1,missUp:.12},
+  hard:{label:'HARD',desc:'長い単語（6文字以上）・攻撃信号の増え方が速く、ミスに厳しい',pool:w=>w.length>=6,grow:1.45,missUp:.17}};
+const COUNTS=[9,14,20];
+let diff='normal', TOTAL=14, BOUNDS=[0,5,9,14];
+function setCount(n){ TOTAL=n; BOUNDS=[0,Math.round(n/3),Math.round(2*n/3),n]; }
+setCount(14);
 let lastSet='';
 function pickWords(){
   let pick,key;
-  do{ const a=WORDS.slice(); for(let i=a.length-1;i>0;i--){ const j=R(i+1); [a[i],a[j]]=[a[j],a[i]]; }
+  const pool=WORDS.filter(x=>DIFF[diff].pool(x[0]));
+  do{ const a=pool.slice(); for(let i=a.length-1;i>0;i--){ const j=R(i+1); [a[i],a[j]]=[a[j],a[i]]; }
     pick=a.slice(0,TOTAL); key=pick.map(x=>x[0]).sort().join(); }while(key===lastSet);
   lastSet=key; return pick;
 }
@@ -486,22 +581,77 @@ function playClear(){ if(!ok()) return;
 function playPower(){ if(!ok()) return; const t=ac.currentTime;
   voice({type:'sine',f0:70,f1:32,dur:1.1,vol:.55,lp0:400,wet:false}); voice({f0:50,dur:.9,vol:.12,lp0:200,lp1:900,q:3,wet:false});
   voice({type:'sine',f0:15000,dur:1.2,vol:.012,lp0:20000,wet:false}); clack(t,.8,700); }
-// ---- BGM: ダークなシンセウェーブ風のオリジナル曲（124BPM・イ短調・4つ打ち）
-//   フェーズ1: キック＋16分で脈打つベース＋パッド / フェーズ2: アルペジオとクラップ / フェーズ3: 主旋律と倍のハイハット
-//   終了時は小節の頭で止めず、余韻の和音（アウトロ）で締める ----
+// ---- BGM の音作り（ユーザー指定の経路）----
 let bgmBus=null, duck=null, seqT=null, nextT=0, seqStep=0;
-const BPM=124, SPB=60/BPM, S16=SPB/4;
+const BPM=150, SPB=60/BPM, S16=SPB/4;
 const midiF=m=>440*Math.pow(2,(m-69)/12);
-// 4小節ループ: Am - F - Dm - E
-const CH=[[33,[57,60,64]],[29,[57,60,65]],[26,[57,62,65]],[28,[56,59,64]]];
-const ARP=[0,1,2,1,0,2,1,2];
-// 主旋律: [開始16分位置(0-63), 長さ(16分), MIDI]（オリジナル）
-const LEAD=[[0,6,76],[6,2,74],[8,8,72],[16,6,77],[22,2,76],[24,8,74],[32,4,74],[36,4,77],[40,8,81],[48,6,80],[54,2,76],[56,8,71]];
+const CH=[[38,[62,65,69]],[34,[62,65,70]],[36,[64,67,72]],[33,[61,64,69]]];
+const OST=[0,2,1,2,0,2,1,2,0,2,1,2,0,1,2,1];
+const LEAD=[[0,4,74],[4,2,77],[6,2,76],[8,8,74],[16,4,77],[20,2,79],[22,2,77],[24,8,76],[32,4,76],[36,2,79],[38,2,81],[40,8,82],[48,4,81],[52,4,79],[56,8,73]];
+let gLP=null, gGate=null, LG=null, analyser=null, fdata=null, mediaSrc=null;
+
 function bgmOut(){
   if(bgmBus) return bgmBus;
-  const comp=ac.createDynamicsCompressor(); comp.threshold.value=-16; comp.ratio.value=5; comp.connect(master);
-  bgmBus=ac.createGain(); bgmBus.gain.value=.5; bgmBus.connect(comp);
-  duck=ac.createGain(); duck.gain.value=1; duck.connect(bgmBus);   // キックに合わせて沈むバス（サイドチェイン風）
+
+  // 1. 低域ブースト（小型スピーカーやPC内蔵でも低音の存在感を補正）
+  const bassBoost = ac.createBiquadFilter();
+  bassBoost.type = 'lowshelf';
+  bassBoost.frequency.value = 120;
+  bassBoost.gain.value = 6.0;
+
+  // 2. ウェーブシェーパー（デジタル臭さを消すための軽いサチュレーション／歪み付加）
+  const shaper = ac.createWaveShaper();
+  const k = 25, n = 44100, curve = new Float32Array(n), deg = Math.PI / 180;
+  for(let i = 0; i < n; ++i){
+    const x = (i * 2) / n - 1;
+    curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+  }
+  shaper.curve = curve;
+  shaper.oversample = '4x';
+
+  // 3. マスターコンプレッサー（音圧の天井を固め、パンチを出す）
+  const comp = ac.createDynamicsCompressor();
+  comp.threshold.value = -14;
+  comp.knee.value = 12;
+  comp.ratio.value = 6;
+  comp.attack.value = 0.002;
+  comp.release.value = 0.2;
+
+  // 接続フローの構築
+  bgmBus = ac.createGain();
+  bgmBus.gain.value = 0.55;
+  bgmBus.connect(bassBoost);
+  bassBoost.connect(shaper);
+  shaper.connect(comp);
+  comp.connect(master);
+
+  analyser = ac.createAnalyser();
+  analyser.fftSize = 512;
+  analyser.smoothingTimeConstant = 0.55;
+  bgmBus.connect(analyser);
+  fdata = new Uint8Array(analyser.frequencyBinCount);
+
+  gGate = ac.createGain();
+  gGate.connect(bgmBus);
+
+  gLP = ac.createBiquadFilter();
+  gLP.type = 'lowpass';
+  gLP.frequency.value = 800;
+  gLP.Q.value = 0.8;
+  gLP.connect(gGate);
+
+  duck = ac.createGain();
+  duck.gain.value = 1;
+  duck.connect(gLP);
+
+  LG = {};
+  ['amb','bass','pad','drum','perc','synth','lead','hype'].forEach(k=>{
+    const g = ac.createGain();
+    g.gain.value = 0;
+    g.connect(k==='bass'||k==='pad'||k==='synth' ? duck : gLP);
+    LG[k] = g;
+  });
+
   return bgmBus;
 }
 function bVoice(t,f,dur,vol,type,lp,att,rel,wet,detune,toDuck){
@@ -520,33 +670,40 @@ function bNoise(t,dur,vol,type,f,q){ if(!longNoise){ hiss(0,.01,.0001); } bgmOut
   src.connect(fl); fl.connect(g); g.connect(bgmBus); g.connect(bus().send); src.start(t,Math.random()); src.stop(t+dur+.02); }
 function bClap(t){ [0,.012,.024].forEach(d=>bNoise(t+d,.16,.28,'bandpass',1500,1.2)); }
 function bHat(t,v){ bNoise(t,.04,v,'highpass',8500); }
-function bgmStep(st,t){
-  const s16=st%16, bar=(st/16|0)%4, ph=typeof phase==='number'?phase:0, [root,chord]=CH[bar];
-  if(s16%4===0) bKick(t);
-  if(ph>=1&&(s16===4||s16===12)) bClap(t);
-  if(s16%4===2) bHat(t,.09); else if(ph>=2&&s16%2===1) bHat(t,.04);
-  // 16分で脈打つベース（オクターブを交互に）
-  bVoice(t,midiF(root+(s16%2?12:0)),S16*.9,.15,'sawtooth',ph>=2?1500:800,.003,.04,false,0,true);
-  bVoice(t,midiF(root-12),S16*.9,.12,'sine',300,.003,.04,false,0,true);
-  // パッド
-  if(s16===0) chord.forEach((m,i)=>{ bVoice(t,midiF(m),SPB*4,.03,'sawtooth',1100,.4,.6,true,-8+i*5,true); bVoice(t,midiF(m-12),SPB*4,.025,'sawtooth',900,.4,.6,true,7-i*4,true); });
-  // アルペジオ（フェーズ2以降）
-  if(ph>=1&&s16%2===0){ const m=chord[ARP[(s16/2)%8]]+12; bVoice(t,midiF(m),S16*1.6,.04,'triangle',3500,.003,.1,true); bVoice(t,midiF(m),S16*1.6,.02,'square',2200,.003,.1,true,6); }
-  // 主旋律（フェーズ3）
-  if(ph>=2) LEAD.forEach(([p,l,m])=>{ if(p===st%64){ const o=bVoice(t,midiF(m),l*S16,.07,'sawtooth',2800,.02,.15,true);
-      bVoice(t,midiF(m),l*S16,.04,'square',2000,.02,.15,true,-9);
-      const lfo=ac.createOscillator(), lg=ac.createGain(); lfo.frequency.value=5.2; lg.gain.value=10; lfo.connect(lg); lg.connect(o.detune); lfo.start(t+.12); lfo.stop(t+l*S16); } });
+// ---- BGM: 音源ファイルをそのまま流す（入力による曲の変化はなし）----
+//   開始前の画面: The_Glass_Perimeter.mp3 / タイピング中: Iron_Skyline_Pursuit.mp3（LOAD で手元の曲にも替えられる）
+//   どちらも bgmOut() の音作り（低域ブースト → 軽い歪み → コンプ）を通し、アナライザーで低音を読んで光の演出に使う
+let gameMode='', gameUser='', userTrack='', gameFadeT=null, keyTimes=[], lastKeyAt=0;
+const gAud=$('gameAudio'), mAud=$('menuAudio');
+function noteKey(){ const now=performance.now(); lastKeyAt=now; keyTimes.push(now); while(keyTimes.length&&now-keyTimes[0]>2000) keyTimes.shift(); }
+// ファイルを直接開いた場合（file:）は音の加工と低音の読み取りが使えないため、そのまま鳴らす
+function route(el){ bgmOut(); if(location.protocol==='file:') return; if(!el._src){ try{ el._src=ac.createMediaElementSource(el); el._src.connect(gGate); }catch(e){} } gGate.gain.value=1; }
+function playEl(el,onok,onng){ route(el); el.playbackRate=1; el.volume=.85; try{ el.currentTime=0; }catch(e){}
+  const pr=el.play(); if(pr&&pr.then) pr.then(()=>onok&&onok()).catch(()=>onng&&onng()); else onok&&onok(); }
+function bgmStart(){
+  if(!bgmOn||!audio()||gameMode==='file'&&!gAud.paused) return; clearInterval(gameFadeT);
+  playEl(gAud,()=>{ gameMode='file'; },()=>{ gameMode=''; });
 }
-function bgmStart(){ if(seqT||!bgmOn||!audio()) return; nextT=ac.currentTime+.08; seqStep=0;
-  seqT=setInterval(()=>{ while(nextT<ac.currentTime+.15){ bgmStep(seqStep,nextT); nextT+=S16; seqStep=(seqStep+1)%64; } },25); }
-function bgmStop(){ clearInterval(seqT); seqT=null; }
-// アウトロ: 曲を止めて、長い余韻の和音（Am → 主音に解決）と低いティンパニ風の音で締める
+function bgmStop(){ clearInterval(gameFadeT); try{ gAud.pause(); gAud.playbackRate=1; }catch(e){} gameMode=''; }
+// ハッキング成功（フェーズ突破）: 専用の成功音（効果音。曲は変えない）
+function musicSuccess(){
+  if(!ok()) return; [0,4,7,12,16].forEach((s,i)=>voice({type:'square',f0:midiF(74+s),t:i*.07,dur:.35,vol:.07,lp0:2000,lp1:7000,q:4}));
+  voice({f0:midiF(86),t:.35,dur:1.2,vol:.06,lp0:4000,lp1:900,q:2}); boom(.35,.7,110,.7); hiss(0,.5,.15,300,8000);
+}
 function bgmOutro(){
-  bgmStop(); if(!bgmOn||!audio()) return; const t=ac.currentTime+.05;
-  [0,.36,.72].forEach((d,i)=>{ bKick(t+d); bNoise(t+d,.5,.25,'lowpass',400); });
-  [45,57,60,64,69,72].forEach((m,i)=>{ bVoice(t+.72,midiF(m),5.5,.05,'sawtooth',1600,.6,3.5,true,i%2?6:-6); });
-  bVoice(t+.72,midiF(33),5.5,.2,'sine',300,.3,3,false);
+  if(gameMode!=='file'||gAud.paused) return; clearInterval(gameFadeT);
+  gameFadeT=setInterval(()=>{ gAud.volume=Math.max(0,gAud.volume-.03); if(gAud.volume<=0){ clearInterval(gameFadeT); gAud.pause(); gameMode=''; } },80);
 }
+// 開始前の画面の曲
+function deckStatus(live,msg){ $('trkStatus').textContent=msg||(live?'PLAYING [LIVE]':(bgmOn?'STANDBY':'MUTED')); $('trkStatus').classList.toggle('live',live);
+  document.querySelector('.cyber-deck').classList.toggle('live',live);
+  $('trkName').textContent=userTrack||'The_Glass_Perimeter'; }
+function menuMusicStart(){
+  menuMusicStop(); if(!bgmOn||!audio()){ deckStatus(false); return; }
+  playEl(mAud,()=>deckStatus(true),()=>deckStatus(false,'NO SIGNAL'));
+}
+function menuMusicStop(){ try{ mAud.pause(); }catch(e){} deckStatus(false); }
+mAud.addEventListener('error',()=>{ if(state==='menu') deckStatus(false,'NO SIGNAL'); });
 
 // 警報: 緊迫感のあるアラート
 // 1秒周期で「ウーッ」と上昇する警笛＋高い警告ビープ3連＋心音のような低音2連、背後に不穏な低いうなり
@@ -693,7 +850,7 @@ const WAVES=[{f:1,a:1},{f:2.3,a:.62},{f:3.7,a:.46},{f:5.9,a:.32},{f:.5,a:.8}];
 const LIMIT=.85;
 function sizeWave(){ const r=wv.getBoundingClientRect(), d=window.devicePixelRatio||1; wv.width=Math.max(1,r.width*d|0); wv.height=Math.max(1,r.height*d|0); }
 function waveOk(){ aAmp=Math.max(.04,aAmp-.028); ripples.push(performance.now()); }
-function waveMiss(){ wRed=1; aAmp=Math.min(1,aAmp+.12); }
+function waveMiss(){ wRed=1; aAmp=Math.min(1,aAmp+DIFF[diff].missUp); }
 function waveReset(){ aAmp=.05; wRed=0; ripples=[]; fin=null; }
 // 最後の一撃: 攻撃信号が最大まで膨らんだあと、緑の打ち消し波が左から右へ走って平らにする
 function waveFinale(cb){ fin={t0:performance.now(),cb}; }
@@ -705,13 +862,14 @@ function waveFrame(ts){
     if(finT<.8) aAmp=Math.min(1,aAmp+dt*1.6);
     front=Math.max(0,Math.min(1,(finT-.8)/1.3));
     if(finT>2.3&&fin.cb){ const cb=fin.cb; fin.cb=null; cb(); }
-  } else if(state==='play'||state==='boot'){ aAmp=Math.min(1,aAmp+dt*(.07+phase*.055)); }
+  } else if(state==='play'||state==='boot'){ aAmp=Math.min(1,aAmp+dt*(.07+phase*.055)*DIFF[diff].grow); }
+  if(state==='play') fwTick(dt);
   else if(state==='done'||state==='idle'||state==='off'){ aAmp=Math.max(.02,aAmp-dt*.5); }
   wRed=Math.max(0,wRed-dt*1.6);
   const live=fin&&front>=1?0:aAmp;
   wPhase+=dt*(2.5+live*9);
   const W=wv.width,H=wv.height,d=window.devicePixelRatio||1, mid=H/2, full=H/2-6*d;
-  wx.clearRect(0,0,W,H); wx.strokeStyle='rgba(40,110,60,.22)'; wx.lineWidth=1;
+  wx.clearRect(0,0,W,H); wx.strokeStyle='rgba(40,110,60,'+(.18+beat*.4).toFixed(2)+')'; wx.lineWidth=1;
   for(let x=0;x<W;x+=32*d){ wx.beginPath(); wx.moveTo(x,0); wx.lineTo(x,H); wx.stroke(); }
   wx.beginPath(); wx.moveTo(0,mid); wx.lineTo(W,mid); wx.stroke();
   // 危険ライン
@@ -782,7 +940,7 @@ function openWin(id,delay){
 }
 
 // ---- 電光掲示板: 右から左へ流す（上下2段。下段は少し遅れて流れる） ----
-const MQ=[$('mqTop'),$('mqBot')], RM=matchMedia('(prefers-reduced-motion: reduce)').matches, MQ_SPEED=300;
+const MQ=[$('mqTop'),$('mqBot')], RM=matchMedia('(prefers-reduced-motion: reduce)').matches, MQ_SPEED=600;
 let mqFree=[0,0];
 let mqSpecial=0, mqOdd=false, oddI=0, mqList='', mqGen=0;
 function mqClear(){ mqGen++; MQ.forEach(b=>b.textContent=''); mqFree=[0,0]; mqSpecial=0; mqOdd=false; }
@@ -798,7 +956,7 @@ function mqSpawn(box,k,html,cls,done){
   const el=document.createElement('span'); el.className='mq'+(cls?' '+cls:''); el.innerHTML=html; box.appendChild(el);
   if(RM){ [...box.children].forEach(c=>{ if(c!==el) c.remove(); }); el.classList.add('still'); setTimeout(()=>{ done&&done(); },2500); return; }
   const W=box.clientWidth, w=el.offsetWidth, now=performance.now(), start=Math.max(now,mqFree[k]);
-  mqFree[k]=start+(w+60)/MQ_SPEED*1000;
+  mqFree[k]=start+(w+40)/MQ_SPEED*1000;
   el.style.transform=`translateX(${W}px)`;
   const an=el.animate([{transform:`translateX(${W}px)`},{transform:`translateX(${-w}px)`}],{duration:(W+w)/MQ_SPEED*1000,delay:start-now,easing:'linear',fill:'both'});
   an.onfinish=()=>{ el.remove(); done&&done(); };
@@ -822,6 +980,9 @@ setInterval(()=>{
     else { const tier=tension<.34?0:tension<.67?1:2, L=STATUS[tier]; txt=garble(L[stI[tier]++%L.length],Math.max(0,tension-.3)*.35); cls=['odd','gold','red2'][tier]; }
     mqOdd=true; mqSpawn(MQ[1],1,esc(txt),cls); }
   if(state==='done' && mqList && mqFree[0]<now+200) mqSpawn(MQ[0],0,mqList,'');
+  if((state==='over'||state==='overres')&&!mqSpecial&&mqFree[1]<now+200){ mqOdd=true; mqSpawn(MQ[1],1,esc(garble(['SYSTEM COMPROMISED  //  ALL DATA EXPOSED','ROOT ACCESS TRANSFERRED TO 203.0.113.47','NODE7 OFFLINE  //  RECOVERY FAILED'][stI[1]++%3],.3)),'red2'); }
+  if(state==='menu'){ if(mqFree[0]<now+200) mqSpawn(MQ[0],0,'ミッションを選択してください　<span class="en">'+DIFF[diff].label+' / '+TOTAL+' WORDS</span>','gold');
+    if(mqFree[1]<now+200) mqSpawn(MQ[1],1,esc(['NODE7 DEFENSE SYSTEM  //  STANDING BY','SELECT DIFFICULTY AND NUMBER OF QUESTIONS','ALL OPERATORS REPORT TO CONSOLE'][stI[0]++%3]),'odd'); }
 },300);
 // ミスしたとき: 掲示板の文字が文字化けし、ドットが欠ける
 const MOJI='縺繧譁蟄蛹荳螳髢驕逕蜈邵ｦｮｯｹｻ\uFFFD';
@@ -838,13 +999,10 @@ function mqGlitch(){
 }
 const esc=t=>t.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 
-// ---- 切迫度: 進むほどネオンが赤へ、画面ノイズ・掲示板の文字化け・電子ノイズ音が増える。クリアで緑に戻る ----
+// ---- 切迫度: 進むほど画面ノイズ・掲示板の文字化け・電子ノイズ音が増える ----
 let tension=0;
 function setTension(x){
   tension=Math.max(0,Math.min(1,x));
-  const k=tension, mix=(a,b)=>a.map((v,i)=>Math.round(v+(b[i]-v)*k)).join(',');
-  const rs=document.documentElement.style;
-  rs.setProperty('--nc',mix([57,255,136],[255,45,70])); rs.setProperty('--core',mix([220,255,233],[255,222,226]));
 }
 const nz=$('noise'), nzx=nz.getContext('2d');
 let nzUntil=0, nzNext=0, nzPow=0, nzLast=0;
@@ -853,7 +1011,8 @@ function crackle(p){ if(!ok()) return; hiss(0,.06+p*.12,.08+p*.22,6000,800,false
   for(let i=0;i<2+p*5;i++) voice({type:'square',f0:300+R(3000),t:Math.random()*.15,dur:.03,vol:.02+p*.05,lp0:8000,wet:false,att:.002}); }
 function noiseFrame(now){
   requestAnimationFrame(noiseFrame);
-  const active=(state==='play'||state==='boot')&&tension>0.05&&!RM;
+  if(state==='over'&&!RM){ nzPow=1; nzUntil=now+80; }
+  const active=((state==='play'||state==='boot')&&tension>0.05||state==='over')&&!RM;
   if(active&&now>=nzNext&&now>=nzUntil){
     nzPow=.15+tension*.85; nzUntil=now+60+Math.random()*(80+tension*260);
     nzNext=now+Math.max(350,(4200-3600*tension)*(.5+Math.random()));
@@ -867,7 +1026,7 @@ function noiseFrame(now){
   nzx.clearRect(0,0,W,H);
   // 問題文のあるメインウィンドウは避けて描く
   const dr=nz.getBoundingClientRect(), mb=$('main').getBoundingClientRect();
-  nzx.save(); nzx.beginPath(); nzx.rect(0,0,W,H); if(!$('main').hidden) nzx.rect((mb.left-dr.left)*d,(mb.top-dr.top)*d,mb.width*d,mb.height*d); nzx.clip('evenodd');
+  nzx.save(); nzx.beginPath(); nzx.rect(0,0,W,H); if(!$('main').hidden&&state!=='over') nzx.rect((mb.left-dr.left)*d,(mb.top-dr.top)*d,mb.width*d,mb.height*d); nzx.clip('evenodd');
   const cols=['57,255,136','63,208,192','216,242,122','255,77,94','230,230,230'];
   for(let i=0;i<Math.round(6+nzPow*46);i++){
     nzx.fillStyle='rgba('+cols[R(cols.length)]+','+(.2+Math.random()*.55*nzPow)+')';
@@ -877,6 +1036,127 @@ function noiseFrame(now){
   nzx.restore();
 }
 try{ new ResizeObserver(sizeNoise).observe(nz); }catch(e){ window.addEventListener('resize',sizeNoise); }
+
+// ---- 低音に連動する演出: 曲の低音の強さを --beat (0〜1) にして、ネオン・画面の光・掲示板・窓の枠・波形を脈打たせる ----
+let beat=0, beatAvg=.2;
+const vizBars=[];
+function beatFrame(){
+  requestAnimationFrame(beatFrame);
+  if(!analyser){ return; }
+  analyser.getByteFrequencyData(fdata);
+  let lo=0; for(let i=1;i<5;i++) lo+=fdata[i]; lo/=4*255;
+  beatAvg+=(lo-beatAvg)*.02;
+  const v=Math.max(0,Math.min(1,(lo-beatAvg*.96)/.16));
+  beat=Math.max(v,beat*.86);
+  if(!RM) document.documentElement.style.setProperty('--beat',beat.toFixed(3));
+  if(state==='menu'){ if(!vizBars.length) vizBars.push(...document.querySelectorAll('#viz i'));
+    vizBars.forEach((b,i)=>{ const x=fdata[2+i*3]/255; b.style.height=(4+x*16).toFixed(1)+'px'; b.style.opacity=(.3+x*.7).toFixed(2); }); }
+}
+requestAnimationFrame(beatFrame);
+
+// ---- ネオンの光: 上 = 外部からの攻撃（攻撃信号の振れ幅）、下 = こちらの攻撃（打鍵・速さ・コンボ） ----
+// 上: 攻撃が弱いと暗い紫、強まるほど橙 → 赤へ。ミスで赤く跳ね上がる
+// 下: 打鍵ごとに白く光り、速いほど明るく、コンボが続くほど 緑 → 青緑 → 白青 へ。ミスで一瞬消えかける
+let kickB=0, missB=0, missA=0;
+function lightKey(){ kickB=1; }
+function lightMiss(){ missB=1; missA=1; }
+const lerp3=(a,b,k)=>a.map((v,i)=>v+(b[i]-v)*k);
+const ramp=(stops,k)=>{ k=Math.max(0,Math.min(.9999,k))*(stops.length-1); const i=k|0; return lerp3(stops[i],stops[i+1],k-i); };
+const A_STOPS=[[120,70,255],[200,60,230],[255,140,40],[255,40,60]];
+const B_STOPS=[[57,255,136],[40,220,255],[200,235,255]];
+let lastLight=0;
+function lightFrame(now){
+  requestAnimationFrame(lightFrame);
+  const dt=Math.min(.05,(now-(lastLight||now))/1000); lastLight=now;
+  kickB=Math.max(0,kickB-dt*5); missB=Math.max(0,missB-dt*3); missA=Math.max(0,missA-dt*2);
+  let cA, brA, cB, brB;
+  if(state==='play'||state==='boot'||state==='ending'){
+    const a=Math.max(aAmp,missA*.9);
+    cA=ramp(A_STOPS,a); brA=.55+a*.8+missA*.4;
+    const kps=keyTimes.filter(t=>now-t<1500).length/1.5, pw=Math.min(1,kps/7), cb=Math.min(1,streak/40);
+    cB=lerp3(ramp(B_STOPS,cb),[255,255,255],kickB*.5); brB=(.5+pw*.6+cb*.25+kickB*.5)*(1-missB*.75);
+    if(missB>.5) cB=lerp3(cB,[255,60,80],missB-.5);
+  } else if(state==='done'){ cA=[40,90,60]; brA=.35; cB=[57,255,136]; brB=1.2; }
+  else if(state==='over'||state==='overres'){ cA=[255,40,60]; brA=1.4+Math.random()*.3; cB=[60,20,25]; brB=.15+(Math.random()<.1?.5:0); }
+  else if(state==='menu'){ cA=[120,70,255]; brA=.6; cB=[57,255,136]; brB=.75; }
+  else { cA=[57,255,136]; brA=.7; cB=[57,255,136]; brB=.7; }
+  const rs=document.documentElement.style, j=c=>c.map(Math.round).join(',');
+  rs.setProperty('--ncA',j(cA)); rs.setProperty('--coreA',j(lerp3(cA,[255,255,255],.82)));
+  rs.setProperty('--ncB',j(cB)); rs.setProperty('--coreB',j(lerp3(cB,[255,255,255],.82)));
+  rs.setProperty('--brA',brA.toFixed(3)); rs.setProperty('--brB',brB.toFixed(3));
+}
+requestAnimationFrame(lightFrame);
+
+// ---- ゲームオーバー: ファイアウォールの耐久値 ----
+// 攻撃信号が危険ライン（85%）を超えている間は耐久値が減り続ける（入力が遅すぎる）。
+// ミスが3回以上続くと、続いた回数に応じてさらに削られる。信号を低く抑えていると少しずつ回復する。0%でハッキングされる
+let fw=100, missRun=0, fwWarnAt=0, fwLowShown=false;
+const FW_DRAIN={easy:9,normal:13,hard:18};
+function fwSet(v){
+  fw=Math.max(0,Math.min(100,v));
+  const el=$('sFw'); el.textContent=Math.ceil(fw)+'%'; el.dataset.lv=fw<30?2:fw<60?1:0;
+  document.body.classList.toggle('danger',fw<30&&state==='play');
+  if(fw<30&&!fwLowShown&&state==='play'){ fwLowShown=true; banner('FIREWALL CRITICAL'); marquee('警告　ファイアウォールの耐久値が残りわずかです','red'); }
+  if(fw>=45) fwLowShown=false;
+  if(fw<=0&&state==='play') gameOver();
+}
+function fwTick(dt){
+  if(aAmp>=LIMIT) fwSet(fw-dt*FW_DRAIN[diff]*(1+(aAmp-LIMIT)*3));
+  else if(aAmp<.45) fwSet(fw+dt*2);
+  const now=performance.now();
+  if(fw<30&&now-fwWarnAt>800){ fwWarnAt=now; if(ok()){ voice({type:'square',f0:1760,dur:.08,vol:.06,lp0:6000,wet:false}); voice({type:'square',f0:1760,t:.12,dur:.08,vol:.06,lp0:6000,wet:false}); } }
+}
+function fwMiss(){ missRun++; if(missRun>=3) fwSet(fw-8*(missRun-2)); }
+
+// ハッキングされたときの演出: 曲が止まり、画面がノイズに埋もれ、各ウィンドウが乗っ取られて閉じる → SYSTEM HACKED → 結果
+let floodT=null;
+function gameOver(){
+  state='over'; clearInterval(timer); update(); document.body.classList.remove('danger');
+  setTension(1); musicCrash(); mqClear();
+  marquee('侵入されました　システムの制御を奪われました','red');
+  banner('SYSTEM COMPROMISED');
+  const f=$('impact'); f.classList.add('red'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go');
+  document.body.classList.add('alert');
+  addLine('warn','[!] FIREWALL DOWN'); addLine('warn','[!] ROOT ACCESS LOST'); addLine('warn','[!] Remote user '+ATK+' has taken control.');
+  ['wBreach','wFeed','wTrace','wDump','wKey','wMon','wCopy','wWave'].forEach(id=>$(id).classList.add('owned'));
+  floodT=setInterval(()=>{
+    [Lb,Lt,Ld,Lf].forEach(L=>L.line(garble('>> '+rx(8)+' ACCESS DENIED '+rx(6)+' YOU ARE BEING WATCHED',.45),'r'));
+    if(Math.random()<.6) addLine('warn',garble('YOUR SYSTEM BELONGS TO US  //  '+rx(8)+'  //  CONTROL TRANSFERRED',.35));
+    if(Math.random()<.5) mqGlitch();
+  },90);
+  const order=['wDump','wFeed','wKey','wTrace','wMon','wBreach','wCopy','wWave','main'];
+  order.forEach((id,i)=>later(()=>{ const w=$(id); if(w.hidden) return; w.classList.add('kill','lost'); if(ok()) boom(0,.4,55,.3);
+      later(()=>{ w.hidden=true; w.classList.remove('kill','lost'); },520); },1800+i*200));
+  later(()=>{ clearInterval(floodT); $('hacked').hidden=false; if(ok()){ boom(0,1,70,1.4); hiss(0,1.2,.35,3000,100); } },1800+order.length*200+400);
+  later(()=>showFail(),1800+order.length*200+2600);
+}
+// 曲を止める: テープが止まるように音程が落ち、ノイズにかき消される
+function musicCrash(){
+  if(!audio()) return;
+  if(gameMode==='file'&&!gAud.paused){ clearInterval(gameFadeT); let r=1; const iv=setInterval(()=>{ r-=.08; try{ gAud.playbackRate=Math.max(.2,r); }catch(e){} if(r<=.25){ clearInterval(iv); gAud.pause(); gAud.playbackRate=1; gameMode=''; } },60); }
+  if(!ok()) return;
+  voice({f0:180,f1:18,dur:1.3,vol:.18,lp0:2000,lp1:120,q:3,wet:false}); voice({type:'square',f0:90,f1:12,dur:1.3,vol:.1,lp0:900,lp1:80,wet:false});
+  hiss(.1,1.5,.3,8000,200,false);
+  for(let i=0;i<10;i++) voice({type:'square',f0:200+R(2400),t:.2+i*.11,dur:.05,vol:.05,lp0:8000,wet:false,att:.002});
+}
+function showFail(){
+  state='overres';
+  const s=elapsed(), acc=ti/(ti+miss||1)*100, cpm=s>0?Math.round(ti/s*60):0, prog=Math.round(ti/N*100);
+  const ov=$('ov'); ov.classList.add('fail'); ov.hidden=false; ov.classList.remove('in'); void ov.offsetWidth; ov.classList.add('in');
+  const tt=$('rTitle'); tt.textContent='SYSTEM HACKED'; tt.style.setProperty('--n',13);
+  $('rGrade').textContent='F'; $('rGrade').classList.remove('on'); $('rScoreL').textContent='PROGRESS';
+  const items=[['rSpd',cpm,0,' CPM'],['rAcc',acc,1,' %'],['rTime',s,1,' s'],['rMiss',miss,0,''],['rCombo',maxStreak,0,''],['rScore',prog,0,' %']];
+  items.forEach(([id])=>$(id).textContent='--');
+  items.forEach(([id,v,dp,u],i)=>later(()=>countUp($(id),v,dp,u),1500+i*260));
+  later(()=>{ $('rGrade').classList.add('on'); if(ok()) boom(0,.6,60,.8); },1500+items.length*260+200);
+  $('rHint').textContent='Enter: mission select';
+  $('res').hidden=false;
+  $('res').textContent=`C:\\> report.exe\n-------------------------------------\n MISSION FAILED\n ATTACKER : ${ATK} (in control)\n MODE     : ${DIFF[diff].label}\n PROGRESS : ${prog} %  (${wi} / ${TOTAL} words)\n TIME     : ${s.toFixed(1)} s\n MISS     : ${miss}\n-------------------------------------`;
+}
+function clearOver(){ clearInterval(floodT); $('hacked').hidden=true; document.body.classList.remove('danger');
+  ['wBreach','wFeed','wTrace','wDump','wKey','wMon','wCopy','wWave'].forEach(id=>$(id).classList.remove('owned'));
+  const ov=$('ov'); ov.classList.remove('fail'); $('rTitle').textContent='TARGET DOWN'; $('rTitle').style.setProperty('--n',11); $('rScoreL').textContent='SCORE';
+  $('impact').classList.remove('red'); }
 
 // ---- 進行 ----
 const con=$('con'), body=$('mainBody');
@@ -897,20 +1177,60 @@ function typeLines(lines,cb){
   step();
 }
 function toOff(){
-  setTension(0); mqList=''; token++; state='off'; sirenStop(); bgmStop(); clearInterval(timer); mqClear();
-  WINS.forEach(id=>$(id).hidden=true); $('alert').hidden=true; $('idle').hidden=true; $('ov').hidden=true; $('power').hidden=false;
+  clearOver(); setTension(0); mqList=''; token++; state='off'; sirenStop(); bgmStop(); clearInterval(timer); mqClear();
+  WINS.forEach(id=>$(id).hidden=true); $('alert').hidden=true; $('idle').hidden=true; $('ov').hidden=true; $('menu').hidden=true; $('power').hidden=false;
   document.body.classList.remove('alert');
 }
 function powerOn(){
   if(state!=='off') return; audio(); state='pwr'; $('power').hidden=true;
   const f=$('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); playPower();
-  later(toIdle,800);
+  later(toMenu,800);
 }
+// 開始前の画面: 難易度と問題数を選ぶ
+let mRow=2;
+function renderMenu(){
+  const od=$('optDiff'); od.textContent='';
+  Object.keys(DIFF).forEach(k=>{ const b=document.createElement('button'); b.type='button'; b.textContent=DIFF[k].label; if(k===diff) b.className='on';
+    b.addEventListener('click',()=>{ diff=k; mRow=0; playKey(false); renderMenu(); }); od.appendChild(b); });
+  $('diffDesc').textContent=DIFF[diff].desc;
+  const oc=$('optCount'); oc.textContent='';
+  COUNTS.forEach(n=>{ const b=document.createElement('button'); b.type='button'; b.textContent=n+' WORDS'; if(n===TOTAL) b.className='on';
+    b.addEventListener('click',()=>{ setCount(n); mRow=1; playKey(false); renderMenu(); }); oc.appendChild(b); });
+  const per=[BOUNDS[1],BOUNDS[2]-BOUNDS[1],BOUNDS[3]-BOUNDS[2]];
+  $('countDesc').textContent='防御 '+per[0]+'語 → 追跡 '+per[1]+'語 → 反撃 '+per[2]+'語';
+  document.querySelectorAll('#menu [data-row]').forEach(el=>el.classList.toggle('sel',+el.dataset.row===mRow));
+}
+function toMenu(){
+  if(naming) finishNaming(); clearOver(); setTension(0); mqList=''; token++; state='menu'; sirenStop(); bgmStop(); clearInterval(timer); mqClear();
+  WINS.forEach(id=>$(id).hidden=true); $('alert').hidden=true; $('ov').hidden=true; $('power').hidden=true; $('idle').hidden=true;
+  document.body.classList.remove('alert'); $('menu').hidden=false; mRow=2; renderMenu(); menuMusicStart();
+}
+function menuKey(e){
+  const k=e.key;
+  if(k==='ArrowUp'||k==='ArrowDown'){ e.preventDefault(); mRow=(mRow+(k==='ArrowUp'?2:1))%3; playKey(false); renderMenu(); return; }
+  if(k==='ArrowLeft'||k==='ArrowRight'){ e.preventDefault(); const d=k==='ArrowLeft'?-1:1;
+    if(mRow===0){ const ks=Object.keys(DIFF); diff=ks[(ks.indexOf(diff)+d+ks.length)%ks.length]; }
+    else if(mRow===1){ const i=COUNTS.indexOf(TOTAL); setCount(COUNTS[(i+d+COUNTS.length)%COUNTS.length]); }
+    playKey(false); renderMenu(); return; }
+  if(k==='Enter'){ e.preventDefault(); startMission(); }
+}
+function startMission(){
+  if(state!=='menu') return; audio(); playKey(true); if(ok()){ boom(0,.6,120,.5); voice({f0:220,f1:880,dur:.4,vol:.08,lp0:400,lp1:6000,q:6}); }
+  menuMusicStop(); $('menu').hidden=true; toIdle();
+}
+$('mStart').addEventListener('click',startMission);
+(()=>{ const v=$('viz'); for(let i=0;i<24;i++){ const b=document.createElement('i'); b.style.animationDelay=(Math.random()).toFixed(2)+'s'; v.appendChild(b); } })();
+$('dLoad').addEventListener('click',()=>$('trkFile').click());
+$('dLoadG').addEventListener('click',()=>$('gTrkFile').click());
+$('gTrkFile').addEventListener('change',e=>{ const f=e.target.files&&e.target.files[0]; if(!f) return; gAud.src=URL.createObjectURL(f); gameUser=f.name; $('gTrk').textContent=f.name; });
+$('trkFile').addEventListener('change',e=>{ const f=e.target.files&&e.target.files[0]; if(!f) return;
+  mAud.src=URL.createObjectURL(f); userTrack=f.name; if(state==='menu') menuMusicStart(); });
+
 // 何もない画面 → 突然の警報
 function toIdle(){
-  if(naming) finishNaming(); setTension(0); mqList=''; token++; state='idle'; sirenStop(); bgmStop(); clearInterval(timer); mqClear();
+  if(naming) finishNaming(); clearOver(); setTension(0); mqList=''; token++; state='idle'; sirenStop(); bgmStop(); clearInterval(timer); mqClear();
   WINS.forEach(id=>$(id).hidden=true); $('alert').hidden=true; $('ov').hidden=true; $('power').hidden=true;
-  document.body.classList.remove('alert'); $('idle').hidden=false; $('idle').textContent='C:\\>';
+  document.body.classList.remove('alert'); $('menu').hidden=true; menuMusicStop(); $('idle').hidden=false; $('idle').textContent='C:\\>';
   later(toAlert,1600+R(1200));
 }
 function toAlert(){
@@ -923,7 +1243,7 @@ function respond(){
   token++; state='boot'; sirenStop(); $('alert').hidden=true; document.body.classList.remove('alert'); audio(); mqClear(); bgmStart();
   const m=$('main'); m.hidden=false; m.classList.remove('appear'); void m.offsetWidth; m.classList.add('appear'); playOpen();
   words=pickWords(); N=words.reduce((a,w)=>a+w[0].length+1,0);   // 各単語の最後に Enter（1打）
-  wi=0;ci=0;ti=0;miss=0;streak=0;maxStreak=0;t0=null;missHere=false;phase=0;
+  wi=0;ci=0;ti=0;miss=0;streak=0;maxStreak=0;t0=null;missHere=false;phase=0; missRun=0; fwLowShown=false; fwSet(100);
   con.textContent=''; $('res').hidden=true; $('banner').hidden=true;
   dummiesReset(); startPhaseStats(); update();
   typeLines(BOOT,()=>{ startPhase(0); });
@@ -974,7 +1294,7 @@ function key(ch){
   const exp=cur[ci]._ch;
   if(ch===exp||(ch!=='\n'&&exp!=='\n'&&ch.toLowerCase()===exp.toLowerCase())){
     cur[ci].className=(missHere?'w':'d')+(exp==='\n'?' ent':''); missHere=false;
-    ci++; ti++; phTyped++; streak++; maxStreak=Math.max(maxStreak,streak); xfer=Math.min(phLen,xfer+1);
+    missRun=0; noteKey(); lightKey(); ci++; ti++; phTyped++; streak++; maxStreak=Math.max(maxStreak,streak); xfer=Math.min(phLen,xfer+1);
     drawXfer(1); dummiesOk();
     if(streak>0&&streak%15===0){ playStinger(); banner(['FIREWALL HOLDING','SIGNAL LOCKED','PROXY STRIPPED','UPLINK SEIZED','SYSTEM BREACHED'][(streak/15-1)%5]); }
     setTension(ti/N);
@@ -982,7 +1302,7 @@ function key(ch){
   } else {
     miss++; phMiss++; streak=0; missHere=true; cur[ci].className='c miss'+(cur[ci]._ch==='\n'?' ent':'');
     const before=xfer; xfer=Math.max(0,xfer-2); drawXfer(xfer-before);
-    playMiss(); dummiesMiss();
+    playMiss(); dummiesMiss(); fwMiss(); lightMiss();
   }
   update();
 }
@@ -992,7 +1312,7 @@ function wordDone(){
   mqTop('<span class="en">'+esc(w.toUpperCase())+'</span>'+esc(words[wi][1]));
   wi++;
   if(wi>=TOTAL){ ending(); return; }
-  if(wi===BOUNDS[phase+1]){ state='boot'; typeLines(PH[phase].end,()=>later(()=>startPhase(phase+1),250)); return; }
+  if(wi===BOUNDS[phase+1]){ musicSuccess(); state='boot'; typeLines(PH[phase].end,()=>later(()=>startPhase(phase+1),250)); return; }
   newWord();
 }
 // ---- 終了演出: 攻撃信号が最大まで膨らむ → 緑の打ち消し波が走って平らにする → 閃光と衝撃 → 相手の窓が切断されて閉じる → 結果 ----
@@ -1027,7 +1347,8 @@ const METRIC={
   speed:{label:'SPEED',cmp:(a,b)=>b.cpm-a.cpm||b.acc-a.acc||a.id-b.id,main:d=>d.cpm+' CPM',sub:d=>d.time.toFixed(1)+'s',sub2:d=>'miss '+d.miss},
   acc:{label:'ACCURACY',cmp:(a,b)=>b.acc-a.acc||b.cpm-a.cpm||a.id-b.id,main:d=>d.acc.toFixed(1)+'%',sub:d=>'miss '+d.miss,sub2:d=>d.cpm+' CPM'}
 };
-const rankOf=(rec,k)=>{ const l=SCORES.slice().sort(METRIC[k].cmp); return [l.indexOf(rec)+1,l.length,l]; };
+const boardName=b=>{ const [d,n]=b.split('-'); return DIFF[d].label+' / '+n+' WORDS'; };
+const rankOf=(rec,k)=>{ const l=SCORES.filter(d=>d.board===rec.board).sort(METRIC[k].cmp); return [l.indexOf(rec)+1,l.length,l]; };
 const gradeOf=sc=>sc>=350?'S':sc>=250?'A':sc>=160?'B':sc>=90?'C':'D';
 let naming=null, nameBuf='', rankTab='total', lastRec=null;
 function finish(){
@@ -1041,7 +1362,8 @@ function finish(){
  MISSION COMPLETE
  ATTACKER : ${ATK} (offline)
  TIME     : ${s.toFixed(1)} s
- WORDS    : ${TOTAL}  (${N} chars)
+ MODE     : ${DIFF[diff].label}
+ WORDS    : ${TOTAL}  (${N} keys)
  SPEED    : ${cpm} CPM
  MISS     : ${miss}
  ACCURACY : ${acc.toFixed(1)} %
@@ -1051,7 +1373,7 @@ function finish(){
 ${words.map(([w,ja])=>' '+w.padEnd(12)+ja).join('\n')}
 -------------------------------------`;
   body.scrollTop=body.scrollHeight;
-  const rec={id:SCORES.length,name:'',cpm,time:+s.toFixed(1),miss,acc:+acc.toFixed(1),score,combo:maxStreak};
+  const rec={id:SCORES.length,board:diff+'-'+TOTAL,name:'',cpm,time:+s.toFixed(1),miss,acc:+acc.toFixed(1),score,combo:maxStreak};
   SCORES.push(rec); naming=rec; nameBuf=''; rankTab='total';
   later(()=>showResult(rec),900);
 }
@@ -1077,13 +1399,13 @@ function renderResult(){
   const lab=document.createElement('span'); lab.textContent='NAME'; nm.appendChild(lab);
   const ch=[...(naming?nameBuf:rec.name)];
   for(let i=0;i<3;i++){ const b=document.createElement('i'); b.textContent=ch[i]||(naming?'_':''); if(naming&&i===Math.min(ch.length,2)&&ch.length<3) b.className='cur'; nm.appendChild(b); }
-  $('rHint').textContent=naming?'Type your name (3 letters) and press Enter':'Enter: new attack  /  Click outside: view log';
+  $('rHint').textContent=naming?'Type your name (3 letters) and press Enter':'Enter: mission select  /  Click outside: view log';
   const tabs=$('rTabs'); tabs.textContent='';
   Object.keys(METRIC).forEach(k=>{ const [r]=rankOf(rec,k), bt=document.createElement('button'); bt.type='button';
     bt.textContent=METRIC[k].label+' #'+r; if(k===rankTab) bt.className='on';
     bt.addEventListener('click',e=>{ e.stopPropagation(); rankTab=k; renderResult(); }); tabs.appendChild(bt); });
   const M=METRIC[rankTab], [me1,total,list]=rankOf(rec,rankTab), tb=$('rRank'); tb.textContent='';
-  $('rRankH').textContent='RANKING'+(me1===1&&total>1?'   NEW RECORD!':'');
+  $('rRankH').textContent='RANKING  '+boardName(rec.board)+(me1===1&&total>1?'   NEW RECORD!':'');
   const row=(d,i)=>{ const tr=document.createElement('tr'); if(d===rec) tr.className='me';
     [[(d===rec?'> ':'')+(i+1)+'.','r'],[d===naming?(nameBuf||'___'):d.name,'n'],[M.main(d),'r'],[M.sub(d),'r'],[M.sub2(d),'r']]
       .forEach(([t,c])=>{ const td=document.createElement('td'); td.className=c; td.textContent=t; tr.appendChild(td); });
@@ -1097,14 +1419,16 @@ $('ov').addEventListener('click',e=>{ if(naming||e.target.closest('.box')) retur
 window.addEventListener('keydown',e=>{
   if(e.ctrlKey||e.metaKey||e.altKey) return;
   if(state==='off'){ e.preventDefault(); powerOn(); return; }
+  if(state==='menu'){ menuKey(e); return; }
   if(state==='alert'){ if(e.key==='Enter'){ e.preventDefault(); respond(); } return; }
-  if(e.key==='Escape'){ e.preventDefault(); if(naming) finishNaming(); toIdle(); return; }
+  if(e.key==='Escape'){ e.preventDefault(); if(naming) finishNaming(); toMenu(); return; }
   if(state==='done'&&naming){ e.preventDefault();
     if(e.key==='Enter') finishNaming();
     else if(e.key==='Backspace'){ nameBuf=[...nameBuf].slice(0,-1).join(''); playKey(false); renderResult(); }
     else if(/^[a-zA-Z0-9]$/.test(e.key)&&[...nameBuf].length<3){ nameBuf+=e.key.toUpperCase(); playKey(false); renderResult(); }
     return; }
-  if(state==='done'&&e.key==='Enter'){ e.preventDefault(); toIdle(); return; }
+  if((state==='done'||state==='overres')&&e.key==='Enter'){ e.preventDefault(); toMenu(); return; }
+  if(state==='over') return;
   if(state!=='play') return;
   if(e.key==='Process'||e.isComposing||e.keyCode===229){ $('ime').hidden=false; return; }
   if(e.key==='Enter'){ e.preventDefault(); if(!e.repeat){ playKey(true); key('\n'); } return; }
@@ -1112,9 +1436,12 @@ window.addEventListener('keydown',e=>{
 });
 $('power').addEventListener('click',powerOn);
 $('alert').addEventListener('click',respond);
-$('rst').addEventListener('click',()=>{ audio(); toIdle(); });
-$('se').addEventListener('click',e=>{ seOn=!seOn; e.target.textContent='SE: '+(seOn?'ON':'OFF'); if(!seOn) sirenStop(); });
-$('bgm').addEventListener('click',e=>{ bgmOn=!bgmOn; e.target.textContent='BGM: '+(bgmOn?'ON':'OFF'); if(bgmOn){ if(state==='boot'||state==='play') bgmStart(); } else bgmStop(); });
+$('rst').addEventListener('click',()=>{ audio(); toMenu(); });
+function setSe(on){ seOn=on; ['se','dSe'].forEach(id=>$(id).textContent='SE: '+(on?'ON':'OFF')); if(!on) sirenStop(); }
+function setBgm(on){ bgmOn=on; ['bgm','dBgm'].forEach(id=>$(id).textContent='BGM: '+(on?'ON':'OFF'));
+  if(on){ audio(); if(state==='boot'||state==='play') bgmStart(); if(state==='menu') menuMusicStart(); } else { bgmStop(); menuMusicStop(); } }
+$('se').addEventListener('click',()=>setSe(!seOn)); $('dSe').addEventListener('click',()=>setSe(!seOn));
+$('bgm').addEventListener('click',()=>setBgm(!bgmOn)); $('dBgm').addEventListener('click',()=>setBgm(!bgmOn));
 
 try{ new ResizeObserver(sizeWave).observe(wv); new ResizeObserver(sizeCanvas).observe(cv); }catch(e){ window.addEventListener('resize',()=>{sizeWave();sizeCanvas();}); }
 dummiesReset(); toOff(); sizeNoise(); requestAnimationFrame(noiseFrame);
