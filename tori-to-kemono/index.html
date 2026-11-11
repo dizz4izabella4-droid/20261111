@@ -133,7 +133,7 @@ body.vscpu #bb2{display:none}
 <body>
 <div class="menu" id="menu" hidden><div class="mbox"><div class="micos"><canvas id="mico1" width="18" height="18" aria-hidden="true"></canvas><canvas id="mico2" width="18" height="18" aria-hidden="true"></canvas></div>
   <h1>鳥と獣の戦い</h1>
-  <div class="mmusic" role="radiogroup" aria-label="音楽"><span>音楽</span><button data-bgm="turkish" role="radio">トルコ行進曲</button><button data-bgm="cancan" role="radio">天国と地獄</button><button data-bgm="none" role="radio" class="mnone">なし</button></div>
+  <div class="mmusic" role="radiogroup" aria-label="音楽"><span>音楽</span><button data-bgm="dies" role="radio">怒りの日</button><button data-bgm="moonlight" role="radio">月光</button><button data-bgm="canon" role="radio">カノン</button><button data-bgm="none" role="radio" class="mnone">なし</button></div>
   <button data-mode="2p" class="mbtn">ふたりで対戦</button>
   <button data-mode="cpu" class="mbtn cpu">コンピュータと対戦<small>あなたは鳥（下）・コンピュータは獣</small></button></div></div>
 <div class="turnfx" id="turnfx" aria-live="polite"><div class="tin"><canvas id="tico" width="18" height="18" aria-hidden="true"></canvas><span class="tname"></span><span class="tleft"><small>残り</small><b></b><small>コマ</small></span><span class="tsub"></span></div></div>
@@ -287,45 +287,60 @@ const sfx=(()=>{
     g.gain.setValueAtTime(v,s); g.gain.setValueAtTime(v,s+d*.7); g.gain.linearRampToValueAtTime(0,s+d);
     o.connect(g).connect(a.destination); o.start(s); o.stop(s+d+.02);
   }
-  // ===== 音楽：2曲から選ぶ（どちらも矩形波でくり返す）。f=0 は休み、d はミリ秒 =====
-  // トルコ行進曲（モーツァルト）：16分音符130ミリ秒
-  const TM=130, TQ={B3:493.88,C4:523.25,D4:587.33,E4:659.25,Fs4:739.99,G4:783.99,A4:880,B4:987.77,C5:1046.5,D5:1174.66,E5:1318.51,Fs5:1479.98,G5:1567.98,A5:1760,B5:1975};
-  const TURKISH=[
-    [TQ.B4,TM],[TQ.A4,TM],[TQ.G4,TM],[TQ.A4,TM],[TQ.C5,TM*2],[0,TM*2],
-    [TQ.D5,TM],[TQ.C5,TM],[TQ.B4,TM],[TQ.C5,TM],[TQ.E5,TM*2],[0,TM*2],
-    [TQ.Fs5,TM],[TQ.E5,TM],[TQ.D5,TM],[TQ.E5,TM],[TQ.B5,TM],[TQ.A5,TM],[TQ.G5,TM],[TQ.A5,TM],
-    [TQ.B5,TM],[TQ.A5,TM],[TQ.G5,TM],[TQ.Fs5,TM],[TQ.E5,TM*2],[0,TM*2],
-    [TQ.E5,TM*2],[TQ.G5,TM*2],[TQ.Fs5,TM],[TQ.E5,TM],[TQ.D5,TM],[TQ.E5,TM],[TQ.Fs5,TM*2],[TQ.D5,TM*2],
-    [TQ.E5,TM*2],[TQ.G5,TM*2],[TQ.Fs5,TM],[TQ.E5,TM],[TQ.D5,TM],[TQ.E5,TM],[TQ.Fs5,TM*4],
-    [TQ.B4,TM],[TQ.A4,TM],[TQ.G4,TM],[TQ.A4,TM],[TQ.C5,TM*2],[0,TM*2],
-    [TQ.D5,TM],[TQ.C5,TM],[TQ.B4,TM],[TQ.C5,TM],[TQ.E5,TM*2],[0,TM*2],
-    [TQ.Fs5,TM],[TQ.E5,TM],[TQ.D5,TM],[TQ.E5,TM],[TQ.A5,TM*2],[TQ.G5,TM*2],[TQ.Fs5,TM*2],[TQ.E5,TM*2],[TQ.A4,TM*4]];
-  // 天国と地獄（オッフェンバック）のカンカン：16分音符100ミリ秒
-  const TO=100;
-  const CANCAN=[
-    [TQ.G4,TO],[TQ.B4,TO],[TQ.G4,TO],[TQ.B4,TO],[TQ.G4,TO],[TQ.B4,TO],[TQ.G4,TO],[TQ.B4,TO],
-    [TQ.C5,TO],[TQ.E5,TO],[TQ.C5,TO],[TQ.E5,TO],[TQ.D5,TO*2],[TQ.B4,TO*2],
-    [TQ.G4,TO],[TQ.B4,TO],[TQ.G4,TO],[TQ.B4,TO],[TQ.G4,TO],[TQ.B4,TO],[TQ.G4,TO],[TQ.B4,TO],
-    [TQ.C5,TO],[TQ.D5,TO],[TQ.E5,TO],[TQ.Fs5,TO],[TQ.G5,TO*4],
-    [TQ.D5,TO],[TQ.Fs5,TO],[TQ.D5,TO],[TQ.Fs5,TO],[TQ.D5,TO],[TQ.Fs5,TO],[TQ.D5,TO],[TQ.Fs5,TO],
-    [TQ.E5,TO],[TQ.G5,TO],[TQ.E5,TO],[TQ.G5,TO],[TQ.Fs5,TO*2],[TQ.D5,TO*2],
-    [TQ.B4,TO],[TQ.D5,TO],[TQ.B4,TO],[TQ.D5,TO],[TQ.C5,TO],[TQ.E5,TO],[TQ.C5,TO],[TQ.E5,TO],
-    [TQ.D5,TO],[TQ.C5,TO],[TQ.B4,TO],[TQ.A4,TO],[TQ.G4,TO*4],[0,TO*2]];
-  const TRACKS={turkish:{notes:TURKISH,vol:.03,decay:.9}, cancan:{notes:CANCAN,vol:.028,decay:.85}};
-  let track='turkish'; try{ const t=localStorage.getItem('o3-bgm'); if(TRACKS[t]||t==='none') track=t; }catch(e){} // 'none'＝音楽なし
-  let bgmOn=false, bgmIdx=0, bgmAt=0, bgmTimer=0, bgmGain=null;
-  function bgmNote(f,t,d){
-    if(!f) return; // 休み
-    const T=TRACKS[track], o=ctx.createOscillator(), g=ctx.createGain();
-    o.type='square'; o.frequency.value=f;
-    g.gain.setValueAtTime(T.vol,t); g.gain.exponentialRampToValueAtTime(.001,t+d*T.decay);
-    o.connect(g).connect(bgmGain); o.start(t); o.stop(t+d);
+  // ===== 音楽：3曲から選ぶ（くり返し流す） =====
+  // 1音＝[開始拍, MIDI番号, 長さ(拍), 強さ]。曲ごとに波形・音量の違う声部を重ねる
+  const midiHz=m=>440*Math.pow(2,(m-69)/12);
+  const arp=(chords,per=2)=>{ const ev=[]; let b=0; chords.forEach(c=>c.forEach(m=>{ ev.push([b,m,.42,.65]); b+=1/per; })); return ev; };
+  // 01 怒りの日（Dies irae）：グレゴリオ聖歌の冒頭の動機「ファ ミ ファ レ ミ ド レ レ」
+  //    1回目は中音域、2回目は1オクターブ下で重く。低音は D→A→D で弔鐘のように支える（16拍でくり返す）
+  const DIES_M=[65,64,65,62,64,60,62,62];
+  const DIES_MEL=[...DIES_M.map((m,i)=>[i,m,.9,.7]), ...DIES_M.map((m,i)=>[8+i,m-12,.9,.75])];
+  const DIES_BASS=[0,8].flatMap(o=>[[o,50,3.8,.7],[o+4,45,1.9,.7],[o+6,50,1.9,.7]]);
+  // 02 月光（ベートーヴェン）：嬰ハ短調。冒頭4小節の3連符の伴奏（G# C# E）と低音
+  //    C#m → C#m/B → A・D/F# → G#7 → くり返し。3連符は少し重ねて、ペダルを踏んだ響きに
+  const MOON_TRI=[[56,61,64],[56,61,64],[56,61,64],[56,61,64], [56,61,64],[56,61,64],[56,61,64],[56,61,64],
+                  [57,61,64],[57,61,64],[57,62,66],[57,62,66], [56,60,66],[56,60,66],[56,60,63],[56,60,63]];
+  const MOON_ARP=MOON_TRI.flatMap((c,k)=>c.map((m,j)=>[k+j/3,m,Math.min(.62,16-(k+j/3)-.02),.7])); // 曲の切れ目をまたがない
+  const MOON_BASS=[[0,49,3.9,.7],[4,47,3.9,.7],[8,45,1.95,.7],[10,42,1.95,.7],[12,44,3.9,.7]];
+  // 03 カノン（パッヘルベル）：ニ長調 D-A-Bm-F#m-G-D-G-A を3回。上の声は回ごとに
+  //    ①ファ# ミ レ ド# シ ラ シ ド#（全音符）②レ ド# シ ラ ソ ファ# ソ ミ ③2分音符の動く旋律
+  //    どの音も、その時に鳴る和音の音か経過音になるように合わせてある（96拍でくり返す）
+  const CANON_CH=[[50,57,62,66],[45,52,57,61],[47,54,59,62],[42,49,54,57],[43,50,55,59],[38,45,50,54],[43,50,55,59],[45,52,57,61]];
+  const CANON_ARP=[0,32,64].flatMap(o=>arp(CANON_CH.map(c=>[c[0],c[1],c[2],c[3],c[2],c[1],c[2],c[1]]),2).map(([b,m,d,v])=>[o+b,m,d,v]));
+  const CANON_V1=[78,76,74,73,71,69,71,73], CANON_V2=[74,73,71,69,67,66,67,64],
+        CANON_V3=[74,78,81,79,78,74,78,76, 74,71,74,69,67,71,69,67];
+  const CANON_MEL=[...CANON_V1.map((m,i)=>[i*4,m,3.8,.7]), ...CANON_V2.map((m,i)=>[32+i*4,m,3.8,.7]), ...CANON_V3.map((m,i)=>[64+i*2,m,1.85,.7])];
+  const CANON_BASS=[0,32,64].flatMap(o=>[50,45,47,42,43,38,43,45].map((m,i)=>[o+i*4,m,3.8,.7]));
+  // 曲の長さ len（拍）でくり返す。vol は声部ごとの音量（効果音より控えめ）
+  const BGMK=.077; // 効果音とつり合う大きさにそろえる係数
+  const mk=(bpm,len,parts)=>{ const ev=[];
+    for(const {ev:e,wave,vol} of parts) for(const [b,m,d,v] of e) ev.push([b,m,d,wave,vol*v*BGMK]);
+    ev.sort((a,b)=>a[0]-b[0]); return {bpm,len,ev}; };
+  const TRACKS={
+    dies:mk(112,16,[{ev:DIES_MEL,wave:'square',vol:.55},{ev:DIES_BASS,wave:'triangle',vol:.6}]),
+    moonlight:mk(56,16,[{ev:MOON_ARP,wave:'triangle',vol:.5},{ev:MOON_BASS,wave:'triangle',vol:.55}]),
+    canon:mk(110,96,[
+      {ev:CANON_ARP,wave:'square',vol:.2},
+      {ev:CANON_MEL,wave:'triangle',vol:.6},
+      {ev:CANON_BASS,wave:'triangle',vol:.45}])
+  };
+  let track='dies'; try{ const t=localStorage.getItem('o3-bgm'); if(TRACKS[t]||t==='none') track=t; }catch(e){} // 'none'＝音楽なし
+  let bgmOn=false, bgmIdx=0, bgmAt=0, bgmTimer=0, bgmGain=null; // bgmAt＝今回のくり返しの頭の時刻
+  function bgmNote(m,t,end,wave,v){
+    const o=ctx.createOscillator(), g=ctx.createGain();
+    o.type=wave; o.frequency.value=midiHz(m);
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(v,t+.015);
+    g.gain.setValueAtTime(v,Math.max(t+.02,end-.04)); g.gain.linearRampToValueAtTime(0,end);
+    o.connect(g).connect(bgmGain); o.start(t); o.stop(end+.02);
   }
   // 少し先まで前もって予約しておく（タイマーのぶれで拍が乱れないように）
   function bgmPump(){
     if(!bgmOn||!ctx) return;
-    const ns=TRACKS[track].notes;
-    while(bgmAt<ctx.currentTime+.25){ const [f,d]=ns[bgmIdx]; bgmNote(f,bgmAt,d/1000); bgmAt+=d/1000; bgmIdx=(bgmIdx+1)%ns.length; }
+    const T=TRACKS[track], spb=60/T.bpm;
+    for(;;){ const [b,m,d,w,v]=T.ev[bgmIdx], t=bgmAt+b*spb;
+      if(t>=ctx.currentTime+.25) break;
+      if(t>=ctx.currentTime-.05) bgmNote(m,t,t+d*spb,w,v); // 遅れてしまった音は鳴らさず先へ
+      if(++bgmIdx>=T.ev.length){ bgmIdx=0; bgmAt+=T.len*spb; } }
     bgmTimer=setTimeout(bgmPump,60);
   }
   function bgmStop(){ if(!bgmOn) return; bgmOn=false; clearTimeout(bgmTimer);
@@ -990,3 +1005,4 @@ requestAnimationFrame(frame);
 </script>
 </body>
 </html>
+
