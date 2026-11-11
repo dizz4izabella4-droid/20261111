@@ -49,6 +49,11 @@ header{display:flex;flex-direction:column;align-items:center;gap:10px;padding-to
 .music.on .eq i:nth-child(2){animation-delay:-.3s;background:var(--mint)}
 .music.on .eq i:nth-child(3){animation-delay:-.55s;background:var(--lav)}
 .music:not(.on) .eq i{background:#d9c8de}
+/* オン・オフのスイッチ */
+.sw{position:relative;width:30px;height:18px;border-radius:999px;background:#e6d3ea;transition:background .2s;flex:none}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(107,74,122,.3);transition:transform .2s}
+.music.on .sw{background:var(--pink)}
+.music.on .sw::after{transform:translateX(12px)}
 @keyframes eq{0%,100%{height:4px}50%{height:14px}}
 
 /* カード: キャンディのように色分け。横にアイコン、右に名前と説明 */
@@ -94,7 +99,7 @@ footer .keys{opacity:.8}
 </head>
 <body>
 <canvas id="sky" aria-hidden="true"></canvas>
-<button type="button" class="music" id="music" aria-pressed="false"><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span><span id="mLabel">おんがく OFF</span></button>
+<button type="button" class="music" id="music" role="switch" aria-checked="false"><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span><span id="mLabel">主題歌を流す</span><span class="sw" aria-hidden="true"></span></button>
 <div class="wrap">
   <header>
     <div class="ribbon"><span class="t">ゲームのへや</span></div>
@@ -163,12 +168,13 @@ function setMusic(on){
   if(on){ const p=bgm.play(); if(p&&p.catch) p.catch(()=>show(false)); } else bgm.pause();
   show(on);
 }
-function show(on){ $('music').classList.toggle('on',on); $('music').setAttribute('aria-pressed',String(on)); $('mLabel').textContent='おんがく '+(on?'ON':'OFF'); }
+function show(on){ $('music').classList.toggle('on',on); $('music').setAttribute('aria-checked',String(on)); }
 bgm.addEventListener('play',()=>show(true)); bgm.addEventListener('pause',()=>show(false));
 $('music').addEventListener('click',e=>{ e.stopPropagation(); audio(); setMusic(bgm.paused); });
 // 最初のタッチ・クリック・キー入力で流しはじめる
-function firstTouch(){ document.removeEventListener('pointerdown',firstTouch,true); document.removeEventListener('keydown',firstTouch,true);
-  audio(); if(want&&bgm.paused) setMusic(true); }
+function firstTouch(e){ document.removeEventListener('pointerdown',firstTouch,true); document.removeEventListener('keydown',firstTouch,true);
+  audio(); if(e&&e.target&&e.target.closest&&e.target.closest('#music')) return;   // ボタンを押したときはボタンの切り替えに任せる
+  if(want&&bgm.paused) setMusic(true); }
 document.addEventListener('pointerdown',firstTouch,true); document.addEventListener('keydown',firstTouch,true);
 // いちおう自動で流してみる（許可されている環境なら流れる）
 if(want){ const p=bgm.play(); if(p&&p.catch) p.catch(()=>{}); }
