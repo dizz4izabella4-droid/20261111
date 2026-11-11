@@ -28,6 +28,7 @@ body{font-family:var(--ja);color:var(--ink);background:linear-gradient(160deg,va
 .stage .sub{align-self:center}
 .window{height:clamp(220px,min(92vw,46vh),520px);flex:none}
 #sky{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+body.abyss #sky{z-index:9}
 .wrap{position:relative;z-index:1;max-width:540px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
 
 /* 見出し: リボンの帯 */
@@ -95,6 +96,81 @@ footer .keys{opacity:.8}
   .music{padding:7px 12px 7px 10px;font-size:12px}
   header{padding-top:46px}
 }
+
+/* ===== 主題歌モード「ABYSS CODE」: かわいい画面が崩れ落ち、ダークファンタジーのカラオケ画面になる ===== */
+#abyss{position:fixed;inset:0;z-index:8;display:none;overflow:hidden;color:#f4e6d0;background:#050104}
+body.abyss #abyss{display:block}
+body.abyss,html.lock,html.lock body{overflow:hidden}
+html.lock .wrap{contain:paint}
+.abg{position:absolute;inset:-4%;background:#050104 url(launcher-bg.jpg) center 30%/cover no-repeat;filter:brightness(.32) saturate(1.25) contrast(1.1);
+  animation:abgz 40s linear infinite alternate}
+@keyframes abgz{from{transform:scale(1)}to{transform:scale(1.12)}}
+.abg2{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 55%,rgba(150,0,20,.0) 0%,rgba(90,0,12,.35) 55%,rgba(5,0,3,.92) 100%),
+  linear-gradient(180deg,rgba(5,0,3,.6) 0%,rgba(5,0,3,0) 30%,rgba(5,0,3,0) 70%,rgba(5,0,3,.75) 100%)}
+#flash{position:absolute;inset:0;background:#ff1a2a;opacity:0;pointer-events:none;mix-blend-mode:screen}
+#flash.go{animation:aflash .9s ease-out}
+@keyframes aflash{0%{opacity:.85}100%{opacity:0}}
+/* 題名 */
+#atitle{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;
+  padding:0 max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));opacity:0;pointer-events:none;transition:opacity .8s}
+#atitle.on{opacity:1}
+#atitle h1{margin:0;font:700 clamp(46px,15vw,120px)/.95 "Times New Roman","Liberation Serif",serif;letter-spacing:.06em;color:#f7e3b0;
+  text-shadow:0 0 18px rgba(255,40,40,.75),0 0 46px rgba(200,0,20,.6),3px 3px 0 #3a0008}
+#atitle h1 span{display:block}
+#atitle.on h1{animation:tin 1.6s cubic-bezier(.2,.8,.2,1) both}
+#atitle p{margin:0;font:700 clamp(17px,5vw,30px) var(--ja);letter-spacing:.32em;color:#e8b8a0;text-shadow:0 0 12px rgba(255,40,40,.6)}
+#atitle.on p{animation:tin 1.6s .5s cubic-bezier(.2,.8,.2,1) both}
+#atitle.glitch h1{animation:tglitch .35s steps(3) 2}
+@keyframes tin{0%{opacity:0;transform:scale(1.35);filter:blur(10px)}100%{opacity:1;transform:none;filter:none}}
+@keyframes tglitch{0%{transform:translate(0,0);clip-path:inset(0 0 0 0)}33%{transform:translate(-6px,2px);clip-path:inset(20% 0 40% 0)}66%{transform:translate(5px,-3px);clip-path:inset(55% 0 5% 0)}100%{transform:none;clip-path:inset(0 0 0 0)}}
+/* 歌詞 */
+#kara{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:clamp(14px,3.5vh,30px);text-align:center;opacity:0;transition:opacity .6s;
+  padding:calc(70px + env(safe-area-inset-top,0px)) max(18px,env(safe-area-inset-right,0px)) calc(80px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px))}
+#kara.on{opacity:1}
+#kara,#atitle{pointer-events:none;z-index:1}
+#abar{z-index:3}
+#atoast{z-index:4}
+#kcal{z-index:3}
+#ksec{align-self:center;white-space:nowrap;font:700 clamp(12px,3.4vw,16px) "Times New Roman","Liberation Serif",serif;letter-spacing:.24em;color:#c9a35a;text-shadow:0 0 10px rgba(255,60,40,.5)}
+#ksec::before,#ksec::after{content:"";display:inline-block;width:2.4em;height:1px;background:currentColor;vertical-align:middle;margin:0 .8em;opacity:.6}
+.kl{align-self:center;font-family:var(--ja);font-weight:800;letter-spacing:.06em;line-height:1.35;white-space:nowrap;transition:opacity .3s}
+#kprev{font-size:clamp(15px,4.4vw,26px);color:rgba(244,230,208,.32);min-height:1.35em}
+#kcur{--p:0%;font-size:clamp(30px,9.4vw,68px);min-height:1.35em;align-self:center;display:inline-block;
+  background:linear-gradient(90deg,#ffe2a0 0%,#ff5a3a calc(var(--p) - 2%),rgba(255,240,220,.38) var(--p));-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 14px rgba(255,40,30,.55)) drop-shadow(0 2px 0 rgba(40,0,6,.9))}
+#kcur.shout{letter-spacing:.04em}
+#kcur.pop{animation:kpop .45s cubic-bezier(.2,1.4,.4,1)}
+@keyframes kpop{0%{transform:scale(.86);opacity:.2}100%{transform:none;opacity:1}}
+#knext{font-size:clamp(16px,4.8vw,28px);color:rgba(244,230,208,.5);min-height:1.35em}
+/* 下の進み具合 */
+#abar{position:absolute;left:max(18px,env(safe-area-inset-left,0px));right:max(18px,env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));
+  display:flex;align-items:center;gap:10px;font:12px "Times New Roman","Liberation Serif",serif;color:#a8845a;font-variant-numeric:tabular-nums}
+#abar .tr{flex:1;height:3px;background:rgba(200,150,90,.22);border-radius:3px;overflow:hidden}
+#abar .tr i{display:block;height:100%;width:0;background:linear-gradient(90deg,#8a0010,#ff4a2a,#ffd27a)}
+#abar button{font:700 11px var(--ja);letter-spacing:.06em;color:#e8c890;background:rgba(40,6,10,.7);border:1px solid rgba(200,150,90,.4);border-radius:999px;padding:6px 12px;cursor:pointer}
+#abar button:focus-visible{outline:2px solid #ffd27a;outline-offset:2px}
+#abar button[hidden]{display:none}
+#atoast{position:absolute;left:50%;bottom:calc(64px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:calc(100% - 36px);padding:10px 16px;border-radius:12px;
+  background:rgba(30,4,8,.92);border:1px solid rgba(220,160,90,.45);font:700 13px/1.6 var(--ja);color:#f4e0c0;text-align:center;opacity:0;transition:opacity .3s;pointer-events:none}
+#atoast.on{opacity:1}
+#atoast.btn{pointer-events:auto}
+#atoast button{margin-top:8px;font:700 12px var(--ja);color:#1a0306;background:#ffd27a;border:0;border-radius:999px;padding:6px 14px;cursor:pointer}
+/* 調整中の表示 */
+#kcal{position:absolute;top:calc(64px + env(safe-area-inset-top,0px));left:0;right:0;text-align:center;font:700 13px var(--ja);color:#ffd27a;letter-spacing:.06em;display:none}
+body.calib #kcal{display:block}
+/* ひび割れ */
+#crack{position:fixed;inset:0;z-index:9;width:100%;height:100%;pointer-events:none;opacity:0}
+#crack.go{animation:crk 1.2s ease-out forwards}
+@keyframes crk{0%{opacity:0}8%{opacity:1}70%{opacity:.85}100%{opacity:0}}
+/* 崩壊のときの揺れ */
+.quake{animation:quake .5s steps(8)}
+@keyframes quake{0%,100%{transform:none}20%{transform:translate(-8px,4px) rotate(-.6deg)}40%{transform:translate(7px,-5px) rotate(.5deg)}60%{transform:translate(-5px,-3px)}80%{transform:translate(6px,5px) rotate(.4deg)}}
+/* 主題歌モード中のスイッチ */
+.music{z-index:12}
+body.abyss .music{background:rgba(24,4,8,.85);color:#f0d6a0;box-shadow:0 0 0 1px rgba(220,160,90,.45),0 0 18px rgba(255,40,30,.35)}
+body.abyss .music .sw{background:#5a1018}
+body.abyss .music.on .sw{background:#c41a2a}
+@media (prefers-reduced-motion:reduce){.abg,#atitle.on h1,#atitle.on p,#kcur.pop,.quake{animation:none}}
 @media (prefers-reduced-motion:reduce){.ribbon .t,.music.on .eq i{animation:none}.app,.app.show{opacity:1;transform:none;transition:none}}
 </style>
 </head>
@@ -112,7 +188,16 @@ footer .keys{opacity:.8}
   </section>
   <footer><span id="count"></span><span class="keys">↑↓ でえらんで Enter であそぶ</span></footer>
 </div>
-<audio id="bgm" loop preload="auto" src="launcher-bgm.mp3"></audio>
+<div id="abyss" aria-live="polite">
+  <div class="abg"></div><div class="abg2"></div><div id="flash"></div>
+  <div id="atitle"><h1><span>ABYSS</span><span>CODE</span></h1><p>— 深淵の黙示録 —</p></div>
+  <div id="kcal"></div>
+  <div id="kara"><div id="ksec"></div><div class="kl" id="kprev"></div><div class="kl" id="kcur"></div><div class="kl" id="knext"></div></div>
+  <div id="atoast"></div>
+  <div id="abar"><span id="atime">0:00</span><span class="tr"><i id="aprog"></i></span><button type="button" id="acal">タイミングを合わせる</button><button type="button" id="areset" hidden>元に戻す</button></div>
+</div>
+<canvas id="crack" aria-hidden="true"></canvas>
+<audio id="bgm" preload="auto" src="launcher-bgm.mp3"></audio>
 <script>
 // ===== 作品の一覧 =====
 // 新しい作品を載せるとき: リポジトリに作品のフォルダ（中に index.html）を作り、ここに1件足す
@@ -163,24 +248,248 @@ $('count').textContent='ぜんぶで '+APPS.length+' こ';
 items.forEach((el,i)=>setTimeout(()=>el.classList.add('show'),reduce?0:150+i*120));
 mark();
 
-// ===== 音楽: ブラウザの決まりで、最初に画面を触ったときから流す。ボタンでオン・オフ（設定はこの端末に保存） =====
-const bgm=$('bgm'); bgm.volume=.7;
-let want=true; try{ want=localStorage.getItem('launcher-bgm')!=='off'; }catch(e){}
-function setMusic(on){
-  want=on; try{ localStorage.setItem('launcher-bgm',on?'on':'off'); }catch(e){}
-  if(on){ const p=bgm.play(); if(p&&p.catch) p.catch(()=>show(false)); } else bgm.pause();
-  show(on);
+// ===== 主題歌モード「ABYSS CODE — 深淵の黙示録 —」 =====
+// スイッチを入れると: かわいい画面が揺れてひび割れ、崩れ落ちる → 暗転して題名 → 曲に合わせて歌詞を大きく表示（カラオケ）
+// スイッチを切る・曲が終わると、元の画面に戻る
+const bgm=$('bgm'); bgm.volume=.8;
+// 歌詞。各部分の [見出し, 始まり(秒), 終わり(秒), 歌詞]。時刻は曲の構成（120BPM、休止 68・124・148秒付近）からの推定で、
+// 各行の時間は文字数に比例して配る。「タイミングを合わせる」でタップした時刻があれば、そちらを使う
+const SONG=[
+ ['VERSE 1',8,32,`くろき てんくうに きざまれた
+かみの しなりお ひきさけ
+ぎんの らいめい せかいを さき
+ほろびの かねが なりひびく
+うしなわれた きおくの はて
+きょむの しはいが ほほえんだ
+この いのちに しるされた
+ふういんを いま ときはなて`],
+ ['PRE-CHORUS',32,50,`せんこくの しんえん
+きょうきの らくいん
+だれが さだめた うんめいか
+ひゃくおくの ほしを やきつくし
+てんちの ほうそくを うちくだけ`],
+ ['CHORUS',50,68,`はめつを つげる しゅうえんの しょうどう
+てんくうを さく こくえんの ほのお
+かみが おそれた きんきの ちから
+いま ふういんを かいほうせよ
+アビス・コード！
+しんえんの そのさきへ
+アビス・コード！
+てんめいを うらぎれ
+せかいが すべて くずれおちても
+われは けっして ひざまずかない`],
+ ['VERSE 2',70,88,`ぎそうの てんしが まいおりる
+しんぱんの つるぎを かかげて
+せいぎの なのもと くだかれた
+むすうの たましい そのなかで
+だれもが かみを しんじるなら
+われは かみを ころすだろう
+きょうかいせんを こえた さき
+そこに しんじつが あるのなら`],
+ ['PRE-CHORUS 2',88,108,`ぜつぼうの ふちで
+しんわは くずれる
+さいごの とびらを こじあけろ
+りんねの くさりを たちきって
+うんめいの しゅうえんを つげろ`],
+ ['CHORUS 2',108,124,`はめつを つげる しゅうえんの しょうどう
+てんくうを さく こくえんの ほのお
+かみが おそれた きんきの ちから
+いま ふういんを かいほうせよ
+アビス・コード！
+しんえんの そのさきへ
+アビス・コード！
+てんめいを うらぎれ
+せかいが すべて くずれおちても
+われは けっして ひざまずかない`],
+ ['BRIDGE — Breakdown',126,148,`きこえるか
+しんえんの こえが
+みえるか
+ほうかいする てんくうが
+われこそが
+さいごの しんぱんしゃ
+われこそが
+きんだんの かいほうしゃ
+ゼロへと かえれ
+すべてを こわせ
+かみの しはいに
+しゅうえんを`],
+ ['FINAL CHORUS — Explosive',150,168,`はめつを こえて しんわを こわせ
+てんくうを こえて うちゅうを こわせ
+かみも さだめも こえた そのさき
+われが あらたな せかいの ほうそく
+アビス・コード！
+しんえんを そのみへと
+アビス・コード！
+てんめいを うらぎれ
+たとえ このみが ほのおに きえても
+われは けっして ひざまずかない`]];
+const DEF=[]; // 推定の歌い出し時刻
+SONG.forEach(([label,a,b,txt])=>{ const ls=txt.split('\n'), w=ls.map(l=>l.replace(/[\s・！]/g,'').length+3), tot=w.reduce((x,y)=>x+y,0);
+  let t=a; ls.forEach((l,k)=>{ DEF.push({label,text:l,start:+t.toFixed(2),secEnd:b}); t+=(b-a)*w[k]/tot; }); });
+const TKEY='abyss-timing-v1';
+let LINES=[];
+function buildLines(){
+  let custom=null; try{ const v=JSON.parse(localStorage.getItem(TKEY)||'null'); if(Array.isArray(v)&&v.length===DEF.length) custom=v; }catch(e){}
+  LINES=DEF.map((d,i)=>({...d,start:custom?custom[i]:d.start}));
+  LINES.forEach((l,i)=>{ const nx=LINES[i+1]; const sameSec=nx&&nx.label===l.label;
+    l.end=nx?(sameSec?nx.start:Math.min(nx.start,l.secEnd+(custom?2:0))):Math.min(l.start+6,l.secEnd+2); });
+  $('areset').hidden=!custom;
 }
+let abyss=false, phase='', calib=false, calIdx=0, calTimes=[], shown=-2, endT=0;
+const fmt=s=>Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');
 function show(on){ $('music').classList.toggle('on',on); $('music').setAttribute('aria-checked',String(on)); }
-bgm.addEventListener('play',()=>show(true)); bgm.addEventListener('pause',()=>show(false));
-$('music').addEventListener('click',e=>{ e.stopPropagation(); audio(); setMusic(bgm.paused); });
-// 最初のタッチ・クリック・キー入力で流しはじめる
-function firstTouch(e){ document.removeEventListener('pointerdown',firstTouch,true); document.removeEventListener('keydown',firstTouch,true);
-  audio(); if(e&&e.target&&e.target.closest&&e.target.closest('#music')) return;   // ボタンを押したときはボタンの切り替えに任せる
-  if(want&&bgm.paused) setMusic(true); }
-document.addEventListener('pointerdown',firstTouch,true); document.addEventListener('keydown',firstTouch,true);
-// いちおう自動で流してみる（許可されている環境なら流れる）
-if(want){ const p=bgm.play(); if(p&&p.catch) p.catch(()=>{}); }
+$('music').addEventListener('click',e=>{ e.stopPropagation(); audio(); abyss?exitAbyss():enterAbyss(); });
+
+// 崩壊: 揺れ・ひび割れ・赤い閃光のあと、パーツが重力で落ちていく
+const FALL=()=>[document.querySelector('.ribbon'),document.querySelector('.sub'),...items,document.querySelector('.stage'),document.querySelector('footer')];
+let fallRaf=0;
+function collapse(done){
+  const wrap=document.querySelector('.wrap'); document.documentElement.classList.add('lock'); scrollTo(0,0);
+  if(reduce){ wrap.style.opacity='0'; done(); return; }
+  wrap.classList.remove('quake'); void wrap.offsetWidth; wrap.classList.add('quake');
+  drawCrack(); $('crack').classList.remove('go'); void $('crack').offsetWidth; $('crack').classList.add('go');
+  if(audio()){ rumble(); }
+  const els=FALL(), st=els.map((el,k)=>({el,x:0,y:0,r:0,vx:(Math.random()-.5)*260,vy:-120-Math.random()*220,vr:(Math.random()-.5)*220,delay:.35+k*.06+Math.random()*.12}));
+  let t0=performance.now(), last=t0;
+  cancelAnimationFrame(fallRaf);
+  const step=now=>{ const dt=Math.min(.05,(now-last)/1000); last=now; const el=(now-t0)/1000; let alive=false;
+    st.forEach(o=>{ if(el<o.delay){ alive=true; return; } o.vy+=1500*dt; o.x+=o.vx*dt; o.y+=o.vy*dt; o.r+=o.vr*dt;
+      o.el.style.transition='none'; o.el.style.transform=`translate(${o.x}px,${o.y}px) rotate(${o.r}deg)`;
+      if(o.y<innerHeight*1.4) alive=true; });
+    if(alive&&el<3) fallRaf=requestAnimationFrame(step); else { wrap.style.visibility='hidden'; done(); } };
+  fallRaf=requestAnimationFrame(step);
+}
+function restoreUI(){
+  cancelAnimationFrame(fallRaf);
+  const wrap=document.querySelector('.wrap'); wrap.style.visibility=''; wrap.style.opacity=''; wrap.classList.remove('quake');
+  FALL().forEach((el,k)=>{ el.style.transition='none'; el.style.transform='translateY(-120vh) rotate('+((Math.random()-.5)*40)+'deg)';
+    void el.offsetWidth; setTimeout(()=>{ el.style.transition='transform .8s cubic-bezier(.3,1.35,.5,1)'; el.style.transform=''; },60+k*70);
+    setTimeout(()=>{ el.style.transition=''; },1200+k*70); });
+  setTimeout(()=>{ if(!abyss) document.documentElement.classList.remove('lock'); },1600);
+}
+// ひび割れの線（画面の一点から放射状に走る）
+function drawCrack(){
+  const c=$('crack'), d=Math.min(2,devicePixelRatio||1); c.width=innerWidth*d; c.height=innerHeight*d; const g=c.getContext('2d'); g.scale(d,d);
+  const ox=innerWidth*(.35+Math.random()*.3), oy=innerHeight*(.35+Math.random()*.25);
+  g.lineCap='round';
+  for(let i=0;i<14;i++){ let a=i/14*Math.PI*2+Math.random()*.3, x=ox, y=oy, len=Math.max(innerWidth,innerHeight)*(.4+Math.random()*.5);
+    g.beginPath(); g.moveTo(x,y);
+    for(let s=0;s<len;s+=20+Math.random()*40){ a+=(Math.random()-.5)*.6; x+=Math.cos(a)*30; y+=Math.sin(a)*30; g.lineTo(x,y);
+      if(Math.random()<.18){ g.moveTo(x,y); } }
+    g.strokeStyle='rgba(255,255,255,.9)'; g.lineWidth=2.2; g.shadowColor='rgba(255,30,40,.9)'; g.shadowBlur=10; g.stroke(); }
+}
+// 低い地鳴り（効果音）
+function rumble(){ const t=ac.currentTime, o=ac.createOscillator(), g=ac.createGain(); o.type='sawtooth'; o.frequency.setValueAtTime(70,t); o.frequency.exponentialRampToValueAtTime(28,t+1.4);
+  g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.35,t+.05); g.gain.exponentialRampToValueAtTime(.0001,t+1.5);
+  const f=ac.createBiquadFilter(); f.type='lowpass'; f.frequency.value=300; o.connect(f); f.connect(g); g.connect(ac.destination); o.start(t); o.stop(t+1.6);
+  [0,.12,.3].forEach(d=>tone(1800+Math.random()*900,d,.12,.04,'square')); }
+
+function enterAbyss(){
+  if(abyss) return; abyss=true; show(true); buildLines(); shown=-2; phase='title';
+  try{ bgm.currentTime=0; }catch(e){}
+  const p=bgm.play(); if(p&&p.catch) p.catch(()=>{ toast('曲を再生できませんでした。もう一度スイッチを押してください'); exitAbyss(); });
+  collapse(()=>{});
+  setTimeout(()=>{ if(!abyss) return; document.body.classList.add('abyss'); embers(true);
+    const f=$('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go');
+    $('atitle').classList.add('on'); $('kara').classList.remove('on'); },reduce?0:1100);
+  requestAnimationFrame(tick);
+}
+function exitAbyss(){
+  if(!abyss) return; abyss=false; calib=false; document.body.classList.remove('calib'); show(false);
+  bgm.pause(); try{ bgm.currentTime=0; }catch(e){}
+  $('atitle').classList.remove('on'); $('kara').classList.remove('on'); toast('');
+  document.body.classList.remove('abyss'); embers(false); restoreUI();
+}
+bgm.addEventListener('ended',()=>{ if(!abyss) return; if(calib) finishCalib(); setTimeout(exitAbyss,1800); });
+
+// 毎フレーム: 曲の再生位置に合わせて表示を切り替える
+// 1行に収まるよう文字の大きさを縮める（行の折り返しをなくして、左から右へ色が流れるようにする）
+const KMAX={kprev:26,kcur:68,knext:28,ksec:16}, KMIN={kprev:11,kcur:18,knext:12,ksec:9};
+function fit(id,shout){ const el=$(id); const max=Math.min(KMAX[id]*(shout?1.35:1),innerWidth*(id==='kcur'?(shout?.13:.094):id==='ksec'?.034:.05));
+  el.style.fontSize=max+'px'; const k=$('kara'), cs=getComputedStyle(k), w=k.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight)-8;
+  const inner=el.offsetWidth; if(inner>w) el.style.fontSize=Math.max(KMIN[id],max*w/inner*.98)+'px'; }
+function fitAll(){ fit('ksec'); fit('kprev'); fit('kcur',$('kcur').classList.contains('shout')); fit('knext'); }
+addEventListener('resize',()=>{ if(abyss) fitAll(); });
+function setLine(i){
+  const cur=$('kcur'), L=LINES[i];
+  $('kprev').textContent=i>0&&LINES[i-1].label===(L?L.label:'')?LINES[i-1].text:'';
+  cur.textContent=L?L.text:''; cur.classList.toggle('shout',!!L&&/アビス・コード/.test(L.text));
+  cur.classList.remove('pop'); void cur.offsetWidth; cur.classList.add('pop');
+  const nx=LINES[i+1]; $('knext').textContent=nx?nx.text:'';
+  $('ksec').textContent=L?L.label:'';
+  fitAll();
+}
+function tick(){
+  if(!abyss) return;
+  const t=bgm.currentTime||0, dur=bgm.duration||180.85;
+  $('aprog').style.width=(t/dur*100)+'%'; $('atime').textContent=fmt(t)+' / '+fmt(dur);
+  if(calib){ calView(t); requestAnimationFrame(tick); return; }
+  const first=LINES[0].start, lastL=LINES[LINES.length-1];
+  if(t<first-.4||t>lastL.end+1){ // 前奏と後奏は題名
+    if(phase!=='title'){ phase='title'; $('kara').classList.remove('on'); $('atitle').classList.add('on'); $('atitle').classList.add('glitch'); setTimeout(()=>$('atitle').classList.remove('glitch'),800); }
+  } else {
+    if(phase!=='lyrics'){ phase='lyrics'; $('atitle').classList.remove('on'); $('kara').classList.add('on'); shown=-2; }
+    let i=-1; for(let k=0;k<LINES.length;k++){ if(LINES[k].start<=t+.05) i=k; else break; }
+    if(i<0) i=0;
+    // 休止（間奏）: 次の行が来るまで、次の部分の見出しと次の行だけ出す
+    const L=LINES[i], gap=t>L.end+.3&&LINES[i+1]&&LINES[i+1].start-t>.9;
+    const key=gap?'g'+i:i;
+    if(key!==shown){ shown=key;
+      if(gap){ const nx=LINES[i+1]; $('kprev').textContent=''; $('kcur').textContent='…'; $('kcur').classList.remove('shout'); $('knext').textContent=nx.text; $('ksec').textContent=nx.label; $('kcur').style.setProperty('--p','0%'); fitAll(); }
+      else setLine(i); }
+    if(!gap){ const p=Math.max(0,Math.min(1,(t-L.start)/Math.max(.4,(L.end-L.start)*.9))); $('kcur').style.setProperty('--p',(p*104).toFixed(1)+'%'); }
+  }
+  requestAnimationFrame(tick);
+}
+
+// ===== タイミング合わせ: 曲を頭から流し、各行の歌い出しで画面をタップ。タップした時刻をこの端末に保存する =====
+function startCalib(){
+  calib=true; calIdx=0; calTimes=[]; document.body.classList.add('calib');
+  try{ bgm.currentTime=0; }catch(e){} bgm.play();
+  $('atitle').classList.remove('on'); $('kara').classList.add('on'); phase='calib';
+  toast('歌い出しに合わせて、画面のどこかをタップしてください（パソコンはスペースキーでも可）',4000);
+  calShow();
+}
+function calShow(){
+  const L=LINES[calIdx], P=LINES[calIdx-1];
+  $('kcal').textContent='タイミング合わせ中　'+calIdx+' / '+LINES.length;
+  $('ksec').textContent=L?L.label:'';
+  $('kprev').textContent=P?P.text:'';
+  $('kcur').textContent=L?L.text:'おわり'; $('kcur').classList.toggle('shout',!!L&&/アビス・コード/.test(L.text)); $('kcur').style.setProperty('--p','0%');
+  $('knext').textContent=LINES[calIdx+1]?LINES[calIdx+1].text:'';
+  fitAll();
+}
+function calView(t){ /* 調整中は、次にタップする行を薄く表示しておく */ }
+function calTap(){
+  if(!calib||calIdx>=LINES.length) return;
+  calTimes.push(+(bgm.currentTime).toFixed(2)); $('kcur').style.setProperty('--p','104%');
+  const cur=$('kcur'); cur.classList.remove('pop'); void cur.offsetWidth; cur.classList.add('pop');
+  calIdx++; setTimeout(()=>{ if(calib) calShow(); },220);
+  if(calIdx>=LINES.length) setTimeout(finishCalib,400);
+}
+function finishCalib(){
+  if(!calib) return; calib=false; document.body.classList.remove('calib');
+  if(calTimes.length===LINES.length){
+    try{ localStorage.setItem(TKEY,JSON.stringify(calTimes)); }catch(e){}
+    buildLines();
+    toastCopy('タイミングを保存しました。この端末では次からこのタイミングで表示します。下のボタンでデータをコピーして送ってもらえれば、どの端末でも同じになるよう組み込みます。',JSON.stringify(calTimes));
+  } else toast('最後まで合わせられなかったので、保存しませんでした',4000);
+  shown=-2; phase='';
+}
+$('abyss').addEventListener('pointerdown',e=>{ if(e.target.closest('button')) return; if(calib){ e.preventDefault(); calTap(); } });
+document.addEventListener('keydown',e=>{ if(calib&&(e.key===' '||e.key==='Enter')){ e.preventDefault(); calTap(); } else if(abyss&&e.key==='Escape') exitAbyss(); });
+$('acal').addEventListener('click',e=>{ e.stopPropagation(); startCalib(); });
+$('areset').addEventListener('click',e=>{ e.stopPropagation(); try{ localStorage.removeItem(TKEY); }catch(_){} buildLines(); shown=-2; toast('推定のタイミングに戻しました',2500); });
+
+let toastT=0;
+function toast(msg,ms){ const t=$('atoast'); clearTimeout(toastT); t.classList.remove('btn'); t.textContent=msg; t.classList.toggle('on',!!msg); if(msg&&ms) toastT=setTimeout(()=>t.classList.remove('on'),ms); }
+function toastCopy(msg,data){ const t=$('atoast'); clearTimeout(toastT); t.textContent=msg; t.appendChild(document.createElement('br'));
+  const b=document.createElement('button'); b.type='button'; b.textContent='データをコピー';
+  b.addEventListener('click',e=>{ e.stopPropagation(); const done=()=>{ b.textContent='コピーしました'; setTimeout(()=>t.classList.remove('on'),1500); };
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(data).then(done,()=>{ b.textContent='コピーできませんでした'; }); else b.textContent='コピーできませんでした'; });
+  const c=document.createElement('button'); c.type='button'; c.textContent='閉じる'; c.style.marginLeft='8px'; c.addEventListener('click',e=>{ e.stopPropagation(); t.classList.remove('on'); });
+  t.append(b,c); t.classList.add('on','btn'); }
+buildLines();
 
 // ===== 効果音: ぽわん（選ぶ）、きらりん（決定） =====
 let ac=null;
@@ -206,6 +515,9 @@ document.addEventListener('keydown',e=>{
 const cv=$('sky'), cx=cv.getContext('2d');
 const COLS=['#ff8fb8','#6fd6b8','#b39cf2','#ffd66b','#ffffff'];
 let W=0,H=0,DPR=1, parts=[], sparks=[];
+let ember=false;
+const EMB=['#ff3a1a','#ff7a2a','#ffc46a','#b01010','#ff5a3a'];
+function embers(on){ ember=on; parts.forEach(p=>{ if(on){ p.c=EMB[Math.random()*EMB.length|0]; p.k=2; p.vy=-(30+Math.random()*70); p.r=2+Math.random()*4; p.a=.5+Math.random()*.5; } else Object.assign(p,mk()); }); }
 function size(){ DPR=Math.min(2,window.devicePixelRatio||1); W=innerWidth; H=innerHeight; cv.width=W*DPR; cv.height=H*DPR; cx.setTransform(DPR,0,0,DPR,0,0); }
 function mk(y){ return {x:Math.random()*W,y:y==null?Math.random()*H:y,r:5+Math.random()*9,k:Math.random()*3|0,c:COLS[Math.random()*COLS.length|0],
   vy:reduce?0:-(6+Math.random()*12),sw:Math.random()*6.28,sp:reduce?0:.6+Math.random()*.8,rot:Math.random()*6.28,vr:reduce?0:(Math.random()-.5)*.6,a:.35+Math.random()*.35}; }
@@ -226,8 +538,8 @@ function frame(t){
   const dt=Math.min(.05,(t-(last||t))/1000); last=t;
   cx.clearRect(0,0,W,H);
   parts.forEach(p=>{
-    p.y+=p.vy*dt; p.sw+=dt*p.sp; p.rot+=p.vr*dt; if(p.y<-20) Object.assign(p,mk(H+20));
-    cx.save(); cx.translate(p.x+Math.sin(p.sw)*14,p.y); cx.rotate(p.rot); cx.globalAlpha=p.a; cx.fillStyle=p.c; shape(p.k,p.r); cx.restore();
+    p.y+=p.vy*dt; p.sw+=dt*p.sp; p.rot+=p.vr*dt; if(p.y<-20){ Object.assign(p,mk(H+20)); if(ember){ p.c=EMB[Math.random()*EMB.length|0]; p.k=2; p.vy=-(30+Math.random()*70); p.r=2+Math.random()*4; } }
+    cx.save(); cx.translate(p.x+Math.sin(p.sw)*14,p.y); cx.rotate(p.rot); cx.globalAlpha=ember?p.a*(.6+Math.random()*.4):p.a; cx.fillStyle=p.c; if(ember){ cx.shadowColor=p.c; cx.shadowBlur=8; } shape(p.k,p.r); cx.restore();
   });
   sparks=sparks.filter(s=>(s.t+=dt)<.9);
   sparks.forEach(s=>{ s.vy+=520*dt; s.x+=s.vx*dt; s.y+=s.vy*dt; s.rot+=dt*6;
@@ -238,7 +550,7 @@ size(); addEventListener('resize',size);
 parts=Array.from({length:reduce?14:Math.min(34,Math.round(W*H/22000))},()=>mk());
 if(reduce){ frame(0); } else requestAnimationFrame(frame);
 // ほかのページから戻ってきたとき（ブラウザの戻る）に、飛び散りを消して状態を戻す
-addEventListener('pageshow',e=>{ if(e.persisted){ sparks=[]; if(want&&ac) setMusic(true); } });
+addEventListener('pageshow',e=>{ if(e.persisted){ sparks=[]; if(abyss) exitAbyss(); } });
 </script>
 </body>
 </html>
