@@ -1734,7 +1734,7 @@ var STY = {
 };
 
 function shatter(o, hx, hy, c) {
-  var closeLeft = { monitor: 2, cabinet: 3, aquarium: 3, pot: 2, crystal: 5 }[o.t] || 0;
+  var closeLeft = (o.t === 'crystal' ? 2 : (Math.random() < 0.25 ? 1 : 0)) * ({ monitor: 1, cabinet: 1, aquarium: 1, pot: 1, crystal: 1 }[o.t] || 0);
   c = Object.assign({}, c, { M: Math.round(c.M * 1.3), N: Math.round(c.N * 1.2), dust: Math.round((c.dust || 0) * 1.7), pop: Math.min(0.45, c.pop * 2.6), v: c.v * 1.12 });
   var hull = hullFor(o), polys = fracture(hull, hx, hy, c.M, c.N, c.jit || 0.14), i;
   for (i = 0; i < polys.length; i++) {
@@ -1751,7 +1751,7 @@ function shatter(o, hx, hy, c) {
     var rr = 0, jj; for (jj = 0; jj < sh.verts.length; jj += 2) rr = Math.max(rr, Math.hypot(sh.verts[jj], sh.verts[jj + 1]));
     if (closeLeft > 0 && rr > 2 && Math.random() < 0.4) {
       /* 手前まで迫ってくる大きな破片 */
-      closeLeft--; sh.pop = true; sh.zoom = rnd(4.5, 8); sh.alpha = Math.max(sh.alpha, 0.58);
+      closeLeft--; sh.pop = true; sh.zoom = rnd(3.5, 6.5); sh.alpha = Math.max(sh.alpha, 0.58);
       sh.vx = (sh.x - 80) * 0.9 + rnd(-8, 8); sh.vy = (sh.y - 56) * 0.7 - rnd(10, 40); sh.life = rnd(0.85, 1.25); sh.fade = 0.45; sh.vr = rnd(-3, 3);
     }
     addFx(sh);
