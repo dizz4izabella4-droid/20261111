@@ -247,24 +247,24 @@ body.abyss .music.on .sw{background:#c41a2a}
 <script>
 // ===== 作品の一覧 =====
 // 新しい作品を載せるとき: リポジトリに作品のフォルダ（中に index.html）を作り、ここに1件足す
-//   path … フォルダ名（末尾に /）   ja … 日本語の名前   name … 英語の名前   desc … ひとこと説明
+//   path … フォルダ名（末尾に /）   ja … 日本語の名前   name … 英語の名前（小さく上に出る）
 //   for  … 'pc' / 'mobile' / 'both'   color … 'pink' / 'mint' / 'lav' / 'lemon'   icon … 下の ICONS の名前
 //   start … 制作開始日（YYYY-MM-DD。分からないときは書かない）   date … 最終アップロード日（YYYY-MM-DD）。作品をpushしたら、その作品の date を当日に直す（どちらもカードの下に極小で出る）
 const APPS=[
   {path:'typing-pc/', ja:'CMDタイピング', name:'CMD TYPING', for:'pc', color:'mint', icon:'keyboard',
-   desc:'キーボード使用', start:'2026-11-10', date:'2026-11-12'},
+   start:'2026-11-10', date:'2026-11-12'},
   {path:'typing-mobile/', ja:'CMDタイピング スマホ版', name:'CMD TYPING MOBILE', for:'mobile', color:'lav', icon:'phone',
-   desc:'フリック', start:'2026-11-11', date:'2026-11-12'},
-  {path:'tori-to-kemono/', ja:'鳥と獣の戦い', name:'BIRDS VS BEASTS', for:'mobile', color:'pink', icon:'bird',
-   desc:'置いて対戦', start:'2026-10-30', date:'2026-11-11'},
+   start:'2026-11-11', date:'2026-11-12'},
+  {path:'tori-to-kemono/', ja:'鳥と獣の戦い test ver.', name:'BIRDS VS BEASTS', for:'mobile', color:'pink', icon:'bird',
+   start:'2026-10-30', date:'2026-11-11'},
   {path:'kumiwake-bou/', ja:'ワイヤダ', name:'WAIYADA', for:'both', color:'lemon', icon:'loop',
-   desc:'ワイヤダ', note:'某〇〇をできるようにしただけなので、面白いのは保証済み。（オリジナリティーは皆無）', start:'2026-11-11', date:'2026-11-12'},
+   start:'2026-11-11', date:'2026-11-12'},
   {path:'glass-breaker/', ja:'ガラス割り', name:'GLASS BREAKER', for:'mobile', color:'mint', icon:'glass',
-   desc:'叩いて割る', start:'2026-11-12', date:'2026-11-12'},
+   start:'2026-11-12', date:'2026-11-12'},
   {path:'dentaku-drill/', ja:'電卓ドリル', name:'CALCULATOR DRILL', for:'both', color:'pink', icon:'calc',
-   desc:'電卓ドリル自動生成', start:'2026-11-10', date:'2026-11-12'},
-  {path:'nobiru-hige/', ja:'伸びるヒゲ', name:'NOBIRU HIGE', for:'pc', color:'lemon', icon:'hige',
-   desc:'キーボード使用', start:'2026-11-12', date:'2026-11-12'},
+   start:'2026-11-10', date:'2026-11-12'},
+  {path:'nobiru-hige/', ja:'伸びるヒゲ test ver.', name:'NOBIRU HIGE', for:'both', color:'lemon', icon:'hige',
+   start:'2026-11-12', date:'2026-11-12'},
 ];
 // アイコン（白で描く）
 const ICONS={
@@ -290,10 +290,9 @@ const items=APPS.map((a,i)=>{
   el.className='app '+(a.color||'pink'); el.href=a.path;
   const ic=document.createElement('span'); ic.className='icon'; ic.innerHTML=ICONS[a.icon]||ICONS.star;
   const en=document.createElement('span'); en.className='en'; en.textContent=a.name;
-  const ds=document.createElement('span'); ds.className='ds'; ds.textContent=a.desc;
+  const ds=document.createElement('span'); ds.className='ds'; ds.textContent=a.ja;
   const tx=document.createElement('span'); tx.className='txt'; tx.append(en,ds);
-  if(a.note){ const nt=document.createElement('span'); nt.className='nt'; nt.textContent=a.note; tx.appendChild(nt); }
-  el.setAttribute('aria-label',a.ja+'（'+a.desc+(a.note?'。'+a.note:'')+'）');
+  el.setAttribute('aria-label',a.ja);
   el.append(ic,tx);
   { const t=document.createElement('span'); t.className='tag'; t.textContent=a.for==='both'?'どちらも':LABEL[a.for]+'むけ'; el.appendChild(t); }
   if(a.for===myDev||a.for==='both'){ const r=document.createElement('span'); r.className='rec'; r.textContent='この端末におすすめ'; el.appendChild(r); }
