@@ -452,7 +452,7 @@ body{display:block;padding:0;overflow:hidden;touch-action:manipulation;-webkit-u
 #ov .hint{font-size:10px;margin-top:8px}
 #ov .fmsg{font-size:11px}
 /* フリックキーボード（スマホの標準キーボードは使わない） */
-.kb{flex:none;display:grid;grid-template-columns:repeat(3,1fr) .85fr;grid-template-rows:repeat(4,var(--kh,46px));gap:5px;
+.kb{flex:none;display:grid;grid-template-columns:.62fr repeat(3,1fr) .62fr;grid-template-rows:repeat(4,var(--kh,46px));gap:5px;
   touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;font-family:var(--mono)}
 body.nokb .kb{display:none}
 .k{position:relative;background:#03110a;border:1px solid #1b3a26;border-radius:7px;display:flex;align-items:center;justify-content:center;
@@ -463,8 +463,17 @@ body.nokb .kb{display:none}
 .k .h3{right:6px;top:50%;transform:translateY(-50%)}
 .k .h4{bottom:2px;left:50%;transform:translateX(-50%)}
 .k.fn{background:#020a05;color:#7fa98a;font-size:13px;letter-spacing:.06em}
-.k.ent{grid-column:4;grid-row:2/5;color:var(--accent);font-size:13px;flex-direction:column;gap:2px;border-color:#2f6b43}
-.k.ent b{font-size:22px;font-weight:normal;line-height:1}
+.k.ent{grid-column:5;grid-row:2/5;color:var(--accent);font-size:10px;letter-spacing:0;flex-direction:column;gap:2px;border-color:#2f6b43}
+.k.ent b{font-size:20px;font-weight:normal;line-height:1}
+/* 左の細い列: 流れ続ける文字情報（押せない） */
+.klog{grid-column:1;grid-row:1/5;position:relative;overflow:hidden;border:1px solid #1b3a26;border-radius:7px;background:#020a05;pointer-events:none;
+  display:flex;flex-direction:column;justify-content:flex-end;padding:2px 3px 3px;box-sizing:border-box;font:7px/1.3 var(--mono);color:#3f7a52;white-space:nowrap;
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 22%);mask-image:linear-gradient(to bottom,transparent 0,#000 22%)}
+.klog div{overflow:hidden}
+.klog .hi{color:#8dffb5}
+.klog .wr{color:var(--gold)}
+body.alert .klog,body.danger .klog{color:#a35a62}
+body.alert .klog .hi,body.danger .klog .hi{color:#ff8a94}
 .k.mod{font:14px var(--ja);letter-spacing:0}
 .k.want{border-color:var(--gold);color:var(--gold);background:#1c2208;box-shadow:0 0 12px rgba(216,242,122,.45)}
 .k{transition:background .2s,border-color .2s,box-shadow .2s}
@@ -1736,13 +1745,28 @@ function flashKey(k,res){ if(res==null) return; const c=res?'ok1':'ng1'; k.class
 function buzz(ms){ try{ if(navigator.vibrate) navigator.vibrate(ms); }catch(e){} }
 function kbShow(on){ document.body.classList.toggle('nokb',!on); }
 function mkKey(cls,col,row){ const k=document.createElement('div'); k.className='k'+(cls?' '+cls:''); if(col) k.style.gridColumn=col; if(row) k.style.gridRow=row; kbEl.appendChild(k); return k; }
+// 左の細い列に、下から上へ流れ続ける文字情報（見た目だけ）
+const klog=document.createElement('div'); klog.className='klog'; klog.setAttribute('aria-hidden','true');
+const KL_W=['SYN','ACK','RST','PSH','TCP','UDP','DNS','TLS','ARP','FIN'], KL_V=['443','22','80','8080','3306','53','5432','25'];
+const kh=n=>Math.floor(Math.random()*n).toString(16).toUpperCase().padStart(n>256?4:2,'0');
+function klLine(){
+  const r=Math.random(), d=document.createElement('div');
+  if(r<.5) d.textContent=kh(65536)+' '+kh(256)+' '+kh(256);
+  else if(r<.75) d.textContent=KL_W[Math.random()*KL_W.length|0]+' :'+KL_V[Math.random()*KL_V.length|0];
+  else if(r<.9) d.textContent='>'+(Math.random()*9999|0)+'.'+(Math.random()*99|0).toString().padStart(2,'0')+'ms';
+  else { d.className=Math.random()<.5?'hi':'wr'; d.textContent=Math.random()<.5?'0x'+kh(65536)+'FF':'OK '+kh(256)+kh(256); }
+  return d;
+}
+function klTick(){ if(document.body.classList.contains('nokb')) return; klog.appendChild(klLine()); while(klog.childElementCount>26) klog.firstChild.remove(); }
+setInterval(klTick,RM?900:130);
 function renderKB(){
   kbEl.textContent='';
-  FKEYS.forEach((ch,i)=>{ if(ch[0]==='MOD'){ modKey=mkKey('fn mod',i%3+1,(i/3|0)+1); modKey.dataset.fn='MOD'; modKey.textContent='小゛゜'; return; }
-    const k=mkKey('',i%3+1,(i/3|0)+1); k.dataset.i=i;
+  kbEl.appendChild(klog);
+  FKEYS.forEach((ch,i)=>{ if(ch[0]==='MOD'){ modKey=mkKey('fn mod',i%3+2,(i/3|0)+1); modKey.dataset.fn='MOD'; modKey.textContent='小゛゜'; return; }
+    const k=mkKey('',i%3+2,(i/3|0)+1); k.dataset.i=i;
     const c=document.createElement('span'); c.textContent=ch[0]; k.appendChild(c);
     for(let d=1;d<5;d++) if(ch[d]){ const h=document.createElement('span'); h.className='h h'+d; h.textContent=ch[d]; k.appendChild(h); } });
-  delKey=mkKey('fn',4,1); delKey.textContent='\u232B'; delKey.dataset.fn='Backspace';
+  delKey=mkKey('fn',5,1); delKey.textContent='\u232B'; delKey.dataset.fn='Backspace';
   entKey=mkKey('fn ent'); entKey.dataset.fn='Enter'; entKey.innerHTML='<b>\u21B5</b>ENTER';
 }
 // 押している間、上下左右の候補を十字に表示する
