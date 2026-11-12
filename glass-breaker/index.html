@@ -1069,15 +1069,16 @@ function drawFigureBack() {
   }
   R(px - 1, y0 - 1, 3, 1, '#f4f4ee');
   /* 腕は前で赤ちゃんを抱えている(肘だけ外に見える) */
-  R(px - 5, y0 + 2, 1, 6, '#222b45'); R(px + 5, y0 + 2, 1, 6, '#222b45'); R(px - 4, y0 + 8, 1, 1, '#222b45'); R(px + 4, y0 + 8, 1, 1, '#222b45');
+  if (G.secret) { R(px - 5, y0 + 2, 1, 10, '#222b45'); R(px + 5, y0 + 2, 1, 10, '#222b45'); R(px - 5, y0 + 12, 1, 2, '#e4b992'); R(px + 5, y0 + 12, 1, 2, '#e4b992'); }
+  else { R(px - 5, y0 + 2, 1, 6, '#222b45'); R(px + 5, y0 + 2, 1, 6, '#222b45'); R(px - 4, y0 + 8, 1, 1, '#222b45'); R(px + 4, y0 + 8, 1, 1, '#222b45'); }
   for (dy = -3; dy <= 3; dy++) for (dx = -3; dx <= 3; dx++) if (dx * dx + dy * dy <= 9) R(px + dx, hy + dy, 1, 1, (Math.abs(dx) === 3 && dy >= 0 && dy <= 1) ? '#e4b992' : '#1d1612');
   R(px - 1, hy - 3, 2, 1, '#3d2e22');
-  R(px - 3, hy, 1, 1, '#ffffff'); R(px + 3, hy, 1, 1, '#ffffff'); pline(px - 3, hy + 1, px - 1, y0 + 2, '#e8e8e8');
+  R(px - 3, hy, 1, 1, '#ffffff'); R(px + 3, hy, 1, 1, '#ffffff'); if (!G.secret) pline(px - 3, hy + 1, px - 1, y0 + 2, '#e8e8e8');
   R(px - 4, hy - 1, 1, 1, '#c8d0da'); R(px + 3, hy - 1, 1, 1, '#c8d0da');
   /* 肩越しにのぞく赤ちゃん社長 */
   var bx = px + 4, by = y0 - 1;
-  for (dy = -2; dy <= 2; dy++) for (dx = -2; dx <= 2; dx++) if (dx * dx + dy * dy <= 5) R(bx + dx, by + dy, 1, 1, '#f6cfb0');
-  R(bx - 1, by - 2, 2, 1, '#fff6ea'); R(bx + 3, by - 3 + (Math.floor(simT / 250) & 1), 1, 2, '#f6cfb0');
+  if (!G.secret) for (dy = -2; dy <= 2; dy++) for (dx = -2; dx <= 2; dx++) if (dx * dx + dy * dy <= 5) R(bx + dx, by + dy, 1, 1, '#f6cfb0');
+  if (!G.secret) { R(bx - 1, by - 2, 2, 1, '#fff6ea'); R(bx + 3, by - 3 + (Math.floor(simT / 250) & 1), 1, 2, '#f6cfb0'); }
   pl.gp = null;
 }
 function drawFigure() {
@@ -1346,16 +1347,55 @@ function drawBabySprite(alpha, noShadow) {
   R(hx - f * 1, hy - 4, 1, 1, '#c8c8c8');
   ctx.globalAlpha = ga;
 }
+/* 土下座(u=0で立ち姿の手前、1で額を床につける) */
+function drawDogeza(px, F, f, u) {
+  var k = clamp(u / 0.3, 0, 1), t = clamp((u - 0.3) / 0.6, 0, 1), i, n = 8;
+  function bx(d0, y0, w, h, c) { R(f > 0 ? px + d0 : px - d0 - w + 1, y0, w, h, c); }
+  function pt(dx, y) { return [f > 0 ? px + dx : px - dx, y]; }
+  R(px - 8, F + 1, 18, 1, 'rgba(0,0,0,0.36)');
+  bx(-9, F - 2, 2, 2, '#2a1a10'); bx(-8, F - 2, 7, 2, '#4a3a2c');
+  bx(-4, F - 8, 4, 6, '#4a3a2c'); bx(-4, F - 8, 4, 1, '#5a4838');
+  var Hx = -2, Hy = F - 8, Sx = 7 * t, Sy = F - 19 + 13 * t;
+  for (i = 0; i <= n; i++) {
+    var s = i / n, x = Hx + (Sx - Hx) * s, y = Hy + (Sy - Hy) * s, q = pt(x - 2, Math.round(y - 2));
+    R(f > 0 ? q[0] : q[0] - 4, q[1], 5, 5, i & 1 ? '#7a5c3e' : '#6e5236');
+  }
+  var Dx = Sx + 1 + 2 * t, Dy = Sy - 6 + 8 * t, hq = pt(Math.round(Dx), Math.round(Dy)), dx, dy;
+  for (dy = -3; dy <= 3; dy++) for (dx = -3; dx <= 3; dx++) if (dx * dx + dy * dy <= 10) {
+    var back = (dx * f) <= -2 && dy >= -1;
+    R(hq[0] + dx, hq[1] + dy, 1, 1, back ? '#c8c8c8' : '#f2c29c');
+  }
+  R(hq[0] + f, hq[1] - 3, 1, 1, '#fff4e4');
+  var ax = 3 + (Sx + 6 - 3) * t, ay = F - 9 + 8 * t, sp = pt(Math.round(Sx), Math.round(Sy)), ap = pt(Math.round(ax), Math.round(ay));
+  for (i = 0; i <= 6; i++) R(Math.round(sp[0] + (ap[0] - sp[0]) * i / 6), Math.round(sp[1] + (ap[1] - sp[1]) * i / 6), 2, 2, '#6a4e34');
+  R(ap[0], ap[1], 2, 2, '#f2c29c');
+}
+/* 後ろ姿(花火を見るとき) */
+function drawPresBack(px, F) {
+  var B = F, hip = B - 7, HW = [3, 3, 4, 4, 5, 5, 5, 5, 4, 4, 3], top = B - 18, i, x, dx, dy;
+  R(px - 5, F + 1, 11, 1, 'rgba(0,0,0,0.36)'); R(px - 3, F + 2, 7, 1, 'rgba(0,0,0,0.24)');
+  R(px - 2, hip, 2, 7, '#4a3a2c'); R(px + 1, hip, 2, 7, '#3a2c20'); R(px - 3, B, 3, 1, '#2a1a10'); R(px + 1, B, 3, 1, '#2a1a10');
+  for (i = 0; i < 11; i++) for (x = -HW[i]; x <= HW[i]; x++) R(px + x, top + i, 1, 1, (x === -HW[i] || x === HW[i]) ? '#3e2c1c' : (x === 0 && i > 1 ? '#6a4e34' : (i === 0 ? '#94724e' : '#7a5c3e')));
+  R(px - 1, top, 3, 1, '#f4f4ee');
+  R(px - 6, top + 1, 1, 9, '#6a4e34'); R(px + 6, top + 1, 1, 9, '#6a4e34'); R(px - 6, top + 10, 1, 2, '#f2c29c'); R(px + 6, top + 10, 1, 2, '#f2c29c');
+  var hy = B - 22;
+  for (dy = -4; dy <= 4; dy++) for (dx = -4; dx <= 4; dx++) if (dx * dx + dy * dy <= 17) R(px + dx, hy + dy, 1, 1, (dy >= 0 || Math.abs(dx) >= 3) ? '#c8c8c8' : '#f2c29c');
+  R(px - 2, hy - 3, 2, 1, '#fff4e4'); R(px - 5, hy, 1, 2, '#dca47c'); R(px + 5, hy, 1, 2, '#dca47c');
+}
 function presFallAngle() {
   var t = pr.t, a = t < 0.7 ? (t / 0.7) * (t / 0.7) : t < 2.3 ? 1 : Math.max(0, 1 - (t - 2.3) / 0.8);
   return -pr.face * a * 1.5708;
 }
-function prVisible() { return pr.st === 'fall' || pr.st === 'focus' || pr.st === 'sit' || pr.st === 'startle' || pr.st === 'tremble' || pr.st === 'enter' || pr.st === 'flee' || pr.st === 'wig' || pr.st === 'cry'; }
+function prVisible() { return pr.st === 'beg' || pr.st === 'dogeza' || pr.st === 'stand' || pr.st === 'side' || pr.st === 'fall' || pr.st === 'focus' || pr.st === 'sit' || pr.st === 'startle' || pr.st === 'tremble' || pr.st === 'enter' || pr.st === 'flee' || pr.st === 'wig' || pr.st === 'cry'; }
 function drawPresNPC() {
   var o = { ph: pr.ph, wig: pr.wig, pale: pr.pale > 0 };
   if (pr.st === 'sit') { o.sit = true; drawPres(Math.round(pr.x), Math.round(pr.z), pr.face, o); return; }
   if (pr.st === 'startle') { var u = clamp(pr.t / 0.45, 0, 1); o.shock = true; o.mark = true; o.jump = Math.sin(Math.PI * u) * 9; drawPres(Math.round(pr.x), Math.round(pr.z), pr.face, o); return; }
   if (pr.st === 'tremble') { o.hug = true; o.shock = true; drawPres(Math.round(pr.x) + ((Math.floor(simT / 35) & 1) ? 1 : -1), Math.round(pr.z), pr.face, o); return; }
+  if (pr.st === 'beg') { o.run = true; o.droop = 0.8; o.pale = true; drawPres(Math.round(pr.x), Math.round(pr.z), pr.face, o); return; }
+  if (pr.st === 'dogeza') { if (pr.u < 0.1) { o.droop = 0.8; o.pale = true; drawPres(Math.round(pr.x), Math.round(pr.z), pr.face, o); } else drawDogeza(Math.round(pr.x), Math.round(pr.z), pr.face, pr.u); return; }
+  if (pr.st === 'stand') { o.droop = 0.6; o.pale = false; drawPres(Math.round(pr.x), Math.round(pr.z), pr.face, o); return; }
+  if (pr.st === 'side') { drawPresBack(Math.round(pr.x), Math.round(pr.z)); return; }
   if (pr.st === 'focus') { o.shock = true; o.hug = true; o.pale = true; o.mark = pr.t > 0.3; drawPres(Math.round(pr.x) + ((Math.floor(simT / 35) & 1) ? 1 : -1), Math.round(pr.z), pr.face, o); return; }
   if (pr.st === 'fall') {
     var ang = presFallAngle(), fx = Math.round(pr.x), fz = Math.round(pr.z);
@@ -1586,7 +1626,7 @@ function sCrystalBreak(pan) {
 
 /* ---------- 高解像度の粉砕(割れた瞬間だけ、ドットより細かい破片で描く) ---------- */
 var FX = [], PB = [];
-function addFx(p) { p.age = 0; FX.push(p); if (FX.length > 1200) { for (var i = 0; i < FX.length && FX.length > 1200; i++) if (!FX[i].keep) { FX.splice(i, 1); i--; } } }
+function addFx(p) { p.age = 0; FX.push(p); if (FX.length > 1700) { for (var i = 0; i < FX.length && FX.length > 1700; i++) if (!FX[i].keep) { FX.splice(i, 1); i--; } } }
 function polyArea(poly) {
   var a = 0, n = poly.length, i;
   for (i = 0; i < n; i++) { var p = poly[i], q = poly[(i + 1) % n]; a += p[0] * q[1] - q[0] * p[1]; }
@@ -1691,6 +1731,8 @@ var STY = {
 };
 
 function shatter(o, hx, hy, c) {
+  var closeLeft = { wall: 3, pane: 3, monitor: 2, cabinet: 3, aquarium: 3, table: 2, door: 3, pot: 2, crystal: 5, lamp: 1, jug: 1, vase: 1 }[o.t] || 0;
+  c = Object.assign({}, c, { M: Math.round(c.M * 1.3), N: Math.round(c.N * 1.2), dust: Math.round((c.dust || 0) * 1.7), pop: Math.min(0.45, c.pop * 2.6), v: c.v * 1.12 });
   var hull = hullFor(o), polys = fracture(hull, hx, hy, c.M, c.N, c.jit || 0.14), i;
   for (i = 0; i < polys.length; i++) {
     var sh = mkShard(polys[i]), dx = sh.x - hx, dy = sh.y - hy, d = Math.hypot(dx, dy), ux, uy;
@@ -1702,6 +1744,13 @@ function shatter(o, hx, hy, c) {
     sh.life = c.life * rnd(0.85, 1.15); sh.fade = 0.8; sh.pop = Math.random() < c.pop;
     sh.glint = Math.random() < 0.3; sh.seed = Math.random() * 10;
     c.style(sh, o);
+    if (sh.pop) sh.zoom = rnd(1.2, 2.4);
+    var rr = 0, jj; for (jj = 0; jj < sh.verts.length; jj += 2) rr = Math.max(rr, Math.hypot(sh.verts[jj], sh.verts[jj + 1]));
+    if (closeLeft > 0 && rr > 2 && Math.random() < 0.4) {
+      /* 手前まで迫ってくる大きな破片 */
+      closeLeft--; sh.pop = true; sh.zoom = rnd(4.5, 8); sh.alpha = Math.max(sh.alpha, 0.58);
+      sh.vx = (sh.x - 80) * 0.9 + rnd(-8, 8); sh.vy = (sh.y - 56) * 0.7 - rnd(10, 40); sh.life = rnd(0.85, 1.25); sh.fade = 0.45; sh.vr = rnd(-3, 3);
+    }
     addFx(sh);
   }
   for (i = 0; i < (c.dust || 0); i++) {
@@ -1757,7 +1806,7 @@ function updFx(dt) {
     if (p.age >= p.life) { FX.splice(i, 1); continue; }
     if (p.kind === 'ring' || p.kind === 'puddle') continue;
     if (p.kind === 'puff') { p.x += p.vx * dt; p.y += p.vy * dt; continue; }
-    p.vy += GRAV * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+    p.vy += GRAV * (p.zoom ? 0.2 : 1) * dt; p.x += p.vx * dt; p.y += p.vy * dt;
     if (p.kind === 'poly' && p.vr) p.rot += p.vr * dt;
     if (p.pop) { if (p.y > 190) FX.splice(i, 1); continue; }
     if (p.y >= p.fy) {
@@ -1783,7 +1832,7 @@ function drawPB() {
 function drawOne(c, p) {
   var rem = p.life - p.age, a = rem < (p.fade || 0.3) ? Math.max(0, rem / (p.fade || 0.3)) : 1, u = p.age / p.life, i;
   if (p.kind === 'poly') {
-    var v = p.verts, cs = Math.cos(p.rot), sn = Math.sin(p.rot), sc = p.pop ? 1 + p.age * 1.3 : 1, sy = (p.sy == null ? 1 : p.sy), n = v.length / 2, X0 = 0, Y0 = 0;
+    var v = p.verts, cs = Math.cos(p.rot), sn = Math.sin(p.rot), sc = p.pop ? 1 + p.age * (p.zoom || 1.3) : 1, sy = (p.sy == null ? 1 : p.sy), n = v.length / 2, X0 = 0, Y0 = 0;
     c.beginPath();
     for (i = 0; i < n; i++) {
       var vx = v[i * 2] * sc, vy = v[i * 2 + 1] * sc, X = p.x + vx * cs - vy * sn, Y = p.y + (vx * sn + vy * cs) * sy;
@@ -2115,8 +2164,8 @@ function drawHUD(c) {
     if (k > 1.3) {
       c.globalAlpha = clamp((k - 1.3) / 0.6, 0, 1);
       var by = 40 + Math.sin(G.t * 2.2) * 1.2;
-      c.font = 'bold 12px ' + JP; c.lineJoin = 'round'; c.lineWidth = 2.6; c.strokeStyle = '#ffffff'; c.strokeText('ハッピーハッピーエンド', 80, by);
-      c.fillStyle = '#ff6f9d'; c.fillText('ハッピーハッピーエンド', 80, by);
+      c.font = 'bold 12px ' + JP; c.lineJoin = 'round'; c.lineWidth = 2.6; c.strokeStyle = '#ffffff'; var etxt = G.secret ? 'シークレットエンド' : 'ハッピーハッピーエンド'; c.strokeText(etxt, 80, by);
+      c.fillStyle = G.secret ? '#ffd25a' : '#ff6f9d'; c.fillText(etxt, 80, by);
       c.globalAlpha = 1;
       if (k > 5.6 && Math.floor(G.t * 1.6) % 2 === 0) { c.font = '5px ' + JP; c.fillStyle = 'rgba(255,240,200,0.95)'; c.fillText('タッチでもう一度', 80, 78); }
     }
@@ -2175,7 +2224,51 @@ function gameUpdate(dt, rdt) {
         if (u > 1.1 && !G.music) { G.music = true; pl.tapFlash = 0.15; if (AC) tn(AC.currentTime, 1800, 0.04, { g: 0.05 }); startBGM(); }
         if (u > 2.0) { G.step = 6; G.st = 0; }
         break;
-      case 6: pl.cut = 'grip'; pl.cutU = G.st / 0.45; if (G.st > 0.5) { pl.cut = null; G.mode = 'play'; ctlOn = true; G.startT = 0; pr.st = 'flee'; pr.t = 0; pr.fear = 0; } break;
+      case 6: pl.cut = 'grip'; pl.cutU = G.st / 0.45; if (G.st > 0.5) { pl.cut = null; G.mode = 'play'; ctlOn = true; G.startT = 0; pr.st = 'flee'; pr.t = 0; pr.fear = 0; G.base = brokenN; G.quiet = 0; } break;
+    }
+    return;
+  }
+  if (G.mode === 'play') {
+    /* 何も壊さずにいると、社長のほうから近づいてくる(シークレット) */
+    if (brokenN !== G.base) G.quiet = -1e9;
+    else if (pr.st === 'flee' && pl.st === 'idle') G.quiet += dt;
+    if (G.quiet >= 25 && pr.st === 'flee' && pl.st === 'idle') {
+      G.mode = 'secret'; G.step = 0; G.st = 0; G.secret = true; ctlOn = false; atkHeld = null; pl.moving = false;
+      pr.st = 'beg'; pr.t = 0; pr.u = 0; pr.side = pr.x > pl.x ? 1 : -1;
+      /* 家具と重ならない、プレイヤーの横の空き場所を探す */
+      var cands = [], dd0, sg;
+      for (dd0 = 14; dd0 <= 48; dd0 += 4) for (sg = 0; sg < 2; sg++) cands.push(pl.x + (sg ? -pr.side : pr.side) * dd0);
+      pr.tx = clamp(pl.x + pr.side * 15, 8, 152);
+      for (var ci = 0; ci < cands.length; ci++) {
+        var cxx = cands[ci], okc = cxx > 10 && cxx < 150 && !blocked(cxx, pl.z);
+        for (var oi = 0; okc && oi < objs.length; oi++) { var oo = objs[oi]; if (oo.t === 'wall' || oo.dead || oo.deco) continue; if (oo.fl >= pl.z - 1 && cxx + 10 > oo.x && cxx - 10 < oo.x + oo.w && oo.el < 24) okc = false; }
+        if (okc) { pr.tx = cxx; break; }
+      }
+    }
+    return;
+  }
+  if (G.mode === 'secret') {
+    if (G.step === 0) {
+      var tx = pr.tx, ddx = tx - pr.x, ddz = pl.z - pr.z, dd = Math.hypot(ddx, ddz * 2);
+      pl.face = pr.x > pl.x ? 1 : -1;
+      if (dd < 1) { G.step = 1; G.st = 0; pr.st = 'dogeza'; pr.u = 0; pr.face = pl.x > pr.x ? 1 : -1; }
+      else { var ms = Math.min(dd, 20 * dt); pr.x += ddx / dd * ms; pr.z += ddz * 2 / dd * ms * 0.5; pr.face = ddx > 0 ? 1 : -1; pr.ph += dt * 7; }
+      return;
+    }
+    if (G.step === 1) {
+      var was = pr.u; pr.u = clamp(G.st / 1.5, 0, 1);
+      if (was < 0.3 && pr.u >= 0.3 && AC) tn(AC.currentTime, 110, 0.14, { f2: 60, g: 0.12 });
+      if (was < 1 && pr.u >= 1 && AC) { tn(AC.currentTime, 90, 0.2, { f2: 45, g: 0.18 }); nz(AC.currentTime, 0.12, { type: 'lowpass', f: 600, f2: 200, g: 0.08 }); }
+      if (G.st > 4.4) { G.step = 2; G.st = 0; }
+      return;
+    }
+    if (G.step === 2) { pr.u = clamp(1 - G.st / 0.9, 0, 1); if (G.st > 0.9) { pr.st = 'stand'; G.step = 3; G.st = 0; } return; }
+    if (G.step === 3) {
+      if (G.st > 1.0) {
+        pl.back = true; pl.batX = Math.round(pl.x) - pl.face * 5; pr.st = 'side'; pl.cut = null; G.heldT = G.t; G.mode = 'end'; fwStart();
+        if (AC) { var t1 = AC.currentTime; [1047, 1319, 1568].forEach(function (f0, i) { tn(t1 + i * 0.15, f0, 0.5, { g: 0.04 }); }); }
+      }
+      return;
     }
     return;
   }
@@ -2206,7 +2299,7 @@ function resetGame() {
   pr.x = 141; pr.z = 99; pr.face = -1; pr.st = 'sit'; pr.t = 0; pr.fear = 0; pr.wig = true; pr.hop = 0; pr.pale = 0; pr.jt = 0; pr.scream = 0; pr.obj = null;
   baby = null; TR.length = 0; CG.length = 0; FW.q.length = 0; FW.sh.length = 0; FW.sp.length = 0; FW.fl = 0;
   costT = costD = 0; costPulse = 0;
-  G.mode = 'title'; G.t = 0; G.step = 0; G.st = 0; G.startT = -1; G.heldT = -1; G.music = false; G.curtain = false; G.fwT = 0; ctlOn = false; atkHeld = null;
+  G.secret = false; G.quiet = 0; G.base = 0; G.mode = 'title'; G.t = 0; G.step = 0; G.st = 0; G.startT = -1; G.heldT = -1; G.music = false; G.curtain = false; G.fwT = 0; ctlOn = false; atkHeld = null;
   stopBGM();
 }
 function onAnyStart(e) {
