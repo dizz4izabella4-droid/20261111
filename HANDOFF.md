@@ -6,7 +6,7 @@
 
 - **CMD Typing（PC版）**：コマンドプロンプト風の英単語タイピングゲーム。外部からのハッキング攻撃を受け、入力で防御 → 追跡 → 反撃するという筋立て。3〜11章で詳しく説明する。
 - **CMD Typing Mobile（スマホ版）**：PC版と同じ筋立てを、スマホの縦画面とフリック入力に合わせたもの。12章。
-- **鳥と獣の戦い**：スマホを机に置いて2人で遊ぶ対戦ゲーム。13章。
+- **コウモリ**（旧・鳥と獣の戦い）：スマホを机に置いて2人で遊ぶ対戦ゲーム。13章。
 - **ワイヤダ**（旧名：クワイヤダ、組み分け帽）：数字をたよりに1本の輪を作るパズル（1人用、スマホ・PC両対応）。14章。
 - **GLASS BREAKER（ガラス割り）**：バットで物を叩いて割る、破壊表現のテスト（スマホの縦画面、タッチ操作）。15章。
 - **電卓ドリル（CALCULATOR DRILL）**：電卓ドリルを自動生成するツール（CASIO DS-20WKA 想定）。16章。
@@ -23,7 +23,7 @@
 | 公開URL（GitHub Pages） | https://dizz4izabella4-droid.github.io/20261111/ | トップはアプリ選択画面。Settings → Pages で main / (root) を指定して公開する（設定状況は未確認） |
 | 　PC版 | https://dizz4izabella4-droid.github.io/20261111/typing-pc/ | |
 | 　スマホ版 | https://dizz4izabella4-droid.github.io/20261111/typing-mobile/ | |
-| 　鳥と獣の戦い | https://dizz4izabella4-droid.github.io/20261111/tori-to-kemono/ | |
+| 　コウモリ | https://dizz4izabella4-droid.github.io/20261111/tori-to-kemono/ | |
 | 　ワイヤダ | https://dizz4izabella4-droid.github.io/20261111/kumiwake-bou/ | 旧名：クワイヤダ、組み分け帽 |
 | 　　ルール説明 | https://dizz4izabella4-droid.github.io/20261111/kumiwake-bou/rules.html | 本体の「あそびかた」から開く。「ゲームへ」で本体へ戻る |
 | 　GLASS BREAKER | https://dizz4izabella4-droid.github.io/20261111/glass-breaker/ | |
@@ -31,7 +31,7 @@
 | 　伸びるヒゲ | https://dizz4izabella4-droid.github.io/20261111/nobiru-hige/ | |
 | 　イカロス | https://dizz4izabella4-droid.github.io/20261111/icarus/ | |
 | claude.ai アーティファクト（PC版） | https://claude.ai/artifact/NctPezS87FshtyQGQ1YaDf | 開発中の確認用。曲2つも同梱して公開済み |
-| claude.ai アーティファクト（鳥と獣の戦い） | https://claude.ai/artifact/RtGte1cpPBFfU2wHBe8bEi | 開発の正本はこちら。リポジトリの tori-to-kemono/index.html は、その写し |
+| claude.ai アーティファクト（コウモリ） | https://claude.ai/artifact/RtGte1cpPBFfU2wHBe8bEi | 開発の正本はこちら。リポジトリの tori-to-kemono/index.html は、その写し |
 | claude.ai アーティファクト（GLASS BREAKER） | https://claude.ai/artifact/35FutrJp3Aag1QnQRN6Nmg | 開発の正本はこちら。リポジトリの glass-breaker/index.html は、その写し |
 | claude.ai アーティファクト（イカロス） | https://claude.ai/artifact/9HeYU5kUoepJMdZ3wUpJ3X | 確認用。リポジトリの icarus/index.html は、その写し |
 | claude.ai アーティファクト（旧スマホ版） | https://claude.ai/artifact/TwbhHpCo6BMetgr6v178bd | 試作（フリック入力と偉人の名言）。新しいスマホ版に置き換えたので使わない |
@@ -44,7 +44,7 @@ typing-pc/index.html               PC版の本体（HTML/CSS/JS すべて1ファ
 typing-pc/The_Glass_Perimeter.mp3  ミッション選択画面の曲（約3分1秒）
 typing-pc/Iron_Skyline_Pursuit.mp3 タイピング中の曲（約2分40秒）
 typing-mobile/index.html           スマホ版の本体（曲は ../typing-pc/ のものを共用）
-tori-to-kemono/index.html          鳥と獣の戦い（アーティファクトの写し）
+tori-to-kemono/index.html          コウモリ（旧・鳥と獣の戦い。フォルダ名はURL維持のためそのまま。アーティファクトの写し）
 kumiwake-bou/index.html            ワイヤダの本体（HTML/CSS/JS すべて1ファイル、外部読み込みなし）
 kumiwake-bou/rules.html            ワイヤダのルール説明ページ（1ファイル。例題の図は答えを計算して作った静的なSVG）
 kumiwake-bou/tools/gen.js          ワイヤダの問題を作る道具（Node.js）
@@ -63,7 +63,7 @@ HANDOFF.md                         本書
 
 ### アプリ選択画面
 
-- 作品ごとに、名前（英語・小さく）、日本語の名前（大きく）、アイコン、向いている端末（PCむけ / スマホむけ / どちらも）だけを表示する。**ひとこと説明は出さない**（2026-11-12 に全部やめた。`desc`・`note` は APPS から削除済み）。「イカロス」「伸びるヒゲ」は、日本語の名前の後ろに「test ver.」を付けている（鳥と獣の戦いには付けない）。
+- 作品ごとに、名前（英語・小さく）、日本語の名前（大きく）、アイコン、向いている端末（PCむけ / スマホむけ / どちらも）だけを表示する。**ひとこと説明は出さない**（2026-11-12 に全部やめた。`desc`・`note` は APPS から削除済み）。「イカロス」「伸びるヒゲ」は、日本語の名前の後ろに「test ver.」を付けている（コウモリには付けない）。
 - 使っている端末に合う作品に、黄色の印を付け、最初に選んだ状態にする（タッチ操作の端末ならスマホ向け）。
 - タップ・クリック、またはキーボードの ↑↓ と Enter で開く。
 
@@ -84,7 +84,7 @@ HANDOFF.md                         本書
 
 1. PC版：コードを直したら、アーティファクト（PC版）を更新して確認し、同じ内容で typing-pc/index.html を作り直して push する。
 2. スマホ版：typing-mobile/index.html を直接直し、スマホの画面の大きさでブラウザ確認してから push する。PC版の仕組み（攻撃信号・耐久値・評価など）を変えたときは、スマホ版にも同じ変更を入れる。
-3. 鳥と獣の戦い：アーティファクトを更新したら、その内容で tori-to-kemono/index.html を作り直して push する。
+3. コウモリ：アーティファクトを更新したら、その内容で tori-to-kemono/index.html を作り直して push する。
 4. GLASS BREAKER：アーティファクトを更新したら、その内容に doctype・`<html lang="ja">`・charset・viewport を付けて glass-breaker/index.html を作り直して push する（`<head>` の先頭に、上下の安全余白用の `html{padding-top/bottom: env(safe-area-inset-*)}` と `[hidden]{display:none!important}` を足す）。
 5. ワイヤダ：kumiwake-bou/index.html を直接直す。問題や手筋を変えたら `node kumiwake-bou/tools/verify.js` で「すべて OK」を確認し、ブラウザでも確認してから push する。
 6. 電卓ドリル：dentaku-drill/index.html を直接直す。
@@ -384,7 +384,10 @@ PC版の筋立てと仕組み（防御→追跡→反撃、攻撃信号、耐久
 
 ---
 
-## 13. 鳥と獣の戦い（tori-to-kemono）
+## 13. コウモリ（tori-to-kemono）
+
+> 2026-11-12：タイトルを「鳥と獣の戦い」から「コウモリ」に変更。UI全体をレトロゲーム風に作り直した（ゲームのロジックは変更なし）。
+> レトロ化の中身：かどを欠いたドット風の枠線（box-shadow）、ぼかしなしの角ばった影、角丸なし、`steps()` のカクカクした動き、市松模様の背景、パレットを暗い1系統に統一、ボタンやアイコンはドット絵（canvas）。フォントは標準の日本語フォントのみ。
 
 - 開発は claude.ai のアーティファクトで続けており、リポジトリの index.html はその写し（2026-11-11 版）。リポジトリ側で直接直さない。
 - ルールを変えたら、自動対局で勝率や手数を検証してから出す方針。

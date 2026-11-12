@@ -3,41 +3,51 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>鳥と獣の戦い</title>
+<title>コウモリ</title>
 <style>
 /* 机に置いて向かい合う：上の帯は獣の人向け（逆さ）、下の帯は鳥の人向け、間に縦長の菱形の盤。1画面に収める。決着後は背景が勝者の色になる */
+/* 画面まわり（ボタン・帯・メニュー）はファミコン風：角を丸めず、欠け角の枠、ベタ塗りの影、網点の背景、コマ送りの動き。文字は標準の日本語フォントのまま */
 :root{
-  --bg:#e9ece6; --fg:#1d2420; --muted:#5f6b63; --card:#ffffff; --btn:#2f6b2f; --accent:#d08a2a;
-  --bird:#3b7ddd; --beast:#d9762b; --win1:#b9d6ff; --win2:#ffd2a6; --turn1:#a9c8f4; --turn2:#f5c49a;
+  color-scheme:dark;
+  --bg:#1d2b53; --fg:#fff1e8; --muted:#a8a8b8; --card:#000000; --btn:#2f8f3a; --accent:#ffec27; --line:#c2c3c7; --dim:#5f574f;
+  --bird:#4a8fe0; --beast:#e8802a; --win1:#2a62c0; --win2:#c26a1c; --turn1:#1b3a7a; --turn2:#6b3414;
   --font:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","YuGothic","Meiryo","Noto Sans JP",sans-serif;
 }
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){ --bg:#121614; --fg:#e6ebe7; --muted:#9aa69e; --card:#1c221f; --btn:#3a7a3a; --accent:#e6a650; --win1:#16305a; --win2:#5a2e10; --turn1:#13284a; --turn2:#43260f; color-scheme:dark }
-}
-:root[data-theme="dark"]{ --bg:#121614; --fg:#e6ebe7; --muted:#9aa69e; --card:#1c221f; --btn:#3a7a3a; --accent:#e6a650; --win1:#16305a; --win2:#5a2e10; --turn1:#13284a; --turn2:#43260f; color-scheme:dark }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body{transition:background-color .8s}
-/* 手番の人の色を画面全体の背景に（決着後は勝者の色が優先） */
-body.turn1{background:var(--turn1)} body.turn2{background:var(--turn2)}
-body.win1{background:var(--win1)} body.win2{background:var(--win2)}
+html,body{margin:0;height:100%}
+/* 手番の人の色を画面全体の背景に（決着後は勝者の色が優先）。網点の模様は常に重ねる */
+body{background-color:var(--bg);color:var(--fg);font-family:var(--font);font-size:14px;overflow:hidden;
+  background-image:conic-gradient(rgba(0,0,0,.18) 25%,transparent 0 50%,rgba(0,0,0,.18) 0 75%,transparent 0);background-size:6px 6px;
+  transition:background-color .6s steps(4);-webkit-font-smoothing:none;font-smooth:never;
+  -webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;
+  padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px))}
+body.turn1{background-color:var(--turn1)} body.turn2{background-color:var(--turn2)}
+body.win1{background-color:var(--win1)} body.win2{background-color:var(--win2)}
 /* はじめのメニュー */
-.menu{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(8,14,30,.72)}
-.mbox{background:var(--card);border-radius:14px;padding:18px 18px 16px;width:min(300px,86vw);display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 6px 0 rgba(0,0,0,.3)}
-.mbox h1{margin:0 0 4px;font-size:22px;letter-spacing:.08em}
+.menu{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
+  background:conic-gradient(rgba(0,0,0,.4) 25%,transparent 0 50%,rgba(0,0,0,.4) 0 75%,transparent 0) 0 0/6px 6px,rgba(8,14,34,.78)}
+.mbox{--pxc:var(--fg);background:var(--card);border-radius:0;margin:4px;padding:18px 18px 16px;width:min(300px,86vw);display:flex;flex-direction:column;align-items:center;gap:12px;
+  box-shadow:0 -4px 0 0 var(--pxc),0 4px 0 0 var(--pxc),-4px 0 0 0 var(--pxc),4px 0 0 0 var(--pxc),8px 8px 0 0 rgba(0,0,0,.55)}
+.mbox h1{margin:0 0 2px;font-size:30px;font-weight:900;letter-spacing:.2em;padding-left:.2em;color:var(--accent);text-shadow:3px 3px 0 #7e2553}
 .micos{display:flex;gap:14px}
 .mbox canvas{width:54px;height:54px;image-rendering:pixelated;display:inline-block}
-.mbtn{font:inherit;width:100%;font-size:17px;font-weight:800;padding:12px 10px;border-radius:10px;border:0;cursor:pointer;color:#fff;background:var(--btn);display:flex;flex-direction:column;align-items:center;gap:2px}
-.mmusic{display:flex;align-items:center;gap:4px;width:100%;font-size:12px;font-weight:700;color:var(--muted)}
-.mmusic button{font:inherit;flex:1;font-size:clamp(10px,3.1vw,12px);white-space:nowrap;padding:7px 2px;border-radius:8px;border:2px solid var(--muted);background:transparent;color:var(--fg);cursor:pointer}
+.mbtn{--pxc:var(--fg);font:inherit;width:100%;font-size:16px;font-weight:900;letter-spacing:.08em;padding:12px 10px;border:0;border-radius:0;cursor:pointer;color:#fff;background:var(--btn);margin:3px 0;
+  display:flex;flex-direction:column;align-items:center;gap:2px;text-shadow:2px 2px 0 rgba(0,0,0,.5);
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.3),inset 0 -4px 0 rgba(0,0,0,.4),0 -3px 0 0 var(--pxc),0 3px 0 0 var(--pxc),-3px 0 0 0 var(--pxc),3px 0 0 0 var(--pxc)}
+.mbtn:active{transform:translateY(2px);box-shadow:inset 0 -2px 0 rgba(0,0,0,.4),0 -3px 0 0 var(--pxc),0 3px 0 0 var(--pxc),-3px 0 0 0 var(--pxc),3px 0 0 0 var(--pxc)}
+.mbtn.cpu{background:#7e2553} .mbtn small{font-size:11px;font-weight:700;letter-spacing:.04em;opacity:.95}
+.mbtn:focus-visible{outline:3px dashed var(--accent);outline-offset:5px}
+.mmusic{display:flex;align-items:center;gap:6px;width:100%;font-size:12px;font-weight:900;color:var(--muted)}
+.mmusic button{--pxc:var(--dim);font:inherit;flex:1;font-size:clamp(10px,3.1vw,12px);font-weight:900;white-space:nowrap;padding:7px 2px;margin:2px;border:0;border-radius:0;background:#000;color:var(--fg);cursor:pointer;
+  box-shadow:0 -2px 0 0 var(--pxc),0 2px 0 0 var(--pxc),-2px 0 0 0 var(--pxc),2px 0 0 0 var(--pxc)}
 .mmusic button.mnone{flex:.6}
-.mmusic button[aria-checked="true"]{border-color:#e0a020;background:#e0a020;color:#fff}
-.mbtn.cpu{background:#6a4a9a} .mbtn small{font-size:11px;font-weight:600;opacity:.9}
-.mbtn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.mmusic button[aria-checked="true"]{--pxc:var(--accent);background:var(--accent);color:#000}
 /* 手番が替わった瞬間の全面告知：手番の人に向けて（獣は逆さ）。下の盤の操作は邪魔しない */
 .turnfx{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;visibility:hidden}
-.turnfx.t1{background:rgba(40,100,200,.82)} .turnfx.t2{background:rgba(205,100,30,.82)}
-.turnfx .tin{display:flex;flex-direction:column;align-items:center;gap:10px;color:#fff;font-weight:900;text-shadow:4px 4px 0 rgba(0,0,0,.35)}
+.turnfx.t1{background:conic-gradient(rgba(0,0,0,.22) 25%,transparent 0 50%,rgba(0,0,0,.22) 0 75%,transparent 0) 0 0/6px 6px,rgba(32,92,214,.9)}
+.turnfx.t2{background:conic-gradient(rgba(0,0,0,.22) 25%,transparent 0 50%,rgba(0,0,0,.22) 0 75%,transparent 0) 0 0/6px 6px,rgba(214,104,28,.9)}
+.turnfx .tin{display:flex;flex-direction:column;align-items:center;gap:10px;color:#fff;font-weight:900;text-shadow:4px 4px 0 #000}
 .turnfx.t2 .tin{transform:rotate(180deg)}
 body.vscpu .turnfx.t2 .tin{transform:none} body.vscpu .turnfx.t2.show .tin{animation:tpop .3s steps(4)}
 body.vscpu .turnfx .tname{font-size:clamp(28px,9vw,44px)}
@@ -55,56 +65,58 @@ body.vscpu .turnfx .tname{font-size:clamp(28px,9vw,44px)}
 @keyframes tpop2{0%{transform:rotate(180deg) scale(.4)}100%{transform:rotate(180deg) scale(1)}}
 @media (prefers-reduced-motion:reduce){.turnfx.show,.turnfx.show .tin{animation:tfxr .8s steps(1) forwards}.turnfx.t2.show .tin{animation:none}
   @keyframes tfxr{0%{opacity:1}99%{opacity:1}100%{opacity:0;visibility:hidden}}}
-html,body{margin:0;height:100%}
-body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:14px;overflow:hidden;
-  -webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;
-  padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px))}
 .wrap{height:100%;max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:6px;padding-block:6px}
-/* 各プレイヤーの手元の帯：1行に収める */
-.panel{background:var(--card);border-radius:8px;border:2px solid transparent;padding:3px 5px;display:flex;align-items:center;gap:4px;flex:none;
-  font-variant-numeric:tabular-nums;font-size:11px;min-height:32px}
+/* 各プレイヤーの手元の帯：1行に収める。欠け角の枠（手番の人は黄色） */
+.panel{--pxc:var(--line);background:var(--card);border:0;border-radius:0;margin:2px;padding:3px 5px;display:flex;align-items:center;gap:4px;flex:none;
+  font-variant-numeric:tabular-nums;font-size:11px;min-height:32px;
+  box-shadow:0 -2px 0 0 var(--pxc),0 2px 0 0 var(--pxc),-2px 0 0 0 var(--pxc),2px 0 0 0 var(--pxc),4px 4px 0 0 rgba(0,0,0,.45)}
 .panel.top{transform:rotate(180deg)}
 body.vscpu .panel.top{transform:none}
 body.vscpu #bb2{display:none}
-.cpuname{display:none;font-size:11px;font-weight:800;color:var(--beast);white-space:nowrap} body.vscpu .cpuname{display:inline}
-.panel.turn{border-color:var(--accent)}
+.cpuname{display:none;font-size:11px;font-weight:900;color:var(--beast);white-space:nowrap} body.vscpu .cpuname{display:inline}
+.panel.turn{--pxc:var(--accent)}
 .p1 .pname{color:var(--bird)} .p2 .pname{color:var(--beast)}
 .ico{width:24px;height:24px;image-rendering:pixelated;flex:none}
-.pname{font-weight:800;font-size:12px}
+.pname{font-weight:900;font-size:12px}
 .panel b{font-size:15px}
 /* 得点：持ち主の色の札に大きな数字。増減した瞬間に跳ねる */
-.pts{display:inline-flex;align-items:baseline;gap:1px;padding:1px 6px 2px;border-radius:7px;color:#fff;line-height:1.1;box-shadow:inset 0 -3px 0 rgba(0,0,0,.25)}
+.pts{display:inline-flex;align-items:baseline;gap:1px;padding:1px 6px 2px;border-radius:0;color:#fff;line-height:1.1;text-shadow:2px 2px 0 rgba(0,0,0,.5);box-shadow:inset 0 3px 0 rgba(255,255,255,.3),inset 0 -3px 0 rgba(0,0,0,.4)}
 .p1 .pts{background:var(--bird)} .p2 .pts{background:var(--beast)}
 .pts b{font-size:22px;font-weight:900;font-variant-numeric:tabular-nums}
-.pts small{font-size:10px;font-weight:700}
-.pbat{display:inline-flex;align-items:center;gap:1px;padding:1px 4px;border-radius:6px;background:#3a2a52;color:#fff;line-height:1.1}
+.pts small{font-size:10px;font-weight:900}
+.pbat{display:inline-flex;align-items:center;gap:1px;padding:1px 4px;border-radius:0;background:#5f3a8a;color:#fff;line-height:1.1;text-shadow:2px 2px 0 rgba(0,0,0,.5);box-shadow:inset 0 3px 0 rgba(255,255,255,.25),inset 0 -3px 0 rgba(0,0,0,.4)}
 .pbat b{font-size:16px;font-weight:900}
 .bico{width:18px;height:14px;image-rendering:pixelated}
 .bump{animation:bump .35s steps(4)}
 @keyframes bump{0%{transform:scale(1)}40%{transform:scale(1.35)}100%{transform:scale(1)}}
-.pbats{font-size:10px;color:var(--muted);white-space:nowrap}
-.panel button.gen[aria-pressed="true"]{background:#e0a020;border-color:#e0a020;color:#fff}
-.pturn{min-width:0;overflow:hidden;text-overflow:ellipsis;margin-left:auto;font-weight:700;font-size:10px;padding:2px 5px;border-radius:999px;color:var(--muted);white-space:nowrap}
-.panel.turn .pturn{background:var(--accent);color:#fff}
+.pbats{font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap}
+.pturn{min-width:0;overflow:hidden;text-overflow:ellipsis;margin-left:auto;font-weight:900;font-size:10px;padding:2px 5px;border-radius:0;color:var(--muted);white-space:nowrap}
+.panel.turn .pturn{background:var(--accent);color:#000}
 .pbtns{display:flex;gap:4px}
-.panel button{font:inherit;font-size:10px;font-weight:600;border-radius:6px;padding:4px 5px;cursor:pointer;background:transparent;color:var(--fg);border:1px solid var(--muted);white-space:nowrap}
-.panel button.main{background:var(--btn);color:#fff;border-color:var(--btn)}
+.panel button{--pxc:var(--line);font:inherit;font-size:10px;font-weight:900;border:0;border-radius:0;margin:2px;padding:4px 6px;cursor:pointer;background:#1d2b53;color:var(--fg);white-space:nowrap;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.2),inset 0 -2px 0 rgba(0,0,0,.45),0 -2px 0 0 var(--pxc),0 2px 0 0 var(--pxc),-2px 0 0 0 var(--pxc),2px 0 0 0 var(--pxc)}
+.panel button:active:not(:disabled){transform:translateY(2px)}
+.panel button.main{background:var(--btn);color:#fff}
+.panel button.gen[aria-pressed="true"]{--pxc:var(--accent);background:var(--accent);color:#000}
 .panel button:disabled{opacity:.4;cursor:default}
-.panel button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.panel button:focus-visible{outline:2px dashed var(--accent);outline-offset:3px}
 /* 盤 */
 .stageWrap{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
 .stage{position:relative;touch-action:manipulation}
 /* 音のボタン：盤の真ん中（島のくびれ）の右脇、海の上。上下どちらの人からも同じに見える絵 */
-.sndbtn{position:absolute;right:4px;top:50%;transform:translateY(-50%);z-index:2;width:34px;height:34px;padding:0;border-radius:50%;
-  border:2px solid rgba(255,255,255,.85);background:rgba(10,20,40,.55);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}
-.sndbtn svg{width:20px;height:20px}
+.sndbtn{--pxc:var(--fg);position:absolute;right:6px;top:50%;transform:translateY(-50%);z-index:2;width:34px;height:34px;padding:0;margin:0;border:0;border-radius:0;
+  background:#1d2b53;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.22),inset 0 -3px 0 rgba(0,0,0,.45),0 -2px 0 0 var(--pxc),0 2px 0 0 var(--pxc),-2px 0 0 0 var(--pxc),2px 0 0 0 var(--pxc)}
+.sndbtn canvas{image-rendering:pixelated;display:block}
 /* 最初から：盤の真ん中の左脇。対局中は1回目で赤くなり、もう一度押すと最初から（3秒で元に戻る） */
-.newbtn{right:auto;left:4px}
-.newbtn.ask{background:#c8282a;border-color:#fff;animation:askp .5s steps(2) infinite}
-@keyframes askp{50%{box-shadow:0 0 0 5px rgba(255,80,80,.5)}}
+.newbtn{right:auto;left:6px}
+.newbtn.ask{background:#c8282a}
+.newbtn.ask{--pxc:var(--fg)}
+@keyframes askb{50%{background:#ff004d}}
+.newbtn.ask{animation:askb .5s steps(1) infinite}
 @media (prefers-reduced-motion:reduce){.newbtn.ask{animation:none}}
 .sndbtn[aria-pressed="false"]{opacity:.7}
-.sndbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sndbtn:focus-visible{outline:2px dashed var(--accent);outline-offset:4px}
 #art{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;cursor:pointer}
 .banner{position:absolute;left:50%;display:flex;flex-direction:column;align-items:center;gap:2px;
   padding:8px 18px;background:#000;color:#fff;border:4px solid #fff;outline:4px solid #000;
@@ -132,7 +144,7 @@ body.vscpu #bb2{display:none}
 </head>
 <body>
 <div class="menu" id="menu" hidden><div class="mbox"><div class="micos"><canvas id="mico1" width="18" height="18" aria-hidden="true"></canvas><canvas id="mico2" width="18" height="18" aria-hidden="true"></canvas></div>
-  <h1>鳥と獣の戦い</h1>
+  <h1>コウモリ</h1>
   <div class="mmusic" role="radiogroup" aria-label="音楽"><span>音楽</span><button data-bgm="dies" role="radio">怒りの日</button><button data-bgm="moonlight" role="radio">月光</button><button data-bgm="canon" role="radio">カノン</button><button data-bgm="none" role="radio" class="mnone">なし</button></div>
   <button data-mode="2p" class="mbtn">ふたりで対戦</button>
   <button data-mode="cpu" class="mbtn cpu">コンピュータと対戦<small>あなたは鳥（下）・コンピュータは獣</small></button></div></div>
@@ -160,7 +172,6 @@ body.vscpu #bb2{display:none}
     <div class="pbtns" id="bb1"><button data-act="gen" class="gen" aria-pressed="false">大将</button></div>
   </section>
 </div>
-
 
 <script>
 // ===== 盤と規則（純粋関数） =====
@@ -948,11 +959,16 @@ for(const p of [1,2]){
     if(act==='gen'){ if(!over&&turn===p&&gen[p]<0&&performance.now()>=tossUntil){ arm[p]=!arm[p]; sfx.arm(); render(); } }
   });
 }
-// スピーカーの絵（音あり＝音の波、消音＝×）
-const SPK='<path d="M3 9h4l5-4v14l-5-4H3z" fill="currentColor"/>';
+// ボタンの絵：ドット絵（#のところを塗る）
+const IC_SND_ON=["......#....",".....##...#","....###...#","#######.#.#","#######.#.#","#######.#.#","....###...#",".....##...#","......#...."];
+const IC_SND_OFF=["......#....",".....##....","....###....","#######.#.#","#######..#.","#######.#.#","....###....",".....##....","......#...."];
+const IC_NEW=["..###.#..",".#....##.","#.....###","#........","#.......#","#.......#",".#.....#.","..#####.."];
+const IC_OK=["........#",".......##","#.....##.","##...##..",".##.##...","..###....","...#....."];
+function pixIcon(rows){ const c=document.createElement('canvas'); c.width=rows[0].length; c.height=rows.length; const x=c.getContext('2d'); x.fillStyle='#fff1e8';
+  rows.forEach((r,y)=>[...r].forEach((ch,i)=>{ if(ch==='#') x.fillRect(i,y,1,1); }));
+  c.style.width=(c.width*2)+'px'; c.setAttribute('aria-hidden','true'); return c; }
 function sndLabel(){ const b=$('sndbtn');
-  b.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+SPK+(sfx.on? '<path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
-    : '<path d="M16 9l5 6M21 9l-5 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>')+'</svg>';
+  b.replaceChildren(pixIcon(sfx.on?IC_SND_ON:IC_SND_OFF));
   b.setAttribute('aria-pressed',String(sfx.on)); b.setAttribute('aria-label',sfx.on?'音を消す':'音を出す'); }
 // はじめのメニュー：ふたりで／コンピュータと
 function showMenu(){ clearTimeout(cpuTimer); stopAnnounce(); sfx.bgmStop(); $('menu').hidden=false; $('menu').querySelector('.mbtn').focus(); }
@@ -965,14 +981,12 @@ $('menu').addEventListener('click',e=>{
   vsCPU= m==='cpu'; document.body.classList.toggle('vscpu',vsCPU); $('menu').hidden=true; sfx.start(); newGame(); });
 for(const [p,k] of [[1,'bird'],[2,'beast']]){ const c=$('mico'+p).getContext('2d'); c.imageSmoothingEnabled=false; c.drawImage(SPR[k],(18-SPR[k].width)>>1,(18-SPR[k].height)>>1); }
 // 最初からのボタン：回る矢印。確かめ中はチェックの絵になり、両方の帯に案内を出す
-const ICON_NEW='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12a7 7 0 1 1-2.05-4.95" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M19.5 3.5v5h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-const ICON_OK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 let askTimer=0;
-function newBtnReset(){ clearTimeout(askTimer); const b=$('newbtn'); b.classList.remove('ask'); b.innerHTML=ICON_NEW; b.setAttribute('aria-label','最初から'); }
+function newBtnReset(){ clearTimeout(askTimer); const b=$('newbtn'); b.classList.remove('ask'); b.replaceChildren(pixIcon(IC_NEW)); b.setAttribute('aria-label','最初から'); }
 $('newbtn').addEventListener('click',()=>{
   const b=$('newbtn');
   if(!placed||over||b.classList.contains('ask')){ newBtnReset(); showMenu(); return; }
-  b.classList.add('ask'); b.innerHTML=ICON_OK; b.setAttribute('aria-label','もう一度押すと最初から'); sfx.no();
+  b.classList.add('ask'); b.replaceChildren(pixIcon(IC_OK)); b.setAttribute('aria-label','もう一度押すと最初から'); sfx.no();
   for(const p of [1,2]) $('t'+p).textContent='もう一度で最初から';
   askTimer=setTimeout(()=>{ newBtnReset(); render(); },3000);
 });
@@ -1005,4 +1019,3 @@ requestAnimationFrame(frame);
 </script>
 </body>
 </html>
-
