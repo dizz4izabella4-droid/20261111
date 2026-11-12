@@ -626,3 +626,10 @@ PC版の筋立てと仕組み（防御→追跡→反撃、攻撃信号、耐久
 - `clearOver()` で `hush`/`pwroff` を外し `pwron` を付ける（リトライ・再開で暗転が残らない）。ゲームオーバーのテープストップ演出は従来のまま。
 - PC版の時間計測も入力時間のみ加算する方式（tAcc/tRun/clockStart/clockStop）に統一。フェーズ間の待ちは含まれないため、スコアは以前より高めに出る。
 - 注意: `clockStart` 内は `clearInterval(timer)`（`clockStop()` にすると時計が0のままになる）。
+
+## 20. GLASS BREAKER 2ステージ構成（廊下→社長室ボス）
+- 流れ: タイトル → ステージ1「オフィスの長い廊下」(WW=480, 横スクロール, camX追従) → 右端の扉(`gate`, hp3)を割る → ブラックアウト(「社長室／ボスステージ」) → `setupBoss()` → bossIntro(社長が驚く→入室→構え→「ボス戦」) → ボス戦（従来のステージ。ズラ/シークレット/エンディングはボス戦のみ）。
+- `seg2/data.js`: `defsCorr()/defsBoss()/renderCorr()/build(stage)`、`STAGE`,`WW`,`camX`。廊下の新オブジェクト: server/plant（draw.js, tail.js destroy）。
+- 社長は廊下では `pr.st='gone'` のまま（pres.js で STAGE==='corr' の再出現を抑止）。
+- カメラ: render() で sky0.85/city0.6 のパララックス、fxin/fxout/HUDは camX を考慮。
+- 損害額は廊下から持ち越し、ボス移行時に brokenN/focus をリセット。
