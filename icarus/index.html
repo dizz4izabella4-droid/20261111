@@ -1561,6 +1561,60 @@ const rocketItem=(function(){
   return {update:update,setOn:v=>{on=v;g.visible=glint.visible=v;}};
 })();
 
+/* ---- 04e-ice.js ---- */
+/* ================= 凍結の演出（画面がパリッと凍る） ================= */
+const ice=(function(){
+  const cv=document.createElement('canvas');cv.id='ice';
+  cv.style.cssText='position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;display:none';
+  const fr=document.createElement('div');fr.id='frost';
+  fr.style.cssText='position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;opacity:0;background:radial-gradient(ellipse at 50% 50%,rgba(200,235,255,0) 38%,rgba(190,228,255,.34) 74%,rgba(235,247,255,.78) 100%)';
+  canvas.parentNode.insertBefore(cv,canvas.nextSibling);canvas.parentNode.insertBefore(fr,cv);
+  const cx=cv.getContext('2d');
+  let segs=[],drawn=0,t=0,on=false,lastOp=-1;
+  function gen(){
+    const W=window.innerWidth,H=window.innerHeight;
+    const dpr=Math.min(window.devicePixelRatio||1,2);
+    cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);cx.setTransform(dpr,0,0,dpr,0,0);cx.clearRect(0,0,W,H);
+    segs=[];drawn=0;t=0;
+    const ox=W*(0.35+0.3*Math.random()),oy=H*(0.3+0.3*Math.random());
+    const maxD=Math.hypot(W,H);
+    function ray(x,y,a,len,w,gen_){
+      let d=0,px=x,py=y;
+      while(d<len){
+        const st=22+Math.random()*40;
+        a+=(Math.random()-0.5)*0.5;
+        const nx=px+Math.cos(a)*st,ny=py+Math.sin(a)*st;
+        segs.push({x0:px,y0:py,x1:nx,y1:ny,w:w,t:Math.hypot(nx-ox,ny-oy)/maxD*0.5+gen_*0.05});
+        if(Math.random()<0.22&&w>0.8)ray(nx,ny,a+(Math.random()<0.5?-1:1)*(0.5+Math.random()*0.7),len*0.35*(0.5+Math.random()),w*0.6,gen_+1);
+        px=nx;py=ny;d+=st;
+      }
+    }
+    const N=16;for(let i=0;i<N;i++)ray(ox,oy,i/N*Math.PI*2+Math.random()*0.3,maxD*(0.45+0.4*Math.random()),2.6,0);
+    // 縁から育つ霜の結晶
+    for(let i=0;i<150;i++){
+      const side=Math.floor(Math.random()*4);let x,y,a;
+      if(side===0){x=Math.random()*W;y=0;a=Math.PI/2;}else if(side===1){x=Math.random()*W;y=H;a=-Math.PI/2;}else if(side===2){x=0;y=Math.random()*H;a=0;}else{x=W;y=Math.random()*H;a=Math.PI;}
+      const before=segs.length;ray(x,y,a+(Math.random()-0.5)*0.8,25+Math.random()*130,1.6,1);
+      const dly=0.15+Math.random()*0.65;for(let k=before;k<segs.length;k++)segs[k].t=dly+(k-before)*0.012;
+    }
+    segs.sort((p,q)=>p.t-q.t);
+  }
+  function start(){gen();on=true;cv.style.display='block';cv.style.opacity=1;fr.style.opacity=1;}
+  function clear(){on=false;cv.style.display='none';try{cx.clearRect(0,0,cv.width,cv.height);}catch(_){}segs=[];fr.style.opacity=0;lastOp=-1;}
+  function update(dt,frost){
+    if(!on){const o=Math.round(clamp(frost*0.9,0,0.9)*50)/50;if(o!==lastOp){fr.style.opacity=o;lastOp=o;}return;}
+    t+=dt;
+    cx.lineCap='round';
+    while(drawn<segs.length&&segs[drawn].t<=t){
+      const s=segs[drawn++];
+      cx.strokeStyle='rgba(140,200,240,.55)';cx.lineWidth=s.w+2.2;cx.beginPath();cx.moveTo(s.x0,s.y0);cx.lineTo(s.x1,s.y1);cx.stroke();
+      cx.strokeStyle='rgba(255,255,255,.95)';cx.lineWidth=s.w;cx.beginPath();cx.moveTo(s.x0,s.y0);cx.lineTo(s.x1,s.y1);cx.stroke();
+    }
+    lastOp=-1;fr.style.opacity=1;
+  }
+  return {start:start,clear:clear,update:update};
+})();
+
 /* ---- 05-audio.js ---- */
 /* ================= 音（すべて合成。素材ファイルなし） ================= */
 const audio=(function(){
@@ -1664,6 +1718,13 @@ const audio=(function(){
     [0,7,12,19,24].forEach((d,i)=>tone(293.66*Math.pow(2,d/12),t+0.06*i,2.6,'triangle',0.1,0.01,0.8));
     noiseHit(t+0.25,1.4,300,3500,0.5,0.4,'bandpass',0.4);
   }
+  function iceCrack(){
+    if(!ctx)return;const t=ctx.currentTime;
+    noiseHit(t,0.09,9000,5000,0.9,0.7,'highpass',0.3);
+    [0,0.04,0.09,0.15].forEach((d,i)=>noiseHit(t+d,0.05,7000-i*1200,3000,2,0.35,'bandpass',0.4));
+    [2400,3100,4200,5200].forEach((f,i)=>tone(f,t+0.02*i,0.9,'sine',0.06,0.002,0.9));
+    noiseHit(t+0.1,1.2,6000,1800,0.5,0.14,'bandpass',0.6);
+  }
   function engineDie(){
     if(!ctx)return;const t=ctx.currentTime;
     noiseHit(t,0.5,3000,300,1.2,0.3,'bandpass',0.4);
@@ -1745,7 +1806,7 @@ const audio=(function(){
       if(Math.random()<0.5)tone(base*oct*2*Math.pow(2,ch[(Math.random()*ch.length)|0]/12),t+0.3,4.5,'triangle',0.02,1.2,1.0);
     }
   }
-  return {suspend:function(){try{ctx&&ctx.state==='running'&&ctx.suspend();}catch(e){}},resume:function(){try{ctx&&ctx.state==='suspended'&&ctx.resume();}catch(e){}},init:init,setOn:setOn,flap:flap,ring:ring,splash:splash,rocketGet:rocketGet,engineDie:engineDie,angelFlap:angelFlap,thud:thud,launch:launch,puff:puff,shed:shed,melt:melt,rise:rise,endChord:endChord,update:update,get on(){return on},get ready(){return !!ctx}};
+  return {suspend:function(){try{ctx&&ctx.state==='running'&&ctx.suspend();}catch(e){}},resume:function(){try{ctx&&ctx.state==='suspended'&&ctx.resume();}catch(e){}},init:init,setOn:setOn,flap:flap,ring:ring,splash:splash,rocketGet:rocketGet,iceCrack:iceCrack,engineDie:engineDie,angelFlap:angelFlap,thud:thud,launch:launch,puff:puff,shed:shed,melt:melt,rise:rise,endChord:endChord,update:update,get on(){return on},get ready(){return !!ctx}};
 })();
 
 /* ---- 06-view.js ---- */
@@ -1969,7 +2030,7 @@ function applyAtmosphere(alt01,heat,y){
   const elev=lerp(0.11,0.60,sstep(0,1.0,alt01));
   U.uSunDir.value.set(-0.10,Math.sin(elev),-Math.cos(elev)).normalize();
   U.uSunR.value=lerp(0.026,0.075,alt01)*(1+heat*0.45);
-  {const sp=sstep(2600,5000,y);if(sp>0){U.uZen.value.lerp(SPACE_ZEN,sp);U.uMid.value.lerp(SPACE_MID,sp*0.8);}}
+  {const sp=sstep(2600,5200,y);if(sp>0){U.uZen.value.lerp(SPACE_ZEN,sp);U.uMid.value.lerp(SPACE_MID,sp*0.8);}}
   U.uFogDen.value=lerp(0.00085,0.00055,alt01);
   const mist=0;
   G.mist+=(mist-G.mist)*0.15;
@@ -1991,7 +2052,7 @@ function setMode(m){G.mode=m;G.modeT=0;}
 function resetRun(){
   Object.assign(b,makeBird());
   b.x=START.x;b.y=START.y;b.z=START.z;b.yaw=0;b.pitch=-0.04;b.roll=0;
-  G.heat=0;G.melt=0;G.meltT=0;G.meltShed=0;G.maxAlt=0;G.damage=0;G.angelSeen=0;G.rocket=false;G.frost=0;G.cause='melt';FL.VMAX=104;rocketItem.setOn(true);G.shake=0;G.fovKick=0;G.stun=0;G.flash=0;G.timeScale=1;G.shedHeat=0;G.thK=0;
+  G.heat=0;G.melt=0;G.meltT=0;G.meltShed=0;G.maxAlt=0;G.damage=0;G.angelSeen=0;G.rocket=false;G.frost=0;G.cause='melt';FL.VMAX=104;rocketItem.setOn(true);ice.clear();G.shake=0;G.fovKick=0;G.stun=0;G.flash=0;G.timeScale=1;G.shedHeat=0;G.thK=0;
   G.steerSeen=false;G.flapSeen=false;G.hintShown=false;G.above=false;G.lastBreak=-99;
   G.runs=(G.runs||0)+1;el.title.classList.toggle('retry',G.runs>1);
   wings.restore();wings.setLoose(0);
@@ -2034,7 +2095,7 @@ function flapNow(){
 function startMelt(cause){
   G.cause=cause||'melt';
   setMode('melt');G.meltT=0;G.meltShed=0;
-  if(G.cause==='melt'){audio.melt();G.flash=0.7;}else{audio.engineDie();G.flash=0.3;}
+  if(G.cause==='melt'){audio.melt();G.flash=0.7;}else{audio.engineDie();audio.iceCrack();ice.start();G.flash=0.85;}
   G.shake=1;
   G.fadeTarget=0;
   el.hint.classList.remove('on');
@@ -2048,7 +2109,7 @@ function finish(){
   let line;
   if(G.cause==='freeze'){
     line='エンジンは、凍りついた。<br><span style="font-size:.62em;opacity:.85">空の向こうは、あまりに寒かった。</span>';
-    el.endTxt.innerHTML=line+'<br><span style="font-size:.5em;letter-spacing:.25em;opacity:.8">到達 '+alt.toLocaleString('ja-JP')+' m ／ 大気圏</span>';
+    el.endTxt.innerHTML=line+'<br><span style="font-size:.5em;letter-spacing:.25em;opacity:.8">到達 '+alt.toLocaleString('ja-JP')+' m ／ 成層圏</span>';
     el.endNote.textContent='ジェットエンジン、凍結のためクリア不可。';
   }else{
   if(G.maxAlt<500)line='まだ、空は遠い。';
@@ -2069,10 +2130,10 @@ function rocketThrust(){
   const sput=fr>0.5?(Math.sin(G.t*29+Math.sin(G.t*7)*3)>-0.2-0.6*sstep(0.5,1,fr)?1:0.15):1;
   const rk=(1-0.75*sstep(0.6,1,fr))*sput;
   G.rk=rk;
-  return 38*rk*(1-0.8*clamp(b.speed/170,0,1));
+  return 210*rk*(1-0.8*clamp(b.speed/600,0,1));
 }
 function rocketTick(dt){
-  G.frost=sstep(3300,4700,b.y);
+  G.frost=sstep(3600,5200,b.y);
   G.heat=0;
   if(G.frost>=0.999){startMelt('freeze');return;}
   const rk=G.rk||0;
@@ -2089,11 +2150,11 @@ function rocketTick(dt){
   }
 }
 function pickRocket(){
-  G.rocket=true;FL.VMAX=170;G.flapSeen=G.steerSeen=true;
+  G.rocket=true;FL.VMAX=420;G.flapSeen=G.steerSeen=true;
   audio.rocketGet();rocketItem.setOn(false);
   G.flash=Math.max(G.flash,0.55);G.fovKick=Math.min(26,G.fovKick+16);G.shake=Math.max(G.shake,0.5);
   parts.burst(ROCKET_POS.x,ROCKET_POS.y+2,ROCKET_POS.z,70,30,1.0,0.85,0.5,0.7,1.4,0,0.9);
-  el.hint.innerHTML='<span>ロケット入手</span><span>舵で自由に飛べる</span>';
+  el.hint.innerHTML='<span>ロケット入手</span><span>一気に成層圏へ</span>';
   el.hint.classList.add('on');G.hintShown=true;G.hintT=0;
 }
 
@@ -2189,7 +2250,8 @@ function update(dt){
     for(let s=0;s<steps;s++){
       const px=b.x,py=b.y,pz=b.z;
       if(mode==='fly')G.thK=thermalForce();else{G.thK=0;thAx=thAy=thAz=0;}
-      const sx=(mode==='fly'&&G.stun<=0)?ctl.sx:0,sy=(mode==='fly'&&G.stun<=0)?ctl.sy:0;
+      let sx=(mode==='fly'&&G.stun<=0)?ctl.sx:0,sy=(mode==='fly'&&G.stun<=0)?ctl.sy:0;
+      if(mode==='fly'&&G.rocket){sx*=0.15;sy=clamp((1.25-b.pitch)*2.5+ctl.sy*0.15,-1,1);}
       if(mode==='fly'&&G.rocket){birdBasis(b,_bs);const T0=rocketThrust();thAx+=_bs.fx*T0;thAy+=_bs.fy*T0;thAz+=_bs.fz*T0;}
       stepBird(b,h,sx,sy,thAx,thAy,thAz);
       collide(h);
@@ -2242,7 +2304,7 @@ function update(dt){
       G.heat=G.cause==='melt'?1-0.75*sstep(0.4,4.5,G.meltT):0;
       if(G.cause==='melt'){const tgt=Math.floor(G.meltT*16);
       if(tgt>G.meltShed){shedFeathers(1);G.meltShed=tgt;}}
-      else{b.vy-=16*dt;G.frost=Math.max(0,G.frost-dt*0.03);}
+      else{b.vy-=16*dt;G.frost=Math.max(G.frost,0.9);}
       if(G.meltT>0.7){
         b.free=true;
         b.pitch+=(-1.25-b.pitch)*Math.min(1,dt*1.0);
@@ -2353,7 +2415,7 @@ function updateView(dt){
   parts.update(dt);
   fallFeathers.update(dt,G.t);
   puffs.mesh.visible=false;// puffs.update(cam.position.x,cam.position.y,cam.position.z,VMU.uSunV.value);
-  birds.update(G.t,thAct);birds.updateFlocks(G.t,b.x,b.y,b.z);
+  ice.update(dt,G.rocket?G.frost:0);birds.update(G.t,thAct);birds.updateFlocks(G.t,b.x,b.y,b.z);
   rocketItem.update(G.t,Math.hypot(b.x-ROCKET_POS.x,b.y-ROCKET_POS.y,b.z-ROCKET_POS.z));
   const ang=angels.update(dt,{x:b.x,y:b.y,z:b.z,yaw:b.yaw,pr:clamp(b.y/3000,0,1),mode:G.mode,t:G.t});
   if(ang.seen>G.angelSeen)G.angelSeen=ang.seen;

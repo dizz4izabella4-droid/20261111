@@ -127,7 +127,7 @@ function applyAtmosphere(alt01,heat,y){
   const elev=lerp(0.11,0.60,sstep(0,1.0,alt01));
   U.uSunDir.value.set(-0.10,Math.sin(elev),-Math.cos(elev)).normalize();
   U.uSunR.value=lerp(0.026,0.075,alt01)*(1+heat*0.45);
-  {const sp=sstep(2600,5000,y);if(sp>0){U.uZen.value.lerp(SPACE_ZEN,sp);U.uMid.value.lerp(SPACE_MID,sp*0.8);}}
+  {const sp=sstep(2600,5200,y);if(sp>0){U.uZen.value.lerp(SPACE_ZEN,sp);U.uMid.value.lerp(SPACE_MID,sp*0.8);}}
   U.uFogDen.value=lerp(0.00085,0.00055,alt01);
   const mist=0;
   G.mist+=(mist-G.mist)*0.15;
@@ -149,7 +149,7 @@ function setMode(m){G.mode=m;G.modeT=0;}
 function resetRun(){
   Object.assign(b,makeBird());
   b.x=START.x;b.y=START.y;b.z=START.z;b.yaw=0;b.pitch=-0.04;b.roll=0;
-  G.heat=0;G.melt=0;G.meltT=0;G.meltShed=0;G.maxAlt=0;G.damage=0;G.angelSeen=0;G.rocket=false;G.frost=0;G.cause='melt';FL.VMAX=104;rocketItem.setOn(true);G.shake=0;G.fovKick=0;G.stun=0;G.flash=0;G.timeScale=1;G.shedHeat=0;G.thK=0;
+  G.heat=0;G.melt=0;G.meltT=0;G.meltShed=0;G.maxAlt=0;G.damage=0;G.angelSeen=0;G.rocket=false;G.frost=0;G.cause='melt';FL.VMAX=104;rocketItem.setOn(true);ice.clear();G.shake=0;G.fovKick=0;G.stun=0;G.flash=0;G.timeScale=1;G.shedHeat=0;G.thK=0;
   G.steerSeen=false;G.flapSeen=false;G.hintShown=false;G.above=false;G.lastBreak=-99;
   G.runs=(G.runs||0)+1;el.title.classList.toggle('retry',G.runs>1);
   wings.restore();wings.setLoose(0);
@@ -192,7 +192,7 @@ function flapNow(){
 function startMelt(cause){
   G.cause=cause||'melt';
   setMode('melt');G.meltT=0;G.meltShed=0;
-  if(G.cause==='melt'){audio.melt();G.flash=0.7;}else{audio.engineDie();G.flash=0.3;}
+  if(G.cause==='melt'){audio.melt();G.flash=0.7;}else{audio.engineDie();audio.iceCrack();ice.start();G.flash=0.85;}
   G.shake=1;
   G.fadeTarget=0;
   el.hint.classList.remove('on');
@@ -206,7 +206,7 @@ function finish(){
   let line;
   if(G.cause==='freeze'){
     line='エンジンは、凍りついた。<br><span style="font-size:.62em;opacity:.85">空の向こうは、あまりに寒かった。</span>';
-    el.endTxt.innerHTML=line+'<br><span style="font-size:.5em;letter-spacing:.25em;opacity:.8">到達 '+alt.toLocaleString('ja-JP')+' m ／ 大気圏</span>';
+    el.endTxt.innerHTML=line+'<br><span style="font-size:.5em;letter-spacing:.25em;opacity:.8">到達 '+alt.toLocaleString('ja-JP')+' m ／ 成層圏</span>';
     el.endNote.textContent='ジェットエンジン、凍結のためクリア不可。';
   }else{
   if(G.maxAlt<500)line='まだ、空は遠い。';
@@ -227,10 +227,10 @@ function rocketThrust(){
   const sput=fr>0.5?(Math.sin(G.t*29+Math.sin(G.t*7)*3)>-0.2-0.6*sstep(0.5,1,fr)?1:0.15):1;
   const rk=(1-0.75*sstep(0.6,1,fr))*sput;
   G.rk=rk;
-  return 38*rk*(1-0.8*clamp(b.speed/170,0,1));
+  return 210*rk*(1-0.8*clamp(b.speed/600,0,1));
 }
 function rocketTick(dt){
-  G.frost=sstep(3300,4700,b.y);
+  G.frost=sstep(3600,5200,b.y);
   G.heat=0;
   if(G.frost>=0.999){startMelt('freeze');return;}
   const rk=G.rk||0;
@@ -247,11 +247,11 @@ function rocketTick(dt){
   }
 }
 function pickRocket(){
-  G.rocket=true;FL.VMAX=170;G.flapSeen=G.steerSeen=true;
+  G.rocket=true;FL.VMAX=420;G.flapSeen=G.steerSeen=true;
   audio.rocketGet();rocketItem.setOn(false);
   G.flash=Math.max(G.flash,0.55);G.fovKick=Math.min(26,G.fovKick+16);G.shake=Math.max(G.shake,0.5);
   parts.burst(ROCKET_POS.x,ROCKET_POS.y+2,ROCKET_POS.z,70,30,1.0,0.85,0.5,0.7,1.4,0,0.9);
-  el.hint.innerHTML='<span>ロケット入手</span><span>舵で自由に飛べる</span>';
+  el.hint.innerHTML='<span>ロケット入手</span><span>一気に成層圏へ</span>';
   el.hint.classList.add('on');G.hintShown=true;G.hintT=0;
 }
 
@@ -347,7 +347,8 @@ function update(dt){
     for(let s=0;s<steps;s++){
       const px=b.x,py=b.y,pz=b.z;
       if(mode==='fly')G.thK=thermalForce();else{G.thK=0;thAx=thAy=thAz=0;}
-      const sx=(mode==='fly'&&G.stun<=0)?ctl.sx:0,sy=(mode==='fly'&&G.stun<=0)?ctl.sy:0;
+      let sx=(mode==='fly'&&G.stun<=0)?ctl.sx:0,sy=(mode==='fly'&&G.stun<=0)?ctl.sy:0;
+      if(mode==='fly'&&G.rocket){sx*=0.15;sy=clamp((1.25-b.pitch)*2.5+ctl.sy*0.15,-1,1);}
       if(mode==='fly'&&G.rocket){birdBasis(b,_bs);const T0=rocketThrust();thAx+=_bs.fx*T0;thAy+=_bs.fy*T0;thAz+=_bs.fz*T0;}
       stepBird(b,h,sx,sy,thAx,thAy,thAz);
       collide(h);
@@ -400,7 +401,7 @@ function update(dt){
       G.heat=G.cause==='melt'?1-0.75*sstep(0.4,4.5,G.meltT):0;
       if(G.cause==='melt'){const tgt=Math.floor(G.meltT*16);
       if(tgt>G.meltShed){shedFeathers(1);G.meltShed=tgt;}}
-      else{b.vy-=16*dt;G.frost=Math.max(0,G.frost-dt*0.03);}
+      else{b.vy-=16*dt;G.frost=Math.max(G.frost,0.9);}
       if(G.meltT>0.7){
         b.free=true;
         b.pitch+=(-1.25-b.pitch)*Math.min(1,dt*1.0);
@@ -511,7 +512,7 @@ function updateView(dt){
   parts.update(dt);
   fallFeathers.update(dt,G.t);
   puffs.mesh.visible=false;// puffs.update(cam.position.x,cam.position.y,cam.position.z,VMU.uSunV.value);
-  birds.update(G.t,thAct);birds.updateFlocks(G.t,b.x,b.y,b.z);
+  ice.update(dt,G.rocket?G.frost:0);birds.update(G.t,thAct);birds.updateFlocks(G.t,b.x,b.y,b.z);
   rocketItem.update(G.t,Math.hypot(b.x-ROCKET_POS.x,b.y-ROCKET_POS.y,b.z-ROCKET_POS.z));
   const ang=angels.update(dt,{x:b.x,y:b.y,z:b.z,yaw:b.yaw,pr:clamp(b.y/3000,0,1),mode:G.mode,t:G.t});
   if(ang.seen>G.angelSeen)G.angelSeen=ang.seen;

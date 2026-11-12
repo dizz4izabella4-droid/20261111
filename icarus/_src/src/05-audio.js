@@ -100,6 +100,13 @@ const audio=(function(){
     [0,7,12,19,24].forEach((d,i)=>tone(293.66*Math.pow(2,d/12),t+0.06*i,2.6,'triangle',0.1,0.01,0.8));
     noiseHit(t+0.25,1.4,300,3500,0.5,0.4,'bandpass',0.4);
   }
+  function iceCrack(){
+    if(!ctx)return;const t=ctx.currentTime;
+    noiseHit(t,0.09,9000,5000,0.9,0.7,'highpass',0.3);
+    [0,0.04,0.09,0.15].forEach((d,i)=>noiseHit(t+d,0.05,7000-i*1200,3000,2,0.35,'bandpass',0.4));
+    [2400,3100,4200,5200].forEach((f,i)=>tone(f,t+0.02*i,0.9,'sine',0.06,0.002,0.9));
+    noiseHit(t+0.1,1.2,6000,1800,0.5,0.14,'bandpass',0.6);
+  }
   function engineDie(){
     if(!ctx)return;const t=ctx.currentTime;
     noiseHit(t,0.5,3000,300,1.2,0.3,'bandpass',0.4);
@@ -181,5 +188,5 @@ const audio=(function(){
       if(Math.random()<0.5)tone(base*oct*2*Math.pow(2,ch[(Math.random()*ch.length)|0]/12),t+0.3,4.5,'triangle',0.02,1.2,1.0);
     }
   }
-  return {suspend:function(){try{ctx&&ctx.state==='running'&&ctx.suspend();}catch(e){}},resume:function(){try{ctx&&ctx.state==='suspended'&&ctx.resume();}catch(e){}},init:init,setOn:setOn,flap:flap,ring:ring,splash:splash,rocketGet:rocketGet,engineDie:engineDie,angelFlap:angelFlap,thud:thud,launch:launch,puff:puff,shed:shed,melt:melt,rise:rise,endChord:endChord,update:update,get on(){return on},get ready(){return !!ctx}};
+  return {suspend:function(){try{ctx&&ctx.state==='running'&&ctx.suspend();}catch(e){}},resume:function(){try{ctx&&ctx.state==='suspended'&&ctx.resume();}catch(e){}},init:init,setOn:setOn,flap:flap,ring:ring,splash:splash,rocketGet:rocketGet,iceCrack:iceCrack,engineDie:engineDie,angelFlap:angelFlap,thud:thud,launch:launch,puff:puff,shed:shed,melt:melt,rise:rise,endChord:endChord,update:update,get on(){return on},get ready(){return !!ctx}};
 })();
