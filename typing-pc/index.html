@@ -142,7 +142,7 @@ body.alert .neon{animation:alarm .5s steps(1) infinite}
 .c.miss{background:var(--err);color:#fff;animation:none}
 .w{color:#ff8a94}
 @keyframes blink{50%{background:transparent;color:var(--fg)}}
-.tr{color:var(--jp);font-family:var(--ja);font-size:13px;margin-left:2.4em;letter-spacing:.02em;opacity:0;transition:opacity .6s}
+.tr{color:#6f9a7c;font-family:var(--ja);font-size:13px;margin-left:2.4em;letter-spacing:.02em;opacity:0;transition:opacity .6s}
 .tr.on{opacity:1}
 .status{border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:2px 18px;padding:6px 14px;font-size:12px;font-variant-numeric:tabular-nums;flex:none}
 .status b{color:var(--ok);font-weight:normal}
@@ -363,9 +363,10 @@ body.pwron .crt{animation:crton .6s ease-out}
   <div class="mbox">
     <div class="mt">NODE7 DEFENSE SYSTEM</div>
     <div class="ms">SELECT MISSION PARAMETERS</div>
-    <div class="opt" data-row="0"><span class="ol">DIFFICULTY</span><span class="oc" id="optDiff"></span><span class="od" id="diffDesc"></span></div>
-    <div class="opt" data-row="1"><span class="ol">QUESTIONS</span><span class="oc" id="optCount"></span><span class="od" id="countDesc"></span></div>
-    <button type="button" class="start" id="mStart" data-row="2">START MISSION</button>
+    <div class="opt" data-row="0"><span class="ol">LEVEL</span><span class="oc" id="optLv"></span><span class="od" id="lvDesc"></span></div>
+    <div class="opt" data-row="1"><span class="ol">DIFFICULTY</span><span class="oc" id="optDiff"></span><span class="od" id="diffDesc"></span></div>
+    <div class="opt" data-row="2"><span class="ol">QUESTIONS</span><span class="oc" id="optCount"></span><span class="od" id="countDesc"></span></div>
+    <button type="button" class="start" id="mStart" data-row="3">START MISSION</button>
     <div class="mh">&uarr;&darr; select &nbsp; &larr;&rarr; change &nbsp; ENTER start</div>
   </div>
   <div class="cyber-deck">
@@ -485,25 +486,535 @@ const ATK='203.0.113.47';
 const hopIp=()=>'198.51.100.'+(R(250)+2);
 const lan=()=>'10.0.'+R(255)+'.'+(R(254)+1);
 
-// ---- 問題: 中学校で習う英単語。難易度に応じた単語から毎回ランダムに出題、直前と同じ組み合わせにはしない ----
-const WORDS='apple りんご|book 本|school 学校|teacher 先生|student 生徒|friend 友達|family 家族|mother 母|father 父|house 家|room 部屋|window 窓|door ドア|desk 机|chair いす|pencil 鉛筆|picture 絵、写真|music 音楽|soccer サッカー|tennis テニス|baseball 野球|library 図書館|park 公園|station 駅|hospital 病院|river 川|mountain 山|sea 海|sky 空|flower 花|tree 木|animal 動物|dog 犬|cat ねこ|bird 鳥|water 水|milk 牛乳|bread パン|breakfast 朝食|lunch 昼食|dinner 夕食|morning 朝|afternoon 午後|evening 夕方|night 夜|today 今日|tomorrow 明日|yesterday 昨日|week 週|month 月|year 年|spring 春|summer 夏|autumn 秋|winter 冬|weather 天気|rain 雨|snow 雪|happy 幸せな|sad 悲しい|busy 忙しい|beautiful 美しい|interesting おもしろい|important 大切な|different 違う|easy 簡単な|difficult 難しい|young 若い|always いつも|usually ふつうは|sometimes ときどき|together いっしょに|study 勉強する|write 書く|read 読む|speak 話す|listen 聞く|swim 泳ぐ|cook 料理する|visit 訪れる|travel 旅行する|answer 答える|question 質問|country 国|city 都市|world 世界|people 人々|money お金|time 時間|history 歴史|science 科学|math 数学|homework 宿題|vacation 休暇|birthday 誕生日'.split('|').map(x=>x.split(' '));
-// 難易度と問題数（開始前の画面で選ぶ）。問題数は3フェーズにほぼ均等に分ける
+// ---- 問題: 英語のレベル別（Lv1〜Lv5）。各語は「英単語 訳1/訳2/…」。複数の訳がある語は、電光掲示板に訳が高速で流れる ----
+const LEVELS=[
+{label:'Lv1',name:'中学1年・基礎',desc:'身近な基本単語（食べ物・家族・動作など）',raw:`
+apple りんご
+banana バナナ
+orange オレンジ
+tomato トマト
+potato じゃがいも
+cake ケーキ
+egg 卵
+rice 米/ごはん
+tea お茶
+coffee コーヒー
+fish 魚/釣りをする
+meat 肉
+bread パン
+milk 牛乳
+water 水
+breakfast 朝食
+lunch 昼食
+dinner 夕食
+book 本/予約する
+school 学校
+teacher 先生
+student 生徒/学生
+friend 友達
+family 家族
+mother 母
+father 父
+brother 兄弟
+sister 姉妹
+house 家
+room 部屋/余地
+window 窓
+door ドア
+desk 机
+chair いす
+pencil 鉛筆
+picture 絵/写真
+music 音楽
+soccer サッカー
+tennis テニス
+baseball 野球
+library 図書館
+park 公園/駐車する
+station 駅
+river 川
+mountain 山
+sea 海
+sky 空
+flower 花
+tree 木
+dog 犬
+cat ねこ
+bird 鳥
+morning 朝
+afternoon 午後
+evening 夕方
+night 夜
+today 今日
+tomorrow 明日
+yesterday 昨日
+week 週
+month 月
+year 年
+spring 春/泉/ばね/跳ぶ
+summer 夏
+winter 冬
+rain 雨/雨が降る
+snow 雪/雪が降る
+happy 幸せな/うれしい
+sad 悲しい
+busy 忙しい
+easy 簡単な
+young 若い
+always いつも
+sometimes ときどき
+together いっしょに
+study 勉強する/研究
+write 書く
+read 読む
+speak 話す
+listen 聞く
+swim 泳ぐ
+cook 料理する/料理人
+visit 訪れる/訪問
+answer 答える/答え
+question 質問/問題
+country 国/田舎
+city 都市
+world 世界
+people 人々
+money お金
+time 時間/回
+homework 宿題
+birthday 誕生日
+hand 手/渡す
+head 頭/率いる
+face 顔/直面する
+color 色
+light 光/明かり/軽い
+watch 見る/腕時計
+play 遊ぶ/演奏する/劇
+run 走る/経営する/流れる
+open 開ける/開いている
+close 閉める/近い/親しい
+kind 親切な/種類
+right 右/正しい/権利
+fast 速い/断食
+big 大きい
+small 小さい
+`},
+{label:'Lv2',name:'中学2〜3年',desc:'中学の総仕上げ（多義語が増える）',raw:`
+hospital 病院
+weather 天気
+beautiful 美しい
+interesting おもしろい
+important 大切な/重要な
+different 違う/異なる
+difficult 難しい
+usually ふつうは
+travel 旅行する/旅行
+history 歴史
+science 科学
+math 数学
+vacation 休暇
+restaurant レストラン
+hotel ホテル
+airport 空港
+museum 博物館
+concert 音楽会
+festival 祭り
+holiday 休日/祝日
+member 会員/一員
+club クラブ/部活動/こん棒
+team チーム
+game 試合/ゲーム
+practice 練習する/練習/実践
+subject 教科/主題/主語
+language 言語
+lesson 授業/教訓
+test 試験/試す
+exam 試験
+class 授業/クラス/階級
+letter 手紙/文字
+bank 銀行/土手
+miss 逃す/恋しく思う
+enjoy 楽しむ
+fine 元気な/すばらしい/罰金
+fall 落ちる/秋/滝
+seat 席/座らせる
+break 壊す/休憩/破る
+catch 捕まえる/間に合う/かかる
+carry 運ぶ/持ち歩く
+borrow 借りる
+lend 貸す
+wear 着る/すり減る
+win 勝つ/勝ち取る
+lose 失う/負ける
+follow ついていく/従う/理解する
+meet 会う/出会う
+invite 招待する
+wait 待つ
+wonder 不思議に思う/驚き
+build 建てる/築く
+grow 育つ/育てる/〜になる
+matter 問題/重要である/物質
+rest 休憩/残り/休む
+fair 公平な/見本市/晴れた
+mean 意味する/意地悪な/つもりである
+point 点/指す/要点
+lead 導く/先頭/主役
+bear 耐える/産む/クマ
+check 調べる/確認する/小切手
+cross 横切る/十字架/交差する
+draw 描く/引く/引き分け
+drop 落とす/しずく/落ちる
+fit 合う/健康な/適合する
+hold 持つ/開催する/保つ
+join 参加する/つなぐ
+jump 跳ぶ
+kick 蹴る
+land 土地/着陸する/陸
+lie うそ/うそをつく/横たわる
+low 低い
+mind 心/気にする/注意する
+move 動く/引っ越す/感動させる
+need 必要とする/必要
+pay 支払う/給料/割に合う
+plant 植物/工場/植える
+pull 引く
+push 押す
+reach 届く/到着する/手を伸ばす
+ring 輪/鳴る/指輪
+rock 岩/ロック/揺らす
+save 救う/節約する/保存する
+sign 看板/合図/署名する
+sound 音/聞こえる/健全な
+stand 立つ/我慢する/売店
+stick 棒/くっつく/突き刺す
+store 店/蓄える/貯蔵
+strike 打つ/ストライキ/襲う
+tie 結ぶ/ネクタイ/引き分け
+touch 触れる/感動させる/接触
+turn 回る/曲がる/番
+well よく/健康な/井戸
+`},
+{label:'Lv3',name:'高校基礎',desc:'高校の基礎（抽象語・多義語）',raw:`
+achieve 達成する
+ability 能力
+accept 受け入れる/承諾する
+advice 助言
+affect 影響を与える
+amount 量/合計/〜に達する
+ancient 古代の
+argue 議論する/主張する
+attitude 態度
+audience 観客/聴衆
+average 平均/平均の/普通の
+behavior 行動/ふるまい
+benefit 利益/恩恵/利益を得る
+challenge 挑戦/異議を唱える
+character 性格/登場人物/文字
+choice 選択
+climate 気候
+community 地域社会/共同体
+compare 比較する
+concentrate 集中する
+condition 状態/条件
+confident 自信のある
+connect 結ぶ/つなぐ
+consider よく考える/みなす
+contain 含む
+control 支配/制御する
+culture 文化
+custom 習慣/慣習
+damage 損害/傷める
+dangerous 危険な
+decide 決める
+describe 描写する/説明する
+develop 発達させる/開発する
+disease 病気
+distance 距離
+effect 効果/影響
+effort 努力
+environment 環境
+especially 特に
+event 出来事/行事
+experience 経験/体験する
+express 表現する/急行/急行の
+figure 数字/図/人物
+foreign 外国の
+gather 集まる/集める
+government 政府
+habit 習慣/癖
+imagine 想像する
+improve 改善する/上達する
+include 含む
+increase 増える/増加
+influence 影響/影響を与える
+information 情報
+introduce 紹介する/導入する
+invent 発明する
+issue 問題/発行する/号
+knowledge 知識
+mention 述べる/言及する
+nature 自然/本性
+notice 気づく/通知/注意
+novel 小説/斬新な
+object 物/目的/反対する
+offer 申し出る/提供する/申し出
+opinion 意見
+order 注文/命令/順序
+pollution 汚染
+popular 人気のある/大衆の
+position 位置/地位/立場
+possible 可能な
+prepare 準備する
+present 贈り物/現在/出席している/提示する
+produce 生産する/農作物
+protect 守る
+provide 供給する/提供する
+raise 上げる/育てる/集める
+rate 割合/速度/評価する
+realize 気づく/実現する
+reduce 減らす
+refer 言及する/参照する
+remain 残る/〜のままである
+repeat 繰り返す
+require 必要とする/要求する
+research 研究/調査する
+resource 資源
+respect 尊敬/尊重する/点
+result 結果/結果として生じる
+review 復習/批評/見直す
+rule 規則/支配する
+safe 安全な/金庫
+society 社会
+solution 解決策/溶液
+spread 広がる/広げる
+support 支える/支持/支援
+suggest 提案する/示唆する
+survive 生き残る
+term 期間/学期/用語
+tradition 伝統
+view 眺め/見解/見る
+`},
+{label:'Lv4',name:'大学受験',desc:'大学入試レベル（長めの語・多義語）',raw:`
+abandon 見捨てる/あきらめる
+abstract 抽象的な/要約
+accommodate 収容する/適応させる
+acknowledge 認める/感謝する
+adequate 十分な/適切な
+adapt 適応する/適応させる
+adjust 調整する/順応する
+advocate 主張する/擁護者
+ambiguous あいまいな
+appreciate 感謝する/正しく評価する/値上がりする
+approach 近づく/取り組み/方法
+assume 仮定する/引き受ける/装う
+attribute 〜のせいにする/特性
+bias 偏見/かたより
+capacity 容量/能力/収容力
+cease やめる/終わる
+clarify 明らかにする
+coincide 同時に起こる/一致する
+collapse 崩壊する/倒れる/崩壊
+commit 犯す/約束する/ゆだねる
+comply 従う/応じる
+comprehend 理解する
+compromise 妥協/妥協する
+concern 心配/関係する/関心
+conduct 行う/行為/指揮する
+confine 閉じ込める/制限する
+consequence 結果/重大さ
+considerable かなりの
+consistent 一貫した/矛盾しない
+constitute 構成する/〜に相当する
+consume 消費する/食べる
+contemporary 現代の/同時代の
+contradict 矛盾する/反論する
+contrast 対照/対比する
+contribute 貢献する/寄付する/一因となる
+convey 伝える/運ぶ
+cope 対処する
+crucial きわめて重要な
+decline 衰える/断る/減少
+demonstrate 示す/実演する/デモをする
+derive 引き出す/由来する
+determine 決定する/決意する/突き止める
+deteriorate 悪化する
+dispute 論争/議論する/異議を唱える
+distinguish 区別する/見分ける
+domestic 国内の/家庭の
+dominant 支配的な/優勢な
+emerge 現れる/明らかになる
+emphasize 強調する
+enhance 高める/強める
+ensure 確実にする
+evolve 進化する/発展する
+exceed 超える
+exhibit 展示する/示す/展示品
+exploit 利用する/搾取する
+extend 延ばす/広げる/及ぶ
+fundamental 基本的な/根本的な
+generate 生み出す/発生させる
+hypothesis 仮説
+identical 同一の
+implement 実行する/道具
+imply ほのめかす/意味する
+inevitable 避けられない
+infer 推論する
+inherit 受け継ぐ/相続する
+inhibit 抑制する/妨げる
+integrate 統合する
+interpret 解釈する/通訳する
+maintain 維持する/主張する/扶養する
+moderate 適度な/穏健な/和らげる
+neglect 怠る/無視する/怠慢
+obtain 得る/入手する
+obvious 明らかな
+occupy 占める/従事させる/占領する
+oppose 反対する
+perceive 知覚する/気づく
+persist 固執する/持続する
+prejudice 偏見
+presume 推定する/思い込む
+prevail 広まる/勝つ
+resolve 解決する/決意する/決意
+restrain 抑える
+retain 保持する
+reveal 明らかにする
+sustain 維持する/支える/こうむる
+tackle 取り組む/タックルする
+tolerate 我慢する/許容する
+undertake 引き受ける/着手する
+vague あいまいな/漠然とした
+witness 目撃者/目撃する/証人
+`},
+{label:'Lv5',name:'難関・上級',desc:'難語・文語的な語（長めの語が中心）',raw:`
+ameliorate 改善する
+ambivalent 相反する感情を持つ
+arbitrary 任意の/恣意的な
+auspicious 縁起のよい/幸先のよい
+bolster 支える/強化する/クッション
+candid 率直な
+canvass 選挙運動をする/世論調査をする/詳しく調べる
+cardinal 最重要な/枢機卿/基数
+coherent 首尾一貫した
+condone 大目に見る/容認する
+conspicuous 目立つ
+contemplate 熟考する/検討する
+cumbersome 扱いにくい/面倒な
+deplete 使い果たす/激減させる
+derogatory 軽蔑的な
+diligent 勤勉な
+discharge 解雇する/放出する/退院させる/果たす
+discrepancy 食い違い
+dubious 疑わしい
+eloquent 雄弁な
+elusive つかまえにくい/とらえどころのない
+enigma 謎
+ephemeral はかない/短命の
+exacerbate 悪化させる
+fastidious 気難しい/細部にこだわる
+fathom 理解する/ファゾム
+fluctuate 変動する
+futile 無駄な
+gregarious 社交的な/群れをなす
+hinder 妨げる
+impeccable 非の打ちどころのない
+incline 傾ける/〜したい気にさせる/傾斜
+indigenous 先住の/土着の
+inept 不器用な/不適格な
+lucid 明快な/頭がはっきりした
+meticulous 細心の/念入りな
+mitigate 和らげる/軽減する
+moot 議論の余地のある/無意味な
+obsolete 時代遅れの
+ostensible 表向きの
+paradox 逆説/矛盾
+pragmatic 実際的な/実用的な
+precarious 不安定な/危険な
+profound 深い/深遠な
+reconcile 和解させる/調和させる/折り合いをつける
+reluctant 気が進まない
+resilient 立ち直りの早い/弾力のある
+sanction 認可/制裁/認可する
+scrutinize 詳しく調べる
+skeptical 懐疑的な
+spontaneous 自発的な/自然に起こる
+substantiate 立証する
+superfluous 余分な
+tenacious 粘り強い/頑固な
+tender 優しい/柔らかい/痛い/提出する
+temper 気質/かんしゃく/和らげる
+trivial ささいな
+ubiquitous どこにでもある
+unanimous 満場一致の
+vindicate 潔白を証明する/正当性を示す
+volatile 不安定な/揮発性の/移り気な
+wane 衰える/欠ける
+zealous 熱心な
+abate 弱まる/和らげる
+acquiesce 黙って従う
+aloof よそよそしい/距離を置いた
+amiable 愛想のよい
+analogous 類似した
+anomaly 異常/変則
+apathy 無関心
+astute 抜け目のない/鋭い
+audacious 大胆な/厚かましい
+benevolent 慈悲深い
+blatant あからさまな
+brevity 簡潔さ/短さ
+brisk きびきびした/活発な/爽やかな
+circumvent 回避する/迂回する
+clandestine 秘密の
+cogent 説得力のある
+complacent 自己満足した
+conciliate なだめる/懐柔する
+corroborate 裏づける
+credulous だまされやすい
+cryptic 謎めいた
+degrade 品位を下げる/分解する
+deter 思いとどまらせる
+dilemma 板ばさみ/ジレンマ
+disparity 格差/不均衡
+dissent 異議を唱える/異議
+diverge 分岐する/逸脱する
+dormant 休眠中の/潜伏した
+eccentric 風変わりな/変人
+endorse 支持する/裏書きする
+erratic 不規則な/気まぐれな
+fallacy 誤り/誤った考え
+frugal 倹約な/質素な
+haphazard 行き当たりばったりの
+hypocrisy 偽善
+impartial 公平な
+impetus 推進力/弾み
+innate 生まれつきの
+integral 不可欠な/積分
+intrinsic 本来備わっている/固有の
+inundate 水浸しにする/圧倒する
+juxtapose 並べて置く/並置する
+lenient 寛大な
+lethargic 無気力な
+`},
+];
+// 各語は [英単語, 訳をまとめた文字列, 訳の配列]
+const WB=LEVELS.map(L=>L.raw.split('\n').map(s=>s.trim()).filter(Boolean).map(s=>{ const i=s.indexOf(' '), ms=s.slice(i+1).split('/'); return [s.slice(0,i),ms.join('、'),ms]; }));
+// 攻撃の強さ（難易度）と問題数（開始前の画面で選ぶ）。出題する単語はレベル（LEVEL）で決まる。問題数は3フェーズにほぼ均等に分ける
 const DIFF={
-  easy:{label:'EASY',desc:'短い単語（5文字以下）・攻撃信号の増え方がゆるやか',pool:w=>w.length<=5,grow:.7,missUp:.08},
-  normal:{label:'NORMAL',desc:'すべての単語・標準の攻撃',pool:()=>true,grow:1,missUp:.12},
-  hard:{label:'HARD',desc:'長い単語（6文字以上）・攻撃信号の増え方が速く、ミスに厳しい',pool:w=>w.length>=6,grow:1.45,missUp:.17}};
-const COUNTS=[9,14,20];
-let diff='normal', TOTAL=14, BOUNDS=[0,5,9,14];
+  easy:{label:'EASY',desc:'攻撃信号の増え方がゆるやか・ミスに寛容',grow:.7,missUp:.08},
+  normal:{label:'NORMAL',desc:'標準の攻撃',grow:1,missUp:.12},
+  hard:{label:'HARD',desc:'攻撃信号の増え方が速く、ミスに厳しい',grow:1.45,missUp:.17}};
+const COUNTS=[9,14,20,30];
+let lv=0, diff='normal', TOTAL=14, BOUNDS=[0,5,9,14];
 function setCount(n){ TOTAL=n; BOUNDS=[0,Math.round(n/3),Math.round(2*n/3),n]; }
 setCount(14);
 let lastSet='';
 function pickWords(){
   let pick,key;
-  const pool=WORDS.filter(x=>DIFF[diff].pool(x[0]));
+  const pool=WB[lv];
   do{ const a=pool.slice(); for(let i=a.length-1;i>0;i--){ const j=R(i+1); [a[i],a[j]]=[a[j],a[i]]; }
     pick=a.slice(0,TOTAL); key=pick.map(x=>x[0]).sort().join(); }while(key===lastSet);
   lastSet=key; return pick;
 }
+
 
 // ---- フェーズ: 防御 → 追跡 → 反撃 ----
 const PH=[
@@ -975,25 +1486,26 @@ function openWin(id,delay){
 }
 
 // ---- 電光掲示板: 右から左へ流す（上下2段。下段は少し遅れて流れる） ----
-const MQ=[$('mqTop'),$('mqBot')], RM=matchMedia('(prefers-reduced-motion: reduce)').matches, MQ_SPEED=600;
+const MQ=[$('mqTop'),$('mqBot')], RM=matchMedia('(prefers-reduced-motion: reduce)').matches, MQ_SPEED=600, MQ_FAST=1500;   // 複数の訳がある語は MQ_FAST で高速に流す
 let mqFree=[0,0];
 let mqSpecial=0, mqOdd=false, oddI=0, mqList='', mqGen=0;
 function mqClear(){ mqGen++; MQ.forEach(b=>b.textContent=''); mqFree=[0,0]; mqSpecial=0; mqOdd=false; }
 // 上段だけに流す（単語の訳）
-function mqTop(html,cls){ mqSpawn(MQ[0],0,html,cls); }
+function mqTop(html,cls,speed){ mqSpawn(MQ[0],0,html,cls,null,speed); }
 // 上下両方に流す（警報・フェーズ・完了などの特定の演出）。下段の変な日本語は打ち切って差し替える
 function marquee(html,cls){
   mqSpawn(MQ[0],0,html,cls);
   later(()=>{ if(mqOdd){ MQ[1].querySelectorAll('.odd').forEach(e=>e.remove()); mqFree[1]=performance.now(); mqOdd=false; }
     const g=mqGen; mqSpecial++; mqSpawn(MQ[1],1,html,cls,()=>{ if(g===mqGen) mqSpecial=Math.max(0,mqSpecial-1); }); },450);
 }
-function mqSpawn(box,k,html,cls,done){
+function mqSpawn(box,k,html,cls,done,speed){
+  const SP=speed||MQ_SPEED;
   const el=document.createElement('span'); el.className='mq'+(cls?' '+cls:''); el.innerHTML=html; box.appendChild(el);
   if(RM){ [...box.children].forEach(c=>{ if(c!==el) c.remove(); }); el.classList.add('still'); setTimeout(()=>{ done&&done(); },2500); return; }
   const W=box.clientWidth, w=el.offsetWidth, now=performance.now(), start=Math.max(now,mqFree[k]);
-  mqFree[k]=start+(w+40)/MQ_SPEED*1000;
+  mqFree[k]=start+(w+40)/SP*1000;
   el.style.transform=`translateX(${W}px)`;
-  const an=el.animate([{transform:`translateX(${W}px)`},{transform:`translateX(${-w}px)`}],{duration:(W+w)/MQ_SPEED*1000,delay:start-now,easing:'linear',fill:'both'});
+  const an=el.animate([{transform:`translateX(${W}px)`},{transform:`translateX(${-w}px)`}],{duration:(W+w)/SP*1000,delay:start-now,easing:'linear',fill:'both'});
   an.onfinish=()=>{ el.remove(); done&&done(); };
 }
 // 普段の下段: それらしい英語のシステム表示。進むほど内容が切迫し、文字化けも増える
@@ -1016,8 +1528,8 @@ setInterval(()=>{
     mqOdd=true; mqSpawn(MQ[1],1,esc(txt),cls); }
   if(state==='done' && mqList && mqFree[0]<now+200) mqSpawn(MQ[0],0,mqList,'');
   if((state==='over'||state==='overres')&&!mqSpecial&&mqFree[1]<now+200){ mqOdd=true; mqSpawn(MQ[1],1,esc(garble(['SYSTEM COMPROMISED  //  ALL DATA EXPOSED','ROOT ACCESS TRANSFERRED TO 203.0.113.47','NODE7 OFFLINE  //  RECOVERY FAILED'][stI[1]++%3],.3)),'red2'); }
-  if(state==='menu'){ if(mqFree[0]<now+200) mqSpawn(MQ[0],0,'ミッションを選択してください　<span class="en">'+DIFF[diff].label+' / '+TOTAL+' WORDS</span>','gold');
-    if(mqFree[1]<now+200) mqSpawn(MQ[1],1,esc(['NODE7 DEFENSE SYSTEM  //  STANDING BY','SELECT DIFFICULTY AND NUMBER OF QUESTIONS','ALL OPERATORS REPORT TO CONSOLE'][stI[0]++%3]),'odd'); }
+  if(state==='menu'){ if(mqFree[0]<now+200) mqSpawn(MQ[0],0,'ミッションを選択してください　<span class="en">'+LEVELS[lv].label+' / '+DIFF[diff].label+' / '+TOTAL+' WORDS</span>','gold');
+    if(mqFree[1]<now+200) mqSpawn(MQ[1],1,esc(['NODE7 DEFENSE SYSTEM  //  STANDING BY','SELECT LEVEL, DIFFICULTY AND NUMBER OF QUESTIONS','ALL OPERATORS REPORT TO CONSOLE'][stI[0]++%3]),'odd'); }
 },300);
 // ミスしたとき: 掲示板の文字が文字化けし、ドットが欠ける
 const MOJI='縺繧譁蟄蛹荳螳髢驕逕蜈邵ｦｮｯｹｻ\uFFFD';
@@ -1186,7 +1698,7 @@ function showFail(){
   later(()=>{ $('rGrade').classList.add('on'); if(ok()) boom(0,.6,60,.8); },1500+items.length*260+200);
   $('rHint').textContent='Enter: mission select';
   $('res').hidden=false;
-  $('res').textContent=`C:\\> report.exe\n-------------------------------------\n MISSION FAILED\n ATTACKER : ${ATK} (in control)\n MODE     : ${DIFF[diff].label}\n PROGRESS : ${prog} %  (${wi} / ${TOTAL} words)\n TIME     : ${s.toFixed(1)} s\n MISS     : ${miss}\n-------------------------------------`;
+  $('res').textContent=`C:\\> report.exe\n-------------------------------------\n MISSION FAILED\n ATTACKER : ${ATK} (in control)\n LEVEL    : ${LEVELS[lv].label} ${LEVELS[lv].name}\n MODE     : ${DIFF[diff].label}\n PROGRESS : ${prog} %  (${wi} / ${TOTAL} words)\n TIME     : ${s.toFixed(1)} s\n MISS     : ${miss}\n-------------------------------------`;
 }
 function clearOver(){ clearInterval(floodT);
   { const b=document.body; if(b.classList.contains('pwroff')){ b.classList.remove('pwroff'); b.classList.add('pwron'); setTimeout(()=>b.classList.remove('pwron'),700); } b.classList.remove('hush'); } $('hacked').hidden=true; document.body.classList.remove('danger');
@@ -1224,15 +1736,19 @@ function powerOn(){
   later(toMenu,800);
 }
 // 開始前の画面: 難易度と問題数を選ぶ
-let mRow=2;
+let mRow=3;
 function renderMenu(){
+  const ol=$('optLv'); ol.textContent='';
+  LEVELS.forEach((L,i)=>{ const b=document.createElement('button'); b.type='button'; b.textContent=L.label; if(i===lv) b.className='on';
+    b.addEventListener('click',()=>{ lv=i; mRow=0; playKey(false); renderMenu(); }); ol.appendChild(b); });
+  $('lvDesc').textContent=LEVELS[lv].name+'：'+LEVELS[lv].desc+'（'+WB[lv].length+'語から出題）';
   const od=$('optDiff'); od.textContent='';
   Object.keys(DIFF).forEach(k=>{ const b=document.createElement('button'); b.type='button'; b.textContent=DIFF[k].label; if(k===diff) b.className='on';
-    b.addEventListener('click',()=>{ diff=k; mRow=0; playKey(false); renderMenu(); }); od.appendChild(b); });
+    b.addEventListener('click',()=>{ diff=k; mRow=1; playKey(false); renderMenu(); }); od.appendChild(b); });
   $('diffDesc').textContent=DIFF[diff].desc;
   const oc=$('optCount'); oc.textContent='';
   COUNTS.forEach(n=>{ const b=document.createElement('button'); b.type='button'; b.textContent=n+' WORDS'; if(n===TOTAL) b.className='on';
-    b.addEventListener('click',()=>{ setCount(n); mRow=1; playKey(false); renderMenu(); }); oc.appendChild(b); });
+    b.addEventListener('click',()=>{ setCount(n); mRow=2; playKey(false); renderMenu(); }); oc.appendChild(b); });
   const per=[BOUNDS[1],BOUNDS[2]-BOUNDS[1],BOUNDS[3]-BOUNDS[2]];
   $('countDesc').textContent='防御 '+per[0]+'語 → 追跡 '+per[1]+'語 → 反撃 '+per[2]+'語';
   document.querySelectorAll('#menu [data-row]').forEach(el=>el.classList.toggle('sel',+el.dataset.row===mRow));
@@ -1240,14 +1756,15 @@ function renderMenu(){
 function toMenu(){
   if(naming) finishNaming(); clearOver(); setTension(0); mqList=''; token++; state='menu'; sirenStop(); bgmStop(); clockStop(); mqClear();
   WINS.forEach(id=>$(id).hidden=true); $('alert').hidden=true; $('ov').hidden=true; $('power').hidden=true; $('idle').hidden=true;
-  document.body.classList.remove('alert'); $('menu').hidden=false; mRow=2; renderMenu(); menuMusicStart();
+  document.body.classList.remove('alert'); $('menu').hidden=false; mRow=3; renderMenu(); menuMusicStart();
 }
 function menuKey(e){
   const k=e.key;
-  if(k==='ArrowUp'||k==='ArrowDown'){ e.preventDefault(); mRow=(mRow+(k==='ArrowUp'?2:1))%3; playKey(false); renderMenu(); return; }
+  if(k==='ArrowUp'||k==='ArrowDown'){ e.preventDefault(); mRow=(mRow+(k==='ArrowUp'?3:1))%4; playKey(false); renderMenu(); return; }
   if(k==='ArrowLeft'||k==='ArrowRight'){ e.preventDefault(); const d=k==='ArrowLeft'?-1:1;
-    if(mRow===0){ const ks=Object.keys(DIFF); diff=ks[(ks.indexOf(diff)+d+ks.length)%ks.length]; }
-    else if(mRow===1){ const i=COUNTS.indexOf(TOTAL); setCount(COUNTS[(i+d+COUNTS.length)%COUNTS.length]); }
+    if(mRow===0){ lv=(lv+d+LEVELS.length)%LEVELS.length; }
+    else if(mRow===1){ const ks=Object.keys(DIFF); diff=ks[(ks.indexOf(diff)+d+ks.length)%ks.length]; }
+    else if(mRow===2){ const i=COUNTS.indexOf(TOTAL); setCount(COUNTS[(i+d+COUNTS.length)%COUNTS.length]); }
     playKey(false); renderMenu(); return; }
   if(k==='Enter'){ e.preventDefault(); startMission(); }
 }
@@ -1355,8 +1872,10 @@ function phaseBreak(){
   later(()=>{ musicSuccess(); typeLines(PH[phase].end,()=>later(()=>startPhase(phase+1),800),{n:2,ms:22,gap:240}); },550);
 }
 function wordDone(){
-  const w=words[wi][0]; playChord(w.length);
-  mqTop('<span class="en">'+esc(w.toUpperCase())+'</span>'+esc(words[wi][1]));
+  const [w,ja,ms]=words[wi]; playChord(w.length);
+  // 訳が複数ある語（多義語）は、すべての訳を1本の帯にして高速で流す
+  mqTop('<span class="en">'+esc(w.toUpperCase())+'</span>'+ms.map(esc).join('<span class="sep">／</span>'),ms.length>1?'gold':'',ms.length>1?MQ_FAST:0);
+  if(newWord.line){ const t=document.createElement('span'); t.className='tr on'; t.textContent=ja; newWord.line.appendChild(t); }
   wi++;
   if(wi>=TOTAL){ ending(); return; }
   if(wi===BOUNDS[phase+1]){ phaseBreak(); return; }
@@ -1408,7 +1927,7 @@ const METRIC={
   speed:{label:'SPEED',cmp:(a,b)=>b.cpm-a.cpm||b.acc-a.acc||a.id-b.id,main:d=>d.cpm+' CPM',sub:d=>d.time.toFixed(1)+'s',sub2:d=>'miss '+d.miss},
   acc:{label:'ACCURACY',cmp:(a,b)=>b.acc-a.acc||b.cpm-a.cpm||a.id-b.id,main:d=>d.acc.toFixed(1)+'%',sub:d=>'miss '+d.miss,sub2:d=>d.cpm+' CPM'}
 };
-const boardName=b=>{ const [d,n]=b.split('-'); return DIFF[d].label+' / '+n+' WORDS'; };
+const boardName=b=>{ const [l,d,n]=b.split('-'); return LEVELS[l].label+' / '+DIFF[d].label+' / '+n+' WORDS'; };
 const rankOf=(rec,k)=>{ const l=SCORES.filter(d=>d.board===rec.board).sort(METRIC[k].cmp); return [l.indexOf(rec)+1,l.length,l]; };
 const gradeOf=sc=>sc>=350?'S':sc>=250?'A':sc>=160?'B':sc>=90?'C':'D';
 let naming=null, nameBuf='', rankTab='total', lastRec=null;
@@ -1422,6 +1941,7 @@ function finish(){
  MISSION COMPLETE
  ATTACKER : ${ATK} (offline)
  TIME     : ${s.toFixed(1)} s
+ LEVEL    : ${LEVELS[lv].label} ${LEVELS[lv].name}
  MODE     : ${DIFF[diff].label}
  WORDS    : ${TOTAL}  (${N} keys)
  SPEED    : ${cpm} CPM
@@ -1430,10 +1950,10 @@ function finish(){
  MAX COMBO: ${maxStreak}
  SCORE    : ${score} pts  RANK ${gradeOf(score)}
 -------------------------------------
-${words.map(([w,ja])=>' '+w.padEnd(12)+ja).join('\n')}
+${words.map(([w,ja])=>' '+w.padEnd(14)+ja).join('\n')}
 -------------------------------------`;
   body.scrollTop=body.scrollHeight;
-  const rec={id:SCORES.length,board:diff+'-'+TOTAL,name:'',cpm,time:+s.toFixed(1),miss,acc:+acc.toFixed(1),score,combo:maxStreak};
+  const rec={id:SCORES.length,board:lv+'-'+diff+'-'+TOTAL,name:'',cpm,time:+s.toFixed(1),miss,acc:+acc.toFixed(1),score,combo:maxStreak};
   SCORES.push(rec); naming=rec; nameBuf=''; rankTab='total';
   later(()=>showResult(rec),500);
 }
