@@ -1944,7 +1944,7 @@ window.addEventListener('blur', function () { kb.l = kb.r = kb.u = kb.d = 0; atk
 var G = { mode: 'title', t: 0, step: 0, st: 0, startT: -1, heldT: -1 }, ctlOn = false;
 var costT = 0, costD = 0, costPulse = 0, lastHund = 0, tickGap = 0;
 var JP = '"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "游ゴシック", "Meiryo", "Noto Sans JP", sans-serif';
-function addCost(v) { if (v > 0) { costT += v; costPulse = 0.35; } }
+function addCost(v) { if (v > 0) { costT += v; costPulse = 0.55; } }
 function updCost(dt) {
   costPulse = Math.max(0, costPulse - dt); tickGap -= dt;
   if (costD < costT) {
@@ -1960,8 +1960,16 @@ function drawCost(c) {
   if (D < 100) n = 1;
   var commas = Math.floor((n - 1) / 3), w = n * DW2 + commas * 1.6 + 5;
   c.save();
+  /* 壊した瞬間：光って大きくなり、すっと戻る(右上を支点に拡大) */
+  var pu = costPulse > 0 ? costPulse / 0.55 : 0, sc = 1 + 0.45 * Math.sin(Math.PI * Math.min(1, (1 - pu) * 1.6 + 0.0001)) * (pu > 0 ? 1 : 0);
+  if (pu > 0) { c.translate(x + 1.2, y - 1); c.scale(sc, sc); c.translate(-(x + 1.2), -(y - 1)); }
+  if (pu > 0) { c.shadowColor = 'rgba(255,210,90,' + (0.9 * pu).toFixed(2) + ')'; c.shadowBlur = 6 * pu * S * dpr; }
   c.globalAlpha = 0.62; c.fillStyle = '#000'; c.fillRect(x - w - 2.2, y - 1, w + 3.4, H + 2.4); c.globalAlpha = 1;
-  if (costPulse > 0) { c.globalAlpha = costPulse / 0.35 * 0.5; c.fillStyle = '#ff5a3a'; c.fillRect(x - w - 2.2, y - 1, w + 3.4, H + 2.4); c.globalAlpha = 1; }
+  c.shadowBlur = 0;
+  if (pu > 0) {
+    c.globalAlpha = pu * 0.55; c.fillStyle = '#ff7a3a'; c.fillRect(x - w - 2.2, y - 1, w + 3.4, H + 2.4);
+    c.globalAlpha = pu; c.strokeStyle = '#fff2b0'; c.lineWidth = 0.5; c.strokeRect(x - w - 2.2, y - 1, w + 3.4, H + 2.4); c.globalAlpha = 1;
+  }
   c.font = 'bold ' + H + 'px ' + JP; c.textBaseline = 'top'; c.textAlign = 'center';
   c.beginPath(); c.rect(x - w - 2.2, y - 0.6, w + 3.4, H + 1.6); c.clip();
   var cx = x - DW2 / 2;
@@ -1974,7 +1982,7 @@ function drawCost(c) {
       if (i === 2) frac = p - Math.floor(p);
       else { var lo = (D / Math.pow(10, i - 1)) % 10; frac = lo > 9 ? lo - 9 : 0; }
     }
-    c.fillStyle = '#ffd25a';
+    c.fillStyle = pu > 0.4 ? '#ffffff' : '#ffd25a';
     c.fillText(String(base), cx, y + 0.4 - frac * (H + 1));
     if (frac > 0) c.fillText(String((base + 1) % 10), cx, y + 0.4 + (1 - frac) * (H + 1));
     cx -= DW2;
@@ -1995,7 +2003,10 @@ function drawHUD(c) {
     c.font = 'bold 9.5px ' + JP; c.lineJoin = 'round';
     c.lineWidth = 1.6; c.strokeStyle = 'rgba(0,0,0,0.8)'; c.strokeText('働き過ぎの現代人へ送る', 80, 52);
     c.fillStyle = '#f4f1e8'; c.fillText('働き過ぎの現代人へ送る', 80, 52);
-    if (Math.floor(G.t * 1.6) % 2 === 0) { c.font = '5px ' + JP; c.fillStyle = 'rgba(255,225,140,0.95)'; c.fillText('タッチしてスタート', 80, 76); }
+    if (Math.floor(G.t * 1.6) % 2 === 0) { c.font = '5px ' + JP; c.fillStyle = 'rgba(255,225,140,0.95)'; c.fillText('タッチしてスタート', 80, 72); }
+    c.font = '3.6px ' + JP; c.fillStyle = 'rgba(255,255,255,0.7)';
+    c.fillText('おすすめ：スマートフォン', 80, 96);
+    c.fillText('PCでも遊べます（WASDで移動、スペースでスイング）', 80, 101.5);
   }
   if (G.startT >= 0 && G.startT < 1.8) {
     var u = G.startT / 1.8, v = 0.5 + Math.pow((u - 0.5) * 2, 3) / 2, x = 190 - 300 * v;
