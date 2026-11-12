@@ -11,6 +11,7 @@
 - **GLASS BREAKER（ガラス割り）**：バットで物を叩いて割る、破壊表現のテスト（スマホの縦画面、タッチ操作）。15章。
 - **電卓ドリル（CALCULATOR DRILL）**：電卓ドリルを自動生成するツール（CASIO DS-20WKA 想定）。16章。
 - **伸びるヒゲ**：キノコを取ると縦に伸び、敵に当たると縮む、レトロ風アクション（PC向け）。18章。
+- **イカロス〜蝋で固めた鳥の羽〜**：高層ビルの谷間を羽ばたいて飛ぶ、一人称視点の鳥人間ゲーム（スマホ・PC両対応）。19章。
 
 ---
 
@@ -28,9 +29,11 @@
 | 　GLASS BREAKER | https://dizz4izabella4-droid.github.io/20261111/glass-breaker/ | |
 | 　電卓ドリル | https://dizz4izabella4-droid.github.io/20261111/dentaku-drill/ | |
 | 　伸びるヒゲ | https://dizz4izabella4-droid.github.io/20261111/nobiru-hige/ | |
+| 　イカロス | https://dizz4izabella4-droid.github.io/20261111/icarus/ | |
 | claude.ai アーティファクト（PC版） | https://claude.ai/artifact/NctPezS87FshtyQGQ1YaDf | 開発中の確認用。曲2つも同梱して公開済み |
 | claude.ai アーティファクト（鳥と獣の戦い） | https://claude.ai/artifact/RtGte1cpPBFfU2wHBe8bEi | 開発の正本はこちら。リポジトリの tori-to-kemono/index.html は、その写し |
 | claude.ai アーティファクト（GLASS BREAKER） | https://claude.ai/artifact/35FutrJp3Aag1QnQRN6Nmg | 開発の正本はこちら。リポジトリの glass-breaker/index.html は、その写し |
+| claude.ai アーティファクト（イカロス） | https://claude.ai/artifact/9HeYU5kUoepJMdZ3wUpJ3X | 確認用。リポジトリの icarus/index.html は、その写し |
 | claude.ai アーティファクト（旧スマホ版） | https://claude.ai/artifact/TwbhHpCo6BMetgr6v178bd | 試作（フリック入力と偉人の名言）。新しいスマホ版に置き換えたので使わない |
 
 ### リポジトリの構成
@@ -49,6 +52,7 @@ kumiwake-bou/tools/verify.js       ワイヤダの収録問題を検査する道
 dentaku-drill/index.html            電卓ドリル自動生成ツールの本体（HTML/CSS/JS すべて1ファイル、外部読み込みなし）
 nobiru-hige/index.html              伸びるヒゲ の本体（HTML/CSS/JS すべて1ファイル、外部読み込みなし）
 glass-breaker/index.html            GLASS BREAKER の本体（HTML/CSS/JS すべて1ファイル、外部読み込みなし。アーティファクトの写し）
+icarus/index.html                   イカロス の本体（HTML/CSS/JS すべて1ファイル、外部読み込みなし）
 README.md
 HANDOFF.md                         本書
 ```
@@ -550,4 +554,14 @@ PC版の筋立てと仕組み（防御→追跡→反撃、攻撃信号、耐久
 - 操作：矢印キー／WASD／スペース／Z、またはタッチ端末の画面下のソフトキー（◀ ▶ ▲。複数同時押し可。タッチ端末だけに表示）。トップのカードは「どちらも」。音は最初のキー入力かタッチから鳴る（音のオフ機能はない）。
 - 変えた点（元のコードからの変更）：タイトルを「伸びるヒゲ」に、画面左上の表示を NOBIRU HIGE に変更。BGM は元の旋律をやめ、オリジナルの旋律に差し替え（作品の旋律は使わない方針）。主人公の配色は、帽子・シャツを紫、オーバーオールを黄土色に変更。
 - claude.ai のアーティファクト版もある（確認用）。doctype・html・head・body を書かない断片で、`100vh`・`100vw` を `100%` にしてある。
+- この作品からトップへ戻る手段は付けない（他の作品と同じ）。
+
+---
+
+## 19. イカロス〜蝋で固めた鳥の羽〜（icarus）
+
+- 渡されたHTMLをそのまま置いた（2026-11-12）。外部読み込みなし。claude.ai のアーティファクト版もある（確認用）。
+- 内容：鳥の頭の人間（白頭ワシ）の一人称視点で、高層ビルの谷間を飛ぶ。羽ばたいて速度と高度を保ち、風（向かい風・横風・突風）に流されながらビルをよける。ビルに当たるか、飛んだあとに地面へ着くと CRASH。
+- 操作：左右の羽ばたきを F / J キー、または画面下の LEFT WING / RIGHT WING ボタンで行う。左右を交互に打つと進みやすい。両方を長押しすると滑空。CRASH のあとは F / J で再開。トップのカードは「どちらも」。
+- 音は最初のキー入力かタッチから鳴る（BGM は Web Audio の合成、鳥の声つき）。マナーモード対応として、`<head>` に `navigator.audioSession.type='ambient'` を入れた（iOS 16.4以降のSafari）。
 - この作品からトップへ戻る手段は付けない（他の作品と同じ）。
