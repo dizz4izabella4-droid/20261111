@@ -256,24 +256,24 @@ body.abyss .music.on .sw{background:#c41a2a}
 // 新しい作品を載せるとき: リポジトリに作品のフォルダ（中に index.html）を作り、ここに1件足す
 //   path … フォルダ名（末尾に /）   ja … 日本語の名前   name … 英語の名前（小さく上に出る）   label … 読み上げ用の名前（省略すると ja）
 //   for  … 'pc' / 'mobile' / 'both'   color … 'pink' / 'mint' / 'lav' / 'lemon'   icon … 下の ICONS の名前
-//   start … 制作開始日（YYYY-MM-DD。分からないときは書かない）   date … 最終アップロード日（YYYY-MM-DD）。作品をpushしたら、その作品の date を当日に直す（どちらもカードの下に極小で出る）
+//   //   start … 制作開始日（YYYY-MM-DD。分からないときは書かない）   ver … バージョン（例 '1.0'）。大幅に改修したら上げる（上げ幅の目安は HANDOFF.md）。どちらもカードの下に極小で出る
 const APPS=[
   {path:'typing-pc/', ja:'キーボード', label:'CMDタイピング（キーボード）', name:'CMD TYPING', for:'pc', color:'mint', icon:'keyboard',
-   start:'2026-11-10', date:'2026-11-13'},
+   start:'2026-11-10', ver:'1.0'},
   {path:'typing-mobile/', ja:'フリック', label:'CMDタイピング スマホ版（フリック）', name:'CMD TYPING MOBILE', for:'mobile', color:'lav', icon:'phone',
-   start:'2026-11-11', date:'2026-11-13'},
+   start:'2026-11-11', ver:'1.0'},
   {path:'tori-to-kemono/', ja:'机に置き対戦', label:'コウモリ（机に置き対戦）', name:'KOUMORI', for:'mobile', color:'pink', icon:'bird',
-   start:'2026-10-30', date:'2026-11-11'},
+   start:'2026-10-30', ver:'1.0'},
   {path:'kumiwake-bou/', ja:'定理探し', label:'ワイヤダ（定理探し）', name:'WAIYADA', for:'both', color:'lemon', icon:'loop',
-   start:'2026-11-11', date:'2026-11-12'},
+   start:'2026-11-11', ver:'1.0'},
   {path:'glass-breaker/', ja:'カタストロフィー', label:'ガラス割り（カタストロフィー）', name:'GLASS BREAKER', for:'mobile', color:'mint', icon:'glass',
-   start:'2026-11-12', date:'2026-11-12'},
+   start:'2026-11-12', ver:'2.0'},
   {path:'dentaku-drill/', ja:'電卓の使い方', label:'電卓ドリル（電卓の使い方）', name:'CALCULATOR DRILL', for:'both', color:'pink', icon:'calc',
-   start:'2026-11-10', date:'2026-11-12'},
+   start:'2026-11-10', ver:'1.0'},
   {path:'nobiru-hige/', ja:'テスト', label:'伸びるヒゲ test ver.（テスト）', name:'NOBIRU HIGE', for:'both', color:'lemon', icon:'hige',
-   start:'2026-11-12', date:'2026-11-12'},
+   start:'2026-11-12', ver:'1.0'},
   {path:'icarus/', ja:'テスト', label:'イカロス〜蝋で固めた鳥の羽〜 test ver.（テスト）', name:'ICARUS', for:'both', color:'lav', icon:'wing',
-   start:'2026-11-12', date:'2026-11-13'},
+   start:'2026-11-12', ver:'1.0'},
 ];
 // アイコン（白で描く）
 const ICONS={
@@ -310,7 +310,7 @@ const items=APPS.map((a,i)=>{
   el.addEventListener('mouseenter',()=>{ sel=i; mark(); pop(560+i*80); });
   el.addEventListener('click',e=>{ e.preventDefault(); launch(i); });
   li.appendChild(el);
-  { const f=d=>d.replace(/-/g,'.'), t=[]; if(a.start) t.push('制作開始 '+f(a.start)); if(a.date) t.push('最終アップロード '+f(a.date));
+  { const f=d=>d.replace(/-/g,'.'), t=[]; if(a.start) t.push('制作開始 '+f(a.start)); if(a.ver) t.push('Ver.'+a.ver);
     if(t.length){ const dt=document.createElement('div'); dt.className='dt'; dt.textContent=t.join(' ／ '); li.appendChild(dt); } }
   list.appendChild(li); return el;
 });
