@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#ffe3ef">
-<title>試作品箱</title>
+<title>izのおもちゃ箱</title>
 <style>
 /* ゲーム選択画面: パステルのお菓子箱。ふわふわ浮かぶ星とハート、キャンディのようなカード。作品は下の APPS に1件足すと増える */
 :root{
@@ -46,7 +46,7 @@ header{display:flex;flex-direction:column;align-items:center;gap:10px;padding-to
 
 /* 画面の名前: 左上に小さく */
 .boxname{position:fixed;z-index:4;margin:0;top:max(12px,env(safe-area-inset-top,0px));left:max(12px,env(safe-area-inset-left,0px));
-  padding:7px 13px;border-radius:999px;background:var(--white);color:var(--ink);font:800 12px var(--ja);letter-spacing:.14em;
+  padding:7px 12px;border-radius:0;background:var(--white);color:var(--ink);font:800 12px var(--ja);letter-spacing:.08em;
   box-shadow:0 3px 0 #e6d3ea,0 6px 14px rgba(107,74,122,.12)}
 
 /* 音楽ボタン */
@@ -195,7 +195,7 @@ body.abyss .music.on .sw{background:#c41a2a}
 </head>
 <body>
 <canvas id="sky" aria-hidden="true"></canvas>
-<h1 class="boxname" id="boxname">試作品箱</h1>
+<h1 class="boxname" id="boxname">izのおもちゃ箱</h1>
 <button type="button" class="music" id="music" role="switch" aria-checked="false"><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span><span id="mLabel">主題歌を流す</span><span class="sw" aria-hidden="true"></span></button>
 <div class="wrap">
   <section class="stage" aria-label="ゲームをえらぶ">
