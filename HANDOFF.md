@@ -640,3 +640,4 @@ PC版の筋立てと仕組み（防御→追跡→反撃、攻撃信号、耐久
 - 社長は廊下では `pr.st='gone'` のまま（pres.js で STAGE==='corr' の再出現を抑止）。
 - カメラ: render() で sky0.85/city0.6 のパララックス、fxin/fxout/HUDは camX を考慮。
 - 損害額は廊下から持ち越し、ボス移行時に brokenN/focus をリセット。
+- 廊下の壁（x≈105）に社長の肖像画（髪フサフサ・金フレーム）を静的描画（data.js renderCorr 内）。
