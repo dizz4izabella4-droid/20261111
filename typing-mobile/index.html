@@ -432,7 +432,8 @@ body{display:block;padding:0;overflow:hidden;touch-action:manipulation;-webkit-u
 #menu .od{grid-column:1;font-size:10.5px}
 #menu .oc{gap:6px;flex-wrap:nowrap}
 #menu .oc button{flex:1;min-width:0;font-size:12px;padding:8px 2px;letter-spacing:.04em}
-#menu #optDiff{gap:4px}
+#menu #optDiff,#menu #optGenre{gap:4px}
+#menu #optGenre button{font-size:11px;letter-spacing:0;padding:8px 0}
 #menu #optDiff button{font-size:10.5px;letter-spacing:0;padding:8px 0}
 #menu .start{padding:11px;font-size:14px;letter-spacing:.24em;margin-top:6px}
 #menu .start.sel{animation:none;border-color:var(--accent);background:#0d3a1d}
@@ -536,9 +537,11 @@ body.kbres .k[data-fn="Backspace"]{opacity:1;color:var(--gold);border-color:#5a6
   <div class="mbox">
     <div class="mt">NODE7 DEFENSE SYSTEM</div>
     <div class="ms">SELECT MISSION PARAMETERS</div>
-    <div class="opt" data-row="0"><span class="ol">DIFFICULTY</span><span class="oc" id="optDiff"></span><span class="od" id="diffDesc"></span></div>
-    <div class="opt" data-row="1"><span class="ol">QUESTIONS</span><span class="oc" id="optCount"></span><span class="od" id="countDesc"></span></div>
-    <button type="button" class="start" id="mStart" data-row="2">START MISSION</button>
+    <div class="opt" data-row="0"><span class="ol">GENRE</span><span class="oc" id="optGenre"></span><span class="od" id="genreDesc"></span></div>
+    <div class="opt" data-row="1"><span class="ol">DIFFICULTY</span><span class="oc" id="optDiff"></span><span class="od" id="diffDesc"></span></div>
+    <div class="opt" data-row="2"><span class="ol">QUESTIONS</span><span class="oc" id="optCount"></span><span class="od" id="countDesc"></span></div>
+    <div class="opt" data-row="3"><span class="ol">READING</span><span class="oc" id="optRead"></span><span class="od" id="readDesc"></span></div>
+    <button type="button" class="start" id="mStart" data-row="4">START MISSION</button>
   </div>
   <div class="cyber-deck">
     <div class="track-info">TARGET: <span id="trkName">The_Glass_Perimeter</span><br>STATUS: <span id="trkStatus">STANDBY</span><br>MISSION: <span id="gTrk">Iron Skyline Pursuit</span> <small>150 BPM [HIGH_TENSION]</small></div>
@@ -666,7 +669,13 @@ const lan=()=>'10.0.'+R(255)+'.'+(R(254)+1);
 
 // ---- 問題: 重厚・禁忌・神話の語句（59語）。表示は漢字・カタカナ、入力は読みのひらがな。難易度に応じた語句から毎回ランダムに出題、直前と同じ組み合わせにはしない ----
 // 各要素は [読み, 表示]。words[wi][0] が入力する読み
-const WORDS='こくえん 黒焔|しゅうえん 終焉|たそがれ 黄昏|れいめい 黎明|しんえん 深淵|きょむ 虚無|ならく 奈落|めいふ 冥府|れんごく 煉獄|てんけい 天啓|しんばつ 神罰|だんざい 断罪|めっきゃく 滅却|かくせい 覚醒|ぼうぎゃく 暴虐|ぜったいれいど 絶対零度|てんちかいびゃく 天地開闢|むげんりんね 無限輪廻|えいごうかいき 永劫回帰|しゅうまつせかい 終末世界|たぶー 禁忌|はいとく 背徳|くろれきし 黒歴史|きんだんりょういき 禁断領域|しんえんのもん 深淵の門|くろきけいやく 黒き契約|だてん 堕天|じゅばく 呪縛|じゅそ 呪詛|しんしょく 侵蝕|おせん 汚染|こっか 黒化|ふういん 封印|ふういんかいじょ 封印解除|きんしょ 禁書|ひとく 秘匿|いたん 異端|はんぎゃく 反逆|はいしん 背信|もくしろく 黙示録|あぽかりぷす アポカリプス|あるまげどん アルマゲドン|るしふぁー ルシファー|べりある ベリアル|めふぃすとふぇれす メフィストフェレス|あざぜる アザゼル|りゔぁいあさん リヴァイアサン|べひーもす ベヒーモス|けるべろす ケルベロス|ばはむーと バハムート|ねめしす ネメシス|あるかな アルカナ|せらふぃむ セラフィム|けるびむ ケルビム|ぐりもわーる グリモワール|かたすとろふぃ カタストロフィ|えでん エデン|のあ ノア|はるまげどん ハルマゲドン'.split('|').map(x=>x.split(' '));
+// ジャンルごとの語句。「読み 表示」を「|」で区切って並べる。読みはフリックで打てる文字だけにすること
+const mkW=t=>t.split('|').map(x=>x.split(' '));
+const WORDSETS={
+  chuni:mkW('こくえん 黒焔|しゅうえん 終焉|たそがれ 黄昏|れいめい 黎明|しんえん 深淵|きょむ 虚無|ならく 奈落|めいふ 冥府|れんごく 煉獄|てんけい 天啓|しんばつ 神罰|だんざい 断罪|めっきゃく 滅却|かくせい 覚醒|ぼうぎゃく 暴虐|ぜったいれいど 絶対零度|てんちかいびゃく 天地開闢|むげんりんね 無限輪廻|えいごうかいき 永劫回帰|しゅうまつせかい 終末世界|たぶー 禁忌|はいとく 背徳|くろれきし 黒歴史|きんだんりょういき 禁断領域|しんえんのもん 深淵の門|くろきけいやく 黒き契約|だてん 堕天|じゅばく 呪縛|じゅそ 呪詛|しんしょく 侵蝕|おせん 汚染|こっか 黒化|ふういん 封印|ふういんかいじょ 封印解除|きんしょ 禁書|ひとく 秘匿|いたん 異端|はんぎゃく 反逆|はいしん 背信|もくしろく 黙示録|あぽかりぷす アポカリプス|あるまげどん アルマゲドン|るしふぁー ルシファー|べりある ベリアル|めふぃすとふぇれす メフィストフェレス|あざぜる アザゼル|りゔぁいあさん リヴァイアサン|べひーもす ベヒーモス|けるべろす ケルベロス|ばはむーと バハムート|ねめしす ネメシス|あるかな アルカナ|せらふぃむ セラフィム|けるびむ ケルビム|ぐりもわーる グリモワール|かたすとろふぃ カタストロフィ|えでん エデン|のあ ノア|はるまげどん ハルマゲドン|ぜつぼう 絶望|きょうき 狂気|ぐれん 紅蓮|しっこく 漆黒|あんこく 暗黒|やみよ 闇夜|むげんじごく 無間地獄|あびきょうかん 阿鼻叫喚|ちみもうりょう 魑魅魍魎|ひゃっきやこう 百鬼夜行|あっきらせつ 悪鬼羅刹|いんがおうほう 因果応報|しょぎょうむじょう 諸行無常|りんねてんしょう 輪廻転生|しんらばんしょう 森羅万象|てんぺんちい 天変地異|あしゅら 阿修羅|えんま 閻魔|やしゃ 夜叉|きじん 鬼神|じゃしん 邪神|じゃがん 邪眼|まがん 魔眼|まおう 魔王|せいけん 聖剣|せいこん 聖痕|せいはい 聖杯|だてんし 堕天使|しにがみ 死神|あんこくきし 暗黒騎士|しんぱん 審判|しょくざい 贖罪|ごくえん 獄炎|ほうこう 咆哮|せんめつ 殲滅|じゅうりん 蹂躙|はめつ 破滅|ほうかい 崩壊|らせん 螺旋|こくいん 刻印|ゆうへい 幽閉|ふしちょう 不死鳥|せいりゅう 青龍|すざく 朱雀|びゃっこ 白虎|げんぶ 玄武|やまたのおろち 八岐大蛇|とこやみ 常闇|よみのくに 黄泉の国|さんずのかわ 三途の川|げっしょく 月蝕|らぐなろく ラグナロク|ゔぁるはら ヴァルハラ|わるきゅーれ ワルキューレ|ゆぐどらしる ユグドラシル|おーでぃん オーディン|みょるにる ミョルニル|えくすかりばー エクスカリバー|ぐんぐにる グングニル|さたん サタン|べるぜぶぶ ベルゼブブ|あすもでうす アスモデウス|ねくろのみこん ネクロノミコン|たるたろす タルタロス|うろぼろす ウロボロス|ふぇんりる フェンリル|ふぇにっくす フェニックス|めでゅーさ メデューサ|すふぃんくす スフィンクス|ゔぁんぱいあ ヴァンパイア'),
+  easy:mkW('がっこう 学校|かいしゃ 会社|でんしゃ 電車|びょういん 病院|としょかん 図書館|てんき 天気|きせつ 季節|やさい 野菜|くだもの 果物|ともだち 友達|かぞく 家族|しごと 仕事|しゅみ 趣味|やくそく 約束|じゅんび 準備|れんしゅう 練習|べんきょう 勉強|しつもん 質問|せつめい 説明|そうだん 相談|れんらく 連絡|よてい 予定|かくにん 確認|ちゅうい 注意|あんぜん 安全|べんり 便利|たいせつ 大切|とくべつ 特別|けいけん 経験|せいこう 成功|しっぱい 失敗|うんどう 運動|りょこう 旅行|りょうり 料理|せんたく 洗濯|そうじ 掃除|ちょうしょく 朝食|ちゅうしょく 昼食|ゆうしょく 夕食|ゆうびん 郵便|ぎんこう 銀行|くうこう 空港|こうばん 交番|しんごう 信号|どうろ 道路|ちかてつ 地下鉄|しんかんせん 新幹線|ひこうき 飛行機|じてんしゃ 自転車|しやくしょ 市役所|しょうぼうしょ 消防署|ぜいきん 税金|ねんきん 年金|きゅうりょう 給料|たんじょうび 誕生日|けっこん 結婚|そつぎょう 卒業|にゅうがく 入学|しゅっぱつ 出発|とうちゃく 到着|ていねい 丁寧|しんせつ 親切|げんき 元気|じょうぶ 丈夫|ねっしん 熱心|まじめ 真面目|ふくしゅう 復習|よしゅう 予習|しゅくだい 宿題|しけん 試験|せいせき 成績|じかん 時間|ばしょ 場所|りゆう 理由|もくてき 目的|もんだい 問題|こたえ 答え|かんがえ 考え|じゅうしょ 住所|でんわ 電話|めいし 名刺|しゃしん 写真|おんがく 音楽|えいが 映画|どうぶつ 動物|しょくぶつ 植物|うみ 海|やま 山|かわ 川|そら 空|ほし 星|つき 月|たいよう 太陽|かぜ 風|あめ 雨|ゆき 雪|はる 春|なつ 夏|あき 秋|ふゆ 冬|まいにち 毎日|こんしゅう 今週|らいげつ 来月|きょねん 去年|ごぜん 午前|ごご 午後|きゅうじつ 休日|へいじつ 平日|しゅうまつ 週末|しょくどう 食堂|えきまえ 駅前|こうえん 公園|どうぶつえん 動物園|すいぞくかん 水族館|たいいくかん 体育館|びじゅつかん 美術館|びよういん 美容院|やっきょく 薬局|はいしゃ 歯医者|きゅうきゅうしゃ 救急車|けいさつ 警察|ゆうびんきょく 郵便局'),
+  hard:mkW('ふんいき 雰囲気|ぜいじゃく 脆弱|かんすい 完遂|じゅんしゅ 遵守|こうそく 拘束|なついん 捺印|とうしゅう 踏襲|つづきがら 続柄|すいとう 出納|るふ 流布|そうさい 相殺|きそん 既存|おおむね 概ね|ひんぱん 頻繁|はんれい 凡例|せんじょう 洗浄|きゃくちゅう 脚注|おぼえがき 覚書|しゅし 趣旨|いしょく 委嘱|けねん 懸念|さっしん 刷新|だしん 打診|あっせん 斡旋|ひっぱく 逼迫|かんれい 慣例|ほてん 補填|りんぎ 稟議|こうてつ 更迭|ふっしょく 払拭|はたん 破綻|かし 瑕疵|きぞく 帰属|ふんきゅう 紛糾|しもん 諮問|とうしん 答申|かんあん 勘案|そご 齟齬|ねんしゅつ 捻出|ばっすい 抜粋|はんよう 汎用|けいちょう 傾聴|たまわる 賜る|うかがう 伺う|うけたまわる 承る|とどこおる 滞る|まかなう 賄う|ほどこす 施す|がいさん 概算|のうひん 納品|みつもり 見積もり|かどう 稼働|いっせい 一斉|はんにゅう 搬入|しゅうわい 収賄|わいろ 賄賂|そつう 疎通|べんしょう 弁償|はんぼう 繁忙|がいよう 概要|がいとう 該当|すいこう 遂行|ぼうちょう 傍聴|こうじ 公示|じゅうらん 縦覧|けいそう 係争|てんぷ 添付|しょうだく 承諾|せいやく 誓約|けつじょ 欠如|しゅうち 周知|すうせい 趨勢|こうけん 貢献|せいさん 精算|ぎぎ 疑義|そくおう 即応|ちょうぼ 帳簿|しょうきゃく 償却|たなおろし 棚卸し|さいけん 債権|さいむ 債務|たんぽ 担保|ていとう 抵当|たいしゃく 貸借|くりこし 繰越|ふりかえ 振替|とくそく 督促|たいのう 滞納|のうふ 納付|かんぷ 還付|こうじょ 控除|ふよう 扶養|ふか 賦課|ちょうしゅう 徴収|げんせんちょうしゅう 源泉徴収|とくべつちょうしゅう 特別徴収|ふつうちょうしゅう 普通徴収|かくていしんこく 確定申告|かぜいひょうじゅん 課税標準|げんかしょうきゃく 減価償却|こくみんけんこうほけん 国民健康保険|こうきこうれいしゃ 後期高齢者|かいごほけん 介護保険|じゅうみんきほんだいちょう 住民基本台帳|ちほうこうきょうだんたい 地方公共団体'),
+  nan:mkW('ひまわり 向日葵|つくし 土筆|いるか 海豚|なまこ 海鼠|くらげ 海月|とかげ 蜥蜴|こうもり 蝙蝠|きつつき 啄木鳥|むかで 百足|かまきり 蟷螂|つつじ 躑躅|あじさい 紫陽花|またたび 木天蓼|さざんか 山茶花|いちじく 無花果|ざくろ 石榴|れもん 檸檬|りんご 林檎|ぶどう 葡萄|すいか 西瓜|かぼちゃ 南瓜|とうもろこし 玉蜀黍|ばら 薔薇|しつけ 躾|なぎ 凪|いわし 鰯|かつお 鰹|さんま 秋刀魚|ふぐ 河豚|まぐろ 鮪|えび 海老|はまぐり 蛤|あさり 浅蜊|あわび 鮑|さざえ 栄螺|いか 烏賊|たこ 蛸|のり 海苔|こんぶ 昆布|こんにゃく 蒟蒻|わさび 山葵|しょうが 生姜|きゅうり 胡瓜|なす 茄子|ごぼう 牛蒡|くわい 慈姑|ふき 蕗|ぜんまい 薇|うど 独活|そば 蕎麦|さすが 流石|ふさわしい 相応しい|あえて 敢えて|いわゆる 所謂|とにかく 兎に角|ようやく 漸く|たちまち 忽ち|たまたま 偶々|おそらく 恐らく|はなはだ 甚だ|おびただしい 夥しい|ないがしろ 蔑ろ|やよい 弥生|さつき 皐月|みなづき 水無月|かんなづき 神無月|しもつき 霜月|しわす 師走|きさらぎ 如月|むつき 睦月|ながつき 長月|いなか 田舎|さみだれ 五月雨|しぐれ 時雨|こがらし 木枯らし|かげろう 陽炎|しんきろう 蜃気楼|なだれ 雪崩|ふぶき 吹雪|みぞれ 霙|あられ 霰|ひょう 雹|かすみ 霞|おぼろ 朧|あけぼの 曙|あかつき 暁|ゆかた 浴衣|ぞうり 草履|たび 足袋|じゅばん 襦袢|はんてん 半纏|ふろしき 風呂敷|ためらう 躊躇う|たしなむ 嗜む|ささやく 囁く|つぶやく 呟く|すする 啜る|かすめる 掠める|うずくまる 蹲る|もてあそぶ 弄ぶ|ひるがえす 翻す|いきどおる 憤る|おののく 慄く|けなす 貶す|ねぎらう 労う|こじれる 拗れる|くすぶる 燻る|からかう 揶揄う|つねる 抓る|めくる 捲る|はびこる 蔓延る|ひるむ 怯む|うずく 疼く|たぎる 滾る|うごめく 蠢く|さえずる 囀る|あざける 嘲る|さげすむ 蔑む|すもう 相撲|かぶき 歌舞伎|うきよえ 浮世絵|なげし 長押|とりい 鳥居|さいせん 賽銭|みこし 神輿|だし 山車|みやげ 土産|わこうど 若人|くろうと 玄人|しろうと 素人|おとな 大人|めがね 眼鏡|けしき 景色|がらす 硝子|たばこ 煙草|こーひー 珈琲|せりふ 台詞|しにせ 老舗|あま 海女|とうじ 杜氏|いれずみ 刺青|ほご 反故|ほのめかす 仄めかす|はしご 梯子|かわせ 為替|あいづち 相槌|あぐら 胡座|あくび 欠伸|あだな 渾名|どんぐり 団栗|こだま 木霊|やぎ 山羊|あしか 海驢|くじら 鯨|さめ 鮫|ふくろう 梟|からす 鴉|うぐいす 鶯|ひばり 雲雀|かっこう 郭公|ほととぎす 時鳥|おうむ 鸚鵡|わすれなぐさ 勿忘草|ごろつき 破落戸|われもこう 吾亦紅|たんぽぽ 蒲公英|つづらおり 九十九折|なずな 薺|はこべ 繁縷|のびる 野蒜|うるさい 五月蠅い|しゃくなげ 石楠花|ちゃぶだい 卓袱台|おたまじゃくし 御玉杓子|くたびれる 草臥れる|じょうろ 如雨露|ひょうたん 瓢箪|しゃもじ 杓文字|ことごとく 悉く|すべからく 須く|もっぱら 専ら|きんもくせい 金木犀|くるまえび 車海老|ひがんばな 彼岸花|ねこやなぎ 猫柳|しゃくやく 芍薬|ゆきやなぎ 雪柳|かぶとむし 兜虫|とのさまがえる 殿様蛙|あまがえる 雨蛙|げんごろう 源五郎|すずらん 鈴蘭|かたばみ 酢漿草|ねんごろ 懇ろ|ぼたんゆき 牡丹雪|ささめゆき 細雪|さざなみ 細波|まなざし 眼差し|まどろむ 微睡む|ゆりかご 揺り籠|なごり 名残|ためいき 溜息')};
 // 濁点・半濁点・小書きは「小゛゜」キーで直前の文字を切り替えて作る（例: せ→ぜ、は→ば→ぱ、つ→っ→づ、う→ぅ→ゔ）
 // 1文字ぶんの打鍵の並び: ぜ = [せ, MOD]、ぱ = [は, MOD, MOD]、っ = [つ, MOD]
 const CYC='あぁ いぃ うぅゔ えぇ おぉ かが きぎ くぐ けげ こご さざ しじ すず せぜ そぞ ただ ちぢ つっづ てで とど はばぱ ひびぴ ふぶぷ へべぺ ほぼぽ やゃ ゆゅ よょ わゎ'.split(' ');
@@ -684,21 +693,32 @@ const DIFF={
   normal:{label:'NORMAL',desc:'すべての語句・標準の攻撃',pool:()=>true,grow:1,missUp:.12,drain:13},
   hard:{label:'HARD',desc:'長い語句（7打以上）・攻撃が速く、ミスに厳しい',pool:w=>strokesOf(w)>=7,grow:1.3,missUp:.16,drain:18},
   expert:{label:'EXPERT',desc:'最も長い語句（8打以上）・読みを隠す（打てた字とミスした字だけ表示）・攻撃が最も速い',pool:w=>strokesOf(w)>=8,grow:1.6,missUp:.2,drain:24,hide:true}};
+// ジャンル（開始前の画面で選ぶ）。読み学習：どのジャンルも、表示される漢字の読みを打つ
+const GENRES={
+  chuni:{label:'厨二',desc:'重厚・闇／禁忌・神話系の語句（漢字・カタカナ）'},
+  easy:{label:'実用 易',desc:'日常でよく使う語句。確実に読めるようにする'},
+  hard:{label:'実用 難',desc:'仕事・行政・税務で使う語句。誤読しやすい読みを含む'},
+  nan:{label:'難読',desc:'動植物・月の異名・和語など、難読の漢字'}};
 const COUNTS=[6,9,14,20];
-let diff='normal', TOTAL=14, BOUNDS=[0,5,9,14];
+let diff='normal', genre='chuni', readHide=false, TOTAL=14, BOUNDS=[0,5,9,14];
 function setCount(n){ TOTAL=n; BOUNDS=[0,Math.round(n/3),Math.round(2*n/3),n]; }
 setCount(14);
 // 選んだ難易度と問題数は端末に覚えておく
-try{ const sv=JSON.parse(localStorage.getItem('cmdTypingMobile')||'{}'); if(DIFF[sv.diff]) diff=sv.diff; if(COUNTS.includes(sv.n)) setCount(sv.n); }catch(e){}
-function saveOpt(){ try{ localStorage.setItem('cmdTypingMobile',JSON.stringify({diff,n:TOTAL})); }catch(e){} }
+try{ const sv=JSON.parse(localStorage.getItem('cmdTypingMobile')||'{}'); if(DIFF[sv.diff]) diff=sv.diff; if(GENRES[sv.genre]) genre=sv.genre; readHide=!!sv.rh; if(COUNTS.includes(sv.n)) setCount(sv.n); }catch(e){}
+function saveOpt(){ try{ localStorage.setItem('cmdTypingMobile',JSON.stringify({diff,genre,rh:readHide,n:TOTAL})); }catch(e){} }
 let lastSet='';
 function pickWords(){
   let pick,key;
-  const pool=WORDS.filter(x=>DIFF[diff].pool(x[0]));
+  const all=WORDSETS[genre];
+  let pool=all.filter(x=>DIFF[diff].pool(x[0]));
+  // 条件に合う語が足りないときは、近い長さの語で補う（難易度が長い語句向けなら長い順、短い語句向けなら短い順）
+  if(pool.length<TOTAL){ const long=diff==='hard'||diff==='expert', rest=all.filter(x=>!pool.includes(x)).sort((a,b)=>long?strokesOf(b[0])-strokesOf(a[0]):strokesOf(a[0])-strokesOf(b[0]));
+    pool=pool.concat(rest.slice(0,TOTAL-pool.length)); }
   do{ const a=pool.slice(); for(let i=a.length-1;i>0;i--){ const j=R(i+1); [a[i],a[j]]=[a[j],a[i]]; }
     pick=a.slice(0,TOTAL); key=pick.map(x=>x[0]).sort().join(); }while(key===lastSet&&pool.length>TOTAL);
   lastSet=key; return pick;
 }
+let missW=new Set();   // ミスした語（結果の復習リスト用）
 
 // ---- フェーズ: 防御 → 追跡 → 反撃 ----
 const PH=[
@@ -1264,7 +1284,7 @@ setInterval(()=>{
     mqOdd=true; mqSpawn(MQ[1],1,esc(txt),cls); }
   if(state==='done' && mqList && mqFree[0]<now+200) mqSpawn(MQ[0],0,mqList,'');
   if((state==='over'||state==='overres')&&!mqSpecial&&mqFree[1]<now+200){ mqOdd=true; mqSpawn(MQ[1],1,esc(garble(['SYSTEM COMPROMISED  //  ALL DATA EXPOSED','ROOT ACCESS TRANSFERRED TO 203.0.113.47','NODE7 OFFLINE  //  RECOVERY FAILED'][stI[1]++%3],.3)),'red2'); }
-  if(state==='menu'){ if(mqFree[0]<now+200) mqSpawn(MQ[0],0,'ミッションを選択してください　<span class="en">'+DIFF[diff].label+' / '+TOTAL+' WORDS</span>','gold');
+  if(state==='menu'){ if(mqFree[0]<now+200) mqSpawn(MQ[0],0,'ミッションを選択してください　<span class="en">'+GENRES[genre].label+' / '+DIFF[diff].label+' / '+TOTAL+' WORDS</span>','gold');
     if(mqFree[1]<now+200) mqSpawn(MQ[1],1,esc(['NODE7 DEFENSE SYSTEM  //  STANDING BY','SELECT DIFFICULTY AND NUMBER OF QUESTIONS','ALL OPERATORS REPORT TO CONSOLE'][stI[0]++%3]),'odd'); }
 },300);
 // ミスしたとき: 掲示板の文字が文字化けし、ドットが欠ける
@@ -1433,7 +1453,7 @@ function showFail(){
   later(()=>{ $('rGrade').classList.add('on'); if(ok()) boom(0,.6,60,.8); },1150+items.length*190+150);
   $('rHint').textContent='ENTER: mission select  /  RETRY: same settings';
   $('res').hidden=false;
-  $('res').textContent=`C:\\> report.exe\n-------------------------------------\n MISSION FAILED\n ATTACKER : ${ATK} (in control)\n MODE     : ${DIFF[diff].label}\n PROGRESS : ${prog} %  (${wi} / ${TOTAL} words)\n TIME     : ${s.toFixed(1)} s\n MISS     : ${miss}\n-------------------------------------`;
+  $('res').textContent=`C:\\> report.exe\n-------------------------------------\n MISSION FAILED\n ATTACKER : ${ATK} (in control)\n GENRE    : ${GENRES[genre].label}\n MODE     : ${DIFF[diff].label}\n PROGRESS : ${prog} %  (${wi} / ${TOTAL} words)\n TIME     : ${s.toFixed(1)} s\n MISS     : ${miss}\n-------------------------------------`;
 }
 function clearOver(){ clearInterval(floodT);
   { const b=document.body; if(b.classList.contains('pwroff')){ b.classList.remove('pwroff'); b.classList.add('pwron'); setTimeout(()=>b.classList.remove('pwron'),700); } b.classList.remove('hush'); } $('hacked').hidden=true; document.body.classList.remove('danger');
@@ -1471,31 +1491,41 @@ function powerOn(){
   later(toMenu,800);
 }
 // 開始前の画面: 難易度と問題数を選ぶ
-let mRow=2;
+let mRow=4;
 function renderMenu(){
+  const og=$('optGenre'); og.textContent='';
+  Object.keys(GENRES).forEach(k=>{ const b=document.createElement('button'); b.type='button'; b.textContent=GENRES[k].label; if(k===genre) b.className='on';
+    b.addEventListener('click',()=>{ genre=k; mRow=0; playKey(false); renderMenu(); }); og.appendChild(b); });
+  $('genreDesc').textContent=GENRES[genre].desc+'（'+WORDSETS[genre].length+'語）';
   const od=$('optDiff'); od.textContent='';
   Object.keys(DIFF).forEach(k=>{ const b=document.createElement('button'); b.type='button'; b.textContent=DIFF[k].label; if(k===diff) b.className='on';
-    b.addEventListener('click',()=>{ diff=k; mRow=0; playKey(false); renderMenu(); }); od.appendChild(b); });
+    b.addEventListener('click',()=>{ diff=k; mRow=1; playKey(false); renderMenu(); }); od.appendChild(b); });
   $('diffDesc').textContent=DIFF[diff].desc;
   const oc=$('optCount'); oc.textContent='';
   COUNTS.forEach(n=>{ const b=document.createElement('button'); b.type='button'; b.textContent=n+' WORDS'; if(n===TOTAL) b.className='on';
-    b.addEventListener('click',()=>{ setCount(n); mRow=1; playKey(false); renderMenu(); }); oc.appendChild(b); });
+    b.addEventListener('click',()=>{ setCount(n); mRow=2; playKey(false); renderMenu(); }); oc.appendChild(b); });
   const per=[BOUNDS[1],BOUNDS[2]-BOUNDS[1],BOUNDS[3]-BOUNDS[2]];
   $('countDesc').textContent='防御 '+per[0]+'語 → 追跡 '+per[1]+'語 → 反撃 '+per[2]+'語';
+  const orr=$('optRead'); orr.textContent='';
+  [['表示',false],['隠す',true]].forEach(([t,v])=>{ const b=document.createElement('button'); b.type='button'; b.textContent=t; if(v===readHide) b.className='on';
+    b.addEventListener('click',()=>{ readHide=v; mRow=3; playKey(false); renderMenu(); }); orr.appendChild(b); });
+  $('readDesc').textContent=readHide||DIFF[diff].hide?'読みを「・」で隠す。打てた字とミスした字だけ見える（読みの学習向け）':'読みを表示する';
   document.querySelectorAll('#menu [data-row]').forEach(el=>el.classList.toggle('sel',+el.dataset.row===mRow));
   saveOpt();
 }
 function toMenu(){
   if(naming) finishNaming(); clearOver(); setTension(0); mqList=''; token++; state='menu'; sirenStop(); bgmStop(); clockStop(); mqClear();
   WINS.forEach(id=>$(id).hidden=true); $('alert').hidden=true; $('ov').hidden=true; $('power').hidden=true; $('idle').hidden=true;
-  document.body.classList.remove('alert'); kbShow(false); $('menu').hidden=false; mRow=2; renderMenu(); menuMusicStart();
+  document.body.classList.remove('alert'); kbShow(false); $('menu').hidden=false; mRow=4; renderMenu(); menuMusicStart();
 }
 function menuKey(e){
   const k=e.key;
-  if(k==='ArrowUp'||k==='ArrowDown'){ e.preventDefault(); mRow=(mRow+(k==='ArrowUp'?2:1))%3; playKey(false); renderMenu(); return; }
+  if(k==='ArrowUp'||k==='ArrowDown'){ e.preventDefault(); mRow=(mRow+(k==='ArrowUp'?4:1))%5; playKey(false); renderMenu(); return; }
   if(k==='ArrowLeft'||k==='ArrowRight'){ e.preventDefault(); const d=k==='ArrowLeft'?-1:1;
-    if(mRow===0){ const ks=Object.keys(DIFF); diff=ks[(ks.indexOf(diff)+d+ks.length)%ks.length]; }
-    else if(mRow===1){ const i=COUNTS.indexOf(TOTAL); setCount(COUNTS[(i+d+COUNTS.length)%COUNTS.length]); }
+    if(mRow===0){ const ks=Object.keys(GENRES); genre=ks[(ks.indexOf(genre)+d+ks.length)%ks.length]; }
+    else if(mRow===1){ const ks=Object.keys(DIFF); diff=ks[(ks.indexOf(diff)+d+ks.length)%ks.length]; }
+    else if(mRow===2){ const i=COUNTS.indexOf(TOTAL); setCount(COUNTS[(i+d+COUNTS.length)%COUNTS.length]); }
+    else if(mRow===3){ readHide=!readHide; }
     playKey(false); renderMenu(); return; }
   if(k==='Enter'){ e.preventDefault(); startMission(); }
 }
@@ -1529,7 +1559,7 @@ function respond(){
   if(state!=='alert') return;
   token++; state='boot'; sirenStop(); $('alert').hidden=true; document.body.classList.remove('alert'); audio(); mqClear(); bgmStart();
   const m=$('main'); m.hidden=false; m.classList.remove('appear'); void m.offsetWidth; m.classList.add('appear'); playOpen();
-  words=pickWords(); N=words.reduce((a,w)=>a+strokesOf(w[0]),0);   // 打鍵数（各語の最後の Enter を含む）
+  missW=new Set(); words=pickWords(); N=words.reduce((a,w)=>a+strokesOf(w[0]),0);   // 打鍵数（各語の最後の Enter を含む）
   clockStop(); tAcc=0; wi=0;ci=0;ti=0;miss=0;streak=0;maxStreak=0;missHere=false;phase=0; missRun=0; fwLowShown=false; fwSet(100);
   con.textContent=''; $('res').hidden=true; $('banner').hidden=true;
   dummiesReset(); startPhaseStats(); update();
@@ -1560,7 +1590,7 @@ function newWord(){
   const rd=document.createElement('div'); rd.className='rd'; d.appendChild(rd);
   // 読みの後ろに Enter（↵）を置き、押して確定するまで次へ進まない
   // EXPERT は読みを「・」で隠し、打てた字とミスした字だけ見せる
-  const hide=!!DIFF[diff].hide;
+  const hide=!!DIFF[diff].hide||readHide;
   cur=[...r,'\n'].map(ch=>{ const s=document.createElement('span'); s.className='u'; s._ch=ch; s._seq=seqOf(ch); s._hid=hide&&ch!=='\n';
     s.textContent=ch==='\n'?'\u21B5':s._hid?'\u30FB':ch; if(s._hid) s.classList.add('hid'); if(ch==='\n') s.classList.add('ent'); rd.appendChild(s); return s; });
   // 次の語の予告（同じフェーズの中だけ）
@@ -1610,7 +1640,7 @@ function key(ch){
     else { if(sub) reveal(cur[ci]); cur[ci].className='c'+(sub?' pd':'')+(cur[ci]._ch==='\n'?' ent':''); wantMod(sub>0); hintNext(); }
     update(); return true;
   }
-  miss++; phMiss++; streak=0; missHere=true; reveal(el); el.className='c miss'+(sub?' pd':'')+ent; void el.offsetWidth; el.classList.add('shake');
+  miss++; phMiss++; streak=0; missHere=true; missW.add(wi); reveal(el); el.className='c miss'+(sub?' pd':'')+ent; void el.offsetWidth; el.classList.add('shake');
   const before=xfer; xfer=Math.max(0,xfer-2); drawXfer(xfer-before);
   playMiss(); dummiesMiss(); fwMiss(); lightMiss(); buzz(30);
   update(); return false;
@@ -1676,7 +1706,7 @@ const METRIC={
   speed:{label:'SPEED',cmp:(a,b)=>b.cpm-a.cpm||b.acc-a.acc||a.id-b.id,main:d=>d.cpm+' CPM',sub:d=>d.time.toFixed(1)+'s',sub2:d=>'miss '+d.miss},
   acc:{label:'ACCURACY',cmp:(a,b)=>b.acc-a.acc||b.cpm-a.cpm||a.id-b.id,main:d=>d.acc.toFixed(1)+'%',sub:d=>'miss '+d.miss,sub2:d=>d.cpm+' CPM'}
 };
-const boardName=b=>{ const [d,n]=b.split('-'); return DIFF[d].label+' / '+n+' WORDS'; };
+const boardName=b=>{ const [g,d,n,h]=b.split('|'); return GENRES[g].label+' / '+DIFF[d].label+' / '+n+' WORDS'+(h==='1'&&!DIFF[d].hide?' / 読み隠し':''); };
 const rankOf=(rec,k)=>{ const l=SCORES.filter(d=>d.board===rec.board).sort(METRIC[k].cmp); return [l.indexOf(rec)+1,l.length,l]; };
 const gradeOf=sc=>sc>=220?'S':sc>=170?'A':sc>=120?'B':sc>=80?'C':'D';   // スマホ版の仮の基準
 let naming=null, nameBuf='', rankTab='total', lastRec=null;
@@ -1690,7 +1720,8 @@ function finish(){
  MISSION COMPLETE
  ATTACKER : ${ATK} (offline)
  TIME     : ${s.toFixed(1)} s
- MODE     : ${DIFF[diff].label}
+ GENRE    : ${GENRES[genre].label}
+ MODE     : ${DIFF[diff].label}${readHide&&!DIFF[diff].hide?' (読み隠し)':''}
  WORDS    : ${TOTAL}  (${N} keys)
  SPEED    : ${cpm} CPM
  MISS     : ${miss}
@@ -1698,10 +1729,10 @@ function finish(){
  MAX COMBO: ${maxStreak}
  SCORE    : ${score} pts  RANK ${gradeOf(score)}
 -------------------------------------
-${words.map(([w,disp])=>' '+disp+'（'+w+'）').join('\n')}
--------------------------------------`;
+${words.map(([w,disp],i)=>(missW.has(i)?'*':' ')+disp+'（'+w+'）').join('\n')}
+-------------------------------------${missW.size?'\n * ミスした語（'+missW.size+'語）を復習：\n'+[...missW].sort((a,b)=>a-b).map(i=>'   '+words[i][1]+'＝'+words[i][0]).join('\n')+'\n-------------------------------------':''}`;
   body.scrollTop=body.scrollHeight;
-  const rec={id:SCORES.length,board:diff+'-'+TOTAL,name:'',cpm,time:+s.toFixed(1),miss,acc:+acc.toFixed(1),score,combo:maxStreak};
+  const rec={id:SCORES.length,board:genre+'|'+diff+'|'+TOTAL+'|'+(readHide?1:0),name:'',cpm,time:+s.toFixed(1),miss,acc:+acc.toFixed(1),score,combo:maxStreak};
   SCORES.push(rec); naming=rec; nameBuf=''; rankTab='total';
   later(()=>showResult(rec),500);
 }
