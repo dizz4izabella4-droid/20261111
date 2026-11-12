@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0b1422">
+<script>try{navigator.audioSession.type='ambient'}catch(e){}</script>
+<title>イカロス〜蝋で固めた鳥の羽〜</title>
+<style>
+:root{color-scheme:dark;--ja:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","游ゴシック","Meiryo","Noto Sans JP",sans-serif}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b1422;color:#fff;font-family:var(--ja);user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none}
+.ov{position:fixed;left:0;right:0;pointer-events:none;text-align:center;opacity:0;transition:opacity 1.6s ease}
+.ov.on{opacity:1}
+#title{top:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 24px;gap:14px}
+#title h1{margin:0;font-weight:300;font-size:clamp(34px,9vw,84px);letter-spacing:.34em;padding-left:.34em;color:#fff;text-shadow:0 0 28px rgba(255,190,110,.65),0 2px 26px rgba(10,20,40,.55)}
+#title p{margin:0;font-weight:300;font-size:clamp(12px,3.2vw,19px);letter-spacing:.42em;padding-left:.42em;color:rgba(255,246,230,.92);text-shadow:0 1px 14px rgba(10,20,40,.7)}
+#title .go{margin-top:clamp(26px,7vh,70px);font-size:clamp(12px,3vw,16px);letter-spacing:.3em;padding-left:.3em;color:rgba(255,255,255,.9);animation:pulse 2.6s ease-in-out infinite}
+#title.retry h1,#title.retry p{display:none}
+@keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+#hint{left:0;right:0;bottom:calc(26px + env(safe-area-inset-bottom,0px));font-size:clamp(11px,2.8vw,14px);letter-spacing:.2em;color:rgba(255,255,255,.88);text-shadow:0 1px 10px rgba(5,12,24,.85);transition:opacity 1.2s}
+#hint span{display:inline-block;margin:0 1.2em}
+#end{top:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:0 24px;transition:opacity 2.2s}
+#end p{margin:0;font-weight:300;font-size:clamp(15px,4vw,26px);letter-spacing:.3em;padding-left:.3em;color:#7a5a30;line-height:2}
+#end .go{font-size:clamp(11px,2.8vw,14px);letter-spacing:.3em;color:#9a7a50;animation:pulse 2.6s ease-in-out infinite}
+#snd{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));width:40px;height:40px;border:0;border-radius:50%;background:rgba(10,20,34,.22);color:#fff;opacity:.55;display:grid;place-items:center;padding:0;cursor:pointer}
+#snd:hover{opacity:.9}
+#snd svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#snd .x{display:none}
+#snd.off .w{display:none}#snd.off .x{display:block}
+#err{position:fixed;inset:0;display:none;place-items:center;text-align:center;padding:30px;background:#0b1422;font-size:15px;line-height:1.9;letter-spacing:.1em;z-index:9}
+</style>
+</head>
+<body>
+<canvas id="c" tabindex="0"></canvas>
+<div id="title" class="ov"><h1>イカロス</h1><p>蝋で固めた鳥の羽</p><div class="go" id="go">タップで飛び立つ</div></div>
+<div id="hint" class="ov"></div>
+<div id="end" class="ov"><p id="endTxt"></p><div class="go">タップでもう一度</div></div>
+<button id="snd" type="button" aria-label="音のオン・オフ"><svg viewBox="0 0 24 24"><g class="w"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.6a7.6 7.6 0 0 1 0 10.8"/></g><g class="x"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></g></svg></button>
+<div id="err">この端末では 3D 描画（WebGL2）が使えないため、遊べません。<br>最新の Safari / Chrome でお試しください。</div>
+<script>/*@@THREE@@*/</script>
+<script>
+/*@@GAME@@*/
+</script>
+</body>
+</html>

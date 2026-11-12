@@ -33,7 +33,7 @@
 | claude.ai アーティファクト（PC版） | https://claude.ai/artifact/NctPezS87FshtyQGQ1YaDf | 開発中の確認用。曲2つも同梱して公開済み |
 | claude.ai アーティファクト（コウモリ） | https://claude.ai/artifact/RtGte1cpPBFfU2wHBe8bEi | 開発の正本はこちら。リポジトリの tori-to-kemono/index.html は、その写し |
 | claude.ai アーティファクト（GLASS BREAKER） | https://claude.ai/artifact/35FutrJp3Aag1QnQRN6Nmg | 開発の正本はこちら。リポジトリの glass-breaker/index.html は、その写し |
-| claude.ai アーティファクト（イカロス） | https://claude.ai/artifact/9HeYU5kUoepJMdZ3wUpJ3X | 確認用。リポジトリの icarus/index.html は、その写し |
+| claude.ai アーティファクト（イカロス） | https://claude.ai/artifact/9HeYU5kUoepJMdZ3wUpJ3X | 確認用。リポジトリの icarus/index.html は、その写し（断片版。全面作り直し後の最新を反映） |
 | claude.ai アーティファクト（旧スマホ版） | https://claude.ai/artifact/TwbhHpCo6BMetgr6v178bd | 試作（フリック入力と偉人の名言）。新しいスマホ版に置き換えたので使わない |
 
 ### リポジトリの構成
@@ -52,7 +52,8 @@ kumiwake-bou/tools/verify.js       ワイヤダの収録問題を検査する道
 dentaku-drill/index.html            電卓ドリル自動生成ツールの本体（HTML/CSS/JS すべて1ファイル、外部読み込みなし）
 nobiru-hige/index.html              伸びるヒゲ の本体（HTML/CSS/JS すべて1ファイル、外部読み込みなし）
 glass-breaker/index.html            GLASS BREAKER の本体（HTML/CSS/JS すべて1ファイル、外部読み込みなし。アーティファクトの写し）
-icarus/index.html                   イカロス の本体（HTML/CSS/JS すべて1ファイル、外部読み込みなし）
+icarus/index.html                   イカロス の本体（HTML/CSS/JS と three.js r160 をすべて1ファイルに埋め込み、外部読み込みなし）
+icarus/_src/                        イカロス のソース（src/*.js と build.py。README.md を参照）
 README.md
 HANDOFF.md                         本書
 ```
@@ -564,8 +565,16 @@ PC版の筋立てと仕組み（防御→追跡→反撃、攻撃信号、耐久
 
 ## 19. イカロス〜蝋で固めた鳥の羽〜（icarus）
 
-- 渡されたHTMLをそのまま置いた（2026-11-12）。外部読み込みなし。claude.ai のアーティファクト版もある（確認用）。
-- 内容：鳥の頭の人間（白頭ワシ）の一人称視点で、高層ビルの谷間を飛ぶ。羽ばたいて速度と高度を保ち、風（向かい風・横風・突風）に流されながらビルをよける。ビルに当たるか、飛んだあとに地面へ着くと CRASH。
-- 操作：左右の羽ばたきを F / J キー、または画面下の LEFT WING / RIGHT WING ボタンで行う。左右を交互に打つと進みやすい。両方を長押しすると滑空。CRASH のあとは F / J で再開。トップのカードは「どちらも」。
-- 音は最初のキー入力かタッチから鳴る（BGM は Web Audio の合成、鳥の声つき）。マナーモード対応として、`<head>` に `navigator.audioSession.type='ambient'` を入れた（iOS 16.4以降のSafari）。
+- 2026-11-13 に全面作り直し（最初は渡されたHTMLをそのまま置いていたが、鳥人間の出来が低かったため基礎から書き直した）。three.js r160（`three.min.js`）をHTMLに埋め込んだ1ファイル（約750KB）。外部読み込みなし。claude.ai のアーティファクト版もある（確認用）。
+- ねらい：「飛ぶ楽しさ」を、UIではなく空間・光・音・翼で表す。画面上のUIは、音のオン/オフ（右上）と、最初の数秒のヒントだけ。
+- 流れ：夕暮れの塔の屋上に立つ（タイトル）→ タップで飛び立つ → 街の谷間を飛び、光の輪をくぐりながら雲海を突き抜け、太陽へ上る → 高く、太陽に向くほど翼が熱され、蝋が溶けて羽がほどけ、落ちる → 雲の中で白く終わる（到達高度と輪の数が出る）→ タップでもう一度。ぶつかっても死なない（跳ね返って減速、強いと一瞬ふらつく）。
+- 操作：スマホ＝指をドラッグして舵（上＝上昇、左右＝旋回）、タップで羽ばたき、置きっぱなしで羽ばたき続ける、2本目の指のタップでも羽ばたく。PC＝マウス位置で舵、クリック／スペースで羽ばたき（押しっぱなしで連続）、矢印キー／WASDでも舵。
+- 飛行モデル（`03-flight.js`、素の数値のみで three に依存しない）：エネルギー式のアーケード。揚力は速度の2乗、急降下で加速（終端は約95 m/s）、引き起こしで高度に戻せる、羽ばたきは短い推力（速いほど効かない）、失速すると機首が下がる。バンクで旋回。手を離すと機首が進行方向に落ち着く。
+- 世界（`01-world.js`）：ブロック100 m・道幅40 mの街をハッシュで無限に生成（プレイヤー周りの半径19ブロックだけ InstancedMesh）。窓・屋根・谷の陰・ガラスの反射と太陽の照り返しをシェーダで描く。高さ300 m付近に雲海（5層）と積雲のかたまり、雲を突き抜ける塔もある。空は高度で色が変わり、太陽の位置も高度とともに上がって大きくなる。
+- 翼（`02-wings.js`）：一人称の翼を骨格（上腕・前腕・手）＋羽毛メッシュ（風切・雨覆い、約120枚）＋蝋の帯で作る。逆光で羽が透けて光る。熱で蝋が赤くなり羽がほどけ、1枚ずつ抜けて舞い落ちる。縦画面は翼を前に向けて画面内に収める。
+- 演出（`04-fx.js`／`04b-fx2.js`）：光の粒（空間の手がかり）、速度の風の筋、翼端の航跡、羽ばたきの粒子、舞い落ちる羽、輪（くぐると加速・火花・和音）、上昇気流の光の柱と渦の粒、上昇気流に乗る鳥の群れ。
+- ポスト処理（`00-core.js`）：HDR（HalfFloat）＋MSAA、ブルーム（ダウン／アップ）、太陽の光芒、速度のズームブラー、色収差、レンズのゴースト、ACES、グレイン。解像度は動的に下げる（フレーム時間が長いとき）。
+- 音（`05-audio.js`）：すべて Web Audio で合成（風・羽ばたき・輪の和音・上昇気流・熱の鼓動・溶ける音・落下の笛・終わりの和音）。最初のタッチ／キーで鳴る。`<head>` に `navigator.audioSession.type='ambient'` を入れてあり、iPhoneのマナーモードでは鳴らない。
+- ソース：`icarus/_src/`（`src/*.js` を番号順に連結 → three.min.js と一緒に `template.html` へ。`python3 build.py ../index.html`、断片は `FRAG=1`。three は `npm i three@0.160.1`）。直すときはソースを直してビルドし直す。
+- 確認のしかた：`--use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist` のPlaywrightで動く。デバッグ用に `window.__pose(x,y,z,yaw,pitch,roll,heat,speed)`（姿勢を固定）と `window.__sim(n,dt,policy)`（自動操縦で高速に何秒も進める）がある。自動操縦では約110秒で溶けて終わる（輪38個）。
 - この作品からトップへ戻る手段は付けない（他の作品と同じ）。
