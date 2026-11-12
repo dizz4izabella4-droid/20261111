@@ -110,6 +110,7 @@ header{display:flex;flex-direction:column;align-items:center;gap:10px;padding-to
 .en{font-size:10px;font-weight:700;color:#5a3a68;letter-spacing:.08em;line-height:1.3}
 .ds{font-size:15px;font-weight:700;color:#3e2448;letter-spacing:.04em}
 .nt{display:block;margin-top:3px;font-size:11.5px;font-weight:700;line-height:1.5;color:#5b4466;letter-spacing:.02em}
+.dt{display:block;margin-top:3px;font-size:10px;font-weight:700;line-height:1.3;color:#6a5275;letter-spacing:.04em}
 .tag{flex:none;font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:var(--cL);color:var(--cD);letter-spacing:.06em}
 .rec{position:absolute;top:-9px;right:48px;padding:2px 10px;border-radius:999px;background:var(--lemon);color:#7a5a10;font-size:10px;font-weight:800;
   letter-spacing:.06em;box-shadow:0 2px 0 var(--lemonD);transform:rotate(2deg)}
@@ -245,17 +246,20 @@ body.abyss .music.on .sw{background:#c41a2a}
 // 新しい作品を載せるとき: リポジトリに作品のフォルダ（中に index.html）を作り、ここに1件足す
 //   path … フォルダ名（末尾に /）   ja … 日本語の名前   name … 英語の名前   desc … ひとこと説明
 //   for  … 'pc' / 'mobile' / 'both'   color … 'pink' / 'mint' / 'lav' / 'lemon'   icon … 下の ICONS の名前
+//   date … 最終アップロード日（YYYY-MM-DD）。作品をpushしたら、その作品の date を当日に直す（カードの下に小さく出る）
 const APPS=[
   {path:'typing-pc/', ja:'CMDタイピング', name:'CMD TYPING', for:'pc', color:'mint', icon:'keyboard',
-   desc:'キーボード使用'},
+   desc:'キーボード使用', date:'2026-11-12'},
   {path:'typing-mobile/', ja:'CMDタイピング スマホ版', name:'CMD TYPING MOBILE', for:'mobile', color:'lav', icon:'phone',
-   desc:'フリック'},
+   desc:'フリック', date:'2026-11-12'},
   {path:'tori-to-kemono/', ja:'鳥と獣の戦い', name:'BIRDS VS BEASTS', for:'mobile', color:'pink', icon:'bird',
-   desc:'置いて対戦'},
+   desc:'置いて対戦', date:'2026-11-11'},
   {path:'kumiwake-bou/', ja:'ワイヤダ', name:'WAIYADA', for:'both', color:'lemon', icon:'loop',
-   desc:'ワイヤダ', note:'某〇〇をできるようにしただけなので、面白いのは保証済み。（オリジナリティーは皆無）'},
+   desc:'ワイヤダ', note:'某〇〇をできるようにしただけなので、面白いのは保証済み。（オリジナリティーは皆無）', date:'2026-11-12'},
   {path:'glass-breaker/', ja:'ガラス割り', name:'GLASS BREAKER', for:'mobile', color:'mint', icon:'glass',
-   desc:'叩いて割る'},
+   desc:'叩いて割る', date:'2026-11-12'},
+  {path:'dentaku-drill/', ja:'電卓ドリル', name:'CALCULATOR DRILL', for:'both', color:'pink', icon:'calc',
+   desc:'電卓ドリル自動生成', date:'2026-11-12'},
 ];
 // アイコン（白で描く）
 const ICONS={
@@ -264,6 +268,7 @@ const ICONS={
   bird:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 28c0-9 7-15 16-15 6 0 10 3 12 7l6 1-5 4c0 9-7 14-16 14-7 0-13-4-13-11z" fill="rgba(255,255,255,.25)"/><path d="M14 25c4 4 10 4 14 0"/><circle cx="31" cy="20" r="1.6" fill="#fff"/></svg>',
   loop:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 10h14v14h14v14H10z" fill="rgba(255,255,255,.25)"/><path d="M38 10h.01" stroke-width="5"/></svg>',
   glass:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 7h28v34H10z" fill="rgba(255,255,255,.25)"/><path d="M27 7l-6 12 9 6-7 16"/><path d="M21 19l-9-4M30 25l8-3"/></svg>',
+  calc:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><rect x="10" y="5" width="28" height="38" rx="5"/><rect x="15" y="10" width="18" height="7" rx="1.5" fill="rgba(255,255,255,.25)"/><path d="M16 25h.01M24 25h.01M32 25h.01M16 32h.01M24 32h.01M32 32h.01M16 38h.01M24 38h.01M32 38h.01" stroke-width="4"/></svg>',
   star:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M24 6l5.5 11.6 12.5 1.7-9.2 8.7 2.3 12.5L24 34.4 12.9 40.5l2.3-12.5L6 19.3l12.5-1.7z"/></svg>'
 };
 const GO='<svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l5 5-5 5"/></svg>';
@@ -282,6 +287,7 @@ const items=APPS.map((a,i)=>{
   const ds=document.createElement('span'); ds.className='ds'; ds.textContent=a.desc;
   const tx=document.createElement('span'); tx.className='txt'; tx.append(en,ds);
   if(a.note){ const nt=document.createElement('span'); nt.className='nt'; nt.textContent=a.note; tx.appendChild(nt); }
+  if(a.date){ const dt=document.createElement('span'); dt.className='dt'; dt.textContent='最終アップロード '+a.date.replace(/-/g,'.'); tx.appendChild(dt); }
   el.setAttribute('aria-label',a.ja+'（'+a.desc+(a.note?'。'+a.note:'')+'）');
   el.append(ic,tx);
   { const t=document.createElement('span'); t.className='tag'; t.textContent=a.for==='both'?'どちらも':LABEL[a.for]+'むけ'; el.appendChild(t); }

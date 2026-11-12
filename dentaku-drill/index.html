@@ -1,0 +1,1521 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>電卓ドリル自動生成 — CASIO DS-20WKA</title>
+<style>
+  :root{
+    --bg:#f5f5f4; --card:#fff; --ink:#27272a; --sub:#71717a;
+    --line:#d4d4d8; --line2:#e4e4e7; --accent:#334155;
+    --soft:#f1f5f9; --live:#f4f4f5; --liveline:#52525b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic UI","Meiryo",sans-serif;
+    line-height:1.7;font-size:15px}
+  header{background:#27272a;color:#fff;padding:16px 20px}
+  header h1{margin:0;font-size:18px;font-weight:700}
+  header p{margin:4px 0 0;font-size:12px;color:#a1a1aa}
+  .wrap{max-width:1060px;margin:0 auto;padding:20px 20px 120px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:16px;margin-bottom:16px}
+  .panel h2{margin:0 0 12px;font-size:14px;border-left:3px solid var(--accent);padding-left:9px;font-weight:700}
+  .row{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end}
+  .fld{display:flex;flex-direction:column;gap:5px}
+  .fld label{font-size:12px;color:var(--sub);font-weight:700}
+  select,input[type=number]{padding:7px 9px;border:1px solid var(--line);border-radius:3px;
+    background:#fff;font-size:14px;font-family:inherit;min-width:150px;color:var(--ink)}
+  .chk{display:flex;flex-wrap:wrap;gap:6px}
+  .chk label{display:flex;align-items:center;gap:5px;font-size:13px;
+    background:#fafafa;border:1px solid var(--line);border-radius:3px;
+    padding:6px 10px;cursor:pointer;user-select:none;color:var(--sub)}
+  .chk label:has(input:checked){background:var(--soft);border-color:var(--accent);
+    font-weight:700;color:var(--ink)}
+  button{font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;
+    border-radius:3px;padding:8px 16px;border:1px solid transparent}
+  .b-main{background:var(--accent);color:#fff}
+  .b-main:hover{background:#1e293b}
+  .b-sub{background:#fff;color:var(--ink);border-color:var(--line)}
+  .b-sub:hover{background:#f4f4f5}
+  .b-live{background:#52525b;color:#fff}
+  .b-live:hover{background:#3f3f46}
+  .b-stop{background:#fff;color:var(--ink);border-color:#a1a1aa}
+  .b-mini{padding:4px 11px;font-size:12px}
+  .btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+
+  /* ===== コース選択 ===== */
+  .courses{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+  .course{flex:1;min-width:210px;border:1px solid var(--line);border-radius:4px;
+    padding:11px 13px;cursor:pointer;background:#fafafa;user-select:none;transition:.12s}
+  .course:hover{background:#f4f4f5}
+  .course.on{background:#fff;border-color:var(--accent);border-width:2px;padding:10px 12px}
+  .course .cn{font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
+  .course .cn .mk{width:12px;height:12px;border:1px solid var(--sub);border-radius:50%;
+    display:inline-block;flex-shrink:0}
+  .course.on .cn .mk{border-color:var(--accent);border-width:4px}
+  .course .cd{font-size:11.5px;color:var(--sub);margin-top:5px;line-height:1.55}
+
+  /* ===== モード切替タブ ===== */
+  .modes{display:flex;gap:0;margin-top:14px;border-bottom:1px solid var(--line)}
+  .modes button{border-radius:3px 3px 0 0;border:1px solid var(--line);border-bottom:none;
+    background:#fafafa;color:var(--sub);margin-right:3px;padding:7px 16px;font-size:13px}
+  .modes button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+  /* ===== カード形式 ===== */
+  .q{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:14px 16px;margin-bottom:10px}
+  .q-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px}
+  .q-no{background:#27272a;color:#fff;border-radius:2px;padding:2px 8px;font-size:12px;font-weight:700}
+  .tag{font-size:11px;border-radius:2px;padding:2px 7px;font-weight:700;
+    border:1px solid var(--line);background:#fafafa;color:var(--sub)}
+  .tag.lvl{border-color:var(--sub);color:var(--ink)}
+  .expr{font-family:"SFMono-Regular",Consolas,"Courier New",monospace;
+    font-size:18px;font-weight:700;padding:10px 12px;background:#fafafa;
+    border:1px solid var(--line);border-radius:3px;letter-spacing:.3px}
+  .scene{font-size:13px;color:var(--sub);margin-bottom:7px}
+  .tbl{width:100%;border-collapse:collapse;margin:9px 0;font-size:13px}
+  .tbl th,.tbl td{border:1px solid var(--line);padding:5px 9px;text-align:right}
+  .tbl th{background:#f4f4f5;text-align:center;font-size:12px;font-weight:700}
+  .tbl td:first-child,.tbl th:first-child{text-align:left}
+  .blank{color:#a1a1aa}
+  .ans{margin-top:11px;padding:12px;background:#fafafa;border:1px solid var(--line);border-radius:3px}
+  .ans.hide{display:none}
+  .ans h4{margin:0 0 6px;font-size:12px;color:var(--sub);font-weight:700;
+    letter-spacing:.04em;border-bottom:1px solid var(--line2);padding-bottom:3px}
+  .ans h4.mt{margin-top:12px}
+  .ans-val{font-size:20px;font-weight:700;color:var(--ink);font-family:monospace}
+  .steps{margin:9px 0 0;padding-left:0;list-style:none;counter-reset:s}
+  .steps li{counter-increment:s;position:relative;padding:4px 0 4px 30px;
+    font-family:monospace;font-size:13px;border-bottom:1px dotted var(--line2)}
+  .steps li:last-child{border-bottom:none}
+  .steps li::before{content:counter(s);position:absolute;left:0;top:5px;
+    background:#fff;border:1px solid var(--sub);color:var(--ink);width:19px;height:19px;border-radius:50%;
+    font-size:10.5px;display:flex;align-items:center;justify-content:center;
+    font-family:sans-serif;font-weight:700}
+  .steps .note{color:var(--sub);font-family:inherit;font-size:12px}
+  .caution{margin-top:9px;padding:8px 11px;background:#fff;border:1px solid var(--line);
+    border-left:3px solid var(--sub);border-radius:2px;font-size:12.5px;color:var(--ink)}
+  .hand{margin-top:9px;font-size:12.5px;background:#fff;
+    border:1px dashed var(--line);border-radius:3px;padding:9px 11px;color:var(--sub)}
+  .hand b{color:var(--ink)}
+
+  /* ===== 一覧表形式 ===== */
+  .list{background:var(--card);border:1px solid var(--line);border-radius:4px;overflow:hidden}
+  table.lt{width:100%;border-collapse:collapse;font-size:14px}
+  table.lt th{background:#3f3f46;color:#fff;padding:8px 10px;font-size:12px;
+    text-align:left;font-weight:700;position:sticky;top:0;z-index:2}
+  table.lt td{border-bottom:1px solid var(--line2);padding:8px 10px;vertical-align:top}
+  table.lt tr:last-child td{border-bottom:none}
+  table.lt tr:hover td{background:#fafafa}
+  table.lt tr.sel td{background:var(--soft)}
+
+  table.lt tr.live td{background:var(--live)!important;
+    border-top:2px solid var(--liveline);border-bottom:2px solid var(--liveline)}
+  table.lt tr.live td:first-child{box-shadow:inset 4px 0 0 var(--liveline)}
+  table.lt tr.done td{background:#fbfbfb;color:var(--sub)}
+  table.lt tr.live .c-q{font-size:16px}
+  .cursor{color:var(--ink);font-weight:700;font-size:12px}
+
+  .c-no{width:56px;text-align:center;color:var(--sub);font-weight:700;font-size:12px;white-space:nowrap}
+  .c-lv{width:46px;text-align:center;font-size:10.5px;color:var(--sub);font-weight:700}
+  .c-type{width:134px;font-size:11.5px;color:var(--ink);font-weight:700;line-height:1.4}
+  .c-set{width:108px;font-size:11px;color:var(--sub);line-height:1.4}
+  .c-q{font-family:"SFMono-Regular",Consolas,monospace;font-size:14px;font-weight:700}
+  .c-q .multi{font-family:inherit;font-weight:400;font-size:12.5px;color:var(--sub)}
+  .c-a{width:138px;text-align:right;font-family:monospace;font-weight:700;
+    font-size:15px;color:var(--ink);white-space:nowrap}
+  .c-a.masked{color:transparent;background:
+    repeating-linear-gradient(45deg,#f4f4f5,#f4f4f5 5px,#e4e4e7 5px,#e4e4e7 10px)!important;
+    border-radius:2px}
+  .c-a.reveal{animation:pop .25s ease}
+  @keyframes pop{0%{opacity:.25}100%{opacity:1}}
+  .c-btn{width:72px;text-align:center}
+  .st-btn{background:#fff;border:1px solid var(--line);border-radius:3px;
+    padding:4px 9px;font-size:11.5px;font-weight:700;cursor:pointer;color:var(--ink);white-space:nowrap}
+  .st-btn:hover{background:var(--soft);border-color:var(--accent)}
+  .st-btn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+  /* ===== 下部固定HUD ===== */
+  .hud{position:fixed;left:0;right:0;bottom:0;z-index:30;background:#27272a;color:#fff;
+    padding:9px 16px 11px;box-shadow:0 -2px 10px rgba(0,0,0,.18);
+    transform:translateY(120%);transition:transform .2s ease}
+  .hud.on{transform:translateY(0)}
+  .hud-in{max-width:1060px;margin:0 auto;display:flex;align-items:center;gap:13px;flex-wrap:wrap}
+  .hud .pos{font-size:16px;font-weight:700;white-space:nowrap}
+  .hud .pos small{font-size:11.5px;color:#a1a1aa;font-weight:400}
+  .hud .nxt{font-size:12px;color:#e4e4e7;font-weight:700;white-space:nowrap;
+    border:1px solid #52525b;border-radius:2px;padding:2px 8px}
+  .hud .bar{flex:1;min-width:130px;height:6px;background:#52525b;border-radius:99px;overflow:hidden}
+  .hud .bar i{display:block;height:100%;background:#d4d4d8;width:0;transition:width .2s}
+  .hud .keys{font-size:11.5px;color:#a1a1aa;white-space:nowrap}
+  .hud kbd{background:#3f3f46;border:1px solid #52525b;border-bottom-width:2px;
+    border-radius:2px;padding:1px 5px;font-size:11px;font-family:inherit;color:#e4e4e7}
+  .hud .hud-btns{display:flex;gap:6px}
+
+  /* ===== 右サイドパネル ===== */
+  .ov{position:fixed;inset:0;background:rgba(39,39,42,.32);opacity:0;visibility:hidden;
+    transition:.2s;z-index:40}
+  .ov.on{opacity:1;visibility:visible}
+  .side{position:fixed;top:0;right:0;width:440px;max-width:94vw;height:100%;
+    background:#fff;box-shadow:-4px 0 18px rgba(0,0,0,.14);
+    transform:translateX(100%);transition:transform .2s ease;
+    z-index:50;display:flex;flex-direction:column}
+  .side.on{transform:translateX(0)}
+  .side-h{background:#27272a;color:#fff;padding:12px 16px;display:flex;
+    align-items:center;justify-content:space-between;gap:10px;flex-shrink:0}
+  .side-h .t{font-size:14px;font-weight:700}
+  .side-h .s{font-size:11px;color:#a1a1aa;margin-top:2px}
+  .x{background:transparent;border:none;color:#a1a1aa;font-size:23px;
+    cursor:pointer;padding:0 4px;line-height:1;font-weight:400}
+  .x:hover{color:#fff}
+  .side-b{padding:16px;overflow-y:auto;flex:1}
+  .side-b .ans{margin-top:0}
+  .side-nav{border-top:1px solid var(--line);padding:9px 16px;display:flex;
+    gap:8px;justify-content:space-between;align-items:center;flex-shrink:0;background:#fafafa}
+  .side-nav .pg{font-size:12px;color:var(--sub);font-weight:700}
+
+  .sum{background:#fff;border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:3px;padding:12px 14px;margin-bottom:16px;font-size:13px}
+  .sum b{color:var(--ink)}
+  .sum .note{color:var(--sub);font-size:12px}
+  .empty{text-align:center;color:var(--sub);padding:40px 0;font-size:14px}
+  .hint{font-size:12px;color:var(--sub);margin:0 0 10px}
+  .hint kbd{background:#f4f4f5;border:1px solid var(--line);border-bottom-width:2px;
+    border-radius:2px;padding:1px 5px;font-size:11px;font-family:inherit}
+  code{background:#f4f4f5;padding:1px 5px;border-radius:2px;font-size:12.5px;
+    border:1px solid var(--line2)}
+  .mix{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);display:none}
+  .mix.on{display:block}
+  .mix .mt{font-size:12px;color:var(--sub);font-weight:700;margin-bottom:6px}
+
+  @media print{
+    header,.panel,.btns,.modes,.noprint,.side,.ov,.c-btn,.hud,.courses{display:none!important}
+    body{background:#fff;font-size:11px}
+    .wrap{padding-bottom:20px}
+    .q{page-break-inside:avoid;border-color:#999}
+    .ans{background:#fff;border-color:#999}
+    .list{border-color:#999}
+    table.lt th{background:#e4e4e7!important;color:#000!important;position:static}
+    table.lt td{border-bottom:1px solid #999}
+    table.lt tr.live td,table.lt tr.done td{background:#fff!important;border-top:none;
+      border-bottom:1px solid #999;color:#000}
+    .c-a.masked{color:#fff;background:#fff!important}
+    .cursor{display:none}
+  }
+  @media(max-width:900px){
+    .c-type,.c-set{display:none}
+    .side{width:100%}
+    .hud .keys{display:none}
+  }
+  @media(max-width:640px){
+    .expr{font-size:16px}
+    select,input[type=number]{min-width:120px}
+    .c-lv{display:none}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>電卓ドリル自動生成ツール</h1>
+  <p>CASIO DS-20WKA（カシオ系配列・優先順位なし・GT／独立メモリー搭載）想定 ／ 右手電卓・左手記入の型に対応</p>
+</header>
+
+<div class="wrap">
+
+<div class="panel noprint">
+  <h2>コース選択</h2>
+  <div class="courses" id="courses">
+    <div class="course on" data-c="basic" onclick="setCourse('basic')">
+      <div class="cn"><span class="mk"></span>初級：計算順序の設計</div>
+      <div class="cd">優先順位がない電卓で、括弧付きの式をどう打つか。入れ替え・打ち直し・メモリーによる順序制御。</div>
+    </div>
+    <div class="course" data-c="mid" onclick="setCourse('mid')">
+      <div class="cn"><span class="mk"></span>中級：機能の活用</div>
+      <div class="cd">GT・独立メモリー・定数計算・%・税計算キーを、用途に応じて使い分ける。</div>
+    </div>
+    <div class="course" data-c="adv" onclick="setCourse('adv')">
+      <div class="cn"><span class="mk"></span>上級：実務複合</div>
+      <div class="cd">按分・端数処理・延滞金・減価償却・試算表。複数機能と丸めルールを組み合わせる。</div>
+    </div>
+  </div>
+
+  <h2 style="margin-top:18px">出題設定</h2>
+  <div class="row">
+    <div class="fld"><label>問題数</label>
+      <input type="number" id="count" value="10" min="1" max="50"></div>
+    <div class="fld"><label>難易度（数値の規模）</label>
+      <select id="level">
+        <option value="1">Lv1 基礎（小さい数）</option>
+        <option value="2" selected>Lv2 標準</option>
+        <option value="3">Lv3 応用（大きい数・端数）</option>
+      </select></div>
+    <div class="fld"><label>答えの初期表示</label>
+      <select id="ansmode">
+        <option value="hide" selected>隠す（自己採点用）</option>
+        <option value="show">最初から表示</option>
+      </select></div>
+  </div>
+
+  <div class="fld" style="margin-top:14px">
+    <label id="tlabel">出題タイプ（複数選択可）</label>
+    <div class="chk" id="types"></div>
+  </div>
+
+  <div class="mix" id="mixbox">
+    <div class="mt">下位コースの問題を混ぜる（既定：混ぜない）</div>
+    <div class="chk" id="mixchk"></div>
+    <div class="chk" id="mixtypes" style="margin-top:8px"></div>
+  </div>
+
+  <div class="modes">
+    <button id="m-card" class="on" onclick="setMode('card')">カード形式</button>
+    <button id="m-list" onclick="setMode('list')">一覧表形式</button>
+  </div>
+
+  <div class="btns">
+    <button class="b-main" onclick="gen()">ドリルを生成</button>
+    <button class="b-live" onclick="startLive()">練習モード開始（スペース進行）</button>
+    <button class="b-sub" onclick="toggleAll(true)">答えを全部表示</button>
+    <button class="b-sub" onclick="toggleAll(false)">答えを全部隠す</button>
+    <button class="b-sub" onclick="window.print()">印刷 / PDF保存</button>
+  </div>
+</div>
+
+<div id="out"><div class="empty">コースと設定を選んで「ドリルを生成」を押してください。</div></div>
+
+</div>
+
+<!-- 練習モード 下部固定HUD -->
+<div class="hud noprint" id="hud">
+  <div class="hud-in">
+    <div class="pos" id="hud-pos">Q1 <small>/ 10</small></div>
+    <div class="nxt" id="hud-nxt">スペース → 答えを表示</div>
+    <div class="bar"><i id="hud-bar"></i></div>
+    <div class="keys">
+      <kbd>Space</kbd> 答え/次へ　<kbd>↑↓</kbd> 移動　<kbd>Enter</kbd> 手順　<kbd>Esc</kbd> 終了
+    </div>
+    <div class="hud-btns">
+      <button class="b-sub b-mini" onclick="liveStep()">スペース相当</button>
+      <button class="b-stop b-mini" onclick="stopLive()">終了</button>
+    </div>
+  </div>
+</div>
+
+<!-- 右サイドパネル -->
+<div class="ov" id="ov" onclick="closeSide()"></div>
+<aside class="side" id="side">
+  <div class="side-h">
+    <div>
+      <div class="t" id="sd-t">手順</div>
+      <div class="s" id="sd-s"></div>
+    </div>
+    <button class="x" onclick="closeSide()" title="閉じる">&times;</button>
+  </div>
+  <div class="side-b" id="sd-b"></div>
+  <div class="side-nav">
+    <button class="b-sub b-mini" onclick="navSide(-1)">← 前の問題</button>
+    <span class="pg" id="sd-pg"></span>
+    <button class="b-sub b-mini" onclick="navSide(1)">次の問題 →</button>
+  </div>
+</aside>
+
+<script>
+/* ============================================================
+   電卓ドリル自動生成（3コース構成・簡素配色版）
+   DS-20WKA 挙動前提：
+   - 演算子の優先順位なし（検証1）
+   - GT は = の回数だけ加算（検証3）→ 押し直し禁止
+   - 独立メモリーは AC で消えない（検証2）→ MC 必須
+   - 定数計算の = も GT に乗る（検証4）
+   - セレクター変更は確定値に遡及しない（検証5）
+   ============================================================ */
+
+/* ---------- 出題タイプ定義 ----------
+   c  : 'basic' | 'mid' | 'adv'
+   lv : 対応する数値規模
+----------------------------------------- */
+const TYPES=[
+  // ===== 初級：計算順序の設計 =====
+  {id:'asis',    c:'basic', name:'そのまま打てる式',       lv:[1,2,3]},
+  {id:'swap',    c:'basic', name:'順序入れ替え',           lv:[1,2,3]},
+  {id:'memsub',  c:'basic', name:'メモリー（減−乗除）',    lv:[1,2,3]},
+  {id:'memmul',  c:'basic', name:'メモリー（積が複数）',   lv:[1,2,3]},
+  {id:'denom',   c:'basic', name:'分母が和差の割り算',     lv:[1,2,3]},
+  {id:'numer',   c:'basic', name:'分子が和差の割り算',     lv:[1,2,3]},
+  {id:'chain',   c:'basic', name:'連続除算（分母が積）',   lv:[1,2,3]},
+  {id:'vert',    c:'basic', name:'縦計算（連続加算）',     lv:[1,2,3]},
+  {id:'round',   c:'basic', name:'丸め設定の罠',           lv:[1,2,3]},
+
+  // ===== 中級：機能の活用 =====
+  {id:'gt',      c:'mid',   name:'GT集計（明細＋合計）',   lv:[1,2,3]},
+  {id:'mem',     c:'mid',   name:'メモリー集計（小計）',   lv:[1,2,3]},
+  {id:'const',   c:'mid',   name:'定数計算（税額一括）',   lv:[1,2,3]},
+  {id:'ratio',   c:'mid',   name:'構成比（小数点2）',      lv:[1,2,3]},
+  {id:'memcross',c:'mid',   name:'メモリーで単価×数量',    lv:[1,2,3]},
+  {id:'gtavg',   c:'mid',   name:'GT→平均（件数で割る）',  lv:[1,2,3]},
+  {id:'pct',     c:'mid',   name:'%キー（割増・割引）',    lv:[1,2,3]},
+  {id:'taxin',   c:'mid',   name:'税込からの割戻し',       lv:[1,2,3]},
+  {id:'constdiv',c:'mid',   name:'定数除算（÷2回）',       lv:[1,2,3]},
+  {id:'memratio',c:'mid',   name:'分母固定の構成比',       lv:[1,2,3]},
+
+  // ===== 上級：実務複合 =====
+  {id:'apportion',c:'adv',  name:'按分＋端数調整',         lv:[1,2,3]},
+  {id:'taxcalc',  c:'adv',  name:'税額計算（二段端数）',   lv:[1,2,3]},
+  {id:'depre',    c:'adv',  name:'減価償却（定額・定率）', lv:[1,2,3]},
+  {id:'tbcheck',  c:'adv',  name:'試算表の貸借一致',       lv:[1,2,3]},
+  {id:'fifo',     c:'adv',  name:'移動平均単価',           lv:[1,2,3]},
+  {id:'delay',    c:'adv',  name:'延滞金（日割り）',       lv:[1,2,3]},
+  {id:'compound', c:'adv',  name:'複利・現価係数',         lv:[1,2,3]},
+  {id:'alloc',    c:'adv',  name:'部門共通費の配賦',       lv:[1,2,3]},
+];
+
+const COURSE_NAME={basic:'初級',mid:'中級',adv:'上級'};
+const COURSE_SHORT={basic:'初',mid:'中',adv:'上'};
+const LOWER={basic:[],mid:['basic'],adv:['basic','mid']};
+
+// ---------- ユーティリティ ----------
+const ri=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const fmt=n=>{
+  if(n===null||n===undefined||!isFinite(n)) return '—';
+  const r=Math.round(n*1000000)/1000000;
+  return r.toLocaleString('ja-JP',{maximumFractionDigits:6});
+};
+const f2=n=>n.toLocaleString('ja-JP',{minimumFractionDigits:2,maximumFractionDigits:2});
+function num(lv,kind){
+  if(kind==='small') return lv===1?ri(2,9):lv===2?ri(3,12):ri(4,19);
+  if(kind==='mid')   return lv===1?ri(10,99):lv===2?ri(20,400):ri(100,990);
+  if(kind==='price') return lv===1?ri(2,9)*100:lv===2?ri(3,49)*50:ri(380,2980);
+  if(kind==='qty')   return lv===1?ri(2,9):lv===2?ri(4,40):ri(6,85);
+  if(kind==='big')   return lv===1?ri(1,9)*1000:lv===2?ri(12,480)*1000:ri(145,8900)*1000;
+  return ri(2,99);
+}
+
+const CLEAR='<span class="note">AC → MC（GT表示・M表示が消えたか目視）</span>';
+const HAND='<b>左手</b>ペンを握ったまま保持（置かない）／<b>右手</b>ホームポジション維持／<b>視線</b>資料 → 電卓表示 → 用紙';
+const hand=x=>`<div class="hand"><b>型</b> ${HAND}${x?'<br>'+x:''}</div>`;
+
+// ==========================================================
+//  ジェネレーター
+// ==========================================================
+const G={
+
+/* ===================== 初級 ===================== */
+asis(lv){
+  const a=num(lv,'small'),b=num(lv,'small'),c=num(lv,'mid');
+  const op=pick(['+','-']);
+  const v=op==='+'?a*b+c:a*b-c;
+  return{
+    type:'そのまま打てる式', setting:'小数点 0 ／ CUT',
+    expr:`${a} × ${b} ${op==='+'?'+':'−'} ${fmt(c)}`,
+    answer:v,
+    steps:[CLEAR,`${a} × ${b} ${op} ${c} =`,`<span class="note">表示を見る → 左手で記入</span>`],
+    judge:'乗除が式の先頭にあるため、紙の式のまま打てる',
+    hand:hand()
+  };
+},
+
+swap(lv){
+  const a=num(lv,'mid'),b=num(lv,'small'),c=num(lv,'small');
+  return{
+    type:'順序入れ替え', setting:'小数点 0 ／ CUT',
+    expr:`${fmt(a)} + ${b} × ${c}`,
+    answer:a+b*c,
+    steps:[CLEAR,`${b} × ${c} + ${a} =`,`<span class="note">表示を見る → 記入</span>`],
+    judge:'加算の後ろの乗除は、乗除を先に打って入れ替える（加算は交換可能）',
+    caution:`そのまま <code>${a} + ${b} × ${c} =</code> と打つと ${fmt((a+b)*c)} になり誤り`,
+    hand:hand()
+  };
+},
+
+memsub(lv){
+  const b=num(lv,'small'),c=num(lv,'small');
+  const a=b*c+num(lv,'mid');
+  return{
+    type:'メモリー（減−乗除）', setting:'小数点 0 ／ CUT',
+    expr:`${fmt(a)} − ${b} × ${c}`,
+    answer:a-b*c,
+    steps:[CLEAR,`${a} M+`,`${b} × ${c} M−`,`MR`,`<span class="note">表示を見る → 記入</span>`],
+    judge:'引き算は入れ替えると符号が逆になるため、メモリーで順序を制御する',
+    caution:`入れ替えて <code>${b} × ${c} − ${a} =</code> と打つと ${fmt(b*c-a)} で符号が逆`,
+    hand:hand('<b>MRは何度押しても値が変わらない</b>ので、記入前に安心して確認できる')
+  };
+},
+
+memmul(lv){
+  const a=num(lv,'small'),b=num(lv,'small'),c=num(lv,'small'),d=num(lv,'small');
+  return{
+    type:'メモリー（積が複数）', setting:'小数点 0 ／ CUT',
+    expr:`${a} × ${b} + ${c} × ${d}`,
+    answer:a*b+c*d,
+    steps:[CLEAR,`${a} × ${b} M+`,`${c} × ${d} M+`,`MR`,`<span class="note">表示を見る → 記入</span>`],
+    judge:'積が2つ以上並ぶ式はメモリー案件。1本で打つと前の結果に巻き込まれる',
+    caution:`<code>${a} × ${b} + ${c} × ${d} =</code> と打つと ${fmt((a*b+c)*d)} になり誤り`,
+    hand:hand()
+  };
+},
+
+denom(lv){
+  const p=num(lv,'small'),q=num(lv,'small');
+  const d=p+q,r=lv===1?ri(2,20):ri(5,90);
+  return{
+    type:'分母が和差の割り算', setting:'小数点 F ／ 5-4',
+    expr:`${fmt(d*r)} ÷ ( ${p} + ${q} )`,
+    answer:r,
+    steps:[CLEAR,`${p} + ${q} =`,`<span class="note">表示 ${d} を確認（分母を確定）</span>`,
+           `${d*r} ÷ ${d} =`,`<span class="note">表示を見る → 記入</span>`],
+    judge:'分母が和・差のときは分母を先に確定させ、割られる数から打ち直す',
+    caution:`<code>${d*r} ÷ ${p} + ${q} =</code> と打つと ${fmt(d*r/p+q)} になり誤り`,
+    hand:hand('分母の値は<b>左手でメモ欄に書き留める</b>と打ち直し時の記憶ミスを防げる')
+  };
+},
+
+numer(lv){
+  const d=lv===1?ri(2,9):ri(3,25);
+  const x=d*ri(2,40),y=d*ri(2,40);
+  return{
+    type:'分子が和差の割り算', setting:'小数点 F ／ 5-4',
+    expr:`( ${fmt(x)} + ${fmt(y)} ) ÷ ${d}`,
+    answer:(x+y)/d,
+    steps:[CLEAR,`${x} + ${y} =`,`<span class="note">表示 ${fmt(x+y)}（分子が確定）</span>`,
+           `÷ ${d} =`,`<span class="note">打ち直し不要。そのまま ÷ を続けられる</span>`],
+    judge:'分子の括弧は確定済みの表示値を使えるため、= のあと ÷ を続けるだけでよい',
+    hand:hand('分母の括弧と違い<b>打ち直しが不要</b>。この非対称性が電卓計算の要点')
+  };
+},
+
+chain(lv){
+  const b=num(lv,'small'),c=num(lv,'small');
+  const r=lv===1?ri(2,20):lv===2?ri(3,40):ri(5,90);
+  return{
+    type:'連続除算（分母が積）', setting:'小数点 F ／ 5-4',
+    expr:`${fmt(b*c*r)} ÷ ( ${b} × ${c} )`,
+    answer:r,
+    steps:[CLEAR,`${b*c*r} ÷ ${b} ÷ ${c} =`,`<span class="note">表示を見る → 記入</span>`],
+    judge:'分母が積のときは連続除算でそのまま処理できる（分母を先に出す必要がない）',
+    hand:hand()
+  };
+},
+
+vert(lv){
+  const n=lv===1?6:lv===2?8:10;
+  const v=[];for(let i=0;i<n;i++) v.push(lv===1?ri(100,999):lv===2?ri(1200,98000):ri(14500,987000));
+  const total=v.reduce((a,b)=>a+b,0);
+  let t='<table class="tbl"><tr><th>No</th><th>金額</th></tr>';
+  v.forEach((x,i)=>t+=`<tr><td>${i+1}</td><td>${fmt(x)}</td></tr>`);
+  t+=`<tr><td><b>合計</b></td><td class="blank">—</td></tr></table>`;
+  return{
+    type:'縦計算（連続加算）', setting:'小数点 0 ／ CUT',
+    scene:`出金伝票 ${n} 件の合計を求める。`,
+    html:t, answer:total,
+    listQ:`<span class="multi">${n} 件の合計<br>`+v.map(x=>fmt(x)).join(' + ')+`</span>`,
+    steps:[CLEAR,`${v.join(' + ')} =`,`<span class="note">＝ ${fmt(total)} を合計欄に記入</span>`],
+    judge:'単純な縦一列の合計は連続加算型。途中の表示は見ない',
+    caution:'1行ごとに表示を確認する癖がつくと視線往復が増えて倍の時間がかかる。<b>= を押すまで電卓を見ない</b>',
+    hand:hand('<b>左手の人差し指で現在行を押さえる</b>（ペンは握ったまま）。これが「どこまで足したか」の目印になる')
+  };
+},
+
+round(lv){
+  const a=pick([10000,50000,100000,7000]);
+  const d=pick([3,6,7,9]);
+  const cut=Math.floor(a/d),wrong=cut*d;
+  return{
+    type:'丸め設定の罠', setting:'小数点 0 ／ CUT（意図的）',
+    scene:'小数点セレクターを 0／CUT のまま次を計算すると、結果はどうなるか予測してから実行する。',
+    expr:`${fmt(a)} ÷ ${d} × ${d}`,
+    answer:wrong,
+    steps:[CLEAR,
+      `${a} ÷ ${d} =　<span class="note">→ ${fmt(cut)}（小数部が切捨てられる）</span>`,
+      `× ${d} =　<span class="note">→ ${fmt(wrong)}</span>`,
+      `<span class="note">元の ${fmt(a)} に戻らない（差 ${fmt(a-wrong)}）</span>`],
+    judge:'円単位設定では途中の端数が消えるため、割り算を含む計算では最後まで F で計算し、最終結果だけ丸める',
+    caution:'按分計算・割戻し計算は <b>F で通して最後に円単位処理</b>。これが検証5の実務的な意味',
+    hand:hand('設定は「計算開始前に決める」だけでなく<b>「割り算を含むなら F で通す」</b>判断も必要')
+  };
+},
+
+/* ===================== 中級 ===================== */
+gt(lv){
+  const n=lv===1?3:lv===2?4:5;
+  const rows=[];
+  for(let i=0;i<n;i++) rows.push({name:String.fromCharCode(65+i),price:num(lv,'price'),qty:num(lv,'qty')});
+  const subs=rows.map(r=>r.price*r.qty);
+  const total=subs.reduce((a,b)=>a+b,0);
+
+  let t='<table class="tbl"><tr><th>品名</th><th>単価</th><th>数量</th><th>金額</th></tr>';
+  rows.forEach(r=>t+=`<tr><td>${r.name}</td><td>${fmt(r.price)}</td><td>${fmt(r.qty)}</td><td class="blank">—</td></tr>`);
+  t+=`<tr><td><b>合計</b></td><td></td><td></td><td class="blank">—</td></tr></table>`;
+
+  let at='<table class="tbl"><tr><th>品名</th><th>金額</th></tr>';
+  rows.forEach((r,i)=>at+=`<tr><td>${r.name}</td><td>${fmt(subs[i])}</td></tr>`);
+  at+=`<tr><td><b>合計(GT)</b></td><td><b>${fmt(total)}</b></td></tr></table>`;
+
+  const st=[CLEAR];
+  rows.forEach((r,i)=>st.push(`${r.price} × ${r.qty} =　<span class="note">→ ${fmt(subs[i])} を記入</span>`));
+  st.push(`GT　<span class="note">→ ${fmt(total)} を合計欄に記入</span>`);
+
+  return{
+    type:'GT集計（明細＋合計）', setting:'小数点 0 ／ CUT',
+    scene:'物品購入の明細表。各行の金額と合計を記入する。',
+    html:t, answerHtml:at, answer:total,
+    listQ:`<span class="multi">明細 ${n} 件の金額と合計（GT）<br>`
+      +rows.map(r=>`${fmt(r.price)} × ${fmt(r.qty)}`).join(' ／ ')+`</span>`,
+    listA:`<div style="font-size:12px;text-align:right;line-height:1.5">`
+      +subs.map(s=>fmt(s)).join('<br>')
+      +`<div style="border-top:1px solid #d4d4d8;margin-top:3px;padding-top:3px">${fmt(total)}</div></div>`,
+    steps:st,
+    judge:'最後に合計だけ欲しい明細集計は GT 型が最短',
+    caution:'確認のため = を押し直すと GT に二重計上される。各行の答えは<b>画面を見るだけ</b>で確認し、書き終えるまで電卓に触らない',
+    hand:hand('記入中（左手）も<b>右手は電卓に置いたまま</b>次行の準備。1行ごとに「打つ→見る→書く」を完結させる')
+  };
+},
+
+mem(lv){
+  const sales=num(lv,'big')+500000;
+  const cogs=Math.floor(sales*ri(55,72)/100/1000)*1000;
+  const sga=Math.floor(sales*ri(8,18)/100/1000)*1000;
+  const oi=ri(20,180)*1000,oe=ri(30,240)*1000;
+  const gp=sales-cogs,op=gp-sga,rp=op+oi-oe;
+
+  let t='<table class="tbl"><tr><th>項目</th><th>金額</th></tr>';
+  [['売上高',sales],['売上原価',cogs],['販売費及び一般管理費',sga],['営業外収益',oi],['営業外費用',oe]]
+    .forEach(r=>t+=`<tr><td>${r[0]}</td><td>${fmt(r[1])}</td></tr>`);
+  t+=`<tr><td><b>売上総利益</b></td><td class="blank">—</td></tr>
+      <tr><td><b>営業利益</b></td><td class="blank">—</td></tr>
+      <tr><td><b>経常利益</b></td><td class="blank">—</td></tr></table>`;
+
+  const at=`<table class="tbl"><tr><th>項目</th><th>金額</th></tr>
+    <tr><td>売上総利益</td><td>${fmt(gp)}</td></tr>
+    <tr><td>営業利益</td><td>${fmt(op)}</td></tr>
+    <tr><td><b>経常利益</b></td><td><b>${fmt(rp)}</b></td></tr></table>`;
+
+  return{
+    type:'メモリー集計（小計）', setting:'小数点 F ／ 5-4',
+    scene:'損益計算書から各段階の利益を求める。途中の小計も記入する。',
+    html:t, answerHtml:at, answer:rp,
+    listQ:`<span class="multi">売上${fmt(sales)} 原価${fmt(cogs)} 販管費${fmt(sga)}<br>`
+      +`営業外収益${fmt(oi)} 営業外費用${fmt(oe)}<br>→ 売上総利益・営業利益・経常利益</span>`,
+    listA:`<div style="font-size:12px;text-align:right;line-height:1.5">`
+      +`${fmt(gp)}<br>${fmt(op)}<br><b>${fmt(rp)}</b></div>`,
+    steps:[CLEAR,
+      `${sales} M+　<span class="note">売上高</span>`,
+      `${cogs} M−　<span class="note">売上原価</span>`,
+      `MR　<span class="note">→ 売上総利益 ${fmt(gp)} を記入</span>`,
+      `${sga} M−　<span class="note">販管費</span>`,
+      `MR　<span class="note">→ 営業利益 ${fmt(op)} を記入</span>`,
+      `${oi} M+　<span class="note">営業外収益</span>`,
+      `${oe} M−　<span class="note">営業外費用</span>`,
+      `MR　<span class="note">→ 経常利益 ${fmt(rp)} を記入</span>`],
+    judge:'途中の小計を書く集計はメモリー型。MR は表示するだけで値が変わらないため何度でも覗ける',
+    caution:'次の問題に移る前に <b>MC</b> を押す。AC では独立メモリーは消えない',
+    hand:hand('MR → 表示を見る → 目を離す → 記入。<b>表示を見ながら書くと桁を落としやすい</b>')
+  };
+},
+
+const(lv){
+  const n=lv===1?3:lv===2?3:4;
+  const base=[];for(let i=0;i<n;i++) base.push(ri(5,98)*100);
+  const rate=pick([0.1,0.08]);
+  const tax=base.map(v=>Math.floor(v*rate));
+  const total=tax.reduce((a,b)=>a+b,0);
+
+  let t='<table class="tbl"><tr><th>No</th><th>税抜金額</th><th>消費税額</th></tr>';
+  base.forEach((v,i)=>t+=`<tr><td>${i+1}</td><td>${fmt(v)}</td><td class="blank">—</td></tr>`);
+  t+=`<tr><td colspan="2"><b>税額合計</b></td><td class="blank">—</td></tr></table>`;
+
+  let at='<table class="tbl"><tr><th>No</th><th>消費税額</th></tr>';
+  tax.forEach((v,i)=>at+=`<tr><td>${i+1}</td><td>${fmt(v)}</td></tr>`);
+  at+=`<tr><td><b>合計(GT)</b></td><td><b>${fmt(total)}</b></td></tr></table>`;
+
+  const st=[CLEAR,`${rate} × × ${base[0]} =　<span class="note">→ ${fmt(tax[0])}（${rate} が定数として保持される）</span>`];
+  base.slice(1).forEach((v,i)=>st.push(`${v} =　<span class="note">→ ${fmt(tax[i+1])}</span>`));
+  st.push(`GT　<span class="note">→ ${fmt(total)}</span>`);
+
+  return{
+    type:'定数計算（税額一括）', setting:`小数点 0 ／ CUT ／ 税率 ${rate*100}%`,
+    scene:`各行の消費税額（税率 ${rate*100}%・円未満切捨て）と税額合計を求める。`,
+    html:t, answerHtml:at, answer:total,
+    listQ:`<span class="multi">税率 ${rate*100}% の税額と合計<br>`+base.map(v=>fmt(v)).join(' ／ ')+`</span>`,
+    listA:`<div style="font-size:12px;text-align:right;line-height:1.5">`
+      +tax.map(v=>fmt(v)).join('<br>')
+      +`<div style="border-top:1px solid #d4d4d8;margin-top:3px;padding-top:3px">${fmt(total)}</div></div>`,
+    steps:st,
+    judge:'先に入力した数値が定数として保持される（× を2回）。掛率を固定して各数値を = で次々処理できる',
+    caution:'定数計算の = も GT に加算される。だからこそ合計がそのまま取れるが、<b>押し直せば二重計上</b>',
+    hand:hand('右手は「数値 → =」の往復のみ。<b>視線は資料に固定</b>し、表示は記入の瞬間だけ見る')
+  };
+},
+
+ratio(lv){
+  const total=ri(820,4800)*1000;
+  const part=Math.floor(total*ri(8,46)/100);
+  const pct=part/total*100;
+  return{
+    type:'構成比（小数点2）', setting:'小数点 2 ／ 5-4',
+    scene:'歳入総額に対する町税の構成比を小数第2位まで求める。',
+    html:`<table class="tbl"><tr><th>項目</th><th>金額（千円）</th></tr>
+      <tr><td>歳入総額</td><td>${fmt(total)}</td></tr>
+      <tr><td>町税</td><td>${fmt(part)}</td></tr>
+      <tr><td><b>構成比</b></td><td class="blank">— %</td></tr></table>`,
+    answer:Math.round(pct*100)/100, unit:' %',
+    listQ:`<span class="multi">構成比（小数第2位）<br>${fmt(part)} ÷ ${fmt(total)} × 100</span>`,
+    steps:[CLEAR,`${part} ÷ ${total} × 100 =`,`<span class="note">→ ${pct.toFixed(2)} %</span>`],
+    judge:'構成比は「部分 ÷ 全体 × 100」。小数点セレクターを 2 にしてから計算を開始する',
+    caution:'セレクター変更は確定済みの表示値に遡及しない。<b>計算を始める前に</b> 2 に合わせる',
+    hand:hand()
+  };
+},
+
+memcross(lv){
+  const n=lv===1?3:lv===2?4:5;
+  const rows=[];
+  for(let i=0;i<n;i++) rows.push({n:`品目${i+1}`,p:num(lv,'price'),q:num(lv,'qty')});
+  const subs=rows.map(r=>r.p*r.q);
+  const total=subs.reduce((a,b)=>a+b,0);
+
+  let t='<table class="tbl"><tr><th>品目</th><th>単価</th><th>数量</th></tr>';
+  rows.forEach(r=>t+=`<tr><td>${r.n}</td><td>${fmt(r.p)}</td><td>${fmt(r.q)}</td></tr>`);
+  t+=`<tr><td colspan="2"><b>総額</b></td><td class="blank">—</td></tr></table>`;
+
+  const st=[CLEAR];
+  rows.forEach((r,i)=>st.push(`${r.p} × ${r.q} M+　<span class="note">（${fmt(subs[i])}）</span>`));
+  st.push(`MR　<span class="note">→ ${fmt(total)}</span>`);
+
+  return{
+    type:'メモリーで単価×数量', setting:'小数点 0 ／ CUT',
+    scene:'各行の金額は記入せず、総額のみを求める。',
+    html:t, answer:total,
+    listQ:`<span class="multi">総額のみ（明細は記入不要）<br>`
+      +rows.map(r=>`${fmt(r.p)}×${fmt(r.q)}`).join(' ／ ')+`</span>`,
+    steps:st,
+    judge:'× の直後に M+ を押すと積がメモリーに入る。明細を書かないなら = は不要で、GT より打鍵が少ない',
+    caution:'M+ は = を兼ねるため、<b>M+ の前に = を押すと二重に積算される</b>場合がある。押さないこと',
+    hand:hand('GTとの使い分け：<b>明細を書くならGT／総額だけならメモリー</b>')
+  };
+},
+
+gtavg(lv){
+  const n=lv===1?4:lv===2?5:6;
+  const v=[];
+  for(let i=0;i<n;i++) v.push(lv===1?ri(20,99)*10:lv===2?ri(120,980)*10:ri(1500,9800)*10);
+  const total=v.reduce((a,b)=>a+b,0);
+  const avg=total/n;
+
+  let t='<table class="tbl"><tr><th>月</th><th>使用量</th></tr>';
+  v.forEach((x,i)=>t+=`<tr><td>${i+1}月</td><td>${fmt(x)}</td></tr>`);
+  t+=`<tr><td><b>合計</b></td><td class="blank">—</td></tr>
+      <tr><td><b>平均</b></td><td class="blank">—</td></tr></table>`;
+
+  const st=[CLEAR];
+  v.forEach(x=>st.push(`${x} +`));
+  st.push(`=　<span class="note">→ 合計 ${fmt(total)} を記入</span>`);
+  st.push(`÷ ${n} =　<span class="note">→ 平均 ${f2(avg)}</span>`);
+
+  return{
+    type:'GT→平均（件数で割る）', setting:'小数点 2 ／ 5-4',
+    scene:`${n}か月分の合計と平均を求める（平均は小数第2位）。`,
+    html:t, answer:Math.round(avg*100)/100,
+    listQ:`<span class="multi">${n}件の合計と平均（小数第2位）<br>`+v.map(x=>fmt(x)).join(' + ')+`</span>`,
+    listA:`<div style="font-size:12px;text-align:right;line-height:1.5">合計 ${fmt(total)}<br><b>平均 ${f2(avg)}</b></div>`,
+    steps:st,
+    judge:'合計が表示に残っている状態から ÷ を続ければよい。打ち直し不要',
+    caution:'GTキーで合計を呼び出した場合も、そのまま ÷ を続けられる。ただし<b>= を押し直すとGTが増える</b>',
+    hand:hand('合計を記入してから ÷ を打つ。<b>記入前に次のキーを押すと表示が変わり値を失う</b>')
+  };
+},
+
+pct(lv){
+  const base=lv===1?ri(5,20)*100:lv===2?ri(12,88)*100:ri(145,980)*100;
+  const r=pick([5,8,10,15,20,25]);
+  const up=pick([true,false]);
+  const d=Math.floor(base*r/100);
+  const ans=up?base+d:base-d;
+  return{
+    type:'%キー（割増・割引）', setting:'小数点 0 ／ CUT',
+    scene:`${fmt(base)} 円の ${r}% ${up?'割増':'割引'}後の金額を求める。`,
+    expr:`${fmt(base)} の ${r}% ${up?'増':'引'}`,
+    answer:ans,
+    steps:[CLEAR,
+      `${base} × ${r} %　<span class="note">→ ${fmt(d)}（${r}% 相当額）</span>`,
+      `${up?'+':'−'}　<span class="note">続けて符号キーを押すと元の金額に加減算される</span>`,
+      `<span class="note">→ ${fmt(ans)}（機種により ${base} ${up?'+':'−'} ${r} % の順でも可）</span>`],
+    judge:'%キーは「×→%」で率相当額、続けて +/− で割増・割引になる。本体印字で自機の順序を確認すること',
+    caution:`%キーの挙動は機種差が大きい。<b>結果が合わない場合は <code>${base} × ${up?(100+r):(100-r)} % =</code> の形か、単純に ÷ 100 で代替</b>できる`,
+    hand:hand(`実機で <b>${base} × ${r} % ${up?'+':'−'}</b> を試し、${fmt(ans)} になるか確認（未確認事項の検証）`)
+  };
+},
+
+taxin(lv){
+  const net=lv===1?ri(5,20)*100:lv===2?ri(15,95)*100:ri(180,2800)*10;
+  const rate=pick([0.1,0.08]);
+  const gross=Math.floor(net*(1+rate));
+  const back=Math.floor(gross/(1+rate));
+  const tax=gross-back;
+  return{
+    type:'税込からの割戻し', setting:`小数点 0 ／ CUT ／ 税率 ${rate*100}%`,
+    scene:`税込 ${fmt(gross)} 円（税率 ${rate*100}%）から本体価格と消費税額を求める。`,
+    html:`<table class="tbl"><tr><th>項目</th><th>金額</th></tr>
+      <tr><td>税込価格</td><td>${fmt(gross)}</td></tr>
+      <tr><td><b>本体価格</b></td><td class="blank">—</td></tr>
+      <tr><td><b>消費税額</b></td><td class="blank">—</td></tr></table>`,
+    answer:back,
+    listQ:`<span class="multi">税込 ${fmt(gross)}（${rate*100}%）<br>→ 本体価格・消費税額</span>`,
+    listA:`<div style="font-size:12px;text-align:right;line-height:1.5">本体 ${fmt(back)}<br>税 ${fmt(tax)}</div>`,
+    steps:[CLEAR,
+      `${gross} ÷ ${1+rate} =　<span class="note">→ 本体 ${fmt(back)}</span>`,
+      `<span class="note">（税抜キー搭載機なら 税込金額 → 税抜 でも同じ）</span>`,
+      `${gross} − ${back} =　<span class="note">→ 税額 ${fmt(tax)}</span>`],
+    judge:'割戻しは「÷ (1＋税率)」。税額は差額で求めるのが確実（×税率では1円ずれることがある）',
+    caution:`税額を <code>${back} × ${rate} =</code> で求めると端数処理で差が出る場合がある。<b>税込−本体の差額</b>で出すこと`,
+    hand:hand('税率設定キーを使う前に<b>本体印字で設定手順を確認</b>（未確認事項）')
+  };
+},
+
+constdiv(lv){
+  const d=lv===1?ri(2,9):lv===2?ri(3,25):ri(7,60);
+  const n=lv===1?3:4;
+  const vals=[];for(let i=0;i<n;i++) vals.push(d*(lv===1?ri(2,20):ri(5,200)));
+  const res=vals.map(v=>v/d);
+  let t='<table class="tbl"><tr><th>No</th><th>金額</th><th>÷'+d+'</th></tr>';
+  vals.forEach((v,i)=>t+=`<tr><td>${i+1}</td><td>${fmt(v)}</td><td class="blank">—</td></tr>`);
+  t+='</table>';
+  const st=[CLEAR,`${d} ÷ ÷ ${vals[0]} =　<span class="note">→ ${fmt(res[0])}（${d} が除数の定数になる）</span>`];
+  vals.slice(1).forEach((v,i)=>st.push(`${v} =　<span class="note">→ ${fmt(res[i+1])}</span>`));
+  return{
+    type:'定数除算（÷2回）', setting:'小数点 F ／ 5-4',
+    scene:`各金額を ${d} で割った値を求める（除数を定数化する）。`,
+    html:t, answer:res[n-1],
+    listQ:`<span class="multi">各値 ÷ ${d}（定数除算）<br>`+vals.map(v=>fmt(v)).join(' ／ ')+`</span>`,
+    listA:`<div style="font-size:12px;text-align:right;line-height:1.5">`+res.map(r=>fmt(r)).join('<br>')+`</div>`,
+    steps:st,
+    judge:'÷ を2回押すと「先に入れた数値が除数」として保持される。掛け算の定数（検証4）と対になる挙動',
+    caution:`掛け算の定数と<b>入力順が逆に感じる</b>点に注意。実機で <code>${d} ÷ ÷ ${vals[0]} =</code> を必ず確認`,
+    hand:hand('定数が効いているかは<b>2件目の結果で判定</b>。1件目だけでは定数化できていなくても同じ値になる')
+  };
+},
+
+memratio(lv){
+  const total=lv===1?ri(50,99)*100:lv===2?ri(820,4800)*1000:ri(1250,9800)*1000;
+  const n=lv===1?2:3;
+  const parts=[];let rest=total;
+  for(let i=0;i<n;i++){const p=Math.floor(rest*ri(15,40)/100);parts.push(p);rest-=p;}
+  const names=['町税','地方交付税','国庫支出金'].slice(0,n);
+  const pcts=parts.map(p=>p/total*100);
+
+  let t='<table class="tbl"><tr><th>項目</th><th>金額</th><th>構成比</th></tr>';
+  t+=`<tr><td>歳入総額</td><td>${fmt(total)}</td><td>100.00 %</td></tr>`;
+  names.forEach((nm,i)=>t+=`<tr><td>${nm}</td><td>${fmt(parts[i])}</td><td class="blank">— %</td></tr>`);
+  t+='</table>';
+
+  const st=[CLEAR,`${total} M+　<span class="note">分母を独立メモリーに保持</span>`];
+  names.forEach((nm,i)=>{
+    st.push(`${parts[i]} ÷ MR × 100 =　<span class="note">→ ${nm} ${pcts[i].toFixed(2)} %</span>`);
+  });
+  st.push(`MC　<span class="note">次の問題の前に必ず消す</span>`);
+
+  return{
+    type:'分母固定の構成比', setting:'小数点 2 ／ 5-4',
+    scene:'同じ分母で複数の構成比を求める（小数第2位）。',
+    html:t, answer:Math.round(pcts[0]*100)/100, unit:' %',
+    listQ:`<span class="multi">分母 ${fmt(total)} の構成比 ${n}件<br>`+parts.map(p=>fmt(p)).join(' ／ ')+`</span>`,
+    listA:`<div style="font-size:12px;text-align:right;line-height:1.5">`
+      +pcts.map(p=>p.toFixed(2)+' %').join('<br>')+`</div>`,
+    steps:st,
+    judge:'分母を何度も打ち直すのは入力ミスの元。独立メモリーに置けば MR 呼び出しで済む（MRは値を変えない＝検証2）',
+    caution:'MR は <b>÷ の直後に押して除数として使える</b>。最後に MC を忘れると次の問題に持ち越す',
+    hand:hand('<b>分母を1回だけ打つ</b>のがこの型の価値。桁の多い分母ほど効果が大きい')
+  };
+},
+
+/* ===================== 上級 ===================== */
+apportion(lv){
+  const total=lv===1?ri(30,90)*1000:lv===2?ri(125,890)*1000:ri(1450,9800)*1000;
+  const n=lv===1?3:lv===2?4:5;
+  const keys=[];for(let i=0;i<n;i++) keys.push(lv===1?ri(2,9):ri(12,98));
+  const ksum=keys.reduce((a,b)=>a+b,0);
+  const raw=keys.map(k=>total*k/ksum);
+  const cut=raw.map(x=>Math.floor(x));
+  const csum=cut.reduce((a,b)=>a+b,0);
+  const diff=total-csum;
+  const fin=cut.slice();fin[n-1]+=diff;
+
+  let t='<table class="tbl"><tr><th>部署</th><th>按分基準（人）</th><th>配分額</th></tr>';
+  keys.forEach((k,i)=>t+=`<tr><td>第${i+1}課</td><td>${k}</td><td class="blank">—</td></tr>`);
+  t+=`<tr><td><b>計</b></td><td><b>${ksum}</b></td><td><b>${fmt(total)}</b></td></tr></table>`;
+
+  let at='<table class="tbl"><tr><th>部署</th><th>按分額(切捨)</th><th>調整後</th></tr>';
+  keys.forEach((k,i)=>at+=`<tr><td>第${i+1}課</td><td>${fmt(cut[i])}</td><td>${fmt(fin[i])}</td></tr>`);
+  at+=`<tr><td><b>計</b></td><td>${fmt(csum)}</td><td><b>${fmt(total)}</b></td></tr>
+       <tr><td colspan="2">端数調整額</td><td>${fmt(diff)}</td></tr></table>`;
+
+  const st=[CLEAR,
+    `<span class="note">小数点セレクターを F にする（途中で切らない）</span>`,
+    `${total} ÷ ${ksum} =　<span class="note">→ 1人当たり ${(total/ksum).toFixed(6)}（表示に保持）</span>`,
+    `M+　<span class="note">この単価を独立メモリーへ</span>`,
+  ];
+  keys.forEach((k,i)=>st.push(`MR × ${k} =　<span class="note">→ ${raw[i].toFixed(2)} → 切捨 ${fmt(cut[i])} を記入</span>`));
+  st.push(`<span class="note">切捨の合計 ${fmt(csum)} と総額 ${fmt(total)} の差 ${fmt(diff)} を最終行に加算</span>`);
+  st.push(`MC`);
+
+  return{
+    type:'按分＋端数調整', setting:'小数点 F ／ 5-4 → 記入時に切捨',
+    scene:`共通経費 ${fmt(total)} 円を人数比で按分する。円未満切捨てとし、差額は最終行で調整する。`,
+    html:t, answerHtml:at, answer:fin[n-1],
+    listQ:`<span class="multi">${fmt(total)} を ${keys.join(':')} で按分（切捨・差額は最終行調整）</span>`,
+    listA:`<div style="font-size:12px;text-align:right;line-height:1.5">`
+      +fin.map(x=>fmt(x)).join('<br>')+`</div>`,
+    steps:st,
+    judge:'按分は「単価を1回出してメモリー固定 → 各基準を掛ける」。F で通して記入時のみ切捨てる（検証5の実務適用）',
+    caution:'セレクターを 0／CUT にして按分すると<b>単価の段階で端数が消え、合計が総額に合わなくなる</b>',
+    hand:hand('<b>単価の桁数が多いほどメモリー固定の価値が高い</b>。打ち直すと必ずずれる')
+  };
+},
+
+taxcalc(lv){
+  const income=lv===1?ri(150,400)*10000:lv===2?ri(280,850)*10000:ri(420,1980)*10000;
+  const ded=lv===1?430000:pick([430000,480000,580000]);
+  const rawBase=income-ded;
+  const base=Math.floor(rawBase/1000)*1000;
+  const rate=0.06;
+  const rawTax=base*rate;
+  const tax=Math.floor(rawTax/100)*100;
+  const perCap=5000;
+  const total=tax+perCap;
+
+  return{
+    type:'税額計算（二段端数）', setting:'小数点 0 ／ CUT（段階ごとに確認）',
+    scene:`総所得 ${fmt(income)} 円、所得控除 ${fmt(ded)} 円。課税標準は千円未満切捨て、所得割額（税率 ${rate*100}%）は百円未満切捨て。均等割 ${fmt(perCap)} 円を加えた年税額を求める。`,
+    html:`<table class="tbl"><tr><th>区分</th><th>金額</th></tr>
+      <tr><td>総所得金額</td><td>${fmt(income)}</td></tr>
+      <tr><td>所得控除</td><td>${fmt(ded)}</td></tr>
+      <tr><td><b>課税標準（千円未満切捨）</b></td><td class="blank">—</td></tr>
+      <tr><td><b>所得割額（百円未満切捨）</b></td><td class="blank">—</td></tr>
+      <tr><td>均等割額</td><td>${fmt(perCap)}</td></tr>
+      <tr><td><b>年税額</b></td><td class="blank">—</td></tr></table>`,
+    answerHtml:`<table class="tbl"><tr><th>区分</th><th>金額</th></tr>
+      <tr><td>差引後（未切捨）</td><td>${fmt(rawBase)}</td></tr>
+      <tr><td>課税標準</td><td>${fmt(base)}</td></tr>
+      <tr><td>所得割（未切捨）</td><td>${fmt(rawTax)}</td></tr>
+      <tr><td>所得割額</td><td>${fmt(tax)}</td></tr>
+      <tr><td><b>年税額</b></td><td><b>${fmt(total)}</b></td></tr></table>`,
+    answer:total,
+    listQ:`<span class="multi">所得${fmt(income)} 控除${fmt(ded)} 税率${rate*100}%<br>千円未満切捨→百円未満切捨→均等割${fmt(perCap)}加算</span>`,
+    listA:`<div style="font-size:12px;text-align:right;line-height:1.5">課税標準 ${fmt(base)}<br>所得割 ${fmt(tax)}<br><b>年税額 ${fmt(total)}</b></div>`,
+    steps:[CLEAR,
+      `${income} − ${ded} =　<span class="note">→ ${fmt(rawBase)}</span>`,
+      `÷ 1000 =　<span class="note">→ ${(rawBase/1000).toFixed(3)}</span>`,
+      `<span class="note">小数部を手で捨て、整数部 ${Math.floor(rawBase/1000)} を読む</span>`,
+      `× 1000 =　<span class="note">→ 課税標準 ${fmt(base)}（打ち直してもよい）</span>`,
+      `× ${rate} =　<span class="note">→ ${fmt(rawTax)}</span>`,
+      `÷ 100 =　<span class="note">→ 整数部 ${Math.floor(rawTax/100)} を読む</span>`,
+      `× 100 =　<span class="note">→ 所得割額 ${fmt(tax)}</span>`,
+      `+ ${perCap} =　<span class="note">→ 年税額 ${fmt(total)}</span>`],
+    judge:'端数処理の単位が段階ごとに違うため、電卓の CUT 設定だけでは処理できない。「÷単位 → 整数部を読む → ×単位」で明示的に丸める',
+    caution:'セレクターの CUT は<b>小数部の切捨てのみ</b>。千円未満・百円未満の切捨ては<b>この手順で行う</b>必要がある',
+    hand:hand('各段階の値を<b>必ず紙に書く</b>。二段の丸めを暗算で繋ぐと検算不能になる')
+  };
+},
+
+depre(lv){
+  const cost=lv===1?ri(5,20)*100000:lv===2?ri(12,48)*100000:ri(85,480)*100000;
+  const years=pick([5,6,8,10]);
+  const sl=Math.floor(cost/years);
+  const rate=Math.round(1/years*2*1000)/1000;
+  const y1=Math.floor(cost*rate);
+  const y2=Math.floor((cost-y1)*rate);
+  const y3=Math.floor((cost-y1-y2)*rate);
+
+  return{
+    type:'減価償却（定額・定率）', setting:'小数点 0 ／ CUT',
+    scene:`取得価額 ${fmt(cost)} 円、耐用年数 ${years}年。定額法の年償却額と、定率法（償却率 ${rate}）の第1〜3年の償却額を求める（円未満切捨て）。`,
+    html:`<table class="tbl"><tr><th>項目</th><th>金額</th></tr>
+      <tr><td>取得価額</td><td>${fmt(cost)}</td></tr>
+      <tr><td>耐用年数</td><td>${years} 年</td></tr>
+      <tr><td>定率法償却率</td><td>${rate}</td></tr>
+      <tr><td><b>定額法 年償却額</b></td><td class="blank">—</td></tr>
+      <tr><td><b>定率法 第1年</b></td><td class="blank">—</td></tr>
+      <tr><td><b>定率法 第2年</b></td><td class="blank">—</td></tr>
+      <tr><td><b>定率法 第3年</b></td><td class="blank">—</td></tr></table>`,
+    answerHtml:`<table class="tbl"><tr><th>項目</th><th>金額</th></tr>
+      <tr><td>定額法</td><td>${fmt(sl)}</td></tr>
+      <tr><td>定率法 第1年</td><td>${fmt(y1)}</td></tr>
+      <tr><td>定率法 第2年</td><td>${fmt(y2)}</td></tr>
+      <tr><td>定率法 第3年</td><td>${fmt(y3)}</td></tr>
+      <tr><td>第3年末 帳簿価額</td><td><b>${fmt(cost-y1-y2-y3)}</b></td></tr></table>`,
+    answer:y3,
+    listQ:`<span class="multi">取得${fmt(cost)} 耐用${years}年 償却率${rate}<br>→ 定額法／定率法1〜3年</span>`,
+    listA:`<div style="font-size:12px;text-align:right;line-height:1.5">定額 ${fmt(sl)}<br>${fmt(y1)}<br>${fmt(y2)}<br>${fmt(y3)}</div>`,
+    steps:[CLEAR,
+      `${cost} ÷ ${years} =　<span class="note">→ 定額法 ${fmt(sl)}</span>`,
+      `AC`,
+      `${cost} × ${rate} =　<span class="note">→ 第1年 ${fmt(y1)}</span>`,
+      `${cost} − ${y1} = × ${rate} =　<span class="note">→ 第2年 ${fmt(y2)}</span>`,
+      `<span class="note">または 期首簿価を M+ → 償却額を M− で管理</span>`,
+      `${cost-y1} − ${y2} = × ${rate} =　<span class="note">→ 第3年 ${fmt(y3)}</span>`],
+    judge:'定率法は「期首簿価 × 率」の反復。期首簿価を独立メモリーで管理し、償却額を M− していくと打ち直しが消える',
+    caution:`率を定数化（<code>${rate} × × 簿価 =</code>）すると各年が = 1回で出るが、<b>簿価の更新は自分で行う</b>必要がある`,
+    hand:hand('<b>簿価をメモリー、償却額を紙</b>に。逆にすると検算できない')
+  };
+},
+
+tbcheck(lv){
+  const n=lv===1?5:lv===2?7:9;
+  const names=['現金','当座預金','売掛金','商品','建物','買掛金','借入金','資本金','売上','仕入','給料','支払利息','受取利息','減価償却費'];
+  const rows=[];let dr=0,cr=0;
+  for(let i=0;i<n;i++){
+    const side=i<Math.ceil(n/2)?'D':'C';
+    const v=lv===1?ri(12,98)*1000:lv===2?ri(120,980)*1000:ri(1250,9800)*1000;
+    rows.push({n:names[i],side,v});
+    if(side==='D') dr+=v; else cr+=v;
+  }
+  const adj=dr-cr;
+  if(adj>0){rows.push({n:'雑収入',side:'C',v:adj});cr+=adj;}
+  else if(adj<0){rows.push({n:'雑損失',side:'D',v:-adj});dr+=-adj;}
+
+  let t='<table class="tbl"><tr><th>勘定科目</th><th>借方</th><th>貸方</th></tr>';
+  rows.forEach(r=>t+=`<tr><td>${r.n}</td><td>${r.side==='D'?fmt(r.v):''}</td><td>${r.side==='C'?fmt(r.v):''}</td></tr>`);
+  t+=`<tr><td><b>合計</b></td><td class="blank">—</td><td class="blank">—</td></tr></table>`;
+
+  const ds=rows.filter(r=>r.side==='D'),cs=rows.filter(r=>r.side==='C');
+  return{
+    type:'試算表の貸借一致', setting:'小数点 0 ／ CUT',
+    scene:'合計試算表の借方合計・貸方合計を求め、一致を確認する。',
+    html:t,
+    answerHtml:`<table class="tbl"><tr><th>区分</th><th>金額</th></tr>
+      <tr><td>借方合計</td><td>${fmt(dr)}</td></tr>
+      <tr><td>貸方合計</td><td>${fmt(cr)}</td></tr>
+      <tr><td><b>差額</b></td><td><b>${fmt(dr-cr)}</b></td></tr></table>`,
+    answer:dr,
+    listQ:`<span class="multi">借方${ds.length}件・貸方${cs.length}件の合計と一致確認</span>`,
+    listA:`<div style="font-size:12px;text-align:right;line-height:1.5">借方 ${fmt(dr)}<br>貸方 ${fmt(cr)}<br>差 ${fmt(dr-cr)}</div>`,
+    steps:[CLEAR,
+      `<span class="note">借方を連続加算</span>`,
+      `${ds.map(r=>r.v).join(' + ')} =　<span class="note">→ ${fmt(dr)} を記入</span>`,
+      `AC`,
+      `<span class="note">貸方を連続加算</span>`,
+      `${cs.map(r=>r.v).join(' + ')} =　<span class="note">→ ${fmt(cr)} を記入</span>`,
+      `<span class="note">両者を見比べて一致を確認（差額 ${fmt(dr-cr)}）</span>`],
+    judge:'貸借それぞれを独立に集計し、最後に突き合わせる。GTを使えば AC なしで両方を保持できるが、GT は合算されるため<b>この用途には向かない</b>',
+    caution:'差額が出た場合、<b>差額が9の倍数なら桁の入れ替え（転記ミス）、偶数なら貸借の反対計上</b>を疑う。この当たりをつける習慣が検算を速くする',
+    hand:hand('借方・貸方で<b>電卓を一度ACしてから</b>打ち始める。続けて打つと混ざる')
+  };
+},
+
+fifo(lv){
+  const q1=lv===1?ri(10,50):ri(50,300);
+  const p1=lv===1?ri(100,500):ri(280,1800);
+  const q2=lv===1?ri(10,50):ri(40,250);
+  const p2=p1+(lv===1?ri(10,80):ri(30,420));
+  const sold=Math.floor((q1+q2)*ri(40,70)/100);
+  const totalQ=q1+q2, totalV=q1*p1+q2*p2;
+  const avg=totalV/totalQ;
+  const cogs=Math.round(avg*sold);
+  const rest=totalV-cogs;
+
+  return{
+    type:'移動平均単価', setting:'小数点 F ／ 5-4（単価）',
+    scene:`月初在庫 ${fmt(q1)}個 @${fmt(p1)}円、当月仕入 ${fmt(q2)}個 @${fmt(p2)}円。平均単価、${fmt(sold)}個払出時の売上原価、月末在庫金額を求める。`,
+    html:`<table class="tbl"><tr><th>区分</th><th>数量</th><th>単価</th><th>金額</th></tr>
+      <tr><td>月初在庫</td><td>${fmt(q1)}</td><td>${fmt(p1)}</td><td class="blank">—</td></tr>
+      <tr><td>当月仕入</td><td>${fmt(q2)}</td><td>${fmt(p2)}</td><td class="blank">—</td></tr>
+      <tr><td><b>合計</b></td><td class="blank">—</td><td class="blank">—</td><td class="blank">—</td></tr>
+      <tr><td>払出</td><td>${fmt(sold)}</td><td class="blank">—</td><td class="blank">—</td></tr>
+      <tr><td><b>月末在庫</b></td><td class="blank">—</td><td></td><td class="blank">—</td></tr></table>`,
+    answerHtml:`<table class="tbl"><tr><th>項目</th><th>値</th></tr>
+      <tr><td>合計金額</td><td>${fmt(totalV)}</td></tr>
+      <tr><td>合計数量</td><td>${fmt(totalQ)}</td></tr>
+      <tr><td>平均単価</td><td>${avg.toFixed(4)}</td></tr>
+      <tr><td>売上原価</td><td>${fmt(cogs)}</td></tr>
+      <tr><td><b>月末在庫金額</b></td><td><b>${fmt(rest)}</b></td></tr></table>`,
+    answer:rest,
+    listQ:`<span class="multi">${fmt(q1)}@${fmt(p1)} ＋ ${fmt(q2)}@${fmt(p2)}<br>払出${fmt(sold)}個 → 平均単価・売上原価・月末在庫</span>`,
+    listA:`<div style="font-size:12px;text-align:right;line-height:1.5">単価 ${avg.toFixed(4)}<br>原価 ${fmt(cogs)}<br><b>在庫 ${fmt(rest)}</b></div>`,
+    steps:[CLEAR,
+      `${q1} × ${p1} M+　<span class="note">→ ${fmt(q1*p1)}</span>`,
+      `${q2} × ${p2} M+　<span class="note">→ ${fmt(q2*p2)}</span>`,
+      `MR　<span class="note">→ 合計金額 ${fmt(totalV)} を記入</span>`,
+      `÷ ${totalQ} =　<span class="note">→ 平均単価 ${avg.toFixed(4)}</span>`,
+      `× ${sold} =　<span class="note">→ 売上原価 ${fmt(cogs)}</span>`,
+      `<span class="note">月末在庫＝合計金額 − 売上原価</span>`,
+      `MR − ${cogs} =　<span class="note">→ ${fmt(rest)}</span>`,
+      `MC`],
+    judge:'合計金額をメモリーに置けば、平均単価算出後も原資料に戻らず在庫金額を差額で出せる。MRは値を変えない（検証2）',
+    caution:'平均単価を<b>四捨五入してから掛けると在庫が合わなくなる</b>。F のまま掛け、最終の金額だけ丸める',
+    hand:hand('<b>MR → ÷ → × と一息で繋ぐ</b>。途中で AC を押すとメモリー以外が消え、やり直しになる')
+  };
+},
+
+delay(lv){
+  const tax=lv===1?ri(3,9)*10000:lv===2?ri(12,88)*10000:ri(145,980)*1000;
+  const taxBase=Math.floor(tax/1000)*1000;
+  const days=lv===1?ri(20,60):ri(45,210);
+  const rate=pick([0.029,0.026,0.086]);
+  const raw=taxBase*rate*days/365;
+  const fee=Math.floor(raw/100)*100;
+
+  return{
+    type:'延滞金（日割り）', setting:'小数点 F ／ 5-4 → 最後に百円未満切捨',
+    scene:`本税 ${fmt(tax)} 円（延滞金計算の基礎となる税額は千円未満切捨て）、延滞日数 ${days}日、割合 年${(rate*100).toFixed(1)}%。延滞金額を求める（百円未満切捨て）。`,
+    html:`<table class="tbl"><tr><th>項目</th><th>値</th></tr>
+      <tr><td>本税額</td><td>${fmt(tax)}</td></tr>
+      <tr><td><b>計算の基礎（千円未満切捨）</b></td><td class="blank">—</td></tr>
+      <tr><td>延滞日数</td><td>${days} 日</td></tr>
+      <tr><td>割合（年）</td><td>${(rate*100).toFixed(1)} %</td></tr>
+      <tr><td><b>延滞金（百円未満切捨）</b></td><td class="blank">—</td></tr></table>`,
+    answerHtml:`<table class="tbl"><tr><th>項目</th><th>値</th></tr>
+      <tr><td>計算の基礎</td><td>${fmt(taxBase)}</td></tr>
+      <tr><td>未端数処理額</td><td>${raw.toFixed(2)}</td></tr>
+      <tr><td><b>延滞金</b></td><td><b>${fmt(fee)}</b></td></tr></table>`,
+    answer:fee,
+    listQ:`<span class="multi">本税${fmt(tax)} ${days}日 年${(rate*100).toFixed(1)}%<br>→ 延滞金（百円未満切捨）</span>`,
+    steps:[CLEAR,
+      `<span class="note">セレクターを F にする（日割りで端数が出る）</span>`,
+      `<span class="note">基礎額：${fmt(tax)} の千円未満を切捨 → ${fmt(taxBase)}</span>`,
+      `${taxBase} × ${rate} × ${days} ÷ 365 =　<span class="note">→ ${raw.toFixed(2)}</span>`,
+      `÷ 100 =　<span class="note">→ 整数部 ${Math.floor(raw/100)} を読む</span>`,
+      `× 100 =　<span class="note">→ 延滞金 ${fmt(fee)}</span>`],
+    judge:'乗除のみの連鎖は優先順位の問題が起きない（検証1）ため、そのまま一息で打てる。端数処理は最後に明示的に行う',
+    caution:'<b>÷ 365 を先に打つと桁が小さくなり、以降の乗算で精度が落ちる</b>場合がある。乗算を先に済ませて最後に割るのが安全',
+    hand:hand('延滞金は<b>日数の数え方が本体</b>。電卓作業は一息で終わるよう式を組んでおく')
+  };
+},
+
+compound(lv){
+  const p=lv===1?ri(10,50)*10000:lv===2?ri(50,300)*10000:ri(200,1500)*10000;
+  const r=pick([0.01,0.015,0.02,0.025,0.03]);
+  const n=lv===1?3:lv===2?4:5;
+  let v=p;const seq=[];
+  for(let i=0;i<n;i++){v=v*(1+r);seq.push(v);}
+  const fv=Math.round(v);
+  const pv=Math.round(p/Math.pow(1+r,n));
+
+  return{
+    type:'複利・現価係数', setting:'小数点 F ／ 5-4',
+    scene:`元金 ${fmt(p)} 円を年利 ${(r*100).toFixed(1)}% の複利で ${n}年運用した場合の元利合計と、${n}年後に受け取る ${fmt(p)} 円の現在価値を求める（円未満四捨五入）。`,
+    html:`<table class="tbl"><tr><th>項目</th><th>値</th></tr>
+      <tr><td>元金</td><td>${fmt(p)}</td></tr>
+      <tr><td>年利率</td><td>${(r*100).toFixed(1)} %</td></tr>
+      <tr><td>期間</td><td>${n} 年</td></tr>
+      <tr><td><b>元利合計</b></td><td class="blank">—</td></tr>
+      <tr><td><b>現在価値</b></td><td class="blank">—</td></tr></table>`,
+    answerHtml:`<table class="tbl"><tr><th>年</th><th>期末元利</th></tr>`
+      +seq.map((x,i)=>`<tr><td>${i+1}年</td><td>${x.toFixed(2)}</td></tr>`).join('')
+      +`<tr><td><b>元利合計</b></td><td><b>${fmt(fv)}</b></td></tr>
+        <tr><td><b>現在価値</b></td><td><b>${fmt(pv)}</b></td></tr></table>`,
+    answer:fv,
+    listQ:`<span class="multi">元金${fmt(p)} 年利${(r*100).toFixed(1)}% ${n}年<br>→ 元利合計・現在価値</span>`,
+    listA:`<div style="font-size:12px;text-align:right;line-height:1.5">元利 ${fmt(fv)}<br>現価 ${fmt(pv)}</div>`,
+    steps:[CLEAR,
+      `${1+r} × × ${p} =　<span class="note">→ 1年後 ${seq[0].toFixed(2)}（${1+r} が定数）</span>`,
+      `=　<span class="note">→ 2年後 ${seq[1].toFixed(2)}</span>`,
+      `<span class="note">= を合計 ${n} 回押す → ${n}年後 ${seq[n-1].toFixed(2)}</span>`,
+      `<span class="note">現在価値は逆に割る</span>`,
+      `${1+r} ÷ ÷ ${p} =　<span class="note">→ 1年割戻し</span>`,
+      `=　<span class="note">を ${n} 回 → ${fmt(pv)}</span>`],
+    judge:'複利は定数乗算の反復（検証4）がそのまま使える。= を押すたびに1期進むため、回数を数えるだけでよい',
+    caution:'<b>= の回数を数え間違えると期間がずれる</b>。GT表示が増えるのを期数カウンターに使う手もあるが、最後に AC を忘れないこと',
+    hand:hand('<b>左手で指を折って期数を数える</b>。ペンを握ったままでも人差し指から順に数えられる')
+  };
+},
+
+alloc(lv){
+  const common=lv===1?ri(30,90)*10000:lv===2?ri(120,480)*10000:ri(580,1980)*10000;
+  const n=lv===1?3:4;
+  const depts=['製造部','営業部','管理部','研究部'].slice(0,n);
+  const area=[];for(let i=0;i<n;i++) area.push(lv===1?ri(50,200):ri(120,980));
+  const people=[];for(let i=0;i<n;i++) people.push(lv===1?ri(3,15):ri(8,60));
+  const aSum=area.reduce((a,b)=>a+b,0), pSum=people.reduce((a,b)=>a+b,0);
+  const half=common/2;
+  const byA=area.map(x=>Math.floor(half*x/aSum));
+  const byP=people.map(x=>Math.floor(half*x/pSum));
+  const tot=byA.map((x,i)=>x+byP[i]);
+  const totSum=tot.reduce((a,b)=>a+b,0);
+
+  let t='<table class="tbl"><tr><th>部門</th><th>面積(㎡)</th><th>人員(人)</th></tr>';
+  depts.forEach((d,i)=>t+=`<tr><td>${d}</td><td>${fmt(area[i])}</td><td>${fmt(people[i])}</td></tr>`);
+  t+=`<tr><td><b>計</b></td><td><b>${fmt(aSum)}</b></td><td><b>${fmt(pSum)}</b></td></tr></table>`;
+
+  let at='<table class="tbl"><tr><th>部門</th><th>面積基準</th><th>人員基準</th><th>合計</th></tr>';
+  depts.forEach((d,i)=>at+=`<tr><td>${d}</td><td>${fmt(byA[i])}</td><td>${fmt(byP[i])}</td><td>${fmt(tot[i])}</td></tr>`);
+  at+=`<tr><td><b>計</b></td><td>${fmt(byA.reduce((a,b)=>a+b,0))}</td><td>${fmt(byP.reduce((a,b)=>a+b,0))}</td><td><b>${fmt(totSum)}</b></td></tr>
+       <tr><td colspan="3">配賦漏れ（端数）</td><td>${fmt(common-totSum)}</td></tr></table>`;
+
+  const st=[CLEAR,
+    `<span class="note">セレクター F。共通費の半額 ${fmt(half)} を面積基準で配賦</span>`,
+    `${half} ÷ ${aSum} M+　<span class="note">→ 面積単価 ${(half/aSum).toFixed(4)} をメモリーへ</span>`];
+  depts.forEach((d,i)=>st.push(`MR × ${area[i]} =　<span class="note">→ ${fmt(byA[i])}（${d}・切捨）</span>`));
+  st.push(`MC　<span class="note">基準を切り替えるので必ず消す</span>`);
+  st.push(`${half} ÷ ${pSum} M+　<span class="note">→ 人員単価 ${(half/pSum).toFixed(4)}</span>`);
+  depts.forEach((d,i)=>st.push(`MR × ${people[i]} =　<span class="note">→ ${fmt(byP[i])}（${d}・切捨）</span>`));
+  st.push(`MC　<span class="note">最後に各部門の2基準を合算</span>`);
+
+  return{
+    type:'部門共通費の配賦', setting:'小数点 F ／ 5-4 → 記入時に切捨',
+    scene:`共通費 ${fmt(common)} 円を、半額ずつ面積基準・人員基準で ${n}部門に配賦する（円未満切捨て）。`,
+    html:t, answerHtml:at, answer:tot[0],
+    listQ:`<span class="multi">共通費${fmt(common)} を面積・人員で半額ずつ配賦（${n}部門）</span>`,
+    listA:`<div style="font-size:12px;text-align:right;line-height:1.5">`
+      +tot.map(x=>fmt(x)).join('<br>')+`</div>`,
+    steps:st,
+    judge:'基準が2つある配賦は「単価をメモリーに置く → 各部門を掛ける → 基準を切り替えるときに MC」。メモリーの入れ替えタイミングが要点',
+    caution:'基準を切り替えるとき <b>MC を忘れると前の単価に加算</b>され、全部門の値が狂う。MC 後に M 表示が消えたか必ず目視',
+    hand:hand('配賦表は<b>列ごとに埋める</b>（部門ごとではなく基準ごと）。メモリーの入れ替え回数が最小になる')
+  };
+}
+};
+
+// ---------- 状態 ----------
+let COURSE='basic';
+let MODE='card';
+let QS=[];
+let CUR=-1;
+let LIVE=false, LI=0, SHOWN=false;
+
+// ---------- コース切替 ----------
+function setCourse(c){
+  COURSE=c;
+  document.querySelectorAll('.course').forEach(el=>
+    el.classList.toggle('on', el.dataset.c===c));
+  document.getElementById('tlabel').textContent=
+    `出題タイプ ／ ${COURSE_NAME[c]}（複数選択可）`;
+  buildTypes();
+  buildMix();
+}
+
+// ---------- チェックボックス構築 ----------
+function buildTypes(){
+  const box=document.getElementById('types');
+  const prev={};
+  box.querySelectorAll('input').forEach(i=>prev[i.value]=i.checked);
+  box.innerHTML='';
+  TYPES.filter(t=>t.c===COURSE).forEach(t=>{
+    const on=(t.id in prev)?prev[t.id]:true;   // 当該コースは既定ON
+    box.insertAdjacentHTML('beforeend',
+      `<label><input type="checkbox" value="${t.id}" ${on?'checked':''}>${t.name}</label>`);
+  });
+}
+
+/* 下位コース混在の設定欄
+   - コースごとのON/OFFスイッチ（既定OFF）
+   - ONにしたコースのタイプ個別チェック（既定OFF） */
+function buildMix(){
+  const lowers=LOWER[COURSE];
+  const box=document.getElementById('mixbox');
+  const chk=document.getElementById('mixchk');
+  const tbox=document.getElementById('mixtypes');
+  if(!lowers.length){box.classList.remove('on');chk.innerHTML='';tbox.innerHTML='';return;}
+  box.classList.add('on');
+  chk.innerHTML=lowers.map(c=>
+    `<label><input type="checkbox" class="mixon" value="${c}" onchange="buildMixTypes()">`
+    +`${COURSE_NAME[c]}の問題も混ぜる</label>`).join('');
+  buildMixTypes();
+}
+
+function buildMixTypes(){
+  const tbox=document.getElementById('mixtypes');
+  const ons=[...document.querySelectorAll('.mixon:checked')].map(i=>i.value);
+  const prev={};
+  tbox.querySelectorAll('input').forEach(i=>prev[i.value]=i.checked);
+  if(!ons.length){tbox.innerHTML='';return;}
+  let h='';
+  ons.forEach(c=>{
+    TYPES.filter(t=>t.c===c).forEach(t=>{
+      const on=(t.id in prev)?prev[t.id]:false;  // 下位は既定OFF
+      h+=`<label><input type="checkbox" class="mixtype" value="${t.id}" ${on?'checked':''}>`
+        +`<span style="color:#71717a;font-size:11px">${COURSE_SHORT[c]}</span>${t.name}</label>`;
+    });
+  });
+  tbox.innerHTML=h;
+}
+
+const selected=()=>{
+  const main=[...document.querySelectorAll('#types input:checked')].map(i=>i.value);
+  const mix =[...document.querySelectorAll('.mixtype:checked')].map(i=>i.value);
+  return main.concat(mix);
+};
+
+function setMode(m){
+  MODE=m;
+  document.getElementById('m-card').classList.toggle('on',m==='card');
+  document.getElementById('m-list').classList.toggle('on',m==='list');
+  closeSide();
+  stopLive();
+  if(QS.length) render();
+}
+
+// ---------- 生成 ----------
+function gen(){
+  const lv=+document.getElementById('level').value;
+  const n=Math.max(1,Math.min(50,+document.getElementById('count').value||10));
+  const ids=selected();
+  const out=document.getElementById('out');
+  if(!ids.length){
+    out.innerHTML='<div class="empty">出題タイプを1つ以上選んでください。</div>';QS=[];return;}
+
+  const order=[];
+  for(let i=0;i<n;i++) order.push(ids[i%ids.length]);
+  for(let i=order.length-1;i>0;i--){const j=ri(0,i);[order[i],order[j]]=[order[j],order[i]];}
+
+  QS=order.map(id=>{
+    try{
+      const q=G[id](lv);
+      if(!q) return null;
+      const def=TYPES.find(t=>t.id===id);
+      q.course=def?def.c:COURSE;
+      q.courseLabel=COURSE_SHORT[q.course];
+      return q;
+    }catch(e){return null;}
+  }).filter(Boolean);
+
+  closeSide(); stopLive(); render();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ---------- 描画 ----------
+function render(){
+  const hide=document.getElementById('ansmode').value==='hide';
+  const out=document.getElementById('out');
+  const lv=+document.getElementById('level').value;
+  const mixInfo=[...document.querySelectorAll('.mixon:checked')].map(i=>COURSE_NAME[i.value]);
+
+  const head=`<div class="sum noprint">
+    <b>${COURSE_NAME[COURSE]}コース</b> ／ ${QS.length} 問 ／ 規模 Lv${lv} ／ 表示：${MODE==='card'?'カード形式':'一覧表形式'}
+    ${mixInfo.length?` ／ 混在：${mixInfo.join('・')}`:''}<br>
+    <span class="note">共通ルール：各問の前に <b>AC → MC</b>／GT集計中は <b>= を押し直さない</b>／記入は左手・ペンは置かない</span>
+  </div>`;
+
+  out.innerHTML = head + (MODE==='card' ? renderCard(hide) : renderList(hide));
+  if(LIVE) paintLive();
+}
+
+function renderCard(hide){
+  let h='';
+  QS.forEach((q,i)=>{
+    h+=`<div class="q">
+      <div class="q-head">
+        <span class="q-no">Q${i+1}</span>
+        <span class="tag lvl">${COURSE_NAME[q.course]}</span>
+        <span class="tag">${q.type}</span>
+        <span class="tag">${q.setting}</span>
+      </div>
+      ${q.scene?`<div class="scene">${q.scene}</div>`:''}
+      ${q.expr?`<div class="expr">${q.expr} ＝ ?</div>`:''}
+      ${q.html||''}
+      <div class="btns noprint">
+        <button class="b-sub b-mini" onclick="tog(${i})" id="btn${i}">
+          ${hide?'解答と手順を表示':'解答と手順を隠す'}</button>
+      </div>
+      <div class="ans ${hide?'hide':''}" id="ans${i}">${ansBody(q)}</div>
+    </div>`;
+  });
+  return h;
+}
+
+function renderList(hide){
+  let h=`<p class="hint noprint">
+    <b>練習モード</b>を開始すると <kbd>Space</kbd> だけで進行できます
+    （1回目＝答えを表示／2回目＝次の行へ）。
+    行の右端の「手順」ボタン（または <kbd>Enter</kbd>）で手順を右パネルに表示します。
+  </p>
+  <div class="list"><table class="lt">
+    <tr>
+      <th class="c-no">No</th>
+      <th class="c-lv">級</th>
+      <th class="c-type">タイプ</th>
+      <th class="c-set">設定</th>
+      <th>問題</th>
+      <th class="c-a" style="text-align:right">答え</th>
+      <th class="c-btn noprint">手順</th>
+    </tr>`;
+  QS.forEach((q,i)=>{
+    const qCell = q.listQ || (q.expr?`${q.expr} ＝ ?`:(q.scene||''));
+    const aCell = q.listA || (fmt(q.answer)+(q.unit||''));
+    h+=`<tr id="row${i}">
+      <td class="c-no"><span class="cursor" id="cur${i}"></span>${i+1}</td>
+      <td class="c-lv">${q.courseLabel}</td>
+      <td class="c-type">${q.type}</td>
+      <td class="c-set">${q.setting}</td>
+      <td class="c-q">${qCell}</td>
+      <td class="c-a ${hide?'masked':''}" id="la${i}">${aCell}</td>
+      <td class="c-btn noprint">
+        <button class="st-btn" id="sb${i}" onclick="openSide(${i})">手順</button>
+      </td>
+    </tr>`;
+  });
+  h+='</table></div>';
+  return h;
+}
+
+function ansBody(q){
+  return `<h4>解答</h4>
+    ${q.answerHtml||`<div class="ans-val">${fmt(q.answer)}${q.unit||''}</div>`}
+    <h4 class="mt">判定の根拠</h4>
+    <div style="font-size:13px">${q.judge}</div>
+    <h4 class="mt">キー操作手順</h4>
+    <ol class="steps">${q.steps.map(s=>`<li>${s}</li>`).join('')}</ol>
+    ${q.caution?`<div class="caution">注意：${q.caution}</div>`:''}
+    ${q.hand||''}`;
+}
+
+function tog(i){
+  const a=document.getElementById('ans'+i),b=document.getElementById('btn'+i);
+  const h=a.classList.toggle('hide');
+  b.textContent=h?'解答と手順を表示':'解答と手順を隠す';
+}
+
+function toggleAll(show){
+  if(MODE==='card'){
+    document.querySelectorAll('.ans').forEach(a=>a.classList.toggle('hide',!show));
+    document.querySelectorAll('[id^=btn]').forEach(b=>b.textContent=show?'解答と手順を隠す':'解答と手順を表示');
+  }else{
+    document.querySelectorAll('.c-a[id^=la]').forEach(e=>e.classList.toggle('masked',!show));
+  }
+}
+
+/* ===== 練習モード ===== */
+function startLive(){
+  if(!QS.length){alert('先にドリルを生成してください。');return;}
+  if(MODE!=='list'){setMode('list');}
+  LIVE=true; LI=0; SHOWN=false;
+  document.querySelectorAll('.c-a[id^=la]').forEach(e=>e.classList.add('masked'));
+  document.getElementById('hud').classList.add('on');
+  paintLive(); focusRow();
+}
+
+function stopLive(){
+  LIVE=false; SHOWN=false;
+  const hud=document.getElementById('hud');
+  if(hud) hud.classList.remove('on');
+  document.querySelectorAll('table.lt tr').forEach(r=>{
+    r.classList.remove('live');r.classList.remove('done');});
+  document.querySelectorAll('.cursor').forEach(c=>c.textContent='');
+}
+
+function paintLive(){
+  if(!LIVE) return;
+  QS.forEach((q,i)=>{
+    const row=document.getElementById('row'+i);
+    const cur=document.getElementById('cur'+i);
+    if(!row) return;
+    row.classList.toggle('live', i===LI);
+    row.classList.toggle('done', i<LI);
+    if(cur) cur.textContent = (i===LI?'▶':'');
+  });
+  const q=QS[LI];
+  document.getElementById('hud-pos').innerHTML=
+    `Q${LI+1} <small>/ ${QS.length}　${q.type}</small>`;
+  document.getElementById('hud-nxt').textContent=
+    SHOWN
+      ? (LI===QS.length-1 ? 'スペース → 練習を終了' : 'スペース → 次の問題へ')
+      : 'スペース → 答えを表示';
+  document.getElementById('hud-bar').style.width=
+    Math.round((LI+(SHOWN?1:0))/QS.length*100)+'%';
+}
+
+function focusRow(){
+  const row=document.getElementById('row'+LI);
+  if(row) row.scrollIntoView({block:'center',behavior:'smooth'});
+}
+
+function liveStep(){
+  if(!LIVE) return;
+  if(!SHOWN){
+    const la=document.getElementById('la'+LI);
+    if(la){la.classList.remove('masked');la.classList.add('reveal');
+           setTimeout(()=>la.classList.remove('reveal'),260);}
+    SHOWN=true; paintLive();
+  }else{
+    if(LI>=QS.length-1){
+      paintLive();
+      alert(`全 ${QS.length} 問が終了しました。\n間違えた問題は「手順」で確認してください。`);
+      stopLive(); return;
+    }
+    LI++; SHOWN=false; paintLive(); focusRow();
+    if(document.getElementById('side').classList.contains('on')) openSide(LI);
+  }
+}
+
+function liveMove(d){
+  if(!LIVE) return;
+  const n=LI+d;
+  if(n<0||n>=QS.length) return;
+  LI=n;
+  const la=document.getElementById('la'+LI);
+  SHOWN = la ? !la.classList.contains('masked') : false;
+  paintLive(); focusRow();
+  if(document.getElementById('side').classList.contains('on')) openSide(LI);
+}
+
+/* ===== サイドパネル ===== */
+function openSide(i){
+  if(i<0||i>=QS.length) return;
+  CUR=i;
+  const q=QS[i];
+  document.getElementById('sd-t').textContent=`Q${i+1}　${q.type}`;
+  document.getElementById('sd-s').textContent=`${COURSE_NAME[q.course]} ／ ${q.setting}`;
+  document.getElementById('sd-b').innerHTML=
+    `${q.scene?`<div class="scene">${q.scene}</div>`:''}
+     ${q.expr?`<div class="expr" style="margin-bottom:12px">${q.expr} ＝ ?</div>`:''}
+     ${q.html||''}
+     <div class="ans">${ansBody(q)}</div>`;
+  document.getElementById('sd-pg').textContent=`${i+1} / ${QS.length}`;
+  document.getElementById('side').classList.add('on');
+  document.getElementById('ov').classList.add('on');
+  document.querySelectorAll('table.lt tr').forEach(r=>r.classList.remove('sel'));
+  document.querySelectorAll('.st-btn').forEach(b=>b.classList.remove('on'));
+  const row=document.getElementById('row'+i), btn=document.getElementById('sb'+i);
+  if(row) row.classList.add('sel');
+  if(btn) btn.classList.add('on');
+  const la=document.getElementById('la'+i);
+  if(la) la.classList.remove('masked');
+  if(LIVE){LI=i;SHOWN=true;paintLive();}
+}
+
+function closeSide(){
+  document.getElementById('side').classList.remove('on');
+  document.getElementById('ov').classList.remove('on');
+  document.querySelectorAll('table.lt tr').forEach(r=>r.classList.remove('sel'));
+  document.querySelectorAll('.st-btn').forEach(b=>b.classList.remove('on'));
+  CUR=-1;
+}
+
+function navSide(d){
+  if(CUR<0) return;
+  const n=CUR+d;
+  if(n<0||n>=QS.length) return;
+  openSide(n);
+  const row=document.getElementById('row'+n);
+  if(row) row.scrollIntoView({block:'center',behavior:'smooth'});
+}
+
+/* ===== キーボード ===== */
+document.addEventListener('keydown',e=>{
+  const tag=(e.target.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='select'||tag==='textarea') return;
+
+  if(LIVE){
+    if(e.code==='Space'||e.key===' '){e.preventDefault();liveStep();return;}
+    if(e.key==='ArrowDown'||e.key==='ArrowRight'){e.preventDefault();liveMove(1);return;}
+    if(e.key==='ArrowUp'  ||e.key==='ArrowLeft' ){e.preventDefault();liveMove(-1);return;}
+    if(e.key==='Enter'){e.preventDefault();openSide(LI);return;}
+    if(e.key==='Escape'){
+      e.preventDefault();
+      if(document.getElementById('side').classList.contains('on')) closeSide();
+      else stopLive();
+      return;
+    }
+  }
+
+  if(document.getElementById('side').classList.contains('on')){
+    if(e.key==='Escape') closeSide();
+    if(e.key==='ArrowDown'||e.key==='ArrowRight'){e.preventDefault();navSide(1);}
+    if(e.key==='ArrowUp'||e.key==='ArrowLeft'){e.preventDefault();navSide(-1);}
+  }
+});
+
+document.getElementById('ansmode').addEventListener('change',()=>{if(QS.length)render();});
+setCourse('basic');
+gen();
+</script>
+</body>
+</html>

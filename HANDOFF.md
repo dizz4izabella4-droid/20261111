@@ -9,6 +9,7 @@
 - **鳥と獣の戦い**：スマホを机に置いて2人で遊ぶ対戦ゲーム。13章。
 - **ワイヤダ**（旧名：クワイヤダ、組み分け帽）：数字をたよりに1本の輪を作るパズル（1人用、スマホ・PC両対応）。14章。
 - **GLASS BREAKER（ガラス割り）**：バットで物を叩いて割る、破壊表現のテスト（スマホの縦画面、タッチ操作）。15章。
+- **電卓ドリル（CALCULATOR DRILL）**：電卓ドリルを自動生成するツール（CASIO DS-20WKA 想定）。16章。
 
 ---
 
@@ -24,6 +25,7 @@
 | 　ワイヤダ | https://dizz4izabella4-droid.github.io/20261111/kumiwake-bou/ | 旧名：クワイヤダ、組み分け帽 |
 | 　　ルール説明 | https://dizz4izabella4-droid.github.io/20261111/kumiwake-bou/rules.html | 本体の「あそびかた」から開く。「ゲームへ」で本体へ戻る |
 | 　GLASS BREAKER | https://dizz4izabella4-droid.github.io/20261111/glass-breaker/ | |
+| 　電卓ドリル | https://dizz4izabella4-droid.github.io/20261111/dentaku-drill/ | |
 | claude.ai アーティファクト（PC版） | https://claude.ai/artifact/NctPezS87FshtyQGQ1YaDf | 開発中の確認用。曲2つも同梱して公開済み |
 | claude.ai アーティファクト（鳥と獣の戦い） | https://claude.ai/artifact/RtGte1cpPBFfU2wHBe8bEi | 開発の正本はこちら。リポジトリの tori-to-kemono/index.html は、その写し |
 | claude.ai アーティファクト（GLASS BREAKER） | https://claude.ai/artifact/35FutrJp3Aag1QnQRN6Nmg | 開発の正本はこちら。リポジトリの glass-breaker/index.html は、その写し |
@@ -42,6 +44,7 @@ kumiwake-bou/index.html            ワイヤダの本体（HTML/CSS/JS すべて
 kumiwake-bou/rules.html            ワイヤダのルール説明ページ（1ファイル。例題の図は答えを計算して作った静的なSVG）
 kumiwake-bou/tools/gen.js          ワイヤダの問題を作る道具（Node.js）
 kumiwake-bou/tools/verify.js       ワイヤダの収録問題を検査する道具（Node.js）
+dentaku-drill/index.html            電卓ドリル自動生成ツールの本体（HTML/CSS/JS すべて1ファイル、外部読み込みなし）
 glass-breaker/index.html            GLASS BREAKER の本体（HTML/CSS/JS すべて1ファイル、外部読み込みなし。アーティファクトの写し）
 README.md
 HANDOFF.md                         本書
@@ -76,7 +79,9 @@ HANDOFF.md                         本書
 3. 鳥と獣の戦い：アーティファクトを更新したら、その内容で tori-to-kemono/index.html を作り直して push する。
 4. GLASS BREAKER：アーティファクトを更新したら、その内容に doctype・`<html lang="ja">`・charset・viewport を付けて glass-breaker/index.html を作り直して push する（`<head>` の先頭に、上下の安全余白用の `html{padding-top/bottom: env(safe-area-inset-*)}` と `[hidden]{display:none!important}` を足す）。
 5. ワイヤダ：kumiwake-bou/index.html を直接直す。問題や手筋を変えたら `node kumiwake-bou/tools/verify.js` で「すべて OK」を確認し、ブラウザでも確認してから push する。
-6. 曲は変わらない限り push し直さない（約8MB）。
+6. 電卓ドリル：dentaku-drill/index.html を直接直す。
+7. 曲は変わらない限り push し直さない（約8MB）。
+8. **どの作品でも、push したら、トップの index.html にある `APPS` のその作品の `date` を当日（YYYY-MM-DD）に直す。** 各カードの下に「最終アップロード」として小さく出る日付で、自動では変わらない。トップだけを直したとき（見た目や文言の変更）は、作品の日付は変えない。
 
 ---
 
@@ -479,3 +484,12 @@ PC版の筋立てと仕組み（防御→追跡→反撃、攻撃信号、耐久
 
 - 外部の効果音への差し替え（ライセンスと表記の要否を確認する）。
 - 1部屋完結のゲームとしての形（開始・終了・リザルト）、部屋データの切り出し。
+
+---
+
+## 16. 電卓ドリル（dentaku-drill）
+
+- 渡されたHTMLをそのまま置いた（2026-11-12）。電卓ドリルを自動生成するツールで、CASIO DS-20WKA（カシオ系配列・優先順位なし・GT／独立メモリー搭載）を想定し、右手電卓・左手記入の型に対応している。
+- コースを選び、条件を指定してドリルを作る。印刷用の表示（`@media print`）と、幅900px・640px以下の表示がある。外部読み込みなし。
+- トップのカードは「どちらも」にしている（スマホでも開けるが、紙に印刷して使う前提なら「PCむけ」に直す）。
+- この作品からトップへ戻る手段は付けない（他の作品と同じ）。
