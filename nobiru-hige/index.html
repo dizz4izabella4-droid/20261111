@@ -86,9 +86,9 @@
     <canvas id="game" width="512" height="448"></canvas>
     <div id="start">
       <div class="t">NOBIRU HIGE</div>
-      <div class="s">キノコを ふんで ふんで ふみまくれ</div>
+      <div class="s">焼かないと菌は増える</div>
       <button id="startBtn" type="button">START</button>
-      <div class="h">← → あるく（足の下のキノコがぶちぶち潰れる）<br>スペース ジャンプ（着地で大量に潰れる）<br>スマホは画面下のボタン</div>
+      <div class="h">← → ：あるく　スペース：ジャンプ<br>スマホは画面下のボタン</div>
     </div>
   </div>
   <div id="pad">
@@ -229,7 +229,7 @@ function startBGM() {
 // --- ゲーム定数・状態 ---
 const GRAVITY = 0.55;
 const GROUND_Y = 400;
-const MAX_SCALE = 10;   // 大きくなる上限（画面からはみ出しすぎない）
+const MAX_SCALE = 1e9;  // 大きくなる上限（事実上なし）
 const MIN_SCALE = 0.2;  // 小さくなる下限
 
 const keys = {};
@@ -296,6 +296,7 @@ let enemies = []; // 敵キノコ（踏むと増殖）
 let particles = [];
 let spores = [];  // 飛んでいる胞子（着地するとキノコになる）
 let spawnTimer = 0;
+let tick = 0; // 経過フレーム（波の位相に使う）
 
 // 敵キノコの定数
 const ENEMY_BASE = 24;        // 最初の大きさ
@@ -361,7 +362,7 @@ function footCrush(side) {
     enemies.splice(i, 1);
     cnt++;
     splatEnemy(e);
-    emitSpores(e, cx, GROUND_Y - 6, [-(1.5 + Math.random() * 2.5), 1.5 + Math.random() * 2.5]);
+    emitSpores(e, cx, GROUND_Y - 6, [-(0.8 + Math.random() * 1.8), 0.8 + Math.random() * 1.8]);
   }
   if (cnt > 0) {
     sfxStomp();
@@ -385,7 +386,7 @@ function landingCrush(cx) {
     cnt++;
     splatEnemy(e);
     const away = ex >= cx ? 1 : -1;
-    emitSpores(e, ex, e.y + e.h / 2, [away * (2 + Math.random() * 3.5), away * (0.8 + Math.random() * 2)]);
+    emitSpores(e, ex, e.y + e.h / 2, [away * (1.5 + Math.random() * 2.5), away * (0.6 + Math.random() * 1.4)]);
   }
   score += 10 * cnt;
   rings.push({ x: cx, r: 10, max: R, life: 18 });
@@ -454,6 +455,7 @@ function rectHit(a, b) {
 
 // --- 更新処理 ---
 function update() {
+  tick++;
   // スポーン処理（ぽつぽつ降ってくる）
   spawnTimer++;
   if (spawnTimer > 60) {
@@ -487,8 +489,11 @@ function update() {
   player.y += player.vy;
 
   // 画面端ループまたは壁反射
-  if (player.x < 0) player.x = 0;
-  if (player.x + player.w > canvas.width) player.x = canvas.width - player.w;
+  // 画面より大きくなっても動けるよう、はみ出す側を許す
+  const minX = Math.min(0, canvas.width - player.w);
+  const maxX = Math.max(0, canvas.width - player.w);
+  if (player.x < minX) player.x = minX;
+  if (player.x > maxX) player.x = maxX;
 
   // 地面接地（空中ではonGroundをfalseに戻す＝空中ジャンプ不可）
   const wasOn = player.onGround;
@@ -547,7 +552,11 @@ function update() {
     e.frame += 0.15;
 
     e.vy += GRAVITY * 0.8;
-    e.x += e.vx;
+    // 波のように：群れ全体が寄せては返し、ぴょこぴょこと跳ねの波が横に伝わる
+    const wave = Math.sin(tick * 0.025 + e.x * 0.02) * 0.9;
+    const grounded = e.y + e.h >= GROUND_Y - 0.5;
+    if (grounded && Math.sin(tick * 0.09 - e.x * 0.03) > 0.985) e.vy = -2.6 - Math.random() * 0.8;
+    e.x += e.vx + wave;
     e.y += e.vy;
 
     // 壁で跳ね返る
@@ -578,7 +587,7 @@ function update() {
         enemies.splice(i, 1);
         splatEnemy(e);
         const d = Math.random() < 0.5 ? 1 : -1;
-        emitSpores(e, cxE, e.y + e.h / 2, [d * (1.2 + Math.random() * 2.2), -d * (1.2 + Math.random() * 2.2)]);
+        emitSpores(e, cxE, e.y + e.h / 2, [d * (0.8 + Math.random() * 1.6), -d * (0.8 + Math.random() * 1.6)]);
         // 勢いよく小さいキノコを踏んだら、まわりも一気に潰れる
         if (harmless && impactVy > 2.5) pendingLand = player.x + player.w / 2;
         if (particles.length < 160) addParticles(cxE, e.y + e.h / 2, e.capColor, enemies.length > 60 ? 2 : 6);
@@ -621,7 +630,7 @@ function update() {
       enemies.push(makeEnemy(
         Math.max(0, Math.min(canvas.width - sz, sp.x - sz / 2)),
         GROUND_Y - sz, sz, sp.hue, sp.light,
-        (Math.random() < 0.5 ? -1 : 1) * (1.0 + Math.random() * 0.8), -2, sp.safe
+        (Math.random() < 0.5 ? -1 : 1) * (0.3 + Math.random() * 0.6), -2, sp.safe
       ));
       spores.splice(i, 1);
     }
@@ -834,7 +843,7 @@ function drawUI() {
   ctx.fillText(String(score).padStart(6, '0'), 24, 46);
 
   const heightRatio = player.scaleY >= 1
-    ? `x${player.scaleY.toFixed(1)}`
+    ? (player.scaleY >= 10000 ? `x${player.scaleY.toExponential(1)}` : `x${player.scaleY.toFixed(1)}`)
     : `1/${(1 / player.scaleY).toFixed(1)}`;
   ctx.fillText(`HEIGHT: ${heightRatio}`, 200, 28);
   ctx.fillText(`ENEMIES: ${enemies.length}`, 375, 28);
