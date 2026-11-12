@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f3eee3">
-<title>組み分け帽</title>
+<title>クワイヤダ</title>
 <style>
-/* 組み分け帽: 数字をたよりに1本の輪を作るパズル。紙とインクの落ち着いた見た目。HTML/CSS/JS すべてこの1ファイル */
+/* クワイヤダ: 数字をたよりに1本の輪を作るパズル。紙とインクの落ち着いた見た目。HTML/CSS/JS すべてこの1ファイル */
 :root{
   --paper:#f3eee3; --card:#fbf8f1; --ink:#1e2b3f; --ink2:#5f6b7c; --rule:#d9d1c0; --dot:#1e2b3f;
   --line:#1e2b3f; --done:#a9a394; --err:#c8442e; --hint:#e08a00; --hintbg:rgba(224,138,0,.16);
@@ -133,7 +133,7 @@ dialog .row button{flex:1}
 <body>
 <div class="app">
   <header class="top">
-    <h1>組み分け帽</h1>
+    <h1>クワイヤダ</h1>
     <button type="button" id="snd" aria-pressed="true">音 ON</button>
   </header>
 
@@ -158,27 +158,6 @@ dialog .row button{flex:1}
   </main>
 </div>
 
-<dialog id="dHow" aria-labelledby="howT">
-  <h2 id="howT">あそびかた</h2>
-  <h3>ルール</h3>
-  <ol>
-    <li>となり合う点と点を、たて・よこの線でつないで、<b>全体で1つの輪</b>を作ります。</li>
-    <li>数字は、そのマスのまわり4辺のうち<b>線になる辺の本数</b>です。</li>
-    <li>数字のないマスは、何本でもかまいません。</li>
-    <li>線は、交差も枝分かれもしません。行き止まりもありません。</li>
-  </ol>
-  <div class="ex"><svg class="board" id="exBoard" aria-label="完成した例"></svg><p>完成した例。輪の内側に色が付きます。数字のまわりの線の本数を数えてみてください。</p></div>
-  <h3>操作</h3>
-  <ul>
-    <li>スマホ：辺をタップするたびに「線 → × → 消す」。長押しで×。</li>
-    <li>PC：左クリックで線、右クリックで×。Z で戻す、Y で進む、H でヒント。</li>
-    <li>×は「ここに線はない」の目印です。付けなくても正解になります。</li>
-    <li>数字は、線の本数がそろうと薄く、多すぎると赤くなります。</li>
-  </ul>
-  <h3>ヒント</h3>
-  <p>いま理詰めで決まる辺を1か所、理由つきで示します。まちがった辺があるときは、先にそれを知らせます。</p>
-  <div class="row"><button type="button" class="go" data-close>とじる</button></div>
-</dialog>
 <dialog id="dReset" aria-labelledby="rsT">
   <h2 id="rsT">全部消す</h2>
   <p>この問題の線と×を、すべて消して最初からにします。タイムも0に戻ります。</p>
@@ -360,7 +339,6 @@ const PUZZLES={
   c4:[".122..0", "3.323..", ".13..23", ".2...1.", "22..11.", "..232.1", "2..231."],
   c5:["3.3.1.2", ".2..1.2", "..23.2.", "13.2.23", ".3.22..", "3.2..3.", "2.2.1.0"]
 };
-const EXAMPLE=["12.","3.1",".23"];
 
 // ===== 保存（この端末のブラウザに残す。使えない環境では、開いている間だけ） =====
 const KEY='kumiwake-bou-v1';
@@ -572,7 +550,7 @@ $('bUndo').addEventListener('click',undo); $('bRedo').addEventListener('click',r
 $('bReset').addEventListener('click',()=>$('dReset').showModal());
 $('bResetOk').addEventListener('click',()=>{ $('dReset').close(); resetPuzzle(); });
 $('bList').addEventListener('click',()=>{ if(cur&&!cur.won&&cur.st.some(x=>x)){ stopClock(); store(); } showHome(); });
-$('bHow').addEventListener('click',()=>{ const g=makeGrid(3,3), c=parseClues(EXAMPLE), X=buildBoard($('exBoard'),g,c); paint(X,logicSolve(g,c,null).st,true); $('dHow').showModal(); });
+$('bHow').addEventListener('click',()=>{ location.href='rules.html'; });
 document.querySelectorAll('dialog').forEach(d=>{ d.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>d.close()));
   d.addEventListener('click',ev=>{ if(ev.target===d) d.close(); }); });
 function syncSound(){ $('snd').textContent=SAVE.sound?'音 ON':'音 OFF'; $('snd').setAttribute('aria-pressed',String(!!SAVE.sound)); }
