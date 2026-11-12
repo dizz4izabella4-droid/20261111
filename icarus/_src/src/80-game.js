@@ -2,7 +2,7 @@
 const START={x:0,y:187.9,z:-12.2};
 const coarse=window.matchMedia&&window.matchMedia('(pointer:coarse)').matches;
 const el={title:$('title'),hint:$('hint'),end:$('end'),endTxt:$('endTxt'),go:$('go')};
-const G={mode:'title',t:0,modeT:0,bird:makeBird(),heat:0,melt:0,meltT:0,meltShed:0,maxAlt:0,ringCount:0,shake:0,fovKick:0,stun:0,thK:0,mist:0,
+const G={mode:'title',t:0,modeT:0,bird:makeBird(),heat:0,melt:0,meltT:0,meltShed:0,maxAlt:0,damage:0,angelSeen:0,lastSplash:-9,shake:0,fovKick:0,stun:0,thK:0,mist:0,
   fade:1,fadeTarget:0,fadeSpeed:0.7,flash:0,flapPow:1,hintT:0,hintShown:false,steerSeen:false,flapSeen:false,timeScale:1,endT:0,shedHeat:0,calls:0};
 const b=G.bird;
 const Y_AXIS=new T.Vector3(0,1,0);
@@ -10,56 +10,60 @@ const _v=new T.Vector3(),_w=new T.Vector3(),_q=new T.Quaternion(),_e=new T.Euler
 const tmpB={x:0,y:0,z:0};
 
 /* ---------- 衝突（街） ---------- */
-function ringBlocked(x,y,z){
-  if(y<8)return true;
-  const i=Math.round(x/BP),j=Math.round(z/BP);
-  const n=blockInfo(i,j);
-  for(let k=0;k<n;k++){const o=k*6;
-    if(x>bbuf[o]-3&&x<bbuf[o+3]+3&&y>bbuf[o+1]-3&&y<bbuf[o+4]+3&&z>bbuf[o+2]-3&&z<bbuf[o+5]+3)return true;}
-  return false;
-}
-function ringAreaBlocked(x,y,z,nx,ny,nz){
-  if(ringBlocked(x,y,z))return true;
-  // 輪の面上の点を調べる
-  let ux=-nz,uz=nx,ul=Math.hypot(ux,uz);
-  if(ul<1e-3){ux=1;uz=0;ul=1;}ux/=ul;uz/=ul;
-  // v = n x u
-  const vx=ny*uz-nz*0,vy=nz*ux-nx*uz,vz=nx*0-ny*ux;
-  for(let a=0;a<8;a++){
-    const th=a/8*TAU,c=Math.cos(th)*RING_R*0.85,s=Math.sin(th)*RING_R*0.85;
-    if(ringBlocked(x+ux*c+vx*s,y+vy*s,z+uz*c+vz*s))return true;
-  }
-  return false;
-}
 const CR=1.7;
 function collide(dt){
   let impact=0,nxs=0,nys=0,nzs=0;
-  // 地面
-  if(b.y<2.4){b.y=2.4;if(b.vy<0){impact=Math.max(impact,-b.vy);nys=1;b.vy=-b.vy*0.15;b.vx*=0.93;b.vz*=0.93;}}
-  const i=Math.round(b.x/BP),j=Math.round(b.z/BP);
-  const n=blockInfo(i,j);
-  for(let k=0;k<n;k++){
-    const o=k*6;
-    const x0=bbuf[o]-CR,y0=bbuf[o+1]-(bbuf[o+1]>0?CR:0),z0=bbuf[o+2]-CR,x1=bbuf[o+3]+CR,y1=bbuf[o+4]+CR,z1=bbuf[o+5]+CR;
-    if(b.x>x0&&b.x<x1&&b.y>y0&&b.y<y1&&b.z>z0&&b.z<z1){
-      let dm=1e9,ax=0,ay=0,az=0;
-      let d=b.x-x0;if(d<dm){dm=d;ax=-1;ay=0;az=0;}
-      d=x1-b.x;if(d<dm){dm=d;ax=1;ay=0;az=0;}
-      d=y1-b.y;if(d<dm){dm=d;ax=0;ay=1;az=0;}
-      if(bbuf[o+1]>0){d=b.y-y0;if(d<dm){dm=d;ax=0;ay=-1;az=0;}}
-      d=b.z-z0;if(d<dm){dm=d;ax=0;ay=0;az=-1;}
-      d=z1-b.z;if(d<dm){dm=d;ax=0;ay=0;az=1;}
-      b.x+=ax*dm;b.y+=ay*dm;b.z+=az*dm;
-      const vn=b.vx*ax+b.vy*ay+b.vz*az;
-      if(vn<0){
-        impact=Math.max(impact,-vn);nxs=ax;nys=ay;nzs=az;
-        const e=1.15;
-        b.vx-=e*vn*ax;b.vy-=e*vn*ay;b.vz-=e*vn*az;
-        const f=1-Math.min(0.3,-vn*0.012);b.vx*=f;b.vy*=f;b.vz*=f;
+  // 海：しぶきを上げて速度を失うが、死にはしない
+  if(b.y<2.3){
+    const vin=Math.max(0,-b.vy);
+    b.y=2.3;
+    if(b.vy<0)b.vy=-b.vy*0.06;
+    const sp=Math.hypot(b.vx,b.vz);
+    const dr=Math.exp(-dt*(0.35+sp*0.025));
+    b.vx*=dr;b.vz*=dr;
+    if(vin>3||sp>16)onSplash(Math.max(vin,sp*0.35));
+  }
+  const ci=Math.round(b.x/BP),cj=Math.round(b.z/BP);
+  for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++){
+    const n=blockInfo(ci+di,cj+dj);
+    for(let k=0;k<n;k++){
+      const o=k*8,fl=sbuf[k*4+3];
+      const by0=bbuf[o+1],by1=bbuf[o+4];
+      const yb=by0<=0?-8:by0;
+      const top=(fl>1.5&&fl<2.5)?by1-10:by1;
+      if(b.y<yb-CR||b.y>top+CR)continue;
+      const ly=clamp((b.y-yb)/(by1-yb),0,1);
+      const px=b.x-bbuf[o+6]*ly,pz=b.z-bbuf[o+7]*ly;
+      const x0=bbuf[o]-CR,y0=by0-(by0>0?CR:0),z0=bbuf[o+2]-CR,x1=bbuf[o+3]+CR,y1=top+CR,z1=bbuf[o+5]+CR;
+      if(px>x0&&px<x1&&b.y>y0&&b.y<y1&&pz>z0&&pz<z1){
+        let dm=1e9,ax=0,ay=0,az=0;
+        let d=px-x0;if(d<dm){dm=d;ax=-1;ay=0;az=0;}
+        d=x1-px;if(d<dm){dm=d;ax=1;ay=0;az=0;}
+        d=y1-b.y;if(d<dm){dm=d;ax=0;ay=1;az=0;}
+        if(by0>0){d=b.y-y0;if(d<dm){dm=d;ax=0;ay=-1;az=0;}}
+        d=pz-z0;if(d<dm){dm=d;ax=0;ay=0;az=-1;}
+        d=z1-pz;if(d<dm){dm=d;ax=0;ay=0;az=1;}
+        b.x+=ax*dm;b.y+=ay*dm;b.z+=az*dm;
+        const vn=b.vx*ax+b.vy*ay+b.vz*az;
+        if(vn<0){
+          impact=Math.max(impact,-vn);nxs=ax;nys=ay;nzs=az;
+          const e=1.15;
+          b.vx-=e*vn*ax;b.vy-=e*vn*ay;b.vz-=e*vn*az;
+          const f=1-Math.min(0.3,-vn*0.012);b.vx*=f;b.vy*=f;b.vz*=f;
+        }
       }
     }
   }
   if(impact>6)onImpact(impact,nxs,nys,nzs);
+}
+function onSplash(v){
+  if(G.t-(G.lastSplash||-9)<0.18)return;
+  G.lastSplash=G.t;
+  const k=Math.min(1,v/45);
+  audio.splash(k);
+  G.shake=Math.min(0.6,G.shake+k*0.25);
+  birdBasis(b,_bs);
+  parts.burst(b.x+_bs.fx*2,0.6,b.z+_bs.fz*2,Math.floor(10+34*k),6+22*k,0.82,0.93,1.0,0.5,1.1,9,1.0,0,1,0,0.8);
 }
 function onImpact(v,nx,ny,nz){
   G.shake=Math.min(1,G.shake+v/55);
@@ -73,118 +77,14 @@ function onImpact(v,nx,ny,nz){
   }
 }
 
-/* ---------- 輪の連なり ---------- */
-const chain={list:[],next:0,cp:{x:0,y:0,z:0,yaw:0},n:0,passed:{}};
-function angDiff(a){a=(a+Math.PI)%TAU;if(a<0)a+=TAU;return a-Math.PI;}
-function chainGen(){
-  const cp=chain.cp,n=chain.n++;
-  let sp,dy;
-  if(n<3){sp=85;dy=-16;}else if(n<9){sp=96;dy=(n%2?4:-6);}else if(cp.y<420){sp=108;dy=30;}else{sp=128;dy=38;}
-  cp.yaw+=angDiff(-cp.yaw)*(n<2?0.0:0.28)+(rnd()-0.5)*(n<2?0.15:0.8);
-  let x=cp.x-Math.sin(cp.yaw)*sp,z=cp.z-Math.cos(cp.yaw)*sp,y=cp.y+dy;
-  let nx=x-cp.x,ny=y-cp.y,nz=z-cp.z;let nl=Math.hypot(nx,ny,nz);nx/=nl;ny/=nl;nz/=nl;
-  for(let t=0;t<40&&ringAreaBlocked(x,y,z,nx,ny,nz);t++){y+=7;nx=x-cp.x;ny=y-cp.y;nz=z-cp.z;nl=Math.hypot(nx,ny,nz);nx/=nl;ny/=nl;nz/=nl;}
-  cp.x=x;cp.y=y;cp.z=z;
-  chain.list.push({x:x,y:y,z:z,nx:nx,ny:ny,nz:nz,i:chain.list.length+chain.base});
-}
-chain.base=0;
-function chainReset(x,y,z,yaw){
-  chain.list.length=0;chain.next=0;chain.n=0;chain.base=0;
-  chain.cp.x=x;chain.cp.y=y;chain.cp.z=z;chain.cp.yaw=yaw;
-  for(let k=0;k<7;k++)chainGen();
-}
-function chainRegen(){
-  const old=chain.list.length?chain.list[chain.next].i:0;
-  chain.list.length=0;chain.next=0;
-  chain.base=old;
-  chain.cp.x=b.x;chain.cp.y=Math.max(b.y,60);chain.cp.z=b.z;chain.cp.yaw=b.yaw;
-  chain.n=Math.max(chain.n,10);
-  for(let k=0;k<7;k++)chainGen();
-}
-function ringAdvance(){
-  chain.next++;
-  while(chain.list.length-chain.next<6)chainGen();
-  if(chain.next>16){chain.list.splice(0,10);chain.next-=10;chain.base+=10;}
-}
-function updateRings(px,py,pz){
-  const r=chain.list[chain.next];if(!r)return;
-  const s0=(px-r.x)*r.nx+(py-r.y)*r.ny+(pz-r.z)*r.nz;
-  const s1=(b.x-r.x)*r.nx+(b.y-r.y)*r.ny+(b.z-r.z)*r.nz;
-  if(s0<0&&s1>=0){
-    const t=s0/(s0-s1);
-    const cx=px+(b.x-px)*t-r.x,cy=py+(b.y-py)*t-r.y,cz=pz+(b.z-pz)*t-r.z;
-    const d=Math.hypot(cx,cy,cz);
-    if(d<RING_R*1.1)passRing(r);
-    else{r.missed=true;ringAdvance();}
-  }else{
-    const d=Math.hypot(b.x-r.x,b.y-r.y,b.z-r.z);
-    if(s1>150&&d>150){r.missed=true;ringAdvance();}
-    else if(d>720){chainRegen();}
-  }
-}
-function passRing(r){
-  G.ringCount++;
-  chain.passed[r.i]=G.t;
-  // 加速とごほうび
-  birdBasis(b,_bs);
-  const boost=10;const cap=FL.VMAX*0.82;
-  const sp=Math.hypot(b.vx,b.vy,b.vz);
-  const add=Math.max(0,Math.min(boost,cap-sp));
-  b.vx+=_bs.fx*add;b.vy+=_bs.fy*add;b.vz+=_bs.fz*add;
-  G.heat=Math.max(0,G.heat-0.10);
-  G.fovKick=Math.min(14,G.fovKick+9);G.flash=Math.max(G.flash,0.16);
-  audio.ring(G.ringCount-1);
-  for(let k=0;k<44;k++){
-    const a=rnd()*TAU,c=Math.cos(a),s=Math.sin(a);
-    // 輪の面に沿って火花
-    let ux=-r.nz,uz=r.nx,ul=Math.hypot(ux,uz)||1;ux/=ul;uz/=ul;
-    const vx=r.ny*uz,vy=r.nz*ux-r.nx*uz,vz=-r.ny*ux;
-    const px=r.x+(ux*c+vx*s)*RING_R,py=r.y+(vy*s)*RING_R,pz=r.z+(uz*c+vz*s)*RING_R;
-    parts.spawn(px,py,pz,r.nx*14+(ux*c+vx*s)*6,r.ny*14+vy*s*6,r.nz*14+(uz*c+vz*s)*6,1.0,0.82,0.5,0.7,1.6,0,0.7);
-  }
-  ringAdvance();
-}
-function updateRingVisuals(){
-  for(const rg of rings)rg.used=false;
-  for(let k=-1;k<4;k++){
-    const idx=chain.next+k;if(idx<0||idx>=chain.list.length)continue;
-    const r=chain.list[idx];const slot=rings[(r.i+10000)%5];
-    const m=slot.mesh;
-    const pt=chain.passed[r.i];
-    const passedAge=pt!==undefined?G.t-pt:-1;
-    if(k<0&&(passedAge<0||passedAge>1.1)){continue;}
-    slot.used=true;m.visible=true;
-    m.position.set(r.x,r.y,r.z);
-    _v.set(r.nx,r.ny,r.nz);m.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),_v);
-    const u=m.material.uniforms;
-    if(passedAge>=0){const a=Math.min(1,passedAge/1.0);m.scale.setScalar(1+a*0.8);u.uPass.value=a;u.uState.value=1;slot.disc.material.uniforms.uOn.value=0;}
-    else{m.scale.setScalar(1);u.uPass.value=0;u.uState.value=k===0?1:0.0;slot.disc.material.uniforms.uOn.value=k===0?1:0;}
-  }
-  for(const rg of rings)if(!rg.used)rg.mesh.visible=false;
-}
-
 /* ---------- 上昇気流 ---------- */
 let thAll=[],thAct=[],thFrame=0;
+// 太陽へ向かう「光の柱」のルート。行くほど高く、行くほど遠い。
+const ROUTE=[];
+for(let k=0;k<40;k++)ROUTE.push({x:Math.round(120*Math.sin(0.9*k)),z:-250-430*k,y0:0,top:Math.min(3500,420+250*k),R:46,d:0,k:k});
 function buildThermals(x,z){
-  thAll.length=0;
-  const C=420,a0=Math.floor(x/C),b0=Math.floor(z/C);
-  for(let da=-4;da<=4;da++)for(let db=-4;db<=4;db++){
-    const a=a0+da,bb=b0+db;
-    if(hash3(a,bb,31)<0.42){
-      const cx=(a+0.2+0.6*hash3(a,bb,32))*C,cz=(bb+0.2+0.6*hash3(a,bb,33))*C;
-      thAll.push({x:(Math.round(cx/BP-0.5)+0.5)*BP,z:(Math.round(cz/BP-0.5)+0.5)*BP,y0:0,top:560+200*hash3(a,bb,34),R:36,d:0});
-    }
-  }
-  const C2=900,a1=Math.floor(x/C2),b1=Math.floor(z/C2);
-  for(let da=-2;da<=2;da++)for(let db=-2;db<=2;db++){
-    const a=a1+da,bb=b1+db;
-    if(hash3(a,bb,41)<0.6){
-      thAll.push({x:(a+0.15+0.7*hash3(a,bb,42))*C2,z:(bb+0.15+0.7*hash3(a,bb,43))*C2,y0:CLOUD_Y-40,top:1050+350*hash3(a,bb,44),R:62,d:0});
-    }
-  }
-  thAll.push({x:50,z:-150,y0:0,top:640,R:36,d:0});
-  for(const t of thAll)t.d=Math.hypot(t.x-x,t.z-z);
-  thAll.sort((p,q)=>p.d-q.d);
+  for(const t of ROUTE)t.d=Math.hypot(t.x-x,t.z-z);
+  thAll=ROUTE.slice().sort((p,q)=>p.d-q.d);
   thAct=thAll.slice(0,THN);
 }
 let thAx=0,thAy=0,thAz=0;
@@ -196,7 +96,7 @@ function thermalForce(){
       const q=1-(r/Rr)*(r/Rr);
       const v=sstep(t.y0-5,t.y0+25,b.y)*(1-sstep(t.top-140,t.top+30,b.y));
       const kk=q*v;
-      thAy+=16*kk;thAx+=-dz/(r+1)*3.2*kk;thAz+=dx/(r+1)*3.2*kk;K=Math.max(K,kk);
+      thAy+=26*kk;thAx+=-dz/(r+1)*3.2*kk;thAz+=dx/(r+1)*3.2*kk;K=Math.max(K,kk);
     }
   }
   return K;
@@ -205,10 +105,10 @@ function updateThermalVisuals(){
   const uTh=thermalPts.material.uniforms.uTh.value,uTop=thermalPts.material.uniforms.uTop.value;
   for(let i=0;i<THN;i++){
     const t=thAct[i],m=thermalMeshes[i];
-    if(!t||t.d>2600){m.visible=false;uTh[i].set(0,0,0,0);continue;}
+    if(!t||t.d>4200){m.visible=false;uTh[i].set(0,0,0,0);continue;}
     m.visible=true;
     m.position.set(t.x,t.y0,t.z);m.scale.set(t.R*1.12,t.top-t.y0,t.R*1.12);
-    m.material.uniforms.uOn.value=1;
+    m.material.uniforms.uOn.value=1.5;
     uTh[i].set(t.x,t.y0,t.z,t.R*1.05);uTop[i]=t.top;
   }
 }
@@ -247,13 +147,12 @@ function setMode(m){G.mode=m;G.modeT=0;}
 function resetRun(){
   Object.assign(b,makeBird());
   b.x=START.x;b.y=START.y;b.z=START.z;b.yaw=0;b.pitch=-0.04;b.roll=0;
-  G.heat=0;G.melt=0;G.meltT=0;G.meltShed=0;G.maxAlt=0;G.ringCount=0;G.shake=0;G.fovKick=0;G.stun=0;G.flash=0;G.timeScale=1;G.shedHeat=0;G.thK=0;
+  G.heat=0;G.melt=0;G.meltT=0;G.meltShed=0;G.maxAlt=0;G.damage=0;G.angelSeen=0;G.shake=0;G.fovKick=0;G.stun=0;G.flash=0;G.timeScale=1;G.shedHeat=0;G.thK=0;
   G.steerSeen=false;G.flapSeen=false;G.hintShown=false;G.above=false;G.lastBreak=-99;
   G.runs=(G.runs||0)+1;el.title.classList.toggle('retry',G.runs>1);
   wings.restore();wings.setLoose(0);
   fallFeathers.clear();
-  chain.passed={};
-  chainReset(START.x,START.y,START.z,0);
+  angels.clear();
   cityI=1e9;
   setMode('title');
   el.end.classList.remove('on');
@@ -271,7 +170,7 @@ function launch(){
   G.fovKick=22;G.flash=0.22;
   parts.burst(b.x,b.y-1.5,b.z-1,40,14,1.0,0.9,0.7,0.5,1.2,4,1.2,0,-1,-1,1.2);
   el.title.classList.remove('on');
-  el.hint.innerHTML=coarse?'<span>ドラッグで舵</span><span>タップで羽ばたき</span>':'<span>マウスで舵</span><span>クリック・スペースで羽ばたき</span>';
+  el.hint.innerHTML=coarse?'<span>ドラッグで舵</span><span>タップで羽ばたき</span><span>光の柱で上昇</span>':'<span>マウスで舵</span><span>クリック・スペースで羽ばたき</span><span>光の柱で上昇</span>';
   el.hint.classList.add('on');G.hintT=0;G.hintShown=true;
 }
 function flapNow(){
@@ -301,10 +200,12 @@ function finish(){
   audio.endChord();
   const alt=Math.round(G.maxAlt);
   let line;
-  if(G.maxAlt<650)line='まだ、空は遠い。';
-  else if(G.maxAlt<1050)line='蝋が溶けた。<br>それでも空は、美しかった。';
-  else line='太陽に、触れた。';
-  el.endTxt.innerHTML=line+'<br><span style="font-size:.5em;letter-spacing:.25em;opacity:.8">到達 '+alt.toLocaleString('ja-JP')+' m　輪 '+G.ringCount+'</span>';
+  if(G.maxAlt<500)line='まだ、空は遠い。';
+  else if(G.maxAlt<1500)line='蝋が溶けた。<br>それでも空は、美しかった。';
+  else if(G.maxAlt<2600)line='太陽は、まだ遠かった。';
+  else line='手を伸ばしても、<br>太陽は、遠かった。';
+  if(G.angelSeen>0&&G.maxAlt>=1500)line+='<br><span style="font-size:.62em;opacity:.85">天使たちは、ただ見ていた。</span>';
+  el.endTxt.innerHTML=line+'<br><span style="font-size:.5em;letter-spacing:.25em;opacity:.8">到達 '+alt.toLocaleString('ja-JP')+' m ／ 太陽まで 3,000 m</span>';
   G.fadeTarget=1;G.fadeSpeed=0.55;P.fadeCol.set(0.97,0.93,0.84);
   setTimeout(()=>{if(G.mode==='end')el.end.classList.add('on');},1500);
 }
@@ -337,32 +238,38 @@ function update(dt){
     const steps=sdt>1/40?2:1,h=sdt/steps;
     for(let s=0;s<steps;s++){
       const px=b.x,py=b.y,pz=b.z;
-      G.thK=thermalForce();
+      if(mode==='fly')G.thK=thermalForce();else{G.thK=0;thAx=thAy=thAz=0;}
       const sx=(mode==='fly'&&G.stun<=0)?ctl.sx:0,sy=(mode==='fly'&&G.stun<=0)?ctl.sy:0;
       stepBird(b,h,sx,sy,thAx,thAy,thAz);
       collide(h);
-      if(mode==='fly')updateRings(px,py,pz);
     }
     G.maxAlt=Math.max(G.maxAlt,b.y);
     if(mode==='fly'){
-      const alt01=clamp(b.y/1300,0,1.2);
+      const alt01=clamp(b.y/2000,0,1);
       // 熱：高く、太陽に向かうほど羽が熱される
       birdBasis(b,_bs);
       const sd=U.uSunDir.value;
       const face=clamp((_bs.fx*sd.x+_bs.fy*sd.y+_bs.fz*sd.z)*1.3+0.35,0,1);
-      const expo=sstep(560,1250,b.y);
-      let rate=0.085*expo*(0.3+0.7*face)*(1+0.8*sstep(1300,1700,b.y));
+      // 太陽に近づくほど、羽は容赦なく熱される（高さ3000mが「太陽」）
+      const pr=clamp(b.y/3000,0,1.1);
+      let rate=(0.003+0.11*Math.pow(pr,2.6))*(0.5+0.5*face);
       rate*=1-0.85*G.mist;
-      const cool=0.07*(1-expo)+0.03;
-      G.heat+=(rate-cool*(rate>0.001?0.2:1))*dt;
+      const seaNear=1-sstep(30,260,b.y);
+      const cool=(0.020+0.14*seaNear+0.16*G.mist)*(1-sstep(0.3,0.8,pr));
+      G.heat+=(rate-cool)*dt;
+      G.heat=Math.max(G.heat,sstep(0.4,1.0,pr)*0.85);
       if(G.heat<0)G.heat=0;
       if(G.heat>=1)startMelt();
-      // 熱で羽がほどけていく
-      if(G.heat>0.55){
-        G.shedHeat+=dt*(G.heat-0.5)*3.2;
-        if(G.shedHeat>1){G.shedHeat=0;shedFeathers(1);}
+      // 傷みは戻らない：羽は縮み、ほどけ、抜けていく
+      G.damage=Math.max(G.damage,G.heat);
+      const dmg=G.damage;
+      b.liftScale=1-0.5*sstep(0.3,1,dmg);
+      wings.setLoose(clamp((dmg-0.3)*1.3,0,1));
+      const want=Math.round(wings.total*(1-0.88*sstep(0.18,1,dmg)));
+      if(wings.aliveTotal()>want){
+        G.shedHeat+=dt;
+        if(G.shedHeat>0.22){G.shedHeat=0;shedFeathers(1);}
       }
-      wings.setLoose(clamp((G.heat-0.35)*1.2,0,1));
       // しずくのような蝋
       if(G.heat>0.45&&rnd()<dt*40*G.heat){
         const sd2=rnd()<0.5?-1:1;
@@ -415,9 +322,8 @@ function update(dt){
   G.fovKick*=Math.exp(-dt*2.6);
   G.shake=Math.max(0,G.shake-dt*1.6);
   // 大気
-  const alt01=clamp(b.y/1300,0,1.2);
+  const alt01=clamp(b.y/2000,0,1);
   applyAtmosphere(Math.min(1,alt01),Math.min(1,G.heat),b.y);
-  updateRingVisuals();
   // 雲の移動
   for(const m of cloudLayers){m.position.x=b.x;m.position.z=b.z;}
   ground.position.x=Math.floor(b.x/10)*10;ground.position.z=Math.floor(b.z/10)*10;
@@ -452,7 +358,7 @@ function updateView(dt){
   // 一人称の翼
   wings.sunView(U.uSunDir.value,cam.quaternion);
   const tuck=b.tuck;
-  wings.update(dt,{tuck:tuck,load:clamp(b.load,-0.3,1.2),heat:Math.min(1,G.heat),melt:G.melt,roll:b.roll,pitch:b.pitch*0.5,seed:0.7,calm:G.mode==='title'?1:(sstep(20,10,sp)*0.8),
+  wings.update(dt,{shrink:sstep(0.05,1,G.damage),tuck:tuck,load:clamp(b.load,-0.3,1.2),heat:Math.min(1,G.heat),melt:G.melt,roll:b.roll,pitch:b.pitch*0.5,seed:0.7,calm:G.mode==='title'?1:(sstep(20,10,sp)*0.8),
     sx:-b.yawRate*0.012,sy:-b.pitchRate*0.01+bob*0.5,sr:0.0});
   // 太陽（画面上の位置）
   const sd=U.uSunDir.value;
@@ -461,7 +367,7 @@ function updateView(dt){
   const align=_v.dot(sd);
   P.sunUV.set(_w.x*0.5+0.5,_w.y*0.5+0.5);
   P.sunVis=sstep(0.15,0.55,align);
-  const alt01=Math.min(1,b.y/1300);
+  const alt01=Math.min(1,b.y/2000);
   const sunFace=sstep(0.82,1.0,align);
   P.ray=(0.20+0.32*alt01)*(0.4+0.6*P.sunVis);
   P.bloom=0.42+0.18*alt01+G.heat*0.12;
@@ -490,9 +396,11 @@ function updateView(dt){
   fallFeathers.update(dt,G.t);
   puffs.update(cam.position.x,cam.position.y,cam.position.z,VMU.uSunV.value);
   birds.update(G.t,thAct);
+  const ang=angels.update(dt,{x:b.x,y:b.y,z:b.z,yaw:b.yaw,pr:clamp(b.y/3000,0,1),mode:G.mode,t:G.t});
+  if(ang.seen>G.angelSeen)G.angelSeen=ang.seen;
   // 音
   const fallK=G.mode==='melt'?clamp(sp/80,0,1):0;
-  audio.update(dt,{speed:sp,mode:G.mode,fallK:fallK,cloud:G.mist,thermal:G.thK>0.05?G.thK:0,heat:Math.min(1,G.heat),alt01:alt01});
+  audio.update(dt,{speed:sp,mode:G.mode,fallK:fallK,cloud:G.mist,thermal:G.thK>0.05?G.thK:0,heat:Math.min(1,G.heat),alt01:alt01,angel:ang.presence});
 }
 
 /* ---------- ループ ---------- */

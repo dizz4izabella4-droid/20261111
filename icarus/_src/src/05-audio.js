@@ -1,7 +1,7 @@
 /* ================= 音（すべて合成。素材ファイルなし） ================= */
 const audio=(function(){
   let ctx=null,master=null,comp=null,rev=null,revSend=null,on=true;
-  let windG,windF,rumbleG,thermG,heatG,whistleO,whistleG,noiseBuf,padT=0,hbT=0,lastFlap=0;
+  let choirG,windG,windF,rumbleG,thermG,heatG,whistleO,whistleG,noiseBuf,padT=0,hbT=0,lastFlap=0;
   const SCALE=[0,2,4,7,9]; // ペンタトニック（D）
   function noiseBuffer(sec,color){
     const n=Math.floor(ctx.sampleRate*sec),b=ctx.createBuffer(1,n,ctx.sampleRate),d=b.getChannelData(0);
@@ -37,6 +37,16 @@ const audio=(function(){
     // 落下の笛
     whistleO=ctx.createOscillator();whistleO.type='sine';whistleO.frequency.value=900;
     whistleG=ctx.createGain();whistleG.gain.value=0;whistleO.connect(whistleG);whistleG.connect(master);whistleG.connect(revSend);whistleO.start();
+    // 天使の聖歌（かすかな合唱）
+    choirG=ctx.createGain();choirG.gain.value=0;
+    const cf=ctx.createBiquadFilter();cf.type='lowpass';cf.frequency.value=1100;cf.Q.value=0.4;
+    const lfo=ctx.createOscillator(),lg=ctx.createGain();lfo.frequency.value=4.6;lg.gain.value=3.5;lfo.start();
+    [146.83,220,293.66,349.23,440,587.33].forEach((f,i)=>{
+      const o=ctx.createOscillator();o.type=i%2?'triangle':'sine';o.frequency.value=f;o.detune.value=(i-2.5)*3;
+      lfo.connect(lg);lg.connect(o.detune);
+      const g=ctx.createGain();g.gain.value=0.5/(1+i*0.35);o.connect(g);g.connect(cf);o.start();
+    });
+    cf.connect(choirG);choirG.connect(master);choirG.connect(revSend);
     setOn(on);
   }
   function setOn(v){
@@ -63,6 +73,22 @@ const audio=(function(){
     noiseHit(t+0.1,0.3,1500,500,0.7,0.15,'bandpass',0.1);
     const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(110,t);o.frequency.exponentialRampToValueAtTime(48,t+0.25);
     g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.32,t+0.03);g.gain.exponentialRampToValueAtTime(0.0001,t+0.3);o.connect(g);g.connect(master);o.start(t);o.stop(t+0.35);
+  }
+  function splash(k){
+    if(!ctx)return;const t=ctx.currentTime;
+    noiseHit(t,0.5+0.5*k,2600,500,0.7,0.16+0.30*k,'bandpass',0.25);
+    noiseHit(t,0.35,500,120,0.6,0.12+0.2*k,'lowpass',0.1);
+  }
+  function angelFlap(pan,g){
+    if(!ctx||g<0.02)return;const t=ctx.currentTime;
+    const s=ctx.createBufferSource();s.buffer=noiseBuf[1];s.loop=true;
+    const f=ctx.createBiquadFilter();f.type='bandpass';f.Q.value=0.7;f.frequency.setValueAtTime(260,t);f.frequency.exponentialRampToValueAtTime(700,t+0.35);
+    const o=ctx.createGain();o.gain.setValueAtTime(0,t);o.gain.linearRampToValueAtTime(0.5*g,t+0.18);o.gain.exponentialRampToValueAtTime(0.0001,t+0.9);
+    s.connect(f);f.connect(o);
+    let out=o;
+    try{const p=ctx.createStereoPanner();p.pan.value=pan;o.connect(p);out=p;}catch(e){}
+    out.connect(master);const k=ctx.createGain();k.gain.value=0.7;out.connect(k);k.connect(revSend);
+    s.start(t,Math.random()*1.5);s.stop(t+1.0);
   }
   function ring(n){
     if(!ctx)return;const t=ctx.currentTime;
@@ -115,6 +141,7 @@ const audio=(function(){
     windF.frequency.setTargetAtTime(280+sp*22+p.fallK*900,t,0.12);
     rumbleG.gain.setTargetAtTime(0.05+0.3*wg+p.cloud*0.08,t,0.2);
     thermG.gain.setTargetAtTime(p.thermal*0.07,t,0.2);
+    if(choirG)choirG.gain.setTargetAtTime((p.angel||0)*0.075,t,0.8);
     heatG.gain.setTargetAtTime(Math.max(0,p.heat-0.35)*0.28,t,0.3);
     whistleG.gain.setTargetAtTime(p.fallK*0.05,t,0.2);
     whistleO.frequency.setTargetAtTime(500+p.fallK*900-(p.mode==='end'?300:0),t,0.3);
@@ -136,5 +163,5 @@ const audio=(function(){
       if(Math.random()<0.5)tone(base*oct*2*Math.pow(2,ch[(Math.random()*ch.length)|0]/12),t+0.3,4.5,'triangle',0.02,1.2,1.0);
     }
   }
-  return {suspend:function(){try{ctx&&ctx.state==='running'&&ctx.suspend();}catch(e){}},resume:function(){try{ctx&&ctx.state==='suspended'&&ctx.resume();}catch(e){}},init:init,setOn:setOn,flap:flap,ring:ring,thud:thud,launch:launch,puff:puff,shed:shed,melt:melt,rise:rise,endChord:endChord,update:update,get on(){return on},get ready(){return !!ctx}};
+  return {suspend:function(){try{ctx&&ctx.state==='running'&&ctx.suspend();}catch(e){}},resume:function(){try{ctx&&ctx.state==='suspended'&&ctx.resume();}catch(e){}},init:init,setOn:setOn,flap:flap,ring:ring,splash:splash,angelFlap:angelFlap,thud:thud,launch:launch,puff:puff,shed:shed,melt:melt,rise:rise,endChord:endChord,update:update,get on(){return on},get ready(){return !!ctx}};
 })();

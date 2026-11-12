@@ -217,40 +217,6 @@ const fallFeathers=(function(){
   return {spawn:spawn,update:update,clear:clear};
 })();
 
-/* --- 輪 --- */
-const RING_R=17;
-const ringMat=function(){
-  return new T.ShaderMaterial({
-    uniforms:Object.assign({uState:{value:0},uPass:{value:0}},U),transparent:true,depthWrite:false,blending:T.AdditiveBlending,side:T.DoubleSide,
-    vertexShader:`varying vec2 vUv;varying vec3 vWP;varying vec3 vNw;
-    void main(){vUv=uv;vec4 wp=modelMatrix*vec4(position,1.0);vWP=wp.xyz;vNw=normalize(mat3(modelMatrix)*normal);gl_Position=projectionMatrix*viewMatrix*wp;}`,
-    fragmentShader:FS_PRE+SKY_GLSL+`uniform float uState,uPass;varying vec2 vUv;varying vec3 vWP;varying vec3 vNw;
-    void main(){
-      vec3 V=normalize(cameraPosition-vWP);
-      float fr=pow(1.0-abs(dot(normalize(vNw),V)),1.5);
-      float flow=0.5+0.5*sin(vUv.x*6.2831*10.0-uTime*3.2);
-      float flow2=0.5+0.5*sin(vUv.x*6.2831*3.0+uTime*1.3);
-      float core=0.55+0.45*fr;
-      float a=core*(0.55+0.45*flow)*mix(0.5,1.0,uState);
-      vec3 c=mix(vec3(1.0,0.78,0.42),vec3(1.0,0.97,0.88),fr*0.8+flow2*0.2)*(1.6+uState*1.8);
-      float dist=length(cameraPosition-vWP);
-      a*=smoothstep(3200.0,500.0,dist)*(1.0-uPass);
-      c=mix(c,vec3(1.0,0.9,0.7),uPass);
-      gl_FragColor=vec4(c*a,a);
-    }`});
-};
-const rings=[];
-for(let i=0;i<5;i++){
-  const g=new T.TorusGeometry(RING_R,0.55,10,72);
-  const m=new T.Mesh(g,ringMat());m.frustumCulled=false;m.visible=false;m.renderOrder=24;scene.add(m);
-  // 内側のうっすらした面
-  const disc=new T.Mesh(new T.CircleGeometry(RING_R*0.98,40),new T.ShaderMaterial({uniforms:Object.assign({uOn:{value:0}},U),transparent:true,depthWrite:false,blending:T.AdditiveBlending,side:T.DoubleSide,
-    vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
-    fragmentShader:FS_PRE+`uniform float uOn,uTime;varying vec2 vUv;void main(){vec2 c=vUv-0.5;float r=length(c)*2.0;float a=smoothstep(0.55,1.0,r)*0.10*uOn*(0.7+0.3*sin(uTime*2.0+r*8.0));gl_FragColor=vec4(vec3(1.0,0.82,0.5)*a,a);}`}));
-  disc.frustumCulled=false;disc.renderOrder=24;m.add(disc);
-  rings.push({mesh:m,disc:disc,used:false,passT:-1});
-}
-
 /* --- 上昇気流 --- */
 const THN=8;
 const thermalMeshes=[];
@@ -266,10 +232,10 @@ for(let i=0;i<THN;i++){
       float rise=vWP.y*0.03-uTime*0.9;
       float n=h21(vec2(floor(vUv.x*36.0),floor(rise*1.3)));
       float s=0.5+0.5*sin(vUv.x*6.2831*4.0+vWP.y*0.04-uTime*0.8);
-      float a=(0.07+0.34*n*s)*(0.35+fr)*smoothstep(0.0,0.06,vUv.y)*smoothstep(1.0,0.55,vUv.y);
+      float a=(0.10+0.42*n*s)*(0.35+fr)*smoothstep(0.0,0.06,vUv.y)*smoothstep(1.0,0.55,vUv.y);
       float dist=length(cameraPosition-vWP);
-      a*=smoothstep(2600.0,300.0,dist)*uOn;
-      vec3 c=vec3(1.0,0.74,0.38)*(1.1+0.8*uAlt);
+      a*=smoothstep(4200.0,300.0,dist)*uOn;
+      vec3 c=mix(vec3(1.0,0.74,0.38),vec3(1.0,0.95,0.8),0.35)*(1.4+0.8*uAlt);
       gl_FragColor=vec4(c*a,a);
     }`}));
   m.frustumCulled=false;m.visible=false;m.renderOrder=19;scene.add(m);thermalMeshes.push(m);

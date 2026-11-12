@@ -190,7 +190,7 @@ const wings=(function(){
       S.hand.rotation.y=0.18+fold*0.55-tuck*0.35+0.05*flut(2.9+si);
       S.hand.rotation.z=0.06+load*0.18-heat*0.16-melt*0.5;
       S.wrap.position.set(sg*lay.lat,lay.y,lay.z);
-      S.wrap.scale.set(sg*lay.sc,lay.sc,lay.sc);
+      const shr=p.shrink||0;S.wrap.scale.set(sg*lay.sc*(1-0.52*shr),lay.sc*(1-0.34*shr),lay.sc*(1-0.34*shr));
       // 羽の開き
       const spread=0.05+open*0.18+tuck*(-0.05)+load*0.05+heat*0.04;
       for(const f of S.feathers){
@@ -215,9 +215,11 @@ const wings=(function(){
   // 羽を一枚抜く（返り値: 現在の vm 空間での位置と姿勢）
   function shed(n){
     const out=[];
-    const alive=all.filter(m=>m.userData.alive&&m.userData.kind!=='cov');
-    for(let i=0;i<n&&alive.length;i++){
-      const k=Math.floor(rnd()*alive.length);const m=alive.splice(k,1)[0];
+    for(let i=0;i<n;i++){
+      let alive=all.filter(m=>m.userData.alive&&m.userData.kind!=='cov');
+      if(!alive.length||rnd()<0.35)alive=all.filter(m=>m.userData.alive);
+      if(!alive.length)break;
+      const k=Math.floor(rnd()*alive.length);const m=alive[k];
       m.userData.alive=false;m.visible=false;
       m.updateWorldMatrix(true,false);
       out.push(m.matrixWorld.clone());
@@ -225,6 +227,7 @@ const wings=(function(){
     return out;
   }
   function restore(){for(const m of all){m.userData.alive=true;m.visible=true;}setLoose(0);}
+  function aliveTotal(){let c=0;for(const m of all)if(m.userData.alive)c++;return c;}
   function aliveCount(){let c=0;for(const m of all)if(m.userData.alive&&m.userData.kind!=='cov')c++;return c;}
   function sunView(sunDir,q){ // q: camera quaternion
     const inv=q.clone().invert();
@@ -232,5 +235,5 @@ const wings=(function(){
     VMU.uUpV.value.set(0,1,0).applyQuaternion(inv);
   }
   setLayout(1.7);
-  return {group:group,flap:flap,update:update,setLayout:setLayout,setLoose:setLoose,shed:shed,restore:restore,aliveCount:aliveCount,sunView:sunView,st:st,all:all,sides:sides};
+  return {group:group,flap:flap,update:update,setLayout:setLayout,setLoose:setLoose,shed:shed,restore:restore,aliveCount:aliveCount,aliveTotal:aliveTotal,total:all.length,sunView:sunView,st:st,all:all,sides:sides};
 })();
