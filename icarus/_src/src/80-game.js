@@ -127,7 +127,7 @@ function applyAtmosphere(alt01,heat,y){
   U.uSunDir.value.set(-0.10,Math.sin(elev),-Math.cos(elev)).normalize();
   U.uSunR.value=lerp(0.026,0.075,alt01)*(1+heat*0.45);
   U.uFogDen.value=lerp(0.00085,0.00055,alt01);
-  const mist=sstep(285,306,y)*(1-sstep(352,380,y));
+  const mist=0;
   G.mist+=(mist-G.mist)*0.15;
   U.uMist.value=G.mist*0.9;
 }
@@ -298,7 +298,7 @@ function update(dt){
         _v.set((rnd()<0.5?-1:1)*(0.4+rnd()*1.3),-0.3,-0.7).applyQuaternion(cam.quaternion).add(cam.position);
         parts.spawn(_v.x,_v.y,_v.z,b.vx*0.8,b.vy*0.8+2,b.vz*0.8,1.0,0.55,0.15,0.35,1.6,9,0.1);
       }
-      if(b.y<CLOUD_Y-40&&G.meltT>2.5)finish();
+      if(b.y<300&&G.meltT>2.5)finish();
       else if(b.y<12&&G.meltT>1.5)finish();
     }
   }else if(mode==='end'){
@@ -329,7 +329,7 @@ function update(dt){
   ground.position.x=Math.floor(b.x/10)*10;ground.position.z=Math.floor(b.z/10)*10;
   // 雲海を突き抜ける瞬間
   if(mode==='fly'){
-    if(b.y>CLOUD_Y+70&&!G.above&&b.vy>0&&G.t-(G.lastBreak||-99)>10){G.above=true;G.lastBreak=G.t;G.flash=Math.max(G.flash,0.42);G.fovKick=Math.min(18,G.fovKick+12);audio.rise();parts.burst(b.x,b.y,b.z,50,30,1.0,0.9,0.7,0.7,2.2,0,0.9);}
+    if(false&&b.y>CLOUD_Y+70&&!G.above&&b.vy>0&&G.t-(G.lastBreak||-99)>10){G.above=true;G.lastBreak=G.t;G.flash=Math.max(G.flash,0.42);G.fovKick=Math.min(18,G.fovKick+12);audio.rise();parts.burst(b.x,b.y,b.z,50,30,1.0,0.9,0.7,0.7,2.2,0,0.9);}
     if(b.y<CLOUD_Y+30)G.above=false;
   }
   // 雲に入る音
@@ -394,7 +394,7 @@ function updateView(dt){
   updateTrails(dt,tl,trg,tr,G.t);
   parts.update(dt);
   fallFeathers.update(dt,G.t);
-  puffs.update(cam.position.x,cam.position.y,cam.position.z,VMU.uSunV.value);
+  puffs.mesh.visible=false;// puffs.update(cam.position.x,cam.position.y,cam.position.z,VMU.uSunV.value);
   birds.update(G.t,thAct);
   const ang=angels.update(dt,{x:b.x,y:b.y,z:b.z,yaw:b.yaw,pr:clamp(b.y/3000,0,1),mode:G.mode,t:G.t});
   if(ang.seen>G.angelSeen)G.angelSeen=ang.seen;

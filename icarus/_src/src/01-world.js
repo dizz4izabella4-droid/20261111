@@ -327,7 +327,7 @@ const cloudGeo=new T.PlaneGeometry(1,1).rotateX(-Math.PI/2);
 for(let k=0;k<CLOUD_N;k++){
   const m=new T.Mesh(cloudGeo,makeCloudMat(k));
   m.scale.set(11000,1,11000);m.position.y=CLOUD_Y+k*12;m.frustumCulled=false;m.renderOrder=2+k;
-  scene.add(m);cloudLayers.push(m);
+  m.visible=false;scene.add(m);cloudLayers.push(m);
 }
 
 /* ================= 海（地面） ================= */
