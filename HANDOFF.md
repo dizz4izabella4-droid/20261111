@@ -7,7 +7,7 @@
 - **CMD Typing（PC版）**：コマンドプロンプト風の英単語タイピングゲーム。外部からのハッキング攻撃を受け、入力で防御 → 追跡 → 反撃するという筋立て。3〜11章で詳しく説明する。
 - **CMD Typing Mobile（スマホ版）**：PC版と同じ筋立てを、スマホの縦画面とフリック入力に合わせたもの。12章。
 - **鳥と獣の戦い**：スマホを机に置いて2人で遊ぶ対戦ゲーム。13章。
-- **クワイヤダ**（旧名：組み分け帽）：数字をたよりに1本の輪を作るパズル（1人用、スマホ・PC両対応）。14章。
+- **ワイヤダ**（旧名：クワイヤダ、組み分け帽）：数字をたよりに1本の輪を作るパズル（1人用、スマホ・PC両対応）。14章。
 - **GLASS BREAKER（ガラス割り）**：バットで物を叩いて割る、破壊表現のテスト（スマホの縦画面、タッチ操作）。15章。
 
 ---
@@ -21,7 +21,7 @@
 | 　PC版 | https://dizz4izabella4-droid.github.io/20261111/typing-pc/ | |
 | 　スマホ版 | https://dizz4izabella4-droid.github.io/20261111/typing-mobile/ | |
 | 　鳥と獣の戦い | https://dizz4izabella4-droid.github.io/20261111/tori-to-kemono/ | |
-| 　クワイヤダ | https://dizz4izabella4-droid.github.io/20261111/kumiwake-bou/ | 旧名：組み分け帽 |
+| 　ワイヤダ | https://dizz4izabella4-droid.github.io/20261111/kumiwake-bou/ | 旧名：クワイヤダ、組み分け帽 |
 | 　　ルール説明 | https://dizz4izabella4-droid.github.io/20261111/kumiwake-bou/rules.html | 本体の「あそびかた」から開く。「ゲームへ」で本体へ戻る |
 | 　GLASS BREAKER | https://dizz4izabella4-droid.github.io/20261111/glass-breaker/ | |
 | claude.ai アーティファクト（PC版） | https://claude.ai/artifact/NctPezS87FshtyQGQ1YaDf | 開発中の確認用。曲2つも同梱して公開済み |
@@ -38,10 +38,10 @@ typing-pc/The_Glass_Perimeter.mp3  ミッション選択画面の曲（約3分1�
 typing-pc/Iron_Skyline_Pursuit.mp3 タイピング中の曲（約2分40秒）
 typing-mobile/index.html           スマホ版の本体（曲は ../typing-pc/ のものを共用）
 tori-to-kemono/index.html          鳥と獣の戦い（アーティファクトの写し）
-kumiwake-bou/index.html            クワイヤダの本体（HTML/CSS/JS すべて1ファイル、外部読み込みなし）
-kumiwake-bou/rules.html            クワイヤダのルール説明ページ（1ファイル。例題の図は答えを計算して作った静的なSVG）
-kumiwake-bou/tools/gen.js          クワイヤダの問題を作る道具（Node.js）
-kumiwake-bou/tools/verify.js       クワイヤダの収録問題を検査する道具（Node.js）
+kumiwake-bou/index.html            ワイヤダの本体（HTML/CSS/JS すべて1ファイル、外部読み込みなし）
+kumiwake-bou/rules.html            ワイヤダのルール説明ページ（1ファイル。例題の図は答えを計算して作った静的なSVG）
+kumiwake-bou/tools/gen.js          ワイヤダの問題を作る道具（Node.js）
+kumiwake-bou/tools/verify.js       ワイヤダの収録問題を検査する道具（Node.js）
 glass-breaker/index.html            GLASS BREAKER の本体（HTML/CSS/JS すべて1ファイル、外部読み込みなし。アーティファクトの写し）
 README.md
 HANDOFF.md                         本書
@@ -75,7 +75,7 @@ HANDOFF.md                         本書
 2. スマホ版：typing-mobile/index.html を直接直し、スマホの画面の大きさでブラウザ確認してから push する。PC版の仕組み（攻撃信号・耐久値・評価など）を変えたときは、スマホ版にも同じ変更を入れる。
 3. 鳥と獣の戦い：アーティファクトを更新したら、その内容で tori-to-kemono/index.html を作り直して push する。
 4. GLASS BREAKER：アーティファクトを更新したら、その内容に doctype・`<html lang="ja">`・charset・viewport を付けて glass-breaker/index.html を作り直して push する（`<head>` の先頭に、上下の安全余白用の `html{padding-top/bottom: env(safe-area-inset-*)}` と `[hidden]{display:none!important}` を足す）。
-5. クワイヤダ：kumiwake-bou/index.html を直接直す。問題や手筋を変えたら `node kumiwake-bou/tools/verify.js` で「すべて OK」を確認し、ブラウザでも確認してから push する。
+5. ワイヤダ：kumiwake-bou/index.html を直接直す。問題や手筋を変えたら `node kumiwake-bou/tools/verify.js` で「すべて OK」を確認し、ブラウザでも確認してから push する。
 6. 曲は変わらない限り push し直さない（約8MB）。
 
 ---
@@ -380,11 +380,11 @@ PC版の筋立てと仕組み（防御→追跡→反撃、攻撃信号、耐久
 
 ---
 
-## 14. クワイヤダ（kumiwake-bou）
+## 14. ワイヤダ（kumiwake-bou）
 
-名前は「クワイヤダ」（以前は「組み分け帽」。フォルダ名の kumiwake-bou は、公開URLを変えないためそのまま）。トップの一覧では、英字の名前を KUWAIYADA、ひとこと説明を「クワイヤダ」と表示している。
+名前は「ワイヤダ」（以前は「クワイヤダ」、その前は「組み分け帽」。フォルダ名の kumiwake-bou は、公開URLを変えないためそのまま）。トップの一覧では、英字の名前を WAIYADA、ひとこと説明を「ワイヤダ」と表示している。
 
-数字をたよりに、点と点を線でつないで1本の輪を作るパズル（一般に「スリザーリンク」と呼ばれるルール。その名称は使わず、作品名は「クワイヤダ」）。輪ができると、マスが「内」と「外」に組み分けられる。画面の表示は日本語。
+数字をたよりに、点と点を線でつないで1本の輪を作るパズル（一般に「スリザーリンク」と呼ばれるルール。その名称は使わず、作品名は「ワイヤダ」）。輪ができると、マスが「内」と「外」に組み分けられる。画面の表示は日本語。
 
 ### ルール
 
