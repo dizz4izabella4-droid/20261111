@@ -16,7 +16,7 @@
 <meta name="twitter:title" content="izのおもちゃ箱">
 <meta name="twitter:description" content="　">
 <style>
-/* ゲーム選択画面: パステルのお菓子箱。ふわふわ浮かぶ星とハート、キャンディのようなカード。作品は下の APPS に1件足すと増える */
+/* ゲーム選択画面: パステルのお菓子箱。ふわふわ浮かぶ星とハート、キャンディのようなカード。作品は下の APPS の先頭に1件足すと増える（新しいものが上） */
 :root{
   --sky1:#ffe3ef; --sky2:#efe4ff; --sky3:#dff6f0;
   --ink:#6b4a7a; --ink2:#9a7fa8; --white:#fffafc;
@@ -258,22 +258,22 @@ body.abyss .music.on .sw{background:#c41a2a}
 //   for  … 'pc' / 'mobile' / 'both'   color … 'pink' / 'mint' / 'lav' / 'lemon'   icon … 下の ICONS の名前
 //   //   start … 制作開始日（YYYY-MM-DD。分からないときは書かない）   ver … バージョン（例 '1.0'）。大幅に改修したら上げる（上げ幅の目安は HANDOFF.md）。どちらもカードの下に極小で出る
 const APPS=[
-  {path:'typing-pc/', ja:'キーボード', label:'CMDタイピング（キーボード）', name:'CMD TYPING', for:'pc', color:'mint', icon:'keyboard',
+  {path:'icarus/', ja:'テスト', label:'イカロス〜蝋で固めた鳥の羽〜 test ver.（テスト）', name:'ICARUS', for:'both', color:'lav', icon:'wing',
+   start:'2026-11-12', ver:'1.0'},
+  {path:'nobiru-hige/', ja:'テスト', label:'伸びるヒゲ test ver.（テスト）', name:'NOBIRU HIGE', for:'both', color:'lemon', icon:'hige',
+   start:'2026-11-12', ver:'1.0'},
+  {path:'dentaku-drill/', ja:'電卓の使い方', label:'電卓ドリル（電卓の使い方）', name:'CALCULATOR DRILL', for:'both', color:'pink', icon:'calc',
    start:'2026-11-10', ver:'1.0'},
-  {path:'typing-mobile/', ja:'フリック', label:'CMDタイピング スマホ版（フリック）', name:'CMD TYPING MOBILE', for:'mobile', color:'lav', icon:'phone',
+  {path:'glass-breaker/', ja:'カタストロフィー', label:'ガラス割り（カタストロフィー）', name:'GLASS BREAKER', for:'mobile', color:'mint', icon:'glass',
+   start:'2026-11-12', ver:'2.0'},
+  {path:'kumiwake-bou/', ja:'定理探し', label:'ワイヤダ（定理探し）', name:'WAIYADA', for:'both', color:'lemon', icon:'loop',
    start:'2026-11-11', ver:'1.0'},
   {path:'tori-to-kemono/', ja:'机に置き対戦', label:'コウモリ（机に置き対戦）', name:'KOUMORI', for:'mobile', color:'pink', icon:'bird',
    start:'2026-10-30', ver:'1.0'},
-  {path:'kumiwake-bou/', ja:'定理探し', label:'ワイヤダ（定理探し）', name:'WAIYADA', for:'both', color:'lemon', icon:'loop',
+  {path:'typing-mobile/', ja:'フリック', label:'CMDタイピング スマホ版（フリック）', name:'CMD TYPING MOBILE', for:'mobile', color:'lav', icon:'phone',
    start:'2026-11-11', ver:'1.0'},
-  {path:'glass-breaker/', ja:'カタストロフィー', label:'ガラス割り（カタストロフィー）', name:'GLASS BREAKER', for:'mobile', color:'mint', icon:'glass',
-   start:'2026-11-12', ver:'2.0'},
-  {path:'dentaku-drill/', ja:'電卓の使い方', label:'電卓ドリル（電卓の使い方）', name:'CALCULATOR DRILL', for:'both', color:'pink', icon:'calc',
+  {path:'typing-pc/', ja:'キーボード', label:'CMDタイピング（キーボード）', name:'CMD TYPING', for:'pc', color:'mint', icon:'keyboard',
    start:'2026-11-10', ver:'1.0'},
-  {path:'nobiru-hige/', ja:'テスト', label:'伸びるヒゲ test ver.（テスト）', name:'NOBIRU HIGE', for:'both', color:'lemon', icon:'hige',
-   start:'2026-11-12', ver:'1.0'},
-  {path:'icarus/', ja:'テスト', label:'イカロス〜蝋で固めた鳥の羽〜 test ver.（テスト）', name:'ICARUS', for:'both', color:'lav', icon:'wing',
-   start:'2026-11-12', ver:'1.0'},
 ];
 // アイコン（白で描く）
 const ICONS={

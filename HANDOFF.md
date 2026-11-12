@@ -72,7 +72,7 @@ HANDOFF.md                         本書
 ### 作品を増やすとき
 
 1. リポジトリに作品のフォルダを作り、中に `index.html` を置く（例：`new-game/index.html`）。
-2. トップの `index.html` の `APPS` に1件足す（`path`・`name`・`ja`・`for`・`color`・`icon`・`start`・`date`。`for` は `'pc'`・`'mobile'`・`'both'`）。
+2. トップの `index.html` の `APPS` の**先頭**に1件足す（新しく追加した作品が一番上に来る。2026-11-13 に決定）（`path`・`name`・`ja`・`for`・`color`・`icon`・`start`・`date`。`for` は `'pc'`・`'mobile'`・`'both'`）。
 3. push すると、選択画面に並ぶ。
 
 ### アーティファクト版と index.html の違い
