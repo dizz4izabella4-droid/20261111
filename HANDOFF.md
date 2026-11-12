@@ -579,3 +579,10 @@ PC版の筋立てと仕組み（防御→追跡→反撃、攻撃信号、耐久
 - ソース：`icarus/_src/`（`src/*.js` を番号順に連結 → three.min.js と一緒に `template.html` へ。`python3 build.py ../index.html`、断片は `FRAG=1`。three は `npm i three@0.160.1`）。直すときはソースを直してビルドし直す。
 - 確認のしかた：`--use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist` のPlaywrightで動く。デバッグ用に `window.__pose(x,y,z,yaw,pitch,roll,heat,speed)`（姿勢を固定）と `window.__sim(n,dt,policy)`（自動操縦で高速に何秒も進める）がある。自動操縦では約110秒で溶けて終わる（輪38個）。
 - この作品からトップへ戻る手段は付けない（他の作品と同じ）。
+
+## 13. 静と動の緩急・静かな〆（PC / フリック共通）
+- フェーズ移行: `phaseBreak()` で入力を止め、`hush`（画面の彩度/明るさを落とす）＋BGMを `bgmLevel(.2,.8)` で絞る → 550ms 後に区切りの音とログ → 800ms 置いて次フェーズ。再開時に `hush` 解除・BGMを戻す。窓の展開も 700ms 遅らせ、導入の間を長めに取った。
+- 終了: 反撃の衝撃（`impact`）で一瞬だけ音量を戻し、約0.8秒後から `bgmFadeOut(5)`（`gGate` を `setTargetAtTime` で下げて停止）。窓を順に閉じ → `quietClose()`（ログ3行→ `hush` →「Closing all sessions / node7 is going offline / shutdown /s」）→ `powerOff()`（CRT の横線→点で消灯、電源断SE）→ 約1.5秒後 `finish()` で結果表示。衝撃から結果まで約11秒。
+- `clearOver()` で `hush`/`pwroff` を外し `pwron` を付ける（リトライ・再開で暗転が残らない）。ゲームオーバーのテープストップ演出は従来のまま。
+- PC版の時間計測も入力時間のみ加算する方式（tAcc/tRun/clockStart/clockStop）に統一。フェーズ間の待ちは含まれないため、スコアは以前より高めに出る。
+- 注意: `clockStart` 内は `clearInterval(timer)`（`clockStop()` にすると時計が0のままになる）。
