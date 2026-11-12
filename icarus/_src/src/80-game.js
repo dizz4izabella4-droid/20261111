@@ -522,6 +522,7 @@ function updateView(dt){
   birds.updateCrew(dt,{x:b.x,y:b.y,z:b.z,yaw:b.yaw,speed:b.speed,fly:G.mode==='fly',rocket:G.rocket,age:G.modeT,vx:b.vx,vy:b.vy,vz:b.vz},G.t);
   murmur.update(G.t,b.x,b.y,b.z,dt);
   legacy.update(b.x,b.z);
+  sunGate.update(b.y);
   rocketItem.update(G.t,Math.hypot(b.x-ROCKET_POS.x,b.y-ROCKET_POS.y,b.z-ROCKET_POS.z));
   const ang=angels.update(dt,{x:b.x,y:b.y,z:b.z,yaw:b.yaw,pr:clamp(b.y/3000,0,1),mode:G.mode,t:G.t});
   if(ang.seen>G.angelSeen)G.angelSeen=ang.seen;
