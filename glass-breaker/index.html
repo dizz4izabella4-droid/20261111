@@ -1,0 +1,861 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>
+html{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+[hidden]{display:none!important}
+</style>
+<title>GLASS BREAKER</title>
+<style>
+/* Layout: 上1/3がドット絵の画面、下2/3が操作パネル。破片は全画面のキャンバスに描くのでパネルの上へ飛び出せる */
+:root {
+  --bg: #10131a;
+  --panel: #1a202b;
+  --panel-hi: #232c3b;
+  --edge: #3a4558;
+  --line: #0b0d12;
+  --fg: #e8ecf0;
+  --muted: #8d98a5;
+  --accent: #e0a458;
+  --jp: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "游ゴシック", "Meiryo", "Noto Sans JP", sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; overflow: hidden; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--jp);
+  overscroll-behavior: none;
+}
+.app {
+  width: min(100%, 480px);
+  height: 100%;
+  margin: 0 auto;
+  display: grid;
+  grid-template-rows: 1fr 2fr;
+  min-height: 0;
+}
+.view {
+  background: #3a4a5c;
+  border-bottom: 2px solid var(--line);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.ui {
+  min-height: 0;
+  box-sizing: border-box;
+  padding: 8px max(16px, env(safe-area-inset-right, 0px)) 6px max(16px, env(safe-area-inset-left, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+h1 { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.18em; color: var(--accent); }
+.hud { display: flex; gap: 12px; font-size: 14px; font-variant-numeric: tabular-nums; }
+.grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 4px;
+  font-family: var(--jp);
+  color: var(--fg);
+  background: var(--panel);
+  border: 2px solid var(--edge);
+  border-radius: 0;
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.35);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.tile:active { transform: translateY(2px); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.35); background: var(--panel-hi); }
+.tile.off { opacity: 0.4; }
+.tile:focus-visible, .bar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.icow { height: 68px; display: flex; align-items: center; justify-content: center; }
+.ico { image-rendering: pixelated; image-rendering: crisp-edges; flex: none; }
+.nm { font-size: 14px; font-weight: 700; }
+.ct { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bar { display: flex; gap: 8px; }
+.bar button {
+  flex: 1;
+  min-height: 44px;
+  font-family: var(--jp);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--fg);
+  background: var(--panel);
+  border: 2px solid var(--edge);
+  border-radius: 0;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.35);
+  touch-action: manipulation;
+}
+.bar button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.bar button:active { transform: translateY(2px); }
+.hint { margin: 0; font-size: 11px; line-height: 1.5; color: var(--muted); }
+#cv {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 5;
+  pointer-events: none;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="view" id="view" role="img" aria-label="破壊テストの部屋"></div>
+  <section class="ui">
+    <header>
+      <h1>GLASS BREAKER</h1>
+      <div class="hud"><span id="cnt">破壊 0</span><span id="left">残り 15/15</span></div>
+    </header>
+    <div class="grid" id="grid"></div>
+    <div class="bar">
+      <button id="loop" type="button" aria-pressed="true">連続テスト ON</button>
+      <button id="reset" type="button">部屋を戻す</button>
+    </div>
+    <p class="hint">物のボタンか、上の画面を直接タップで1振り。連続テストONは壊した物が自動で戻ります。音は仮の合成音です。</p>
+  </section>
+</div>
+<canvas id="cv"></canvas>
+
+<script>
+(function () {
+'use strict';
+var DW = 112, DH = 72, RAD = Math.PI / 180;
+var cv = document.getElementById('cv'), ctx = cv.getContext('2d'), mainCtx = ctx;
+var viewEl = document.getElementById('view'), gridEl = document.getElementById('grid');
+var cntEl = document.getElementById('cnt'), leftEl = document.getElementById('left');
+var loopBtn = document.getElementById('loop');
+var ps = 3, CW = 0, CH = 0, VX = 0, VY = 0, VW = 0, VH = 0, OX = 0, OY = 0;
+var loopMode = true, breaks = 0;
+
+function rnd(a, b) { return a + Math.random() * (b - a); }
+function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+
+/* ---------- 部屋データ(設計座標 112×72。画面の大きさに合わせて中央へ置く) ---------- */
+var DEFS = [
+  { t: 'light', mat: 'light', x: 12, y: 3, w: 22, h: 3, hp: 1, fy: 56 },
+  { t: 'light', mat: 'light', x: 78, y: 3, w: 22, h: 3, hp: 1, fy: 56 },
+  { t: 'window', mat: 'glass', x: 4, y: 9, w: 22, h: 28, hp: 1, fy: 58 },
+  { t: 'window', mat: 'glass', x: 86, y: 9, w: 22, h: 28, hp: 1, fy: 58 },
+  { t: 'plate', mat: 'ceramic', x: 42, y: 14, w: 6, h: 6, hp: 1, fy: 58 },
+  { t: 'plate', mat: 'ceramic', x: 49, y: 14, w: 6, h: 6, hp: 1, fy: 58 },
+  { t: 'plate', mat: 'ceramic', x: 56, y: 14, w: 6, h: 6, hp: 1, fy: 58 },
+  { t: 'plate', mat: 'ceramic', x: 63, y: 14, w: 6, h: 6, hp: 1, fy: 58 },
+  { t: 'showcase', mat: 'temper', x: 38, y: 24, w: 36, h: 20, hp: 4, fy: 62 },
+  { t: 'mirror', mat: 'mirror', x: 4, y: 40, w: 12, h: 26, hp: 1, fy: 67 },
+  { t: 'mirror', mat: 'mirror', x: 96, y: 46, w: 10, h: 20, hp: 1, fy: 67 },
+  { t: 'pot', mat: 'ceramic', x: 20, y: 52, w: 9, h: 14, hp: 1, fy: 68 },
+  { t: 'urn', mat: 'ceramic', x: 31, y: 46, w: 14, h: 20, hp: 2, fy: 69 },
+  { t: 'crate', mat: 'wood', x: 56, y: 52, w: 14, h: 14, hp: 2, fy: 69 },
+  { t: 'barrel', mat: 'wood', x: 76, y: 49, w: 14, h: 17, hp: 2, fy: 69 }
+];
+var PROF = {
+  pot: [3, 3, 5, 7, 9, 9, 9, 9, 8, 7, 6, 5, 5, 5],
+  urn: [4, 4, 6, 10, 12, 14, 14, 14, 14, 14, 14, 13, 12, 11, 10, 8, 8, 8, 8, 8],
+  barrel: [10, 12, 13, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 13, 12, 10]
+};
+var PAL = {
+  pot: { l: '#f5f8fa', m: '#d7e0e8', d: '#9aa8b8', b: '#2f62a8', rows: [4, 5, 9], o: '#5b6878' },
+  urn: { l: '#d98b58', m: '#b9703f', d: '#7d4528', b: '#4d2a17', rows: [6, 7, 13], o: '#3a2010' },
+  barrel: { l: '#b9854d', m: '#9a6a3c', d: '#6e4626', b: '#4a5058', rows: [2, 7, 14], o: '#2e1c0e' }
+};
+var GROUPS = [
+  { t: 'window', name: '窓', isc: 2 }, { t: 'mirror', name: '鏡', isc: 2 }, { t: 'showcase', name: '強化ガラス', isc: 2 },
+  { t: 'light', name: '蛍光灯', isc: 3 }, { t: 'plate', name: '皿', isc: 5 }, { t: 'pot', name: '壺', isc: 3 },
+  { t: 'urn', name: '甕', isc: 3 }, { t: 'crate', name: '木箱', isc: 3 }, { t: 'barrel', name: '樽', isc: 3 }
+];
+var objs = [], parts = [], swings = [], tiles = {};
+var simT = 0, hitstop = 0, slowUntil = 0;
+var shakeAmp = 0, shakeDur = 1, shakeT = 0, flashA = 0, flashDur = 1, flashT = 0;
+
+function mkSky(d) {
+  var a = [], x = 0;
+  while (x < d.w) { var w = Math.floor(rnd(3, 7)); a.push({ x: x, w: Math.min(w, d.w - x), h: Math.floor(rnd(3, 10)) }); x += w; }
+  return a;
+}
+function layout() {
+  var r = viewEl.getBoundingClientRect();
+  ps = Math.max(2, Math.floor(Math.min(r.width / DW, r.height / DH)));
+  CW = Math.ceil(window.innerWidth / ps); CH = Math.ceil(window.innerHeight / ps);
+  cv.width = CW; cv.height = CH; cv.style.width = CW * ps + 'px'; cv.style.height = CH * ps + 'px';
+  VX = Math.round(r.left / ps); VY = Math.round(r.top / ps); VW = Math.round(r.width / ps); VH = Math.round(r.height / ps);
+  OX = VX + Math.floor((VW - DW) / 2); OY = VY + Math.floor((VH - DH) / 2);
+  ctx = cv.getContext('2d'); mainCtx = ctx; ctx.imageSmoothingEnabled = false;
+}
+function build() {
+  objs = DEFS.map(function (d) {
+    return Object.assign({}, d, { x: d.x + OX, y: d.y + OY, fy: d.fy + OY, max: d.hp, hits: 0, dead: false, cracks: [], rem: null,
+      sky: d.t === 'window' ? mkSky(d) : null, prof: PROF[d.t] || null });
+  });
+  parts = []; swings = []; breaks = 0; simT = 0; hitstop = 0; slowUntil = 0; shakeT = 0; flashT = 0;
+  hud();
+}
+function standing() { var n = 0; for (var i = 0; i < objs.length; i++) if (!objs[i].dead) n++; return n; }
+function hud() {
+  cntEl.textContent = '破壊 ' + breaks;
+  leftEl.textContent = '残り ' + standing() + '/' + objs.length;
+  GROUPS.forEach(function (g) {
+    var all = objs.filter(function (o) { return o.t === g.t; }), alive = all.filter(function (o) { return !o.dead; }).length, tl = tiles[g.t];
+    if (!tl) return;
+    tl.ct.textContent = '残 ' + alive + '/' + all.length;
+    tl.el.classList.toggle('off', alive === 0);
+  });
+}
+
+/* ---------- 音(仮の合成音。外部素材に差し替える前提) ---------- */
+var AC = null, master = null, nbuf = null, voices = 0;
+function initAudio() {
+  if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
+  try {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    AC = new Ctx();
+    var comp = AC.createDynamicsCompressor();
+    comp.threshold.value = -14; comp.ratio.value = 6;
+    master = AC.createGain(); master.gain.value = 0.9;
+    master.connect(comp); comp.connect(AC.destination);
+    var len = AC.sampleRate * 2;
+    nbuf = AC.createBuffer(1, len, AC.sampleRate);
+    var d = nbuf.getChannelData(0);
+    for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    AC.resume();
+  } catch (e) { AC = null; }
+}
+function pj() { return 1 + (Math.random() - 0.5) * 0.14; }
+function nz(t, dur, o) {
+  if (!AC || voices > 44) return;
+  o = o || {};
+  var s = AC.createBufferSource(); s.buffer = nbuf;
+  var f = AC.createBiquadFilter(); f.type = o.type || 'lowpass'; f.Q.value = o.q || 1;
+  f.frequency.setValueAtTime(o.f || 1000, t);
+  if (o.f2) f.frequency.exponentialRampToValueAtTime(o.f2, t + dur);
+  var g = AC.createGain(), a = o.a || 0.002;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, o.g || 0.4), t + a);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  s.connect(f); f.connect(g); g.connect(master);
+  s.start(t, Math.random() * 1.5); s.stop(t + dur + 0.03);
+  voices++; s.onended = function () { voices--; };
+}
+function tn(t, f, dur, o) {
+  if (!AC || voices > 44) return;
+  o = o || {};
+  var s = AC.createOscillator(); s.type = o.type || 'sine';
+  s.frequency.setValueAtTime(f, t);
+  if (o.f2) s.frequency.exponentialRampToValueAtTime(o.f2, t + dur);
+  var g = AC.createGain(), a = o.a || 0.002;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, o.g || 0.3), t + a);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  s.connect(g); g.connect(master);
+  s.start(t); s.stop(t + dur + 0.03);
+  voices++; s.onended = function () { voices--; };
+}
+function ping(t, f, dur, g) {
+  tn(t, f, dur, { g: g });
+  if (Math.random() < 0.5) tn(t, f * 2.76, dur * 0.5, { g: g * 0.35 });
+}
+function sTinkle(t0, n, span, lo, hi, g) {
+  for (var i = 0; i < n; i++) ping(t0 + Math.pow(Math.random(), 1.3) * span, rnd(lo, hi), rnd(0.05, 0.12), g * rnd(0.5, 1));
+}
+function sRattle(t0) {
+  var t = t0, gap = 0.09;
+  for (var i = 0; i < 8; i++) {
+    tn(t, rnd(700, 1400), 0.03, { type: 'square', g: 0.035 });
+    nz(t, 0.02, { type: 'bandpass', f: 2500, g: 0.09 });
+    t += gap; gap *= 0.8;
+  }
+}
+function sWhoosh(t) { nz(t, 0.12, { type: 'bandpass', f: 500, f2: 2600, q: 0.8, g: 0.14, a: 0.03 }); }
+function sMiss() {
+  if (!AC) return; var t = AC.currentTime + 0.055;
+  nz(t, 0.08, { type: 'lowpass', f: 600, g: 0.25 }); tn(t, 120, 0.08, { f2: 70, g: 0.2 });
+}
+function sHit(mat, k) {
+  if (!AC) return; var t = AC.currentTime + 0.002, p = pj();
+  if (mat === 'glass' || mat === 'mirror' || mat === 'light') {
+    nz(t, 0.05, { type: 'bandpass', f: 2800 * p, q: 1.2, g: 0.5 }); tn(t, 900 * p, 0.06, { type: 'triangle', f2: 500, g: 0.25 });
+  } else if (mat === 'temper') {
+    var r = Math.pow(2, k / 12);
+    nz(t, 0.07, { type: 'bandpass', f: 1800 * r, q: 0.8, g: 0.55 });
+    tn(t, 160 * r, 0.12, { f2: 90 * r, g: 0.55 }); tn(t, 1300 * r, 0.05, { type: 'triangle', g: 0.18 });
+  } else if (mat === 'ceramic') {
+    nz(t, 0.05, { type: 'bandpass', f: 2200 * p, q: 1, g: 0.5 }); tn(t, 520 * p, 0.07, { type: 'triangle', f2: 300, g: 0.3 });
+  } else {
+    nz(t, 0.08, { type: 'lowpass', f: 900 * p, g: 0.6 }); tn(t, 140 * p, 0.1, { f2: 70, g: 0.55 });
+  }
+}
+function sCrack(mat, lvl) {
+  if (!AC) return; var t = AC.currentTime + 0.01, i;
+  if (mat === 'temper') {
+    var r = Math.pow(2, lvl / 12);
+    for (i = 0; i < 2 + lvl * 2; i++) nz(t + rnd(0, 0.14), 0.02, { type: 'highpass', f: rnd(4000, 7500), g: 0.22 });
+    tn(t, 700 * r, 0.2, { type: 'triangle', f2: 760 * r, g: 0.07 });
+  } else if (mat === 'ceramic') {
+    nz(t, 0.03, { type: 'highpass', f: 3000, g: 0.25 }); tn(t, 2400, 0.04, { f2: 1800, g: 0.1 });
+  } else {
+    for (i = 0; i < 2; i++) nz(t + i * 0.05, 0.05, { type: 'bandpass', f: 1200, q: 2, g: 0.3 });
+  }
+}
+function sTicks() {
+  if (!AC) return; var t = AC.currentTime + 0.12;
+  for (var i = 0; i < 9; i++) nz(t + i * 0.07 + rnd(0, 0.05), 0.015, { type: 'highpass', f: 5000, g: 0.16 * (1 - i / 11) });
+}
+function sBuild() {
+  if (!AC) return; var t = AC.currentTime;
+  tn(t, 520, 0.16, { type: 'triangle', f2: 740, g: 0.1 });
+  for (var i = 0; i < 4; i++) nz(t + i * 0.03, 0.015, { type: 'highpass', f: 6000, g: 0.14 });
+}
+function sShatter(o) {
+  if (!AC) return; var t = AC.currentTime + 0.025, i;
+  if (o.t === 'window') {
+    nz(t, 0.12, { type: 'highpass', f: 2500, g: 0.7 });
+    nz(t + 0.02, 0.35, { type: 'bandpass', f: 5000, f2: 3000, q: 0.7, g: 0.4 });
+    for (i = 0; i < 14; i++) ping(t + 0.02 + Math.random() * 0.35, rnd(3000, 8000), rnd(0.12, 0.37), rnd(0.06, 0.12));
+    sTinkle(t + 0.3, 5, 0.7, 3500, 8000, 0.06);
+  } else if (o.t === 'light') {
+    nz(t, 0.04, { type: 'highpass', f: 3500, g: 0.9 }); tn(t, 300, 0.07, { f2: 80, g: 0.45 });
+    tn(t + 0.01, 6500, 0.15, { g: 0.08 }); nz(t + 0.01, 0.15, { type: 'bandpass', f: 7000, q: 1, g: 0.2 });
+    sTinkle(t + 0.15, 4, 0.5, 4000, 8000, 0.05);
+  } else if (o.t === 'mirror') {
+    nz(t, 0.12, { type: 'highpass', f: 2000, g: 0.6 });
+    nz(t + 0.02, 0.4, { type: 'bandpass', f: 3500, f2: 2200, q: 0.7, g: 0.35 });
+    for (i = 0; i < 12; i++) ping(t + 0.02 + Math.random() * 0.4, rnd(2500, 6500), rnd(0.3, 0.8), rnd(0.06, 0.1));
+    sTinkle(t + 0.4, 6, 0.9, 3000, 7000, 0.05);
+  } else if (o.t === 'showcase') {
+    tn(t, 110, 0.35, { f2: 38, g: 0.9 });
+    nz(t, 0.5, { type: 'lowpass', f: 1800, f2: 300, g: 0.7 });
+    nz(t + 0.01, 0.25, { type: 'highpass', f: 2000, g: 0.8 });
+    nz(t + 0.03, 0.7, { type: 'bandpass', f: 4200, f2: 2200, q: 0.6, g: 0.45 });
+    for (i = 0; i < 26; i++) ping(t + 0.03 + Math.random() * 0.7, rnd(2000, 6500), rnd(0.2, 0.6), rnd(0.05, 0.1));
+    tn(t + 0.28, 1760, 0.35, { g: 0.1 }); tn(t + 0.28, 2637, 0.3, { g: 0.05 });
+    sTinkle(t + 0.4, 12, 1.3, 3000, 7500, 0.05);
+  } else if (o.t === 'pot' || o.t === 'plate' || o.t === 'urn') {
+    var heavy = o.t === 'urn', p = pj();
+    nz(t, heavy ? 0.16 : 0.1, { type: 'bandpass', f: (heavy ? 1500 : 2400) * p, q: 0.7, g: 0.8 });
+    nz(t + 0.01, 0.06, { type: 'highpass', f: 4000, g: 0.4 });
+    tn(t, (heavy ? 220 : 380) * p, 0.1, { type: 'triangle', f2: heavy ? 90 : 200, g: heavy ? 0.5 : 0.4 });
+    for (i = 0; i < (o.t === 'plate' ? 4 : 7); i++) {
+      var tt = t + 0.03 + Math.random() * 0.35;
+      tn(tt, rnd(900, 2700), 0.04, { type: 'square', g: 0.05 }); nz(tt, 0.02, { type: 'bandpass', f: 3000, g: 0.12 });
+    }
+    sRattle(t + 0.25);
+  } else {
+    nz(t, 0.1, { type: 'bandpass', f: 1500, q: 1.5, g: 0.8 });
+    nz(t, 0.18, { type: 'lowpass', f: 700, g: 0.8 });
+    tn(t, 110, 0.18, { f2: 55, g: 0.6 });
+    for (i = 0; i < 6; i++) nz(t + 0.04 + Math.random() * 0.3, 0.025, { type: 'bandpass', f: rnd(500, 1200), q: 2, g: 0.3 });
+    if (o.t === 'barrel') for (i = 0; i < 3; i++) nz(t + 0.03 + i * 0.09, 0.2, { type: 'bandpass', f: 1200, f2: 2600, q: 0.8, g: 0.2 });
+  }
+}
+
+/* ---------- ドット描画の道具 ---------- */
+function R(x, y, w, h, c) { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); }
+function pline(x0, y0, x1, y1, col, test) {
+  x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
+  var dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1, e = dx + dy, n = 0;
+  ctx.fillStyle = col;
+  for (;;) {
+    if (!test || test(x0, y0)) ctx.fillRect(x0, y0, 1, 1);
+    if ((x0 === x1 && y0 === y1) || n++ > 400) break;
+    var e2 = 2 * e;
+    if (e2 >= dy) { e += dy; x0 += sx; }
+    if (e2 <= dx) { e += dx; y0 += sy; }
+  }
+}
+function tri(x, y, s, f, col) {
+  ctx.fillStyle = col;
+  for (var r = 0; r < s; r++) {
+    var w = s - r, xx = (f & 1) ? x + (s - w) : x, yy = (f & 2) ? y + (s - 1 - r) : y + r;
+    ctx.fillRect(xx, yy, w, 1);
+  }
+}
+function spr(x, y, rows, pal) {
+  for (var j = 0; j < rows.length; j++) for (var i = 0; i < rows[j].length; i++) {
+    var c = rows[j].charAt(i);
+    if (c !== '.') R(x + i, y + j, 1, 1, pal[c]);
+  }
+}
+function dither(cx, cy, r, col) {
+  ctx.fillStyle = col; cx = Math.round(cx); cy = Math.round(cy);
+  for (var y = -r; y <= r; y++) for (var x = -r; x <= r; x++) if (x * x + y * y <= r * r && ((x + y) & 1) === 0) ctx.fillRect(cx + x, cy + y, 1, 1);
+}
+function insideFn(o) {
+  if (o.prof) return function (x, y) {
+    var r = y - o.y; if (r < 0 || r >= o.prof.length) return false;
+    var wi = o.prof[r], x0 = o.x + Math.floor((o.w - wi) / 2); return x >= x0 && x < x0 + wi;
+  };
+  return function (x, y) { return x >= o.x && x < o.x + o.w && y >= o.y && y < o.y + o.h; };
+}
+
+/* ---------- ひび ---------- */
+function addCracks(o, hx, hy, lvl) {
+  hx = clamp(Math.round(hx), o.x, o.x + o.w - 1); hy = clamp(Math.round(hy), o.y, o.y + o.h - 1);
+  var tmp = o.mat === 'temper', n = tmp ? 3 + lvl * 3 : 2 + lvl * 2, L = tmp ? 5 + lvl * 5 : 4 + lvl * 3, i, s;
+  for (i = 0; i < n; i++) {
+    var a = rnd(0, 6.283), px = hx, py = hy, pl = [[px, py]], segs = 2 + lvl, len = rnd(0.5, 1) * L;
+    for (s = 0; s < segs; s++) { a += rnd(-0.5, 0.5); px += Math.cos(a) * len / segs; py += Math.sin(a) * len / segs; pl.push([px, py]); }
+    o.cracks.push(pl);
+  }
+  if (tmp && lvl >= 3) {
+    [3, 6, 10].forEach(function (Rr) {
+      var pts = [], m = 10, j;
+      for (j = 0; j < m; j++) { var an = j * 6.283 / m + rnd(-0.15, 0.15), rr = Rr + rnd(-1, 1); pts.push([hx + Math.cos(an) * rr, hy + Math.sin(an) * rr]); }
+      var st = Math.floor(rnd(0, m)), len = 3 + Math.floor(rnd(0, 3)), arc = [];
+      for (j = 0; j <= len; j++) arc.push(pts[(st + j) % m]);
+      o.cracks.push(arc);
+      var st2 = (st + len + 2) % m, arc2 = [];
+      for (j = 0; j <= 2; j++) arc2.push(pts[(st2 + j) % m]);
+      o.cracks.push(arc2);
+    });
+  }
+}
+function drawCracks(o, col) {
+  if (!o.cracks.length) return;
+  var test = insideFn(o);
+  for (var i = 0; i < o.cracks.length; i++) {
+    var pl = o.cracks[i];
+    for (var k = 1; k < pl.length; k++) pline(pl[k - 1][0], pl[k - 1][1], pl[k][0], pl[k][1], col, test);
+  }
+}
+function makeRem(o, n) {
+  var r = [];
+  for (var i = 0; i < n; i++) {
+    var e = Math.floor(rnd(0, 4)), s = Math.floor(rnd(2, 5)), x, y, f;
+    if (e === 0) { x = o.x + Math.floor(rnd(0, o.w - s)); y = o.y; f = 0; }
+    else if (e === 1) { x = o.x + Math.floor(rnd(0, o.w - s)); y = o.y + o.h - s; f = 2; }
+    else if (e === 2) { x = o.x; y = o.y + Math.floor(rnd(0, o.h - s)); f = 0; }
+    else { x = o.x + o.w - s; y = o.y + Math.floor(rnd(0, o.h - s)); f = 1; }
+    r.push([x, y, s, f]);
+  }
+  return r;
+}
+function drawRem(o, col) {
+  if (!o.rem) return;
+  for (var i = 0; i < o.rem.length; i++) { var t = o.rem[i]; tri(t[0], t[1], t[2], t[3], col); }
+}
+
+/* ---------- 物の描画(すべてfillRectの手描きドット) ---------- */
+function shadow(o) { R(o.x + 1, o.y + o.h, o.w - 2, 1, 'rgba(0,0,0,0.4)'); }
+function drawProfile(o) {
+  var pr = PROF[o.t], pl = PAL[o.t], h = pr.length, i, k;
+  shadow(o);
+  for (i = 0; i < h; i++) {
+    var wi = pr[i], x0 = o.x + Math.floor((o.w - wi) / 2), band = pl.rows.indexOf(i) >= 0;
+    for (k = 0; k < wi; k++) {
+      var f = wi > 1 ? k / (wi - 1) : 0, col = f < 0.28 ? pl.l : f < 0.62 ? pl.m : pl.d;
+      if (band) col = (o.t === 'barrel' && k === 1) ? '#6b727b' : pl.b;
+      else if (o.t === 'barrel' && k % 4 === 2) col = pl.d;
+      if (k === 0 || k === wi - 1 || i === 0 || i === h - 1) col = pl.o;
+      R(x0 + k, o.y + i, 1, 1, col);
+    }
+  }
+  drawCracks(o, o.t === 'barrel' ? '#3a2614' : o.t === 'urn' ? '#2a1a12' : '#2f3a4a');
+}
+function drawLight(o) {
+  var top = o.top !== undefined ? o.top : VY - 4;
+  R(o.x + 4, top, 1, o.y - top, '#161b23'); R(o.x + o.w - 5, top, 1, o.y - top, '#161b23');
+  if (!o.dead) {
+    R(o.x - 2, o.y + o.h, o.w + 4, 6, 'rgba(255,255,230,0.07)');
+    R(o.x + 1, o.y + o.h, o.w - 2, 4, 'rgba(255,255,230,0.09)');
+    R(o.x + 4, o.y + o.h, o.w - 8, 2, 'rgba(255,255,230,0.12)');
+    R(o.x, o.y, o.w, o.h, '#f4f6ee'); R(o.x, o.y, o.w, 1, '#ffffff'); R(o.x, o.y + o.h - 1, o.w, 1, '#c9cdc2');
+  } else {
+    R(o.x, o.y, 2, o.h, '#2a2f36'); R(o.x + o.w - 2, o.y, 2, o.h, '#2a2f36');
+  }
+  R(o.x - 1, o.y, 1, o.h, '#8f969e'); R(o.x + o.w, o.y, 1, o.h, '#8f969e');
+}
+function drawWindow(o) {
+  var x = o.x, y = o.y, w = o.w, h = o.h, i, bands = ['#1f2f4d', '#3b3a63', '#c9795a', '#f0b070'];
+  R(x - 1, y - 1, w + 2, h + 2, '#c8cfd6'); R(x - 1, y + h, w + 2, 1, '#8f98a2');
+  for (i = 0; i < 4; i++) R(x, y + i * 7, w, 7, bands[i]);
+  for (i = 0; i < o.sky.length; i++) R(x + o.sky[i].x, y + h - o.sky[i].h, o.sky[i].w - 1, o.sky[i].h, '#1b2233');
+  R(x + 3, y + h - 6, 1, 1, '#f6d77a'); R(x + w - 5, y + h - 4, 1, 1, '#f6d77a'); R(x + 10, y + h - 3, 1, 1, '#f6d77a');
+  R(x + Math.floor(w / 2) - 1, y, 1, h, '#c8cfd6'); R(x, y + Math.floor(h / 2) - 1, w, 1, '#c8cfd6');
+  if (!o.dead) {
+    pline(x + 3, y + h - 2, x + 12, y + 2, 'rgba(255,255,255,0.18)'); pline(x + 4, y + h - 2, x + 13, y + 2, 'rgba(255,255,255,0.18)');
+    drawCracks(o, '#ffffff');
+  } else drawRem(o, '#cfeaf5');
+}
+function drawPlate(o) {
+  spr(o.x, o.y, ['.bbbb.', 'bwwwwb', 'bwbbwb', 'bwbbwb', 'bwwwwb', '.bbbb.'], { b: '#3d6db3', w: '#f1f4f6' });
+}
+function drawShowcase(o) {
+  var x = o.x, y = o.y, w = o.w, h = o.h, cx = x + 18, ys = y + 13;
+  R(x, y, w, h, '#1d2630'); R(x, y, w, 6, '#26323f');
+  R(x + 2, ys, w - 4, 1, '#4a586c');
+  var gold = '#e0b84a', gl = '#f6dc7a', gd = '#a8842a';
+  R(cx - 4, ys - 9, 9, 2, gold); R(cx - 4, ys - 9, 1, 2, gl);
+  R(cx - 3, ys - 7, 7, 1, gold); R(cx - 2, ys - 6, 5, 1, gold); R(cx - 1, ys - 5, 3, 1, gd); R(cx, ys - 4, 1, 1, gold);
+  R(cx, ys - 3, 1, 2, gold); R(cx - 3, ys - 1, 7, 1, gd);
+  R(cx - 5, ys - 8, 1, 2, gold); R(cx + 5, ys - 8, 1, 2, gold);
+  R(x + 5, ys - 6, 6, 6, '#4a6fa5'); R(x + 5, ys - 6, 6, 1, '#6f93c9');
+  R(x + w - 12, ys - 8, 5, 8, '#a9585a'); R(x + w - 13, ys - 9, 7, 1, '#c97a7c');
+  if (!o.dead) {
+    R(x, y, w, h, 'rgba(160,210,235,0.14)');
+    pline(x + 6, y + h - 2, x + 14, y + 1, 'rgba(255,255,255,0.25)'); pline(x + 7, y + h - 2, x + 15, y + 1, 'rgba(255,255,255,0.25)');
+  }
+  R(x - 1, y - 1, w + 2, 1, '#9aa9b6'); R(x - 1, y + h, w + 2, 1, '#9aa9b6'); R(x - 1, y - 1, 1, h + 2, '#9aa9b6'); R(x + w, y - 1, 1, h + 2, '#9aa9b6');
+  if (!o.dead) drawCracks(o, '#ffffff'); else drawRem(o, '#cfeaf5');
+}
+function drawMirror(o) {
+  var x = o.x, y = o.y, w = o.w, h = o.h;
+  if (!o.dead) shadow(o);
+  R(x - 1, y - 1, w + 2, h + 2, '#6b4a2b'); R(x - 1, y - 1, w + 2, 1, '#8a6a40');
+  if (!o.dead) {
+    R(x, y, w, h, '#9fb4c4'); R(x, y, Math.floor(w / 3), h, '#b8cad8'); R(x + w - 3, y, 3, h, '#7f95a6');
+    pline(x + 2, y + h - 3, x + w - 3, y + 3, '#e8f1f7'); pline(x + 3, y + h - 3, x + w - 2, y + 3, '#e8f1f7');
+    drawCracks(o, '#ffffff');
+  } else { R(x, y, w, h, '#241f1b'); drawRem(o, '#c3d0dc'); }
+}
+function drawCrate(o) {
+  var x = o.x, y = o.y, w = o.w, h = o.h;
+  shadow(o);
+  R(x, y, w, h, '#a67c48'); R(x, y + 4, w, 1, '#8a6438'); R(x, y + 9, w, 1, '#8a6438');
+  R(x, y, w, 1, '#c79a60'); R(x, y + h - 1, w, 1, '#7a5630'); R(x, y, 1, h, '#7a5630'); R(x + w - 1, y, 1, h, '#7a5630');
+  pline(x + 1, y + 1, x + w - 2, y + h - 2, '#7a5630'); pline(x + 2, y + 1, x + w - 1, y + h - 2, '#7a5630');
+  R(x + 1, y + 1, 1, 1, '#3a2614'); R(x + w - 2, y + 1, 1, 1, '#3a2614'); R(x + 1, y + h - 2, 1, 1, '#3a2614'); R(x + w - 2, y + h - 2, 1, 1, '#3a2614');
+  drawCracks(o, '#3a2614');
+}
+function drawObj(o) {
+  if (o.blinkUntil && simT < o.blinkUntil && (Math.floor(simT / 50) & 1)) return;
+  switch (o.t) {
+    case 'light': drawLight(o); break;
+    case 'window': drawWindow(o); break;
+    case 'plate': if (!o.dead) drawPlate(o); break;
+    case 'showcase': drawShowcase(o); break;
+    case 'mirror': drawMirror(o); break;
+    case 'pot': case 'urn': case 'barrel': if (!o.dead) drawProfile(o); break;
+    case 'crate': if (!o.dead) drawCrate(o); break;
+  }
+}
+function drawRoom() {
+  var m = 4, x0 = VX - m, w = VW + m * 2, y0 = VY - m, y1 = VY + VH + m, fl = OY + 46, y;
+  R(x0, y0, w, y1 - y0, '#3a4a5c');
+  for (var x = x0 + (((OX - x0) % 8) + 8) % 8; x < x0 + w; x += 8) R(x, OY + 7, 1, fl - 3 - OY - 7, '#35445a');
+  R(x0, y0, w, OY + 7 - y0, '#222a35'); R(x0, OY + 7, w, 1, '#161b23');
+  R(x0, fl - 3, w, 3, '#2a3340'); R(x0, fl - 3, w, 1, '#4a586c');
+  R(x0, fl, w, y1 - fl, '#4a3f3a');
+  for (y = fl + 4; y < y1; y += 5) R(x0, y, w, 1, '#3e3531');
+  for (y = fl; y < y1; y += 10) for (var xx = x0 + (((OX - x0) % 14) + 14) % 14; xx < x0 + w; xx += 14) R(xx, y, 1, 5, '#3e3531');
+  R(OX + 36, OY + 44, 40, 1, '#8a6a48'); R(OX + 36, OY + 45, 40, 9, '#5b4430'); R(OX + 36, OY + 50, 40, 1, '#4a3626'); R(OX + 36, OY + 54, 40, 1, '#33271b');
+  R(OX + 40, OY + 20, 32, 1, '#6a523c'); R(OX + 40, OY + 21, 32, 1, '#2a2119');
+}
+function drawBat(s) {
+  var t = simT - s.t0, T = s.pre + 55;
+  if (t < 0) return;
+  var ang, alpha = 1;
+  if (t < s.pre) ang = (300 + Math.sin(t * 0.06) * 1.2) * RAD;
+  else if (t < T) { var u = (t - s.pre) / 55; ang = (300 - 75 * u * u) * RAD; }
+  else { var v = Math.min(1, (t - T) / 150); ang = (225 - 32 * (1 - (1 - v) * (1 - v))) * RAD; alpha = 1 - Math.max(0, (v - 0.4) / 0.6); }
+  var px = s.x + 30, py = s.y + 30, L = 44, dx = Math.cos(ang), dy = Math.sin(ang), f, a;
+  ctx.save(); ctx.beginPath(); ctx.rect(VX, VY, VW, VH); ctx.clip(); ctx.globalAlpha = alpha;
+  if (t >= s.pre) for (a = 300; a > ang / RAD; a -= 4) R(Math.round(px + Math.cos(a * RAD) * 40), Math.round(py + Math.sin(a * RAD) * 40), 1, 1, 'rgba(255,255,255,0.6)');
+  function k(f2) { return f2 < L * 0.2 ? 1 : f2 < L * 0.6 ? 2 : 3; }
+  for (f = 0; f <= L; f++) { var s1 = k(f) + 2; R(Math.round(px + dx * f - s1 / 2), Math.round(py + dy * f - s1 / 2), s1, s1, '#3a2410'); }
+  for (f = 0; f <= L; f++) { var s2 = k(f); R(Math.round(px + dx * f - s2 / 2), Math.round(py + dy * f - s2 / 2), s2, s2, f < L * 0.2 ? '#5a5a66' : '#d6a15a'); }
+  ctx.restore();
+}
+
+/* ---------- 破片(ドット)。画面の外へ飛び出す破片はパネルの上に落ちる ---------- */
+var GRAV = 380, GL = '#9fd3e8';
+function P(p) { parts.push(p); if (parts.length > 300) parts.splice(0, parts.length - 300); }
+function rpos(o, hx, hy) {
+  var x = clamp(hx + (Math.random() + Math.random() - 1) * o.w * 0.55, o.x, o.x + o.w);
+  var y = clamp(hy + (Math.random() + Math.random() - 1) * o.h * 0.55, o.y, o.y + o.h);
+  var dx = x - hx, dy = y - hy, d = Math.hypot(dx, dy) || 1;
+  return { x: x, y: y, dx: dx / d, dy: dy / d };
+}
+function makePop(p, hx) {
+  p.pop = true; p.s = Math.ceil((p.s || 1) * 1.4);
+  p.vy = rnd(15, 70); p.vx = (p.x - hx) * rnd(0.6, 1.4) + rnd(-20, 20);
+  p.fy = VY + VH + rnd(4, Math.max(8, VH * 1.1)); p.life += 0.5;
+}
+function spawnGlass(o, hx, hy, c) {
+  var i;
+  for (i = 0; i < c.n; i++) {
+    var q = rpos(o, hx, hy), sp = rnd(c.v0, c.v1), hl = Math.random() < c.hl;
+    var p = { type: 'tri', x: q.x, y: q.y, vx: q.dx * sp + rnd(-8, 8), vy: q.dy * sp * 0.6 - rnd(6, c.up), s: Math.round(rnd(c.s0, c.s1)),
+      sp: rnd(4, 12) * (Math.random() < 0.5 ? -1 : 1), col: c.col, hl: hl, age: 0, life: c.life * rnd(0.8, 1.1), fade: 0.4, fy: o.fy + rnd(-2, 3), rest: 0.28 };
+    if (Math.random() < (c.pop || 0)) makePop(p, hx);
+    P(p);
+  }
+  for (i = 0; i < (c.grain || 0); i++) {
+    var g = rpos(o, hx, hy);
+    var p2 = { type: 'dot', x: g.x, y: g.y, vx: g.dx * rnd(15, 70), vy: -rnd(8, 60), s: 1, col: c.gcol || '#ffffff', age: 0, life: c.life * rnd(0.6, 0.95), fade: 0.35, fy: o.fy + rnd(-2, 3), rest: 0.25 };
+    if (Math.random() < (c.pop || 0) * 0.5) makePop(p2, hx);
+    P(p2);
+  }
+}
+function spawnCeramic(o, hx, hy, c) {
+  var i;
+  for (i = 0; i < c.big; i++) {
+    var q = rpos(o, hx, hy), sp = rnd(25, 80);
+    var p = { type: 'blk', x: q.x, y: q.y, vx: q.dx * sp + rnd(-12, 12), vy: q.dy * sp * 0.5 - rnd(20, 75), s: Math.round(rnd(c.s0, c.s1)), col: pick(c.cols), edge: c.edge,
+      age: 0, life: rnd(1.1, 1.5), fade: 0.4, fy: o.fy + rnd(-2, 2), rest: 0.32 };
+    if (Math.random() < 0.1) makePop(p, hx);
+    P(p);
+  }
+  for (i = 0; i < c.small; i++) {
+    var s = rpos(o, hx, hy);
+    P({ type: 'dot', x: s.x, y: s.y, vx: s.dx * rnd(20, 80), vy: -rnd(12, 70), s: 1, col: pick(c.cols), age: 0, life: rnd(0.8, 1.1), fade: 0.35, fy: o.fy + rnd(-2, 2), rest: 0.3 });
+  }
+  for (i = 0; i < c.dust; i++) {
+    var d = rpos(o, hx, hy);
+    P({ type: 'puff', x: d.x, y: d.y, vx: rnd(-6, 6), vy: -rnd(3, 12), r0: 2, r1: Math.round(rnd(5, 8)), col: '#cbbfae', alpha: 0.5, age: 0, life: rnd(0.4, 0.55) });
+  }
+}
+function spawnWood(o, hx, hy, c) {
+  var i, cols = ['#b78a52', '#8f6538', '#d4ab6e'];
+  for (i = 0; i < c.n; i++) {
+    var q = rpos(o, hx, hy), sp = rnd(22, 75);
+    P({ type: 'bar', x: q.x, y: q.y, vx: q.dx * sp + rnd(-12, 12), vy: q.dy * sp * 0.5 - rnd(15, 70), len: Math.round(rnd(c.l0, c.l1)), th: Math.round(rnd(c.t0, c.t1)),
+      sp: rnd(4, 10) * (Math.random() < 0.5 ? -1 : 1), col: pick(cols), age: 0, life: rnd(0.9, 1.2), fade: 0.35, fy: o.fy + rnd(-2, 2), rest: 0.3 });
+  }
+  for (i = 0; i < (c.chips || 0); i++) {
+    var s = rpos(o, hx, hy);
+    P({ type: 'dot', x: s.x, y: s.y, vx: s.dx * rnd(15, 70), vy: -rnd(10, 55), s: 1, col: pick(cols), age: 0, life: rnd(0.7, 1.0), fade: 0.3, fy: o.fy + rnd(-2, 2), rest: 0.3 });
+  }
+}
+function spawnWater(o) {
+  for (var i = 0; i < 16; i++) {
+    P({ type: 'drop', x: o.x + rnd(2, o.w - 2), y: o.y + rnd(o.h * 0.3, o.h * 0.9), vx: rnd(-40, 40), vy: -rnd(8, 65), col: '#82b9e6', age: 0, life: 1.2, fade: 0.1, fy: o.fy, rest: 0 });
+  }
+  P({ type: 'puddle', x: o.x + o.w / 2, y: o.fy, rx0: 3, rx1: 14, age: 0, life: 1.2 });
+}
+function burst(x, y, miss) { P({ type: 'burst', x: x, y: y, col: miss ? '#c8cdd7' : '#ffffff', age: 0, life: 0.11 }); }
+function chips(o, x, y) {
+  if (o.mat === 'temper') spawnGlass(o, x, y, { n: 0, grain: 4, gcol: '#d2ebf5', life: 0.8, v0: 0, v1: 0, up: 0, s0: 1, s1: 1, hl: 0, col: '' });
+  else if (o.mat === 'ceramic') spawnCeramic(o, x, y, { big: 0, small: 4, dust: 1, s0: 1, s1: 2, cols: ['#c27a4c', '#7d4528'], edge: null });
+  else if (o.mat === 'wood') spawnWood(o, x, y, { n: 5, l0: 2, l1: 5, t0: 1, t1: 1, chips: 3 });
+}
+function updParts(dt) {
+  for (var i = parts.length - 1; i >= 0; i--) {
+    var p = parts[i];
+    p.age += dt;
+    if (p.age >= p.life) { parts.splice(i, 1); continue; }
+    if (p.type === 'burst' || p.type === 'puddle') continue;
+    if (p.type === 'puff') { p.x += p.vx * dt; p.y += p.vy * dt; continue; }
+    p.vy += GRAV * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+    if (p.y >= p.fy) {
+      p.y = p.fy;
+      if (p.type === 'drop') { p.age = p.life; continue; }
+      if (Math.abs(p.vy) > 25) { p.vy = -p.vy * p.rest; p.vx *= 0.7; }
+      else { p.vy = 0; p.vx *= Math.max(0, 1 - 8 * dt); p.sp = 0; }
+    }
+    if (p.x < 0) { p.x = 0; p.vx = Math.abs(p.vx) * 0.5; }
+    if (p.x > CW - 1) { p.x = CW - 1; p.vx = -Math.abs(p.vx) * 0.5; }
+  }
+}
+function drawParts() {
+  var DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]];
+  for (var i = 0; i < parts.length; i++) {
+    var p = parts[i], rem = p.life - p.age, a = p.fade && rem < p.fade ? rem / p.fade : 1, u = p.age / p.life;
+    var x = Math.round(p.x), y = Math.round(p.y), f = p.sp ? Math.floor(p.age * Math.abs(p.sp)) & 3 : 0, k;
+    ctx.globalAlpha = Math.max(0, a);
+    if (p.type === 'tri') {
+      tri(x, y, p.s, f, p.col);
+      if (p.hl && (Math.floor(p.age * 18) & 1) === 0) R(x, y, 1, 1, '#ffffff');
+    } else if (p.type === 'blk') {
+      R(x, y, p.s, p.s, p.col); if (p.s >= 3 && p.edge) R(x, y + p.s - 1, p.s, 1, p.edge);
+    } else if (p.type === 'bar') {
+      if (f & 1) R(x, y, p.len, p.th, p.col); else R(x, y, p.th, p.len, p.col);
+    } else if (p.type === 'dot') {
+      R(x, y, p.s, p.s, p.col);
+    } else if (p.type === 'drop') {
+      R(x, y, 1, 2, p.col);
+    } else if (p.type === 'puff') {
+      ctx.globalAlpha = (1 - u) * p.alpha; dither(p.x, p.y, Math.round(p.r0 + (p.r1 - p.r0) * u), p.col);
+    } else if (p.type === 'puddle') {
+      ctx.globalAlpha = (1 - u) * 0.5; var rx = Math.round(p.rx0 + (p.rx1 - p.rx0) * Math.min(1, u * 2.5));
+      R(x - rx, y, rx * 2, 1, '#7fb4e6'); R(x - rx + 2, y + 1, rx * 2 - 4, 1, '#7fb4e6');
+    } else if (p.type === 'burst') {
+      ctx.globalAlpha = 1 - u; var r1 = 2 + Math.round(3 * u);
+      for (k = 0; k < 8; k++) { R(x + DIRS[k][0] * r1, y + DIRS[k][1] * r1, 1, 1, p.col); R(x + DIRS[k][0] * (r1 + 1), y + DIRS[k][1] * (r1 + 1), 1, 1, p.col); }
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+/* ---------- 破壊の流れ ---------- */
+function shake(a, ms) { shakeAmp = a; shakeDur = ms; shakeT = ms; }
+function flash(a, ms) { flashA = a; flashDur = ms; flashT = ms; }
+function pickObj(x, y) {
+  for (var i = objs.length - 1; i >= 0; i--) {
+    var o = objs[i];
+    if (!o.dead && x >= o.x - 1 && x <= o.x + o.w + 1 && y >= o.y - 1 && y <= o.y + o.h + 1) return o;
+  }
+  return null;
+}
+function destroy(o, x, y) {
+  o.dead = true; breaks++;
+  if (loopMode) o.respawnAt = simT + 1600;
+  var hx = clamp(x, o.x, o.x + o.w), hy = clamp(y, o.y, o.y + o.h), cx = o.x + o.w / 2;
+  switch (o.t) {
+    case 'window':
+      spawnGlass(o, hx, hy, { n: 16, s0: 3, s1: 7, col: GL, v0: 25, v1: 90, up: 60, hl: 0.3, life: 1.0, grain: 6, pop: 0.2 });
+      o.rem = makeRem(o, 8); hitstop = 42; shake(1, 120); break;
+    case 'light':
+      spawnGlass(o, hx, hy, { n: 0, grain: 14, gcol: '#fffbe6', life: 0.9, v0: 0, v1: 0, up: 0, s0: 1, s1: 1, hl: 0, col: '', pop: 0.4 });
+      flash(0.22, 34); hitstop = 33; shake(1, 100); break;
+    case 'mirror':
+      spawnGlass(o, hx, hy, { n: 14, s0: 4, s1: 8, col: '#c9d6e0', v0: 20, v1: 75, up: 55, hl: 0.5, life: 1.6, grain: 5, pop: 0.3 });
+      o.rem = makeRem(o, 6); hitstop = 42; shake(1, 120); break;
+    case 'showcase':
+      spawnGlass(o, hx, hy, { n: 28, s0: 3, s1: 8, col: GL, v0: 30, v1: 120, up: 80, hl: 0.5, life: 1.2, grain: 20, pop: 0.3 });
+      o.rem = makeRem(o, 10); hitstop = 117; shake(2, 160); flash(0.35, 34); break;
+    case 'plate':
+      spawnCeramic(o, hx, hy, { big: 4, small: 6, dust: 2, s0: 2, s1: 3, cols: ['#f1f4f6', '#d7e0e8', '#3d6db3'], edge: '#8b97a8' });
+      hitstop = 33; shake(1, 90); break;
+    case 'pot':
+      spawnCeramic(o, hx, hy, { big: 7, small: 10, dust: 4, s0: 2, s1: 4, cols: ['#f5f8fa', '#d7e0e8', '#2f62a8'], edge: '#5b6878' });
+      hitstop = 42; shake(1, 110); break;
+    case 'urn':
+      spawnCeramic(o, hx, hy, { big: 8, small: 12, dust: 5, s0: 3, s1: 5, cols: ['#d98b58', '#b9703f', '#7d4528'], edge: '#3a2010' });
+      hitstop = 42; shake(1, 120); break;
+    case 'crate':
+      spawnWood(o, hx, hy, { n: 12, l0: 3, l1: 8, t0: 1, t1: 2, chips: 8 });
+      spawnWood(o, hx, hy, { n: 3, l0: 8, l1: 12, t0: 2, t1: 2, chips: 0 });
+      hitstop = 42; shake(1, 110); break;
+    case 'barrel':
+      spawnWood(o, hx, hy, { n: 7, l0: 7, l1: 10, t0: 2, t1: 2, chips: 4 });
+      spawnWater(o); hitstop = 42; shake(1, 110); break;
+  }
+  sShatter(o);
+  if (!loopMode && standing() === 0) slowUntil = performance.now() + 500;
+  hud();
+}
+function damage(o, x, y) {
+  var lvl = o.hits;
+  addCracks(o, x, y, lvl);
+  sHit(o.mat, lvl - 1); sCrack(o.mat, lvl);
+  chips(o, x, y);
+  hitstop = o.mat === 'temper' ? 50 : 33;
+  shake(1 + (o.mat === 'temper' && lvl >= 2 ? 1 : 0), 110);
+  if (o.mat === 'temper' && o.hp === 1) sTicks();
+}
+function contact(x, y) {
+  var o = pickObj(x, y);
+  if (!o) { burst(x, y, true); sMiss(); return; }
+  o.hp--; o.hits++;
+  burst(x, y);
+  if (o.hp > 0) damage(o, x, y);
+  else { sHit(o.mat, o.hits - 1); destroy(o, x, y); }
+}
+function respawn(o) {
+  o.hp = o.max; o.hits = 0; o.dead = false; o.cracks = []; o.rem = null; o.respawnAt = 0; o.blinkUntil = simT + 350;
+  hud();
+}
+function tap(x, y) {
+  var tg = pickObj(x, y), fin = !!(tg && tg.mat === 'temper' && tg.hp === 1), pre = fin ? 110 : 0;
+  if (fin) sBuild();
+  if (AC) sWhoosh(AC.currentTime + pre / 1000);
+  swings.push({ x: x, y: y, t0: simT, pre: pre, done: false });
+}
+function hitGroup(t) {
+  var c = objs.filter(function (o) { return o.t === t && !o.dead; }).sort(function (a, b) { return a.x - b.x; });
+  if (!c.length) return;
+  var o = c[0];
+  tap(o.x + o.w * rnd(0.35, 0.65), o.y + o.h * rnd(0.35, 0.65));
+}
+
+/* ---------- ループと入力 ---------- */
+var last = performance.now();
+function frame(nowT) {
+  var rdt = Math.min(0.05, (nowT - last) / 1000); last = nowT;
+  var sdt = 0;
+  if (hitstop > 0) hitstop -= rdt * 1000; else sdt = rdt * (nowT < slowUntil ? 0.5 : 1);
+  simT += sdt * 1000;
+  for (var i = 0; i < swings.length; i++) {
+    var s = swings[i];
+    if (!s.done && simT >= s.t0 + s.pre + 55) { s.done = true; contact(s.x, s.y); }
+  }
+  swings = swings.filter(function (s) { return simT < s.t0 + s.pre + 55 + 180; });
+  for (var j = 0; j < objs.length; j++) if (objs[j].dead && loopMode && objs[j].respawnAt && simT >= objs[j].respawnAt) respawn(objs[j]);
+  updParts(sdt);
+  if (shakeT > 0) shakeT -= rdt * 1000;
+  if (flashT > 0) flashT -= rdt * 1000;
+  render();
+  requestAnimationFrame(frame);
+}
+function render() {
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, CW, CH);
+  ctx.save(); ctx.beginPath(); ctx.rect(VX, VY, VW, VH); ctx.clip();
+  if (shakeT > 0) { var a = shakeAmp * (shakeT / shakeDur); ctx.translate(Math.round(rnd(-a, a)), Math.round(rnd(-a, a))); }
+  drawRoom();
+  var dl = 0, i;
+  for (i = 0; i < objs.length; i++) if (objs[i].t === 'light' && objs[i].dead) dl++;
+  if (dl) R(VX - 4, OY + 8, VW + 8, 36, 'rgba(0,0,0,' + (0.1 * dl) + ')');
+  for (i = 0; i < objs.length; i++) drawObj(objs[i]);
+  ctx.restore();
+  for (i = 0; i < swings.length; i++) drawBat(swings[i]);
+  if (flashT > 0) R(VX, VY, VW, VH, 'rgba(255,255,255,' + (flashA * flashT / flashDur) + ')');
+  drawParts();
+}
+
+/* ---------- 操作パネル ---------- */
+function makeIcon(g) {
+  var def = DEFS.filter(function (d) { return d.t === g.t; })[0];
+  var ic = document.createElement('canvas');
+  ic.width = def.w + 2; ic.height = def.h + 3;
+  ic.className = 'ico'; ic.style.width = ic.width * g.isc + 'px'; ic.style.height = ic.height * g.isc + 'px';
+  var o = Object.assign({}, def, { x: 1, y: 1, top: 0, max: def.hp, hits: 0, dead: false, cracks: [], rem: null,
+    sky: def.t === 'window' ? mkSky(def) : null, prof: PROF[def.t] || null });
+  ctx = ic.getContext('2d'); ctx.imageSmoothingEnabled = false;
+  drawObj(o);
+  ctx = mainCtx;
+  return ic;
+}
+function buildTiles() {
+  GROUPS.forEach(function (g) {
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'tile';
+    var w = document.createElement('div'); w.className = 'icow'; w.appendChild(makeIcon(g));
+    var nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = g.name;
+    var ct = document.createElement('span'); ct.className = 'ct';
+    b.appendChild(w); b.appendChild(nm); b.appendChild(ct);
+    b.addEventListener('pointerdown', function (e) { e.preventDefault(); initAudio(); hitGroup(g.t); });
+    b.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); initAudio(); hitGroup(g.t); } });
+    gridEl.appendChild(b);
+    tiles[g.t] = { el: b, ct: ct };
+  });
+}
+viewEl.addEventListener('pointerdown', function (e) {
+  e.preventDefault(); initAudio();
+  tap(e.clientX / ps, e.clientY / ps);
+});
+loopBtn.addEventListener('click', function () {
+  loopMode = !loopMode;
+  loopBtn.setAttribute('aria-pressed', String(loopMode));
+  loopBtn.textContent = '連続テスト ' + (loopMode ? 'ON' : 'OFF');
+  for (var i = 0; i < objs.length; i++) objs[i].respawnAt = (loopMode && objs[i].dead) ? simT + 1000 : 0;
+});
+document.getElementById('reset').addEventListener('click', function () { build(); });
+function init() { layout(); build(); }
+var rz = 0;
+window.addEventListener('resize', function () { clearTimeout(rz); rz = setTimeout(init, 150); });
+buildTiles();
+init();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

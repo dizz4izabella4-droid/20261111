@@ -2,12 +2,13 @@
 
 最終更新: 2026-11-12
 
-このリポジトリは、複数の作品を1つのサイトで公開するゲーム集。トップページ（アプリ選択画面）から遊ぶ作品を選ぶ。
+このリポジトリは、複数の作品を1つのサイトで公開するゲーム集。トップページ（アプリ選択画面。名前は「試作品箱」。左上に小さく表示している。以前の名前は「iz Games」）から遊ぶ作品を選ぶ。
 
 - **CMD Typing（PC版）**：コマンドプロンプト風の英単語タイピングゲーム。外部からのハッキング攻撃を受け、入力で防御 → 追跡 → 反撃するという筋立て。3〜11章で詳しく説明する。
 - **CMD Typing Mobile（スマホ版）**：PC版と同じ筋立てを、スマホの縦画面とフリック入力に合わせたもの。12章。
 - **鳥と獣の戦い**：スマホを机に置いて2人で遊ぶ対戦ゲーム。13章。
 - **組み分け帽**：数字をたよりに1本の輪を作るパズル（1人用、スマホ・PC両対応）。14章。
+- **GLASS BREAKER（ガラス割り）**：バットで物を叩いて割る、破壊表現のテスト（スマホの縦画面、タッチ操作）。15章。
 
 ---
 
@@ -21,8 +22,10 @@
 | 　スマホ版 | https://dizz4izabella4-droid.github.io/20261111/typing-mobile/ | |
 | 　鳥と獣の戦い | https://dizz4izabella4-droid.github.io/20261111/tori-to-kemono/ | |
 | 　組み分け帽 | https://dizz4izabella4-droid.github.io/20261111/kumiwake-bou/ | |
+| 　GLASS BREAKER | https://dizz4izabella4-droid.github.io/20261111/glass-breaker/ | |
 | claude.ai アーティファクト（PC版） | https://claude.ai/artifact/NctPezS87FshtyQGQ1YaDf | 開発中の確認用。曲2つも同梱して公開済み |
 | claude.ai アーティファクト（鳥と獣の戦い） | https://claude.ai/artifact/RtGte1cpPBFfU2wHBe8bEi | 開発の正本はこちら。リポジトリの tori-to-kemono/index.html は、その写し |
+| claude.ai アーティファクト（GLASS BREAKER） | https://claude.ai/artifact/35FutrJp3Aag1QnQRN6Nmg | 開発の正本はこちら。リポジトリの glass-breaker/index.html は、その写し |
 | claude.ai アーティファクト（旧スマホ版） | https://claude.ai/artifact/TwbhHpCo6BMetgr6v178bd | 試作（フリック入力と偉人の名言）。新しいスマホ版に置き換えたので使わない |
 
 ### リポジトリの構成
@@ -37,6 +40,7 @@ tori-to-kemono/index.html          鳥と獣の戦い（アーティファクト
 kumiwake-bou/index.html            組み分け帽の本体（HTML/CSS/JS すべて1ファイル、外部読み込みなし）
 kumiwake-bou/tools/gen.js          組み分け帽の問題を作る道具（Node.js）
 kumiwake-bou/tools/verify.js       組み分け帽の収録問題を検査する道具（Node.js）
+glass-breaker/index.html            GLASS BREAKER の本体（HTML/CSS/JS すべて1ファイル、外部読み込みなし。アーティファクトの写し）
 README.md
 HANDOFF.md                         本書
 ```
@@ -68,8 +72,9 @@ HANDOFF.md                         本書
 1. PC版：コードを直したら、アーティファクト（PC版）を更新して確認し、同じ内容で typing-pc/index.html を作り直して push する。
 2. スマホ版：typing-mobile/index.html を直接直し、スマホの画面の大きさでブラウザ確認してから push する。PC版の仕組み（攻撃信号・耐久値・評価など）を変えたときは、スマホ版にも同じ変更を入れる。
 3. 鳥と獣の戦い：アーティファクトを更新したら、その内容で tori-to-kemono/index.html を作り直して push する。
-4. 組み分け帽：kumiwake-bou/index.html を直接直す。問題や手筋を変えたら `node kumiwake-bou/tools/verify.js` で「すべて OK」を確認し、ブラウザでも確認してから push する。
-5. 曲は変わらない限り push し直さない（約8MB）。
+4. GLASS BREAKER：アーティファクトを更新したら、その内容に doctype・`<html lang="ja">`・charset・viewport を付けて glass-breaker/index.html を作り直して push する（`<head>` の先頭に、上下の安全余白用の `html{padding-top/bottom: env(safe-area-inset-*)}` と `[hidden]{display:none!important}` を足す）。
+5. 組み分け帽：kumiwake-bou/index.html を直接直す。問題や手筋を変えたら `node kumiwake-bou/tools/verify.js` で「すべて OK」を確認し、ブラウザでも確認してから push する。
+6. 曲は変わらない限り push し直さない（約8MB）。
 
 ---
 
@@ -452,3 +457,21 @@ PC版の筋立てと仕組み（防御→追跡→反撃、攻撃信号、耐久
 - 実機での押しやすさの調整（長押しの時間、まんなかの反応しない範囲）。
 - 問題の追加、8×8 以上の大きさ、指でなぞって線を引く操作。
 
+---
+
+## 15. GLASS BREAKER（glass-breaker）
+
+- 物を叩いて割る気持ちよさだけを確かめるテスト。スコアや難易度は「おまけ」の扱いで、表示は破壊数と残りだけ。
+- 画面は縦長。上の1/3がドット絵の部屋、下の2/3が操作パネル。部屋は内部の小さな解像度（約112×72のドット）で描き、画面の幅に合わせて整数倍に拡大する。破片は画面全体のキャンバスに描くので、画面の下端を越えて操作パネルの上へ飛び出す。
+- 操作：物ごとのボタン（窓・鏡・強化ガラス・蛍光灯・皿・壺・甕・木箱・樽）で1振り、または上の画面を直接タップ。移動やジャンプはない。攻撃はバットの1振りだけ。
+- 物は15個（蛍光灯2・窓2・皿4・ショーケース1・鏡2・壺1・甕1・木箱1・樽1）。素材ごとに、HP・ひびの段階・破片の形・音が決まる（ガラスは三角の破片、陶器は欠片と粉、木は木片、樽は水しぶき）。
+- 強化ガラス（ショーケース）はHP4。打つたびにひびが増え、音が半音ずつ上がる。最後の一撃だけ、振る前の溜め、長いヒットストップ、多い破片を付けている。
+- 「連続テスト ON」では、壊した物が約1.6秒で元に戻る（初期はON）。OFFでは戻らず、「部屋を戻す」で全部戻す。
+- 音は Web Audio で合成した仮のもの。外部の効果音に差し替える前提（当たる音、ひびの音、砕ける音、落ちる音の層で鳴らす設計）。鏡の割れる音は気に入られているので、差し替えるときも質感を残すこと。
+- ドットの大きさは画面の幅と高さから自動で決まり、画面の大きさが変わると部屋を作り直す。
+- この作品からトップへ戻る手段は付けない（他の作品と同じ）。
+
+### 今後の候補
+
+- 外部の効果音への差し替え（ライセンスと表記の要否を確認する）。
+- 1部屋完結のゲームとしての形（開始・終了・リザルト）、部屋データの切り出し。
