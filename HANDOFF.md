@@ -10,6 +10,7 @@
 - **ワイヤダ**（旧名：クワイヤダ、組み分け帽）：数字をたよりに1本の輪を作るパズル（1人用、スマホ・PC両対応）。14章。
 - **GLASS BREAKER（ガラス割り）**：バットで物を叩いて割る、破壊表現のテスト（スマホの縦画面、タッチ操作）。15章。
 - **電卓ドリル（CALCULATOR DRILL）**：電卓ドリルを自動生成するツール（CASIO DS-20WKA 想定）。16章。
+- **ブロッコリー test ver.**：ブロッコリーを取って膨らむ、レトロ風アクション（試作）。18章。
 
 ---
 
@@ -26,6 +27,7 @@
 | 　　ルール説明 | https://dizz4izabella4-droid.github.io/20261111/kumiwake-bou/rules.html | 本体の「あそびかた」から開く。「ゲームへ」で本体へ戻る |
 | 　GLASS BREAKER | https://dizz4izabella4-droid.github.io/20261111/glass-breaker/ | |
 | 　電卓ドリル | https://dizz4izabella4-droid.github.io/20261111/dentaku-drill/ | |
+| 　ブロッコリー test ver. | https://dizz4izabella4-droid.github.io/20261111/broccoli-test/ | |
 | claude.ai アーティファクト（PC版） | https://claude.ai/artifact/NctPezS87FshtyQGQ1YaDf | 開発中の確認用。曲2つも同梱して公開済み |
 | claude.ai アーティファクト（鳥と獣の戦い） | https://claude.ai/artifact/RtGte1cpPBFfU2wHBe8bEi | 開発の正本はこちら。リポジトリの tori-to-kemono/index.html は、その写し |
 | claude.ai アーティファクト（GLASS BREAKER） | https://claude.ai/artifact/35FutrJp3Aag1QnQRN6Nmg | 開発の正本はこちら。リポジトリの glass-breaker/index.html は、その写し |
@@ -45,6 +47,7 @@ kumiwake-bou/rules.html            ワイヤダのルール説明ページ（1�
 kumiwake-bou/tools/gen.js          ワイヤダの問題を作る道具（Node.js）
 kumiwake-bou/tools/verify.js       ワイヤダの収録問題を検査する道具（Node.js）
 dentaku-drill/index.html            電卓ドリル自動生成ツールの本体（HTML/CSS/JS すべて1ファイル、外部読み込みなし）
+broccoli-test/index.html            ブロッコリー test ver. の本体（HTML/CSS/JS すべて1ファイル、外部読み込みなし）
 glass-breaker/index.html            GLASS BREAKER の本体（HTML/CSS/JS すべて1ファイル、外部読み込みなし。アーティファクトの写し）
 README.md
 HANDOFF.md                         本書
@@ -537,3 +540,12 @@ PC版の筋立てと仕組み（防御→追跡→反撃、攻撃信号、耐久
 - 歌詞は漢字かな交じりで書く（2026-11-12 に、ひらがなだけの表記から直した）。歌詞は index.html の `SONG` にある。
 - 巻物の紙と木の軸は、計算で作った質感の画像：launcher-scroll.jpg（羊皮紙）、launcher-rod.jpg（木の軸）。作り直すときは `python3 tools/make_scroll_textures.py`（numpy・scipy・Pillow が要る。乱数の種を固定してあるので同じ絵になる）。紙は不透明で、背景の絵は透けない。
 - 紙の上の文字は墨の色（濃い茶）。文字の書体は他の画面と同じ標準の日本語フォントだけを使う。
+
+---
+
+## 18. ブロッコリー test ver.（broccoli-test）
+
+- 渡されたHTMLをそのまま置いた（2026-11-12）。変えたのは `<title>` を「ブロッコリー test ver.」にした1か所だけ。
+- 内容：ブロッコリーを取ると膨らみ、カリフラワー（踏むと2つに分裂）とカタツムリ（踏むと甲羅→滑走）に当たると縮む、横画面のアクション。キーボード（矢印・WASD・スペース）とスマホのソフトキーに対応。音は Web Audio で合成、外部読み込みなし。
+- トップのカードは「どちらも」。色は lemon、アイコンは broccoli。
+- この作品からトップへ戻る手段は付けない（他の作品と同じ）。

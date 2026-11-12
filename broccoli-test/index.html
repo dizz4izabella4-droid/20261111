@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ブロッコリー test ver.</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #111;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #game-container {
+            position: relative;
+            width: 800px;
+            max-width: 100%;
+            height: 450px;
+            max-height: 100vh;
+            background: #222;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            border: 4px solid #444;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: #5c94fc; /* FC風スカイブルー */
+        }
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 10px;
+        }
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 16px;
+            font-weight: bold;
+            text-shadow: 2px 2px #000;
+        }
+        .sound-btn {
+            pointer-events: auto;
+            background: #000;
+            color: #fff;
+            border: 2px solid #fff;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+        }
+        .sound-btn:active {
+            background: #fff;
+            color: #000;
+        }
+        /* スマートフォン用ソフトキー */
+        #touch-controls {
+            display: none;
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            width: 100%;
+            padding: 0 10px;
+            justify-content: space-between;
+            pointer-events: none;
+        }
+        .touch-group {
+            display: flex;
+            gap: 10px;
+            pointer-events: auto;
+        }
+        .t-btn {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            color: #fff;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            text-shadow: 1px 1px #000;
+        }
+        .t-btn:active {
+            background: rgba(255, 255, 255, 0.6);
+        }
+        @media (pointer: coarse) {
+            #touch-controls {
+                display: flex;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas" width="800" height="450"></canvas>
+    <div id="ui-overlay">
+        <div class="top-bar">
+            <div>SCORE: <span id="score-val">0</span> | INFLATE: <span id="size-val">1</span>x</div>
+            <button class="sound-btn" id="soundToggle">SOUND: ON</button>
+        </div>
+        <div id="touch-controls">
+            <div class="touch-group">
+                <div class="t-btn" id="btn-left">◀</div>
+                <div class="t-btn" id="btn-right">▶</div>
+            </div>
+            <div class="touch-group">
+                <div class="t-btn" id="btn-jump">▲</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// --- Web Audio API 音声合成マネージャー ---
+class SoundManager {
+    constructor() {
+        this.ctx = null;
+        this.muted = false;
+    }
+    init() {
+        if (!this.ctx) {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+    }
+    toggleMute() {
+        this.muted = !this.muted;
+        return this.muted;
+    }
+    playJump() {
+        if (this.muted) return;
+        this.init();
+        let osc = this.ctx.createOscillator();
+        let gain = this.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(400, this.ctx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.15);
+    }
+    playGet() {
+        if (this.muted) return;
+        this.init();
+        let osc = this.ctx.createOscillator();
+        let gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+        osc.frequency.setValueAtTime(600, this.ctx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.2);
+    }
+    playSplit() {
+        if (this.muted) return;
+        this.init();
+        let osc = this.ctx.createOscillator();
+        let gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(500, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(150, this.ctx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.12);
+    }
+    playHit() {
+        if (this.muted) return;
+        this.init();
+        let osc = this.ctx.createOscillator();
+        let gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+        osc.frequency.linearRampToValueAtTime(40, this.ctx.currentTime + 0.2);
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.2);
+    }
+}
+
+const soundManager = new SoundManager();
+
+// --- 入力管理 ---
+const input = {
+    left: false, right: false, jump: false,
+    keys: {}
+};
+
+window.addEventListener('keydown', e => {
+    if(['ArrowLeft','KeyA'].includes(e.code)) input.left = true;
+    if(['ArrowRight','KeyD'].includes(e.code)) input.right = true;
+    if(['ArrowUp','KeyW','Space'].includes(e.code)) {
+        if (!input.jump) soundManager.init();
+        input.jump = true;
+        e.preventDefault();
+    }
+});
+window.addEventListener('keyup', e => {
+    if(['ArrowLeft','KeyA'].includes(e.code)) input.left = false;
+    if(['ArrowRight','KeyD'].includes(e.code)) input.right = false;
+    if(['ArrowUp','KeyW','Space'].includes(e.code)) input.jump = false;
+});
+
+// ソフトキー設定
+function bindTouch(id, prop) {
+    const el = document.getElementById(id);
+    el.addEventListener('touchstart', e => { soundManager.init(); input[prop] = true; e.preventDefault(); });
+    el.addEventListener('touchend', e => { input[prop] = false; e.preventDefault(); });
+    el.addEventListener('mousedown', e => { soundManager.init(); input[prop] = true; });
+    el.addEventListener('mouseup', e => { input[prop] = false; });
+}
+bindTouch('btn-left', 'left');
+bindTouch('btn-right', 'right');
+bindTouch('btn-jump', 'jump');
+
+document.getElementById('soundToggle').addEventListener('click', () => {
+    const isMuted = soundManager.toggleMute();
+    document.getElementById('soundToggle').innerText = isMuted ? 'SOUND: OFF' : 'SOUND: ON';
+});
+
+// --- ゲームエンジン本体 ---
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const GROUND_Y = 370;
+const BASE_PLAYER_H = 66;
+const BASE_PLAYER_W = 30;
+
+class Player {
+    constructor() {
+        this.x = 100;
+        this.y = GROUND_Y - BASE_PLAYER_H;
+        this.vx = 0;
+        this.vy = 0;
+        this.width = BASE_PLAYER_W;
+        this.baseHeight = BASE_PLAYER_H;
+        this.height = BASE_PLAYER_H;
+        this.scaleLevel = 1; // 1 = 通常, 2, 3... 縮小時は 0.1 等の小数
+        this.isGrounded = false;
+        this.facing = 1;
+    }
+
+    update() {
+        // 左右移動
+        const speed = 4;
+        if (input.left) { this.vx = -speed; this.facing = -1; }
+        else if (input.right) { this.vx = speed; this.facing = 1; }
+        else { this.vx = 0; }
+
+        this.x += this.vx;
+        if (this.x < 0) this.x = 0;
+        if (this.x > canvas.width - this.width) this.x = canvas.width - this.width;
+
+        // ジャンプ
+        if (input.jump && this.isGrounded) {
+            this.vy = -11;
+            this.isGrounded = false;
+            soundManager.playJump();
+        }
+
+        // 重力
+        this.vy += 0.55;
+        this.y += this.vy;
+
+        // 地面判定
+        const currentBottomLimit = GROUND_Y - this.height;
+        if (this.y >= currentBottomLimit) {
+            this.y = currentBottomLimit;
+            this.vy = 0;
+            this.isGrounded = true;
+        }
+    }
+
+    grow() {
+        this.scaleLevel++;
+        this.height = this.baseHeight * this.scaleLevel;
+        // 地面にめり込まないように位置調整
+        this.y = GROUND_Y - this.height;
+        soundManager.playGet();
+    }
+
+    shrink() {
+        if (this.scaleLevel > 1) {
+            this.scaleLevel--;
+        } else {
+            // 縮小限界：1x1ドットへ向けて縮小、または最小スケール保持
+            this.scaleLevel = Math.max(0.15, this.scaleLevel * 0.7);
+        }
+        this.height = Math.max(6, this.baseHeight * this.scaleLevel);
+        this.y = GROUND_Y - this.height;
+        soundManager.playHit();
+    }
+
+    draw() {
+        ctx.save();
+        ctx.translate(this.x + this.width / 2, this.y + this.height);
+
+        // フォトリアル滑らかシェーディング描画（紳士プロシージャル）
+        // スーツ・体
+        let gradBody = ctx.createLinearGradient(-this.width/2, -this.height, this.width/2, 0);
+        gradBody.addColorStop(0, '#2c3e50');
+        gradBody.addColorStop(0.5, '#1a252f');
+        gradBody.addColorStop(1, '#0b1015');
+        ctx.fillStyle = gradBody;
+        ctx.fillRect(-this.width/2, -this.height, this.width, this.height);
+
+        // 白シャツ・ネクタイ（上部付近に描画）
+        if (this.height > 20) {
+            ctx.fillStyle = '#ecf0f1';
+            ctx.fillRect(-this.width*0.2, -this.height, this.width*0.4, Math.min(this.height*0.3, 15));
+            ctx.fillStyle = '#e74c3c';
+            ctx.fillRect(-2, -this.height + 4, 4, Math.min(this.height*0.25, 12));
+        }
+
+        // 顔（肌のグラデーション）
+        const faceH = Math.min(this.height * 0.35, 24);
+        const faceW = Math.min(this.width * 0.9, 26);
+        let gradFace = ctx.createRadialGradient(0, -this.height - faceH/2, 2, 0, -this.height - faceH/2, faceW);
+        gradFace.addColorStop(0, '#ffeaa7');
+        gradFace.addColorStop(1, '#d1b37b');
+        ctx.fillStyle = gradFace;
+        ctx.beginPath();
+        ctx.arc(0, -this.height - faceH/2, faceW/2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // ダンディーなヒゲ
+        if (faceH > 10) {
+            ctx.fillStyle = '#333';
+            ctx.fillRect(-faceW*0.4, -this.height - faceH*0.4, faceW*0.8, 5);
+        }
+
+        ctx.restore();
+    }
+}
+
+class Broccoli {
+    constructor() {
+        this.x = Math.random() * (canvas.width - 60) + 30;
+        this.y = GROUND_Y - 180 - Math.random() * 80;
+        this.width = 24;
+        this.height = 24;
+        this.collected = false;
+    }
+    update() {}
+    draw() {
+        if (this.collected) return;
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        // ブロッコリー（フォトリアル風グラデーション）
+        let gradStem = ctx.createLinearGradient(0, 12, 0, 24);
+        gradStem.addColorStop(0, '#2ecc71');
+        gradStem.addColorStop(1, '#27ae60');
+        ctx.fillStyle = gradStem;
+        ctx.fillRect(-3, 10, 6, 14);
+
+        let gradHead = ctx.createRadialGradient(-4, 4, 2, 0, 8, 14);
+        gradHead.addColorStop(0, '#2ecc71');
+        gradHead.addColorStop(0.6, '#27ae60');
+        gradHead.addColorStop(1, '#1e8449');
+        ctx.fillStyle = gradHead;
+        ctx.beginPath();
+        ctx.arc(0, 6, 12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+class Cauliflower {
+    constructor(x, y, vx, colorTheme) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = 0;
+        this.width = 30;
+        this.height = 30;
+        this.colorTheme = colorTheme || '#fff';
+    }
+    update() {
+        this.vy += 0.4;
+        this.y += this.vy;
+        this.x += this.vx;
+
+        if (this.y >= GROUND_Y - this.height) {
+            this.y = GROUND_Y - this.height;
+            this.vy = -5; // ぴょんぴょん跳ねる
+        }
+        if (this.x < 0 || this.x > canvas.width - this.width) {
+            this.vx *= -1;
+        }
+    }
+    draw() {
+        ctx.save();
+        ctx.translate(this.x + this.width/2, this.y + this.height/2);
+        let grad = ctx.createRadialGradient(-4, -4, 2, 0, 0, 18);
+        grad.addColorStop(0, this.colorTheme);
+        grad.addColorStop(1, '#95a5a6');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(0, 0, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+class Snail {
+    constructor() {
+        this.x = canvas.width + 50;
+        this.y = GROUND_Y - 26;
+        this.width = 34;
+        this.height = 26;
+        this.vx = -1.5;
+        this.state = 0; // 0: 歩行, 1: 静止甲羅, 2: 高速滑走甲羅
+        this.timer = 0;
+    }
+    update() {
+        if (this.state === 0) {
+            this.x += this.vx;
+        } else if (this.state === 1) {
+            // 静止甲羅
+            this.timer++;
+            if (this.timer > 180) {
+                this.state = 0;
+                this.timer = 0;
+                this.vx = -1.5;
+            }
+        } else if (this.state === 2) {
+            // 高速滑走甲羅
+            this.x += this.vx * 4;
+        }
+    }
+    draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        // カタツムリボディ＆甲羅
+        ctx.fillStyle = this.state === 2 ? '#e74c3c' : (this.state === 1 ? '#7f8c8d' : '#e67e22');
+        ctx.fillRect(0, 10, this.width, 16); // 胴体
+        ctx.beginPath();
+        ctx.arc(this.width/2, 8, 12, 0, Math.PI * 2);
+        ctx.fillStyle = '#9b59b6';
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+// --- ゲーム状態初期化 ---
+const player = new Player();
+let items = [new Broccoli()];
+let cauliflowers = [new Cauliflower(400, 100, 2, '#ffffff')];
+let snails = [new Snail()];
+let score = 0;
+let spawnTimer = 0;
+
+function checkCollision(rect1, rect2) {
+    return rect1.x < rect2.x + rect2.width &&
+           rect1.x + rect1.width > rect2.x &&
+           rect1.y < rect2.y + rect2.height &&
+           rect1.y + rect1.height > rect2.y;
+}
+
+// --- メインループ ---
+function loop() {
+    // 1. 更新
+    player.update();
+
+    spawnTimer++;
+    if (spawnTimer % 350 === 0) {
+        items.push(new Broccoli());
+    }
+    if (spawnTimer % 500 === 0) {
+        cauliflowers.push(new Cauliflower(Math.random() > 0.5 ? 0 : canvas.width, 50, Math.random() > 0.5 ? 2 : -2, '#f1c40f'));
+    }
+    if (spawnTimer % 700 === 0) {
+        snails.push(new Snail());
+    }
+
+    // アイテム判定
+    items.forEach(item => {
+        if (!item.collected && checkCollision(player, item)) {
+            item.collected = true;
+            player.grow();
+            score += 100 * player.scaleLevel;
+        }
+    });
+    items = items.filter(i => !i.collected);
+
+    // カリフラワー更新＆判定
+    cauliflowers.forEach((c, index) => {
+        c.update();
+        if (checkCollision(player, c)) {
+            // 踏みつけ判定（プレイヤーが落下中で、かつ敵の上部にいる場合）
+            if (player.vy > 0 && player.y + player.height - player.vy <= c.y + 12) {
+                soundManager.playSplit();
+                score += 300;
+                // 左右に2つに分裂
+                const colors = ['#e67e22', '#e74c3c', '#9b59b6', '#3498db'];
+                const c1 = new Cauliflower(c.x, c.y, -3, colors[Math.floor(Math.random()*colors.length)]);
+                const c2 = new Cauliflower(c.x, c.y, 3, colors[Math.floor(Math.random()*colors.length)]);
+                cauliflowers.splice(index, 1, c1, c2);
+                player.vy = -7; // 小ジャンプ反動
+            } else {
+                // ダメージ（縮小）
+                player.shrink();
+                c.x += player.facing * 30; // 押し戻し
+            }
+        }
+    });
+
+    // カタツムリ更新＆判定
+    snails.forEach((s, index) => {
+        s.update();
+        if (checkCollision(player, s)) {
+            if (player.vy > 0 && player.y + player.height - player.vy <= s.y + 10) {
+                soundManager.playSplit();
+                score += 500;
+                if (s.state === 0) {
+                    s.state = 1; // 静止甲羅へ
+                    s.vx = 0;
+                } else if (s.state === 1) {
+                    s.state = 2; // 高速滑走甲羅へ！
+                    s.vx = player.facing >= 0 ? 3 : -3;
+                } else {
+                    snails.splice(index, 1); // 撃破
+                }
+                player.vy = -7;
+            } else {
+                if (s.state === 2) {
+                    // 滑走甲羅は一掃＆大ダメージ
+                    player.shrink();
+                } else {
+                    player.shrink();
+                }
+            }
+        }
+    });
+
+    // 2. 描画
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 背景描画（FC風レトロスクロール風＆遠景の山・雲）
+    ctx.fillStyle = '#78c0ff';
+    ctx.fillRect(0, 0, canvas.width, GROUND_Y);
+
+    // 雲
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(150, 80, 25, 0, Math.PI*2);
+    ctx.arc(180, 75, 30, 0, Math.PI*2);
+    ctx.arc(210, 85, 20, 0, Math.PI*2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(550, 120, 20, 0, Math.PI*2);
+    ctx.arc(575, 115, 25, 0, Math.PI*2);
+    ctx.arc(600, 125, 18, 0, Math.PI*2);
+    ctx.fill();
+
+    // 地面（レトロブロック風タイル）
+    ctx.fillStyle = '#c84c0c'; // レンガ色
+    ctx.fillRect(0, GROUND_Y, canvas.width, canvas.height - GROUND_Y);
+    ctx.fillStyle = '#fcbc3c';
+    ctx.fillRect(0, GROUND_Y, canvas.width, 8); // 地面上面ライン
+
+    // エンティティ描画
+    items.forEach(i => i.draw());
+    cauliflowers.forEach(c => c.draw());
+    snails.forEach(s => s.draw());
+    player.draw();
+
+    // UI更新
+    document.getElementById('score-val').innerText = score;
+    document.getElementById('size-val').innerText = Number(player.scaleLevel.toFixed(1));
+
+    requestAnimationFrame(loop);
+}
+
+// ゲームスタート
+loop();
+</script>
+
+</body>
+</html>
