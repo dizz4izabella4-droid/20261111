@@ -491,7 +491,7 @@ function launch(i){
   sel=i; mark();
   if(audio()){ [784,988,1319,1568].forEach((f,k)=>tone(f,k*.06,.3,.08,'triangle')); }
   bgm.pause(); burst(items[i]);
-  setTimeout(()=>{ location.replace(APPS[i].path); },reduce?0:420);
+  setTimeout(()=>{ location.href=APPS[i].path; },reduce?0:420);
 }
 document.addEventListener('keydown',e=>{
   if(e.ctrlKey||e.metaKey||e.altKey) return;
