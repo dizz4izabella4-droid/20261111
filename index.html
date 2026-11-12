@@ -161,27 +161,31 @@ html.lock .wrap{contain:paint}
 #atitle.top p{font-size:clamp(12px,3.4vw,16px);letter-spacing:.24em}
 @keyframes tglow{50%{text-shadow:0 0 28px rgba(255,60,40,.95),0 0 70px rgba(220,0,30,.75),3px 3px 0 #3a0008}}
 @keyframes tin{0%{opacity:0;transform:scale(1.35);filter:blur(10px)}100%{opacity:1;transform:none;filter:none}}
-/* 歌詞の枠: 古い巻物。上下の軸が開いて紙が広がる。紙は半透明で、後ろの絵が透けて見える。中は自由にスクロールできる */
+/* 歌詞の枠: 古い巻物。上下の軸が開いて紙が広がる。紙と軸は計算で作った質感の画像（tools/make_scroll_textures.py）。中は自由にスクロールできる */
 #scroll{position:absolute;z-index:3;left:50%;transform:translateX(-50%);width:min(520px,calc(100% - 44px));
-  top:calc(150px + env(safe-area-inset-top,0px));bottom:calc(40px + env(safe-area-inset-bottom,0px));opacity:0;pointer-events:none;transition:opacity .9s}
+  top:calc(150px + env(safe-area-inset-top,0px));bottom:calc(40px + env(safe-area-inset-bottom,0px));opacity:0;pointer-events:none;transition:opacity .9s;
+  filter:drop-shadow(0 16px 20px rgba(0,0,0,.75)) drop-shadow(0 2px 3px rgba(0,0,0,.6))}
 #scroll.on{opacity:1;pointer-events:auto}
 #lyr{position:absolute;left:0;right:0;top:12px;bottom:12px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
-  background:
-    radial-gradient(ellipse at 18% 12%,rgba(120,70,20,.22),transparent 38%),
-    radial-gradient(ellipse at 84% 64%,rgba(110,55,15,.22),transparent 42%),
-    radial-gradient(ellipse at 30% 88%,rgba(90,40,10,.2),transparent 40%),
-    linear-gradient(90deg,rgba(120,78,34,.62) 0%,rgba(222,192,138,.36) 9%,rgba(236,212,164,.3) 50%,rgba(222,192,138,.36) 91%,rgba(120,78,34,.62) 100%);
-  box-shadow:inset 0 0 34px rgba(80,38,8,.55),inset 0 0 4px rgba(50,20,4,.7);
+  background:url(launcher-scroll.jpg) center/cover no-repeat #cdb27c;
+  box-shadow:inset 0 0 26px rgba(70,34,8,.5),inset 0 0 2px rgba(30,12,2,.8);
   clip-path:inset(50% 0 50% 0);transition:clip-path 1.8s cubic-bezier(.6,0,.2,1);
   scrollbar-width:thin;scrollbar-color:rgba(110,60,20,.7) transparent}
 #scroll.open #lyr{clip-path:inset(0 0 0 0)}
 #lyr:focus-visible{outline:2px solid #ffd27a;outline-offset:-4px}
+/* 紙が軸に巻き込まれて曲がる影（紙が開いてから現れる） */
+#scroll::before,#scroll::after{content:"";position:absolute;left:0;right:0;z-index:1;height:54px;pointer-events:none;opacity:0;transition:opacity 1s}
+#scroll::before{top:12px;background:linear-gradient(180deg,rgba(34,14,3,.7) 0%,rgba(60,30,8,.34) 34%,rgba(60,30,8,.1) 70%,transparent 100%)}
+#scroll::after{bottom:12px;background:linear-gradient(0deg,rgba(34,14,3,.7) 0%,rgba(60,30,8,.34) 34%,rgba(60,30,8,.1) 70%,transparent 100%)}
+#scroll.open::before,#scroll.open::after{opacity:1;transition-delay:1.3s}
 /* 軸（木の棒と金の飾り）。閉じているときは真ん中で重なり、開くと上下へ分かれる */
 .rod{position:absolute;z-index:2;left:-10px;right:-10px;height:24px;border-radius:12px;pointer-events:none;
-  background:linear-gradient(180deg,#8a5426 0%,#5a2e10 40%,#2e1405 85%,#1a0a02 100%);box-shadow:0 6px 12px rgba(0,0,0,.65),inset 0 2px 0 rgba(255,210,150,.25);
+  background:url(launcher-rod.jpg) center/100% 100% #4a2410;box-shadow:0 6px 12px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,220,170,.22);
   transition:transform 1.8s cubic-bezier(.6,0,.2,1)}
 .rod::before,.rod::after{content:"";position:absolute;top:-5px;width:22px;height:34px;border-radius:7px;
-  background:linear-gradient(180deg,#f6dc8e 0%,#c99a3e 35%,#7a5418 75%,#3d2808 100%);box-shadow:0 3px 6px rgba(0,0,0,.6)}
+  background:radial-gradient(ellipse 60% 38% at 38% 22%,rgba(255,250,210,.9),rgba(255,250,210,0) 70%),
+    linear-gradient(90deg,#8f6420 0%,#f1d683 28%,#fff1b0 40%,#d4a640 58%,#7a5418 85%,#46300a 100%);
+  box-shadow:0 3px 6px rgba(0,0,0,.6),inset 0 -3px 5px rgba(50,28,4,.55)}
 .rod::before{left:-4px}.rod::after{right:-4px}
 .rod.top{top:0}.rod.bot{bottom:0}
 #scroll:not(.open) .rod.top{transform:translateY(var(--half,200px))}
@@ -190,11 +194,11 @@ html.lock .wrap{contain:paint}
 #lyr section{display:flex;flex-direction:column;gap:4px;text-align:center;opacity:0;transform:translateY(10px);filter:blur(3px);
   transition:opacity 1s,transform 1s,filter 1s;transition-delay:calc(1.1s + var(--i,0) * .28s)}
 #scroll.open #lyr section{opacity:1;transform:none;filter:none}
-#lyr h2{margin:0 0 6px;font:700 13px "Times New Roman","Liberation Serif",serif;letter-spacing:.28em;color:#7a1206;text-shadow:0 0 6px rgba(255,236,200,.7)}
-#lyr h2::before,#lyr h2::after{content:"❦";font-size:12px;margin:0 .7em;color:#8a4a18;letter-spacing:0}
+#lyr h2{margin:0 0 6px;font:700 13px "Times New Roman","Liberation Serif",serif;letter-spacing:.28em;color:#6e1006;text-shadow:0 1px 0 rgba(255,240,205,.28)}
+#lyr h2::before,#lyr h2::after{content:"❦";font-size:12px;margin:0 .7em;color:#7a3e12;letter-spacing:0}
 #lyr p{margin:0;font:800 clamp(16px,4.6vw,21px)/1.8 var(--ja);letter-spacing:.06em;color:#2a0a04;
-  text-shadow:0 0 6px rgba(255,238,205,.85),0 0 2px rgba(255,238,205,.9)}
-#lyr p.shout{font-size:clamp(20px,6vw,28px);color:#9a0c08;letter-spacing:.1em;text-shadow:0 0 8px rgba(255,230,190,.9),0 0 18px rgba(255,90,60,.5)}
+  text-shadow:0 1px 0 rgba(255,240,205,.3)}
+#lyr p.shout{font-size:clamp(20px,6vw,28px);color:#8c0c08;letter-spacing:.1em;text-shadow:0 1px 0 rgba(255,236,196,.35)}
 #lyr .end{font:700 12px "Times New Roman","Liberation Serif",serif;letter-spacing:.3em;color:#6a3a14;text-align:center;opacity:.8}
 #ahint{position:absolute;z-index:3;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom,0px));text-align:center;font:700 11px var(--ja);letter-spacing:.08em;
   color:rgba(240,214,160,.7);opacity:0;transition:opacity .8s;pointer-events:none}
@@ -307,76 +311,76 @@ mark();
 // スイッチを入れると: かわいい画面が揺れてひび割れ、崩れ落ちる → 暗転して題名 → 題名が上へ移り、歌詞の枠が現れる
 // 歌詞の枠は自由にスクロールできる。枠の外をタップするか、スイッチを切るか、曲が終わると、元の画面に戻る
 const bgm=$('bgm'); bgm.volume=.8;
-// 歌詞（[見出し, (未使用), (未使用), 歌詞]）
+// 歌詞（[見出し, (未使用), (未使用), 歌詞]）。漢字かな交じりで書く
 const SONG=[
- ['VERSE 1',8,32,`くろき てんくうに きざまれた
-かみの しなりお ひきさけ
-ぎんの らいめい せかいを さき
-ほろびの かねが なりひびく
-うしなわれた きおくの はて
-きょむの しはいが ほほえんだ
-この いのちに しるされた
-ふういんを いま ときはなて`],
- ['PRE-CHORUS',32,50,`せんこくの しんえん
-きょうきの らくいん
-だれが さだめた うんめいか
-ひゃくおくの ほしを やきつくし
-てんちの ほうそくを うちくだけ`],
- ['CHORUS',50,68,`はめつを つげる しゅうえんの しょうどう
-てんくうを さく こくえんの ほのお
-かみが おそれた きんきの ちから
-いま ふういんを かいほうせよ
+ ['VERSE 1',8,32,`黒き天空に 刻まれた
+神のシナリオ 引き裂け
+銀の雷鳴 世界を裂き
+滅びの鐘が 鳴り響く
+失われた 記憶の果て
+虚無の支配が 微笑んだ
+この命に 記された
+封印を今 解き放て`],
+ ['PRE-CHORUS',32,50,`宣告の深淵
+狂気の烙印
+誰が定めた 運命か
+百億の星を 焼き尽くし
+天地の法則を 打ち砕け`],
+ ['CHORUS',50,68,`破滅を告げる 終焉の衝動
+天空を裂く 黒炎の焔
+神が恐れた 禁忌の力
+今 封印を 解放せよ
 アビス・コード！
-しんえんの そのさきへ
+深淵のその先へ
 アビス・コード！
-てんめいを うらぎれ
-せかいが すべて くずれおちても
-われは けっして ひざまずかない`],
- ['VERSE 2',70,88,`ぎそうの てんしが まいおりる
-しんぱんの つるぎを かかげて
-せいぎの なのもと くだかれた
-むすうの たましい そのなかで
-だれもが かみを しんじるなら
-われは かみを ころすだろう
-きょうかいせんを こえた さき
-そこに しんじつが あるのなら`],
- ['PRE-CHORUS 2',88,108,`ぜつぼうの ふちで
-しんわは くずれる
-さいごの とびらを こじあけろ
-りんねの くさりを たちきって
-うんめいの しゅうえんを つげろ`],
- ['CHORUS 2',108,124,`はめつを つげる しゅうえんの しょうどう
-てんくうを さく こくえんの ほのお
-かみが おそれた きんきの ちから
-いま ふういんを かいほうせよ
+天命を裏切れ
+世界が全て 崩れ落ちても
+我は決して 跪かない`],
+ ['VERSE 2',70,88,`偽装の天使が 舞い降りる
+審判の剣を 掲げて
+正義の名の下 砕かれた
+無数の魂 その中で
+誰もが神を 信じるなら
+我は神を 殺すだろう
+境界線を超えた先
+そこに真実が あるのなら`],
+ ['PRE-CHORUS 2',88,108,`絶望の淵で
+神話は崩れる
+最後の扉を こじ開けろ
+輪廻の鎖を 断ち切って
+運命の終焉を 告げろ`],
+ ['CHORUS 2',108,124,`破滅を告げる 終焉の衝動
+天空を裂く 黒炎の焔
+神が恐れた 禁忌の力
+今 封印を 解放せよ
 アビス・コード！
-しんえんの そのさきへ
+深淵のその先へ
 アビス・コード！
-てんめいを うらぎれ
-せかいが すべて くずれおちても
-われは けっして ひざまずかない`],
- ['BRIDGE — Breakdown',126,148,`きこえるか
-しんえんの こえが
-みえるか
-ほうかいする てんくうが
-われこそが
-さいごの しんぱんしゃ
-われこそが
-きんだんの かいほうしゃ
-ゼロへと かえれ
-すべてを こわせ
-かみの しはいに
-しゅうえんを`],
- ['FINAL CHORUS — Explosive',150,168,`はめつを こえて しんわを こわせ
-てんくうを こえて うちゅうを こわせ
-かみも さだめも こえた そのさき
-われが あらたな せかいの ほうそく
+天命を裏切れ
+世界が全て 崩れ落ちても
+我は決して 跪かない`],
+ ['BRIDGE — Breakdown',126,148,`聞こえるか
+深淵の声が
+見えるか
+崩壊する天空が
+我こそが
+最後の審判者
+我こそが
+禁断の解放者
+ゼロへと帰れ
+全てを壊せ
+神の支配に
+終焉を`],
+ ['FINAL CHORUS — Explosive',150,168,`破滅を超えて 神話を壊せ
+天空を超えて 宇宙を壊せ
+神も運命も超えた その先
+我が新たな 世界の法則
 アビス・コード！
-しんえんを そのみへと
+深淵をその身へと
 アビス・コード！
-てんめいを うらぎれ
-たとえ このみが ほのおに きえても
-われは けっして ひざまずかない`]];
+天命を裏切れ
+たとえこの身が 炎に消えても
+我は決して 跪かない`]];
 // 歌詞の枠を組み立てる
 (()=>{ const box=$('lyrIn');
   SONG.forEach(([label,,,txt],k)=>{ const sec=document.createElement('section'); sec.style.setProperty('--i',k); const h=document.createElement('h2'); h.textContent=label; sec.appendChild(h);
