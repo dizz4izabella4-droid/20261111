@@ -1,7 +1,7 @@
 /* ================= ゲーム本体 ================= */
 const START={x:0,y:187.9,z:-12.2};
 const coarse=window.matchMedia&&window.matchMedia('(pointer:coarse)').matches;
-const el={title:$('title'),hint:$('hint'),end:$('end'),endTxt:$('endTxt'),endNote:$('endNote'),go:$('go')};
+const el={title:$('title'),hint:$('hint'),end:$('end'),endTxt:$('endTxt'),endNote:$('endNote'),bestTxt:$('bestTxt'),go:$('go')};
 const G={mode:'title',t:0,modeT:0,bird:makeBird(),heat:0,melt:0,meltT:0,meltShed:0,maxAlt:0,damage:0,rocket:false,frost:0,cause:'melt',autoOn:false,angelSeen:0,lastSplash:-9,shake:0,fovKick:0,stun:0,thK:0,mist:0,
   fade:1,fadeTarget:0,fadeSpeed:0.7,flash:0,flapPow:1,hintT:0,hintShown:false,steerSeen:false,flapSeen:false,timeScale:1,endT:0,shedHeat:0,calls:0};
 const b=G.bird;
@@ -149,7 +149,7 @@ function setMode(m){G.mode=m;G.modeT=0;}
 function resetRun(){
   Object.assign(b,makeBird());
   b.x=START.x;b.y=START.y;b.z=START.z;b.yaw=0;b.pitch=-0.04;b.roll=0;
-  G.heat=0;G.melt=0;G.meltT=0;G.meltShed=0;G.maxAlt=0;G.damage=0;G.angelSeen=0;G.rocket=false;G.frost=0;G.cause='melt';FL.VMAX=104;rocketItem.setOn(true);ice.clear();G.shake=0;G.fovKick=0;G.stun=0;G.flash=0;G.timeScale=1;G.shedHeat=0;G.thK=0;
+  G.heat=0;G.melt=0;G.meltT=0;G.meltShed=0;G.maxAlt=0;G.damage=0;G.angelSeen=0;G.rocket=false;G.frost=0;G.cause='melt';FL.VMAX=104;rocketItem.setOn(true);ice.clear();G.newBest=false;G.passedBest=false;G.prevY=188;el.bestTxt.textContent=legacy.best>250?'先人の高さ　'+Math.round(legacy.best).toLocaleString('ja-JP')+' m':'';G.shake=0;G.fovKick=0;G.stun=0;G.flash=0;G.timeScale=1;G.shedHeat=0;G.thK=0;
   G.steerSeen=false;G.flapSeen=false;G.hintShown=false;G.above=false;G.lastBreak=-99;
   G.runs=(G.runs||0)+1;el.title.classList.toggle('retry',G.runs>1);
   wings.restore();wings.setLoose(0);
@@ -203,7 +203,8 @@ function finish(){
   setMode('end');G.endT=0;
   audio.endChord();
   const alt=Math.round(G.maxAlt);
-  let line;
+  let line,line2;
+  const newBest=G.cause==='melt'&&alt>250&&legacy.record(alt);
   if(G.cause==='freeze'){
     line='エンジンは、凍りついた。<br><span style="font-size:.62em;opacity:.85">空の向こうは、あまりに寒かった。</span>';
     el.endTxt.innerHTML=line+'<br><span style="font-size:.5em;letter-spacing:.25em;opacity:.8">到達 '+alt.toLocaleString('ja-JP')+' m ／ 成層圏</span>';
@@ -215,6 +216,8 @@ function finish(){
   else line='手を伸ばしても、<br>太陽は、遠かった。';
   if(G.angelSeen>0&&G.maxAlt>=1500)line+='<br><span style="font-size:.62em;opacity:.85">天使たちは、ただ見ていた。</span>';
   el.endTxt.innerHTML=line+'<br><span style="font-size:.5em;letter-spacing:.25em;opacity:.8">到達 '+alt.toLocaleString('ja-JP')+' m ／ 太陽まで 3,000 m</span>';
+  line2=newBest?'先人の高さを、超えた。':'それでも、勇気は受け継がれる。';
+  el.endTxt.innerHTML+='<br><span style="font-size:.55em;letter-spacing:.3em;opacity:.9">'+line2+'</span>';
   el.endNote.textContent='蝋の羽なので、クリア不可。';
   }
   G.fadeTarget=1;G.fadeSpeed=0.55;P.fadeCol.set(0.97,0.93,0.84);
@@ -354,6 +357,8 @@ function update(dt){
       collide(h);
     }
     G.maxAlt=Math.max(G.maxAlt,b.y);
+    if(mode==='fly'&&!G.rocket&&!G.passedBest&&legacy.best>250&&G.prevY<legacy.best&&b.y>=legacy.best){G.passedBest=true;audio.rocketGet();G.flash=Math.max(G.flash,0.35);el.hint.innerHTML='<span>先人の高さ</span><span>その勇気を、受け継いで</span>';el.hint.classList.add('on');G.hintShown=true;G.hintT=0;G.flapSeen=G.steerSeen=true;}
+    G.prevY=b.y;
     if(mode==='fly'&&!G.rocket&&Math.hypot(b.x-ROCKET_POS.x,b.y-ROCKET_POS.y,b.z-ROCKET_POS.z)<16)pickRocket();
     if(mode==='fly'){
       const alt01=clamp(b.y/2000,0,1);
@@ -513,6 +518,7 @@ function updateView(dt){
   fallFeathers.update(dt,G.t);
   puffs.mesh.visible=false;// puffs.update(cam.position.x,cam.position.y,cam.position.z,VMU.uSunV.value);
   ice.update(dt,G.rocket?G.frost:0);birds.update(G.t,thAct);birds.updateFlocks(G.t,b.x,b.y,b.z);
+  legacy.update(b.x,b.z);
   rocketItem.update(G.t,Math.hypot(b.x-ROCKET_POS.x,b.y-ROCKET_POS.y,b.z-ROCKET_POS.z));
   const ang=angels.update(dt,{x:b.x,y:b.y,z:b.z,yaw:b.yaw,pr:clamp(b.y/3000,0,1),mode:G.mode,t:G.t});
   if(ang.seen>G.angelSeen)G.angelSeen=ang.seen;
