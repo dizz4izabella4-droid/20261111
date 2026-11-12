@@ -64,7 +64,7 @@ const puffs=(function(){
 })();
 
 const birds=(function(){
-  const PER=7,NF=14,FB=13,N=PER*THN+NF*FB;
+  const PER=7,NF=14,FB=13,NB=44,NC=9,B0=PER*THN+NF*FB,C0=B0+NB,N=C0+NC;
   const pos=[-0.0,0,-0.45, -0.1,0,0.3, 0.1,0,0.3,   0,0,-0.2, 0,0,0.28, -1.05,0,0.2,   0,0,-0.2, 0,0,0.28, 1.05,0,0.2];
   const wv=[0,0,0, 0,0,1, 0,0,1];
   const g=new T.InstancedBufferGeometry();
@@ -141,5 +141,49 @@ const birds=(function(){
     }
     ss.set(1,1,1);
   }
-  return {update:update,updateFlocks:updateFlocks};
+  function setM(idx,x,y,z,yaw,roll,sc,pitch){
+    ee.set(pitch||0,yaw,roll,'YXZ');qq.setFromEuler(ee);pp.set(x,y,z);ss.set(sc,sc,sc);mm.compose(pp,qq,ss);
+    const e=mm.elements;
+    aM[0].setXYZW(idx,e[0],e[1],e[2],e[3]);aM[1].setXYZW(idx,e[4],e[5],e[6],e[7]);aM[2].setXYZW(idx,e[8],e[9],e[10],e[11]);aM[3].setXYZW(idx,e[12],e[13],e[14],e[15]);
+  }
+  // 飛び立ちの群れ：屋上から一斉に舞い上がる
+  const bp=[],bv=[],bt=[];for(let i=0;i<NB;i++){bp.push([0,-9999,0]);bv.push([0,0,0]);bt.push(99);}
+  function burst(x,y,z){
+    for(let i=0;i<NB;i++){
+      const a=rnd()*TAU,r=6+rnd()*16;
+      bp[i]=[x+Math.cos(a)*r,y-3+rnd()*4,z+Math.sin(a)*r];
+      const sp=10+rnd()*14;
+      bv[i]=[Math.cos(a)*sp*0.8+(rnd()-0.5)*6,5+rnd()*9,Math.sin(a)*sp*0.8-6-rnd()*8];
+      bt[i]=-rnd()*0.7;
+    }
+  }
+  // いっしょに飛ぶ仲間
+  const crew=[];for(let k=0;k<NC;k++)crew.push({x:0,y:-9999,z:0,s:0,init:false});
+  function updateCrew(dt,P,t){
+    for(let i=0;i<NB;i++){
+      bt[i]+=dt;
+      if(bt[i]<0||bt[i]>10){setM(B0+i,0,-9999,0,0,0,0.001);continue;}
+      const v=bv[i];v[1]+=3*dt;v[0]*=1-0.1*dt;v[2]*=1-0.1*dt;
+      bp[i][0]+=v[0]*dt;bp[i][1]+=v[1]*dt;bp[i][2]+=v[2]*dt;
+      const sc=1.7*Math.min(1,(10-bt[i])/2);
+      setM(B0+i,bp[i][0],bp[i][1],bp[i][2],Math.atan2(-v[0],-v[2]),0.3*Math.sin(t*2+i),sc,0.3);
+    }
+    const on=P.fly&&!P.rocket&&P.speed<125&&P.age>2.5;
+    const cy=Math.cos(P.yaw),sy=Math.sin(P.yaw);
+    for(let k=0;k<NC;k++){
+      const C=crew[k];
+      const rank=Math.ceil(k/2),side=k===0?0:(k%2?1:-1);
+      const ox=side*(12+rank*5.5),ahead=9+rank*3+(k===0?7:0),oy=2.5+rank*0.8+Math.sin(t*0.7+k)*1.2;
+      const gx=P.x+ox*cy-sy*ahead,gz=P.z-ox*sy-cy*ahead;
+      if(!C.init){C.x=gx;C.y=P.y+oy;C.z=gz;C.init=true;}
+      C.x+=P.vx*dt;C.y+=P.vy*dt;C.z+=P.vz*dt;
+      const kf=Math.min(1,dt*1.8);
+      C.x+=(gx-C.x)*kf;C.y+=(P.y+oy-C.y)*kf;C.z+=(gz-C.z)*kf;
+      C.s+=((on?1:0)-C.s)*Math.min(1,dt*(on?0.9:2.5));
+      if(C.s<0.01){setM(C0+k,0,-9999,0,0,0,0.001);if(!on)C.init=false;continue;}
+      setM(C0+k,C.x,C.y+Math.sin(t*1.5+k*1.7)*0.6,C.z,P.yaw,-0.2*side+0.15*Math.sin(t+k),2.2*C.s,0.05);
+    }
+    aM.forEach(a=>a.needsUpdate=true);
+  }
+  return {update:update,updateFlocks:updateFlocks,burst:burst,updateCrew:updateCrew};
 })();

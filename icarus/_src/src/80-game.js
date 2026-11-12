@@ -165,6 +165,7 @@ function resetRun(){
 }
 function launch(){
   audio.launch();
+  birds.burst(b.x,b.y,b.z);
   setMode('fly');
   b.vx=0;b.vy=3.2;b.vz=-21;b.pitch=0.02;
   b.flapCD=0;
@@ -518,6 +519,8 @@ function updateView(dt){
   fallFeathers.update(dt,G.t);
   puffs.mesh.visible=false;// puffs.update(cam.position.x,cam.position.y,cam.position.z,VMU.uSunV.value);
   ice.update(dt,G.rocket?G.frost:0);birds.update(G.t,thAct);birds.updateFlocks(G.t,b.x,b.y,b.z);
+  birds.updateCrew(dt,{x:b.x,y:b.y,z:b.z,yaw:b.yaw,speed:b.speed,fly:G.mode==='fly',rocket:G.rocket,age:G.modeT,vx:b.vx,vy:b.vy,vz:b.vz},G.t);
+  murmur.update(G.t,b.x,b.y,b.z,dt);
   legacy.update(b.x,b.z);
   rocketItem.update(G.t,Math.hypot(b.x-ROCKET_POS.x,b.y-ROCKET_POS.y,b.z-ROCKET_POS.z));
   const ang=angels.update(dt,{x:b.x,y:b.y,z:b.z,yaw:b.yaw,pr:clamp(b.y/3000,0,1),mode:G.mode,t:G.t});

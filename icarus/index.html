@@ -1309,7 +1309,7 @@ const puffs=(function(){
 })();
 
 const birds=(function(){
-  const PER=7,NF=14,FB=13,N=PER*THN+NF*FB;
+  const PER=7,NF=14,FB=13,NB=44,NC=9,B0=PER*THN+NF*FB,C0=B0+NB,N=C0+NC;
   const pos=[-0.0,0,-0.45, -0.1,0,0.3, 0.1,0,0.3,   0,0,-0.2, 0,0,0.28, -1.05,0,0.2,   0,0,-0.2, 0,0,0.28, 1.05,0,0.2];
   const wv=[0,0,0, 0,0,1, 0,0,1];
   const g=new T.InstancedBufferGeometry();
@@ -1386,7 +1386,51 @@ const birds=(function(){
     }
     ss.set(1,1,1);
   }
-  return {update:update,updateFlocks:updateFlocks};
+  function setM(idx,x,y,z,yaw,roll,sc,pitch){
+    ee.set(pitch||0,yaw,roll,'YXZ');qq.setFromEuler(ee);pp.set(x,y,z);ss.set(sc,sc,sc);mm.compose(pp,qq,ss);
+    const e=mm.elements;
+    aM[0].setXYZW(idx,e[0],e[1],e[2],e[3]);aM[1].setXYZW(idx,e[4],e[5],e[6],e[7]);aM[2].setXYZW(idx,e[8],e[9],e[10],e[11]);aM[3].setXYZW(idx,e[12],e[13],e[14],e[15]);
+  }
+  // 飛び立ちの群れ：屋上から一斉に舞い上がる
+  const bp=[],bv=[],bt=[];for(let i=0;i<NB;i++){bp.push([0,-9999,0]);bv.push([0,0,0]);bt.push(99);}
+  function burst(x,y,z){
+    for(let i=0;i<NB;i++){
+      const a=rnd()*TAU,r=6+rnd()*16;
+      bp[i]=[x+Math.cos(a)*r,y-3+rnd()*4,z+Math.sin(a)*r];
+      const sp=10+rnd()*14;
+      bv[i]=[Math.cos(a)*sp*0.8+(rnd()-0.5)*6,5+rnd()*9,Math.sin(a)*sp*0.8-6-rnd()*8];
+      bt[i]=-rnd()*0.7;
+    }
+  }
+  // いっしょに飛ぶ仲間
+  const crew=[];for(let k=0;k<NC;k++)crew.push({x:0,y:-9999,z:0,s:0,init:false});
+  function updateCrew(dt,P,t){
+    for(let i=0;i<NB;i++){
+      bt[i]+=dt;
+      if(bt[i]<0||bt[i]>10){setM(B0+i,0,-9999,0,0,0,0.001);continue;}
+      const v=bv[i];v[1]+=3*dt;v[0]*=1-0.1*dt;v[2]*=1-0.1*dt;
+      bp[i][0]+=v[0]*dt;bp[i][1]+=v[1]*dt;bp[i][2]+=v[2]*dt;
+      const sc=1.7*Math.min(1,(10-bt[i])/2);
+      setM(B0+i,bp[i][0],bp[i][1],bp[i][2],Math.atan2(-v[0],-v[2]),0.3*Math.sin(t*2+i),sc,0.3);
+    }
+    const on=P.fly&&!P.rocket&&P.speed<125&&P.age>2.5;
+    const cy=Math.cos(P.yaw),sy=Math.sin(P.yaw);
+    for(let k=0;k<NC;k++){
+      const C=crew[k];
+      const rank=Math.ceil(k/2),side=k===0?0:(k%2?1:-1);
+      const ox=side*(12+rank*5.5),ahead=9+rank*3+(k===0?7:0),oy=2.5+rank*0.8+Math.sin(t*0.7+k)*1.2;
+      const gx=P.x+ox*cy-sy*ahead,gz=P.z-ox*sy-cy*ahead;
+      if(!C.init){C.x=gx;C.y=P.y+oy;C.z=gz;C.init=true;}
+      C.x+=P.vx*dt;C.y+=P.vy*dt;C.z+=P.vz*dt;
+      const kf=Math.min(1,dt*1.8);
+      C.x+=(gx-C.x)*kf;C.y+=(P.y+oy-C.y)*kf;C.z+=(gz-C.z)*kf;
+      C.s+=((on?1:0)-C.s)*Math.min(1,dt*(on?0.9:2.5));
+      if(C.s<0.01){setM(C0+k,0,-9999,0,0,0,0.001);if(!on)C.init=false;continue;}
+      setM(C0+k,C.x,C.y+Math.sin(t*1.5+k*1.7)*0.6,C.z,P.yaw,-0.2*side+0.15*Math.sin(t+k),2.2*C.s,0.05);
+    }
+    aM.forEach(a=>a.needsUpdate=true);
+  }
+  return {update:update,updateFlocks:updateFlocks,burst:burst,updateCrew:updateCrew};
 })();
 
 /* ---- 04c-angels.js ---- */
@@ -1643,6 +1687,52 @@ const legacy=(function(){
     return false;
   }
   return {update:update,record:record,get best(){return best;}};
+})();
+
+/* ---- 04g-murmur.js ---- */
+/* ================= ムクドリの群れのような「渦をまく黒い雲」 ================= */
+const murmur=(function(){
+  const M=1500,NJ=3;
+  const g=new T.BufferGeometry();
+  g.setAttribute('position',new T.BufferAttribute(new Float32Array(M*3),3));
+  const s=new Float32Array(M*4);for(let i=0;i<M*4;i++)s[i]=rnd();
+  g.setAttribute('aS',new T.BufferAttribute(s,4));
+  const objs=[];
+  const base=[[-150,-430,250],[900,300,380],[-700,1100,620]];
+  for(let j=0;j<NJ;j++){
+    const mat=new T.ShaderMaterial({uniforms:Object.assign({uC:{value:new T.Vector3()},uR:{value:80+30*j},uScare:{value:0}},U),
+      vertexShader:`attribute vec4 aS;uniform vec3 uC;uniform float uR,uScare;uniform float uTime;varying vec3 vWP;
+      void main(){
+        float t=uTime;
+        float a=aS.x*6.2832+t*(0.25+0.45*aS.y);
+        float r=uR*(0.25+0.75*pow(aS.z,0.6))*(1.0+uScare*1.6);
+        vec3 p=vec3(cos(a)*r*(1.0+0.3*sin(t*0.4+aS.x*5.0)),sin(a*2.0+t*0.6+aS.y*6.0)*uR*0.33,sin(a)*r);
+        p+=uR*0.3*vec3(sin(t*0.37+p.z*0.03),sin(t*0.29+p.x*0.03),sin(t*0.41+p.y*0.03));
+        p+=vec3(sin(t*5.0+aS.w*30.0),sin(t*6.0+aS.w*20.0),cos(t*5.0+aS.w*10.0))*0.9;
+        vec4 wp=vec4(uC+p,1.0);vWP=wp.xyz;
+        vec4 mv=viewMatrix*wp;gl_Position=projectionMatrix*mv;
+        gl_PointSize=clamp(900.0/max(-mv.z,1.0),1.6,6.0);
+      }`,
+      fragmentShader:FS_PRE+SKY_GLSL+`varying vec3 vWP;
+      void main(){vec2 c=gl_PointCoord-0.5;if(dot(c,c)>0.25)discard;
+        vec3 col=vec3(0.13,0.10,0.11)*(uSunCol*0.4+vec3(0.55));col=applyFog(col,vWP);gl_FragColor=vec4(col,1.0);}`});
+    const o=new T.Points(g,mat);o.frustumCulled=false;scene.add(o);objs.push({o:o,mat:mat,sc:0});
+  }
+  function wrapTo(v,c,S){return ((v-c+S*0.5)%S+S)%S-S*0.5+c;}
+  function update(t,px,py,pz,dt){
+    for(let j=0;j<NJ;j++){
+      const B=base[j],O=objs[j];
+      const cx=wrapTo(B[0]+Math.cos(t*0.04+j*2)*320,px,2600);
+      const cz=wrapTo(B[1]+Math.sin(t*0.05+j)*320,pz,2600);
+      let cy=wrapTo(B[2]+Math.sin(t*0.06+j)*50,py,900);if(cy<70)cy+=900*0.5;
+      O.mat.uniforms.uC.value.set(cx,cy,cz);
+      const d=Math.hypot(cx-px,cy-py,cz-pz);
+      const tg=1-sstep(40,190,d);
+      O.sc+=(tg-O.sc)*Math.min(1,dt*3);
+      O.mat.uniforms.uScare.value=O.sc;
+    }
+  }
+  return {update:update};
 })();
 
 /* ---- 05-audio.js ---- */
@@ -2098,6 +2188,7 @@ function resetRun(){
 }
 function launch(){
   audio.launch();
+  birds.burst(b.x,b.y,b.z);
   setMode('fly');
   b.vx=0;b.vy=3.2;b.vz=-21;b.pitch=0.02;
   b.flapCD=0;
@@ -2451,6 +2542,8 @@ function updateView(dt){
   fallFeathers.update(dt,G.t);
   puffs.mesh.visible=false;// puffs.update(cam.position.x,cam.position.y,cam.position.z,VMU.uSunV.value);
   ice.update(dt,G.rocket?G.frost:0);birds.update(G.t,thAct);birds.updateFlocks(G.t,b.x,b.y,b.z);
+  birds.updateCrew(dt,{x:b.x,y:b.y,z:b.z,yaw:b.yaw,speed:b.speed,fly:G.mode==='fly',rocket:G.rocket,age:G.modeT,vx:b.vx,vy:b.vy,vz:b.vz},G.t);
+  murmur.update(G.t,b.x,b.y,b.z,dt);
   legacy.update(b.x,b.z);
   rocketItem.update(G.t,Math.hypot(b.x-ROCKET_POS.x,b.y-ROCKET_POS.y,b.z-ROCKET_POS.z));
   const ang=angels.update(dt,{x:b.x,y:b.y,z:b.z,yaw:b.yaw,pr:clamp(b.y/3000,0,1),mode:G.mode,t:G.t});
