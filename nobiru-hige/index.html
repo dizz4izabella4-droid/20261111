@@ -242,6 +242,7 @@ const player = {
   dir: 1,
   onGround: false,
   invuln: 0,
+  chain: 0, // 着地せずに連続で踏んだ回数（増えるほど跳ねが小さくなる）
   walkFrame: 0,
   get w() { return Math.max(2, this.baseW * this.scaleX); },
   get h() { return Math.max(2, this.baseH * this.scaleY); }
@@ -259,6 +260,20 @@ const ENEMY_SHRINK = 0.85;    // 踏んで増えるたびに小さくなる倍�
 const ENEMY_MIN = 5;          // これ以上は小さくならない
 const MAX_ENEMIES = 450;      // 増殖の上限（超えたら増えずに入れ替わる）
 const SLOW_START = 60;        // これ以上の数で処理落ち風になる
+
+// 体重：大きいほど重力が強く（最大2.5倍）、小さいほど普通のまま
+function playerWeight() { return 1 + Math.min(1.5, Math.max(0, player.scaleY - 1) * 0.15); }
+
+// 踏んだときの跳ね返り：大きい（重い）ほど浮かない。連続で踏むほど小さくなる。最低限の浮きは確保
+function stompBounce(e, harmless) {
+  const mass = player.scaleY * player.scaleY;
+  const base = harmless ? 2.6 + 3.2 / (1 + mass * 0.3)
+                        : 5.0 + 3.5 / (1 + mass * 0.3);
+  const sizeF = 0.6 + 0.4 * Math.min(1, e.size / ENEMY_BASE); // 小さい敵ほど弾まない
+  const decay = Math.pow(0.8, player.chain);
+  player.chain++;
+  return -Math.max(2.2, base * sizeF * decay);
+}
 
 // 足の大きさ（両足を合わせた幅）。敵がこれより小さいと、触れてもダメージなし
 function footSize() { return 20 * player.scaleX; }
@@ -347,7 +362,7 @@ function update() {
     sfxJump();
   }
 
-  player.vy += GRAVITY;
+  player.vy += GRAVITY * playerWeight(); // 大きいほど重い
   player.x += player.vx;
   player.y += player.vy;
 
@@ -360,6 +375,7 @@ function update() {
     player.y = GROUND_Y - player.h;
     player.vy = 0;
     player.onGround = true;
+    player.chain = 0;
   }
 
   if (player.invuln > 0) player.invuln--;
@@ -419,7 +435,7 @@ function update() {
 
       if (isStomp) {
         // 踏んだ！ 小さい敵は軽く踏める（バウンドも小さい）
-        player.vy = harmless ? -5.5 : -8.5;
+        player.vy = stompBounce(e, harmless);
         sfxStomp();
         score += 100;
 
