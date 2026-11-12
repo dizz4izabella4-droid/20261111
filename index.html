@@ -119,12 +119,13 @@ header{display:flex;flex-direction:column;align-items:center;gap:10px;padding-to
 
 footer{text-align:center;font-size:12px;font-weight:700;color:var(--ink2);letter-spacing:.08em;display:flex;flex-direction:column;gap:4px}
 footer .keys{opacity:.8}
-/* 外部サイトへのリンク（最下部に常に表示。画面が動いても固定） */
+/* 外部サイトへのリンク: 扉のアイコン（最下部に常に固定表示） */
 .ext{position:fixed;z-index:4;left:50%;transform:translateX(-50%);bottom:max(8px,env(safe-area-inset-bottom,0px));
-  display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;background:rgba(40,10,20,.72);color:#fff;
-  font:700 12px/1.2 var(--ja);letter-spacing:.04em;text-decoration:none;white-space:nowrap;box-shadow:0 3px 10px rgba(20,4,8,.3)}
-.ext:hover,.ext:focus-visible{background:rgba(40,10,20,.88);outline:2px solid #fff;outline-offset:2px}
-.ext svg{width:11px;height:11px}
+  width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:rgba(40,10,20,.72);color:#fff;text-decoration:none;
+  border:2px solid rgba(255,255,255,.75);box-shadow:0 3px 10px rgba(20,4,8,.35);transition:background .15s,transform .15s}
+.ext:hover,.ext:focus-visible{background:rgba(40,10,20,.9);outline:2px solid #fff;outline-offset:2px}
+.ext:active{transform:translateX(-50%) translateY(2px)}
+.ext svg{width:26px;height:26px}
 /* 作者の小さな署名（右下） */
 .byiz{position:fixed;z-index:4;right:max(12px,env(safe-area-inset-right,0px));bottom:max(10px,env(safe-area-inset-bottom,0px));
   font:italic 600 12px/1 "Times New Roman","Liberation Serif",serif;letter-spacing:.08em;color:var(--ink2);opacity:.75;pointer-events:none;transition:opacity .6s,color .6s}
@@ -240,7 +241,7 @@ body.abyss .music.on .sw{background:#c41a2a}
   </section>
   <footer><span id="count"></span><span class="keys">↑↓ でえらんで Enter であそぶ</span></footer>
 </div>
-<a class="ext" id="ext" href="https://iz3ico.github.io/app/" target="_blank" rel="noopener noreferrer">iz3ico.github.io/app <svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3H3v10h10v-3M9 3h4v4M13 3L7 9"/></svg></a>
+<a class="ext" id="ext" href="https://iz3ico.github.io/app/" target="_blank" rel="noopener noreferrer" aria-label="外部サイトへ（iz3ico.github.io/app）" title="iz3ico.github.io/app"><svg viewBox="0 0 32 32" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 28V5h20v23"/><path d="M3 28h26"/><path d="M11 9l10-1.5v19.5L11 28z" fill="rgba(255,255,255,.22)"/><path d="M18.4 18.5h.01" stroke-width="3.2"/></svg></a>
 <div class="byiz" id="byiz">by iz</div>
 <div id="abyss">
   <div class="abg"></div><div class="abg2"></div><div id="flash"></div>
