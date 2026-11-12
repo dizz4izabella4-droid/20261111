@@ -198,15 +198,28 @@ body {
   transform: translateY(1cqw);
   box-shadow: 0 0.4cqw 0 var(--btn-base), 0 0.8cqw 1cqw rgba(0, 0, 0, 0.5), inset 0 -1cqw 1.6cqw rgba(0, 0, 0, 0.3), inset 0 0.6cqw 1cqw rgba(255, 255, 255, 0.3);
 }
-.atk span { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--jp); font-weight: 800; font-size: 5.4cqw; color: #fff4ee; text-shadow: 0 0.3cqw 0 rgba(90, 10, 8, 0.7); pointer-events: none; }
-.plate.p2 { right: 40.8cqw; top: 11.2cqw; width: 19.6cqw; height: 19.6cqw; }
-.atk.weak {
-  right: 42.4cqw; top: 12.6cqw; width: 16.4cqw; height: 16.4cqw;
-  background: radial-gradient(circle at 38% 30%, #ffe9a6 0, #f2b632 40%, #b4790f 100%);
-  box-shadow: 0 1.2cqw 0 #5e400a, 0 2cqw 1.8cqw rgba(0, 0, 0, 0.55), inset 0 -0.8cqw 1.4cqw rgba(0, 0, 0, 0.3), inset 0 0.5cqw 0.9cqw rgba(255, 255, 255, 0.5);
+.pad {
+  position: absolute; right: 7cqw; top: 3cqw; width: 30cqw; height: 30cqw; border-radius: 50%;
+  background: #14161d; box-shadow: inset 0 0.4cqw 0.9cqw #000, 0 0 0 0.3cqw #3d4354;
 }
-.atk.weak.on { box-shadow: 0 0.4cqw 0 #5e400a, 0 0.8cqw 1cqw rgba(0, 0, 0, 0.5), inset 0 -0.8cqw 1.4cqw rgba(0, 0, 0, 0.3), inset 0 0.5cqw 0.9cqw rgba(255, 255, 255, 0.3); }
-.atk.weak span { font-size: 5cqw; color: #4a2a04; text-shadow: 0 0.3cqw 0 rgba(255, 240, 200, 0.6); }
+.pad::after {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 0.8cqw; height: 30cqw; margin: -15cqw 0 0 -0.4cqw;
+  background: #14161d; transform: rotate(45deg); pointer-events: none;
+}
+.pad .atk { left: 1.4cqw; top: 1.4cqw; right: auto; width: 27.2cqw; height: 27.2cqw; }
+.pad .weak {
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+  background: radial-gradient(circle at 32% 26%, #ffe9a6 0, #f2b632 38%, #b4790f 100%);
+  box-shadow: inset 0 -1cqw 1.6cqw rgba(0, 0, 0, 0.3), inset 0 0.6cqw 1cqw rgba(255, 255, 255, 0.5);
+}
+.pad .full { clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+.pad .atk.on { transform: translateY(0.8cqw); filter: brightness(0.9); }
+.pad .atk span {
+  position: absolute; width: 44%; height: 44%; display: grid; place-items: center; pointer-events: none;
+  font-family: var(--jp); font-weight: 800; font-size: 5.4cqw;
+}
+.pad .weak span { left: 9%; top: 9%; color: #4a2a04; text-shadow: 0 0.3cqw 0 rgba(255, 240, 200, 0.6); }
+.pad .full span { right: 9%; bottom: 9%; color: #fff4ee; text-shadow: 0 0.3cqw 0 rgba(90, 10, 8, 0.7); }
 .atk:focus-visible { outline: 0.6cqw solid var(--trim); outline-offset: 0.8cqw; }
 .kick {
   height: 6cqw;
@@ -244,10 +257,10 @@ body {
       <div class="stick" id="stick" role="group" aria-label="スティック（左右で移動、上下で奥と手前へ移動）">
         <i class="knob" id="knob"></i>
       </div>
-      <div class="plate"></div>
-      <button class="atk" id="atk" type="button" aria-label="フルスイング（リーチが長いが、振ったあとの隙が大きい）"><span>フル</span></button>
-      <div class="plate p2"></div>
-      <button class="atk weak" id="atk2" type="button" aria-label="弱（隙が少ないが、リーチが短い）"><span>弱</span></button>
+      <div class="pad">
+        <button class="atk weak" id="atk2" type="button" aria-label="弱（隙が少ないが、リーチが短い）"><span>弱</span></button>
+        <button class="atk full" id="atk" type="button" aria-label="フルスイング（溜めと硬直が長いが、リーチと破壊力が大きい）"><span>フル</span></button>
+      </div>
     </div>
     <div class="kick"></div>
     <canvas id="fxout"></canvas>
@@ -417,9 +430,25 @@ function initAudio() {
     var nd = noiseBuf.getChannelData(0);
     for (var j = 0; j < nlen; j++) nd[j] = Math.random() * 2 - 1;
     AC.resume();
-    loadSamples();
+    loadSamples(); loadBGM();
   } catch (e) { AC = null; }
 }
+/* 音楽(Marrow and Machine)。同じフォルダの bgm.mp3 を読み、切れ目なくループ */
+var bgmGain = null, bgmOn = false;
+function loadBGM() {
+  if (bgmOn || !AC || !window.fetch) return; bgmOn = true;
+  fetch('bgm.mp3').then(function (r) { if (!r.ok) throw 0; return r.arrayBuffer(); }).then(function (ab) {
+    AC.decodeAudioData(ab, function (buf) {
+      var s = AC.createBufferSource(); s.buffer = buf; s.loop = true;
+      bgmGain = AC.createGain(); bgmGain.gain.setValueAtTime(0.0001, AC.currentTime); bgmGain.gain.exponentialRampToValueAtTime(0.3, AC.currentTime + 1.2);
+      s.connect(bgmGain); bgmGain.connect(AC.destination); s.start();
+    }, function () {});
+  }).catch(function () {});
+}
+document.addEventListener('visibilitychange', function () {
+  if (!AC) return;
+  if (document.hidden) AC.suspend(); else AC.resume();
+});
 var noiseBuf = null;
 function smp(name, o) {
   if (!AC) return;
