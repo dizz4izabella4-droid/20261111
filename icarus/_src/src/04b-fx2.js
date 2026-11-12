@@ -64,7 +64,7 @@ const puffs=(function(){
 })();
 
 const birds=(function(){
-  const PER=7,N=PER*THN;
+  const PER=7,NF=14,FB=13,N=PER*THN+NF*FB;
   const pos=[-0.0,0,-0.45, -0.1,0,0.3, 0.1,0,0.3,   0,0,-0.2, 0,0,0.28, -1.05,0,0.2,   0,0,-0.2, 0,0,0.28, 1.05,0,0.2];
   const wv=[0,0,0, 0,0,1, 0,0,1];
   const g=new T.InstancedBufferGeometry();
@@ -85,7 +85,7 @@ const birds=(function(){
     fragmentShader:FS_PRE+SKY_GLSL+`varying vec3 vWP;varying float vW;
     void main(){
       vec3 V=normalize(cameraPosition-vWP);
-      vec3 col=vec3(0.96,0.92,0.86)*(0.65+0.35*vW)*(uSunCol*0.9+vec3(0.35));
+      vec3 col=vec3(0.16,0.12,0.13)*(0.7+0.3*vW)*(uSunCol*0.5+vec3(0.5));
       col=applyFog(col,vWP);
       gl_FragColor=vec4(col,1.0);
     }`});
@@ -117,5 +117,29 @@ const birds=(function(){
     }
     aM.forEach(a=>a.needsUpdate=true);
   }
-  return {update:update};
+  // 渡り鳥の群れ（V字）：プレイヤーのまわりを周回する空間に、いつも何組か飛んでいる
+  const flocks=[];for(let f=0;f<NF;f++){const h=rnd()*TAU,sp=14+9*rnd();flocks.push({bx:rnd()*3000,bz:rnd()*3000,by:rnd()*1400,yaw:h,sp:sp,sc:3.4+3.0*rnd(),ph:rnd()*6});}
+  const SX=2200,SY=1000;
+  function wrapTo(v,c,S){return ((v-c+S*0.5)%S+S)%S-S*0.5+c;}
+  function updateFlocks(t,px,py,pz){
+    for(let f=0;f<NF;f++){
+      const F=flocks[f];
+      const dx=-Math.sin(F.yaw),dz=-Math.cos(F.yaw);
+      const cx=wrapTo(F.bx+dx*F.sp*t,px,SX),cz=wrapTo(F.bz+dz*F.sp*t,pz,SX);
+      let cy=wrapTo(F.by+Math.sin(t*0.05+F.ph)*30,py,SY);if(cy<60)cy+=SY*0.4;
+      for(let k=0;k<FB;k++){
+        const idx=PER*THN+f*FB+k;
+        const rank=Math.ceil(k/2),side=(k%2?1:-1)*(k?1:0);
+        const lx=side*rank*5.5*F.sc,lz=rank*5.5*F.sc;
+        const cyw=Math.cos(F.yaw),syw=Math.sin(F.yaw);
+        const wx=cx+lx*cyw+lz*syw,wz=cz-lx*syw+lz*cyw;
+        const wy=cy+Math.sin(t*1.3+k*0.9+F.ph)*0.7+rank*0.4;
+        ee.set(0,F.yaw,0.08*Math.sin(t*0.7+k),'YXZ');qq.setFromEuler(ee);pp.set(wx,wy,wz);ss.set(F.sc,F.sc,F.sc);mm.compose(pp,qq,ss);
+        const e=mm.elements;
+        aM[0].setXYZW(idx,e[0],e[1],e[2],e[3]);aM[1].setXYZW(idx,e[4],e[5],e[6],e[7]);aM[2].setXYZW(idx,e[8],e[9],e[10],e[11]);aM[3].setXYZW(idx,e[12],e[13],e[14],e[15]);
+      }
+    }
+    ss.set(1,1,1);
+  }
+  return {update:update,updateFlocks:updateFlocks};
 })();

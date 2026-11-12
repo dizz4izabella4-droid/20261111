@@ -11,11 +11,14 @@ window.__sim=function(n,dt,pol){
   const log=[];
   for(let i=0;i<n;i++){
     update(dt);
-    if(i%Math.round(5/dt)===0)log.push({t:+G.t.toFixed(1),m:G.mode,y:Math.round(b.y),sp:Math.round(b.speed),heat:+G.heat.toFixed(2),dmg:+G.damage.toFixed(2),k:+G.thK.toFixed(2),x:Math.round(b.x),z:Math.round(b.z),alive:wings.aliveCount()});
+    if(i%Math.round(5/dt)===0)log.push({t:+G.t.toFixed(1),m:G.mode,c:G.cause,rk:G.rocket,fr:+G.frost.toFixed(2),y:Math.round(b.y),sp:Math.round(b.speed),heat:+G.heat.toFixed(2),dmg:+G.damage.toFixed(2),k:+G.thK.toFixed(2),x:Math.round(b.x),z:Math.round(b.z),alive:wings.aliveCount()});
     if(G.mode==='end')break;
   }
   G.auto=null;
   return log;
 };
-window.__icarus={blockInfo:blockInfo,sbuf:sbuf,bbuf:bbuf,G:G,b:b,cam:cam,wings:wings,view:view,route:ROUTE,angels:angels,startMelt:startMelt,launch:launch,flapNow:flapNow,P:P,U:U,inp:inp,finish:finish};
+window.__icarus={autoCtl:autoCtl,blockInfo:blockInfo,sbuf:sbuf,bbuf:bbuf,G:G,b:b,cam:cam,wings:wings,view:view,route:ROUTE,angels:angels,startMelt:startMelt,launch:launch,flapNow:flapNow,P:P,U:U,inp:inp,finish:finish};
+{const ab=document.getElementById('auto');
+ab.addEventListener('pointerdown',e=>e.stopPropagation());
+ab.addEventListener('click',e=>{e.stopPropagation();audio.init();G.autoOn=!G.autoOn;ab.classList.toggle('on',G.autoOn);ab.textContent=G.autoOn?'オート ON':'オート';if(G.autoOn&&G.mode==='end')resetRun();});}
 requestAnimationFrame(frame);

@@ -74,6 +74,10 @@ function blockInfo(i,j){
     put(cx-15,150,cz-15,cx+15,186,cz+15,1,0.12,0,0,0);
     return n;
   }
+  if(i===1&&j===-2){ // ロケットの屋上
+    put(cx-16,0,cz-20,cx+24,170,cz+20,0,0.3,0,0,0);
+    return n;
+  }
   if(r0<0.15&&dist>1.5)return 0;                 // 水没した区画
   if(rL<0.05&&dist>3){                            // 雲を突き抜ける塔（かすかに傾く）
     const w=15+8*r2,h=335+150*r1;

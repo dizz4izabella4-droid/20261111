@@ -1,7 +1,7 @@
 /* ================= 音（すべて合成。素材ファイルなし） ================= */
 const audio=(function(){
   let ctx=null,master=null,comp=null,rev=null,revSend=null,on=true;
-  let choirG,windG,windF,rumbleG,thermG,heatG,whistleO,whistleG,noiseBuf,padT=0,hbT=0,lastFlap=0;
+  let rocketG,rocketF,choirG,windG,windF,rumbleG,thermG,heatG,whistleO,whistleG,noiseBuf,padT=0,hbT=0,lastFlap=0;
   const SCALE=[0,2,4,7,9]; // ペンタトニック（D）
   function noiseBuffer(sec,color){
     const n=Math.floor(ctx.sampleRate*sec),b=ctx.createBuffer(1,n,ctx.sampleRate),d=b.getChannelData(0);
@@ -37,6 +37,11 @@ const audio=(function(){
     // 落下の笛
     whistleO=ctx.createOscillator();whistleO.type='sine';whistleO.frequency.value=900;
     whistleG=ctx.createGain();whistleG.gain.value=0;whistleO.connect(whistleG);whistleG.connect(master);whistleG.connect(revSend);whistleO.start();
+    // ロケットエンジン（連続音）
+    const rn=loopNoise(false);rocketF=ctx.createBiquadFilter();rocketF.type='lowpass';rocketF.frequency.value=900;
+    rocketG=ctx.createGain();rocketG.gain.value=0;rn.connect(rocketF);rocketF.connect(rocketG);
+    const ro=ctx.createOscillator();ro.type='sawtooth';ro.frequency.value=62;const rg2=ctx.createGain();rg2.gain.value=0.25;ro.connect(rg2);rg2.connect(rocketF);ro.start();
+    rocketG.connect(master);rocketG.connect(revSend);
     // 天使の聖歌（かすかな合唱）
     choirG=ctx.createGain();choirG.gain.value=0;
     const cf=ctx.createBiquadFilter();cf.type='lowpass';cf.frequency.value=1100;cf.Q.value=0.4;
@@ -90,6 +95,18 @@ const audio=(function(){
     out.connect(master);const k=ctx.createGain();k.gain.value=0.7;out.connect(k);k.connect(revSend);
     s.start(t,Math.random()*1.5);s.stop(t+1.0);
   }
+  function rocketGet(){
+    if(!ctx)return;const t=ctx.currentTime;
+    [0,7,12,19,24].forEach((d,i)=>tone(293.66*Math.pow(2,d/12),t+0.06*i,2.6,'triangle',0.1,0.01,0.8));
+    noiseHit(t+0.25,1.4,300,3500,0.5,0.4,'bandpass',0.4);
+  }
+  function engineDie(){
+    if(!ctx)return;const t=ctx.currentTime;
+    noiseHit(t,0.5,3000,300,1.2,0.3,'bandpass',0.4);
+    const o=ctx.createOscillator(),g=ctx.createGain();o.type='sawtooth';o.frequency.setValueAtTime(120,t);o.frequency.exponentialRampToValueAtTime(24,t+1.4);
+    g.gain.setValueAtTime(0.25,t);g.gain.exponentialRampToValueAtTime(0.0001,t+1.5);o.connect(g);g.connect(master);o.start(t);o.stop(t+1.6);
+    [1200,1800,2700].forEach((f,i)=>tone(f,t+0.05*i,1.8,'sine',0.05,0.005,0.9)); // 氷のきしみ
+  }
   function ring(n){
     if(!ctx)return;const t=ctx.currentTime;
     const deg=SCALE[n%5]+12*Math.floor(n/5%3);
@@ -141,6 +158,7 @@ const audio=(function(){
     windF.frequency.setTargetAtTime(280+sp*22+p.fallK*900,t,0.12);
     rumbleG.gain.setTargetAtTime(0.05+0.3*wg+p.cloud*0.08,t,0.2);
     thermG.gain.setTargetAtTime(p.thermal*0.07,t,0.2);
+    if(rocketG){rocketG.gain.setTargetAtTime((p.rocket||0)*0.5,t,0.15);rocketF.frequency.setTargetAtTime(500+(p.rocket||0)*1400,t,0.2);}
     if(choirG)choirG.gain.setTargetAtTime((p.angel||0)*0.075,t,0.8);
     heatG.gain.setTargetAtTime(Math.max(0,p.heat-0.35)*0.28,t,0.3);
     whistleG.gain.setTargetAtTime(p.fallK*0.05,t,0.2);
@@ -163,5 +181,5 @@ const audio=(function(){
       if(Math.random()<0.5)tone(base*oct*2*Math.pow(2,ch[(Math.random()*ch.length)|0]/12),t+0.3,4.5,'triangle',0.02,1.2,1.0);
     }
   }
-  return {suspend:function(){try{ctx&&ctx.state==='running'&&ctx.suspend();}catch(e){}},resume:function(){try{ctx&&ctx.state==='suspended'&&ctx.resume();}catch(e){}},init:init,setOn:setOn,flap:flap,ring:ring,splash:splash,angelFlap:angelFlap,thud:thud,launch:launch,puff:puff,shed:shed,melt:melt,rise:rise,endChord:endChord,update:update,get on(){return on},get ready(){return !!ctx}};
+  return {suspend:function(){try{ctx&&ctx.state==='running'&&ctx.suspend();}catch(e){}},resume:function(){try{ctx&&ctx.state==='suspended'&&ctx.resume();}catch(e){}},init:init,setOn:setOn,flap:flap,ring:ring,splash:splash,rocketGet:rocketGet,engineDie:engineDie,angelFlap:angelFlap,thud:thud,launch:launch,puff:puff,shed:shed,melt:melt,rise:rise,endChord:endChord,update:update,get on(){return on},get ready(){return !!ctx}};
 })();

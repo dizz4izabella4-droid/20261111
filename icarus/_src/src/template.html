@@ -26,6 +26,10 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b1422;col
 #end .go{font-size:clamp(11px,2.8vw,14px);letter-spacing:.3em;color:#9a7a50;animation:pulse 2.6s ease-in-out infinite}
 #snd{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));width:40px;height:40px;border:0;border-radius:50%;background:rgba(10,20,34,.22);color:#fff;opacity:.55;display:grid;place-items:center;padding:0;cursor:pointer}
 #snd:hover{opacity:.9}
+#auto{position:fixed;left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));height:36px;border:0;border-radius:18px;padding:0 15px;background:rgba(10,20,34,.22);color:#fff;opacity:.6;font:inherit;font-size:12px;letter-spacing:.22em;cursor:pointer}
+#auto:hover{opacity:.95}
+#auto.on{opacity:1;background:rgba(255,170,90,.55);box-shadow:0 0 16px rgba(255,190,110,.5)}
+#end .note{margin-top:6px;font-size:clamp(11px,2.9vw,15px);letter-spacing:.22em;color:#8a6a40;opacity:.95}
 #snd svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 #snd .x{display:none}
 #snd.off .w{display:none}#snd.off .x{display:block}
@@ -36,7 +40,8 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b1422;col
 <canvas id="c" tabindex="0"></canvas>
 <div id="title" class="ov"><h1>イカロス</h1><p>蝋で固めた鳥の羽</p><div class="go" id="go">タップで飛び立つ</div></div>
 <div id="hint" class="ov"></div>
-<div id="end" class="ov"><p id="endTxt"></p><div class="go">タップでもう一度</div></div>
+<div id="end" class="ov"><p id="endTxt"></p><div class="go">タップでもう一度</div><div class="note" id="endNote"></div></div>
+<button id="auto" type="button" aria-label="自動操作モード">オート</button>
 <button id="snd" type="button" aria-label="音のオン・オフ"><svg viewBox="0 0 24 24"><g class="w"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.6a7.6 7.6 0 0 1 0 10.8"/></g><g class="x"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></g></svg></button>
 <div id="err">この端末では 3D 描画（WebGL2）が使えないため、遊べません。<br>最新の Safari / Chrome でお試しください。</div>
 <script>/*@@THREE@@*/</script>
