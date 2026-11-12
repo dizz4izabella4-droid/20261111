@@ -116,7 +116,7 @@
     </div>
     <div id="endov">
       <div class="t">BAD END</div>
-      <div class="s">焼いても、土の中の菌は 消えなかった…</div>
+      <div class="s">焼いても、土の中の菌は 消えなかった…<br>地球は、菌の星になった。</div>
       <button id="endBtn" type="button">もういちど</button>
     </div>
   </div>
@@ -557,6 +557,7 @@ function resetEnding() {
   setPhase('play');
   flower = null; flames.length = 0; scorch.length = 0; firing = 0; flash = 0; transform = null; clearTimer = 0;
   fireworks.length = 0; sparks.length = 0; flagH = 0; flagDone = false; playerGone = false; dusk = 0;
+  inSpace = false; spaceT = 0; spaceRot = 0; earth = null;
   badT = 0; bad.length = 0; giants.length = 0; infect = 0; curtain = 0;
   player.fire = false; player.dir = 1;
   document.getElementById('endov').style.display = 'none';
@@ -1033,12 +1034,7 @@ function updateBad() {
   for (const g of giants) g.g = Math.min(1, g.g + g.rate);
   if (t > 240) infect = Math.min(1, (t - 240) / 440);
   if (t % 5 === 0 && t < 520) sfxSprout();
-  if (t === 740) [196, 185, 175, 165].forEach((f, i) => setTimeout(() => playTone(f, 'sawtooth', 0.5, 0.06, f * 0.97, true), i * 350));
-  if (t > 740) curtain = Math.min(1, (t - 740) / 110);
-  if (t >= 860) {
-    setPhase('end');
-    document.getElementById('endov').style.display = 'flex';
-  }
+  if (t >= 760) startSpace(); // 景色が侵食されきったら、宇宙から見た地球へ
 }
 function updateEnding() {
   updateFlames();
@@ -1047,6 +1043,7 @@ function updateEnding() {
   flash *= 0.9;
   if (phase === 'clear') updateClear();
   else if (phase === 'bad') updateBad();
+  else if (phase === 'space') updateSpace();
 }
 
 // ---------- 景色（通常版と、菌に侵された版） ----------
@@ -1283,12 +1280,212 @@ function drawBanners() {
   ctx.textAlign = 'left';
 }
 
+// ================= エピローグ：宇宙から見た地球が菌に染まる =================
+let inSpace = false, spaceT = 0, spaceRot = 0, earth = null;
+const EW = 256, EH = 128, TEX = 160;
+const STARS = Array.from({ length: 110 }, (_, i) => ({ x: Math.floor(hash2(i * 3 + 1) * 512), y: Math.floor(hash2(i * 3 + 2) * 448), s: hash2(i * 3 + 3) < 0.15 ? 3 : 2, ph: hash2(i + 99) * 6.28 }));
+function hash2(i) {
+  i = (i ^ 61) ^ (i >>> 16); i = i + (i << 3); i = i ^ (i >>> 4); i = Math.imul(i, 0x27d4eb2d); i = i ^ (i >>> 15);
+  return (i >>> 0) / 4294967296;
+}
+function initEarth() {
+  let seed = 20261113;
+  const rnd = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
+  const mk = (nx, ny) => { const g = new Float32Array(nx * ny); for (let i = 0; i < g.length; i++) g[i] = rnd(); return { g, nx, ny }; };
+  const sm = t => t * t * (3 - 2 * t);
+  const vn = (L, x, y) => {
+    const fx = x * L.nx, fy = y * (L.ny - 1);
+    const xi = Math.floor(fx), yi = Math.min(L.ny - 2, Math.floor(fy));
+    const tx = sm(fx - xi), ty = sm(fy - yi);
+    const x0 = xi % L.nx, x1 = (x0 + 1) % L.nx;
+    const a = L.g[yi * L.nx + x0], b = L.g[yi * L.nx + x1], c = L.g[(yi + 1) * L.nx + x0], d = L.g[(yi + 1) * L.nx + x1];
+    return a + (b - a) * tx + (c - a) * ty + (a - b - c + d) * tx * ty;
+  };
+  const fbm = (Ls, ws, x, y) => { let s = 0; for (let k = 0; k < Ls.length; k++) s += vn(Ls[k], x, y) * ws[k]; return s; };
+  const eL = [mk(4, 3), mk(8, 5), mk(16, 9), mk(32, 17)], eW = [0.5, 0.27, 0.15, 0.08];
+  const cL = [mk(6, 4), mk(12, 7), mk(24, 13)], cW = [0.55, 0.3, 0.15];
+  const N = EW * EH;
+  const elev = new Float32Array(N), cloud = new Float32Array(N), hn = new Float32Array(N);
+  for (let y = 0; y < EH; y++) for (let x = 0; x < EW; x++) {
+    const i = y * EW + x;
+    elev[i] = fbm(eL, eW, x / EW, y / EH);
+    cloud[i] = fbm(cL, cW, x / EW, y / EH);
+    hn[i] = hash2(i * 7 + 5);
+  }
+  const sorted = Array.from(elev).sort((a, b) => a - b);
+  const thr = sorted[Math.floor(N * 0.68)], hi = sorted[Math.floor(N * 0.93)];
+  const ice = new Uint8Array(N), land = new Uint8Array(N);
+  for (let y = 0; y < EH; y++) for (let x = 0; x < EW; x++) {
+    const i = y * EW + x, lat = (0.5 - y / EH) * 180;
+    if (Math.abs(lat) > 72) ice[i] = 1; else if (elev[i] > thr) land[i] = 1;
+  }
+  // 大陸ごとに分ける（小さな島は消す）
+  const label = new Int32Array(N).fill(-1), comps = [];
+  const nb = i => { const x = i % EW, y = (i / EW) | 0, r = []; r.push(y * EW + (x + 1) % EW, y * EW + (x + EW - 1) % EW); if (y > 0) r.push(i - EW); if (y < EH - 1) r.push(i + EW); return r; };
+  for (let i = 0; i < N; i++) {
+    if (!land[i] || label[i] >= 0) continue;
+    const cells = [i], id = comps.length; label[i] = id;
+    for (let h = 0; h < cells.length; h++) for (const j of nb(cells[h])) if (land[j] && label[j] < 0) { label[j] = id; cells.push(j); }
+    comps.push(cells);
+  }
+  const keep = comps.filter(c => c.length >= 70).sort((a, b) => b.length - a.length);
+  land.fill(0);
+  keep.forEach(c => c.forEach(i => { land[i] = 1; }));
+  // 感染の到達時刻：大陸ごとに1点から、加速しながら広がる
+  const arr = new Float32Array(N).fill(1e9), isSeed = new Uint8Array(N);
+  const starts = [110, 215, 285, 345, 395, 435];
+  let seedA = -1;
+  keep.forEach((cells, k) => {
+    const cand = cells.filter(i => Math.abs((0.5 - ((i / EW) | 0) / EH) * 180) < 55);
+    const pool = cand.length ? cand : cells;
+    const s0 = pool[Math.floor(rnd() * pool.length)];
+    const dist = new Map([[s0, 0]]);
+    const q = [s0]; let dmax = 1;
+    for (let h = 0; h < q.length; h++) for (const j of nb(q[h])) if (land[j] && !dist.has(j)) { const d = dist.get(q[h]) + 1; dist.set(j, d); if (d > dmax) dmax = d; q.push(j); }
+    const st = k < 6 ? starts[k] : 450 + rnd() * 30;
+    const span = k < 6 ? 170 : 90;
+    dist.forEach((d, i) => { arr[i] = st + span * Math.sqrt(d / dmax); });
+    if (k === 0) { seedA = s0; }
+  });
+  isSeed[seedA] = 1;
+  const landList = []; for (let i = 0; i < N; i++) if (land[i]) landList.push(i);
+  // 球面の見た目用の写像
+  const gu = new Int16Array(TEX * TEX), gv = new Int16Array(TEX * TEX), gs = new Float32Array(TEX * TEX), mask = new Uint8Array(TEX * TEX);
+  for (let j = 0; j < TEX; j++) for (let i = 0; i < TEX; i++) {
+    const nx = (i + 0.5 - TEX / 2) / (TEX / 2), ny = (j + 0.5 - TEX / 2) / (TEX / 2), r2 = nx * nx + ny * ny, p = j * TEX + i;
+    if (r2 > 1) continue;
+    const nz = Math.sqrt(1 - r2), lat = Math.asin(-ny), lon = Math.atan2(nx, nz);
+    gu[p] = Math.floor((lon / (Math.PI * 2) + 0.5) * EW) & 255;
+    gv[p] = Math.max(0, Math.min(EH - 1, Math.floor((0.5 - lat / Math.PI) * EH)));
+    const light = Math.max(0, -0.55 * nx - 0.35 * ny + 0.75 * nz) / 0.97;
+    gs[p] = 0.16 + 0.84 * Math.pow(light, 0.9);
+    mask[p] = 1;
+  }
+  const gcv = document.createElement('canvas'); gcv.width = TEX; gcv.height = TEX;
+  const gctx = gcv.getContext('2d');
+  const seedU = seedA % EW, seedV = (seedA / EW) | 0;
+  earth = { elev, cloud, hn, ice, land, arr, isSeed, landList, gu, gv, gs, mask, gcv, gctx, img: gctx.createImageData(TEX, TEX), hi, seedU, seedV,
+    base: seedU - 128 - Math.round(0.22 * 110), pct: 0, done: false };
+}
+function countInfected() {
+  let n = 0;
+  for (const i of earth.landList) if (earth.arr[i] <= spaceT) n++;
+  earth.pct = Math.floor(n / earth.landList.length * 100);
+  if (earth.pct >= 100 && !earth.done) { earth.done = true; flash = 0.7; playTone(65, 'sawtooth', 1.4, 0.08, 40, true); }
+}
+function startSpace() {
+  setPhase('space');
+  inSpace = true; spaceT = 0; spaceRot = 0; curtain = 0;
+  initEarth();
+  playTone(55, 'sine', 10, 0.06, 50, true);
+  playTone(82, 'triangle', 10, 0.04, 80, true);
+}
+function updateSpace() {
+  spaceT++;
+  const t = spaceT;
+  spaceRot += 0.22;
+  if (t % 4 === 0) countInfected();
+  const prog = earth.pct / 100;
+  const gap = Math.max(14, Math.round(70 - 56 * prog));
+  if (t > 100 && t % gap === 0) playTone(58, 'sine', 0.18, 0.1, 40, true);
+  if (t === 110) playTone(220, 'sawtooth', 0.5, 0.06, 70, true);
+  if (t === 640) [196, 185, 175, 165].forEach((f, i) => setTimeout(() => playTone(f, 'sawtooth', 0.5, 0.06, f * 0.97, true), i * 350));
+  if (t > 640) curtain = Math.min(1, (t - 640) / 110);
+  if (t >= 760) {
+    setPhase('end');
+    document.getElementById('endov').style.display = 'flex';
+  }
+}
+function drawSpace() {
+  const W = canvas.width, H = canvas.height;
+  ctx.fillStyle = '#02030c';
+  ctx.fillRect(0, 0, W, H);
+  for (const s of STARS) {
+    ctx.globalAlpha = 0.45 + 0.55 * Math.abs(Math.sin(tick * 0.03 + s.ph));
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(s.x, s.y, s.s, s.s);
+  }
+  ctx.globalAlpha = 1;
+  if (!earth) return;
+  const cx = W / 2, cy = H / 2 - 6, R = TEX;
+  const prog = earth.pct / 100;
+  const ar = Math.round(110 + 80 * prog), ag = Math.round(170 - 80 * prog), ab = Math.round(255 - 35 * prog);
+  const glow = ctx.createRadialGradient(cx, cy, R * 0.95, cx, cy, R * 1.17);
+  glow.addColorStop(0, `rgba(${ar},${ag},${ab},0.6)`);
+  glow.addColorStop(1, `rgba(${ar},${ag},${ab},0)`);
+  ctx.fillStyle = glow;
+  ctx.fillRect(cx - R * 1.2, cy - R * 1.2, R * 2.4, R * 2.4);
+  // 地球（テクスチャを毎フレーム塗る）
+  const E = earth, d = E.img.data;
+  const shift = Math.floor(E.base + spaceRot), cshift = shift + (spaceT >> 2);
+  for (let p = 0; p < TEX * TEX; p++) {
+    const o = p * 4;
+    if (!E.mask[p]) { d[o + 3] = 0; continue; }
+    const u = (E.gu[p] + shift) & 255, v = E.gv[p], ti = v * EW + u;
+    let r, g, b;
+    const hn = E.hn[ti];
+    if (E.ice[ti]) { r = 230; g = 240; b = 255; }
+    else if (E.land[ti]) {
+      const arr = E.arr[ti];
+      const du = ((u - E.seedU + 128) & 255) - 128, dv = v - E.seedV;
+      if (arr <= spaceT) {
+        const fresh = spaceT - arr;
+        if (fresh < 10) { r = 255; g = 90 + fresh * 6; b = 220; }
+        else {
+          r = 140 + hn * 60; g = 30 + hn * 30; b = 150 + hn * 50;
+          if (hash2(ti * 13 + (spaceT >> 3) * 4099) < 0.05) { r = 255; g = 210; b = 255; }
+        }
+      } else if (spaceT >= 60 && spaceT < 110 && du * du + dv * dv <= 2 && (spaceT >> 2) % 2 === 0) {
+        r = 255; g = 30; b = 30;
+      } else if (E.elev[ti] > E.hi) { r = 150; g = 120; b = 70; }
+      else { r = 46 + hn * 20; g = 135 + hn * 25; b = 52 + hn * 16; }
+    } else { r = 24 + hn * 10; g = 56 + hn * 20; b = 160 + hn * 36; }
+    const cl = E.cloud[v * EW + ((E.gu[p] + cshift) & 255)];
+    if (cl > 0.6) { const a = Math.min(0.75, (cl - 0.6) * 4); r += (255 - r) * a; g += (255 - g) * a; b += (255 - b) * a; }
+    const sh = E.gs[p];
+    d[o] = r * sh; d[o + 1] = g * sh; d[o + 2] = b * sh; d[o + 3] = 255;
+  }
+  E.gctx.putImageData(E.img, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(E.gcv, cx - R, cy - R, R * 2, R * 2);
+  // 文字
+  const jp = '"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo","Noto Sans JP",sans-serif';
+  ctx.font = 'bold 14px "Courier New", monospace';
+  txt('ORBIT VIEW', 18, 28, '#9ad0ff', '#000');
+  if (spaceT >= 110 && phase !== 'end') {
+    const red = E.pct >= 100 ? (Math.floor(tick / 8) % 2 === 0) : true;
+    ctx.textAlign = 'right';
+    txt(`CONTAMINATION ${E.pct}%`, W - 18, 28, red ? '#ff5ad0' : '#ffffff', '#000');
+    ctx.textAlign = 'left';
+  }
+  if (spaceT > 50 && spaceT < 210) {
+    ctx.font = `bold 18px ${jp}`;
+    ctx.textAlign = 'center';
+    ctx.globalAlpha = Math.min(1, (spaceT - 50) / 20, (210 - spaceT) / 20);
+    txt('…数日後。', W / 2, H - 36, '#fff', '#000');
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'left';
+  }
+}
+function dissolveK() {
+  if (phase === 'bad') return badT > 700 ? Math.min(1, (badT - 700) / 60) : 0;
+  if (phase === 'space') return spaceT < 50 ? 1 - spaceT / 50 : 0;
+  return 0;
+}
+function drawDissolve(k) {
+  if (k < 0.01) return;
+  ctx.fillStyle = '#000';
+  for (let ty = 0; ty < 28; ty++) for (let tx = 0; tx < 32; tx++) {
+    if (hash2(tx * 31 + ty * 977 + 7) < k) ctx.fillRect(tx * 16, ty * 16, 16, 16);
+  }
+}
+
 // --- 更新処理 ---
 function update() {
   tick++;
   phaseT++;
   flash *= 0.9;
-  if (phase === 'clear' || phase === 'bad' || phase === 'end') { updateEnding(); return; }
+  if (phase === 'clear' || phase === 'bad' || phase === 'space' || phase === 'end') { updateEnding(); return; }
   dusk += ((phase === 'fire' ? 0.3 : 0) - dusk) * 0.03;
   // スポーン処理（ぽつぽつ降ってくる）
   spawnTimer++;
@@ -1659,7 +1856,7 @@ function drawSpores() {
 }
 
 function drawUI() {
-  if (phase === 'bad' || phase === 'end') return;
+  if (phase === 'bad' || phase === 'space' || phase === 'end') return;
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 16px "Courier New", monospace';
   ctx.fillText(`NOBIRU HIGE`, 24, 28);
@@ -1692,6 +1889,9 @@ function loop() {
   }
   ctx.save();
   if (shake > 0.3) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+  if (inSpace) {
+    drawSpace();
+  } else {
   drawBackground();
   drawBad();
   drawSplats();
@@ -1708,9 +1908,11 @@ function loop() {
     ctx.fillStyle = p.color;
     ctx.fillRect(p.x, p.y, 4, 4);
   });
+  }
 
   ctx.restore();
   drawFlash();
+  drawDissolve(dissolveK());
   drawCurtain();
   drawUI();
   requestAnimationFrame(loop);
