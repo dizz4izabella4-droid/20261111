@@ -10,7 +10,7 @@
 - **ワイヤダ**（旧名：クワイヤダ、組み分け帽）：数字をたよりに1本の輪を作るパズル（1人用、スマホ・PC両対応）。14章。
 - **GLASS BREAKER（ガラス割り）**：バットで物を叩いて割る、破壊表現のテスト（スマホの縦画面、タッチ操作）。15章。
 - **電卓ドリル（CALCULATOR DRILL）**：電卓ドリルを自動生成するツール（CASIO DS-20WKA 想定）。16章。
-- **ブロッコリー test ver.**：ブロッコリーを取って膨らむ、レトロ風アクション（試作）。18章。
+- **伸びるヒゲ**：キノコを取ると縦に伸び、敵に当たると縮む、レトロ風アクション（PC向け）。18章。
 
 ---
 
@@ -27,7 +27,7 @@
 | 　　ルール説明 | https://dizz4izabella4-droid.github.io/20261111/kumiwake-bou/rules.html | 本体の「あそびかた」から開く。「ゲームへ」で本体へ戻る |
 | 　GLASS BREAKER | https://dizz4izabella4-droid.github.io/20261111/glass-breaker/ | |
 | 　電卓ドリル | https://dizz4izabella4-droid.github.io/20261111/dentaku-drill/ | |
-| 　ブロッコリー test ver. | https://dizz4izabella4-droid.github.io/20261111/broccoli-test/ | |
+| 　伸びるヒゲ | https://dizz4izabella4-droid.github.io/20261111/nobiru-hige/ | |
 | claude.ai アーティファクト（PC版） | https://claude.ai/artifact/NctPezS87FshtyQGQ1YaDf | 開発中の確認用。曲2つも同梱して公開済み |
 | claude.ai アーティファクト（鳥と獣の戦い） | https://claude.ai/artifact/RtGte1cpPBFfU2wHBe8bEi | 開発の正本はこちら。リポジトリの tori-to-kemono/index.html は、その写し |
 | claude.ai アーティファクト（GLASS BREAKER） | https://claude.ai/artifact/35FutrJp3Aag1QnQRN6Nmg | 開発の正本はこちら。リポジトリの glass-breaker/index.html は、その写し |
@@ -47,7 +47,7 @@ kumiwake-bou/rules.html            ワイヤダのルール説明ページ（1�
 kumiwake-bou/tools/gen.js          ワイヤダの問題を作る道具（Node.js）
 kumiwake-bou/tools/verify.js       ワイヤダの収録問題を検査する道具（Node.js）
 dentaku-drill/index.html            電卓ドリル自動生成ツールの本体（HTML/CSS/JS すべて1ファイル、外部読み込みなし）
-broccoli-test/index.html            ブロッコリー test ver. の本体（HTML/CSS/JS すべて1ファイル、外部読み込みなし）
+nobiru-hige/index.html              伸びるヒゲ の本体（HTML/CSS/JS すべて1ファイル、外部読み込みなし）
 glass-breaker/index.html            GLASS BREAKER の本体（HTML/CSS/JS すべて1ファイル、外部読み込みなし。アーティファクトの写し）
 README.md
 HANDOFF.md                         本書
@@ -543,11 +543,11 @@ PC版の筋立てと仕組み（防御→追跡→反撃、攻撃信号、耐久
 
 ---
 
-## 18. ブロッコリー test ver.（broccoli-test）
+## 18. 伸びるヒゲ（nobiru-hige）
 
-- 渡されたHTMLの `<title>` を「ブロッコリー test ver.」にした以外は、そのまま置いた（2026-11-12。最初に置いた版は別の試作で、同日に今の版へ差し替えた）。
-- 内容：縦画面（480×720以内）の1画面アクション。シルクハットにヒゲの紳士を動かし、ブロッコリー（約12秒ごとに落ちてくる）を取ると縦に15ずつ伸びる（幅は固定）。カリフラワーとカタツムリ（約7秒ごとに空から落ちてくる）は、上から踏むと色が変わって1体増え、横から当たると紳士が縮む（最小1×1）。ゲームオーバーはない。
-- 操作：矢印キー／WASD／スペース、または画面下のソフトキー。音はレトロ風の合成音で、SOUND ボタンで入れる（最初はOFF）。外部読み込みなし。
-- トップのカードは「どちらも」。色は lemon、アイコンは broccoli。
+- 渡されたHTMLを置いた（2026-11-12。同日に、先に置いた「ブロッコリー test ver.」2版（broccoli-test）と入れ替えた。フォルダも削除済み）。外部読み込みなし。
+- 内容：ヒゲの男を動かし、空から降るキノコを取ると縦に1.38倍ずつ伸びる（横は少しだけ）。茶色いキノコの敵は踏むと2体に分かれる。カメの敵は踏むと甲羅になり、もう一度踏むか蹴ると滑って他の敵をなぎ倒す。敵に当たると縮む（無限に小さくなる）。ゲームオーバーはない。
+- 操作：矢印キー／WASD／スペース／Z。**キーボードのみで、スマホのソフトキーはない**ので、トップのカードは「PCむけ」。音は最初のキー入力から鳴る（音のオフ機能はない）。
+- 変えた点（元のコードからの変更）：タイトルを「伸びるヒゲ」に、画面左上の表示を NOBIRU HIGE に変更。BGM は元の旋律をやめ、オリジナルの旋律に差し替え（作品の旋律は使わない方針）。主人公の配色は、帽子・シャツを紫、オーバーオールを黄土色に変更。
+- claude.ai のアーティファクト版もある（確認用）。doctype・html・head・body を書かない断片で、`100vh`・`100vw` を `100%` にしてある。
 - この作品からトップへ戻る手段は付けない（他の作品と同じ）。
-- claude.ai のアーティファクト版もある（開発の確認用）。タイトルは同じ。アーティファクト版は doctype・html・head・body を書かない断片で、高さだけ `100vh` を `100%` にしている。

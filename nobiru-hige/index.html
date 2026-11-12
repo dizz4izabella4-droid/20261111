@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>伸びるヒゲ</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+  body {
+    background-color: #111;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+    font-family: 'Courier New', Courier, monospace;
+  }
+  canvas {
+    background-color: #5c94fc;
+    image-rendering: pixelated;
+    border: 4px solid #fff;
+    box-shadow: 0 0 20px rgba(0,0,0,0.8);
+    max-width: 100vw;
+    max-height: 100vh;
+  }
+</style>
+</head>
+<body>
+<canvas id="game" width="512" height="448"></canvas>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+// --- Web Audio API (ファミコン風チップチューン音源) ---
+let audioCtx = null;
+let bgmPlaying = false;
+let bgmInterval = null;
+
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  if (!bgmPlaying) {
+    bgmPlaying = true;
+    startBGM();
+  }
+}
+
+function playTone(freq, type, duration, vol = 0.1, slideTo = null) {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  if (slideTo) {
+    osc.frequency.exponentialRampToValueAtTime(slideTo, audioCtx.currentTime + duration);
+  }
+  gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + duration);
+}
+
+// 効果音
+function sfxJump() {
+  playTone(180, 'square', 0.25, 0.08, 520);
+}
+function sfxStomp() {
+  // 小気味いい踏みつけ音
+  playTone(400, 'square', 0.06, 0.12, 850);
+  setTimeout(() => playTone(950, 'triangle', 0.08, 0.12, 1200), 40);
+}
+function sfxPowerup() {
+  // 伸びる音
+  const notes = [330, 392, 659, 523, 587, 784];
+  notes.forEach((n, i) => {
+    setTimeout(() => playTone(n, 'square', 0.07, 0.08), i * 45);
+  });
+}
+function sfxShrink() {
+  // 縮む音
+  const notes = [784, 587, 523, 392, 330, 220];
+  notes.forEach((n, i) => {
+    setTimeout(() => playTone(n, 'sawtooth', 0.07, 0.08), i * 45);
+  });
+}
+function sfxShell() {
+  playTone(250, 'square', 0.12, 0.1, 600);
+}
+
+// 陽気なBGMループ（オリジナル）
+function startBGM() {
+  // 周波数テーブル
+  const N = {
+    C4:261.63, D4:293.66, E4:329.63, F4:349.23, G4:392.00, A4:440.00, B4:493.88,
+    C5:523.25, D5:587.33, E5:659.25, F5:698.46, G5:783.99, A5:880.00, _:0
+  };
+  const melody = [
+    N.C5, N._, N.E5, N._, N.G5, N._, N.E5, N._,
+    N.D5, N._, N.F5, N._, N.A5, N._, N.F5, N._,
+    N.E5, N._, N.G5, N._, N.C5, N._, N._, N._,
+    N.A4, N._, N.C5, N.D5, N.E5, N._, N.D5, N._,
+    N.G4, N._, N.B4, N._, N.D5, N._, N.B4, N._,
+    N.C5, N._, N.E5, N.D5, N.C5, N._, N._, N._
+  ];
+  const bass = [
+    N.C4, N._, N.G4, N._, N.C4, N._, N.G4, N._,
+    N.D4, N._, N.A4, N._, N.D4, N._, N.A4, N._,
+    N.C4, N._, N.G4, N._, N.E4, N._, N._, N._,
+    N.F4, N._, N.C5, N._, N.F4, N._, N.C5, N._,
+    N.G4, N._, N.D4, N._, N.G4, N._, N.D4, N._,
+    N.C4, N._, N.G4, N._, N.C4, N._, N._, N._
+  ];
+  let step = 0;
+  bgmInterval = setInterval(() => {
+    if (!bgmPlaying) return;
+    const m = melody[step % melody.length];
+    const b = bass[step % bass.length];
+    if (m > 0) playTone(m, 'square', 0.11, 0.04);
+    if (b > 0) playTone(b / 2, 'triangle', 0.13, 0.06);
+    step++;
+  }, 145);
+}
+
+// --- ゲーム定数・状態 ---
+const GRAVITY = 0.55;
+const GROUND_Y = 400;
+
+const keys = {};
+window.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  initAudio();
+});
+window.addEventListener('keyup', e => {
+  keys[e.code] = false;
+});
+canvas.addEventListener('mousedown', initAudio);
+
+// プレイヤー（ヒゲおじさん）
+const player = {
+  x: 240,
+  y: GROUND_Y - 32,
+  vx: 0,
+  vy: 0,
+  baseW: 24,
+  baseH: 32,
+  scaleX: 1.0,
+  scaleY: 1.0, // キノコで無限に大きく、ダメージで無限に小さくなる
+  dir: 1,
+  onGround: false,
+  invuln: 0,
+  walkFrame: 0,
+  get w() { return Math.max(2, this.baseW * this.scaleX); },
+  get h() { return Math.max(2, this.baseH * this.scaleY); }
+};
+
+let score = 0;
+let items = [];   // 成長キノコ
+let enemies = []; // 敵キノコ・カメ
+let particles = [];
+let spawnTimer = 0;
+
+// 初期配置
+function spawnDrop() {
+  const x = 40 + Math.random() * (canvas.width - 80);
+  const r = Math.random();
+  if (r < 0.45) {
+    // 成長キノコ
+    items.push({
+      x, y: -20, vx: (Math.random() < 0.5 ? -1 : 1) * 1.4, vy: 0,
+      w: 22, h: 22, onGround: false
+    });
+  } else if (r < 0.8) {
+    // 敵キノコ（クリボー風）
+    enemies.push({
+      type: 'goomba',
+      x, y: -20, vx: (Math.random() < 0.5 ? -1 : 1) * 1.3, vy: 0,
+      w: 24, h: 24, safeTimer: 0, frame: 0
+    });
+  } else {
+    // カメ（ノコノコ風）
+    enemies.push({
+      type: 'turtle',
+      state: 'walk', // walk | shell | spin
+      x, y: -28, vx: (Math.random() < 0.5 ? -1 : 1) * 1.1, vy: 0,
+      w: 24, h: 32, safeTimer: 0, frame: 0
+    });
+  }
+}
+
+function addParticles(x, y, color, count = 8) {
+  for (let i = 0; i < count; i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 6,
+      vy: (Math.random() - 1) * 6,
+      life: 25 + Math.random() * 15,
+      color
+    });
+  }
+}
+
+// 矩形衝突判定
+function rectHit(a, b) {
+  return a.x < b.x + b.w &&
+         a.x + a.w > b.x &&
+         a.y < b.y + b.h &&
+         a.y + a.h > b.y;
+}
+
+// --- 更新処理 ---
+function update() {
+  // スポーン処理（ぽつぽつ降ってくる）
+  spawnTimer++;
+  if (spawnTimer > 85) {
+    spawnTimer = 0;
+    if (items.length + enemies.length < 28) {
+      spawnDrop();
+    }
+  }
+
+  // プレイヤー移動
+  const speed = 3.8;
+  if (keys['ArrowLeft'] || keys['KeyA']) {
+    player.vx = -speed;
+    player.dir = -1;
+    player.walkFrame += 0.25;
+  } else if (keys['ArrowRight'] || keys['KeyD']) {
+    player.vx = speed;
+    player.dir = 1;
+    player.walkFrame += 0.25;
+  } else {
+    player.vx *= 0.75;
+    player.walkFrame = 0;
+  }
+
+  if ((keys['Space'] || keys['ArrowUp'] || keys['KeyW'] || keys['KeyZ']) && player.onGround) {
+    player.vy = -11.5;
+    player.onGround = false;
+    sfxJump();
+  }
+
+  player.vy += GRAVITY;
+  player.x += player.vx;
+  player.y += player.vy;
+
+  // 画面端ループまたは壁反射
+  if (player.x < 0) player.x = 0;
+  if (player.x + player.w > canvas.width) player.x = canvas.width - player.w;
+
+  // 地面接地
+  if (player.y + player.h >= GROUND_Y) {
+    player.y = GROUND_Y - player.h;
+    player.vy = 0;
+    player.onGround = true;
+  }
+
+  if (player.invuln > 0) player.invuln--;
+
+  // 成長キノコ更新
+  for (let i = items.length - 1; i >= 0; i--) {
+    const it = items[i];
+    it.vy += GRAVITY * 0.6;
+    it.x += it.vx;
+    it.y += it.vy;
+
+    if (it.x <= 0 || it.x + it.w >= canvas.width) it.vx *= -1;
+    if (it.y + it.h >= GROUND_Y) {
+      it.y = GROUND_Y - it.h;
+      it.vy = 0;
+    }
+
+    if (rectHit(player, it)) {
+      // ひたすら縦に伸びる！
+      const oldH = player.h;
+      player.scaleY *= 1.38;
+      player.scaleX = Math.min(2.2, player.scaleX * 1.03); // 横は少しだけ
+      player.y -= (player.h - oldH); // 地面にめり込まないよう上へ伸ばす
+      score += 100;
+      sfxPowerup();
+      addParticles(it.x + it.w/2, it.y + it.h/2, '#ff3333', 10);
+      items.splice(i, 1);
+    }
+  }
+
+  // 敵更新
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const e = enemies[i];
+    if (e.safeTimer > 0) e.safeTimer--;
+    e.frame += 0.15;
+
+    e.vy += GRAVITY * 0.8;
+    e.x += e.vx;
+    e.y += e.vy;
+
+    // 壁で跳ね返る
+    if (e.x <= 0) { e.x = 0; e.vx = Math.abs(e.vx); }
+    if (e.x + e.w >= canvas.width) { e.x = canvas.width - e.w; e.vx = -Math.abs(e.vx); }
+
+    // 地面
+    if (e.y + e.h >= GROUND_Y) {
+      e.y = GROUND_Y - e.h;
+      e.vy = 0;
+    }
+
+    // カメの甲羅スピンが他の敵をなぎ倒す
+    if (e.type === 'turtle' && e.state === 'spin') {
+      for (let j = enemies.length - 1; j >= 0; j--) {
+        if (i === j) continue;
+        const other = enemies[j];
+        if (rectHit(e, other)) {
+          addParticles(other.x + other.w/2, other.y + other.h/2, '#ffcc00', 8);
+          sfxStomp();
+          score += 200;
+          enemies.splice(j, 1);
+          if (j < i) i--;
+        }
+      }
+    }
+
+    // プレイヤーとの接触判定
+    if (rectHit(player, e)) {
+      const prevBottom = (player.y - player.vy) + player.h;
+      const isStomp = player.vy > 0 && prevBottom <= e.y + e.h * 0.65;
+
+      if (isStomp) {
+        // 踏んだ！
+        player.vy = -8.5;
+        sfxStomp();
+        score += 100;
+
+        if (e.type === 'goomba') {
+          // 踏むと両側に分かれて増える！踏んだ直後はダメージ判定なし
+          const spawnX = e.x;
+          const spawnY = e.y;
+          enemies.splice(i, 1);
+
+          for (const dir of [-1, 1]) {
+            enemies.push({
+              type: 'goomba',
+              x: Math.max(4, Math.min(canvas.width - 28, spawnX + dir * 14)),
+              y: spawnY - 4,
+              vx: dir * (1.8 + Math.random() * 0.8),
+              vy: -4.5,
+              w: 24,
+              h: 24,
+              safeTimer: 45, // 踏んだ直後はダメージ判定なし
+              frame: 0
+            });
+          }
+          addParticles(spawnX + 12, spawnY + 12, '#c84c0c', 10);
+        } else if (e.type === 'turtle') {
+          if (e.state === 'walk') {
+            e.state = 'shell';
+            e.h = 20;
+            e.y = GROUND_Y - e.h;
+            e.vx = 0;
+            e.safeTimer = 20;
+          } else if (e.state === 'shell') {
+            e.state = 'spin';
+            e.vx = (player.x + player.w/2 < e.x + e.w/2 ? 1 : -1) * 6.5;
+            e.safeTimer = 15;
+            sfxShell();
+          } else if (e.state === 'spin') {
+            e.state = 'shell';
+            e.vx = 0;
+            e.safeTimer = 20;
+          }
+        }
+      } else {
+        // 横・下から接触
+        if (e.type === 'turtle' && e.state === 'shell') {
+          // 止まっている甲羅を蹴る
+          e.state = 'spin';
+          e.vx = (player.x + player.w/2 < e.x + e.w/2 ? 1 : -1) * 6.5;
+          e.safeTimer = 15;
+          sfxShell();
+        } else if (e.safeTimer <= 0 && player.invuln <= 0) {
+          // ダメージを受けると無限に小さくなっていく！
+          const oldH = player.h;
+          player.scaleY *= 0.65;
+          player.scaleX *= 0.72;
+          player.y += (oldH - player.h);
+          player.invuln = 55;
+          player.vy = -5;
+          sfxShrink();
+          addParticles(player.x + player.w/2, player.y + player.h/2, '#ffffff', 12);
+        }
+      }
+    }
+  }
+
+  // パーティクル更新
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.25;
+    p.life--;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+
+// --- 描画処理 (ファミコン風ドット絵) ---
+function drawBackground() {
+  ctx.fillStyle = '#5c94fc';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // 雲
+  ctx.fillStyle = '#ffffff';
+  const clouds = [[60, 70], [240, 50], [410, 85]];
+  clouds.forEach(([cx, cy]) => {
+    ctx.fillRect(cx, cy, 48, 16);
+    ctx.fillRect(cx + 8, cy - 8, 32, 8);
+    ctx.fillRect(cx + 16, cy - 14, 16, 6);
+  });
+
+  // 遠くの緑の丘
+  ctx.fillStyle = '#00a800';
+  ctx.beginPath();
+  ctx.arc(90, GROUND_Y, 55, Math.PI, 0);
+  ctx.arc(380, GROUND_Y, 40, Math.PI, 0);
+  ctx.fill();
+
+  // 地面ブロック
+  for (let x = 0; x < canvas.width; x += 32) {
+    ctx.fillStyle = '#c84c0c';
+    ctx.fillRect(x, GROUND_Y, 32, 48);
+    ctx.fillStyle = '#fcbcb0';
+    ctx.fillRect(x + 2, GROUND_Y + 2, 28, 4);
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, GROUND_Y, 32, 24);
+    ctx.strokeRect(x, GROUND_Y + 24, 32, 24);
+  }
+}
+
+function drawPlayer() {
+  if (player.invuln > 0 && Math.floor(player.invuln / 4) % 2 === 0) return;
+
+  ctx.save();
+  ctx.translate(player.x + player.w / 2, player.y + player.h);
+  ctx.scale(player.dir * player.scaleX, player.scaleY);
+
+  // 基準サイズ: 24x32 (原点は足元中央)
+  // どんなに伸びても縮んでも比率で描画
+  const step = Math.sin(player.walkFrame) * 3;
+
+  // 靴
+  ctx.fillStyle = '#6b2c00';
+  ctx.fillRect(-10 + step, -5, 8, 5);
+  ctx.fillRect(2 - step, -5, 8, 5);
+
+  // オーバーオール（青）
+  ctx.fillStyle = '#c88a1a';
+  ctx.fillRect(-8, -16, 16, 11);
+
+  // シャツ（赤）
+  ctx.fillStyle = '#7a3fb0';
+  ctx.fillRect(-10, -17, 20, 6);
+  // 黄色いボタン
+  ctx.fillStyle = '#f0e8d0';
+  ctx.fillRect(-5, -13, 2, 2);
+  ctx.fillRect(3, -13, 2, 2);
+
+  // 顔（肌色）
+  ctx.fillStyle = '#ffa044';
+  ctx.fillRect(-7, -27, 14, 10);
+
+  // 鼻
+  ctx.fillRect(6, -24, 5, 4);
+
+  // 目
+  ctx.fillStyle = '#000';
+  ctx.fillRect(3, -26, 2, 3);
+
+  // 立派なヒゲ！
+  ctx.fillStyle = '#381800';
+  ctx.fillRect(1, -21, 9, 3);
+  ctx.fillRect(3, -22, 4, 1);
+
+  // 帽子（赤）
+  ctx.fillStyle = '#7a3fb0';
+  ctx.fillRect(-8, -32, 16, 5);
+  ctx.fillRect(-6, -29, 17, 2); // ツバ
+
+  ctx.restore();
+}
+
+function drawItems() {
+  items.forEach(it => {
+    // 傘（赤地に白水玉）
+    ctx.fillStyle = '#f83800';
+    ctx.fillRect(it.x + 2, it.y, it.w - 4, 12);
+    ctx.fillRect(it.x, it.y + 4, it.w, 8);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(it.x + 4, it.y + 3, 4, 4);
+    ctx.fillRect(it.x + 14, it.y + 3, 4, 4);
+    ctx.fillRect(it.x + 9, it.y + 7, 4, 4);
+
+    // 軸
+    ctx.fillStyle = '#ffa044';
+    ctx.fillRect(it.x + 5, it.y + 12, it.w - 10, 10);
+    // 目
+    ctx.fillStyle = '#000';
+    ctx.fillRect(it.x + 7, it.y + 14, 2, 4);
+    ctx.fillRect(it.x + 13, it.y + 14, 2, 4);
+  });
+}
+
+function drawEnemies() {
+  enemies.forEach(e => {
+    // 分裂直後の無敵点滅
+    if (e.safeTimer > 0 && Math.floor(e.safeTimer / 3) % 2 === 0) {
+      ctx.globalAlpha = 0.55;
+    }
+
+    if (e.type === 'goomba') {
+      const walk = Math.floor(e.frame) % 2 === 0 ? -1 : 1;
+      // 傘（茶色）
+      ctx.fillStyle = '#c84c0c';
+      ctx.fillRect(e.x + 4, e.y, e.w - 8, 6);
+      ctx.fillRect(e.x + 1, e.y + 5, e.w - 2, 9);
+      // 怒り眉と目
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(e.x + 5, e.y + 7, 4, 5);
+      ctx.fillRect(e.x + 15, e.y + 7, 4, 5);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(e.x + 7, e.y + 8, 2, 4);
+      ctx.fillRect(e.x + 15, e.y + 8, 2, 4);
+      ctx.fillRect(e.x + 5, e.y + 6, 5, 2);
+      ctx.fillRect(e.x + 14, e.y + 6, 5, 2);
+      // 軸
+      ctx.fillStyle = '#fcbcb0';
+      ctx.fillRect(e.x + 7, e.y + 14, 10, 6);
+      // 足
+      ctx.fillStyle = '#000';
+      ctx.fillRect(e.x + 3 + walk, e.y + 19, 7, 5);
+      ctx.fillRect(e.x + 14 - walk, e.y + 19, 7, 5);
+    } else if (e.type === 'turtle') {
+      if (e.state === 'walk') {
+        const dir = e.vx >= 0 ? 1 : -1;
+        const walk = Math.floor(e.frame) % 2 === 0 ? 1 : -1;
+        // 頭
+        ctx.fillStyle = '#f8b800';
+        const headX = dir > 0 ? e.x + 14 : e.x;
+        ctx.fillRect(headX, e.y + 2, 10, 10);
+        ctx.fillStyle = '#000';
+        ctx.fillRect(dir > 0 ? headX + 6 : headX + 2, e.y + 4, 2, 3);
+        // 甲羅（緑）
+        ctx.fillStyle = '#00a800';
+        ctx.fillRect(e.x + 3, e.y + 10, 18, 16);
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(e.x + 4, e.y + 11, 16, 14);
+        // 足
+        ctx.fillStyle = '#f8b800';
+        ctx.fillRect(e.x + 4 + walk, e.y + 26, 6, 6);
+        ctx.fillRect(e.x + 14 - walk, e.y + 26, 6, 6);
+      } else {
+        // 甲羅状態
+        ctx.fillStyle = '#00a800';
+        ctx.fillRect(e.x + 1, e.y + 2, e.w - 2, e.h - 2);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(e.x + 4, e.y + 14, e.w - 8, 4);
+      }
+    }
+    ctx.globalAlpha = 1.0;
+  });
+}
+
+function drawUI() {
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 16px "Courier New", monospace';
+  ctx.fillText(`NOBIRU HIGE`, 24, 28);
+  ctx.fillText(String(score).padStart(6, '0'), 24, 46);
+
+  const heightRatio = player.scaleY >= 1
+    ? `x${player.scaleY.toFixed(1)}`
+    : `1/${(1 / player.scaleY).toFixed(1)}`;
+  ctx.fillText(`HEIGHT: ${heightRatio}`, 200, 28);
+  ctx.fillText(`ENEMIES: ${enemies.length}`, 375, 28);
+}
+
+function loop() {
+  update();
+  drawBackground();
+  drawItems();
+  drawEnemies();
+  drawPlayer();
+
+  particles.forEach(p => {
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x, p.y, 4, 4);
+  });
+
+  drawUI();
+  requestAnimationFrame(loop);
+}
+
+// 最初の数体を配置してスタート
+spawnDrop();
+spawnDrop();
+loop();
+</script>
+</body>
+</html>
