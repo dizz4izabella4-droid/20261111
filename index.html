@@ -31,12 +31,11 @@ body{font-family:var(--ja);color:var(--ink);background:linear-gradient(160deg,va
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
   padding-block:max(18px,env(safe-area-inset-top,0px)) max(28px,env(safe-area-inset-bottom,0px));
   -webkit-tap-highlight-color:transparent;overflow-x:hidden}
-/* ゲームを選ぶ枠: 背景に邪神と流血の宗教画。上の部分は絵が見えるように空けて、カードは半透明にする */
+/* ゲームを選ぶ枠: 背景に邪神と流血の宗教画。カードは上から並べ、カードの中は透けさせて、文字のまわりだけ濃くする */
 .stage{position:relative;display:flex;flex-direction:column;gap:16px;padding:16px 14px 18px;border-radius:30px;overflow:hidden;
   background:#1a0806 url(launcher-bg.jpg) center top/cover no-repeat;border:4px solid #d9b25a;
   box-shadow:0 0 0 4px #fffafc,0 10px 0 #e6d3ea,0 20px 40px rgba(107,74,122,.25)}
 .stage .sub{align-self:center}
-.window{height:clamp(220px,min(92vw,46vh),520px);flex:none}
 #sky{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
 body.abyss #sky{z-index:9}
 .wrap{position:relative;z-index:1;max-width:540px;padding-top:40px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
@@ -96,22 +95,22 @@ header{display:flex;flex-direction:column;align-items:center;gap:10px;padding-to
 .list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
 .app{--c:var(--pink);--cD:var(--pinkD);--cL:#ffe9f1;
   position:relative;display:flex;align-items:center;gap:12px;padding:9px 12px 9px 9px;
-  background:rgba(255,250,252,.5);border-radius:20px;color:inherit;text-decoration:none;border:2px solid rgba(255,255,255,.7);
+  background:rgba(255,250,252,.14);border-radius:20px;color:inherit;text-decoration:none;border:2px solid rgba(255,255,255,.7);
   box-shadow:0 4px 0 rgba(255,255,255,.35),0 10px 22px rgba(20,4,8,.25);transition:transform .18s cubic-bezier(.3,1.6,.5,1),box-shadow .18s,border-color .18s,background .18s;
   opacity:0;transform:translateY(14px) scale(.97)}
 .app.mint{--c:var(--mint);--cD:var(--mintD);--cL:#dcf6ee}
 .app.lav{--c:var(--lav);--cD:var(--lavD);--cL:#ece5ff}
 .app.lemon{--c:var(--lemon);--cD:var(--lemonD);--cL:#fff3cf}
 .app.show{opacity:1;transform:none;transition:opacity .35s,transform .45s cubic-bezier(.3,1.6,.5,1),box-shadow .18s,border-color .18s,background .18s}
-.app.sel,.app:hover,.app:focus-visible{border-color:var(--c);background:rgba(255,250,252,.72);transform:translateY(-2px);outline:none}
+.app.sel,.app:hover,.app:focus-visible{border-color:var(--c);background:rgba(255,250,252,.3);transform:translateY(-2px);outline:none}
 .app:active{transform:translateY(2px)}
 .icon{flex:none;width:48px;height:48px;border-radius:15px;background:var(--c);display:grid;place-items:center;box-shadow:inset 0 -4px 0 var(--cD)}
 .icon svg{width:32px;height:32px}
-.txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;padding:6px 11px;border-radius:13px;background:rgba(255,250,252,.93)}
 .en{font-size:10px;font-weight:700;color:#5a3a68;letter-spacing:.08em;line-height:1.3}
 .ds{font-size:15px;font-weight:700;color:#3e2448;letter-spacing:.04em}
 .nt{display:block;margin-top:3px;font-size:11.5px;font-weight:700;line-height:1.5;color:#5b4466;letter-spacing:.02em}
-.dt{display:block;margin-top:3px;font-size:10px;font-weight:700;line-height:1.3;color:#6a5275;letter-spacing:.04em}
+.dt{width:fit-content;margin:5px auto 0 8px;padding:2px 10px;border-radius:999px;background:rgba(40,10,20,.62);font-size:10px;font-weight:700;line-height:1.5;color:#fff;letter-spacing:.06em}
 .tag{flex:none;font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:var(--cL);color:var(--cD);letter-spacing:.06em}
 .rec{position:absolute;top:-9px;right:48px;padding:2px 10px;border-radius:999px;background:var(--lemon);color:#7a5a10;font-size:10px;font-weight:800;
   letter-spacing:.06em;box-shadow:0 2px 0 var(--lemonD);transform:rotate(2deg)}
@@ -227,7 +226,6 @@ body.abyss .music.on .sw{background:#c41a2a}
 <div class="wrap">
   <section class="stage" aria-label="ゲームをえらぶ">
     <div class="sub">あそぶゲームを<b>えらんでね</b></div>
-    <div class="window" aria-hidden="true"></div>
     <ul class="list" id="list"></ul>
   </section>
   <footer><span id="count"></span><span class="keys">↑↓ でえらんで Enter であそぶ</span></footer>
@@ -288,7 +286,6 @@ const items=APPS.map((a,i)=>{
   const ds=document.createElement('span'); ds.className='ds'; ds.textContent=a.desc;
   const tx=document.createElement('span'); tx.className='txt'; tx.append(en,ds);
   if(a.note){ const nt=document.createElement('span'); nt.className='nt'; nt.textContent=a.note; tx.appendChild(nt); }
-  if(a.date){ const dt=document.createElement('span'); dt.className='dt'; dt.textContent='最終アップロード '+a.date.replace(/-/g,'.'); tx.appendChild(dt); }
   el.setAttribute('aria-label',a.ja+'（'+a.desc+(a.note?'。'+a.note:'')+'）');
   el.append(ic,tx);
   { const t=document.createElement('span'); t.className='tag'; t.textContent=a.for==='both'?'どちらも':LABEL[a.for]+'むけ'; el.appendChild(t); }
@@ -296,7 +293,9 @@ const items=APPS.map((a,i)=>{
   const go=document.createElement('span'); go.className='go'; go.innerHTML=GO; el.appendChild(go);
   el.addEventListener('mouseenter',()=>{ sel=i; mark(); pop(560+i*80); });
   el.addEventListener('click',e=>{ e.preventDefault(); launch(i); });
-  li.appendChild(el); list.appendChild(li); return el;
+  li.appendChild(el);
+  if(a.date){ const dt=document.createElement('div'); dt.className='dt'; dt.textContent='最終アップロード '+a.date.replace(/-/g,'.'); li.appendChild(dt); }
+  list.appendChild(li); return el;
 });
 sel=Math.max(0,APPS.findIndex(a=>a.for===myDev||a.for==='both'));
 function mark(){ items.forEach((el,i)=>el.classList.toggle('sel',i===sel)); }
