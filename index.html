@@ -255,13 +255,13 @@ body.abyss .music.on .sw{background:#c41a2a}
 <script>
 // ===== 作品の一覧 =====
 // 新しい作品を載せるとき: リポジトリに作品のフォルダ（中に index.html）を作り、ここに1件足す
-//   path … フォルダ名（末尾に /）   ja … 日本語の名前   name … 英語の名前（小さく上に出る）
+//   path … フォルダ名（末尾に /）   ja … 日本語の名前   name … 英語の名前（小さく上に出る）   label … 読み上げ用の名前（省略すると ja）
 //   for  … 'pc' / 'mobile' / 'both'   color … 'pink' / 'mint' / 'lav' / 'lemon'   icon … 下の ICONS の名前
 //   start … 制作開始日（YYYY-MM-DD。分からないときは書かない）   date … 最終アップロード日（YYYY-MM-DD）。作品をpushしたら、その作品の date を当日に直す（どちらもカードの下に極小で出る）
 const APPS=[
-  {path:'typing-pc/', ja:'CMDタイピング', name:'CMD TYPING', for:'pc', color:'mint', icon:'keyboard',
+  {path:'typing-pc/', ja:'キーボード', label:'CMDタイピング（キーボード）', name:'CMD TYPING', for:'pc', color:'mint', icon:'keyboard',
    start:'2026-11-10', date:'2026-11-12'},
-  {path:'typing-mobile/', ja:'CMDタイピング スマホ版', name:'CMD TYPING MOBILE', for:'mobile', color:'lav', icon:'phone',
+  {path:'typing-mobile/', ja:'フリック', label:'CMDタイピング スマホ版（フリック）', name:'CMD TYPING MOBILE', for:'mobile', color:'lav', icon:'phone',
    start:'2026-11-11', date:'2026-11-12'},
   {path:'tori-to-kemono/', ja:'コウモリ', name:'KOUMORI', for:'mobile', color:'pink', icon:'bird',
    start:'2026-10-30', date:'2026-11-11'},
@@ -303,7 +303,7 @@ const items=APPS.map((a,i)=>{
   const en=document.createElement('span'); en.className='en'; en.textContent=a.name;
   const ds=document.createElement('span'); ds.className='ds'; ds.textContent=a.ja;
   const tx=document.createElement('span'); tx.className='txt'; tx.append(en,ds);
-  el.setAttribute('aria-label',a.ja);
+  el.setAttribute('aria-label',a.label||a.ja);
   el.append(ic,tx);
   { const t=document.createElement('span'); t.className='tag'; t.textContent=a.for==='both'?'どちらも':LABEL[a.for]+'むけ'; el.appendChild(t); }
   if(a.for===myDev||a.for==='both'){ const r=document.createElement('span'); r.className='rec'; r.textContent='この端末におすすめ'; el.appendChild(r); }
