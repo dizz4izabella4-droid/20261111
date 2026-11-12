@@ -29,7 +29,7 @@
 html,body{margin:0;min-height:100%}
 body{font-family:var(--ja);color:var(--ink);background:linear-gradient(160deg,var(--sky1) 0%,var(--sky2) 52%,var(--sky3) 100%) fixed;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
-  padding-block:max(18px,env(safe-area-inset-top,0px)) max(28px,env(safe-area-inset-bottom,0px));
+  padding-block:max(18px,env(safe-area-inset-top,0px)) calc(max(28px,env(safe-area-inset-bottom,0px)) + 40px);
   -webkit-tap-highlight-color:transparent;overflow-x:hidden}
 /* ゲームを選ぶ枠: 背景に邪神と流血の宗教画。カードは上から並べ、カードの中は透けさせて、文字のまわりだけ濃くする */
 .stage{position:relative;display:flex;flex-direction:column;gap:16px;padding:16px 14px 18px;border-radius:30px;overflow:hidden;
@@ -119,6 +119,12 @@ header{display:flex;flex-direction:column;align-items:center;gap:10px;padding-to
 
 footer{text-align:center;font-size:12px;font-weight:700;color:var(--ink2);letter-spacing:.08em;display:flex;flex-direction:column;gap:4px}
 footer .keys{opacity:.8}
+/* 外部サイトへのリンク（最下部に常に表示。画面が動いても固定） */
+.ext{position:fixed;z-index:4;left:50%;transform:translateX(-50%);bottom:max(8px,env(safe-area-inset-bottom,0px));
+  display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;background:rgba(40,10,20,.72);color:#fff;
+  font:700 12px/1.2 var(--ja);letter-spacing:.04em;text-decoration:none;white-space:nowrap;box-shadow:0 3px 10px rgba(20,4,8,.3)}
+.ext:hover,.ext:focus-visible{background:rgba(40,10,20,.88);outline:2px solid #fff;outline-offset:2px}
+.ext svg{width:11px;height:11px}
 /* 作者の小さな署名（右下） */
 .byiz{position:fixed;z-index:4;right:max(12px,env(safe-area-inset-right,0px));bottom:max(10px,env(safe-area-inset-bottom,0px));
   font:italic 600 12px/1 "Times New Roman","Liberation Serif",serif;letter-spacing:.08em;color:var(--ink2);opacity:.75;pointer-events:none;transition:opacity .6s,color .6s}
@@ -234,6 +240,7 @@ body.abyss .music.on .sw{background:#c41a2a}
   </section>
   <footer><span id="count"></span><span class="keys">↑↓ でえらんで Enter であそぶ</span></footer>
 </div>
+<a class="ext" id="ext" href="https://iz3ico.github.io/app/" target="_blank" rel="noopener noreferrer">iz3ico.github.io/app <svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3H3v10h10v-3M9 3h4v4M13 3L7 9"/></svg></a>
 <div class="byiz" id="byiz">by iz</div>
 <div id="abyss">
   <div class="abg"></div><div class="abg2"></div><div id="flash"></div>
