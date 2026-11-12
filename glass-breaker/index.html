@@ -1217,6 +1217,7 @@ function drawPres(px, F, f, opt) {
   if (opt.scream) { hA = [px + f - 3, top - 3]; hB = [px + f + 3, top - 3]; }
   else if (opt.hug) { hA = [px - 1, top + 4]; hB = [px + 2, top + 5]; }
   else if (opt.sit) { hA = [px - 4, top + 8]; hB = [px + 4, top + 8]; }
+  else if (opt.droop > 0) { hA = [px - 4, top + 10]; hB = [px + 4, top + 10]; }
   else if (opt.shock) { hA = [px - 5, top + 9]; hB = [px + 5, top + 9]; }
   else if (opt.run) { hA = [px - 6, top - 5 + Math.round(Math.sin(ph * 2) * 2)]; hB = [px + 6, top - 4 - Math.round(Math.sin(ph * 2) * 2)]; }
   else { hA = [px - 5, top + 7]; hB = [px + 5, top + 7]; }
@@ -1224,7 +1225,7 @@ function drawPres(px, F, f, opt) {
   L(sB[0], sB[1], hB[0], hB[1], '#6a4e34'); L(sB[0] + 1, sB[1], hB[0] + 1, hB[1], '#7a5c3e');
   P(hA[0] - 1, hA[1] - 1, 2, 2, '#f2c29c'); P(hB[0], hB[1] - 1, 2, 2, '#f2c29c');
   /* 頭 */
-  var hx = px + f, hy = B - 23;
+  var dp = opt.droop || 0, hx = px + f + f * Math.round(dp * 2), hy = B - 23 + Math.round(dp * 4);
   for (dy = -4; dy <= 4; dy++) for (dx = -4; dx <= 4; dx++) if (dx * dx + dy * dy <= 17) {
     var cc = dx * f <= -3 ? '#dca47c' : '#f2c29c';
     if (dx * f <= -3 && dy >= -1 && dy <= 1) cc = '#c8c8c8';
@@ -1255,11 +1256,43 @@ function drawPres(px, F, f, opt) {
 }
 /* ---------- 赤ちゃん社長(クリスタルの破片から生まれ、ハイハイする。当たり判定なし) ---------- */
 var baby = null;
-function spawnBaby(x, z, f) { baby = { x: x, z: z, face: f, ph: 0, dx: f, dz: 0, t: 0, turn: 2, mv: false, popped: false }; }
+var BFORM = 2.7;
+function spawnBaby(x, z, f) {
+  baby = { x: x, z: z, face: f, ph: 0, dx: f, dz: 0, t: 0, turn: 2, mv: false, popped: false, fp: [] };
+  /* 赤ちゃんの絵を一度だけ別キャンバスに描き、不透明な点をガラスの粉の行き先にする */
+  var mc = maskCv.getContext('2d', { willReadFrequently: true }), keep = ctx, px = Math.round(x), F = Math.round(z), x0 = px - 14, y0 = F - 16, w = 29, h = 17, i, j;
+  mc.setTransform(1, 0, 0, 1, 0, 0); mc.clearRect(0, 0, DW, DH);
+  ctx = mc; drawBabySprite(1, true); ctx = keep;
+  var d = mc.getImageData(x0, y0, w, h).data, SC = [[223, 244, 255], [191, 230, 255], [255, 255, 255], [159, 208, 240]];
+  for (j = 0; j < h; j++) for (i = 0; i < w; i++) {
+    var k = (j * w + i) * 4;
+    if (d[k + 3] > 200) {
+      var s0 = SC[Math.floor(Math.random() * 4)];
+      baby.fp.push({ tx: x0 + i, ty: y0 + j, sx: x + rnd(-38, 38), sy: z + rnd(-34, 2), c0: s0, c1: [d[k], d[k + 1], d[k + 2]], d: rnd(0.35, 1.5), dur: rnd(0.7, 1.0), sw: rnd(-9, 9) });
+    }
+  }
+  for (i = 0; i < 70; i++) baby.fp.push({ tx: x + rnd(-6, 8), ty: z - rnd(2, 12), sx: x + rnd(-40, 40), sy: z + rnd(-34, 2), c0: SC[i & 3], c1: null, d: rnd(0.2, 1.4), dur: rnd(0.8, 1.1), sw: rnd(-12, 12) });
+  if (AC) { var t0 = AC.currentTime + 0.3; for (i = 0; i < 14; i++) tn(t0 + i * 0.13, 1000 + i * 150, 0.28, { g: 0.018 }); nz(t0, 1.9, { type: 'highpass', f: 3000, f2: 7000, g: 0.025 }); }
+}
+function drawBabyForm(b) {
+  var i, p, u, e, ux, uy, col, nx, ny, len;
+  for (i = 0; i < b.fp.length; i++) {
+    p = b.fp[i]; u = clamp((b.t - p.d) / p.dur, 0, 1);
+    if (b.t < 0.25 + p.d * 0.2) continue;
+    e = u * u * (3 - 2 * u);
+    ux = p.tx - p.sx; uy = p.ty - p.sy; len = Math.hypot(ux, uy) || 1; nx = -uy / len; ny = ux / len;
+    var sw = Math.sin(u * Math.PI) * p.sw * (1 - u * 0.4);
+    var x = p.sx + ux * e + nx * sw, y = p.sy + uy * e + ny * sw;
+    if (p.c1) { col = 'rgb(' + Math.round(p.c0[0] + (p.c1[0] - p.c0[0]) * e) + ',' + Math.round(p.c0[1] + (p.c1[1] - p.c0[1]) * e) + ',' + Math.round(p.c0[2] + (p.c1[2] - p.c0[2]) * e) + ')'; }
+    else { if (u >= 1) continue; col = 'rgba(' + p.c0.join(',') + ',' + (1 - e).toFixed(2) + ')'; }
+    R(Math.round(x), Math.round(y), 1, 1, col);
+    if (u > 0 && u < 0.85 && (i & 3) === 0) R(Math.round(x - (ux / len) * 1.5), Math.round(y - (uy / len) * 1.5), 1, 1, 'rgba(210,240,255,0.5)');
+  }
+}
 function babyUpdate(dt) {
   if (!baby || !dt) return;
   baby.t += dt;
-  if (baby.t < 0.7 || baby.held) return;
+  if (baby.t < BFORM || baby.held) return;
   if (!baby.popped) {
     baby.popped = true; ring(baby.x, baby.z - 5, 8, 0.3);
     for (var i = 0; i < 4; i++) CG.push({ x: baby.x + rnd(-6, 6), y: baby.z - rnd(2, 12), age: 0, life: 0.45 });
@@ -1281,8 +1314,19 @@ function babyUpdate(dt) {
   if (baby.mv) baby.ph += dt * 8;
 }
 function drawBaby() {
+  var b = baby;
+  if (b.t < BFORM) {
+    drawBabyForm(b);
+    var a = clamp((b.t - 2.0) / 0.7, 0, 1);
+    if (a > 0) drawBabySprite(a);
+    return;
+  }
+  drawBabySprite(1);
+}
+function drawBabySprite(alpha, noShadow) {
   var b = baby, f = b.face, px = Math.round(b.x), F = Math.round(b.z), s = Math.sin(b.ph), dx, dy;
-  R(px - 6, F + 1, 13, 1, 'rgba(0,0,0,0.3)');
+  var ga = ctx.globalAlpha; ctx.globalAlpha = ga * alpha;
+  if (!noShadow) R(px - 6, F + 1, 13, 1, 'rgba(0,0,0,0.3)');
   var bob = b.mv && Math.cos(b.ph * 2) > 0 ? 1 : 0;
   /* 手足(手と膝を交互に出す) */
   var a1 = Math.round(s * 1.6), a2 = -a1;
@@ -1300,20 +1344,22 @@ function drawBaby() {
   R(hx - f, hy - 2, 2, 1, '#fff6ea');
   R(hx + f * 2, hy - 1, 1, 1, '#1b1f27'); R(hx + f, hy + 1, 2, 1, '#e2e2e2'); R(hx + f * 2, hy + 2, 1, 1, '#c0605a'); R(hx, hy + 1, 1, 1, '#f4a8a0');
   R(hx - f * 1, hy - 4, 1, 1, '#c8c8c8');
+  ctx.globalAlpha = ga;
 }
 function presFallAngle() {
-  var t = pr.t, a = t < 0.4 ? (t / 0.4) * (t / 0.4) : t < 1.1 ? 1 : Math.max(0, 1 - (t - 1.1) / 0.4);
+  var t = pr.t, a = t < 0.7 ? (t / 0.7) * (t / 0.7) : t < 2.3 ? 1 : Math.max(0, 1 - (t - 2.3) / 0.8);
   return -pr.face * a * 1.5708;
 }
-function prVisible() { return pr.st === 'fall' || pr.st === 'sit' || pr.st === 'startle' || pr.st === 'tremble' || pr.st === 'enter' || pr.st === 'flee' || pr.st === 'wig' || pr.st === 'cry'; }
+function prVisible() { return pr.st === 'fall' || pr.st === 'focus' || pr.st === 'sit' || pr.st === 'startle' || pr.st === 'tremble' || pr.st === 'enter' || pr.st === 'flee' || pr.st === 'wig' || pr.st === 'cry'; }
 function drawPresNPC() {
   var o = { ph: pr.ph, wig: pr.wig, pale: pr.pale > 0 };
   if (pr.st === 'sit') { o.sit = true; drawPres(Math.round(pr.x), Math.round(pr.z), pr.face, o); return; }
   if (pr.st === 'startle') { var u = clamp(pr.t / 0.45, 0, 1); o.shock = true; o.mark = true; o.jump = Math.sin(Math.PI * u) * 9; drawPres(Math.round(pr.x), Math.round(pr.z), pr.face, o); return; }
   if (pr.st === 'tremble') { o.hug = true; o.shock = true; drawPres(Math.round(pr.x) + ((Math.floor(simT / 35) & 1) ? 1 : -1), Math.round(pr.z), pr.face, o); return; }
+  if (pr.st === 'focus') { o.shock = true; o.hug = true; o.pale = true; o.mark = pr.t > 0.3; drawPres(Math.round(pr.x) + ((Math.floor(simT / 35) & 1) ? 1 : -1), Math.round(pr.z), pr.face, o); return; }
   if (pr.st === 'fall') {
     var ang = presFallAngle(), fx = Math.round(pr.x), fz = Math.round(pr.z);
-    o.shock = true; o.pale = true; o.mark = pr.t > 0.28; o.nosh = true;
+    o.shock = true; o.pale = true; o.mark = pr.t > 0.5 && pr.t < 1.6; o.nosh = true;
     var sw = Math.abs(ang) / 1.5708; R(fx - 5 - Math.round(7 * sw), fz + 1, 11 + Math.round(14 * sw), 1, 'rgba(0,0,0,0.36)');
     ctx.save(); ctx.translate(fx, fz); ctx.rotate(ang); ctx.translate(-fx, -fz);
     drawPres(fx, fz, pr.face, o);
@@ -1322,9 +1368,9 @@ function drawPresNPC() {
   if (pr.jt > 0) o.jumpX = Math.sin(Math.PI * (1 - pr.jt / 0.32)) * 5;
   if (pr.scream > 0) { o.scream = true; o.mark = true; }
   if (pr.st === 'enter' || pr.st === 'flee') { o.run = !o.scream; o.jump = (pr.hop > 0 ? Math.sin(Math.PI * (1 - pr.hop / 0.35)) * 6 : 0) + (o.jumpX || 0); }
-  else if (pr.st === 'wig') { o.shock = true; o.mark = pr.t > 0.25; }
-  else if (pr.st === 'cry') { o.shock = true; o.thr = pr.z - 33 * clamp(pr.t / 1.0, 0, 1); o.thr = Math.round(pr.z + 1 - 34 * clamp(pr.t, 0, 1)); }
-  var jit = pr.st === 'wig' && pr.t > 0.2 ? (Math.floor(simT / 40) & 1) : 0;
+  else if (pr.st === 'wig') { o.shock = true; o.pale = true; o.mark = pr.t < 0.7; o.droop = clamp((pr.t - 0.5) / 1.3, 0, 1); }
+  else if (pr.st === 'cry') { o.shock = true; o.droop = 1; o.thr = Math.round(pr.z + 1 - 34 * clamp(pr.t / 2.6, 0, 1)); }
+  var jit = pr.st === 'wig' && pr.t < 0.7 ? (Math.floor(simT / 40) & 1) : 0;
   drawPres(Math.round(pr.x) + jit, Math.round(pr.z), pr.face, o);
 }
 function presMask() {
@@ -1343,7 +1389,7 @@ function makeCrystal() {
   var m = presMask();
   var o = { t: 'crystal', mat: 'crystal', x: m.x0, y: m.y0, w: m.w, h: m.h, fl: Math.round(pr.z), el: 0, dz: 6, hp: 18, max: 18, hits: 0, dead: false, cracks: [], rem: null,
     respawnAt: 0, block: true, mask: m.rows, cx: Math.round(pr.x), face: pr.face, prof: null };
-  objs.push(o); pr.obj = o; pr.st = 'crystal';
+  objs.push(o); pr.obj = o; pr.st = 'crystal'; ctlOn = true;
 }
 function drawCrystalObj(o) {
   if (o.dead) return;
@@ -1435,15 +1481,20 @@ function prUpdate(dt) {
     pr.fear += dt * (d < 60 ? 1 : 0.35);
     if (brokenN >= Math.ceil(brTotal * 0.75) && pr.hop <= 0) {
       /* あらかた割れた：社長が足を滑らせて転倒。起き上がるまで操作不可 */
-      pr.st = 'fall'; pr.t = 0; pr.wigOff = false; pr.fx0 = pr.x; ctlOn = false; atkHeld = null;
-      if (AC) { nz(AC.currentTime, 0.25, { type: 'bandpass', f: 900, f2: 300, q: 1, g: 0.14 }); }
+      pr.st = 'focus'; pr.t = 0; pr.wigOff = false; ctlOn = false; atkHeld = null; pr.pale = 9;
+      if (AC) { tn(AC.currentTime, 220, 0.5, { f2: 90, g: 0.12 }); }
     }
+    return;
+  }
+  if (pr.st === 'focus') {
+    /* 画面が社長に寄りきるまで、その場で震えて待つ */
+    if (pr.t >= 1.1) { pr.st = 'fall'; pr.t = 0; if (AC) nz(AC.currentTime, 0.3, { type: 'bandpass', f: 900, f2: 300, q: 1, g: 0.14 }); }
     return;
   }
   if (pr.st === 'fall') {
     var fa = presFallAngle();
-    if (pr.t < 0.4) pr.x = clamp(pr.x + pr.face * 16 * dt * (1 - pr.t / 0.4), 6, 154);
-    if (!pr.wigOff && pr.t >= 0.28) {
+    if (pr.t < 0.7) pr.x = clamp(pr.x + pr.face * 13 * dt * (1 - pr.t / 0.7), 6, 154);
+    if (pr.wigOff === false && pr.t >= 0.5) {
       pr.wigOff = true; pr.wig = false;
       var hh = 24, hxw = pr.x + hh * Math.sin(fa), hyw = pr.z - hh * Math.cos(fa);
       addFx({ kind: 'poly', x: hxw, y: hyw - 3, verts: [-4, -0.6, -2.4, -2, 2.4, -2, 4, -0.6, 4, 0.8, -4, 0.8], rot: 0, sy: 1, vr: rnd(-9, 9),
@@ -1451,11 +1502,21 @@ function prUpdate(dt) {
       for (var i = 0; i < 14; i++) addFx({ kind: 'drop', x: hxw + rnd(-4, 5), y: hyw, vx: rnd(-50, 50), vy: -rnd(20, 70), r: rnd(0.3, 0.5), fy: pr.z + rnd(-1, 2), life: 0.9 });
       sShock();
     }
-    if (pr.t >= 1.5) { pr.st = 'wig'; pr.t = 0; ctlOn = true; }
+    if (pr.wigOff === true && pr.t >= 1.35) { pr.wigOff = 2; if (AC) { var tw = AC.currentTime; tn(tw, 160, 0.12, { f2: 90, g: 0.06 }); } }
+    if (pr.t >= 3.1) { pr.st = 'wig'; pr.t = 0; }
     return;
   }
-  if (pr.st === 'wig') { if (pr.t > 1.5) { pr.st = 'cry'; pr.t = 0; sCrystallize(); } return; }
-  if (pr.st === 'cry') { if (pr.t >= 1) makeCrystal(); return; }
+  if (pr.st === 'wig') {
+    if (pr.t > 2.4) { pr.st = 'cry'; pr.t = 0; sCrystallize(); }
+    return;
+  }
+  if (pr.st === 'cry') {
+    var fr = pr.z + 1 - 34 * clamp(pr.t / 2.6, 0, 1);
+    if (Math.random() < dt * 16) CG.push({ x: pr.x + rnd(-5, 5), y: fr + rnd(-1, 3), age: 0, life: 0.4 });
+    if (AC && Math.random() < dt * 6) tn(AC.currentTime, rnd(2400, 4400), 0.12, { g: 0.014 });
+    if (pr.t >= 2.6) makeCrystal();
+    return;
+  }
 }
 
 /* ---------- 花火(クリスタルを割ると、ガラスの外の夜空に上がる) ---------- */
@@ -1875,8 +1936,9 @@ function frame(nowT) {
   if (hitstop > 0) hitstop -= rdt * 1000; else sdt = rdt;
   simT += sdt * 1000;
   updatePlayer(sdt);
-  prFocus += ((pr.st === 'fall' || (pr.st === 'wig' && pr.t < 0.25) ? 1 : 0) - prFocus) * Math.min(1, rdt * 6);
-  if (prFocus < 0.004 && pr.st !== 'fall') prFocus = 0;
+  var pf = (pr.st === 'focus' || pr.st === 'fall' || pr.st === 'wig' || pr.st === 'cry') ? 1 : 0;
+  prFocus += (pf - prFocus) * Math.min(1, rdt * (pf ? 3.2 : 4));
+  if (prFocus < 0.004 && !pf) prFocus = 0;
   prUpdate(sdt); babyUpdate(sdt); gameUpdate(sdt, rdt);
   for (j = 0; j < objs.length; j++) if (objs[j].dead && objs[j].respawnAt && simT >= objs[j].respawnAt) respawn(objs[j]);
   for (j = objs.length - 1; j >= 0; j--) if (objs[j].gone) objs.splice(j, 1);
@@ -1902,7 +1964,7 @@ function render() {
   for (i = 0; i < objs.length; i++) if (objs[i].t !== 'wall') L.push({ z: objs[i].fl, k: 0, o: objs[i] });
   L.push({ z: pl.z, k: 1 });
   if (prVisible()) L.push({ z: pr.z, k: 2 });
-  if (baby && baby.t >= 0.7 && !baby.held) L.push({ z: baby.z, k: 3 });
+  if (baby && !baby.held) L.push({ z: baby.z, k: 3 });
   L.sort(function (a, b) { return (a.z - b.z) || (a.k - b.k); });
   for (i = 0; i < L.length; i++) {
     if (L[i].k === 0) drawObj(L[i].o);
@@ -1991,23 +2053,23 @@ function updCost(dt) {
 function drawCost(c) {
   var D = costD, n = Math.max(1, String(Math.floor(D)).length), i, DW2 = 3.7, H = 6, x = 156.5, y = 3;
   if (D < 100) n = 1;
-  var commas = Math.floor((n - 1) / 3), w = n * DW2 + commas * 1.6 + 5;
+  var commas = Math.floor((n - 1) / 3), w = n * DW2 + commas * 1.6 + 7.6;
   c.save();
   /* 壊した瞬間：光って大きくなり、すっと戻る(右上を支点に拡大) */
   var pu = costPulse > 0 ? costPulse / 0.55 : 0, sc = 1 + 0.45 * Math.sin(Math.PI * Math.min(1, (1 - pu) * 1.6 + 0.0001)) * (pu > 0 ? 1 : 0);
   if (pu > 0) { c.translate(x + 1.2, y - 1); c.scale(sc, sc); c.translate(-(x + 1.2), -(y - 1)); }
-  if (pu > 0) { c.shadowColor = 'rgba(255,210,90,' + (0.9 * pu).toFixed(2) + ')'; c.shadowBlur = 6 * pu * S * dpr; }
+  if (pu > 0) { c.shadowColor = 'rgba(255,60,60,' + (0.9 * pu).toFixed(2) + ')'; c.shadowBlur = 6 * pu * S * dpr; }
   c.globalAlpha = 0.62; c.fillStyle = '#000'; c.fillRect(x - w - 2.2, y - 1, w + 3.4, H + 2.4); c.globalAlpha = 1;
   c.shadowBlur = 0;
   if (pu > 0) {
-    c.globalAlpha = pu * 0.55; c.fillStyle = '#ff7a3a'; c.fillRect(x - w - 2.2, y - 1, w + 3.4, H + 2.4);
-    c.globalAlpha = pu; c.strokeStyle = '#fff2b0'; c.lineWidth = 0.5; c.strokeRect(x - w - 2.2, y - 1, w + 3.4, H + 2.4); c.globalAlpha = 1;
+    c.globalAlpha = pu * 0.55; c.fillStyle = '#e0201c'; c.fillRect(x - w - 2.2, y - 1, w + 3.4, H + 2.4);
+    c.globalAlpha = pu; c.strokeStyle = '#ffb0a8'; c.lineWidth = 0.5; c.strokeRect(x - w - 2.2, y - 1, w + 3.4, H + 2.4); c.globalAlpha = 1;
   }
   c.font = 'bold ' + H + 'px ' + JP; c.textBaseline = 'top'; c.textAlign = 'center';
   c.beginPath(); c.rect(x - w - 2.2, y - 0.6, w + 3.4, H + 1.6); c.clip();
   var cx = x - DW2 / 2;
   for (i = 0; i < n; i++) {
-    if (i > 0 && i % 3 === 0) { c.fillStyle = '#ffd25a'; c.fillText(',', cx + 0.6, y + 0.4); cx -= 1.6; }
+    if (i > 0 && i % 3 === 0) { c.fillStyle = '#ff6a60'; c.fillText(',', cx + 0.6, y + 0.4); cx -= 1.6; }
     var base, frac = 0;
     if (i < 2 || D < 100) { base = 0; }
     else {
@@ -2015,12 +2077,13 @@ function drawCost(c) {
       if (i === 2) frac = p - Math.floor(p);
       else { var lo = (D / Math.pow(10, i - 1)) % 10; frac = lo > 9 ? lo - 9 : 0; }
     }
-    c.fillStyle = pu > 0.4 ? '#ffffff' : '#ffd25a';
+    c.fillStyle = pu > 0.4 ? '#ffffff' : '#ff4a42';
     c.fillText(String(base), cx, y + 0.4 - frac * (H + 1));
     if (frac > 0) c.fillText(String((base + 1) % 10), cx, y + 0.4 + (1 - frac) * (H + 1));
     cx -= DW2;
   }
   c.fillText('$', cx + 0.4, y + 0.4);
+  c.fillText('-', cx - 2.6, y + 0.4);
   c.restore();
 }
 function drawHUD(c) {
@@ -2117,7 +2180,7 @@ function gameUpdate(dt, rdt) {
     return;
   }
   if (G.mode === 'ending') {
-    if (G.step === 0) { if (G.t > 1.8 && pl.st === 'idle' && baby && baby.t > 0.7) { baby.stop = true; G.step = 1; } return; }
+    if (G.step === 0) { if (G.t > 1.8 && pl.st === 'idle' && baby && baby.t > BFORM + 0.2) { baby.stop = true; G.step = 1; } return; }
     if (G.step === 1) {
       var side = pl.x < baby.x ? -1 : 1, tx = clamp(baby.x + side * 7, 6, 154);
       if (walkTo(tx, baby.z, 30, dt)) {
