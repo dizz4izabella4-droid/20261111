@@ -82,12 +82,26 @@ ctx.imageSmoothingEnabled = false;
 
 // --- Web Audio API (ファミコン風チップチューン音源) ---
 let audioCtx = null;
+let masterOut = null;   // マスター（コンプレッサー経由）
+let activeVoices = 0;   // 鳴っている効果音の数（多すぎる時は鳴らさない）
+const MAX_SFX_VOICES = 10;
 let bgmPlaying = false;
 let bgmInterval = null;
 
 function initAudio() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // 音が重なりまくっても割れないよう、コンプレッサーで潰す
+    const comp = audioCtx.createDynamicsCompressor();
+    comp.threshold.value = -20;
+    comp.knee.value = 12;
+    comp.ratio.value = 8;
+    comp.attack.value = 0.002;
+    comp.release.value = 0.12;
+    masterOut = audioCtx.createGain();
+    masterOut.gain.value = 0.9;
+    masterOut.connect(comp);
+    comp.connect(audioCtx.destination);
   }
   if (audioCtx.state === 'suspended') {
     audioCtx.resume();
@@ -98,8 +112,12 @@ function initAudio() {
   }
 }
 
-function playTone(freq, type, duration, vol = 0.1, slideTo = null) {
+function playTone(freq, type, duration, vol = 0.1, slideTo = null, isBgm = false) {
   if (!audioCtx) return;
+  if (!isBgm) {
+    if (activeVoices >= MAX_SFX_VOICES) return; // 同時発音数の上限
+    activeVoices++;
+  }
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.type = type;
@@ -110,7 +128,8 @@ function playTone(freq, type, duration, vol = 0.1, slideTo = null) {
   gain.gain.setValueAtTime(vol, audioCtx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
   osc.connect(gain);
-  gain.connect(audioCtx.destination);
+  gain.connect(masterOut);
+  if (!isBgm) osc.onended = () => { activeVoices--; };
   osc.start();
   osc.stop(audioCtx.currentTime + duration);
 }
@@ -119,10 +138,18 @@ function playTone(freq, type, duration, vol = 0.1, slideTo = null) {
 function sfxJump() {
   playTone(180, 'square', 0.25, 0.08, 520);
 }
+let lastPopTime = 0;
 function sfxStomp() {
-  // 小気味いい踏みつけ音
-  playTone(400, 'square', 0.06, 0.12, 850);
-  setTimeout(() => playTone(950, 'triangle', 0.08, 0.12, 1200), 40);
+  // プチッ。踏みまくっても破綻しないよう、間引き＋数が多いほど小さく・短く
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const n = enemies.length;
+  const gap = n > 150 ? 0.06 : n > 40 ? 0.045 : 0.03;
+  if (now - lastPopTime < gap) return;
+  lastPopTime = now;
+  const vol = 0.12 / Math.sqrt(1 + n / 25);
+  const f = 500 + Math.random() * 900;
+  playTone(f, 'square', 0.035, vol, f * 2.2);
 }
 function sfxPowerup() {
   // 伸びる音
@@ -137,9 +164,6 @@ function sfxShrink() {
   notes.forEach((n, i) => {
     setTimeout(() => playTone(n, 'sawtooth', 0.07, 0.08), i * 45);
   });
-}
-function sfxShell() {
-  playTone(250, 'square', 0.12, 0.1, 600);
 }
 
 // 陽気なBGMループ（オリジナル）
@@ -170,8 +194,8 @@ function startBGM() {
     if (!bgmPlaying) return;
     const m = melody[step % melody.length];
     const b = bass[step % bass.length];
-    if (m > 0) playTone(m, 'square', 0.11, 0.04);
-    if (b > 0) playTone(b / 2, 'triangle', 0.13, 0.06);
+    if (m > 0) playTone(m, 'square', 0.11, 0.04, null, true);
+    if (b > 0) playTone(b / 2, 'triangle', 0.13, 0.06, null, true);
     step++;
   }, 145);
 }
@@ -223,35 +247,51 @@ const player = {
 
 let score = 0;
 let items = [];   // 成長キノコ
-let enemies = []; // 敵キノコ・カメ
+let enemies = []; // 敵キノコ（踏むと増殖）
 let particles = [];
 let spawnTimer = 0;
 
-// 初期配置
+// 敵キノコの定数
+const ENEMY_BASE = 24;        // 最初の大きさ
+const ENEMY_SHRINK = 0.85;    // 踏んで増えるたびに小さくなる倍率
+const ENEMY_MIN = 5;          // これ以上は小さくならない
+const MAX_ENEMIES = 450;      // 増殖の上限（超えたら増えずに入れ替わる）
+const SLOW_START = 60;        // これ以上の数で処理落ち風になる
+
+// 足の大きさ（両足を合わせた幅）。敵がこれより小さいと、触れてもダメージなし
+function footSize() { return 20 * player.scaleX; }
+
+function enemyColor(hue, light) {
+  return {
+    cap: `hsl(${hue}, 85%, ${light}%)`,
+    dark: `hsl(${hue}, 70%, ${Math.max(10, light - 18)}%)`
+  };
+}
+
+function makeEnemy(x, y, size, hue, light, vx, vy, safeTimer) {
+  const c = enemyColor(hue, light);
+  return {
+    type: 'goomba', x, y, vx, vy,
+    w: size, h: size, size, hue, light,
+    capColor: c.cap, darkColor: c.dark,
+    safeTimer: safeTimer || 0, frame: Math.random() * 4
+  };
+}
+
+// 初期配置（パワーアップキノコ多め）
 function spawnDrop() {
   const x = 40 + Math.random() * (canvas.width - 80);
-  const r = Math.random();
-  if (r < 0.45) {
+  const wantItem = Math.random() < 0.65;
+  if ((wantItem || enemies.length >= 28) && items.length < 12) {
     // 成長キノコ
     items.push({
       x, y: -20, vx: (Math.random() < 0.5 ? -1 : 1) * 1.4, vy: 0,
       w: 22, h: 22, onGround: false
     });
-  } else if (r < 0.8) {
-    // 敵キノコ（クリボー風）
-    enemies.push({
-      type: 'goomba',
-      x, y: -20, vx: (Math.random() < 0.5 ? -1 : 1) * 1.3, vy: 0,
-      w: 24, h: 24, safeTimer: 0, frame: 0
-    });
-  } else {
-    // カメ（ノコノコ風）
-    enemies.push({
-      type: 'turtle',
-      state: 'walk', // walk | shell | spin
-      x, y: -28, vx: (Math.random() < 0.5 ? -1 : 1) * 1.1, vy: 0,
-      w: 24, h: 32, safeTimer: 0, frame: 0
-    });
+  } else if (enemies.length < 28) {
+    // 敵キノコ
+    enemies.push(makeEnemy(x, -20, ENEMY_BASE, 18, 41,
+      (Math.random() < 0.5 ? -1 : 1) * 1.3, 0, 0));
   }
 }
 
@@ -279,11 +319,9 @@ function rectHit(a, b) {
 function update() {
   // スポーン処理（ぽつぽつ降ってくる）
   spawnTimer++;
-  if (spawnTimer > 85) {
+  if (spawnTimer > 55) {
     spawnTimer = 0;
-    if (items.length + enemies.length < 28) {
-      spawnDrop();
-    }
+    spawnDrop();
   }
 
   // プレイヤー移動
@@ -370,89 +408,55 @@ function update() {
       e.vy = 0;
     }
 
-    // カメの甲羅スピンが他の敵をなぎ倒す
-    if (e.type === 'turtle' && e.state === 'spin') {
-      for (let j = enemies.length - 1; j >= 0; j--) {
-        if (i === j) continue;
-        const other = enemies[j];
-        if (rectHit(e, other)) {
-          addParticles(other.x + other.w/2, other.y + other.h/2, '#ffcc00', 8);
-          sfxStomp();
-          score += 200;
-          enemies.splice(j, 1);
-          if (j < i) i--;
-        }
-      }
-    }
-
     // プレイヤーとの接触判定
     if (rectHit(player, e)) {
       const prevBottom = (player.y - player.vy) + player.h;
       const isStomp = player.vy > 0 && prevBottom <= e.y + e.h * 0.65;
+      const harmless = e.w < footSize(); // 足より小さい敵はダメージなし
 
       if (isStomp) {
-        // 踏んだ！
-        player.vy = -8.5;
+        // 踏んだ！ 小さい敵は軽く踏める（バウンドも小さい）
+        player.vy = harmless ? -5.5 : -8.5;
         sfxStomp();
         score += 100;
 
-        if (e.type === 'goomba') {
-          // 踏むと両側に分かれて増える！踏んだ直後はダメージ判定なし
-          const spawnX = e.x;
-          const spawnY = e.y;
-          enemies.splice(i, 1);
+        // 踏むと両側に分かれて増える。ちょっと小さく、ちょっと違う色に
+        const spawnX = e.x;
+        const spawnY = e.y;
+        const ps = e.size;
+        const hue = e.hue, light = e.light;
+        enemies.splice(i, 1);
 
-          for (const dir of [-1, 1]) {
-            enemies.push({
-              type: 'goomba',
-              x: Math.max(4, Math.min(canvas.width - 28, spawnX + dir * 14)),
-              y: spawnY - 4,
-              vx: dir * (1.8 + Math.random() * 0.8),
-              vy: -4.5,
-              w: 24,
-              h: 24,
-              safeTimer: 45, // 踏んだ直後はダメージ判定なし
-              frame: 0
-            });
-          }
-          addParticles(spawnX + 12, spawnY + 12, '#c84c0c', 10);
-        } else if (e.type === 'turtle') {
-          if (e.state === 'walk') {
-            e.state = 'shell';
-            e.h = 20;
-            e.y = GROUND_Y - e.h;
-            e.vx = 0;
-            e.safeTimer = 20;
-          } else if (e.state === 'shell') {
-            e.state = 'spin';
-            e.vx = (player.x + player.w/2 < e.x + e.w/2 ? 1 : -1) * 6.5;
-            e.safeTimer = 15;
-            sfxShell();
-          } else if (e.state === 'spin') {
-            e.state = 'shell';
-            e.vx = 0;
-            e.safeTimer = 20;
-          }
+        const cs = Math.max(ENEMY_MIN, ps * ENEMY_SHRINK);
+        const room = MAX_ENEMIES - enemies.length;
+        const n = room >= 2 ? 2 : (room === 1 ? 1 : 0);
+        const dirs = Math.random() < 0.5 ? [-1, 1] : [1, -1];
+        for (let k = 0; k < n; k++) {
+          const dir = dirs[k];
+          const off = Math.max(2, cs * 0.35); // 微妙に重なる位置
+          enemies.push(makeEnemy(
+            Math.max(0, Math.min(canvas.width - cs, spawnX + (ps - cs) / 2 + dir * off)),
+            spawnY - 2,
+            cs,
+            (hue + (Math.random() - 0.5) * 40 + 360) % 360,
+            Math.max(28, Math.min(62, light + (Math.random() - 0.5) * 16)),
+            dir * (1.2 + Math.random() * 1.0),
+            -3.5 - Math.random() * 1.5,
+            harmless ? 0 : 45 // 大きいキノコの分裂直後だけ無敵
+          ));
         }
-      } else {
-        // 横・下から接触
-        if (e.type === 'turtle' && e.state === 'shell') {
-          // 止まっている甲羅を蹴る
-          e.state = 'spin';
-          e.vx = (player.x + player.w/2 < e.x + e.w/2 ? 1 : -1) * 6.5;
-          e.safeTimer = 15;
-          sfxShell();
-        } else if (e.safeTimer <= 0 && player.invuln <= 0) {
-          // ダメージを受けると無限に小さくなっていく！
-          const oldH = player.h;
-          player.scaleY *= 0.65;
-          player.scaleX *= 0.72;
-          player.y += (oldH - player.h);
-          player.invuln = 55;
-          player.vy = -5;
-          sfxShrink();
-          addParticles(player.x + player.w/2, player.y + player.h/2, '#ffffff', 12);
-        }
+        const pc = enemies.length > 60 ? 2 : 6;
+        if (particles.length < 160) addParticles(spawnX + ps / 2, spawnY + ps / 2, e.capColor, pc);
+      } else if (!harmless && e.safeTimer <= 0 && player.invuln <= 0) {
+        // 足より大きいキノコに横・下から当たると、無限に小さくなっていく！
+        const oldH = player.h;
+        player.scaleY *= 0.65;
+        player.scaleX *= 0.72;
+        player.y += (oldH - player.h);
+        player.invuln = 55;
+        player.vy = -5;
+        sfxShrink();
+        addParticles(player.x + player.w/2, player.y + player.h/2, '#ffffff', 12);
       }
     }
   }
@@ -576,62 +580,48 @@ function drawItems() {
 }
 
 function drawEnemies() {
+  const fs = footSize();
   enemies.forEach(e => {
     // 分裂直後の無敵点滅
     if (e.safeTimer > 0 && Math.floor(e.safeTimer / 3) % 2 === 0) {
       ctx.globalAlpha = 0.55;
     }
-
-    if (e.type === 'goomba') {
-      const walk = Math.floor(e.frame) % 2 === 0 ? -1 : 1;
-      // 傘（茶色）
-      ctx.fillStyle = '#c84c0c';
-      ctx.fillRect(e.x + 4, e.y, e.w - 8, 6);
-      ctx.fillRect(e.x + 1, e.y + 5, e.w - 2, 9);
+    const walk = Math.floor(e.frame) % 2 === 0 ? -1 : 1;
+    ctx.save();
+    ctx.translate(e.x, e.y);
+    const sc = e.size / ENEMY_BASE;
+    ctx.scale(sc, sc);
+    // 傘（個体ごとに微妙に違う色）
+    ctx.fillStyle = e.capColor;
+    ctx.fillRect(4, 0, 16, 6);
+    ctx.fillRect(1, 5, 22, 9);
+    if (e.w < fs) {
+      // 足より小さい＝無害。ほんわか目
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(5, 7, 4, 5);
+      ctx.fillRect(15, 7, 4, 5);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(6, 9, 3, 3);
+      ctx.fillRect(15, 9, 3, 3);
+    } else {
       // 怒り眉と目
       ctx.fillStyle = '#fff';
-      ctx.fillRect(e.x + 5, e.y + 7, 4, 5);
-      ctx.fillRect(e.x + 15, e.y + 7, 4, 5);
+      ctx.fillRect(5, 7, 4, 5);
+      ctx.fillRect(15, 7, 4, 5);
       ctx.fillStyle = '#000';
-      ctx.fillRect(e.x + 7, e.y + 8, 2, 4);
-      ctx.fillRect(e.x + 15, e.y + 8, 2, 4);
-      ctx.fillRect(e.x + 5, e.y + 6, 5, 2);
-      ctx.fillRect(e.x + 14, e.y + 6, 5, 2);
-      // 軸
-      ctx.fillStyle = '#fcbcb0';
-      ctx.fillRect(e.x + 7, e.y + 14, 10, 6);
-      // 足
-      ctx.fillStyle = '#000';
-      ctx.fillRect(e.x + 3 + walk, e.y + 19, 7, 5);
-      ctx.fillRect(e.x + 14 - walk, e.y + 19, 7, 5);
-    } else if (e.type === 'turtle') {
-      if (e.state === 'walk') {
-        const dir = e.vx >= 0 ? 1 : -1;
-        const walk = Math.floor(e.frame) % 2 === 0 ? 1 : -1;
-        // 頭
-        ctx.fillStyle = '#f8b800';
-        const headX = dir > 0 ? e.x + 14 : e.x;
-        ctx.fillRect(headX, e.y + 2, 10, 10);
-        ctx.fillStyle = '#000';
-        ctx.fillRect(dir > 0 ? headX + 6 : headX + 2, e.y + 4, 2, 3);
-        // 甲羅（緑）
-        ctx.fillStyle = '#00a800';
-        ctx.fillRect(e.x + 3, e.y + 10, 18, 16);
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(e.x + 4, e.y + 11, 16, 14);
-        // 足
-        ctx.fillStyle = '#f8b800';
-        ctx.fillRect(e.x + 4 + walk, e.y + 26, 6, 6);
-        ctx.fillRect(e.x + 14 - walk, e.y + 26, 6, 6);
-      } else {
-        // 甲羅状態
-        ctx.fillStyle = '#00a800';
-        ctx.fillRect(e.x + 1, e.y + 2, e.w - 2, e.h - 2);
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(e.x + 4, e.y + 14, e.w - 8, 4);
-      }
+      ctx.fillRect(7, 8, 2, 4);
+      ctx.fillRect(15, 8, 2, 4);
+      ctx.fillRect(5, 6, 5, 2);
+      ctx.fillRect(14, 6, 5, 2);
     }
+    // 軸
+    ctx.fillStyle = '#fcbcb0';
+    ctx.fillRect(7, 14, 10, 6);
+    // 足
+    ctx.fillStyle = e.darkColor;
+    ctx.fillRect(3 + walk, 19, 7, 5);
+    ctx.fillRect(14 - walk, 19, 7, 5);
+    ctx.restore();
     ctx.globalAlpha = 1.0;
   });
 }
@@ -647,10 +637,25 @@ function drawUI() {
     : `1/${(1 / player.scaleY).toFixed(1)}`;
   ctx.fillText(`HEIGHT: ${heightRatio}`, 200, 28);
   ctx.fillText(`ENEMIES: ${enemies.length}`, 375, 28);
+  if (slowFactor < 1 && Math.floor(performance.now() / 300) % 2 === 0) {
+    ctx.fillStyle = '#ffec27';
+    ctx.fillText('SLOWDOWN', 200, 46);
+  }
 }
 
+// 数が多いと処理落ち風にスロー＆カクつく
+let slowFactor = 1;
+let slowAcc = 0;
 function loop() {
-  update();
+  const n = enemies.length;
+  slowFactor = n <= SLOW_START ? 1 : Math.max(0.4, 1 - (n - SLOW_START) / 400 * 0.6);
+  slowAcc += slowFactor;
+  while (slowAcc >= 1) { update(); slowAcc -= 1; }
+  // たまに描画をスキップ（ファミコンのチラつき・処理落ち風）
+  if (slowFactor < 1 && Math.random() < (1 - slowFactor) * 0.45) {
+    requestAnimationFrame(loop);
+    return;
+  }
   drawBackground();
   drawItems();
   drawEnemies();
