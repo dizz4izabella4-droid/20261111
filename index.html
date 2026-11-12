@@ -86,6 +86,7 @@ header{display:flex;flex-direction:column;align-items:center;gap:10px;padding-to
 .txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .en{font-size:10px;font-weight:700;color:#5a3a68;letter-spacing:.08em;line-height:1.3}
 .ds{font-size:15px;font-weight:700;color:#3e2448;letter-spacing:.04em}
+.nt{display:block;margin-top:3px;font-size:11.5px;font-weight:700;line-height:1.5;color:#5b4466;letter-spacing:.02em}
 .tag{flex:none;font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:var(--cL);color:var(--cD);letter-spacing:.06em}
 .rec{position:absolute;top:-9px;right:48px;padding:2px 10px;border-radius:999px;background:var(--lemon);color:#7a5a10;font-size:10px;font-weight:800;
   letter-spacing:.06em;box-shadow:0 2px 0 var(--lemonD);transform:rotate(2deg)}
@@ -228,7 +229,7 @@ const APPS=[
   {path:'tori-to-kemono/', ja:'鳥と獣の戦い', name:'BIRDS VS BEASTS', for:'mobile', color:'pink', icon:'bird',
    desc:'置いて対戦'},
   {path:'kumiwake-bou/', ja:'クワイヤダ', name:'KUWAIYADA', for:'both', color:'lemon', icon:'loop',
-   desc:'クワイヤダ'},
+   desc:'クワイヤダ', note:'某〇〇をできるようにしただけなので、面白いのは保証済み。（オリジナリティーは皆無）'},
   {path:'glass-breaker/', ja:'ガラス割り', name:'GLASS BREAKER', for:'mobile', color:'mint', icon:'glass',
    desc:'叩いて割る'},
 ];
@@ -256,7 +257,8 @@ const items=APPS.map((a,i)=>{
   const en=document.createElement('span'); en.className='en'; en.textContent=a.name;
   const ds=document.createElement('span'); ds.className='ds'; ds.textContent=a.desc;
   const tx=document.createElement('span'); tx.className='txt'; tx.append(en,ds);
-  el.setAttribute('aria-label',a.ja+'（'+a.desc+'）');
+  if(a.note){ const nt=document.createElement('span'); nt.className='nt'; nt.textContent=a.note; tx.appendChild(nt); }
+  el.setAttribute('aria-label',a.ja+'（'+a.desc+(a.note?'。'+a.note:'')+'）');
   el.append(ic,tx);
   { const t=document.createElement('span'); t.className='tag'; t.textContent=a.for==='both'?'どちらも':LABEL[a.for]+'むけ'; el.appendChild(t); }
   if(a.for===myDev||a.for==='both'){ const r=document.createElement('span'); r.className='rec'; r.textContent='この端末におすすめ'; el.appendChild(r); }
