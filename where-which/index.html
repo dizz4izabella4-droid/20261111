@@ -2381,6 +2381,12 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         }, HOLD_MS);
       }
 
+      // 「うん」と こたえた あとに、つづけて きく しつもん
+      const YES_FOLLOWUP = {
+        'かなしく\u3000なる\u3000ことばって\u3000ある？': 'どんな\u3000ことば？',
+        'ねえ、ほかにも\u3000つながる\u3000ことばは\u3000ある？': 'どんな\u3000ことば？',
+      };
+
       function onQuickReply(kind) {
         if (kind === 'wait') {
           // 「ちょっと まって」：へんじが くるまで、いつまでも まつ
@@ -2395,7 +2401,30 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
           return;
         }
         const reply = kind === 'yes' ? 'うん' : 'いいえ';
+        const askedText = state.pending ? state.pending.text : '';
+        const follow = kind === 'yes' ? YES_FOLLOWUP[askedText] : null;
         consumePendingAnswer(reply);
+        if (follow) {
+          // 「うん」で おわらずに、つづきを きく（れい：かなしく なる ことばって ある？ → どんな ことば？）
+          if (!maybeSpeakLevelUp()) {
+            state.pending = { kind: 'ask', at: Date.now(), text: follow };
+            speakDialogue({
+              id: `follow_${Date.now()}`,
+              category: 'しつもん',
+              ask: true,
+              text: follow,
+              question: true,
+              yesNo: false,
+              sentences: [
+                splitLineIntoChunks(pickRandomItem(['そうなんだ！', 'へえ、あるんだね。', 'うんうん、そうだよね。'])),
+                splitLineIntoChunks(follow),
+              ],
+            });
+            startHold(false);
+            showFeedback('こたえは、したの ことばに ひらがな5もじまでで いれてね。（グループは えらばなくて いいよ）', false);
+          }
+          return;
+        }
         if (!maybeSpeakLevelUp()) {
           triggerNextSpeech({ preferredTypes: [kind === 'yes' ? 'うんへのへんじ' : 'いいえへのへんじ'] });
         }
