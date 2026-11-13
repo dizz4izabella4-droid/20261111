@@ -95,6 +95,31 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px;pa
 @keyframes walkBob{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-6px) rotate(-2deg)}75%{transform:translateY(-6px) rotate(2deg)}}
 .walk-bobbing{animation:walkBob .55s ease-in-out infinite}
 
+/* ===== きもちエフェクト（かおは いじらず、まわりに マークを だす） ===== */
+#character-sprite-inner{position:relative}
+#character-emote{display:flex;transform-origin:50% 100%}
+#emote-fx{position:absolute;left:50%;top:0;width:0;height:0;pointer-events:none;z-index:3}
+.fx{position:absolute;left:0;top:0;opacity:0;will-change:transform,opacity;animation:fxRise var(--t,1.6s) ease-out var(--d,0s) forwards}
+.fx svg{display:block;width:var(--s,22px);height:var(--s,22px);margin:calc(var(--s,22px) / -2) 0 0 calc(var(--s,22px) / -2)}
+.fx.pop{animation-name:fxPop}
+.fx.fall{animation-name:fxFall}
+.fx .mk{display:grid;place-items:center;min-width:44px;height:44px;margin:-22px 0 0 -22px;padding:0 6px;border-radius:50%;background:#fff;box-shadow:0 3px 0 var(--line);font-weight:900;font-size:26px;line-height:1;color:var(--ink)}
+.fx .mk.a{color:var(--pinkD)}
+.fx .mk.q{color:var(--lavD)}
+@keyframes fxRise{0%{opacity:0;transform:translate(var(--x,0),var(--y,0)) scale(.3) rotate(0)}18%{opacity:1}100%{opacity:0;transform:translate(calc(var(--x,0) + var(--dx,0px)),calc(var(--y,0) + var(--dy,-40px))) scale(1) rotate(var(--r,0deg))}}
+@keyframes fxFall{0%{opacity:0;transform:translate(var(--x,0),var(--y,0)) scale(.6)}15%{opacity:1}100%{opacity:0;transform:translate(var(--x,0),calc(var(--y,0) + var(--dy,50px))) scale(1)}}
+@keyframes fxPop{0%{opacity:0;transform:translate(var(--x,0),var(--y,0)) scale(.2)}16%{opacity:1;transform:translate(var(--x,0),var(--y,0)) scale(1.3)}30%{transform:translate(var(--x,0),var(--y,0)) scale(1)}78%{opacity:1}100%{opacity:0;transform:translate(var(--x,0),calc(var(--y,0) - 6px)) scale(1)}}
+@keyframes emoHop{0%,100%{transform:translateY(0) scale(1,1)}12%{transform:translateY(0) scale(1.08,.9)}30%{transform:translateY(-16px) scale(.96,1.06)}48%{transform:translateY(0) scale(1.06,.93)}64%{transform:translateY(-10px)}80%{transform:translateY(0) scale(1.03,.97)}}
+@keyframes emoDroop{0%{transform:none;filter:none}25%,80%{transform:translateY(7px) rotate(-4deg) scale(1,.93);filter:saturate(.55) brightness(.93)}100%{transform:none;filter:none}}
+@keyframes emoJump{0%,100%{transform:translateY(0)}14%{transform:translateY(-22px) scale(.94,1.08)}30%{transform:translateY(0) scale(1.08,.9)}42%{transform:translateX(-4px)}54%{transform:translateX(4px)}66%{transform:translateX(-2px)}80%{transform:none}}
+@keyframes emoSway{0%,100%{transform:rotate(0)}25%{transform:rotate(-6deg)}75%{transform:rotate(6deg)}}
+@keyframes emoSleep{0%,100%{transform:none}50%{transform:translateY(4px) scale(1.02,.96)}}
+.emo-hop{animation:emoHop 1.3s ease-in-out}
+.emo-droop{animation:emoDroop 3s ease-in-out}
+.emo-jump{animation:emoJump 1s ease-out}
+.emo-sway{animation:emoSway 1.8s ease-in-out 2}
+.emo-sleep{animation:emoSleep 2.4s ease-in-out 2}
+
 /* ===== 交流レベル ===== */
 .level{background:var(--white);border-radius:20px;padding:9px 14px 8px;box-shadow:0 3px 0 var(--line)}
 .level-row{display:flex;align-items:center;gap:10px}
@@ -260,7 +285,8 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
 
       <div id="character-mover" class="hidden">
         <div id="character-sprite-inner" class="presence-float">
-          <img id="character-image" src="" alt="キャラクター">
+          <div id="character-emote"><img id="character-image" src="" alt="キャラクター"></div>
+          <div id="emote-fx" aria-hidden="true"></div>
         </div>
         <div class="shadow"></div>
       </div>
@@ -1145,6 +1171,7 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
         levelUpQueue: null,
         exhausted: false,
         hold: false,
+        emoteTimer: null,
         holdTimer: null,
         lastTypedAt: 0,
         autoPlayEnabled: true,
@@ -1234,6 +1261,8 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
         levelupNum: document.getElementById('levelup-num'),
         levelupGenres: document.getElementById('levelup-genres'),
         topicCount: document.getElementById('topic-count'),
+        characterEmote: document.getElementById('character-emote'),
+        emoteFx: document.getElementById('emote-fx'),
         quick: document.getElementById('quick-replies'),
         qrYes: document.getElementById('qr-yes'),
         qrNo: document.getElementById('qr-no'),
@@ -2199,10 +2228,103 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
         return dom.wordbookModal.classList.contains('flex') || dom.cropModal.classList.contains('flex');
       }
 
+      // ===== きもちエフェクト =====
+      const FX_SVG = {
+        heart: (c) => `<svg viewBox="0 0 24 24"><path fill="${c}" d="M12 21s-7.5-4.6-9.6-9.4C1 8.3 3 5 6.2 5c2 0 3.5 1.1 4.3 2.5h3C14.3 6.1 15.800 5 17.800 5 21 5 23 8.300 21.600 11.600 19.500 16.400 12 21 12 21z"/></svg>`,
+        spark: (c) => `<svg viewBox="0 0 24 24"><path fill="${c}" d="M12 1.500c.9 5.200 2.300 8 5.500 9 .4.100.4.800 0 .9-3.200 1-4.600 3.800-5.500 9-.9-5.200-2.300-8-5.500-9-.4-.1-.4-.8 0-.9 3.200-1 4.600-3.800 5.500-9z"/></svg>`,
+        drop: (c) => `<svg viewBox="0 0 24 24"><path fill="${c}" d="M12 2C9 7 5.500 10.800 5.500 14.800a6.500 6.500 0 0013 0C18.500 10.800 15 7 12 2z"/><ellipse cx="9.600" cy="15" rx="1.500" ry="2.300" fill="#fff" opacity=".6"/></svg>`,
+        cloud: () => `<svg viewBox="0 0 48 30"><path fill="#b9b2cc" d="M12 26a8 8 0 01-1.500-15.900A10 10 0 0130 7.500a8.500 8.500 0 0110 .5 8.500 8.500 0 01-2 18z"/><path stroke="#8f86a8" stroke-width="2.500" stroke-linecap="round" d="M14 28v-1M24 29v-2M34 28v-1"/></svg>`,
+      };
+      const FX_PINK = '#ff8fb3', FX_LEMON = '#ffd54a', FX_BLUE = '#7cc8ff', FX_MINT = '#4fd1a5';
+
+      function fxAdd(html, opt) {
+        const el = document.createElement('div');
+        el.className = 'fx ' + (opt.cls || '');
+        const st = el.style;
+        st.setProperty('--x', (opt.x || 0) + 'px');
+        st.setProperty('--y', (opt.y || 0) + 'px');
+        st.setProperty('--dx', (opt.dx || 0) + 'px');
+        st.setProperty('--dy', (opt.dy === undefined ? -40 : opt.dy) + 'px');
+        st.setProperty('--r', (opt.r || 0) + 'deg');
+        st.setProperty('--d', (opt.d || 0) + 's');
+        st.setProperty('--t', (opt.t || 1.6) + 's');
+        st.setProperty('--s', (opt.s || 22) + 'px');
+        el.innerHTML = html;
+        dom.emoteFx.appendChild(el);
+      }
+
+      function showEmotion(kind) {
+        const body = dom.characterEmote;
+        body.className = '';
+        dom.emoteFx.innerHTML = '';
+        void body.offsetWidth; // アニメを やりなおす
+        const rnd = (a, b) => a + Math.random() * (b - a);
+        const topY = -22;
+        let dur = 2.4;
+        if (kind === 'happy' || kind === 'big') {
+          body.classList.add('emo-hop');
+          const n = kind === 'big' ? 9 : 5;
+          for (let i = 0; i < n; i++) {
+            const side = i % 2 ? 1 : -1;
+            const isHeart = i % 3 !== 0;
+            fxAdd((isHeart ? FX_SVG.heart : FX_SVG.spark)(isHeart ? FX_PINK : FX_LEMON), {
+              x: side * rnd(26, 62), y: rnd(10, 70), dx: side * rnd(4, 18), dy: -rnd(30, 60),
+              r: side * rnd(10, 30), d: i * 0.1, t: rnd(1.3, 1.9), s: rnd(22, 36),
+            });
+          }
+          dur = 2.4;
+        } else if (kind === 'sad') {
+          body.classList.add('emo-droop');
+          fxAdd(FX_SVG.cloud(), { cls: 'pop', x: 0, y: topY - 6, s: 62, t: 3 });
+          [-34, -12, 14, 36].forEach((x, i) => {
+            fxAdd(FX_SVG.drop(FX_BLUE), { cls: 'fall', x, y: 26 + (i % 2) * 8, dy: rnd(36, 52), d: 0.3 + i * 0.35, t: 1.2, s: 18 });
+          });
+          dur = 3.2;
+        } else if (kind === 'surprise') {
+          body.classList.add('emo-jump');
+          fxAdd('<div class="mk a">！</div>', { cls: 'pop', x: 0, y: topY - 8, t: 1.6 });
+          [-1, 1].forEach((side) => {
+            fxAdd(FX_SVG.spark(FX_LEMON), { x: side * 48, y: 24, dx: side * 12, dy: -14, r: side * 20, t: 0.9, s: 24 });
+          });
+        } else if (kind === 'think') {
+          body.classList.add('emo-sway');
+          fxAdd('<div class="mk q">？</div>', { cls: 'pop', x: 8, y: topY - 8, t: 2.6 });
+          dur = 3;
+        } else if (kind === 'sleepy') {
+          body.classList.add('emo-sleep');
+          ['Z', 'z', 'z'].forEach((ch, i) => {
+            fxAdd(`<div class="mk q" style="min-width:0;width:auto;height:auto;background:none;box-shadow:none;font-size:${22 - i * 4}px;margin:-10px 0 0 -6px">${ch}</div>`, {
+              x: 30 + i * 12, y: 0 - i * 8, dx: 14, dy: -28, d: i * 0.5, t: 2, s: 20,
+            });
+          });
+          dur = 3.6;
+        } else {
+          return;
+        }
+        clearTimeout(state.emoteTimer);
+        state.emoteTimer = setTimeout(() => {
+          body.className = '';
+          dom.emoteFx.innerHTML = '';
+        }, dur * 1000 + 600);
+      }
+
+      // おはなしの しゅるいから、きもちを きめる
+      function emotionFor(dialogue) {
+        const c = dialogue.category || '';
+        if (c === 'ネタぎれ') return 'sad';
+        if (c === 'レベルアップ') return 'big';
+        if (/ほめる|おぼえたこと|うんへのへんじ/.test(c)) return 'happy';
+        if (/きづき|おねだり|いたずら/.test(c)) return 'surprise';
+        if (dialogue.question || /いいえへのへんじ|かんがえる|ぎもん|しつもん/.test(c)) return 'think';
+        return null;
+      }
+
       function speakDialogue(dialogue) {
         clearChunkTimers();
         stopAutoTimers();
         releaseHold();
+        const emo = emotionFor(dialogue);
+        if (emo) showEmotion(emo);
 
         state.isSpeaking = true;
         state.currentSentences = dialogue.sentences;
