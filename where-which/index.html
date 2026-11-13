@@ -163,6 +163,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px;pa
 .metarow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 4px}
 .quick{justify-content:center;margin:0 0 8px}
 #input-word::placeholder{font-size:12px}
+#select-genre.locked,#select-genre:disabled{background:#ece9f1;color:#a9a3b6;border-color:#dcd7e6;opacity:.75}
 #speech-category-tag{background:var(--lavS);color:var(--lavD);font-weight:800;font-size:10px;padding:2px 9px;border-radius:999px}
 .next{border:0;border-radius:999px;padding:4px 11px 5px;background:var(--pink);color:#fff;font-weight:800;font-size:12px;box-shadow:0 3px 0 var(--pinkD);display:inline-flex;align-items:center;gap:3px}
 .next:active{transform:translateY(2px);box-shadow:0 1px 0 var(--pinkD)}
@@ -582,6 +583,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         { id: 'jikan', label: 'じかん', level: 4 },
         { id: 'gainen', label: 'かんがえ・がいねん', level: 5 },
         { id: 'bunka', label: 'ぶんか・あそび', level: 6 },
+        { id: 'kotae', label: 'こたえ', level: 1, hidden: true }, // しつもんへの こたえ専用（えらべない）
       ];
 
       // 交流レベル。LEVEL_TABLE[n-1] が Lv.n に必要な累計経験値（あとから数字だけ直せる）
@@ -2731,9 +2733,11 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
           startHold(next.yesNo);
         }
         if (next.ask) {
-          showFeedback('しつもんの こたえは、したの ことばに ひらがな5もじまでで いれて おしえてね。', false);
+          showFeedback('しつもんの こたえは、したの ことばに ひらがな5もじまでで いれてね。（グループは えらばなくて いいよ）', false);
         }
       }
+
+      setInterval(syncGenreLock, 300);
 
       function stopAutoTimers() {
         if (state.autoTimerId) {
@@ -2818,8 +2822,24 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         dom.charCounter.className = val.length > 5 ? 'over' : '';
       }
 
+      // いま、しつもんに こたえる ばんか（こたえる ときは グループを えらばない）
+      function activeAsk() {
+        const pend = state.pending;
+        if (!pend || pend.kind !== 'ask') return null;
+        if (!pend.forever && Date.now() - pend.at > PENDING_WINDOW_MS) return null;
+        return pend;
+      }
+
+      function syncGenreLock() {
+        const on = !!activeAsk();
+        dom.selectGenre.disabled = on;
+        dom.selectGenre.classList.toggle('locked', on);
+      }
+
       function teachWord(rawWord, genreId) {
         const cleanWord = normalizeHiraganaInput(rawWord);
+        const asking = activeAsk();
+        if (asking) genreId = 'kotae';
 
         if (!cleanWord) {
           showFeedback('おしえる ことばを ひらがなで いれてね。', true);
@@ -2839,7 +2859,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
           return false;
         }
 
-        if (!isGenreUnlocked(genreId)) {
+        if (!asking && !isGenreUnlocked(genreId)) {
           const def = GENRE_DEFS.find((g) => g.id === genreId);
           showFeedback(`その グループは まだ ひらいてないよ（Lv.${def ? def.level : '?'} で ひらくよ）。`, true);
           return false;
@@ -2847,7 +2867,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
 
         const existing = state.words.find((w) => w.text === cleanWord);
         if (existing) {
-          existing.genreId = genreId;
+          if (!asking) existing.genreId = genreId; // しつもんの こたえの ときは、もとの グループを かえない
           existing.updatedAt = Date.now();
           saveWords();
           updateWordCountUI();
@@ -2865,6 +2885,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
           id: `word_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
           text: cleanWord,
           genreId,
+          answerTo: asking ? asking.text : undefined,
           createdAt: Date.now(),
           usageCount: 0,
           lastUsedAt: null,
@@ -2896,7 +2917,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         const prev = dom.selectGenre.value;
         dom.selectGenre.innerHTML = '';
         const unlocked = unlockedGenreIds();
-        state.genres.forEach((genre) => {
+        state.genres.filter((g) => !g.hidden).forEach((genre) => {
           const opt = document.createElement('option');
           opt.value = genre.id;
           if (unlocked.has(genre.id)) {
