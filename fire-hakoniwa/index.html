@@ -76,7 +76,7 @@ body.touch .pc-only{display:none}body.touch .touch-only{display:block}
 (()=>{
 'use strict';
 /* ====== 定数 ====== */
-const W=416,H=288,TW=32,TH=16,N=12,OX=208,OY=44,CAP=120,T_SIDE=18;
+const W=416,H=288,TW=32,TH=16,N=12,OX=208,OY=44,CAP=180,T_SIDE=18;
 const BMAX=[50,66,88,115];            // サイズ別の燃焼フレーム数
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 cv.width=W;cv.height=H;
@@ -227,7 +227,7 @@ function spawnWave(n){
 }
 function rollSize(){const r=Math.random();return r<0.35?0:r<0.7?1:r<0.92?2:3;}
 function spawnBaby(m){
-  for(let n=0;n<2;n++)spawnBaby1(m);
+  for(let n=0;n<4;n++)spawnBaby1(m);
 }
 function spawnBaby1(m){
   for(let t=0;t<8;t++){
@@ -248,9 +248,9 @@ function purgeOverflow(){
     }
   }
   const cand=mush.filter(m=>m.burn===0&&m.delay===0&&m.sz>=1);
-  for(let k=0;k<3&&cand.length;k++){
+  for(let k=0;k<(mycs.length<3?1:0)&&cand.length;k++){
     const m=cand.splice(irnd(0,cand.length-1),1)[0];
-    if(mycs.length<10&&!mycs.some(c=>Math.hypot(c.x-m.x,c.y-m.y)<0.9))mycs.push(makeMyc(m.x,m.y));
+    if(mycs.length<6&&!mycs.some(c=>Math.hypot(c.x-m.x,c.y-m.y)<0.9))mycs.push(makeMyc(m.x,m.y));
   }
   showBanner('OVERGROWN','Excess mushrooms swept away — spores settle as mycelium');
 }
@@ -288,7 +288,7 @@ function burnTick(m,burningCount){
     for(let k=0;k<5;k++)parts.push({k:'a',x:m.x+rnd(-.15,.15),y:m.y+rnd(-.15,.15),z:rnd(hh*.4,hh),vx:rnd(-.01,.01),vy:rnd(-.01,.01),vz:rnd(0.02,0.3),life:0,max:irnd(50,90),sz:1});
     for(let k=0;k<2;k++)smoke(m.x,m.y,hh);
     scorchAt(m.x,m.y,0.35);
-    if(Math.random()<[0.04,0.15,0.28,0.4][m.sz]&&mycs.length<10&&!mycs.some(c=>Math.hypot(c.x-m.x,c.y-m.y)<0.9))mycs.push(makeMyc(m.x,m.y));
+    if(Math.random()<[0.03,0.1,0.2,0.3][m.sz]&&mycs.length<6&&!mycs.some(c=>Math.hypot(c.x-m.x,c.y-m.y)<0.9))mycs.push(makeMyc(m.x,m.y));
     scorchAt(m.x+.7,m.y,0.1);scorchAt(m.x-.7,m.y,0.1);scorchAt(m.x,m.y+.7,0.1);scorchAt(m.x,m.y-.7,0.1);
     return true;
   }
@@ -301,7 +301,7 @@ function updateMush(m,bc){
   if(m.burn>0)return burnTick(m,bc);
   m.age++;
   if(m.sz<2&&m.age>(m.sz===0?360:1000)){m.sz++;m.age=0;}
-  if(m.sz>=1){m.grow--;if(m.grow<=0){m.grow=irnd(550,950);if(mush.length<CAP)spawnBaby(m);}}
+  if(m.sz>=1){m.grow--;if(m.grow<=0){m.grow=irnd(450,800);if(mush.length<CAP)spawnBaby(m);}}
   m.wt--;
   if(m.wt<=0){
     if(Math.random()<0.4)m.sp=0;else{m.sp=0.011;m.hd=rnd(0,6.28);}
@@ -365,14 +365,14 @@ function updateMyc(c){
     c.spT--;
     if(c.spT<=0){
       c.spT=irnd(110,220);
-      const n=Math.random()<0.3?4:2;
+      const n=Math.random()<0.3?6:3;
       for(let k=0;k<n;k++)if(mush.length<CAP)spawnAround(c.x,c.y,0.9);
     }
   }
   c.rootT--;
   if(c.rootT<=0){
-    c.rootT=irnd(2400,3600);
-    if(mycs.length<10){
+    c.rootT=irnd(5400,8400);
+    if(mycs.length<6){
       const a=rnd(0,6.28),r=rnd(1.3,2.6),nx=c.x+Math.cos(a)*r,ny=c.y+Math.sin(a)*r;
       if(!blocked(nx,ny,0.25)&&!mycs.some(o=>Math.hypot(o.x-nx,o.y-ny)<1.0))mycs.push(makeMyc(nx,ny));
     }
