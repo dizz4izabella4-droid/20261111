@@ -158,9 +158,12 @@ body.hit #main>.bar{background:#3a0f14}
 #sPh{color:var(--gold)}
 #res{margin-top:10px;white-space:pre-wrap;font-size:13px}
 #ime{color:var(--err);font-size:12px}
-#banner{position:absolute;left:0;right:0;top:0;height:27px;z-index:4;pointer-events:none;border:1px solid var(--gold);background:#000;
-  color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:13px;letter-spacing:.16em;white-space:nowrap;overflow:hidden;box-shadow:0 0 18px rgba(216,242,122,.3)}
-#banner.show{animation:pop 1.6s ease-out forwards}
+#banner{position:absolute;left:0;right:0;top:0;height:44px;z-index:4;pointer-events:none;border:1px solid var(--gold);background:#000;
+  color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:21px;font-weight:bold;letter-spacing:.2em;white-space:nowrap;overflow:hidden;box-shadow:0 0 28px rgba(216,242,122,.55),inset 0 0 14px rgba(216,242,122,.25);text-shadow:0 0 10px var(--gold)}
+#banner.show{animation:pop 2.6s ease-out forwards}
+.phf{animation:phf 2.2s ease-out}
+@keyframes phf{0%,40%{background:var(--gold);color:#000;text-shadow:none}100%{background:transparent}}
+#sPh.phf{padding:0 5px;font-size:11px}
 @keyframes pop{0%{opacity:0;transform:scaleX(.2)}12%{opacity:1;transform:scaleX(1)}80%{opacity:1}100%{opacity:0}}
 
 /* tiles: left / center / right, 1.2% gutters, nothing overlaps */
@@ -386,6 +389,8 @@ body{display:block;padding:0;overflow:hidden;touch-action:manipulation;-webkit-u
 .c.pd{background:var(--gold);color:#021006;animation:none}
 .c.miss.pd{background:var(--err);color:#fff}
 .wl.appear{animation:wordin .16s ease-out}
+.wl.hearing .kj::after{content:"\266A";color:var(--gold);font-size:.6em;margin-left:.5em;text-shadow:none;animation:blink2 .45s steps(1) infinite}   /* 読み上げ中の印 */
+body.kbhear .k{opacity:.45}
 @keyframes wordin{0%{opacity:0;transform:translateY(5px)}100%{opacity:1;transform:none}}
 .wl.old{margin-top:0;column-gap:.4em;animation:settle .45s ease-out}
 @keyframes settle{0%{background:rgba(57,255,136,.2)}100%{background:transparent}}
@@ -399,7 +404,7 @@ body{display:block;padding:0;overflow:hidden;touch-action:manipulation;-webkit-u
 .wl.old .ent{display:none}
 .mq .kj{font:700 1em var(--ja);color:#d8ffe2;margin-right:.5em;text-shadow:inherit;letter-spacing:.1em}
 .status{font-size:9.5px;gap:1px 9px;padding:3px 8px}
-#banner{height:20px;font-size:10px;letter-spacing:.1em}
+#banner{height:34px;font-size:16px;letter-spacing:.08em}
 #res{font-size:10px}
 .lg{font-size:8px;line-height:1.3;padding:2px 5px}
 #lgDump{font-size:7.5px;line-height:1.2}
@@ -510,6 +515,7 @@ body.kbres .k[data-fn="Backspace"]{opacity:1;color:var(--gold);border-color:#5a6
   color:#d8ffe2;font:22px var(--ja);box-shadow:0 4px 14px rgba(0,0,0,.7)}
 .fc.sel{background:var(--accent);color:#021006;border-color:var(--accent);box-shadow:0 0 16px rgba(34,227,106,.6)}
 /* 背の低い画面 */
+@media (max-height:620px){ #menu{gap:6px;padding:6px 3%} #menu .mbox{padding:8px 10px 6px} #menu .ms{margin:0 0 2px} #menu .opt{gap:2px;padding:2px 6px;margin-bottom:0} #menu .od{font-size:9.5px;line-height:1.3} #menu #optGenre button,#menu #optDiff button{padding:5px 0} #menu .oc button{padding:4px 8px} #menu .start{padding:8px 0} }
 @media (max-height:740px){ .mqb.bot{display:none} .kb{--kh:43px} .mqb.top{height:34px} .mqb.top .mq{font-size:22px} .phone{gap:6px} .crt{gap:6px} }
 @media (max-height:640px){ .kb{--kh:40px;gap:4px} .mqb.top{height:28px} .mqb.top .mq{font-size:18px} .kj{font-size:22px} .rd{font-size:20px} }
 @media (max-height:560px){ .kb{--kh:36px} .k{font-size:15px} .k .h{font-size:7.5px} .k .h2{top:1px} .k .h4{bottom:1px} #keyStr{font-size:9px} }
@@ -546,7 +552,7 @@ body.kbres .k[data-fn="Backspace"]{opacity:1;color:var(--gold);border-color:#5a6
   <div class="cyber-deck">
     <div class="track-info">TARGET: <span id="trkName">The_Glass_Perimeter</span><br>STATUS: <span id="trkStatus">STANDBY</span><br>MISSION: <span id="gTrk">Iron Skyline Pursuit</span> <small>150 BPM [HIGH_TENSION]</small></div>
     <div class="waveform-sim" id="viz"></div>
-    <div class="deck-btns"><button type="button" id="dBgm">BGM: ON</button><button type="button" id="dSe">SE: ON</button><button type="button" id="dLoad">LOAD TRACK</button><button type="button" id="dLoadG">LOAD MISSION</button></div>
+    <div class="deck-btns"><button type="button" id="dBgm">BGM: ON</button><button type="button" id="dSe">SE: ON</button><button type="button" id="dVo">VOICE: ON</button><button type="button" id="dLoad">LOAD TRACK</button><button type="button" id="dLoadG">LOAD MISSION</button></div>
     <input type="file" id="trkFile" accept="audio/*" hidden><input type="file" id="gTrkFile" accept="audio/*" hidden>
   </div>
 </div>
@@ -561,7 +567,7 @@ body.kbres .k[data-fn="Backspace"]{opacity:1;color:var(--gold);border-color:#5a6
 
 <div class="win" id="main" hidden>
   <div class="bar"><span class="ico">C:\</span><span class="t" id="mTitle">Command Prompt - defense.exe</span>
-    <button id="se" type="button">SE: ON</button><button id="bgm" type="button">BGM: ON</button><button id="rst" type="button">Restart</button></div>
+    <button id="se" type="button">SE: ON</button><button id="bgm" type="button">BGM: ON</button><button id="vo" type="button">VOICE: ON</button><button id="rst" type="button">Restart</button></div>
   <div class="body" id="mainBody">
     <div id="con"></div>
     <div id="ime" hidden>IME is on. Switch to direct (half-width) input.</div>
@@ -700,12 +706,12 @@ const GENRES={
   hard:{label:'実用 難',desc:'仕事・行政・税務で使う語句。誤読しやすい読みを含む'},
   nan:{label:'難読',desc:'動植物・月の異名・和語など、難読の漢字'}};
 const COUNTS=[6,9,14,20];
-let diff='normal', genre='chuni', readHide=false, TOTAL=14, BOUNDS=[0,5,9,14];
+let diff='normal', genre='chuni', readHide=false, voiceOn=true, TOTAL=14, BOUNDS=[0,5,9,14];
 function setCount(n){ TOTAL=n; BOUNDS=[0,Math.round(n/3),Math.round(2*n/3),n]; }
 setCount(14);
 // 選んだ難易度と問題数は端末に覚えておく
-try{ const sv=JSON.parse(localStorage.getItem('cmdTypingMobile')||'{}'); if(DIFF[sv.diff]) diff=sv.diff; if(GENRES[sv.genre]) genre=sv.genre; readHide=!!sv.rh; if(COUNTS.includes(sv.n)) setCount(sv.n); }catch(e){}
-function saveOpt(){ try{ localStorage.setItem('cmdTypingMobile',JSON.stringify({diff,genre,rh:readHide,n:TOTAL})); }catch(e){} }
+try{ const sv=JSON.parse(localStorage.getItem('cmdTypingMobile')||'{}'); if(DIFF[sv.diff]) diff=sv.diff; if(GENRES[sv.genre]) genre=sv.genre; readHide=!!sv.rh; voiceOn=sv.vo!==false; if(COUNTS.includes(sv.n)) setCount(sv.n); }catch(e){}
+function saveOpt(){ try{ localStorage.setItem('cmdTypingMobile',JSON.stringify({diff,genre,rh:readHide,vo:voiceOn,n:TOTAL})); }catch(e){} }
 let lastSet='';
 function pickWords(){
   let pick,key;
@@ -1232,8 +1238,10 @@ function dummiesMiss(){
 }
 function banner(msg){
   const b=$('banner'); b.textContent='>> '+msg+' <<'; b.hidden=false; b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
-  clearTimeout(alarmT.ban); alarmT.ban=setTimeout(()=>{b.hidden=true;},1600);
+  clearTimeout(alarmT.ban); alarmT.ban=setTimeout(()=>{b.hidden=true;},2600);
 }
+// フェーズが変わったとき、ステータスのフェーズ表示と窓のタイトルを目立たせる
+function phaseFlash(){ ['sPh','mTitle'].forEach(id=>{ const e=$(id); if(!e) return; e.classList.remove('phf'); void e.offsetWidth; e.classList.add('phf'); }); }
 function swapOut(id){ const w=$(id); if(w.hidden) return; w.classList.add('swapout'); if(ok()) boom(0,.25,70,.2);
   later(()=>{ w.hidden=true; w.classList.remove('swapout'); },330); }
 function openWin(id,delay){
@@ -1413,7 +1421,7 @@ function fwMiss(){ missRun++; if(missRun>=3&&!DIFF[diff].safe) fwSet(fw-8*(missR
 // ハッキングされたときの演出: 曲が止まり、画面がノイズに埋もれ、各ウィンドウが乗っ取られて閉じる → SYSTEM HACKED → 結果
 let floodT=null;
 function gameOver(){
-  state='over'; clockStop(); update(); hintNext(); wantMod(false); document.body.classList.remove('danger');
+  speakStop(); state='over'; clockStop(); update(); hintNext(); wantMod(false); document.body.classList.remove('danger');
   setTension(1); musicCrash(); mqClear();
   marquee('侵入されました　システムの制御を奪われました','red');
   banner('SYSTEM COMPROMISED');
@@ -1455,7 +1463,7 @@ function showFail(){
   $('res').hidden=false;
   $('res').textContent=`C:\\> report.exe\n-------------------------------------\n MISSION FAILED\n ATTACKER : ${ATK} (in control)\n GENRE    : ${GENRES[genre].label}\n MODE     : ${DIFF[diff].label}\n PROGRESS : ${prog} %  (${wi} / ${TOTAL} words)\n TIME     : ${s.toFixed(1)} s\n MISS     : ${miss}\n-------------------------------------`;
 }
-function clearOver(){ clearInterval(floodT);
+function clearOver(){ clearInterval(floodT); speakStop();
   { const b=document.body; if(b.classList.contains('pwroff')){ b.classList.remove('pwroff'); b.classList.add('pwron'); setTimeout(()=>b.classList.remove('pwron'),700); } b.classList.remove('hush'); } $('hacked').hidden=true; document.body.classList.remove('danger');
   ['wBreach','wFeed','wTrace','wDump','wKey','wMon','wCopy','wWave'].forEach(id=>$(id).classList.remove('owned'));
   const ov=$('ov'); ov.classList.remove('fail'); $('rTitle').textContent='TARGET DOWN'; $('rTitle').style.setProperty('--n',11); $('rScoreL').textContent='SCORE';
@@ -1559,7 +1567,8 @@ function respond(){
   if(state!=='alert') return;
   token++; state='boot'; sirenStop(); $('alert').hidden=true; document.body.classList.remove('alert'); audio(); mqClear(); bgmStart();
   const m=$('main'); m.hidden=false; m.classList.remove('appear'); void m.offsetWidth; m.classList.add('appear'); playOpen();
-  missW=new Set(); words=pickWords(); N=words.reduce((a,w)=>a+strokesOf(w[0]),0);   // 打鍵数（各語の最後の Enter を含む）
+  missW=new Set(); words=pickWords(); if(voiceOn&&VOK) words.forEach(x=>voiceBuf(x[0]).catch(()=>{}));   // 読み上げ音声を先に読み込んでおく
+  N=words.reduce((a,w)=>a+strokesOf(w[0]),0);   // 打鍵数（各語の最後の Enter を含む）
   clockStop(); tAcc=0; wi=0;ci=0;ti=0;miss=0;streak=0;maxStreak=0;missHere=false;phase=0; missRun=0; fwLowShown=false; fwSet(100);
   con.textContent=''; $('res').hidden=true; $('banner').hidden=true;
   dummiesReset(); startPhaseStats(); update();
@@ -1572,7 +1581,7 @@ function startPhase(p){
   $('mTitle').textContent=P.title; $('sPh').textContent=(p+1)+'/3 '+P.name; $('sMl').textContent=P.meter;
   $('dTitle').textContent=P.copy;
   $('bTitle').textContent=['defense@node7: ~/firewall','trace@node7: ~/origin','counter@node7: ~/strike'][p];
-  if(p>0){ banner('PHASE '+(p+1)+': '+P.name); playBanner(); later(()=>{ document.body.classList.remove('hush'); bgmLevel(1,.35); },700); }
+  if(p>0){ banner('PHASE '+(p+1)+' / 3　'+P.name); playBanner(); bgmLevel(1,.2); phaseFlash(); }
   marquee('第'+(p+1)+'段階　'+['防御','追跡','反撃'][p],'gold');
   // 反撃フェーズ: 下の2枚（防御ログ・経路追跡）を閉じ、同じ場所に傍受とメモリダンプを開く
   const d0=p>0?700:150; if(p===2) ['wBreach','wTrace'].forEach(swapOut);
@@ -1583,6 +1592,36 @@ function startPhase(p){
 }
 // 1語の表示: 1行目に漢字・カタカナ、2行目に入力する読み（ひらがな）。打ち終えた語は小さく1行にまとめる
 let sub=0;
+// ---- 読み上げ: 事前に作った女性の音声ファイル（voice/<読みの文字コード>.mp3。作り方は tools/gen_voice.py）を Web Audio で鳴らす ----
+// 端末の音声合成は使わないので、どの端末でも同じ声になる。Web Audio なので、効果音と同じく iPhone のマナーモードに従う。
+// 単語が出たら、まず読み（ひらがな）を聞かせ、終わってから入力できる（読み上げ中のキーは無視する。時計も止めるので、聞いている時間はタイムに入らない）。
+// 単語の行をタップ（PCでは Tab）で、もう一度読む（このときは入力を止めない）。
+// 読みを隠している間（READING＝隠す、EXPERT）は、答えを先に聞かせないよう、打ち終えたあとに読む。
+const VOK=!!(window.AudioContext||window.webkitAudioContext)&&typeof fetch==='function';
+const voiceFile=r=>'voice/'+[...r].map(c=>c.codePointAt(0).toString(16)).join('-')+'.mp3';
+let hearing=false, hearT=null, vNow=null, vTok=0, voiceWarned=false; const VB={};
+// 再生できなかったとき、理由を画面に1回だけ出す（音が出ない原因をつかむため）
+function voiceWarn(why){ if(voiceWarned) return; voiceWarned=true; try{ addLine('warn','[!] 読み上げ音声を再生できません: '+why); }catch(e){} }
+function voiceBuf(r){
+  if(!VB[r]){
+    VB[r]=fetch(voiceFile(r)).then(res=>{ if(!res.ok) throw new Error('voice/'+voiceFile(r).slice(6)+' を読み込めません（HTTP '+res.status+'）'); return res.arrayBuffer(); })
+      .then(b=>new Promise((good,bad)=>{ const c=audio(); if(!c) return bad(new Error('音声を再生できない環境です')); c.decodeAudioData(b,good,bad); }));
+    VB[r].catch(()=>{ delete VB[r]; });
+  }
+  return VB[r];
+}
+function hearDone(){ clearTimeout(hearT); hearT=null; hearing=false; vNow=null; const l=newWord.line; if(l) l.classList.remove('hearing'); }
+function speakStop(){ vTok++; if(vNow){ try{ vNow.stop(); }catch(e){} } hearDone(); }
+function speakWord(r,gate){
+  speakStop(); if(!voiceOn||!VOK) return;
+  const tok=vTok;
+  if(gate){ clockStop(); hearing=true; if(newWord.line) newWord.line.classList.add('hearing'); hearT=setTimeout(hearDone,3000); }   // 3秒たっても終わらなければ（読み込み失敗など）入力を許す
+  voiceBuf(r).then(buf=>{
+    if(tok!==vTok) return;                                  // 読み込み中に、別の読み上げや停止があった
+    const c=audio(), src=c.createBufferSource(), g=c.createGain(); src.buffer=buf; g.gain.value=.9; src.connect(g); g.connect(c.destination);
+    vNow=src; src.onended=()=>{ if(vNow===src) hearDone(); }; src.start();
+  }).catch(err=>{ voiceWarn((err&&err.message)||'再生が拒否されました'); if(tok===vTok) hearDone(); });
+}
 function newWord(){
   const [r,disp]=words[wi]; const d=document.createElement('div'); d.className='wl';
   const pr=document.createElement('span'); pr.className='pr'; pr.textContent=PH[phase].prompt;
@@ -1590,7 +1629,7 @@ function newWord(){
   const rd=document.createElement('div'); rd.className='rd'; d.appendChild(rd);
   // 読みの後ろに Enter（↵）を置き、押して確定するまで次へ進まない
   // EXPERT は読みを「・」で隠し、打てた字とミスした字だけ見せる
-  const hide=!!DIFF[diff].hide||readHide;
+  const hide=!!DIFF[diff].hide||readHide; newWord.hide=hide;
   cur=[...r,'\n'].map(ch=>{ const s=document.createElement('span'); s.className='u'; s._ch=ch; s._seq=seqOf(ch); s._hid=hide&&ch!=='\n';
     s.textContent=ch==='\n'?'\u21B5':s._hid?'\u30FB':ch; if(s._hid) s.classList.add('hid'); if(ch==='\n') s.classList.add('ent'); rd.appendChild(s); return s; });
   // 次の語の予告（同じフェーズの中だけ）
@@ -1599,6 +1638,7 @@ function newWord(){
   if(newWord.line) newWord.line.classList.add('old');
   con.appendChild(d); ci=0; sub=0; wStep=0; cur[0].className='c'; wantMod(false); body.scrollTop=body.scrollHeight; d.classList.add('appear');
   newWord.line=d; hintNext();
+  if(!hide) speakWord(r,true);   // 単語が出たら読み上げ、終わってから入力できる（読みを隠している間は、打ち終えたあとに読む）
 }
 // 時計は入力している間だけ進める（フェーズの切り替えや演出の時間は、タイムと速さに数えない）
 function elapsed(){ return (tAcc+(tRun!=null?performance.now()-tRun:0))/1000; }
@@ -1646,14 +1686,15 @@ function key(ch){
   update(); return false;
 }
 // 単語の入力完了: 日本語の意味を暗く表示 → 次の単語 / 次のフェーズ
-// フェーズの切り替え: 静（曲が引いて画面が落ち着き、成功の知らせが静かに出る）→ 動（せり上がる音 → 衝撃で曲が戻り、窓が開く）
+// フェーズの切り替え: 曲を引いたり画面を暗くしたりはしない（静かにしない）。成功の知らせを出して、すぐ次のフェーズへ。
+// 新しいフェーズの始まりは、startPhase の banner() と phaseFlash() で大きく目立たせる
 function phaseBreak(){
   state='boot'; clockStop(); update(); hintNext(); kbSync();
-  document.body.classList.add('hush'); bgmLevel(.2,.8);
-  later(()=>{ musicSuccess(); typeLines(PH[phase].end,()=>later(()=>startPhase(phase+1),800),{n:2,ms:22,gap:240}); },550);
+  later(()=>{ musicSuccess(); typeLines(PH[phase].end,()=>later(()=>startPhase(phase+1),400),{n:2,ms:22,gap:240}); },250);
 }
 function wordDone(){
   const [w,disp]=words[wi]; playChord([...w].length);
+  if(newWord.hide) speakWord(w,false);   // 読みを隠している間は、打ち終えたあとに読んで答えを知らせる
   mqTop('<span class="kj">'+esc(disp)+'</span>'+esc(w));
   wi++;
   if(wi>=TOTAL){ ending(); return; }
@@ -1790,6 +1831,8 @@ window.addEventListener('keydown',e=>{
   if((state==='done'||state==='overres')&&(e.key==='Backspace'||e.key==='r')){ e.preventDefault(); retry(); return; }
   if(state==='over') return;
   if(state!=='play') return;
+  if(e.key==='Tab'){ e.preventDefault(); if(!e.repeat&&words[wi]) speakWord(words[wi][0],false); return; }
+  if(hearing){ e.preventDefault(); return; }   // 読み上げ中は入力を受けない
   if(e.key==='Process'||e.isComposing||e.keyCode===229){ $('ime').hidden=false; return; }
   if(e.key==='Enter'){ e.preventDefault(); if(!e.repeat){ playKey(true); key('\n'); } return; }
   if(/^[\u3041-\u3096\u30FC]$/.test(e.key)){ e.preventDefault(); if(!e.repeat) playKey(false); key(e.key); }
@@ -1800,6 +1843,11 @@ $('rst').addEventListener('click',()=>{ audio(); toMenu(); });
 function setSe(on){ seOn=on; ['se','dSe'].forEach(id=>$(id).textContent='SE: '+(on?'ON':'OFF')); if(!on) sirenStop(); }
 function setBgm(on){ bgmOn=on; ['bgm','dBgm'].forEach(id=>$(id).textContent='BGM: '+(on?'ON':'OFF'));
   if(on){ audio(); if(state==='boot'||state==='play') bgmStart(); if(state==='menu') menuMusicStart(); } else { bgmStop(); menuMusicStop(); } }
+function setVoice(on){ voiceOn=on; ['vo','dVo'].forEach(id=>$(id).textContent='VOICE: '+(on?'ON':'OFF')); if(!on) speakStop(); else if(state==='play'&&words[wi]&&!newWord.hide) speakWord(words[wi][0],false); saveOpt(); }
+$('vo').addEventListener('click',()=>setVoice(!voiceOn)); $('dVo').addEventListener('click',()=>setVoice(!voiceOn));
+if(!VOK) ['vo','dVo'].forEach(id=>{ $(id).textContent='VOICE: N/A'; $(id).disabled=true; }); else setVoice(voiceOn);
+// 単語の行をタップすると、もう一度読む
+con.addEventListener('click',e=>{ const l=e.target.closest&&e.target.closest('.wl'); if(l&&l===newWord.line&&state==='play'&&words[wi]) speakWord(words[wi][0],false); });
 $('se').addEventListener('click',()=>setSe(!seOn)); $('dSe').addEventListener('click',()=>setSe(!seOn));
 $('bgm').addEventListener('click',()=>setBgm(!bgmOn)); $('dBgm').addEventListener('click',()=>setBgm(!bgmOn));
 
@@ -1891,6 +1939,7 @@ function fkey(k){
     return null; }
   if(state==='done'||state==='overres'){ if(k==='Enter'){ playKey(true); toMenu(); } else if(k==='Backspace') retry(); return null; }
   if(state!=='play'){ if(k!=='Backspace') playKey(k==='Enter'); return null; }
+  if(hearing) return null;   // 読み上げ中は入力を受けない
   if(k==='Backspace'){ playKey(false); return null; }   // 打ち直しはできない（PC版と同じ）
   if(k==='Enter'){ playKey(true); return key('\n'); }
   playKey(false); return key(k);
@@ -1901,6 +1950,7 @@ function kbSync(){
   const res=state==='done'&&!naming||state==='overres';
   document.body.classList.toggle('kbwait',!(state==='play'||state==='done'&&naming));
   document.body.classList.toggle('kbres',res);
+  document.body.classList.toggle('kbhear',hearing&&state==='play');
   if(delKey){ const t=res?'RETRY':'\u232B'; if(delKey.textContent!==t) delKey.textContent=t; }
   if(state!=='play'&&hintEl) hintNext();
 }
