@@ -160,11 +160,10 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px;pa
 .btn-s.main{background:var(--mint);color:#fff;box-shadow:0 3px 0 var(--mintD)}
 
 /* ===== セリフ ===== */
-.speech{position:relative;z-index:4;margin:auto 10px calc(var(--chsize,96px) + 24px);background:rgba(255,253,255,.93);border:3px solid #fff;border-radius:22px;padding:9px 12px 8px;
-  display:flex;flex-direction:column;cursor:pointer;box-shadow:0 4px 0 var(--line),0 8px 18px rgba(107,74,122,.12);transition:transform .1s}
+.speech{position:relative;z-index:4;margin:auto 10px calc(var(--chsize,96px) + 24px);background:rgba(255,253,255,.93);border:2px solid var(--ink);border-radius:8px;padding:9px 12px 8px;
+  display:flex;flex-direction:column;cursor:pointer;box-shadow:none;transition:transform .1s}
 .speech{transition:opacity 1.2s ease,transform .1s}
 .speech.dim{opacity:.14}
-.speech::after{content:"";position:absolute;left:50%;bottom:-11px;width:16px;height:16px;background:rgba(255,253,255,.97);transform:translateX(-50%) rotate(45deg);border-radius:0 0 4px 0;box-shadow:3px 3px 0 var(--line)}
 .speech:active{transform:scale(.995)}
 .speech-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px}
 .speaker{display:flex;align-items:center;gap:8px}
@@ -238,6 +237,9 @@ body.kb .app{min-height:0}
 .nc[data-face="normal"] .f-normal,.nc[data-face="smile"] .f-smile,.nc[data-face="surprise"] .f-surprise,.nc[data-face="troubled"] .f-troubled,
 .nc[data-face="angry"] .f-angry,.nc[data-face="cry"] .f-cry,.nc[data-face="shy"] .f-shy,.nc[data-face="sleepy"] .f-sleepy{display:inline}
 .nc .m-open{display:none}
+.nc .mo{transform-box:fill-box;transform-origin:50% 40%}
+.nc[data-say="1"] .mo{animation:moTalk .34s ease-in-out infinite}
+@keyframes moTalk{0%,100%{transform:scale(1,1)}50%{transform:scale(1.12,.35)}}
 .nc[data-talk="1"] .m-closed{display:none}
 .nc[data-talk="1"] .m-open{display:inline}
 .nc .eye{transform-box:fill-box;transform-origin:center;transition:transform .06s}
@@ -2361,7 +2363,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         state.isSpeaking = false;
 
         dom.speechText.innerHTML = '';
-        state.currentSentences.forEach((chunks, sIdx) => {
+        state.currentSentences.slice(-1).forEach((chunks, sIdx) => {
           const p = document.createElement('p');
           chunks.forEach((chunkText) => {
             const span = document.createElement('span');
@@ -2728,36 +2730,36 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
           </g>
           <g class="face f-smile">
             <path d="M36 74Q42 64 48 74M72 74Q78 64 84 74" fill="none" stroke="#5b4332" stroke-width="3" stroke-linecap="round"/>
-            <path d="M51 76Q60 90 69 76Z" fill="#ef8a80" stroke="#5b4332" stroke-width="2.2" stroke-linejoin="round"/>
+            <path class="mo" d="M51 76Q60 90 69 76Z" fill="#ef8a80" stroke="#5b4332" stroke-width="2.2" stroke-linejoin="round"/>
             <ellipse cx="29" cy="82" rx="7" ry="4.4" fill="#ffb3b3" opacity=".6"/><ellipse cx="91" cy="82" rx="7" ry="4.4" fill="#ffb3b3" opacity=".6"/>
           </g>
           <g class="face f-surprise">
             <ellipse cx="42" cy="70" rx="4.4" ry="6.4" fill="#5b4332"/><ellipse cx="78" cy="70" rx="4.4" ry="6.4" fill="#5b4332"/>
-            <ellipse cx="60" cy="80" rx="4.2" ry="5.4" fill="#e8776f" stroke="#5b4332" stroke-width="2"/>
+            <ellipse class="mo" cx="60" cy="80" rx="4.2" ry="5.4" fill="#e8776f" stroke="#5b4332" stroke-width="2"/>
           </g>
           <g class="face f-troubled">
             <ellipse cx="42" cy="73" rx="3.2" ry="4.6" fill="#5b4332"/><ellipse cx="78" cy="73" rx="3.2" ry="4.6" fill="#5b4332"/>
             <path d="M34 62L49 66M86 62L71 66" stroke="#5b4332" stroke-width="2.4" stroke-linecap="round"/>
-            <path d="M51 80q4.500-4.500 9 0q4.500 4.500 9 0" fill="none" stroke="#5b4332" stroke-width="2.4" stroke-linecap="round"/>
+            <path class="mo" d="M51 80q4.500-4.500 9 0q4.500 4.500 9 0" fill="none" stroke="#5b4332" stroke-width="2.4" stroke-linecap="round"/>
           </g>
           <g class="face f-angry">
             <ellipse cx="42" cy="73" rx="3.4" ry="4.6" fill="#5b4332"/><ellipse cx="78" cy="73" rx="3.4" ry="4.6" fill="#5b4332"/>
             <path d="M33 64L50 70M87 64L70 70" stroke="#5b4332" stroke-width="3" stroke-linecap="round"/>
-            <path d="M52 82Q60 75 68 82" fill="none" stroke="#5b4332" stroke-width="2.6" stroke-linecap="round"/>
+            <path class="mo" d="M52 82Q60 75 68 82" fill="none" stroke="#5b4332" stroke-width="2.6" stroke-linecap="round"/>
           </g>
           <g class="face f-cry">
             <ellipse cx="42" cy="72" rx="3.4" ry="5" fill="#5b4332"/><ellipse cx="78" cy="72" rx="3.4" ry="5" fill="#5b4332"/>
             <path d="M40 78Q38 88 41 94M80 78Q82 88 79 94" stroke="#8fd3ff" stroke-width="4" stroke-linecap="round" fill="none" opacity=".85"/>
-            <path d="M52 84Q60 75 68 84" fill="none" stroke="#5b4332" stroke-width="2.6" stroke-linecap="round"/>
+            <path class="mo" d="M52 84Q60 75 68 84" fill="none" stroke="#5b4332" stroke-width="2.6" stroke-linecap="round"/>
           </g>
           <g class="face f-shy">
             <path d="M37 73Q42 67 47 73M73 73Q78 67 83 73" fill="none" stroke="#5b4332" stroke-width="2.8" stroke-linecap="round"/>
-            <path d="M54 78q3 3.500 6 0q3 3.500 6 0" fill="none" stroke="#5b4332" stroke-width="2.4" stroke-linecap="round"/>
+            <path class="mo" d="M54 78q3 3.500 6 0q3 3.500 6 0" fill="none" stroke="#5b4332" stroke-width="2.4" stroke-linecap="round"/>
             <ellipse cx="29" cy="81" rx="8" ry="5" fill="#ff9aa8" opacity=".8"/><ellipse cx="91" cy="81" rx="8" ry="5" fill="#ff9aa8" opacity=".8"/>
           </g>
           <g class="face f-sleepy">
             <path d="M36 72Q42 77 48 72M72 72Q78 77 84 72" fill="none" stroke="#5b4332" stroke-width="2.8" stroke-linecap="round"/>
-            <ellipse cx="60" cy="80" rx="2.6" ry="3.2" fill="#e8776f" opacity=".85"/>
+            <ellipse class="mo" cx="60" cy="80" rx="2.6" ry="3.2" fill="#e8776f" opacity=".85"/>
           </g>
         </g>
       </svg>`;
@@ -2825,8 +2827,10 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         setInterval(() => {
           const el = ncEl();
           if (!el) return;
-          open = state.isSpeaking && el.dataset.face === 'normal' ? !open : false;
+          const normal = el.dataset.face === 'normal';
+          open = state.isSpeaking && normal ? !open : false;
           el.dataset.talk = open ? '1' : '0';
+          el.dataset.say = state.isSpeaking && !normal ? '1' : '0';
         }, 190);
       }
 
@@ -3025,7 +3029,11 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         let lastEmo = emo;
         dialogue.sentences.forEach((chunks, sIdx) => {
           const p = document.createElement('p');
-          dom.speechText.appendChild(p);
+          if (sIdx === 0) dom.speechText.appendChild(p);
+          else {
+            // つぎの ひとことが はじまる ときに、まえの ひとことを けす
+            state.chunkTimers.push(setTimeout(() => { dom.speechText.innerHTML = ''; dom.speechText.appendChild(p); }, cumulativeDelay));
+          }
           if (sIdx > 0) {
             const lastS = sIdx === dialogue.sentences.length - 1;
             const e2 = lastS && dialogue.question ? 'think' : emoFromText(chunks.join(''));
@@ -3051,6 +3059,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
             if (/……/.test(chunkText)) pause += 240;
             cumulativeDelay += pause;
           });
+          cumulativeDelay += 450;
         });
 
         const endTimerId = setTimeout(() => {
