@@ -263,20 +263,21 @@ function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
    奥行きあり。fl = 床に接する画面のy(奥ほど小さい)、el = 床からの高さ、dz = 当たる奥行きの幅 */
 var BANDS = ['#1b2a4a', '#3b3a63', '#c9795a', '#f0b070'];
 var WALL_B = 82, Z_MIN = 88, Z_MAX = 117;
-var COST = { wall: 4800, pane: 1200, door: 6500, monitor: 750, cup: 15, wine: 60, table: 1400, jug: 30, cabinet: 8500, lamp: 1100, vase: 350, aquarium: 2800, pot: 180000, server: 650, plant: 90, gate: 9000 };
+var COST = { wall: 4800, pane: 1200, door: 6500, monitor: 750, cup: 15, wine: 60, table: 1400, jug: 30, cabinet: 8500, lamp: 1100, vase: 350, aquarium: 2800, pot: 180000, server: 650, plant: 90, gate: 9000, ln2: 0, fire: 0 };
 var DEFS = [], WW = 160, STAGE = 'boss', camX = 0;
 function defsBoss() {
   var DEFS = [];
   var i;
   function add(o) { if (o.el == null) o.el = 0; if (o.dz == null) o.dz = 5; DEFS.push(o); }
   for (i = 0; i < 8; i++) add({ t: 'wall', mat: 'glass', x: i * 20 + 1, fl: 82, el: 1, w: 18, h: 70, hp: 2, dz: 7 });
-  [6, 24, 116, 134].forEach(function (x) { add({ t: 'monitor', mat: 'glass', x: x, fl: 87, el: 16, w: 16, h: 12, hp: 2 }); });
+  [6, 24, 134].forEach(function (x) { add({ t: 'monitor', mat: 'glass', x: x, fl: 87, el: 16, w: 16, h: 12, hp: 2 }); });
   [42, 152].forEach(function (x) { add({ t: 'cup', mat: 'glass', x: x, fl: 87, el: 14, w: 4, h: 6, hp: 1 }); });
   add({ t: 'jug', mat: 'glass', x: 51, fl: 87, el: 16, w: 10, h: 17, hp: 2 });
   add({ t: 'cabinet', mat: 'temper', x: 66, fl: 90, w: 28, h: 36, hp: 6, block: true });
-  [24, 100, 140].forEach(function (x) { add({ t: 'lamp', mat: 'glass', x: x, fl: 96, el: 24, w: 10, h: 11, hp: 1 }); });
+  [24, 140].forEach(function (x) { add({ t: 'lamp', mat: 'glass', x: x, fl: 96, el: 24, w: 10, h: 11, hp: 1 }); });
   add({ t: 'vase', mat: 'glass', x: 4, fl: 94, el: 12, w: 7, h: 10, hp: 1, block: true });
-  add({ t: 'vase', mat: 'glass', x: 104, fl: 92, el: 12, w: 7, h: 10, hp: 1, block: true });
+  add({ t: 'fire', deco: true, x: 98, fl: 88, w: 22, h: 34, hp: 1 });
+  add({ t: 'ln2', mat: 'glass', x: 114, fl: 102, el: 0, w: 8, h: 20, hp: 2, nocount: true, dz: 5 });
   add({ t: 'pot', mat: 'ceramic', x: 120, fl: 94, el: 12, w: 9, h: 14, hp: 1, block: true, prof: [3, 3, 5, 7, 9, 9, 9, 9, 8, 7, 6, 5, 5, 5] });
   add({ t: 'deskSw', deco: true, x: 130, fl: 100, w: 8, h: 12, hp: 1 });
   add({ t: 'chair', deco: true, x: 134, fl: 98, w: 17, h: 26, hp: 1, block: true });
@@ -445,7 +446,7 @@ function build(stage) {
     o.y = o.fl - o.el - o.h;
     return o;
   });
-  brTotal = objs.filter(function (q) { return !q.deco; }).length; brokenN = 0; prFocus = 0;
+  brTotal = objs.filter(function (q) { return !q.deco && !q.nocount; }).length; brokenN = 0; prFocus = 0;
   if (typeof foes !== 'undefined') { if (stage === 'corr') foeSetup(); else foes.length = 0; }
   if (STAGE === 'corr') renderCorr(); else { skyCv.width = cityCv.width = frontCv.width = DW; renderStatic(); }
   FX.length = 0; PB.length = 0; simT = 0; hitstop = 0; shakeT = 0; flashT = 0;
@@ -984,6 +985,8 @@ function drawObj(o) {
     case 'pot': drawPot(o); break;
     case 'chair': drawChair(o); break;
     case 'deskSw': drawDeskSw(o); break;
+    case 'fire': drawFire(o); break;
+    case 'ln2': drawLn2(o); break;
     case 'door': drawDoor(o); break;
   }
 }
@@ -993,6 +996,76 @@ function drawDeskSw(o) {
   R(x - 1, y - 11, 10, 2, '#9a7650'); R(x - 1, y - 11, 10, 1, '#b8946a'); R(x, y - 9, 8, 8, '#4a3426'); R(x, y - 9, 8, 1, '#6a4a34'); R(x, y - 1, 8, 1, '#2a1c14');
   R(x + 2, y - 13, 4, 2, '#2a2a30'); R(x + 3, y - 13, 2, 1, on ? '#ff8a7a' : (G.sw ? '#a02a2a' : '#d23f31'));
   if (on) { R(x + 1, y - 14, 6, 1, 'rgba(255,120,100,0.5)'); }
+}
+
+/* ---------- 暖炉・液体窒素の瓶・床のコード ---------- */
+function drawFire(o) {
+  var x = o.x, w = o.w, fl = o.fl, T = o.y, i, k, hot = G.melt ? 1 : 0;
+  R(x - 2, fl, w + 4, 1, 'rgba(0,0,0,0.34)');
+  /* 煙突(天井まで) */
+  R(x + 5, 11, 12, T - 11, '#7d6e63'); R(x + 5, 11, 1, T - 11, '#9a8a7e'); R(x + 16, 11, 1, T - 11, '#5a4e46');
+  for (i = 14; i < T; i += 4) { R(x + 5, i, 12, 1, '#5f544c'); R(x + 5 + ((i >> 2) & 1 ? 4 : 8), i + 1, 1, 3, '#5f544c'); }
+  /* マントルと本体 */
+  R(x - 2, T, w + 4, 3, '#a8998b'); R(x - 2, T, w + 4, 1, '#c4b5a6'); R(x - 2, T + 3, w + 4, 1, '#6a5e54');
+  R(x, T + 4, w, fl - T - 4, '#6e625a'); R(x, T + 4, 1, fl - T - 4, '#867a70'); R(x + w - 1, T + 4, 1, fl - T - 4, '#4e443e');
+  for (i = T + 8; i < fl; i += 4) { R(x, i, w, 1, '#564c45'); for (k = x + ((i >> 2) & 1 ? 3 : 7); k < x + w; k += 8) R(k, i + 1, 1, 3, '#564c45'); }
+  /* 炉口 */
+  R(x + 3, T + 10, w - 6, fl - T - 12, '#140c0a'); R(x + 3, T + 10, w - 6, 1, '#3a2a22');
+  R(x + 4, T + 11, w - 8, fl - T - 14, '#2a1710');
+  /* 薪と炎 */
+  var by = fl - 5;
+  for (k = 0; k < 6; k++) {
+    var ph = simT / 85 + k * 1.9, hh = Math.round((6 + 3 * Math.sin(ph) + 2 * Math.sin(ph * 2.3)) * (1 + hot * 0.45)), fx = x + 5 + k * 2 + (k > 2 ? 1 : 0);
+    R(fx, by - hh, 2, hh, '#ff4a14'); R(fx, by - hh + 2, 2, hh - 2, '#ff7a1c');
+    R(fx, by - Math.round(hh * 0.62), 2, Math.round(hh * 0.62), '#ffb02e'); R(fx, by - Math.round(hh * 0.3), 2, Math.round(hh * 0.3), '#ffe27a'); R(fx + (Math.sin(ph * 1.7) > 0 ? 1 : 0), by - hh - 1, 1, 2, '#ff9a2a');
+  }
+  R(x + 4, by, w - 8, 2, '#4a2a16'); R(x + 5, by, w - 10, 1, '#6a3a1c'); R(x + 5, by + 1, 4, 1, '#ff6a1a'); R(x + 12, by + 1, 3, 1, '#ff8a2a');
+  R(x + 4, by + 2, w - 8, 1, '#2a1a10');
+  /* 床にゆれる灯り */
+  var fa = 0.1 + 0.03 * Math.sin(simT / 70) + hot * 0.08;
+  for (i = 0; i < 5; i++) R(x - 5 + i, fl + 1 + i, w + 10 - i * 2, 1, 'rgba(255,150,50,' + (fa * (1 - i * 0.16)).toFixed(3) + ')');
+}
+function drawLn2(o) {
+  if (o.dead) return;
+  var x = o.x, y = o.y, fl = o.fl, i;
+  R(x - 1, fl, o.w + 2, 1, 'rgba(0,0,0,0.34)');
+  R(x + 3, y, 2, 1, '#e8f4fa'); R(x + 2, y + 1, 4, 3, '#cfe6f2'); R(x + 2, y + 1, 1, 3, '#ffffff');
+  R(x, y + 5, 8, 15, '#bfe6f6'); R(x + 1, y + 4, 6, 1, '#bfe6f6');
+  R(x + 1, y + 6, 6, 13, '#6ec4f2'); R(x + 1, y + 6, 6, 1, '#a9e2ff');
+  R(x + 1, y + 10, 6, 5, '#f2f8fb'); R(x + 1, y + 12, 6, 1, '#2a6ab0'); R(x + 2, y + 11, 1, 1, '#2a6ab0'); R(x + 4, y + 11, 1, 1, '#2a6ab0'); R(x + 5, y + 14, 1, 1, '#2a6ab0');
+  R(x + 1, y + 7, 1, 11, 'rgba(255,255,255,0.55)');
+  /* 冷気が足元を這う */
+  for (i = 0; i < 4; i++) {
+    var u = (simT / 900 + i * 0.27) % 1, mx = x + 4 + Math.round(Math.sin(i * 2.1 + simT / 600) * 6) + (i & 1 ? 1 : -1) * Math.round(u * 5);
+    R(mx - 1, fl - Math.round(u * 3), 3, 1, 'rgba(225,245,255,' + (0.5 * (1 - u)).toFixed(2) + ')');
+  }
+  drawCracks(o, '#ffffff');
+}
+var CABLE = [[135, 101], [133, 103], [129, 105], [124, 104], [119, 106], [113, 105], [108, 107]];
+function drawCable() {
+  var i, a, b;
+  for (i = 0; i < CABLE.length - 1; i++) {
+    a = CABLE[i]; b = CABLE[i + 1];
+    pline(a[0], a[1] + 1, b[0], b[1] + 1, 'rgba(0,0,0,0.3)');
+    pline(a[0], a[1], b[0], b[1], '#b9b2a0');
+    pline(a[0], a[1] - 1, b[0], b[1] - 1, i & 1 ? '#f4efe2' : '#e2dccb');
+  }
+  R(134, 99, 3, 3, '#2a2c34'); R(134, 99, 3, 1, '#4a4e5c'); R(107, 106, 3, 3, '#2a2c34'); R(107, 106, 3, 1, '#4a4e5c');
+}
+function drawLnPool() {
+  var g = G.ln; if (!g) return;
+  var rx = Math.round(g.r), ry = Math.max(1, Math.round(g.r * 0.3)), a = clamp((10 - g.t) / 2.5, 0, 1), dy, hw, k;
+  if (a <= 0 || rx < 2) return;
+  for (dy = -ry; dy <= ry; dy++) {
+    hw = Math.round(rx * Math.sqrt(1 - (dy / ry) * (dy / ry)));
+    R(g.x - hw, g.z + dy, hw * 2, 1, 'rgba(176,228,255,' + (0.5 * a).toFixed(2) + ')');
+    if (Math.abs(dy) >= ry - 1) R(g.x - hw, g.z + dy, hw * 2, 1, 'rgba(240,252,255,' + (0.55 * a).toFixed(2) + ')');
+  }
+  for (k = 0; k < rx * 0.9; k++) {
+    var h = ((k * 7919 + Math.floor(simT / 160 + k * 3) * 104729) % 1000) / 1000, h2 = ((k * 6151 + 17) % 1000) / 1000;
+    if (h > 0.55) continue;
+    R(Math.round(g.x + (h2 * 2 - 1) * rx * 0.9), Math.round(g.z + (((k * 37) % 100) / 50 - 1) * ry * 0.8), 1, 1, 'rgba(255,255,255,' + (0.85 * a).toFixed(2) + ')');
+  }
 }
 
 /* ---------- キラッ(メガネと革靴) ---------- */
@@ -1561,13 +1634,26 @@ function presFallAngle() {
   var t = pr.t, a = t < 0.7 ? (t / 0.7) * (t / 0.7) : t < 2.3 ? 1 : Math.max(0, 1 - (t - 2.3) / 0.8);
   return -pr.face * a * 1.5708;
 }
-function prVisible() { return pr.st === 'beg' || pr.st === 'dogeza' || pr.st === 'stand' || pr.st === 'side' || pr.st === 'fall' || pr.st === 'focus' || pr.st === 'sit' || pr.st === 'press' || pr.st === 'startle' || pr.st === 'tremble' || pr.st === 'enter' || pr.st === 'flee' || pr.st === 'wig' || pr.st === 'cry'; }
+function presTripAngle() {
+  var t = pr.t, a = t < 0.5 ? (t / 0.5) * (t / 0.5) : t < 1.5 ? 1 : Math.max(0, 1 - (t - 1.5) / 0.7);
+  return pr.face * a * 1.5708;
+}
+function prVisible() { return pr.st === 'beg' || pr.st === 'dogeza' || pr.st === 'stand' || pr.st === 'side' || pr.st === 'fall' || pr.st === 'focus' || pr.st === 'sit' || pr.st === 'press' || pr.st === 'startle' || pr.st === 'tremble' || pr.st === 'enter' || pr.st === 'flee' || pr.st === 'wig' || pr.st === 'cry' || pr.st === 'dash' || pr.st === 'trip'; }
 function drawPresNPC() {
   var o = { ph: pr.ph, wig: pr.wig, pale: pr.pale > 0 };
   if (pr.st === 'sit') { o.sit = true; drawPres(Math.round(pr.x), Math.round(pr.z), pr.face, o); return; }
   if (pr.st === 'press') { var q = pr.t < 0.45 ? pr.t / 0.45 : pr.t < 0.75 ? 1 : Math.max(0, 1 - (pr.t - 0.75) / 0.4); o.sit = true; o.shock = true; o.press = q; drawPres(Math.round(pr.x), Math.round(pr.z), pr.face, o); return; }
   if (pr.st === 'startle') { var u = clamp(pr.t / 0.45, 0, 1); o.shock = true; o.mark = true; o.jump = Math.sin(Math.PI * u) * 9; drawPres(Math.round(pr.x), Math.round(pr.z), pr.face, o); return; }
-  if (pr.st === 'tremble') { o.hug = true; o.shock = true; drawPres(Math.round(pr.x) + ((Math.floor(simT / 35) & 1) ? 1 : -1), Math.round(pr.z), pr.face, o); return; }
+  if (pr.st === 'dash') { o.run = true; o.shock = true; o.pale = true; o.droop = 0; drawPres(Math.round(pr.x), Math.round(pr.z), pr.face, o); return; }
+  if (pr.st === 'trip') {
+    var tang = presTripAngle(), tx = Math.round(pr.x) + ((pr.t > 0.5 && pr.t < 1.5 && (Math.floor(simT / 38) & 1)) ? 1 : 0), tz = Math.round(pr.z);
+    o.shock = true; o.pale = true; o.mark = pr.t < 0.9; o.nosh = true; o.hug = pr.t > 1.8;
+    var tw = Math.abs(tang) / 1.5708; R(tx - 5 - Math.round(7 * tw), tz + 1, 11 + Math.round(14 * tw), 1, 'rgba(0,0,0,0.36)');
+    ctx.save(); ctx.translate(tx, tz); ctx.rotate(tang); ctx.translate(-tx, -tz);
+    drawPres(tx, tz, pr.face, o);
+    ctx.restore(); return;
+  }
+  if (pr.st === 'tremble') { o.hug = true; o.shock = true; if (pr.ln2) { o.pale = true; o.mark = false; } drawPres(Math.round(pr.x) + ((Math.floor(simT / 35) & 1) ? 1 : -1), Math.round(pr.z), pr.face, o); return; }
   if (pr.st === 'beg') { o.run = true; o.droop = 0.8; o.pale = true; drawPres(Math.round(pr.x), Math.round(pr.z), pr.face, o); return; }
   if (pr.st === 'dogeza') { if (pr.u < 0.1) { o.droop = 0.8; o.pale = true; drawPres(Math.round(pr.x), Math.round(pr.z), pr.face, o); } else drawDogeza(Math.round(pr.x), Math.round(pr.z), pr.face, pr.u); return; }
   if (pr.st === 'stand') { o.droop = 0.6; o.pale = false; drawPres(Math.round(pr.x), Math.round(pr.z), pr.face, o); return; }
@@ -1585,14 +1671,14 @@ function drawPresNPC() {
   if (pr.scream > 0) { o.scream = true; o.mark = true; }
   if (pr.st === 'enter' || pr.st === 'flee') { o.run = !o.scream; o.jump = (pr.hop > 0 ? Math.sin(Math.PI * (1 - pr.hop / 0.35)) * 6 : 0) + (o.jumpX || 0); }
   else if (pr.st === 'wig') { o.shock = true; o.pale = true; o.mark = pr.t < 0.7; o.droop = clamp((pr.t - 0.5) / 1.3, 0, 1); }
-  else if (pr.st === 'cry') { o.shock = true; o.droop = 1; o.thr = Math.round(pr.z + 1 - 34 * clamp(pr.t / 2.6, 0, 1)); }
+  else if (pr.st === 'cry') { o.shock = true; o.droop = 1; o.hug = true; o.pale = true; o.thr = Math.round(pr.z + 1 - 34 * clamp(pr.t / 2.0, 0, 1)); }
   var jit = pr.st === 'wig' && pr.t < 0.7 ? (Math.floor(simT / 40) & 1) : 0;
   drawPres(Math.round(pr.x) + jit, Math.round(pr.z), pr.face, o);
 }
 function presMask() {
   var keep = ctx, px = Math.round(pr.x), F = Math.round(pr.z), mc = maskCv.getContext('2d', { willReadFrequently: true });
   mc.setTransform(1, 0, 0, 1, 0, 0); mc.clearRect(0, 0, DW, DH);
-  ctx = mc; drawPres(px, F, pr.face, { shock: true, nosh: true }); ctx = keep;
+  ctx = mc; drawPres(px, F, pr.face, { shock: true, hug: true, nosh: true }); ctx = keep;
   var y0 = F - 30, h = 31, x0 = px - 9, w = 19, d = mc.getImageData(x0, y0, w, h).data, rows = [], ix, iy;
   for (iy = 0; iy < h; iy++) {
     var a = -1, b = -1;
@@ -1610,7 +1696,7 @@ function makeCrystal() {
 function drawCrystalObj(o) {
   if (o.dead) return;
   R(o.cx - 6, o.fl + 1, 13, 1, 'rgba(120,200,255,0.35)');
-  drawPres(o.cx, o.fl, o.face, { shock: true, crys: true, nosh: true });
+  drawPres(o.cx, o.fl, o.face, { shock: true, hug: true, crys: true, nosh: true });
   drawCracks(o, '#ffffff');
 }
 function prDodgeCheck() {
@@ -1664,6 +1750,7 @@ function prUpdate(dt) {
   if (pr.st === 'tremble') {
     pr.pale = Math.max(pr.pale, 0.6); pr.sweat -= dt;
     if (pr.sweat <= 0) { pr.sweat = 0.14; addFx({ kind: 'drop', x: pr.x + rnd(-3, 4), y: pr.z - 27, vx: rnd(-25, 25), vy: -rnd(15, 40), r: rnd(0.3, 0.45), fy: pr.z + rnd(-1, 2), life: 0.8 }); }
+    if (pr.ln2 && lnCovers(pr.x, pr.z)) { pr.ln2 = false; pr.st = 'cry'; pr.t = 0; ctlOn = false; atkHeld = null; sCrystallize(); }
     return;
   }
   if (pr.st === 'wait') { if (pr.t > 1.2) { pr.st = 'enter'; pr.t = 0; } return; }
@@ -1724,14 +1811,41 @@ function prUpdate(dt) {
     return;
   }
   if (pr.st === 'wig') {
-    if (pr.t > 2.4) { pr.st = 'cry'; pr.t = 0; sCrystallize(); }
+    if (pr.t > 2.4) { pr.st = 'dash'; pr.t = 0; pr.tx = 130; pr.tz = 103; if (AC) nz(AC.currentTime, 0.25, { type: 'bandpass', f: 1400, f2: 500, q: 1, g: 0.08 }); }
+    return;
+  }
+  if (pr.st === 'dash') {
+    /* ハゲのまま社長椅子へ全力で走る */
+    var ddx = pr.tx - pr.x, ddz = pr.tz - pr.z, dd = Math.hypot(ddx, ddz * 2) || 1, spd = 58;
+    pr.x += ddx / dd * spd * dt; pr.z += ddz / dd * spd * dt;
+    if (Math.abs(ddx) > 1) pr.face = ddx > 0 ? 1 : -1;
+    pr.ph += dt * 13; pr.sweat -= dt;
+    if (pr.sweat <= 0) { pr.sweat = 0.07; addFx({ kind: 'drop', x: pr.x + pr.face * rnd(-1, 4), y: pr.z - 27 + rnd(-1, 2), vx: rnd(-25, 25) - pr.face * 14, vy: -rnd(15, 40), r: rnd(0.3, 0.45), fy: pr.z + rnd(-1, 2), life: 0.8 }); }
+    if (Math.random() < dt * 14) addFx({ kind: 'puff', x: pr.x - pr.face * 3, y: pr.z, vx: -pr.face * 8, vy: -2, r0: 1.2, r1: 4.5, col: '205,192,175', alpha: 0.4, life: 0.4 });
+    if (dd < 2.5) {
+      pr.st = 'trip'; pr.t = 0; pr.tripSnd = 0; pr.face = ddx >= 0 ? 1 : (ddx < -1 ? -1 : pr.face);
+      if (AC) { var tq = AC.currentTime; tn(tq, 520, 0.16, { f2: 210, type: 'triangle', g: 0.09 }); tn(tq + 0.05, 900, 0.1, { f2: 300, type: 'square', g: 0.03 }); }
+    }
+    return;
+  }
+  if (pr.st === 'trip') {
+    if (pr.t < 0.5) pr.x = clamp(pr.x + pr.face * 16 * dt * (1 - pr.t / 0.5), 6, 150);
+    if (!pr.tripSnd && pr.t >= 0.46) {
+      pr.tripSnd = 1; shake(1.6, 170); hitstop = 30;
+      for (var ti = 0; ti < 8; ti++) addFx({ kind: 'puff', x: pr.x + pr.face * rnd(4, 18), y: pr.z + rnd(-1, 1), vx: rnd(-14, 14), vy: -rnd(2, 8), r0: 1.5, r1: rnd(5, 8), col: '205,192,175', alpha: 0.45, life: rnd(0.4, 0.7) });
+      if (AC) { var tt = AC.currentTime; tn(tt, 120, 0.2, { f2: 52, g: 0.2 }); nz(tt, 0.18, { type: 'lowpass', f: 700, f2: 200, g: 0.16 }); }
+    }
+    if (pr.t >= 2.2) {
+      pr.st = 'tremble'; pr.t = 0; pr.ln2 = true; pr.sweat = 0; ctlOn = true; atkHeld = null;
+      for (var oi = 0; oi < objs.length; oi++) if (objs[oi].t === 'ln2' && objs[oi].dead) respawn(objs[oi]);
+    }
     return;
   }
   if (pr.st === 'cry') {
-    var fr = pr.z + 1 - 34 * clamp(pr.t / 2.6, 0, 1);
+    var fr = pr.z + 1 - 34 * clamp(pr.t / 2.0, 0, 1);
     if (Math.random() < dt * 16) CG.push({ x: pr.x + rnd(-5, 5), y: fr + rnd(-1, 3), age: 0, life: 0.4 });
     if (AC && Math.random() < dt * 6) tn(AC.currentTime, rnd(2400, 4400), 0.12, { g: 0.014 });
-    if (pr.t >= 2.6) makeCrystal();
+    if (pr.t >= 2.0) makeCrystal();
     return;
   }
 }
@@ -2214,6 +2328,35 @@ function drawFoe(f) {
   ctx.restore();
 }
 
+/* ---------- 液体窒素の水たまり ---------- */
+function lnCovers(x, z) {
+  var g = G.ln; if (!g || g.r < 4) return false;
+  var dx = (x - g.x) / g.r, dz = (z - g.z) / (g.r * 0.3);
+  return dx * dx + dz * dz < 1;
+}
+function lnUpdate(dt) {
+  var g = G.ln, i, m = G.melt;
+  if (!dt) return;
+  if (g) {
+    g.t += dt; g.r = Math.min(38, g.r + 17 * dt * (g.r < 20 ? 1 : 0.7));
+    g.mist = (g.mist || 0) - dt;
+    if (g.mist <= 0 && g.t < 9) {
+      g.mist = 0.045;
+      var ang = rnd(0, 6.283), rr = Math.sqrt(Math.random());
+      addFx({ kind: 'puff', x: g.x + Math.cos(ang) * g.r * rr, y: g.z + Math.sin(ang) * g.r * 0.3 * rr, vx: rnd(-4, 4), vy: -rnd(5, 12), r0: 2, r1: rnd(6, 10), col: '215,240,255', alpha: 0.5, life: rnd(0.8, 1.5) });
+    }
+    if (g.t > 10.5) G.ln = null;
+  }
+  if (m) {
+    m.t += dt; m.s = (m.s || 0) - dt;
+    if (m.s <= 0 && m.t < 3.2) {
+      m.s = 0.05;
+      addFx({ kind: 'puff', x: m.x + rnd(-15, 15), y: m.z - rnd(0, 12), vx: rnd(-4, 4), vy: -rnd(8, 20), r0: 2, r1: rnd(7, 11), col: '240,246,255', alpha: 0.5, life: rnd(0.9, 1.7) });
+      if (Math.random() < 0.5) addFx({ kind: 'drop', x: m.x + rnd(-14, 14), y: m.z - rnd(0, 14), vx: rnd(-10, 10), vy: -rnd(0, 20), r: rnd(0.3, 0.5), fy: m.z + rnd(0, 2), life: 1.0 });
+    }
+  }
+}
+
 /* ---------- 高解像度の粉砕(割れた瞬間だけ、ドットより細かい破片で描く) ---------- */
 var FX = [], PB = [];
 function addFx(p) { p.age = 0; FX.push(p); if (FX.length > 1700) { for (var i = 0; i < FX.length && FX.length > 1700; i++) if (!FX[i].keep) { FX.splice(i, 1); i--; } } }
@@ -2303,6 +2446,7 @@ function ring(x, y, r1, life) { addFx({ kind: 'ring', x: x, y: y, r0: 1, r1: r1,
 
 var STY = {
   crystal: function (sh) { sh.fill = pick(['#e8f7ff', '#bfe6ff', '#d9c8ff', '#ffd6f0', '#c8ffe8', '#fff3c4']); sh.alpha = 0.82; sh.tint = 'rgba(255,255,255,0.18)'; sh.stroke = '#ffffff'; sh.lw = 0.26; sh.hl = true; sh.glint = Math.random() < 0.7; },
+  ln2: function (sh) { sh.fill = pick(['#e8f7ff', '#bfe6ff', '#8fd4ff']); sh.alpha = 0.7; sh.stroke = 'rgba(255,255,255,0.95)'; sh.lw = 0.2; sh.hl = true; },
   aquarium: function (sh) { sh.fill = pick(['#cfe8f4', '#2f7fc8', '#6fb7e8']); sh.alpha = 0.6; sh.stroke = 'rgba(255,255,255,0.95)'; sh.lw = 0.22; sh.hl = true; },
   vase: function (sh) { sh.fill = pick(['#bfe3f2', '#7ec3ea']); sh.alpha = 0.6; sh.stroke = 'rgba(255,255,255,0.95)'; sh.lw = 0.18; },
   plant: function (sh) { sh.fill = pick(['#b5683c', '#c47a4a', '#3f8a4a', '#58a85a', '#2f7a3e']); sh.stroke = '#3a2410'; sh.lw = 0.3; },
@@ -2550,12 +2694,22 @@ function destroy(o, x, y) {
     case 'pot':
       shatter(o, hx, hy, { M: 10, N: 4, R: 8, v: 90, push: 24, up: 85, spin: 10, life: 2.8, pop: 0.1, dust: 16, jit: 0.2, puffs: 5, dustFill: '#e6ecf2', style: STY.pot });
       ring(hx, hy, 9, 0.22); hitstop = 70; shake(1.6, 140); flash(0.2, 34); break;
+    case 'ln2':
+      shatter(o, hx, hy, { M: 9, N: 4, R: 8, v: 95, push: 24, up: 75, spin: 10, life: 2.2, pop: 0.08, dust: 20, style: STY.ln2 });
+      G.ln = { x: o.x + o.w / 2, z: o.fl, r: 3, t: 0 };
+      for (i = 0; i < 12; i++) addFx({ kind: 'puff', x: o.x + 4 + rnd(-4, 4), y: o.fl - rnd(0, 12), vx: rnd(-18, 18), vy: -rnd(4, 14), r0: 2, r1: rnd(7, 11), col: '215,240,255', alpha: 0.6, life: rnd(0.9, 1.6) });
+      if (AC) { var tl = AC.currentTime; nz(tl, 1.4, { type: 'highpass', f: 3200, f2: 6500, g: 0.07 }); tn(tl, 2300, 0.1, { f2: 1500, g: 0.03 }); }
+      hitstop = 40; shake(1.0, 110); break;
     case 'crystal':
       shatter(o, hx, hy, { M: 22, N: 10, R: 16, v: 150, push: 30, up: 120, spin: 12, life: 3.6, pop: 0.28, dust: 220, dustFill: '#f4fbff', style: STY.crystal });
       sparks(o, 90); ring(hx, hy, 18, 0.35); ring(hx, hy, 10, 0.25); hitstop = 190; shake(3, 260); flash(0.6, 60);
+      G.melt = { x: o.cx, z: o.fl, t: 0 };
+      for (i = 0; i < 9; i++) addFx({ kind: 'puddle', x: o.cx + rnd(-15, 15), y: o.fl + rnd(0, 3), rx: rnd(6, 12), life: 3.4 });
+      for (i = 0; i < 24; i++) addFx({ kind: 'puff', x: o.cx + rnd(-14, 14), y: o.fl - rnd(0, 14), vx: rnd(-5, 5), vy: -rnd(8, 22), r0: 2, r1: rnd(7, 11), col: '240,246,255', alpha: 0.55, life: rnd(0.9, 1.8) });
+      if (AC) { var tm = AC.currentTime; nz(tm + 0.1, 2.2, { type: 'highpass', f: 2600, f2: 5200, g: 0.035 }); for (i = 0; i < 9; i++) tn(tm + 0.3 + i * 0.22, rnd(900, 1600), 0.07, { f2: rnd(500, 800), g: 0.025, type: 'sine' }); }
       o.gone = true; pr.st = 'done'; pr.t = 0; spawnBaby(o.cx, o.fl, o.face); fwStart(); startEnding(); break;
   }
-  if (o.t !== 'crystal') { addCost(COST[o.t] || 0); brokenN++; prReact(o.t === 'pot'); }
+  if (o.t !== 'crystal' && o.t !== 'ln2') { addCost(COST[o.t] || 0); brokenN++; prReact(o.t === 'pot'); }
   hitstop = Math.round(hitstop * (0.7 + 0.3 * pw)); if (pw > 1) shake(shakeAmp * 1.3 + 0.4, shakeDur * 1.2);
   sShatter(o, hx);
 }
@@ -2607,13 +2761,13 @@ function frame(nowT) {
   if (hitstop > 0) hitstop -= rdt * 1000; else sdt = rdt;
   simT += sdt * 1000;
   updatePlayer(sdt);
-  var zt = (pr.st === 'focus' || pr.st === 'fall' || pr.st === 'wig' || pr.st === 'cry') ? { x: pr.x, y: pr.z - 14, a: 0.32 } : (G.zoom || null), pf = zt ? 1 : 0;
+  var zt = (pr.st === 'focus' || pr.st === 'fall' || pr.st === 'wig' || pr.st === 'cry' || pr.st === 'dash' || pr.st === 'trip') ? { x: pr.x, y: pr.z - 14, a: 0.32 } : (G.zoom || null), pf = zt ? 1 : 0;
   if (zt) focusT = zt;
   prFocus += (pf - prFocus) * Math.min(1, rdt * (pf ? 3.2 : 4));
   if (prFocus < 0.004 && !pf) prFocus = 0;
   var ct = STAGE === 'corr' ? clamp(pl.x - 70 + pl.face * 14, 0, WW - DW) : 0;
   camX += (ct - camX) * Math.min(1, rdt * 5); if (Math.abs(ct - camX) < 0.05) camX = ct;
-  prUpdate(sdt); samUpdate(sdt); foeUpdate(sdt); babyUpdate(sdt); gameUpdate(sdt, rdt);
+  prUpdate(sdt); lnUpdate(sdt); samUpdate(sdt); foeUpdate(sdt); babyUpdate(sdt); gameUpdate(sdt, rdt);
   for (j = 0; j < objs.length; j++) if (objs[j].dead && objs[j].respawnAt && simT >= objs[j].respawnAt) respawn(objs[j]);
   for (j = objs.length - 1; j >= 0; j--) if (objs[j].gone) objs.splice(j, 1);
   updFx(sdt); updGlint(rdt); updFW(rdt);
@@ -2650,6 +2804,7 @@ function render() {
   if (STAGE === 'corr') drawElev(); else drawTrap();
   for (i = 0; i < objs.length; i++) if (objs[i].t === 'lamp' && objs[i].dead) dl++;
   if (dl) R(0, 11, WW, 76, 'rgba(0,0,14,' + (0.07 * dl) + ')');
+  if (STAGE !== 'corr') { drawCable(); drawLnPool(); }
   for (i = 0; i < objs.length; i++) if (objs[i].t !== 'wall') L.push({ z: objs[i].fl, k: 0, o: objs[i] });
   L.push({ z: pl.z, k: 1 });
   if (prVisible()) L.push({ z: pr.z, k: 2 });
@@ -2830,6 +2985,9 @@ function drawHUD(c) {
   if (G.mode === 'play' && G.stage === 'corr' && G.hintT > 1.6 && G.hintT < 9 && Math.floor(G.hintT * 1.8) % 2 === 0) {
     c.font = 'bold 4.6px ' + JP; c.lineJoin = 'round'; c.lineWidth = 1.2; c.strokeStyle = 'rgba(0,0,0,0.8)'; c.strokeText('右端の扉を割って進め ▶', 120, 20); c.fillStyle = '#ffe14a'; c.fillText('右端の扉を割って進め ▶', 120, 20);
   }
+  if (G.mode === 'play' && pr.st === 'tremble' && pr.ln2 && !G.ln && Math.floor(simT / 420) % 2 === 0) {
+    c.font = 'bold 4.6px ' + JP; c.lineJoin = 'round'; c.lineWidth = 1.2; c.strokeStyle = 'rgba(0,0,0,0.8)'; c.strokeText('瓶を割れ ▼', 114, 80); c.fillStyle = '#9fe4ff'; c.fillText('瓶を割れ ▼', 114, 80);
+  }
   c.restore();
 }
 /* 幕(赤いビロードとひだ、金の房)。p=0で上、p=1で下まで閉じる */
@@ -2865,7 +3023,7 @@ function startBlackout() {
 function setupBoss() {
   build('boss'); G.stage = 'boss';
   pl.x = -20; pl.z = 108; pl.face = 1; pl.st = 'idle'; pl.bk = false; pl.pose = readyPose(); pl.cut = 'carry'; pl.cutU = 0; pl.back = false; pl.moving = false; pl.wallHit = false;
-  pr.x = 141; pr.z = 99; pr.face = -1; pr.st = 'sit'; pr.t = 0; pr.fear = 0; pr.wig = true; pr.hop = 0; pr.pale = 0; pr.jt = 0; pr.scream = 0; pr.obj = null;
+  pr.x = 141; pr.z = 99; pr.face = -1; pr.st = 'sit'; pr.t = 0; pr.fear = 0; pr.wig = true; pr.hop = 0; pr.pale = 0; pr.jt = 0; pr.scream = 0; pr.obj = null; pr.ln2 = false; G.ln = null; G.melt = null;
   baby = null; TR.length = 0; CG.length = 0; FW.q.length = 0; FW.sh.length = 0; FW.sp.length = 0; FW.fl = 0; G.secret = false; G.quiet = 0;
   samReset(); G.zoom = null; G.trap = 0; G.sw = 0; G.plat = 0; G.pressed = false; G.rumb = false; pl.dodgeT = 0; pl.ear = false;
 }
@@ -3038,7 +3196,7 @@ function gameUpdate(dt, rdt) {
 function resetGame() {
   build('corr'); G.stage = 'corr'; G.banner = 'スタート'; G.hintT = 0; G.bt = 0;
   pl.x = -20; pl.z = 108; pl.face = 1; pl.st = 'idle'; pl.bk = false; pl.pose = readyPose(); pl.cut = null; pl.cutU = 0; pl.ear = false; pl.back = false; pl.moving = false; pl.tapFlash = 0;
-  pr.x = 141; pr.z = 99; pr.face = -1; pr.st = 'gone'; pr.t = 0; pr.fear = 0; pr.wig = true; pr.hop = 0; pr.pale = 0; pr.jt = 0; pr.scream = 0; pr.obj = null;
+  pr.x = 141; pr.z = 99; pr.face = -1; pr.st = 'gone'; pr.t = 0; pr.fear = 0; pr.wig = true; pr.hop = 0; pr.pale = 0; pr.jt = 0; pr.scream = 0; pr.obj = null; pr.ln2 = false; G.ln = null; G.melt = null;
   baby = null; TR.length = 0; CG.length = 0; FW.q.length = 0; FW.sh.length = 0; FW.sp.length = 0; FW.fl = 0;
   costT = costD = 0; costPulse = 0;
   G.secret = false; G.quiet = 0; G.base = 0; G.mode = 'title'; G.t = 0; G.step = 0; G.st = 0; G.startT = -1; G.heldT = -1; G.music = false; G.curtain = false; G.fwT = 0; ctlOn = false; atkHeld = null; G.elev = 0; G.pin = false; G.dsnd = false;
