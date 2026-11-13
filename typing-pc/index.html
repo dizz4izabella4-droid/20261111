@@ -134,6 +134,7 @@ body.alert .neon{animation:alarm .5s steps(1) infinite}
 .bl.note{color:#6f9a7c}
 .wl{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:0;font-size:17px;letter-spacing:.05em}
 .pr{color:#4f7d5d;font-size:14px;letter-spacing:0}
+.wl.hearing::after{content:"\u266A";color:var(--gold);font-size:.6em;margin-left:.7em;animation:blink2 .45s steps(1) infinite}   /* 読み上げ中の印 */
 .wl.now{font-size:34px}   /* 入力中の単語は2倍（34px）。打ち終えた行は17pxに戻る */
 .wl .ent{font-size:.8em;margin-left:.35em;padding:0 .15em}
 .wl .ent.d{color:#2f6b43}
@@ -1798,7 +1799,7 @@ function respond(){
   if(state!=='alert') return;
   token++; state='boot'; sirenStop(); $('alert').hidden=true; document.body.classList.remove('alert'); audio(); mqClear(); bgmStart();
   const m=$('main'); m.hidden=false; m.classList.remove('appear'); void m.offsetWidth; m.classList.add('appear'); playOpen();
-  words=pickWords(); N=words.reduce((a,w)=>a+w[0].length+1,0);   // 各単語の最後に Enter（1打）
+  words=pickWords(); words.forEach(x=>voiceAudio(x[0])); N=words.reduce((a,w)=>a+w[0].length+1,0);   // 各単語の最後に Enter（1打）
   clockStop(); tAcc=0; wi=0;ci=0;ti=0;miss=0;streak=0;maxStreak=0;missHere=false;phase=0; missRun=0; fwLowShown=false; fwSet(100);
   con.textContent=''; $('res').hidden=true; $('banner').hidden=true;
   dummiesReset(); startPhaseStats(); update();
@@ -1819,16 +1820,22 @@ function startPhase(p){
   state='boot';
   typeLines(P.intro,()=>later(()=>{ state='play'; newWord(); },p>0?520:380));
 }
-// ---- 読み上げ: ブラウザ内蔵の音声合成（Web Speech API）。出題の単語が出たとき英語で読む。Tab で、もう一度読む ----
-let voiceOn=true, voiceEn=null;
-const TTS=('speechSynthesis' in window)&&('SpeechSynthesisUtterance' in window);
-function pickVoice(){ if(!TTS) return; const vs=speechSynthesis.getVoices();
-  const us=vs.filter(v=>/^en[-_]US/i.test(v.lang)), en=vs.filter(v=>/^en/i.test(v.lang));
-  voiceEn=us.find(v=>/natural|neural|online|google|samantha|aria|jenny|zira/i.test(v.name))||us[0]||en[0]||null; }
-if(TTS){ pickVoice(); try{ speechSynthesis.addEventListener('voiceschanged',pickVoice); }catch(e){ speechSynthesis.onvoiceschanged=pickVoice; } }
-function speakWord(w){ if(!TTS||!voiceOn) return;
-  try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(w); u.lang='en-US'; u.rate=.85; u.volume=1; if(voiceEn) u.voice=voiceEn; speechSynthesis.speak(u); }catch(e){} }
-function speakStop(){ if(TTS){ try{ speechSynthesis.cancel(); }catch(e){} } }
+// ---- 読み上げ: 事前に作った音声ファイル（voice/<単語>.mp3。espeak-ng のロボット風の声。作り方は tools/gen_voice.py）を再生する ----
+// 端末の音声合成は使わないので、どの環境でも同じ声になる。単語が出たら、まず読み上げを聞かせ、終わってから入力できる
+// （読み上げ中のキーは無視する。タイムは入力している間だけ数えるので、聞いている時間は入らない）。Tab で、もう一度読む（このときは入力を止めない）
+let voiceOn=true, hearing=false, hearT=null, vNow=null; const VC={};
+function voiceAudio(w){ let a=VC[w]; if(!a){ a=new Audio('voice/'+w+'.mp3'); a.preload='auto'; VC[w]=a; } return a; }
+function hearDone(){ clearTimeout(hearT); hearT=null; hearing=false; vNow=null; const l=newWord.line; if(l) l.classList.remove('hearing'); }
+function speakStop(){ if(vNow){ try{ vNow.pause(); }catch(e){} } hearDone(); }
+function speakWord(w,gate){
+  speakStop(); if(!voiceOn) return;
+  const a=voiceAudio(w); vNow=a; a.volume=.9;
+  if(gate){ hearing=true; if(newWord.line) newWord.line.classList.add('hearing'); hearT=setTimeout(hearDone,3000); }   // 3秒たっても終わらなければ（読み込み失敗など）入力を許す
+  const end=()=>{ if(vNow===a) hearDone(); };
+  a.onended=end; a.onerror=end;
+  try{ a.currentTime=0; }catch(e){}
+  const pr=a.play(); if(pr&&pr.catch) pr.catch(end);
+}
 function newWord(){
   const [w,ja]=words[wi]; const d=document.createElement('div'); d.className='wl';
   const pr=document.createElement('span'); pr.className='pr'; pr.textContent=PH[phase].prompt; d.appendChild(pr);
@@ -1837,7 +1844,7 @@ function newWord(){
   con.querySelectorAll('.wl.now').forEach(x=>x.classList.remove('now')); d.classList.add('now');
   con.appendChild(d); ci=0; cur[0].className='c'; body.scrollTop=body.scrollHeight; d.classList.add('appear');
   newWord.line=d;
-  speakWord(w);   // 単語が出た瞬間に英語で読み上げる（入力は止めない）
+  speakWord(w,true);   // 単語が出たら読み上げ、終わってから入力できる
 }
 // 時計は入力している間だけ進める（フェーズの切り替えや演出の時間は、タイムと速さに数えない）
 function elapsed(){ return (tAcc+(tRun!=null?performance.now()-tRun:0))/1000; }
@@ -2025,7 +2032,8 @@ window.addEventListener('keydown',e=>{
   if(state==='over') return;
   if(state!=='play') return;
   if(e.key==='Process'||e.isComposing||e.keyCode===229){ $('ime').hidden=false; return; }
-  if(e.key==='Tab'){ e.preventDefault(); if(!e.repeat&&words[wi]) speakWord(words[wi][0]); return; }
+  if(e.key==='Tab'){ e.preventDefault(); if(!e.repeat&&words[wi]) speakWord(words[wi][0],false); return; }
+  if(hearing){ e.preventDefault(); return; }   // 読み上げ中は入力を受けない
   if(e.key==='Enter'){ e.preventDefault(); if(!e.repeat){ playKey(true); key('\n'); } return; }
   if(e.key.length===1){ e.preventDefault(); $('ime').hidden=true; if(!e.repeat) playKey(e.key===' '); key(e.key); }
 });
@@ -2037,7 +2045,6 @@ function setBgm(on){ bgmOn=on; ['bgm','dBgm'].forEach(id=>$(id).textContent='BGM
   if(on){ audio(); if(state==='boot'||state==='play') bgmStart(); if(state==='menu') menuMusicStart(); } else { bgmStop(); menuMusicStop(); } }
 function setVoice(on){ voiceOn=on; ['vo','dVo'].forEach(id=>$(id).textContent='VOICE: '+(on?'ON':'OFF')); if(!on) speakStop(); }
 $('vo').addEventListener('click',()=>setVoice(!voiceOn)); $('dVo').addEventListener('click',()=>setVoice(!voiceOn));
-if(!TTS) ['vo','dVo'].forEach(id=>{ $(id).textContent='VOICE: N/A'; $(id).disabled=true; });
 $('se').addEventListener('click',()=>setSe(!seOn)); $('dSe').addEventListener('click',()=>setSe(!seOn));
 $('bgm').addEventListener('click',()=>setBgm(!bgmOn)); $('dBgm').addEventListener('click',()=>setBgm(!bgmOn));
 
