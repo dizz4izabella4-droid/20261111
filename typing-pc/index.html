@@ -134,6 +134,7 @@ body.alert .neon{animation:alarm .5s steps(1) infinite}
 .bl.note{color:#6f9a7c}
 .wl{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:0;font-size:17px;letter-spacing:.05em}
 .pr{color:#4f7d5d;font-size:14px;letter-spacing:0}
+.wl.now{font-size:34px}   /* 入力中の単語は2倍（34px）。打ち終えた行は17pxに戻る */
 .wl .ent{font-size:.8em;margin-left:.35em;padding:0 .15em}
 .wl .ent.d{color:#2f6b43}
 .d{color:var(--ok)}
@@ -372,7 +373,7 @@ body.pwron .crt{animation:crton .6s ease-out}
   <div class="cyber-deck">
     <div class="track-info">TARGET: <span id="trkName">The_Glass_Perimeter</span><br>STATUS: <span id="trkStatus">STANDBY</span><br>MISSION: <span id="gTrk">Iron Skyline Pursuit</span> <small>150 BPM [HIGH_TENSION]</small></div>
     <div class="waveform-sim" id="viz"></div>
-    <div class="deck-btns"><button type="button" id="dBgm">BGM: ON</button><button type="button" id="dSe">SE: ON</button><button type="button" id="dLoad">LOAD TRACK</button><button type="button" id="dLoadG">LOAD MISSION</button></div>
+    <div class="deck-btns"><button type="button" id="dBgm">BGM: ON</button><button type="button" id="dSe">SE: ON</button><button type="button" id="dVo">VOICE: ON</button><button type="button" id="dLoad">LOAD TRACK</button><button type="button" id="dLoadG">LOAD MISSION</button></div>
     <input type="file" id="trkFile" accept="audio/*" hidden><input type="file" id="gTrkFile" accept="audio/*" hidden>
   </div>
 </div>
@@ -387,7 +388,7 @@ body.pwron .crt{animation:crton .6s ease-out}
 
 <div class="win" id="main" hidden>
   <div class="bar"><span class="ico">C:\</span><span class="t" id="mTitle">Command Prompt - defense.exe</span>
-    <button id="se" type="button">SE: ON</button><button id="bgm" type="button">BGM: ON</button><button id="rst" type="button">Restart</button></div>
+    <button id="se" type="button">SE: ON</button><button id="bgm" type="button">BGM: ON</button><button id="vo" type="button">VOICE: ON</button><button id="rst" type="button">Restart</button></div>
   <div class="body" id="mainBody">
     <div id="con"></div>
     <div id="ime" hidden>IME is on. Switch to direct (half-width) input.</div>
@@ -1754,6 +1755,7 @@ function renderMenu(){
   document.querySelectorAll('#menu [data-row]').forEach(el=>el.classList.toggle('sel',+el.dataset.row===mRow));
 }
 function toMenu(){
+  speakStop();
   if(naming) finishNaming(); clearOver(); setTension(0); mqList=''; token++; state='menu'; sirenStop(); bgmStop(); clockStop(); mqClear();
   WINS.forEach(id=>$(id).hidden=true); $('alert').hidden=true; $('ov').hidden=true; $('power').hidden=true; $('idle').hidden=true;
   document.body.classList.remove('alert'); $('menu').hidden=false; mRow=3; renderMenu(); menuMusicStart();
@@ -1817,13 +1819,25 @@ function startPhase(p){
   state='boot';
   typeLines(P.intro,()=>later(()=>{ state='play'; newWord(); },p>0?520:380));
 }
+// ---- 読み上げ: ブラウザ内蔵の音声合成（Web Speech API）。出題の単語が出たとき英語で読む。Tab で、もう一度読む ----
+let voiceOn=true, voiceEn=null;
+const TTS=('speechSynthesis' in window)&&('SpeechSynthesisUtterance' in window);
+function pickVoice(){ if(!TTS) return; const vs=speechSynthesis.getVoices();
+  const us=vs.filter(v=>/^en[-_]US/i.test(v.lang)), en=vs.filter(v=>/^en/i.test(v.lang));
+  voiceEn=us.find(v=>/natural|neural|online|google|samantha|aria|jenny|zira/i.test(v.name))||us[0]||en[0]||null; }
+if(TTS){ pickVoice(); try{ speechSynthesis.addEventListener('voiceschanged',pickVoice); }catch(e){ speechSynthesis.onvoiceschanged=pickVoice; } }
+function speakWord(w){ if(!TTS||!voiceOn) return;
+  try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(w); u.lang='en-US'; u.rate=.85; u.volume=1; if(voiceEn) u.voice=voiceEn; speechSynthesis.speak(u); }catch(e){} }
+function speakStop(){ if(TTS){ try{ speechSynthesis.cancel(); }catch(e){} } }
 function newWord(){
   const [w,ja]=words[wi]; const d=document.createElement('div'); d.className='wl';
   const pr=document.createElement('span'); pr.className='pr'; pr.textContent=PH[phase].prompt; d.appendChild(pr);
   // 単語の後ろに Enter（↵）を置き、押して確定するまで次へ進まない
   cur=[...w,'\n'].map(ch=>{ const s=document.createElement('span'); s.className='u'; s.textContent=ch==='\n'?'\u21B5':ch; s._ch=ch; if(ch==='\n') s.classList.add('ent'); d.appendChild(s); return s; });
+  con.querySelectorAll('.wl.now').forEach(x=>x.classList.remove('now')); d.classList.add('now');
   con.appendChild(d); ci=0; cur[0].className='c'; body.scrollTop=body.scrollHeight; d.classList.add('appear');
   newWord.line=d;
+  speakWord(w);   // 単語が出た瞬間に英語で読み上げる（入力は止めない）
 }
 // 時計は入力している間だけ進める（フェーズの切り替えや演出の時間は、タイムと速さに数えない）
 function elapsed(){ return (tAcc+(tRun!=null?performance.now()-tRun:0))/1000; }
@@ -2011,6 +2025,7 @@ window.addEventListener('keydown',e=>{
   if(state==='over') return;
   if(state!=='play') return;
   if(e.key==='Process'||e.isComposing||e.keyCode===229){ $('ime').hidden=false; return; }
+  if(e.key==='Tab'){ e.preventDefault(); if(!e.repeat&&words[wi]) speakWord(words[wi][0]); return; }
   if(e.key==='Enter'){ e.preventDefault(); if(!e.repeat){ playKey(true); key('\n'); } return; }
   if(e.key.length===1){ e.preventDefault(); $('ime').hidden=true; if(!e.repeat) playKey(e.key===' '); key(e.key); }
 });
@@ -2020,6 +2035,9 @@ $('rst').addEventListener('click',()=>{ audio(); toMenu(); });
 function setSe(on){ seOn=on; ['se','dSe'].forEach(id=>$(id).textContent='SE: '+(on?'ON':'OFF')); if(!on) sirenStop(); }
 function setBgm(on){ bgmOn=on; ['bgm','dBgm'].forEach(id=>$(id).textContent='BGM: '+(on?'ON':'OFF'));
   if(on){ audio(); if(state==='boot'||state==='play') bgmStart(); if(state==='menu') menuMusicStart(); } else { bgmStop(); menuMusicStop(); } }
+function setVoice(on){ voiceOn=on; ['vo','dVo'].forEach(id=>$(id).textContent='VOICE: '+(on?'ON':'OFF')); if(!on) speakStop(); }
+$('vo').addEventListener('click',()=>setVoice(!voiceOn)); $('dVo').addEventListener('click',()=>setVoice(!voiceOn));
+if(!TTS) ['vo','dVo'].forEach(id=>{ $(id).textContent='VOICE: N/A'; $(id).disabled=true; });
 $('se').addEventListener('click',()=>setSe(!seOn)); $('dSe').addEventListener('click',()=>setSe(!seOn));
 $('bgm').addEventListener('click',()=>setBgm(!bgmOn)); $('dBgm').addEventListener('click',()=>setBgm(!bgmOn));
 
