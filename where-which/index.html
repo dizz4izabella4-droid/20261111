@@ -234,7 +234,23 @@ body.kb .app{min-height:0}
 /* ===== 森のすみか（背景は固定。水面・葉っぱ・ランタン・窓の灯りだけ うごく） ===== */
 .room{background:#cfe3b8}
 .room .deco{position:absolute;inset:0;overflow:hidden;border-radius:inherit}
-.scene{position:absolute;left:0;bottom:0;width:100%;aspect-ratio:1672/941}
+.scene{position:absolute;left:0;bottom:0;width:100%;aspect-ratio:830/464}
+.sv{position:absolute;inset:0;opacity:0;visibility:hidden;transition:opacity 3.2s ease,visibility 0s 3.2s}
+.sv.on{z-index:2;opacity:1;visibility:visible;transition:opacity 3.2s ease,visibility 0s}
+.sv.under{z-index:1;opacity:1;visibility:visible;transition:none}
+.fx-rain{position:absolute;inset:0;opacity:0;transition:opacity 3s;pointer-events:none;overflow:hidden;
+  background-image:linear-gradient(100deg,transparent 46%,rgba(235,245,255,.55) 50%,transparent 54%),linear-gradient(100deg,transparent 47%,rgba(235,245,255,.35) 50%,transparent 53%);
+  background-size:38px 90px,23px 70px;animation:rainFall .55s linear infinite}
+@keyframes rainFall{from{background-position:0 0,0 0}to{background-position:-9px 90px,-6px 70px}}
+.scene.is-rain .fx-rain{opacity:.55}
+.fx-fly{position:absolute;inset:0;opacity:0;transition:opacity 3s;pointer-events:none}
+.scene.is-night .fx-fly{opacity:1}
+.fx-fly i{position:absolute;width:5px;height:5px;border-radius:50%;background:#fff6a8;box-shadow:0 0 8px 3px rgba(255,240,140,.75);animation:flyA 7s ease-in-out infinite}
+.fx-fly i:nth-child(1){left:24%;top:62%}.fx-fly i:nth-child(2){left:34%;top:50%;animation-delay:-2s;animation-duration:9s}
+.fx-fly i:nth-child(3){left:48%;top:70%;animation-delay:-4s}.fx-fly i:nth-child(4){left:62%;top:58%;animation-delay:-1s;animation-duration:8s}
+.fx-fly i:nth-child(5){left:14%;top:44%;animation-delay:-5s;animation-duration:10s}.fx-fly i:nth-child(6){left:72%;top:76%;animation-delay:-3s}
+.fx-fly i:nth-child(7){left:42%;top:40%;animation-delay:-6s;animation-duration:11s}
+@keyframes flyA{0%,100%{transform:translate(0,0);opacity:.15}25%{transform:translate(14px,-10px);opacity:1}50%{transform:translate(4px,-22px);opacity:.3}75%{transform:translate(-12px,-8px);opacity:.95}}
 .sc-base{position:absolute;inset:0;width:100%;height:100%;display:block;user-select:none}
 .sp{position:absolute;height:auto;pointer-events:none;user-select:none;will-change:transform}
 .sp-water{filter:url(#ripple)}
@@ -256,8 +272,8 @@ body.kb .app{min-height:0}
 @keyframes winGlow{0%,100%{filter:brightness(1) saturate(1)}50%{filter:brightness(1.16) saturate(1.1)}}
 .halo{position:absolute;pointer-events:none;mix-blend-mode:screen;border-radius:50%;
   background:radial-gradient(circle,rgba(255,214,128,.62) 0,rgba(255,200,110,.22) 38%,transparent 68%)}
-.halo-window{left:77.2%;top:22%;width:16.4%;aspect-ratio:1;animation:haloPulse 4.4s ease-in-out infinite}
-.halo-lantern{left:50.4%;top:20.5%;width:12.6%;aspect-ratio:1;animation:haloFlick 3.1s ease-in-out infinite}
+.halo-window{left:83%;top:19.8%;width:16.4%;aspect-ratio:1;animation:haloPulse 4.4s ease-in-out infinite}
+.halo-lantern{left:56.4%;top:14.2%;width:12.6%;aspect-ratio:1;animation:haloFlick 3.1s ease-in-out infinite}
 @keyframes haloPulse{0%,100%{opacity:.35;transform:scale(.96)}50%{opacity:.8;transform:scale(1.06)}}
 @keyframes haloFlick{0%,100%{opacity:.55}18%{opacity:.95}33%{opacity:.45}52%{opacity:1}71%{opacity:.6}86%{opacity:.85}}
 @media(prefers-reduced-motion:reduce){.sp-water{filter:none!important}}
@@ -361,18 +377,64 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
     <div id="character-stage" class="room" role="button" tabindex="0">
       <div id="room-decorations" class="deco" aria-hidden="true">
         <div class="scene">
-          <img class="sc-base" src="scene/bg.jpg" alt="" draggable="false">
-          <img class="sp sp-water" src="scene/water.png" alt="" draggable="false" style="left:0.000%;top:58.448%;width:45.455%">
-          <div class="glint" style="left:0.000%;top:58.448%;width:45.455%;clip-path:polygon(0.0% 26.8%, 15.8% 21.1%, 32.9% 16.9%, 43.4% 11.3%, 57.9% 4.2%, 73.7% 5.6%, 86.8% 12.7%, 98.9% 19.7%, 98.0% 29.6%, 90.8% 50.7%, 81.6% 69.0%, 68.4% 80.3%, 50.0% 84.5%, 31.6% 90.1%, 15.8% 97.2%, 0.0% 85.9%)"></div>
-          <img class="sp sp-leaf lf-tl" src="scene/leafTL.png" alt="" draggable="false" style="left:0.000%;top:0.000%;width:28.110%">
-          <img class="sp sp-leaf lf-tc" src="scene/leafTC.png" alt="" draggable="false" style="left:41.268%;top:0.000%;width:19.438%">
-          <img class="sp sp-leaf lf-tr" src="scene/leafTR.png" alt="" draggable="false" style="left:64.892%;top:0.000%;width:35.108%">
-          <img class="sp sp-leaf lf-br" src="scene/leafBR.png" alt="" draggable="false" style="left:75.957%;top:73.326%;width:24.043%">
-          <img class="sp sp-leaf lf-bl" src="scene/leafBL.png" alt="" draggable="false" style="left:0.000%;top:66.419%;width:8.971%">
-          <div class="halo halo-window"></div>
-          <img class="sp sp-window" src="scene/window.png" alt="" draggable="false" style="left:80.443%;top:27.099%;width:9.868%">
-          <div class="halo halo-lantern"></div>
-          <img class="sp sp-lantern" src="scene/lantern.png" alt="" draggable="false" style="left:52.632%;top:10.096%;width:9.270%">
+          <div class="sv sv-day" data-v="day">
+            <img class="sc-base" src="scene/day/bg.webp" alt="" draggable="false">
+            <img class="sp sp-water" src="scene/day/water.webp" alt="" draggable="false" style="left:0.000%;top:57.328%;width:52.048%">
+            <div class="glint" style="left:0.000%;top:57.328%;width:52.048%;clip-path:polygon(0.0% 19.5%, 23.1% 14.6%, 32.4% 4.9%, 55.6% 2.4%, 76.4% 7.3%, 94.9% 17.1%, 99.5% 29.3%, 93.8% 59.8%, 81.0% 80.5%, 57.9% 95.1%, 34.7% 97.6%, 13.9% 92.7%, 0.0% 87.8%)"></div>
+            <img class="sp sp-leaf lf-tl" src="scene/day/leafTL.webp" alt="" draggable="false" style="left:0.000%;top:0.000%;width:28.313%">
+            <img class="sp sp-leaf lf-tc" src="scene/day/leafTC.webp" alt="" draggable="false" style="left:41.566%;top:0.000%;width:19.277%">
+            <img class="sp sp-leaf lf-tr" src="scene/day/leafTR.webp" alt="" draggable="false" style="left:65.060%;top:0.000%;width:34.940%">
+            <img class="sp sp-leaf lf-br" src="scene/day/leafBR.webp" alt="" draggable="false" style="left:77.108%;top:73.276%;width:22.892%">
+            <img class="sp sp-leaf lf-bl" src="scene/day/leafBL.webp" alt="" draggable="false" style="left:0.000%;top:66.810%;width:10.843%">
+            <div class="halo halo-window"></div>
+            <img class="sp sp-window" src="scene/day/window.webp" alt="" draggable="false" style="left:86.265%;top:25.000%;width:9.880%">
+            <div class="halo halo-lantern"></div>
+            <img class="sp sp-lantern" src="scene/day/lantern.webp" alt="" draggable="false" style="left:58.795%;top:10.345%;width:7.711%">
+          </div>
+          <div class="sv sv-dusk" data-v="dusk">
+            <img class="sc-base" src="scene/dusk/bg.webp" alt="" draggable="false">
+            <img class="sp sp-water" src="scene/dusk/water.webp" alt="" draggable="false" style="left:0.000%;top:57.328%;width:52.048%">
+            <div class="glint" style="left:0.000%;top:57.328%;width:52.048%;clip-path:polygon(0.0% 19.5%, 23.1% 14.6%, 32.4% 4.9%, 55.6% 2.4%, 76.4% 7.3%, 94.9% 17.1%, 99.5% 29.3%, 93.8% 59.8%, 81.0% 80.5%, 57.9% 95.1%, 34.7% 97.6%, 13.9% 92.7%, 0.0% 87.8%)"></div>
+            <img class="sp sp-leaf lf-tl" src="scene/dusk/leafTL.webp" alt="" draggable="false" style="left:0.000%;top:0.000%;width:28.313%">
+            <img class="sp sp-leaf lf-tc" src="scene/dusk/leafTC.webp" alt="" draggable="false" style="left:41.566%;top:0.000%;width:19.277%">
+            <img class="sp sp-leaf lf-tr" src="scene/dusk/leafTR.webp" alt="" draggable="false" style="left:65.060%;top:0.000%;width:34.940%">
+            <img class="sp sp-leaf lf-br" src="scene/dusk/leafBR.webp" alt="" draggable="false" style="left:77.108%;top:73.276%;width:22.892%">
+            <img class="sp sp-leaf lf-bl" src="scene/dusk/leafBL.webp" alt="" draggable="false" style="left:0.000%;top:66.810%;width:10.843%">
+            <div class="halo halo-window"></div>
+            <img class="sp sp-window" src="scene/dusk/window.webp" alt="" draggable="false" style="left:86.265%;top:25.000%;width:9.880%">
+            <div class="halo halo-lantern"></div>
+            <img class="sp sp-lantern" src="scene/dusk/lantern.webp" alt="" draggable="false" style="left:58.795%;top:10.345%;width:7.711%">
+          </div>
+          <div class="sv sv-night" data-v="night">
+            <img class="sc-base" src="scene/night/bg.webp" alt="" draggable="false">
+            <img class="sp sp-water" src="scene/night/water.webp" alt="" draggable="false" style="left:0.000%;top:57.328%;width:52.048%">
+            <div class="glint" style="left:0.000%;top:57.328%;width:52.048%;clip-path:polygon(0.0% 19.5%, 23.1% 14.6%, 32.4% 4.9%, 55.6% 2.4%, 76.4% 7.3%, 94.9% 17.1%, 99.5% 29.3%, 93.8% 59.8%, 81.0% 80.5%, 57.9% 95.1%, 34.7% 97.6%, 13.9% 92.7%, 0.0% 87.8%)"></div>
+            <img class="sp sp-leaf lf-tl" src="scene/night/leafTL.webp" alt="" draggable="false" style="left:0.000%;top:0.000%;width:28.313%">
+            <img class="sp sp-leaf lf-tc" src="scene/night/leafTC.webp" alt="" draggable="false" style="left:41.566%;top:0.000%;width:19.277%">
+            <img class="sp sp-leaf lf-tr" src="scene/night/leafTR.webp" alt="" draggable="false" style="left:65.060%;top:0.000%;width:34.940%">
+            <img class="sp sp-leaf lf-br" src="scene/night/leafBR.webp" alt="" draggable="false" style="left:77.108%;top:73.276%;width:22.892%">
+            <img class="sp sp-leaf lf-bl" src="scene/night/leafBL.webp" alt="" draggable="false" style="left:0.000%;top:66.810%;width:10.843%">
+            <div class="halo halo-window"></div>
+            <img class="sp sp-window" src="scene/night/window.webp" alt="" draggable="false" style="left:86.265%;top:25.000%;width:9.880%">
+            <div class="halo halo-lantern"></div>
+            <img class="sp sp-lantern" src="scene/night/lantern.webp" alt="" draggable="false" style="left:58.795%;top:10.345%;width:7.711%">
+          </div>
+          <div class="sv sv-rain" data-v="rain">
+            <img class="sc-base" src="scene/rain/bg.webp" alt="" draggable="false">
+            <img class="sp sp-water" src="scene/rain/water.webp" alt="" draggable="false" style="left:0.000%;top:57.328%;width:52.048%">
+            <div class="glint" style="left:0.000%;top:57.328%;width:52.048%;clip-path:polygon(0.0% 19.5%, 23.1% 14.6%, 32.4% 4.9%, 55.6% 2.4%, 76.4% 7.3%, 94.9% 17.1%, 99.5% 29.3%, 93.8% 59.8%, 81.0% 80.5%, 57.9% 95.1%, 34.7% 97.6%, 13.9% 92.7%, 0.0% 87.8%)"></div>
+            <img class="sp sp-leaf lf-tl" src="scene/rain/leafTL.webp" alt="" draggable="false" style="left:0.000%;top:0.000%;width:28.313%">
+            <img class="sp sp-leaf lf-tc" src="scene/rain/leafTC.webp" alt="" draggable="false" style="left:41.566%;top:0.000%;width:19.277%">
+            <img class="sp sp-leaf lf-tr" src="scene/rain/leafTR.webp" alt="" draggable="false" style="left:65.060%;top:0.000%;width:34.940%">
+            <img class="sp sp-leaf lf-br" src="scene/rain/leafBR.webp" alt="" draggable="false" style="left:77.108%;top:73.276%;width:22.892%">
+            <img class="sp sp-leaf lf-bl" src="scene/rain/leafBL.webp" alt="" draggable="false" style="left:0.000%;top:66.810%;width:10.843%">
+            <div class="halo halo-window"></div>
+            <img class="sp sp-window" src="scene/rain/window.webp" alt="" draggable="false" style="left:86.265%;top:25.000%;width:9.880%">
+            <div class="halo halo-lantern"></div>
+            <img class="sp sp-lantern" src="scene/rain/lantern.webp" alt="" draggable="false" style="left:58.795%;top:10.345%;width:7.711%">
+          </div>
+          <div class="fx-rain"></div>
+          <div class="fx-fly"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
         </div>
         <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="ripple" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.006 0.03" numOctaves="2" seed="3" result="n"><animate attributeName="baseFrequency" dur="14s" values="0.006 0.03;0.01 0.042;0.006 0.03" repeatCount="indefinite"/></feTurbulence><feDisplacementMap in="SourceGraphic" in2="n" scale="3.2" xChannelSelector="R" yChannelSelector="G"/></filter></svg>
       </div>
@@ -1584,8 +1646,8 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         const stage = dom.characterStage;
         const w = stage.clientWidth, h = stage.clientHeight;
         if (!w || !h) return;
-        const k = Math.max(w / 1672, h / 941);
-        const sw = 1672 * k, sh = 941 * k;
+        const k = Math.max(w / 830, h / 464);
+        const sw = 830 * k, sh = 464 * k;
         const f = w / sw;
         const L = Math.min(Math.max(0.93 - f, 0), Math.max(0, 1 - f));
         const sc = stage.querySelector('.scene');
@@ -1595,6 +1657,41 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         sc.style.top = (h - sh) + 'px';
         sc.style.bottom = 'auto';
       }
+
+      // ===== じかんに あわせて へんか（ひる・ゆうがた・よる・あめ） =====
+      let sceneNow = '';
+      function sceneByClock(d) {
+        const m = d.getHours() * 60 + d.getMinutes();
+        if (m >= 5 * 60 + 30 && m < 16 * 60) return 'day';
+        if (m >= 16 * 60 && m < 18 * 60 + 30) return 'dusk';
+        return 'night';
+      }
+      function setScene(name, instant) {
+        if (name === sceneNow) return;
+        const sc = document.querySelector('#room-decorations .scene');
+        if (!sc) return;
+        const prev = sceneNow;
+        sceneNow = name;
+        sc.querySelectorAll('.sv').forEach((el) => {
+          const v = el.dataset.v;
+          el.classList.remove('under');
+          if (v === name) {
+            if (instant) { el.style.transition = 'none'; requestAnimationFrame(() => requestAnimationFrame(() => { el.style.transition = ''; })); }
+            el.classList.add('on');
+          }
+          else if (v === prev && !instant) { el.classList.remove('on'); el.classList.add('under'); setTimeout(() => el.classList.remove('under'), 3400); }
+          else el.classList.remove('on');
+        });
+        sc.classList.toggle('is-rain', name === 'rain');
+        sc.classList.toggle('is-night', name === 'night');
+      }
+      function updateScene(instant) {
+        let forced = '';
+        try { forced = new URLSearchParams(location.search).get('scene') || ''; } catch (err) { forced = ''; }
+        setScene(['day', 'dusk', 'night', 'rain'].includes(forced) ? forced : sceneByClock(new Date()), instant);
+      }
+      updateScene(true);
+      setInterval(() => updateScene(false), 60000);
 
       // ===== はじまりの流れ：キャラづくり → なまえ → ナレーション → ねんね → 三日後 → かいわ =====
       const SLEEP_MS = 40000;
