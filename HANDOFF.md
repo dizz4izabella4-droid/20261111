@@ -680,8 +680,8 @@ PC版の筋立てと仕組み（防御→追跡→反撃、攻撃信号、耐久
 
 ### 21-y. きもちエフェクト（写真は変形しない）
 - 顔の検出・変形はしない。キャラの周りにマークを出し、体全体を動かして気持ちを表す（どんな画像でも動く）。
-- `showEmotion(kind)`：happy/big（ハート・きらきら＋ジャンプ）、sad（どよーん雲・涙＋うなだれ）、surprise（！＋ぴょん）、think（？＋ゆらゆら）、sleepy（Zzz）。
-- `emotionFor(dialogue)` が話の種類から選ぶ：ネタぎれ→sad、レベルアップ→big、ほめる/おぼえたこと/うんへのへんじ→happy、きづき/おねだり/いたずら→surprise、質問/いいえへのへんじ→think。
+- `showEmotion(kind)`：happy/big（ハート・きらきら＋ジャンプ）、sad（どよーん雲・涙＋うなだれ）、surprise（！＋ぴょん）、think（？＋ゆらゆら）、sleepy（Zzz）、music（♪）、idea（電球）、angry（怒りマーク）、shy（照れ）、sweat（汗）、confused（ぐるぐる＋？）の計12種。
+- `emotionFor(dialogue)` が話の種類から選ぶ：ネタぎれ→sad、レベルアップ→big、ほめる/おぼえたこと/うんへのへんじ→happy、きづき→idea、おねだり→shy、いたずら→sweat、あそび→music、つっこみ→angry、むずかしい→confused、はんのう→surprise、質問/いいえへのへんじ→think。
 - DOM：`#character-emote`（img を包む、体のアニメ用）と `#emote-fx`（マーク用）。`prefers-reduced-motion` ではアニメ無効。
 
 ## 21. 社長室の演出と用心棒
