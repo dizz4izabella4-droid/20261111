@@ -56,7 +56,7 @@ body.touch .pc-only{display:none}body.touch .touch-only{display:block}
       <div>Wave <b id="hWave">1</b>　Mushrooms <b id="hLeft">0</b>　Mycelium <b id="hMyc">0</b>　Score <b id="hScore">0</b></div>
       <div class="btns"><button id="bMute" type="button">Sound ON</button><button id="bReset" type="button">Reset</button></div>
     </div>
-    <div id="banner">ALL BURNED<small id="bSub"></small></div>
+    <div id="banner"><span id="bMain">ALL BURNED</span><small id="bSub"></small></div>
     <div id="title">
       <h1>火の箱庭（仮）</h1>
       <div class="sub">Quarter-view prototype</div>
@@ -77,7 +77,7 @@ body.touch .pc-only{display:none}body.touch .touch-only{display:block}
 'use strict';
 /* ====== 定数 ====== */
 const W=416,H=288,TW=32,TH=16,N=12,OX=208,OY=44,CAP=120,T_SIDE=18;
-const BMAX=[50,66,88];            // サイズ別の燃焼フレーム数
+const BMAX=[50,66,88,115];            // サイズ別の燃焼フレーム数
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 cv.width=W;cv.height=H;
 const rnd=(a,b)=>a+Math.random()*(b-a), irnd=(a,b)=>Math.floor(rnd(a,b+1));
@@ -179,6 +179,7 @@ function buildWorld(){
 }
 
 function resetGame(){
+  purgeCool=0;bannerT=0;
   buildWorld();
   player={x:N/2,y:N/2,aim:Math.PI/2,walk:0,moving:false,fireF:0,firing:false,pilotT:0};
   mush=[];mycs=[];parts=[];wave=1;score=0;tickN=0;phase='play';clearT=0;shakeAmt=0;idSeq=0;
@@ -224,11 +225,34 @@ function spawnWave(n){
     mush.push(makeMush(p[0],p[1],i%5===0?2:(i%4===0?0:1),i*5+irnd(0,6)));
   }
 }
+function rollSize(){const r=Math.random();return r<0.35?0:r<0.7?1:r<0.92?2:3;}
 function spawnBaby(m){
+  for(let n=0;n<2;n++)spawnBaby1(m);
+}
+function spawnBaby1(m){
   for(let t=0;t<8;t++){
     const a=rnd(0,6.28),x=m.x+Math.cos(a)*0.6,y=m.y+Math.sin(a)*0.6;
-    if(!blocked(x,y,0.25)){const b=makeMush(x,y,0,0);b.pop=24;mush.push(b);puff(x,y);dirt(x,y,7);return;}
+    if(!blocked(x,y,0.25)){const b=makeMush(x,y,rollSize(),0);b.pop=24;mush.push(b);puff(x,y);dirt(x,y,7);return;}
   }
+}
+let purgeCool=0,bannerT=0;
+function showBanner(main,sub){
+  document.getElementById('bMain').textContent=main;document.getElementById('bSub').textContent=sub;
+  document.getElementById('banner').style.opacity=1;
+}
+function purgeOverflow(){
+  purgeCool=480;bannerT=130;
+  for(const m of mush){
+    if(m.burn===0&&m.delay===0&&!m.vanish){
+      m.vanish=8+Math.round(Math.hypot(m.x-player.x,m.y-player.y)*4)+irnd(0,6);
+    }
+  }
+  const cand=mush.filter(m=>m.burn===0&&m.delay===0&&m.sz>=1);
+  for(let k=0;k<3&&cand.length;k++){
+    const m=cand.splice(irnd(0,cand.length-1),1)[0];
+    if(mycs.length<10&&!mycs.some(c=>Math.hypot(c.x-m.x,c.y-m.y)<0.9))mycs.push(makeMyc(m.x,m.y));
+  }
+  showBanner('OVERGROWN','Excess mushrooms swept away — spores settle as mycelium');
 }
 function ignite(m){
   if(canIgnite(m)){m.burn=1;m.sp=0;spark(m.x,m.y,10,3);}
@@ -236,7 +260,7 @@ function ignite(m){
 let lastCrack=0;
 function burnTick(m,burningCount){
   m.burn++;
-  const bm=BMAX[m.sz],pe=bm*0.6,hh=[8,12,16][m.sz];
+  const bm=BMAX[m.sz],pe=bm*0.6,hh=[8,12,16,22][m.sz];
   scorchAt(m.x,m.y,0.005);
   if(m.burn<pe){
     if(m.burn===2)m.sp=rnd(0.05,0.075);
@@ -264,13 +288,14 @@ function burnTick(m,burningCount){
     for(let k=0;k<5;k++)parts.push({k:'a',x:m.x+rnd(-.15,.15),y:m.y+rnd(-.15,.15),z:rnd(hh*.4,hh),vx:rnd(-.01,.01),vy:rnd(-.01,.01),vz:rnd(0.02,0.3),life:0,max:irnd(50,90),sz:1});
     for(let k=0;k<2;k++)smoke(m.x,m.y,hh);
     scorchAt(m.x,m.y,0.35);
-    if(Math.random()<[0.04,0.15,0.28][m.sz]&&mycs.length<10&&!mycs.some(c=>Math.hypot(c.x-m.x,c.y-m.y)<0.9))mycs.push(makeMyc(m.x,m.y));
+    if(Math.random()<[0.04,0.15,0.28,0.4][m.sz]&&mycs.length<10&&!mycs.some(c=>Math.hypot(c.x-m.x,c.y-m.y)<0.9))mycs.push(makeMyc(m.x,m.y));
     scorchAt(m.x+.7,m.y,0.1);scorchAt(m.x-.7,m.y,0.1);scorchAt(m.x,m.y+.7,0.1);scorchAt(m.x,m.y-.7,0.1);
     return true;
   }
   return false;
 }
 function updateMush(m,bc){
+  if(m.vanish>0){m.vanish--;if(m.vanish===0){puff(m.x,m.y);for(let k=0;k<5;k++)parts.push({k:'a',x:m.x+rnd(-.15,.15),y:m.y+rnd(-.15,.15),z:rnd(2,10),vx:rnd(-.02,.02),vy:rnd(-.02,.02),vz:rnd(0.05,0.35),life:0,max:irnd(30,60),sz:1});return true;}return false;}
   if(m.delay>0){m.delay--;if(m.delay===0){m.pop=24;puff(m.x,m.y);dirt(m.x,m.y,8);}return false;}
   if(m.pop>0){m.pop--;if(m.pop%6===0)dirt(m.x,m.y,2);if(m.burn===0)return false;}
   if(m.burn>0)return burnTick(m,bc);
@@ -325,7 +350,7 @@ function makeMyc(x,y){
 function spawnAround(x,y,rad){
   for(let t=0;t<8;t++){
     const a=rnd(0,6.28),r=rnd(0.2,rad),nx=x+Math.cos(a)*r,ny=y+Math.sin(a)*r;
-    if(!blocked(nx,ny,0.2)){const b=makeMush(nx,ny,0,0);b.pop=24;mush.push(b);puff(nx,ny);dirt(nx,ny,7);return;}
+    if(!blocked(nx,ny,0.2)){const b=makeMush(nx,ny,rollSize(),0);b.pop=24;mush.push(b);puff(nx,ny);dirt(nx,ny,7);return;}
   }
 }
 function updateMyc(c){
@@ -341,7 +366,7 @@ function updateMyc(c){
     c.spT--;
     if(c.spT<=0){
       c.spT=irnd(110,220);
-      const n=Math.random()<0.3?2:1;
+      const n=Math.random()<0.3?4:2;
       for(let k=0;k<n;k++)if(mush.length<CAP)spawnAround(c.x,c.y,0.9);
     }
   }
@@ -576,6 +601,9 @@ function update(){
   for(let i=mush.length-1;i>=0;i--){
     if(updateMush(mush[i],bc)){mush[i]=mush[mush.length-1];mush.pop();}
   }
+  if(purgeCool>0)purgeCool--;
+  if(mush.length>=CAP&&purgeCool===0)purgeOverflow();
+  if(bannerT>0&&--bannerT===0&&phase==='play')document.getElementById('banner').style.opacity=0;
   for(const t of trees)updateTree(t);
   for(const g of grass)updateGrass(g);
   for(let i=mycs.length-1;i>=0;i--)if(updateMyc(mycs[i])){mycs[i]=mycs[mycs.length-1];mycs.pop();}
@@ -583,9 +611,7 @@ function update(){
   // 波
   if(phase==='play'&&mush.length===0&&mycs.length===0){
     phase='clear';clearT=0;
-    const b=document.getElementById('banner');
-    document.getElementById('bSub').textContent='Wave '+wave+' cleared — the next one is bigger';
-    b.style.opacity=1;
+    showBanner('ALL BURNED','Wave '+wave+' cleared — the next one is bigger');
   }else if(phase==='clear'){
     clearT++;
     if(clearT>150){
@@ -634,10 +660,10 @@ function hsl2rgb(h,s,l){
   return [Math.round(f(0)*255),Math.round(f(8)*255),Math.round(f(4)*255)];
 }
 const DES=[
-  {cap:[[4,6,6],[4,8,10,10],[6,10,12,14,14]],stem:[[2,2],[4,4],[6,5]]},            // 0 丸い傘＋斑点
-  {cap:[[6,8],[8,12,12],[10,14,16,16]],stem:[[2,3],[4,3],[6,4]]},                   // 1 平たい傘＋しま
-  {cap:[[2,4,6],[2,4,6,8,10],[2,4,6,8,10,12,14]],stem:[[2,3],[2,5],[4,6]]},         // 2 とんがり帽子
-  {cap:[[4,6,8],[4,8,10,12],[6,10,12,14,16]],stem:[[2,2],[4,4],[4,5]]}              // 3 つば付き
+  {cap:[[4,6,6],[4,8,10,10],[6,10,12,14,14],[6,10,14,16,18,18]],stem:[[2,2],[4,4],[6,5],[8,6]]},            // 0 丸い傘＋斑点
+  {cap:[[6,8],[8,12,12],[10,14,16,16],[10,16,20,22,22]],stem:[[2,3],[4,3],[6,4],[8,5]]},                   // 1 平たい傘＋しま
+  {cap:[[2,4,6],[2,4,6,8,10],[2,4,6,8,10,12,14],[2,4,6,8,10,12,14,16,18]],stem:[[2,3],[2,5],[4,6],[6,7]]},         // 2 とんがり帽子
+  {cap:[[4,6,8],[4,8,10,12],[6,10,12,14,16],[6,10,14,16,18,20]],stem:[[2,2],[4,4],[4,5],[6,6]]}              // 3 つば付き
 ];
 function drawMush(m){
   if(m.delay>0)return;
@@ -656,6 +682,7 @@ function drawMush(m){
     else{const q=Math.min(1,(f-.6)/.2);capC=[lerp(flick[0],36,q),lerp(flick[1],26,q),lerp(flick[2],23,q)];stemC=[lerp(flick[0],58,q),lerp(flick[1],45,q),lerp(flick[2],40,q)];capHi=capC;}
     if(f>0.7)alpha=1-(f-0.7)/0.3;
   }
+  if(m.vanish>0&&m.vanish<14)alpha=Math.min(alpha,m.vanish%4<2?0.3:0.75);
   ctx.save();
   if(m.pop>0){
     ctx.beginPath();ctx.rect(0,0,W,y+1);ctx.clip();
@@ -679,14 +706,14 @@ function drawMush(m){
     if(dsg===0){
       ctx.fillStyle='rgba(255,255,255,.9)';
       if(m.sz===0)ctx.fillRect(x-1,top+1,1,1);
-      else{ctx.fillRect(x-3+m.spot,top+1,2,1);ctx.fillRect(x+1,top+2,2,1);if(m.sz===2)ctx.fillRect(x-5,top+3,2,1);}
+      else{ctx.fillRect(x-3+m.spot,top+1,2,1);ctx.fillRect(x+1,top+2,2,1);if(m.sz>=2)ctx.fillRect(x-5,top+3,2,1);if(m.sz===3){ctx.fillRect(x+4,top+4,2,1);ctx.fillRect(x-1,top+4,2,1);}}
     }else if(dsg===1){
       ctx.fillStyle='rgba(0,0,0,.25)';
       const rw=cap[Math.min(1,cap.length-1)];ctx.fillRect(Math.round(x-rw/2),top+1,rw,1);
       if(cap.length>2){const rw2=cap[cap.length-1];ctx.fillRect(Math.round(x-rw2/2),top+cap.length-1,rw2,1);}
     }else if(dsg===2){
       ctx.fillStyle='rgba(255,255,255,.9)';
-      ctx.fillRect(x-1,top+(m.sz===0?2:3),1,1);if(m.sz===2)ctx.fillRect(x+2,top+5,1,1);
+      ctx.fillRect(x-1,top+(m.sz===0?2:3),1,1);if(m.sz>=2)ctx.fillRect(x+2,top+5,1,1);
     }else{
       const lw=cap[cap.length-1];
       ctx.fillStyle='#f1e6c8';ctx.fillRect(Math.round(x-lw/2),top+cap.length-1,lw,1);
