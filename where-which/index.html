@@ -224,6 +224,22 @@ body.kb header,body.kb .level,body.kb .teach-head{display:none}
 body.kb .room{min-height:0;height:100%}
 body.kb .app{min-height:0}
 
+/* ===== はじめの子（植物スライム）SVG ===== */
+#character-svg{width:var(--chsize,96px);height:var(--chsize,96px);filter:drop-shadow(0 4px 4px rgba(0,0,0,.18))}
+.nc{display:block;width:100%;height:100%;overflow:visible}
+.nc .face{display:none}
+.nc[data-face="normal"] .f-normal,.nc[data-face="smile"] .f-smile,.nc[data-face="surprise"] .f-surprise,.nc[data-face="troubled"] .f-troubled,
+.nc[data-face="angry"] .f-angry,.nc[data-face="cry"] .f-cry,.nc[data-face="shy"] .f-shy,.nc[data-face="sleepy"] .f-sleepy{display:inline}
+.nc .m-open{display:none}
+.nc[data-talk="1"] .m-closed{display:none}
+.nc[data-talk="1"] .m-open{display:inline}
+.nc .eye{transform-box:fill-box;transform-origin:center;transition:transform .06s}
+.nc[data-blink="1"] .eye{transform:scaleY(.1)}
+.nc .bodygroup{transform-origin:60px 108px;animation:ncBreathe 3.4s ease-in-out infinite}
+.nc .leaves{transform-origin:60px 34px;animation:ncSway 4.2s ease-in-out infinite}
+@keyframes ncBreathe{0%,100%{transform:scale(1,1)}50%{transform:scale(1.025,.972)}}
+@keyframes ncSway{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(4deg)}}
+
 /* ===== はじまり（キャラづくり・ナレーション・ねんね・三日後） ===== */
 body:not(.ph-talk) .level,body:not(.ph-talk) .teach,body:not(.ph-talk) #speech-box,body:not(.ph-talk) footer,
 body:not(.ph-talk) .status,body:not(.ph-talk) .toggle,body:not(.ph-talk) .controls,body:not(.ph-talk) header .chip-btn{display:none!important}
@@ -236,7 +252,8 @@ body:not(.ph-talk) .room{cursor:default}
 .setup-card p{margin:0;font-size:15px;line-height:1.9;font-weight:700;color:var(--ink2);word-break:keep-all;overflow-wrap:anywhere}
 .setup-big{border:0;border-radius:20px;padding:14px 34px 16px;background:var(--mint);color:#fff;font-size:18px;font-weight:900;letter-spacing:.1em;box-shadow:0 6px 0 var(--mintD)}
 .setup-big:active{transform:translateY(4px);box-shadow:0 2px 0 var(--mintD)}
-.setup-prev{width:120px;height:120px;object-fit:contain;filter:drop-shadow(0 5px 5px rgba(0,0,0,.18));animation:gentleFloat 3.5s ease-in-out infinite}
+.setup-prev{width:130px;height:130px;filter:drop-shadow(0 5px 5px rgba(0,0,0,.18));animation:gentleFloat 3.5s ease-in-out infinite}
+.setup-prev img{width:100%;height:100%;object-fit:contain}
 .setup-name{width:100%;height:52px;border:3px solid var(--line);border-radius:18px;padding:0 16px;font-size:20px;font-weight:800;text-align:center;background:#fff;outline:none}
 .setup-name:focus{border-color:var(--mint)}
 .setup-err{min-height:18px;font-size:12px;font-weight:800;color:var(--pinkD)}
@@ -334,7 +351,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
 
       <div id="character-mover" class="hidden">
         <div id="character-sprite-inner" class="presence-float">
-          <div id="character-emote"><img id="character-image" src="" alt="キャラクター"></div>
+          <div id="character-emote"><img id="character-image" src="" alt="キャラクター"><div id="character-svg" class="hidden"></div></div>
           <div id="emote-fx" aria-hidden="true"></div>
         </div>
         <div class="shadow"></div>
@@ -353,7 +370,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
     <div id="speech-box" class="speech" role="button" tabindex="0" title="おすと つぎの おはなしを きけるよ">
       <div class="speech-head">
         <div class="speaker">
-          <button id="btn-edit-name" type="button" class="name-tag" title="なまえを かえる"><span id="speech-speaker-label">イリス</span><i>✎</i></button>
+          <button id="btn-edit-name" type="button" class="name-tag" title="なまえを かえる"><span id="speech-speaker-label">んちょ</span><i>✎</i></button>
           <span id="speech-category-tag">ひとりごと</span>
         </div>
         <button id="btn-next-speech" type="button" class="next">
@@ -395,7 +412,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
 
   <section class="teach" aria-label="ことばを おしえる">
     <div class="teach-head">
-      <h2 id="teach-title-text">イリスに ことばを おしえる</h2>
+      <h2 id="teach-title-text">んちょに ことばを おしえる</h2>
       <span class="limit">ひらがな・5もじまで</span>
     </div>
     <form id="teach-form" novalidate>
@@ -421,17 +438,19 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
 <div id="setup" class="ov hidden">
   <div class="setup-card" id="setup-step1">
     <h2>WHERE <b>WHICH</b></h2>
-    <p>はじめに、いっしょに すごす<br>キャラクターを つくろう。</p>
-    <p>しゃしんや イラストを えらぶと、<br>キャラクターの かたちに きりぬけるよ。</p>
-    <button id="setup-pick" type="button" class="setup-big">しゃしんを えらぶ</button>
+    <p>はじめに、いっしょに すごす<br>キャラクターを きめよう。</p>
+    <div id="setup-prev1" class="setup-prev" aria-hidden="true"></div>
+    <p>この子は「んちょ」。<br>しゃしんから、べつの キャラクターを<br>つくることも できるよ。</p>
+    <button id="setup-default" type="button" class="setup-big">この子に する</button>
+    <button id="setup-pick" type="button" class="setup-link">しゃしんから つくる</button>
   </div>
   <div class="setup-card hidden" id="setup-step2">
-    <img id="setup-preview" class="setup-prev" alt="つくった キャラクター">
+    <div id="setup-preview" class="setup-prev"></div>
     <p>なまえを つけてあげよう。</p>
-    <input id="setup-name" class="setup-name" type="text" maxlength="10" placeholder="なまえ（10もじまで）" autocomplete="off" aria-label="キャラクターの なまえ">
+    <input id="setup-name" class="setup-name" type="text" maxlength="10" value="んちょ" placeholder="なまえ（10もじまで）" autocomplete="off" aria-label="キャラクターの なまえ">
     <div id="setup-err" class="setup-err"></div>
     <button id="setup-decide" type="button" class="setup-big">きめる</button>
-    <button id="setup-redo" type="button" class="setup-link">べつの しゃしんに する</button>
+    <button id="setup-redo" type="button" class="setup-link">べつの キャラに する</button>
   </div>
 </div>
 <div id="intro" class="ov"><div id="intro-text"></div></div>
@@ -1217,7 +1236,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         genres: [],
         words: [],
         characterImage: null,
-        characterName: 'イリス',
+        characterName: 'んちょ',
         selectedFilterGenre: 'all',
         recentSpeechIds: [],
         recentCategories: [],
@@ -1332,6 +1351,9 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         levelupGenres: document.getElementById('levelup-genres'),
         topicCount: document.getElementById('topic-count'),
         characterEmote: document.getElementById('character-emote'),
+        characterSvg: document.getElementById('character-svg'),
+        setupPrev1: document.getElementById('setup-prev1'),
+        setupDefault: document.getElementById('setup-default'),
         setup: document.getElementById('setup'),
         setupStep1: document.getElementById('setup-step1'),
         setupStep2: document.getElementById('setup-step2'),
@@ -1372,9 +1394,9 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
 
         try {
           const savedName = localStorage.getItem(STORAGE_KEYS.CHAR_NAME);
-          state.characterName = savedName ? savedName.trim() : 'イリス';
+          state.characterName = savedName ? savedName.trim() : 'んちょ';
         } catch (err) {
-          state.characterName = 'イリス';
+          state.characterName = 'んちょ';
         }
 
         state.words.forEach((w) => {
@@ -1577,8 +1599,11 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
 
       function showSetupStep() {
         dom.setup.classList.remove('hidden');
+        dom.setupPrev1.innerHTML = NC_SVG;
         if (state.characterImage) {
-          dom.setupPreview.src = state.characterImage;
+          dom.setupPreview.innerHTML = state.characterImage === 'default' ? NC_SVG : '<img alt="つくった キャラクター">';
+          const img = dom.setupPreview.querySelector('img');
+          if (img) img.src = state.characterImage;
           dom.setupStep1.classList.add('hidden');
           dom.setupStep2.classList.remove('hidden');
           dom.setupErr.textContent = '';
@@ -1664,6 +1689,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         state.napping = true;
         state.walk.waitTimer = 5 + Math.random() * 3;
         dom.characterEmote.classList.add('napping');
+        setFace('sleepy');
         spawnZzz();
         clearInterval(state.zzzTimer);
         state.zzzTimer = setInterval(spawnZzz, 2200);
@@ -1674,6 +1700,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         clearInterval(state.zzzTimer);
         state.zzzTimer = null;
         dom.characterEmote.classList.remove('napping');
+        setFace('normal');
         dom.emoteFx.innerHTML = '';
       }
 
@@ -1710,7 +1737,16 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
 
       function bindStartEvents() {
         dom.setupPick.addEventListener('click', () => dom.inputCharacterFile.click());
-        dom.setupRedo.addEventListener('click', () => dom.inputCharacterFile.click());
+        dom.setupDefault.addEventListener('click', () => {
+          saveCharacterImage('default');
+          renderCharacterImage();
+          showSetupStep();
+        });
+        dom.setupRedo.addEventListener('click', () => {
+          saveCharacterImage(null);
+          renderCharacterImage();
+          showSetupStep();
+        });
         dom.setupDecide.addEventListener('click', decideName);
         dom.setupName.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') { e.preventDefault(); decideName(); }
@@ -1773,8 +1809,13 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
       }
 
       function renderCharacterImage() {
+        const isDefault = state.characterImage === 'default';
+        dom.characterImage.classList.toggle('hidden', isDefault);
+        dom.characterSvg.classList.toggle('hidden', !isDefault);
+        dom.btnRemoveImage.textContent = 'はじめの子に もどす';
+        dom.btnRemoveImage.classList.toggle('hidden', isDefault);
         if (state.characterImage) {
-          dom.characterImage.src = state.characterImage;
+          if (!isDefault) dom.characterImage.src = state.characterImage;
           dom.characterMover.classList.remove('hidden');
           dom.characterPlaceholder.classList.add('hidden');
           dom.characterImageControls.classList.remove('hidden');
@@ -1842,6 +1883,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
 
         dom.characterMover.style.transform = `translate3d(calc(-50% + ${state.walk.x.toFixed(1)}px), ${state.walk.y.toFixed(1)}px, 0)`;
         dom.characterImage.style.transform = state.walk.facingLeft ? 'scaleX(-1)' : 'scaleX(1)';
+        dom.characterSvg.style.transform = state.walk.facingLeft ? 'scaleX(-1)' : 'scaleX(1)';
 
         state.walk.rafId = requestAnimationFrame(updateWalkLoop);
       }
@@ -2521,6 +2563,90 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         return dom.wordbookModal.classList.contains('flex') || dom.cropModal.classList.contains('flex');
       }
 
+      // ===== はじめの子「んちょ」（植物スライム）：からだ・葉っぱ・目・口を わけた SVG =====
+      const NC_SVG = `<svg class="nc" viewBox="0 0 120 120" data-face="normal" aria-hidden="true">
+        <g class="bodygroup">
+          <ellipse cx="60" cy="110" rx="40" ry="5" fill="rgba(90,60,40,.12)"/>
+          <path class="body" d="M10 96C8 56 32 34 60 34C88 34 112 56 110 96C110 105 96 109 60 109C24 109 10 105 10 96Z" fill="#f5e8d1" stroke="#b98d6c" stroke-width="2.6" stroke-linejoin="round"/>
+          <path d="M22 60C28 46 40 40 52 38" fill="none" stroke="#fffaf0" stroke-width="5" stroke-linecap="round" opacity=".75"/>
+          <ellipse cx="34" cy="104" rx="9" ry="3" fill="#e8d3b3" opacity=".7"/><ellipse cx="86" cy="104" rx="9" ry="3" fill="#e8d3b3" opacity=".7"/>
+          <g class="leaves">
+            <path d="M60 36C60 31 60 28 60 25" fill="none" stroke="#6fa862" stroke-width="2.6" stroke-linecap="round"/>
+            <path d="M60 26C51 12 36 12 28 19C37 31 52 33 60 26Z" fill="#9ad184" stroke="#5f9a55" stroke-width="2.2" stroke-linejoin="round"/>
+            <path d="M60 26C69 9 86 9 94 16C86 29 69 33 60 26Z" fill="#9ad184" stroke="#5f9a55" stroke-width="2.2" stroke-linejoin="round"/>
+            <path d="M58 25C50 19 43 18 36 20M62 25C70 17 78 15 86 17" fill="none" stroke="#5f9a55" stroke-width="1.2" stroke-linecap="round" opacity=".7"/>
+          </g>
+          <g class="face f-normal">
+            <ellipse class="eye" cx="42" cy="72" rx="3.4" ry="5" fill="#5b4332"/><ellipse class="eye" cx="78" cy="72" rx="3.4" ry="5" fill="#5b4332"/>
+            <path class="m-closed" d="M55 76H65" stroke="#5b4332" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+            <ellipse class="m-open" cx="60" cy="77" rx="4" ry="4.6" fill="#e8776f" stroke="#5b4332" stroke-width="2"/>
+          </g>
+          <g class="face f-smile">
+            <path d="M36 74Q42 64 48 74M72 74Q78 64 84 74" fill="none" stroke="#5b4332" stroke-width="3" stroke-linecap="round"/>
+            <path d="M51 76Q60 90 69 76Z" fill="#ef8a80" stroke="#5b4332" stroke-width="2.2" stroke-linejoin="round"/>
+            <ellipse cx="29" cy="82" rx="7" ry="4.4" fill="#ffb3b3" opacity=".6"/><ellipse cx="91" cy="82" rx="7" ry="4.4" fill="#ffb3b3" opacity=".6"/>
+          </g>
+          <g class="face f-surprise">
+            <ellipse cx="42" cy="70" rx="4.4" ry="6.4" fill="#5b4332"/><ellipse cx="78" cy="70" rx="4.4" ry="6.4" fill="#5b4332"/>
+            <ellipse cx="60" cy="80" rx="4.2" ry="5.4" fill="#e8776f" stroke="#5b4332" stroke-width="2"/>
+          </g>
+          <g class="face f-troubled">
+            <ellipse cx="42" cy="73" rx="3.2" ry="4.6" fill="#5b4332"/><ellipse cx="78" cy="73" rx="3.2" ry="4.6" fill="#5b4332"/>
+            <path d="M34 62L49 66M86 62L71 66" stroke="#5b4332" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M51 80q4.500-4.500 9 0q4.500 4.500 9 0" fill="none" stroke="#5b4332" stroke-width="2.4" stroke-linecap="round"/>
+          </g>
+          <g class="face f-angry">
+            <ellipse cx="42" cy="73" rx="3.4" ry="4.6" fill="#5b4332"/><ellipse cx="78" cy="73" rx="3.4" ry="4.6" fill="#5b4332"/>
+            <path d="M33 64L50 70M87 64L70 70" stroke="#5b4332" stroke-width="3" stroke-linecap="round"/>
+            <path d="M52 82Q60 75 68 82" fill="none" stroke="#5b4332" stroke-width="2.6" stroke-linecap="round"/>
+          </g>
+          <g class="face f-cry">
+            <ellipse cx="42" cy="72" rx="3.4" ry="5" fill="#5b4332"/><ellipse cx="78" cy="72" rx="3.4" ry="5" fill="#5b4332"/>
+            <path d="M40 78Q38 88 41 94M80 78Q82 88 79 94" stroke="#8fd3ff" stroke-width="4" stroke-linecap="round" fill="none" opacity=".85"/>
+            <path d="M52 84Q60 75 68 84" fill="none" stroke="#5b4332" stroke-width="2.6" stroke-linecap="round"/>
+          </g>
+          <g class="face f-shy">
+            <path d="M37 73Q42 67 47 73M73 73Q78 67 83 73" fill="none" stroke="#5b4332" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M54 78q3 3.500 6 0q3 3.500 6 0" fill="none" stroke="#5b4332" stroke-width="2.4" stroke-linecap="round"/>
+            <ellipse cx="29" cy="81" rx="8" ry="5" fill="#ff9aa8" opacity=".8"/><ellipse cx="91" cy="81" rx="8" ry="5" fill="#ff9aa8" opacity=".8"/>
+          </g>
+          <g class="face f-sleepy">
+            <path d="M36 72Q42 77 48 72M72 72Q78 77 84 72" fill="none" stroke="#5b4332" stroke-width="2.8" stroke-linecap="round"/>
+            <ellipse cx="60" cy="80" rx="2.6" ry="3.2" fill="#e8776f" opacity=".85"/>
+          </g>
+        </g>
+      </svg>`;
+      const NC_FACE = { happy: 'smile', big: 'smile', idea: 'smile', music: 'smile', sad: 'cry', surprise: 'surprise', think: 'troubled', confused: 'troubled', sweat: 'troubled', angry: 'angry', shy: 'shy', sleepy: 'sleepy' };
+
+      function ncEl() {
+        return dom.characterSvg.querySelector('.nc');
+      }
+
+      function setFace(face) {
+        const el = ncEl();
+        if (el) el.dataset.face = face || 'normal';
+      }
+
+      // まばたき と おしゃべり（くちパク）
+      function startNcLoops() {
+        const blink = () => {
+          const el = ncEl();
+          if (el && state.phase !== 'setup' && !state.napping) {
+            el.dataset.blink = '1';
+            setTimeout(() => { el.dataset.blink = '0'; }, 140);
+          }
+          setTimeout(blink, 2200 + Math.random() * 3200);
+        };
+        setTimeout(blink, 1800);
+        let open = false;
+        setInterval(() => {
+          const el = ncEl();
+          if (!el) return;
+          open = state.isSpeaking && el.dataset.face === 'normal' ? !open : false;
+          el.dataset.talk = open ? '1' : '0';
+        }, 190);
+      }
+
       // ===== きもちエフェクト =====
       const FX_SVG = {
         heart: (c) => `<svg viewBox="0 0 24 24"><path fill="${c}" d="M12 21s-7.5-4.6-9.6-9.4C1 8.3 3 5 6.2 5c2 0 3.5 1.1 4.3 2.5h3C14.3 6.1 15.800 5 17.800 5 21 5 23 8.300 21.600 11.600 19.500 16.400 12 21 12 21z"/></svg>`,
@@ -2632,10 +2758,12 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         } else {
           return;
         }
+        setFace(NC_FACE[kind]);
         clearTimeout(state.emoteTimer);
         state.emoteTimer = setTimeout(() => {
           body.className = '';
           dom.emoteFx.innerHTML = '';
+          setFace(state.napping ? 'sleepy' : 'normal');
         }, dur * 1000 + 600);
       }
 
@@ -3149,9 +3277,9 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
 
         dom.btnRemoveImage.addEventListener('click', (e) => {
           e.stopPropagation();
-          saveCharacterImage(null);
+          saveCharacterImage('default');
           renderCharacterImage();
-          showFeedback('がぞうを けしたよ。また いつでも えらべるよ。', false);
+          showFeedback('はじめの子に もどしたよ。しゃしんは いつでも えらびなおせるよ。', false);
         });
 
         dom.characterStage.addEventListener('dragover', (e) => {
@@ -3365,6 +3493,8 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         updateLevelUI();
         updateTopicCount();
         bindEvents();
+        dom.characterSvg.innerHTML = NC_SVG;
+        startNcLoops();
         bindStartEvents();
         loadPhase();
         startPhaseFlow();
