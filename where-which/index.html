@@ -160,7 +160,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px;pa
 .name-tag{border:0;display:inline-flex;align-items:center;gap:5px;background:var(--mint);color:#fff;padding:2px 10px 3px;border-radius:999px}
 .name-tag i{font-style:normal;font-size:11px;opacity:.85}
 .name-edit{margin:4px 2px 0;display:flex;align-items:center;gap:6px}
-.metarow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:-2px 4px 0}
+.metarow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 4px}
 .quick{justify-content:center;margin:0 0 8px}
 #input-word::placeholder{font-size:12px}
 #speech-category-tag{background:var(--lavS);color:var(--lavD);font-weight:800;font-size:10px;padding:2px 9px;border-radius:999px}
@@ -237,7 +237,7 @@ body.kb .app{min-height:0}
 /* ===== 森のすみか（背景は固定。水面・葉っぱ・ランタン・窓の灯りだけ うごく） ===== */
 .room{background:#cfe3b8}
 .room .deco{position:absolute;inset:0;overflow:hidden;border-radius:inherit}
-.scene{position:absolute;left:0;bottom:0;width:100%;aspect-ratio:830/464}
+.scene{position:absolute;left:0;bottom:0;width:100%;aspect-ratio:830/464;z-index:0}
 .sv{position:absolute;inset:0;opacity:0;visibility:hidden;transition:opacity 3.2s ease,visibility 0s 3.2s}
 .sv.on{z-index:2;opacity:1;visibility:visible;transition:opacity 3.2s ease,visibility 0s}
 .sv.under{z-index:1;opacity:1;visibility:visible;transition:none}
@@ -376,7 +376,18 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
     </button>
   </header>
 
-  <section aria-label="キャラクターのばしょ" class="stagewrap">
+  <div class="metarow">
+    <div class="metaL">
+      <button id="btn-edit-name" type="button" class="name-tag" title="なまえを かえる"><span id="speech-speaker-label">んちょ</span><i>✎</i></button>
+    </div>
+    <button id="btn-toggle-auto" type="button" class="toggle" title="かってに おはなしするのを きりかえる">ひとりごと: ON</button>
+  </div>
+  <div id="name-edit-box" class="name-edit hidden">
+    <input id="character-name-input" type="text" maxlength="10" placeholder="あたらしいなまえ" aria-label="あたらしいなまえ">
+    <button id="btn-save-name" type="button" class="btn-s main">きめる</button>
+  </div>
+
+    <section aria-label="キャラクターのばしょ" class="stagewrap">
     <div id="character-stage" class="room" role="button" tabindex="0">
       <div id="room-decorations" class="deco" aria-hidden="true">
         <div class="scene">
@@ -464,17 +475,6 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
     </div>
   </section>
 
-  <div class="metarow">
-    <div class="metaL">
-      <button id="btn-edit-name" type="button" class="name-tag" title="なまえを かえる"><span id="speech-speaker-label">んちょ</span><i>✎</i></button>
-    </div>
-    <button id="btn-toggle-auto" type="button" class="toggle" title="かってに おはなしするのを きりかえる">ひとりごと: ON</button>
-  </div>
-  <div id="name-edit-box" class="name-edit hidden">
-    <input id="character-name-input" type="text" maxlength="10" placeholder="あたらしいなまえ" aria-label="あたらしいなまえ">
-    <button id="btn-save-name" type="button" class="btn-s main">きめる</button>
-  </div>
-
   <section class="teach" aria-label="ことばを おしえる">
     <div id="quick-replies" class="quick hidden" aria-label="へんじ">
       <button type="button" id="qr-yes" class="qr yes">うん</button>
@@ -503,7 +503,8 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
 
   <footer>おぼえた ことばは この ブラウザの なかに ほぞん されるよ<br><span id="topic-count">はなした ネタ：0こ</span></footer>
 
-  <section class="level" aria-label="こうりゅうレベル">
+
+<section class="level" aria-label="こうりゅうレベル">
     <div class="level-row">
       <span class="lv" id="level-label">Lv.1</span>
       <div class="lvbar"><i id="level-bar"></i></div>
