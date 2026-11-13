@@ -709,6 +709,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
           },
           {
             type: "はんのう",
+            replyOnly: true, // 教えて もらった あとだけ（いきなりは いわない）
             lines: [
               "へえー、そうなんだ！",
               "えっ、ほんとう？",
@@ -2368,6 +2369,8 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         dom.qrYes.classList.toggle('hidden', !yesNo);
         dom.qrNo.classList.toggle('hidden', !yesNo);
         dom.quick.classList.remove('hidden');
+        // がめんの したに かくれて いても、ボタンが みえる ばしょまで うごかす
+        try { dom.quick.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (err) { /* むし */ }
         clearTimeout(state.holdTimer);
         state.holdTimer = setTimeout(() => {
           // ずっと へんじが なければ、またひとりごとに もどる
@@ -2934,7 +2937,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
 
         if (!maybeSpeakLevelUp()) {
           triggerNextSpeech({
-            preferredTypes: ['おぼえたこと', 'きづき'],
+            preferredTypes: ['おぼえたこと', 'きづき', 'はんのう'],
             forceWord: cleanWord,
           });
         }
