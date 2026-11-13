@@ -1161,6 +1161,7 @@ function drawHead(cx, hy, fa, o) {
   }
   function hp(x, y, w, h, c) { R(cx + fa * x - (fa < 0 ? w - 1 : 0), hy + y, w, h, c); }
   hp(-2, 0, 2, 2, o.mask ? '#c9c9c2' : sk[2]); /* 耳 */
+  if (o.hs === 'swept') { hp(-3, -6, 7, 2, hr[0]); hp(-1, -7, 5, 1, hr[1]); hp(1, -7, 3, 1, hr[2]); hp(3, -5, 3, 1, hr[1]); hp(-4, -4, 2, 5, hr[0]); hp(2, -6, 1, 1, hr[2]); hp(-2, -8, 2, 1, hr[0]); }
   if (o.hs === 'knot') { hp(-1, -8, 3, 3, hr[0]); hp(0, -9, 1, 1, hr[2]); hp(-1, -6, 3, 1, o.tilak || hr[1]); }
   if (o.hs === 'spiky') { hp(-3, -7, 2, 2, hr[0]); hp(0, -8, 2, 3, hr[1]); hp(2, -7, 2, 2, hr[0]); hp(-5, -5, 2, 2, hr[1]); hp(4, -5, 2, 2, hr[0]); if (o.hl) { hp(0, -8, 1, 1, o.hl); hp(-3, -7, 1, 1, o.hl); } }
   if (o.mask) {
@@ -1180,6 +1181,10 @@ function drawHead(cx, hy, fa, o) {
     hp(2, -2, 4, 1, '#d7dde6'); hp(2, 1, 4, 1, '#d7dde6'); hp(2, -2, 1, 4, '#d7dde6'); hp(5, -2, 1, 4, '#d7dde6');
     hp(3, -1, 2, 2, o.lens || '#a8d8f0'); hp(-2, -1, 4, 1, '#aeb6c2');
   }
+  if (o.shades) {
+    hp(1, -2, 5, 3, '#141821'); hp(1, -3, 5, 1, '#c8ced8'); hp(1, 1, 5, 1, '#8e97a6'); hp(-3, -2, 4, 1, '#c8ced8');
+    hp(2, -2, 2, 1, o.lens || '#7d94c0'); hp(2, -1, 1, 1, '#3c4a66'); hp(4, -1, 1, 1, '#566a94');
+  }
   if (o.band) { hp(-4, -3, 9, 1, o.band); hp(-4, -2, 2, 1, o.band); }
 }
 function drawTorso(m) {
@@ -1189,6 +1194,7 @@ function drawTorso(m) {
     for (x = -hw; x <= hw; x++) {
       rel = x * fa;
       if (x === -hw || x === hw) col = P.o; else if (rel <= -hw + 1) col = P.d; else if (rel <= -hw + 3) col = P.b; else if (rel >= hw - 1) col = P.h; else if (rel >= hw - 3) col = P.m; else col = P.b;
+      if (m.pin && col === P.b && ((x + hw) % 3 === 0) && i > 1) col = m.pin;
       if (i === 0 && x !== -hw && x !== hw) col = P.h;
       if (i >= th - 2) col = (x === -hw || x === hw) ? P.o : P.d;
       R(c0 + x, y, 1, 1, col);
@@ -1201,7 +1207,7 @@ function drawTorso(m) {
   for (i = 1; i <= 6; i++) { var hv = 3 - (i >> 1); R(cc - hv, y0 + i, hv * 2 + 1, 1, '#f6f6f0'); R(cc - hv, y0 + i, 1, 1, '#cfd2da'); }
   pline(cc - 4, y0 + 1, cc - 1, y0 + 10, P.hh); pline(cc + 4, y0 + 1, cc + 1, y0 + 10, P.o);
   R(cc - 1, y0 + 2, 3, 2, T.h); R(cc - 1, y0 + 3, 3, 1, T.b);
-  for (i = 4; i <= 13; i++) { var tw = i < 11 ? 3 : (i < 13 ? 2 : 1); R(cc - 1 + (tw === 1 ? 1 : 0), y0 + i, tw, 1, T.b); R(cc - 1, y0 + i, 1, 1, T.d); if (i < 11) R(cc + 1, y0 + i, 1, 1, T.h); if (i % 3 === 0 && i < 12) R(cc, y0 + i, 1, 1, T.s); }
+  for (i = 4; i <= 13; i++) { var tw = i < 11 ? 3 : (i < 13 ? 2 : 1); R(cc - 1 + (tw === 1 ? 1 : 0), y0 + i, tw, 1, T.b); R(cc - 1, y0 + i, 1, 1, T.d); if (i < 11) R(cc + 1, y0 + i, 1, 1, T.h); if (m.tieStripe && i < 12) R(cc - 1 + (i % 3), y0 + i, 1, 1, T.s); else if (i % 3 === 0 && i < 12) R(cc, y0 + i, 1, 1, T.s); }
   var by = y0 + th - 4;
   R(cc + fa * 2 - 1, y0 + 10, 2, 2, '#0a0c12'); R(cc + fa * 2 - 1, y0 + 10, 1, 1, '#5a6890'); R(cc + fa * 2 - 1, y0 + 14, 2, 2, '#0a0c12'); R(cc + fa * 2 - 1, y0 + 14, 1, 1, '#5a6890');
   var pk = cc - fa * 5 - (fa > 0 ? 0 : 1); R(pk, y0 + 7, 3, 1, P.h); R(pk, y0 + 6, 2, 1, '#f6f6f0'); if (m.pocket) R(pk + 1, y0 + 6, 1, 1, m.pocket);
@@ -1223,6 +1229,7 @@ function drawMan(m) {
     limb([S, E, H], 4, sl, fa);
     var dx = H[0] - E[0], dy = H[1] - E[1], dd = Math.hypot(dx, dy) || 1, ux = dx / dd, uy = dy / dd;
     R(Math.round(H[0] - ux * 3), Math.round(H[1] - uy * 3), 2, 2, '#f6f6f0'); R(Math.round(H[0] - ux * 3), Math.round(H[1] - uy * 3), 1, 1, '#cfd2da');
+    if (m.watch && !back) { var wx = Math.round(H[0] - ux * 1.5), wy = Math.round(H[1] - uy * 1.5); R(wx - 1, wy - 1, 3, 3, '#aeb6c2'); R(wx, wy, 1, 1, '#1b2030'); R(wx - 1, wy - 1, 3, 1, '#e4e9f0'); }
     if (m.glove) { var g = m.glove; R(H[0] - 3, H[1] - 3, 6, 6, g[0]); R(H[0] - 3, H[1] - 3, 6, 1, g[1]); R(H[0] - 3, H[1] + 2, 6, 1, g[2]); R(H[0] - 2, H[1] - 2, 2, 2, g[3]); R(H[0] - 3, H[1] - 3, 1, 6, g[1]); }
     else { R(H[0] - 2, H[1] - 2, 4, 4, SK[0]); R(H[0] - 2, H[1] + 1, 4, 1, SK[2]); R(H[0] - 2, H[1] - 2, 4, 1, SK[1]); R(H[0] + (fa > 0 ? 1 : -2), H[1] - 1, 1, 2, SK[2]); }
   }
@@ -1523,8 +1530,9 @@ function drawFigure() {
   if (!pl.cut && P) H = hands(P);
   var lg = function (fx, fy) { var hx = px + (fx > px ? 1 : -1), kx = (hx + fx) / 2 + f * 2, ky = (hip + fy) / 2 - 1; return { hx: hx, hy: hip, kx: kx, ky: ky, fx: fx, fy: fy }; };
   var lensCol = glintA(GL.g) > 0.5 ? '#ffffff' : '#a8d8f0';
-  var m = { px: px, F: F, fa: f, top: y0, th: th, hy: hy, ux: ux, hw: 6, hwB: 4.4, suit: PAL.navy, pocket: '#d23f31',
-    head: { glasses: true, lens: lensCol, hair: ['#120e0b', '#2a1f18', '#4a382b'], hs: 'short' },
+  var m = { px: px, F: F, fa: f, top: y0, th: th, hy: hy, ux: ux, hw: 6, hwB: 4.4, suit: PAL.black, pin: '#464b64', pocket: null, watch: true, tieStripe: true, skin: ['#e8b98f', '#f6d0aa', '#c8956c', '#a8764e', '#e09a84'],
+    tie: { d: '#0c1634', b: '#1c2f66', h: '#2e4a8c', s: '#c4ceE4'.toLowerCase() },
+    head: { shades: true, lens: glintA(GL.g) > 0.5 ? '#ffffff' : '#7d94c0', hair: ['#14100d', '#2a2019', '#4a3a2e'], hs: 'swept', skin: ['#e8b98f', '#f6d0aa', '#c8956c', '#a8764e', '#e09a84'] },
     legs: [lg(f2x, f2y), lg(f1x, f1y)], A: H ? [H.x, H.y] : null, B: H ? [H.x - f, H.y + 1] : null };
   drawMan(m);
   var hcx = m.out.hcx;

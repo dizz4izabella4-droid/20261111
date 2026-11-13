@@ -6,3 +6,7 @@
 - 四天王(pres.js `drawFoe0`/`FSTY`): 種類ごとにスーツ/ネクタイ/肌/髪型の配色を持ち`drawMan`で描画。`FOE.rng/ev.r`もSC倍。当たり判定(foeHit/samHit)の幅・高さを拡大。
 - 社長/用心棒/赤ちゃん/土下座/後ろ姿は`withScale`ラッパー(`drawPres`→`drawPres0`等)。クリスタル/赤ちゃんのマスク領域も拡大。
 - 左レバー位置: `.stick{left:10cqw→4cqw}`(assemble.pyでパッチ)。
+
+## 26. 主人公モデル刷新(v28)
+- 参考画像に合わせ、主人公を「ミラーサングラス(銀フレーム)・後ろに流した黒髪・黒のピンストライプスーツ・紺に銀ストライプのネクタイ・白ポケットチーフ・腕時計・日焼け肌」に変更。
+- draw.js: `drawHead`に`hs:'swept'`/`shades`、`drawTorso`に`m.pin`(縦ストライプ)/`m.tieStripe`(斜めストライプ)、`drawMan`の腕に`m.watch`を追加。player.jsの`drawFigure`のmオプションで指定。
