@@ -95,6 +95,22 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px;pa
 @keyframes walkBob{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-6px) rotate(-2deg)}75%{transform:translateY(-6px) rotate(2deg)}}
 .walk-bobbing{animation:walkBob .55s ease-in-out infinite}
 
+/* ===== 交流レベル ===== */
+.level{background:var(--white);border-radius:20px;padding:9px 14px 8px;box-shadow:0 3px 0 var(--line)}
+.level-row{display:flex;align-items:center;gap:10px}
+.level .lv{flex:none;background:var(--lemon);color:#7a5a00;font-weight:900;font-size:13px;padding:2px 11px 3px;border-radius:999px;box-shadow:0 2px 0 var(--lemonD)}
+.lvbar{flex:1;height:9px;border-radius:999px;background:var(--line);overflow:hidden}
+.lvbar i{display:block;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,var(--mint),var(--lav));transition:width .5s ease}
+.lvnext{flex:none;font-size:11px;font-weight:800;color:var(--ink2)}
+.lvhint{margin-top:4px;font-size:11px;color:var(--ink2);text-align:center}
+.levelup{position:fixed;left:50%;top:max(14px,env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:60;max-width:92vw;
+  display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 24px 13px;border-radius:24px;background:var(--lemon);color:#5c4300;
+  box-shadow:0 5px 0 var(--lemonD),0 14px 30px rgba(74,61,99,.25);cursor:pointer;text-align:center;animation:lvpop .5s cubic-bezier(.22,1.4,.36,1)}
+.levelup b{font-size:18px;font-weight:900;letter-spacing:.08em}
+.levelup span{font-size:12px;font-weight:800}
+@keyframes lvpop{0%{opacity:0;transform:translate(-50%,-20px) scale(.85)}100%{opacity:1;transform:translate(-50%,0) scale(1)}}
+.gsel{border:0;border-radius:999px;padding:2px 6px;background:var(--mintS);color:var(--mintD);font-size:10px;font-weight:800;max-width:118px;outline:none}
+
 /* ===== なまえ ===== */
 .namebar{align-self:center;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;background:var(--white);border-radius:999px;padding:6px 8px 6px 16px;box-shadow:0 3px 0 var(--line);font-size:13px}
 .namebar .lbl{color:var(--ink2);font-weight:700}
@@ -259,6 +275,15 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
     </div>
   </section>
 
+  <section class="level" aria-label="こうりゅうレベル">
+    <div class="level-row">
+      <span class="lv" id="level-label">Lv.1</span>
+      <div class="lvbar"><i id="level-bar"></i></div>
+      <span class="lvnext" id="level-next">つぎまで あと 15</span>
+    </div>
+    <div class="lvhint" id="level-hint"></div>
+  </section>
+
   <section aria-label="なまえのへんこう" class="namebar">
     <span class="lbl">なまえ：</span>
     <span id="speech-speaker-name">イリス</span>
@@ -310,7 +335,12 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
     </div>
   </section>
 
-  <footer>おぼえた ことばは この ブラウザの なかに ほぞん されるよ</footer>
+  <footer>おぼえた ことばは この ブラウザの なかに ほぞん されるよ<br><span id="topic-count">はなした ネタ：0こ</span></footer>
+</div>
+
+<div id="levelup" class="levelup hidden" role="status" aria-live="polite">
+  <b>レベルアップ！ <span id="levelup-num">Lv.2</span></b>
+  <span id="levelup-genres"></span>
 </div>
 
 <!-- ことばちょう -->
@@ -367,28 +397,79 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
 
       const STORAGE_KEYS = {
         WORDS: 'iris_child_app_words_v02',
-        GENRES: 'iris_child_app_genres_v02',
         IMAGE: 'iris_character_image_v1',
         CHAR_NAME: 'iris_character_name_v1',
+        PROGRESS: 'iris_progress_v1',
       };
 
-      const DEFAULT_GENRES = [
-        { id: 'ikimono', label: 'いきもの' },
-        { id: 'tabemono', label: 'たべもの' },
-        { id: 'basho', label: 'ばしょ' },
-        { id: 'hito', label: 'ひと・かんけい' },
-        { id: 'kodo', label: 'こうどう' },
-        { id: 'kimochi', label: 'きもち' },
-        { id: 'mono', label: 'もの' },
-        { id: 'sonota', label: 'その他' },
+      // ジャンル。level は解放されるレベル
+      const GENRE_DEFS = [
+        { id: 'ikimono', label: 'いきもの', level: 1 },
+        { id: 'tabemono', label: 'たべもの', level: 1 },
+        { id: 'mono', label: 'もの', level: 1 },
+        { id: 'sonota', label: 'その他', level: 1 },
+        { id: 'basho', label: 'ばしょ', level: 2 },
+        { id: 'kodo', label: 'こうどう', level: 2 },
+        { id: 'kimochi', label: 'きもち', level: 3 },
+        { id: 'hito', label: 'ひと・かんけい', level: 3 },
+        { id: 'shizen', label: 'しぜん', level: 4 },
+        { id: 'jikan', label: 'じかん', level: 4 },
+        { id: 'gainen', label: 'かんがえ・がいねん', level: 5 },
+        { id: 'bunka', label: 'ぶんか・あそび', level: 6 },
       ];
+
+      // 交流レベル。LEVEL_TABLE[n-1] が Lv.n に必要な累計経験値（あとから数字だけ直せる）
+      const LEVEL_TABLE = [0, 15, 40, 75, 120, 180];
+      const EXP_REWARD = { teach: 2, answer: 3, assoc: 3, continue: 2 };
+      const EXP_COOLDOWN_MS = 10000;      // 同じ行動の経験値は、この間隔をあける
+      const PENDING_WINDOW_MS = 120000;   // イリスの問いかけに答えたと数える時間
+      const THREE_WORDS_LEVEL = 4;        // 3つの言葉を使う連想が出るレベル
+
+      // ジャンルの相性（連想の方向を選ぶ手がかり。ほかの組み合わせも禁止しない）
+      const GENRE_AFFINITY = [
+        ['ikimono', 'tabemono'], ['ikimono', 'basho'], ['ikimono', 'kodo'],
+        ['tabemono', 'kimochi'], ['basho', 'kodo'], ['hito', 'kimochi'],
+        ['mono', 'kodo'], ['shizen', 'kimochi'], ['jikan', 'kodo'],
+        ['gainen', 'kimochi'], ['bunka', 'hito'],
+      ];
+
+      // セリフのグループごとに、出はじめるレベル（書いてないものは Lv.1）
+      const GROUP_LEVEL = {
+        すききらい: 1, みぢかなもの: 1, ことばあそび: 1, れんそう: 1,
+        そうぞう: 2, くらべる: 2, きもち: 3, せいかつとけいけん: 3,
+        かんがえをふかめる: 5, むずかしい: 5,
+        きょうつうてん: 1, ちがいをみつける: 1, そうぞうする: 2, ぎもんをひろげる: 2,
+        つかいみち: 2, きもちをつなぐ: 3, いたずらっぽい: 3, ものがたり: 4,
+        れんそうのれんそう: 2, じぶんのかんがえ: 5,
+      };
 
       const SAMPLE_WORDS = [
         { text: 'りんご', genreId: 'tabemono' },
-        { text: 'さんぽ', genreId: 'kodo' },
         { text: 'ねこ', genreId: 'ikimono' },
         { text: 'おやつ', genreId: 'tabemono' },
-        { text: 'ひみつ', genreId: 'kimochi' },
+        { text: 'とけい', genreId: 'mono' },
+        { text: 'ひみつ', genreId: 'sonota' },
+        { text: 'さんぽ', genreId: 'kodo' },
+        { text: 'こうえん', genreId: 'basho' },
+        { text: 'ともだち', genreId: 'hito' },
+        { text: 'わくわく', genreId: 'kimochi' },
+        { text: 'あめ', genreId: 'shizen' },
+        { text: 'あさ', genreId: 'jikan' },
+        { text: 'ゆめ', genreId: 'gainen' },
+        { text: 'おまつり', genreId: 'bunka' },
+      ];
+
+      const LEVELUP_LINES = [
+        'やったあ！　レベルが　あがったよ！',
+        'わあ、なんだか　せかいが　ひろがった　きがする！',
+        'えへへ、また　ひとつ　かしこく　なったよ！',
+      ];
+
+      // はなすネタが なくなったとき（このセリフだけは くりかえす）
+      const NETAGIRE_LINES = [
+        ['もう、はなす　ことが　なくなっちゃった。', 'あたらしい　ことばを　おしえて　くれたら、また　おはなし　できるよ。'],
+        ['うーん、はなしたい　ことは　ぜんぶ　はなしたかも。', 'ねえ、あたらしい　ことばを　おしえて。'],
+        ['おはなしの　ネタが　ぎれちゃった。', 'ことばを　ふやしたり、レベルを　あげたら　また　はなせるよ。'],
       ];
 
       const DIALOGUE_DATA = {
@@ -1011,6 +1092,18 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
         selectedFilterGenre: 'all',
         recentSpeechIds: [],
         recentCategories: [],
+        level: 1,
+        exp: 0,
+        usedTopics: new Set(),     // いちど はなしたネタ（二度と使わない）
+        everTaught: new Set(),     // いままでに おしえた ことば（けしても経験値は出ない）
+        pairHistory: [],
+        recentAssocWords: [],
+        answers: [],
+        log: [],
+        lastGrant: {},
+        pending: null,
+        levelUpQueue: null,
+        exhausted: false,
         autoPlayEnabled: true,
         isSpeaking: false,
         chunkTimers: [],
@@ -1090,15 +1183,18 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
         btnCropModeRect: document.getElementById('btn-crop-mode-rect'),
         btnCropReset: document.getElementById('btn-crop-reset'),
         cropCanvas: document.getElementById('crop-canvas'),
+        levelLabel: document.getElementById('level-label'),
+        levelBar: document.getElementById('level-bar'),
+        levelNext: document.getElementById('level-next'),
+        levelHint: document.getElementById('level-hint'),
+        levelup: document.getElementById('levelup'),
+        levelupNum: document.getElementById('levelup-num'),
+        levelupGenres: document.getElementById('levelup-genres'),
+        topicCount: document.getElementById('topic-count'),
       };
 
       function loadData() {
-        try {
-          const savedGenres = localStorage.getItem(STORAGE_KEYS.GENRES);
-          state.genres = savedGenres ? JSON.parse(savedGenres) : [...DEFAULT_GENRES];
-        } catch (err) {
-          state.genres = [...DEFAULT_GENRES];
-        }
+        state.genres = GENRE_DEFS.slice();
 
         try {
           const savedWords = localStorage.getItem(STORAGE_KEYS.WORDS);
@@ -1121,7 +1217,167 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
           state.characterName = 'イリス';
         }
 
+        state.words.forEach((w) => {
+          w.usageCount = Number(w.usageCount) || 0;
+          if (!w.lastUsedAt) w.lastUsedAt = null;
+        });
+        loadProgress();
+
         updateCharacterNameUI();
+      }
+
+      function levelForExp(exp) {
+        let lv = 1;
+        LEVEL_TABLE.forEach((need, i) => {
+          if (exp >= need) lv = i + 1;
+        });
+        return lv;
+      }
+
+      function loadProgress() {
+        let p = {};
+        try {
+          const raw = localStorage.getItem(STORAGE_KEYS.PROGRESS);
+          p = raw ? JSON.parse(raw) : {};
+        } catch (err) {
+          p = {};
+        }
+        state.exp = Number(p.exp) || 0;
+        state.level = Math.max(Number(p.level) || 1, levelForExp(state.exp));
+        state.usedTopics = new Set(Array.isArray(p.usedTopics) ? p.usedTopics : []);
+        state.everTaught = new Set(Array.isArray(p.everTaught) ? p.everTaught : []);
+        state.pairHistory = Array.isArray(p.pairHistory) ? p.pairHistory : [];
+        state.answers = Array.isArray(p.answers) ? p.answers : [];
+        state.log = Array.isArray(p.log) ? p.log : [];
+        state.words.forEach((w) => state.everTaught.add(w.text));
+      }
+
+      function saveProgress() {
+        try {
+          localStorage.setItem(
+            STORAGE_KEYS.PROGRESS,
+            JSON.stringify({
+              level: state.level,
+              exp: state.exp,
+              usedTopics: Array.from(state.usedTopics),
+              everTaught: Array.from(state.everTaught),
+              pairHistory: state.pairHistory,
+              answers: state.answers,
+              log: state.log,
+            })
+          );
+        } catch (err) {
+          /* 保存できなくても、あそびは つづける */
+        }
+      }
+
+      // ===== ジャンルの解放 =====
+      function unlockedGenreIds() {
+        const ids = new Set(GENRE_DEFS.filter((g) => g.level <= state.level).map((g) => g.id));
+        state.words.forEach((w) => ids.add(w.genreId)); // すでに ことばが はいっている ジャンルは そのまま つかえる
+        return ids;
+      }
+
+      function isGenreUnlocked(genreId) {
+        return unlockedGenreIds().has(genreId);
+      }
+
+      // ===== 交流レベルと経験値 =====
+      function updateLevelUI() {
+        dom.levelLabel.textContent = `Lv.${state.level}`;
+        if (state.level >= LEVEL_TABLE.length) {
+          dom.levelBar.style.width = '100%';
+          dom.levelNext.textContent = 'さいだいレベル';
+          dom.levelHint.textContent = 'ぜんぶの ジャンルが ひらいたよ！';
+          return;
+        }
+        const prev = LEVEL_TABLE[state.level - 1];
+        const need = LEVEL_TABLE[state.level];
+        const pct = Math.max(0, Math.min(100, ((state.exp - prev) / (need - prev)) * 100));
+        dom.levelBar.style.width = `${pct}%`;
+        dom.levelNext.textContent = `つぎまで あと ${need - state.exp}`;
+        const nextGenres = GENRE_DEFS.filter((g) => g.level === state.level + 1).map((g) => g.label);
+        dom.levelHint.textContent = `Lv.${state.level + 1} で 「${nextGenres.join('」「')}」が ひらくよ`;
+      }
+
+      function grantExp(kind) {
+        const now = Date.now();
+        if (now - (state.lastGrant[kind] || 0) < EXP_COOLDOWN_MS) return 0;
+        state.lastGrant[kind] = now;
+
+        const before = state.level;
+        state.exp += EXP_REWARD[kind];
+        state.log.push({ k: kind, at: now });
+        if (state.log.length > 60) state.log.shift();
+
+        state.level = Math.max(state.level, levelForExp(state.exp));
+        saveProgress();
+        updateLevelUI();
+        if (state.level > before) {
+          onLevelUp(before, state.level);
+        }
+        return EXP_REWARD[kind];
+      }
+
+      function onLevelUp(from, to) {
+        const added = GENRE_DEFS.filter((g) => g.level > from && g.level <= to).map((g) => g.label);
+        state.levelUpQueue = { from, to, added };
+        renderGenreSelect();
+        if (dom.wordbookModal.classList.contains('flex')) {
+          renderWordbookFilterBar();
+          renderWordbookList();
+        }
+        dom.levelupNum.textContent = `Lv.${to}`;
+        dom.levelupGenres.textContent = added.length > 0 ? `あたらしい グループ：${added.join('・')}` : '';
+        dom.levelup.classList.remove('hidden');
+        clearTimeout(state.levelupTimer);
+        state.levelupTimer = setTimeout(() => dom.levelup.classList.add('hidden'), 5500);
+      }
+
+      // レベルアップの おはなしを した ときは true
+      function maybeSpeakLevelUp() {
+        const q = state.levelUpQueue;
+        if (!q) return false;
+        state.levelUpQueue = null;
+        const second = q.added.length > 0
+          ? `「${q.added.join('」「')}」の\u3000ことばも\u3000おしえて\u3000ほしいな。`
+          : 'まだまだ\u3000いっしょに\u3000かんがえよう！';
+        state.pending = null;
+        speakDialogue({
+          id: `levelup_${Date.now()}`,
+          category: 'レベルアップ',
+          sentences: [splitLineIntoChunks(pickRandomItem(LEVELUP_LINES)), splitLineIntoChunks(second)],
+        });
+        return true;
+      }
+
+      // イリスの質問・連想に、ことばで こたえた とき
+      function consumePendingAnswer(word) {
+        const pend = state.pending;
+        if (!pend || Date.now() - pend.at > PENDING_WINDOW_MS) {
+          state.pending = null;
+          return;
+        }
+        state.pending = null;
+        if (pend.kind === 'ask') {
+          grantExp('answer');
+          state.answers.push({ q: pend.text, a: word, at: Date.now() });
+          if (state.answers.length > 100) state.answers.shift();
+        } else {
+          grantExp('assoc');
+        }
+      }
+
+      // イリスの問いかけを きいて、つぎの おはなしへ すすんだ とき
+      function onUserContinue() {
+        const pend = state.pending;
+        if (!pend || state.isSpeaking) return;
+        if (Date.now() - pend.at > PENDING_WINDOW_MS) {
+          state.pending = null;
+          return;
+        }
+        state.pending = null;
+        grantExp('continue');
       }
 
       function updateCharacterNameUI() {
@@ -1520,20 +1776,115 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
         return arr[Math.floor(Math.random() * arr.length)];
       }
 
-      // 教えた言葉から、重ならないように n 個えらぶ。同じグループの言葉を優先して、無理なつながりを避ける
+      function hashStr(str) {
+        let h = 5381;
+        for (let i = 0; i < str.length; i++) {
+          h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+        }
+        return (h >>> 0).toString(36);
+      }
+
+      // ネタの目印。セリフのひな型 + 入った言葉。同じ目印は二度と使わない
+      function topicKey(raw, words) {
+        return hashStr(raw) + (words && words.length > 0 ? `|${words.join(',')}` : '');
+      }
+
+      function genresAffine(a, b) {
+        return GENRE_AFFINITY.some((p) => (p[0] === a && p[1] === b) || (p[0] === b && p[1] === a));
+      }
+
+      // 教えた言葉から、重ならないように n 個えらぶ（言葉の文字を返す）
+      // 少なく使った言葉・さいきん使ってない言葉を優先。Lv.2からは ちがうジャンル・相性のよいジャンルを多めに
       function pickAssocWords(n) {
         const pool = state.words.slice();
-        const first = pickRandomItem(pool);
+        const recent = state.recentAssocWords;
+        const weight = (w) => {
+          let x = 1 / (1 + (w.usageCount || 0));
+          if (recent.includes(w.text)) x *= 0.15;
+          return x;
+        };
+        const pickWeighted = (arr) => {
+          const ws = arr.map(weight);
+          let r = Math.random() * ws.reduce((x, y) => x + y, 0);
+          for (let i = 0; i < arr.length; i++) {
+            r -= ws[i];
+            if (r <= 0) return arr[i];
+          }
+          return arr[arr.length - 1];
+        };
+
+        let first;
+        if (Math.random() < 0.3) {
+          first = pool.reduce((a, b) => ((b.createdAt || 0) > (a.createdAt || 0) ? b : a)); // とうろくしたばかりの言葉
+        } else {
+          first = pickWeighted(pool);
+        }
         const picked = [first];
         while (picked.length < n) {
           const remain = pool.filter((w) => !picked.includes(w));
-          const sameGenre = remain.filter((w) => w.genreId === first.genreId);
-          const from = sameGenre.length > 0 && Math.random() < 0.6 ? sameGenre : remain;
-          picked.push(pickRandomItem(from));
+          const aff = remain.filter((w) => genresAffine(first.genreId, w.genreId));
+          const diff = remain.filter((w) => w.genreId !== first.genreId);
+          const same = remain.filter((w) => w.genreId === first.genreId);
+          let from = remain;
+          if (state.level >= 2) {
+            if (aff.length > 0 && Math.random() < 0.55) from = aff;
+            else if (diff.length > 0 && Math.random() < 0.7) from = diff;
+          } else if (same.length > 0 && Math.random() < 0.6) {
+            from = same;
+          }
+          picked.push(pickWeighted(from));
         }
         return picked.map((w) => w.text);
       }
 
+      // この候補に、まだ使っていない言葉の組み合わせがあるか。あれば {words, key, pairKey}
+      function resolveCandidate(c, forceWord) {
+        if (c.assoc) {
+          for (let t = 0; t < 15; t++) {
+            const words = pickAssocWords(c.needsThree ? 3 : 2);
+            // 言葉が文に入らないセリフ（「このふたつ…」）は、言葉がちがっても二度は使わない
+            // 文に入る言葉だけで ネタを数える（入らない言葉が ちがっても、同じ文は二度と使わない）
+            const shown = ['{word_a}', '{word_b}', '{word_c}'].map((ph, i) => (c.rawLine.includes(ph) ? words[i] : null)).filter(Boolean);
+            const key = topicKey(c.rawLine, shown);
+            const pairKey = words.slice().sort().join('+');
+            if (state.usedTopics.has(key)) continue;
+            if (t < 10 && state.pairHistory.includes(pairKey)) continue; // 同じ組み合わせを すぐに くりかえさない
+            return { words, key, pairKey };
+          }
+          // ランダムで見つからなかったら、言葉が少ないときは ぜんぶの組み合わせを しらべる
+          const all = state.words.map((w) => w.text);
+          if (all.length <= 30) {
+            const n = c.needsThree ? 3 : 2;
+            const combos = [];
+            all.forEach((x) => all.forEach((y) => {
+              if (y === x) return;
+              if (n === 2) combos.push([x, y]);
+              else all.forEach((z) => { if (z !== x && z !== y) combos.push([x, y, z]); });
+            }));
+            combos.sort(() => Math.random() - 0.5);
+            for (const words of combos) {
+              const shown = ['{word_a}', '{word_b}', '{word_c}'].map((ph, i) => (c.rawLine.includes(ph) ? words[i] : null)).filter(Boolean);
+              const key = topicKey(c.rawLine, shown);
+              if (!state.usedTopics.has(key)) return { words, key, pairKey: words.slice().sort().join('+') };
+            }
+          }
+          return null;
+        }
+        if (c.needsWord) {
+          const list = forceWord
+            ? [forceWord]
+            : state.words.map((w) => w.text).sort(() => Math.random() - 0.5);
+          for (const w of list) {
+            const key = topicKey(c.rawLine, [w]);
+            if (!state.usedTopics.has(key)) return { words: [w], key };
+          }
+          return null;
+        }
+        const key = topicKey(c.rawLine, null);
+        return state.usedTopics.has(key) ? null : { words: [], key };
+      }
+
+      // つぎの おはなしを つくる。はなせる ネタが ひとつも ないときは null
       function buildNextDialogue(options = {}) {
         const { preferredTypes = null, forceWord = null } = options;
         const hasWords = state.words.length > 0 || Boolean(forceWord);
@@ -1541,6 +1892,10 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
         const candidates = [];
         DIALOGUE_DATA.dialogues.forEach((group, groupIdx) => {
           if (preferredTypes && !preferredTypes.includes(group.type)) {
+            return;
+          }
+          // レベルが たりないグループは まだ出ない
+          if (state.level < (GROUP_LEVEL[group.type] || 1)) {
             return;
           }
           // 連想系は、教えた言葉が2つ以上あるときだけ
@@ -1553,15 +1908,14 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
             if (needsWord && !hasWords) {
               return;
             }
-            // 3つめの言葉が要る連想（{word_c}、「みっつ」）は、言葉が3つ以上あるときだけ
+            // 3つの言葉を使う連想（{word_c}、「みっつ」）は、Lv.4から。言葉が3つ以上あるときだけ
             const needsThree = group.assoc === true && (rawLine.includes('{word_c}') || rawLine.includes('みっつ'));
-            if (needsThree && state.words.length < 3) {
+            if (needsThree && (state.words.length < 3 || state.level < THREE_WORDS_LEVEL)) {
               return;
             }
 
-            const baseId = `${groupIdx}_${lineIdx}`;
             candidates.push({
-              baseId,
+              baseId: `${groupIdx}_${lineIdx}`,
               type: group.type,
               rawLine,
               needsWord,
@@ -1584,8 +1938,7 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
           }
         }
 
-        // 連想系（言葉を2〜3つ組み合わせるセリフ）は、約20%で混ぜる
-        // ユーザーへの質問は、残りのうち約35%
+        // 連想系は約20%、ユーザーへの質問は残りのうち約35%で混ぜる
         if (!preferredTypes) {
           const assocs = filtered.filter((c) => c.assoc);
           const rest = filtered.filter((c) => !c.assoc);
@@ -1601,14 +1954,36 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
           }
         }
 
-        let chosen;
-        const wordCandidates = filtered.filter((c) => c.needsWord);
-        if (hasWords && wordCandidates.length > 0 && (forceWord || Math.random() < 0.45)) {
-          chosen = pickRandomItem(wordCandidates);
-        } else {
-          chosen = pickRandomItem(filtered);
+        // 候補を順に ためして、まだ使ってない ネタを見つける（二度と同じネタは使わない）
+        const preferWord = hasWords && (Boolean(forceWord) || Math.random() < 0.45);
+        const tried = new Set();
+        let pool = filtered;
+        let chosen = null;
+        let resolved = null;
+        for (let guard = 0; guard < 2000; guard++) {
+          const avail = pool.filter((c) => !tried.has(c));
+          if (avail.length === 0) {
+            if (pool !== candidates) {
+              pool = candidates;
+              continue;
+            }
+            break;
+          }
+          const wordAvail = avail.filter((c) => c.needsWord);
+          const c = preferWord && wordAvail.length > 0 ? pickRandomItem(wordAvail) : pickRandomItem(avail);
+          tried.add(c);
+          const r = resolveCandidate(c, forceWord);
+          if (r) {
+            chosen = c;
+            resolved = r;
+            break;
+          }
+        }
+        if (!chosen) {
+          return null;
         }
 
+        state.usedTopics.add(resolved.key);
         state.recentSpeechIds.push(chosen.baseId);
         if (state.recentSpeechIds.length > 14) {
           state.recentSpeechIds.shift();
@@ -1618,24 +1993,35 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
           state.recentCategories.shift();
         }
 
-        let finalLine = chosen.rawLine;
-        if (chosen.needsWord) {
-          const targetWord = forceWord || pickRandomItem(state.words).text;
-          finalLine = finalLine.replace(/\{word\}/g, targetWord);
+        // つかった言葉の記録
+        const now = Date.now();
+        resolved.words.forEach((t) => {
+          const w = state.words.find((x) => x.text === t);
+          if (w) {
+            w.usageCount = (w.usageCount || 0) + 1;
+            w.lastUsedAt = now;
+          }
+        });
+        if (chosen.assoc) {
+          state.pairHistory.push(resolved.pairKey);
+          if (state.pairHistory.length > 10) state.pairHistory.shift();
+          state.recentAssocWords = resolved.words.slice();
         }
 
+        let finalLine = chosen.rawLine;
         const sentences = [];
         if (chosen.assoc) {
-          const picked = pickAssocWords(chosen.needsThree ? 3 : 2);
-          const [wa, wb, wc] = picked;
+          const [wa, wb, wc] = resolved.words;
           // 言葉が入らないセリフは、先にどの言葉の話かを見せる
           if (!chosen.rawLine.includes('{word_a}')) {
-            sentences.push(splitLineIntoChunks(picked.join('、') + '。'));
+            sentences.push(splitLineIntoChunks(resolved.words.join('、') + '。'));
           }
           finalLine = finalLine
             .replace(/\{word_a\}/g, wa)
             .replace(/\{word_b\}/g, wb)
             .replace(/\{word_c\}/g, wc || '');
+        } else if (chosen.needsWord) {
+          finalLine = finalLine.replace(/\{word\}/g, resolved.words[0]);
         }
         sentences.push(splitLineIntoChunks(finalLine));
 
@@ -1646,20 +2032,32 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
           );
           if (followGroup) {
             const safeFollowLines = followGroup.lines.filter(
-              (l) => !l.includes('{word}') && l !== chosen.rawLine
+              (l) => !l.includes('{word}') && l !== chosen.rawLine && !state.usedTopics.has(topicKey(l, null))
             );
             if (safeFollowLines.length > 0) {
-              sentences.push(splitLineIntoChunks(pickRandomItem(safeFollowLines)));
+              const fl = pickRandomItem(safeFollowLines);
+              state.usedTopics.add(topicKey(fl, null));
+              sentences.push(splitLineIntoChunks(fl));
             }
           }
         }
+
+        saveWords();
+        saveProgress();
+        updateTopicCount();
 
         return {
           id: `${chosen.baseId}_${Date.now()}`,
           category: chosen.type,
           ask: chosen.ask,
+          assoc: chosen.assoc,
+          text: finalLine,
           sentences,
         };
+      }
+
+      function updateTopicCount() {
+        dom.topicCount.textContent = `はなした ネタ：${state.usedTopics.size}こ`;
       }
 
       function clearChunkTimers() {
@@ -1743,7 +2141,29 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
       }
 
       function triggerNextSpeech(options = {}) {
-        const next = buildNextDialogue(options);
+        let next = buildNextDialogue(options);
+        if (!next && (options.preferredTypes || options.forceWord)) {
+          next = buildNextDialogue({ forceWord: options.forceWord || null });
+        }
+        if (!next && options.forceWord) {
+          next = buildNextDialogue({});
+        }
+
+        if (!next) {
+          // はなせる ネタが もう ない
+          state.exhausted = true;
+          state.pending = null;
+          const pair = pickRandomItem(NETAGIRE_LINES);
+          speakDialogue({
+            id: `netagire_${Date.now()}`,
+            category: 'ネタぎれ',
+            sentences: pair.map((l) => splitLineIntoChunks(l)),
+          });
+          return;
+        }
+
+        state.exhausted = false;
+        state.pending = next.ask || next.assoc ? { kind: next.ask ? 'ask' : 'assoc', at: Date.now(), text: next.text } : null;
         speakDialogue(next);
         if (next.ask) {
           showFeedback('しつもんの こたえは、したの ことばに ひらがな5もじまでで いれて おしえてね。', false);
@@ -1766,6 +2186,11 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
         dom.autoProgressBar.style.width = '0%';
 
         if (!state.autoPlayEnabled || state.isSpeaking) {
+          return;
+        }
+        if (state.exhausted) {
+          // はなす ネタが ないあいだは、自分からは はなさない（ことばを おしえると また はなす）
+          dom.statusText.textContent = 'ことばを まってるよ';
           return;
         }
 
@@ -1847,6 +2272,12 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
           return false;
         }
 
+        if (!isGenreUnlocked(genreId)) {
+          const def = GENRE_DEFS.find((g) => g.id === genreId);
+          showFeedback(`その グループは まだ ひらいてないよ（Lv.${def ? def.level : '?'} で ひらくよ）。`, true);
+          return false;
+        }
+
         const existing = state.words.find((w) => w.text === cleanWord);
         if (existing) {
           existing.genreId = genreId;
@@ -1855,10 +2286,13 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
           updateWordCountUI();
           showFeedback(`「${cleanWord}」の グループを 「${getGenreLabel(genreId)}」に なおしたよ。`, false);
 
-          triggerNextSpeech({
-            preferredTypes: ['おぼえたこと'],
-            forceWord: cleanWord,
-          });
+          consumePendingAnswer(cleanWord);
+          if (!maybeSpeakLevelUp()) {
+            triggerNextSpeech({
+              preferredTypes: ['おぼえたこと'],
+              forceWord: cleanWord,
+            });
+          }
           return true;
         }
 
@@ -1867,6 +2301,8 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
           text: cleanWord,
           genreId,
           createdAt: Date.now(),
+          usageCount: 0,
+          lastUsedAt: null,
         };
 
         state.words.unshift(newEntry);
@@ -1875,22 +2311,42 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
 
         showFeedback(`「${cleanWord}」（${getGenreLabel(genreId)}）を おぼえたよ！`, false);
 
-        triggerNextSpeech({
-          preferredTypes: ['おぼえたこと', 'きづき'],
-          forceWord: cleanWord,
-        });
+        // 経験値：はじめて教えた言葉だけ（けして また教えても出ない）
+        if (!state.everTaught.has(cleanWord)) {
+          state.everTaught.add(cleanWord);
+          grantExp('teach');
+        }
+        consumePendingAnswer(cleanWord);
+        saveProgress();
+
+        if (!maybeSpeakLevelUp()) {
+          triggerNextSpeech({
+            preferredTypes: ['おぼえたこと', 'きづき'],
+            forceWord: cleanWord,
+          });
+        }
 
         return true;
       }
 
       function renderGenreSelect() {
+        const prev = dom.selectGenre.value;
         dom.selectGenre.innerHTML = '';
+        const unlocked = unlockedGenreIds();
         state.genres.forEach((genre) => {
           const opt = document.createElement('option');
           opt.value = genre.id;
-          opt.textContent = genre.label;
+          if (unlocked.has(genre.id)) {
+            opt.textContent = genre.label;
+          } else {
+            opt.textContent = `${genre.label}（Lv.${genre.level}で ひらく）`;
+            opt.disabled = true;
+          }
           dom.selectGenre.appendChild(opt);
         });
+        if (prev && unlocked.has(prev)) {
+          dom.selectGenre.value = prev;
+        }
       }
 
       function updateWordCountUI() {
@@ -1917,7 +2373,8 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
         const allBtn = createFilterChip('all', `ぜんぶ (${state.words.length})`);
         dom.genreFilterBar.appendChild(allBtn);
 
-        state.genres.forEach((genre) => {
+        const unlocked = unlockedGenreIds();
+        state.genres.filter((g) => unlocked.has(g.id)).forEach((genre) => {
           const count = state.words.filter((w) => w.genreId === genre.id).length;
           const chip = createFilterChip(genre.id, `${genre.label} (${count})`);
           dom.genreFilterBar.appendChild(chip);
@@ -1967,9 +2424,25 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
           wordSpan.className = 'w';
           wordSpan.textContent = wordObj.text;
 
-          const genreBadge = document.createElement('span');
-          genreBadge.className = 'g';
-          genreBadge.textContent = getGenreLabel(wordObj.genreId);
+          // ジャンルは あとから かえられる（ひらいている ジャンルから えらぶ）
+          const genreBadge = document.createElement('select');
+          genreBadge.className = 'gsel';
+          genreBadge.setAttribute('aria-label', `「${wordObj.text}」の グループ`);
+          const unlockedNow = unlockedGenreIds();
+          state.genres.filter((g) => unlockedNow.has(g.id)).forEach((g) => {
+            const o = document.createElement('option');
+            o.value = g.id;
+            o.textContent = g.label;
+            genreBadge.appendChild(o);
+          });
+          genreBadge.value = wordObj.genreId;
+          genreBadge.addEventListener('change', () => {
+            wordObj.genreId = genreBadge.value;
+            wordObj.updatedAt = Date.now();
+            saveWords();
+            renderWordbookFilterBar();
+            renderWordbookList();
+          });
 
           infoDiv.appendChild(wordSpan);
           infoDiv.appendChild(genreBadge);
@@ -2036,6 +2509,14 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
 
         if (target) {
           showFeedback(`「${target.text}」を ことばちょうから けしたよ。`, false);
+        }
+      }
+
+      // ユーザーが「つぎ」へ すすめた とき
+      function userNext() {
+        onUserContinue();
+        if (!maybeSpeakLevelUp()) {
+          triggerNextSpeech();
         }
       }
 
@@ -2195,13 +2676,14 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
         });
 
         dom.btnSampleWord.addEventListener('click', () => {
-          const unregistered = SAMPLE_WORDS.filter(
+          const open = SAMPLE_WORDS.filter((sw) => isGenreUnlocked(sw.genreId));
+          const unregistered = open.filter(
             (sw) => !state.words.some((w) => w.text === sw.text)
           );
           const pick =
             unregistered.length > 0
               ? pickRandomItem(unregistered)
-              : pickRandomItem(SAMPLE_WORDS);
+              : pickRandomItem(open);
 
           dom.inputWord.value = pick.text;
           dom.selectGenre.value = pick.genreId;
@@ -2219,7 +2701,7 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
           if (state.isSpeaking) {
             finishSpeakingImmediately();
           } else {
-            triggerNextSpeech();
+            userNext();
           }
         });
 
@@ -2229,15 +2711,17 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
             if (state.isSpeaking) {
               finishSpeakingImmediately();
             } else {
-              triggerNextSpeech();
+              userNext();
             }
           }
         });
 
         dom.btnNextSpeech.addEventListener('click', (e) => {
           e.stopPropagation();
-          triggerNextSpeech();
+          userNext();
         });
+
+        dom.levelup.addEventListener('click', () => dom.levelup.classList.add('hidden'));
 
         dom.btnToggleAuto.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -2267,6 +2751,8 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
         renderGenreSelect();
         updateWordCountUI();
         updateCharCounter();
+        updateLevelUI();
+        updateTopicCount();
         bindEvents();
 
         triggerNextSpeech({ preferredTypes: ['あいさつ'] });
