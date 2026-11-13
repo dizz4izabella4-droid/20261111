@@ -142,6 +142,13 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px;pa
 .bar{flex:1;height:5px;border-radius:999px;background:var(--line);overflow:hidden}
 #auto-progress-bar{height:100%;width:0;background:var(--lav);transition:width .2s linear}
 #speech-hint-text{font-size:10px;color:var(--ink2);user-select:none}
+.quick{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.qr{border:0;border-radius:16px;padding:10px 20px 12px;font-size:15px;font-weight:900;letter-spacing:.06em;color:#fff;transition:transform .08s,box-shadow .08s}
+.qr.yes{background:var(--mint);box-shadow:0 4px 0 var(--mintD)}
+.qr.no{background:var(--pink);box-shadow:0 4px 0 var(--pinkD)}
+.qr.wait{background:var(--lavS);color:var(--lavD);box-shadow:0 4px 0 var(--line);font-size:13px}
+.qr.wait.on{background:var(--lav);color:#fff;box-shadow:0 4px 0 var(--lavD)}
+.qr:active{transform:translateY(3px);box-shadow:none}
 @keyframes wordPopIn{0%{opacity:0;transform:translateY(5px) scale(.97)}100%{opacity:1;transform:none}}
 .speech-chunk{display:inline-block;animation:wordPopIn .28s cubic-bezier(.22,1,.36,1) forwards}
 @keyframes speakingPulse{0%,100%{opacity:.25;transform:scale(.85)}50%{opacity:1;transform:scale(1.1)}}
@@ -307,6 +314,11 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
         </button>
       </div>
       <div class="speech-body"><div id="speech-text" aria-live="polite"></div></div>
+      <div id="quick-replies" class="quick hidden" aria-label="へんじ">
+        <button type="button" id="qr-yes" class="qr yes">うん</button>
+        <button type="button" id="qr-no" class="qr no">いいえ</button>
+        <button type="button" id="qr-wait" class="qr wait">ちょっと まって</button>
+      </div>
       <div class="speech-foot">
         <div class="bar"><div id="auto-progress-bar"></div></div>
         <span id="speech-hint-text">おすと つぎへ すすむよ</span>
@@ -422,7 +434,9 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
       const LEVEL_TABLE = [0, 15, 40, 75, 120, 180];
       const EXP_REWARD = { teach: 2, answer: 3, assoc: 3, continue: 2 };
       const EXP_COOLDOWN_MS = 10000;      // 同じ行動の経験値は、この間隔をあける
-      const PENDING_WINDOW_MS = 120000;   // イリスの問いかけに答えたと数える時間
+      const PENDING_WINDOW_MS = 180000;   // イリスの問いかけに答えたと数える時間（3分）
+      const HOLD_MS = 180000;             // しつもんの あと、へんじを まつ時間（「ちょっとまって」で むせいげんに）
+      const TYPING_GRACE_MS = 20000;      // 入力ちゅうは、この間 つぎの おはなしへ すすまない
       const THREE_WORDS_LEVEL = 4;        // 3つの言葉を使う連想が出るレベル
 
       // ジャンルの相性（連想の方向を選ぶ手がかり。ほかの組み合わせも禁止しない）
@@ -1080,6 +1094,32 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
               "きみが　この　ふたつを　おしえてくれたのには、りゆうが　あるのかな？",
               "ねえ、ことばって、ふしぎな　ちからが　あると　おもわない？"
             ]
+          },
+          {
+            type: "うんへのへんじ",
+            replyOnly: true,
+            lines: [
+              "そっかあ、うん。　なんだか　うれしいな。",
+              "やっぱり　そうなんだね。",
+              "うんうん、わかった！　おしえてくれて　ありがとう。",
+              "えへへ、うれしいな。",
+              "そうなんだ！　ちょっと　おぼえておくね。",
+              "ふむふむ、なるほどね。",
+              "うん！　わたしも　そうおもってたんだ。"
+            ]
+          },
+          {
+            type: "いいえへのへんじ",
+            replyOnly: true,
+            lines: [
+              "そっかあ、ちがうんだね。　おしえてくれて　ありがとう。",
+              "ふうん、そうじゃないんだ。",
+              "なるほどね、ちがう　ことも　あるよね。",
+              "そうなんだ。　わたし、ちょっと　かんちがい　してたかも。",
+              "うーん、むずかしいね。　でも、わかったよ。",
+              "そっか。　ほかの　ことも　きかせてね。",
+              "うんうん、ひとつ　かしこく　なったよ。"
+            ]
           }
         ]
       };
@@ -1104,6 +1144,9 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
         pending: null,
         levelUpQueue: null,
         exhausted: false,
+        hold: false,
+        holdTimer: null,
+        lastTypedAt: 0,
         autoPlayEnabled: true,
         isSpeaking: false,
         chunkTimers: [],
@@ -1191,6 +1234,10 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
         levelupNum: document.getElementById('levelup-num'),
         levelupGenres: document.getElementById('levelup-genres'),
         topicCount: document.getElementById('topic-count'),
+        quick: document.getElementById('quick-replies'),
+        qrYes: document.getElementById('qr-yes'),
+        qrNo: document.getElementById('qr-no'),
+        qrWait: document.getElementById('qr-wait'),
       };
 
       function loadData() {
@@ -1354,7 +1401,7 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
       // イリスの質問・連想に、ことばで こたえた とき
       function consumePendingAnswer(word) {
         const pend = state.pending;
-        if (!pend || Date.now() - pend.at > PENDING_WINDOW_MS) {
+        if (!pend || (!pend.forever && Date.now() - pend.at > PENDING_WINDOW_MS)) {
           state.pending = null;
           return;
         }
@@ -1372,7 +1419,7 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
       function onUserContinue() {
         const pend = state.pending;
         if (!pend || state.isSpeaking) return;
-        if (Date.now() - pend.at > PENDING_WINDOW_MS) {
+        if (!pend.forever && Date.now() - pend.at > PENDING_WINDOW_MS) {
           state.pending = null;
           return;
         }
@@ -1894,6 +1941,10 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
           if (preferredTypes && !preferredTypes.includes(group.type)) {
             return;
           }
+          // 「うん」「いいえ」への へんじは、ボタンを おしたときだけ
+          if (group.replyOnly && !preferredTypes) {
+            return;
+          }
           // レベルが たりないグループは まだ出ない
           if (state.level < (GROUP_LEVEL[group.type] || 1)) {
             return;
@@ -2025,7 +2076,11 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
         }
         sentences.push(splitLineIntoChunks(finalLine));
 
-        if (!forceWord && Math.random() < 0.25) {
+        // へんじを まつ しつもん（質問・連想で、？で おわるもの）。「うん」「いいえ」で こたえられるものは ボタンも出す
+        const isQuestion = (chosen.ask || chosen.assoc) && /[？?]\s*$/.test(finalLine);
+        const isYesNo = isQuestion && !/(なあに|なに|どんな|どこ|いつ|だれ|どう|どちら|どっち|どれ|いくつ|どの|なぜ)/.test(finalLine);
+
+        if (!forceWord && !isQuestion && Math.random() < 0.25) {
           const followUpTypes = ['ひとりごと', 'かんがえる', 'しつもん', 'きぶん'];
           const followGroup = DIALOGUE_DATA.dialogues.find(
             (g) => g.type === pickRandomItem(followUpTypes)
@@ -2052,6 +2107,8 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
           ask: chosen.ask,
           assoc: chosen.assoc,
           text: finalLine,
+          question: isQuestion,
+          yesNo: isYesNo,
           sentences,
         };
       }
@@ -2086,9 +2143,66 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
         scheduleNextAutoSpeech();
       }
 
+      // ===== へんじを まつ（すぐ つぎの話題へ いかない） =====
+      function releaseHold() {
+        clearTimeout(state.holdTimer);
+        state.holdTimer = null;
+        state.hold = false;
+        dom.quick.classList.add('hidden');
+        dom.qrWait.classList.remove('on');
+        dom.qrWait.textContent = 'ちょっと まって';
+      }
+
+      function startHold(yesNo) {
+        state.hold = true;
+        dom.qrYes.classList.toggle('hidden', !yesNo);
+        dom.qrNo.classList.toggle('hidden', !yesNo);
+        dom.quick.classList.remove('hidden');
+        clearTimeout(state.holdTimer);
+        state.holdTimer = setTimeout(() => {
+          // ずっと へんじが なければ、またひとりごとに もどる
+          state.hold = false;
+          dom.quick.classList.add('hidden');
+          if (!state.isSpeaking) {
+            dom.statusText.textContent = 'かんがえちゅう…';
+            dom.speechHintText.textContent = 'おすと つぎへ すすむよ';
+            scheduleNextAutoSpeech();
+          }
+        }, HOLD_MS);
+      }
+
+      function onQuickReply(kind) {
+        if (kind === 'wait') {
+          // 「ちょっと まって」：へんじが くるまで、いつまでも まつ
+          clearTimeout(state.holdTimer);
+          state.holdTimer = null;
+          state.hold = true;
+          if (state.pending) state.pending.forever = true;
+          dom.qrWait.classList.add('on');
+          dom.qrWait.textContent = 'まってるよ';
+          dom.statusText.textContent = 'へんじを まってるよ';
+          dom.speechHintText.textContent = 'ゆっくりで いいよ。こたえられるように なったら おしえてね';
+          return;
+        }
+        const reply = kind === 'yes' ? 'うん' : 'いいえ';
+        consumePendingAnswer(reply);
+        if (!maybeSpeakLevelUp()) {
+          triggerNextSpeech({ preferredTypes: [kind === 'yes' ? 'うんへのへんじ' : 'いいえへのへんじ'] });
+        }
+      }
+
+      // ことばを うちこんでいる ときは、つぎの おはなしへ すすまない
+      function userIsBusy() {
+        const typingRecently = Date.now() - (state.lastTypedAt || 0) < TYPING_GRACE_MS;
+        if (dom.inputWord.value.trim() !== '') return true;
+        if (document.activeElement === dom.inputWord && typingRecently) return true;
+        return dom.wordbookModal.classList.contains('flex') || dom.cropModal.classList.contains('flex');
+      }
+
       function speakDialogue(dialogue) {
         clearChunkTimers();
         stopAutoTimers();
+        releaseHold();
 
         state.isSpeaking = true;
         state.currentSentences = dialogue.sentences;
@@ -2165,6 +2279,9 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
         state.exhausted = false;
         state.pending = next.ask || next.assoc ? { kind: next.ask ? 'ask' : 'assoc', at: Date.now(), text: next.text } : null;
         speakDialogue(next);
+        if (next.question) {
+          startHold(next.yesNo);
+        }
         if (next.ask) {
           showFeedback('しつもんの こたえは、したの ことばに ひらがな5もじまでで いれて おしえてね。', false);
         }
@@ -2188,6 +2305,12 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
         if (!state.autoPlayEnabled || state.isSpeaking) {
           return;
         }
+        if (state.hold) {
+          // しつもんの へんじを まっている あいだは、つぎの話題へ すすまない
+          dom.statusText.textContent = 'へんじを まってるよ';
+          dom.speechHintText.textContent = 'ゆっくりで いいよ。「うん」「いいえ」や ことばで こたえてね';
+          return;
+        }
         if (state.exhausted) {
           // はなす ネタが ないあいだは、自分からは はなさない（ことばを おしえると また はなす）
           dom.statusText.textContent = 'ことばを まってるよ';
@@ -2206,6 +2329,10 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
         }, stepMs);
 
         state.autoTimerId = setTimeout(() => {
+          if (userIsBusy()) {
+            scheduleNextAutoSpeech(); // もうすこし まつ
+            return;
+          }
           triggerNextSpeech();
         }, duration);
       }
@@ -2521,7 +2648,17 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
       }
 
       function bindEvents() {
-        dom.inputWord.addEventListener('input', updateCharCounter);
+        dom.inputWord.addEventListener('input', () => {
+          state.lastTypedAt = Date.now();
+          updateCharCounter();
+        });
+        dom.inputWord.addEventListener('focus', () => {
+          state.lastTypedAt = Date.now();
+        });
+
+        dom.qrYes.addEventListener('click', (e) => { e.stopPropagation(); onQuickReply('yes'); });
+        dom.qrNo.addEventListener('click', (e) => { e.stopPropagation(); onQuickReply('no'); });
+        dom.qrWait.addEventListener('click', (e) => { e.stopPropagation(); onQuickReply('wait'); });
 
         dom.characterStage.addEventListener('click', () => {
           dom.inputCharacterFile.click();
@@ -2697,7 +2834,7 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
         });
 
         dom.speechBox.addEventListener('click', (e) => {
-          if (e.target.closest('#btn-next-speech')) return;
+          if (e.target.closest('#btn-next-speech') || e.target.closest('#quick-replies')) return;
           if (state.isSpeaking) {
             finishSpeakingImmediately();
           } else {
@@ -2706,6 +2843,7 @@ footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
         });
 
         dom.speechBox.addEventListener('keydown', (e) => {
+          if (e.target.closest('#quick-replies')) return;
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             if (state.isSpeaking) {
