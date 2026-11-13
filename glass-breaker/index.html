@@ -1242,6 +1242,558 @@ function drawMan(m) {
   m.out = { hcx: hcx, sh: sh, sh2: sh2 };
 }
 
+/* ================= パーツ人形レンダラ(4倍で描いて縮小・パレット吸着・縁取り) ================= */
+var PSS = 4;
+var PUP = { cv: null, c: null, out: null, oc: null, x0: 0, y0: 0, w: 0, h: 0, pal: null, px: [] };
+function hex2rgb(h) { return [parseInt(h.substr(1, 2), 16), parseInt(h.substr(3, 2), 16), parseInt(h.substr(5, 2), 16)]; }
+function rgb2hex(r, g, b) { return '#' + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1); }
+function mixHex(a, b, t) { var A = hex2rgb(a), B = hex2rgb(b); return rgb2hex(Math.round(A[0] + (B[0] - A[0]) * t), Math.round(A[1] + (B[1] - A[1]) * t), Math.round(A[2] + (B[2] - A[2]) * t)); }
+/* パレット: {名前: '#hex'} → 色の索引表と縁取り色 */
+function mkPal(o, outl) {
+  var P = { names: o, list: [], rgb: [], ol: [], cache: new Int16Array(32768).fill(-1), idx: {} }, k;
+  for (k in o) { P.idx[k] = P.list.length; P.list.push(o[k]); P.rgb.push(hex2rgb(o[k])); }
+  for (k = 0; k < P.list.length; k++) P.ol.push(hex2rgb(mixHex(P.list[k], outl || '#06070b', 0.78)));
+  return P;
+}
+function palNear(P, r, g, b) {
+  var key = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3), v = P.cache[key];
+  if (v >= 0) return v;
+  var best = 0, bd = 1e9, i, q, d;
+  for (i = 0; i < P.rgb.length; i++) { q = P.rgb[i]; d = (q[0] - r) * (q[0] - r) * 3 + (q[1] - g) * (q[1] - g) * 4 + (q[2] - b) * (q[2] - b) * 2; if (d < bd) { bd = d; best = i; } }
+  P.cache[key] = best; return best;
+}
+function pupBegin(P, x0, y0, x1, y1) {
+  if (!PUP.cv) { PUP.cv = document.createElement('canvas'); PUP.c = PUP.cv.getContext('2d', { willReadFrequently: true }); PUP.out = document.createElement('canvas'); PUP.oc = PUP.out.getContext('2d'); }
+  x0 = Math.floor(x0) - 2; y0 = Math.floor(y0) - 2; x1 = Math.ceil(x1) + 2; y1 = Math.ceil(y1) + 2;
+  var w = x1 - x0, h = y1 - y0;
+  if (PUP.cv.width < w * PSS || PUP.cv.height < h * PSS) { PUP.cv.width = Math.max(PUP.cv.width, w * PSS); PUP.cv.height = Math.max(PUP.cv.height, h * PSS); }
+  if (PUP.out.width < w || PUP.out.height < h) { PUP.out.width = Math.max(PUP.out.width, w); PUP.out.height = Math.max(PUP.out.height, h); }
+  var c = PUP.c; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, w * PSS, h * PSS);
+  c.setTransform(PSS, 0, 0, PSS, -x0 * PSS, -y0 * PSS);
+  PUP.x0 = x0; PUP.y0 = y0; PUP.w = w; PUP.h = h; PUP.pal = P; PUP.px.length = 0;
+  return c;
+}
+/* 描画の道具(座標は1倍の論理座標、右向き) */
+function pFill(c, col) { c.fillStyle = col; c.fill(); }
+function pEll(c, x, y, rx, ry, col, rot) { c.beginPath(); c.ellipse(x, y, Math.max(0.01, rx), Math.max(0.01, ry), rot || 0, 0, 6.2832); pFill(c, col); }
+function pPoly(c, pts, col) { c.beginPath(); c.moveTo(pts[0][0], pts[0][1]); for (var i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]); c.closePath(); pFill(c, col); }
+function pSmooth(c, pts) { /* 閉じた滑らかな形(中点を通る二次曲線) */
+  var n = pts.length, i, a, b; c.beginPath();
+  c.moveTo((pts[n - 1][0] + pts[0][0]) / 2, (pts[n - 1][1] + pts[0][1]) / 2);
+  for (i = 0; i < n; i++) { a = pts[i]; b = pts[(i + 1) % n]; c.quadraticCurveTo(a[0], a[1], (a[0] + b[0]) / 2, (a[1] + b[1]) / 2); }
+  c.closePath();
+}
+function pBlob(c, pts, col) { pSmooth(c, pts); pFill(c, col); }
+function pCap(c, x0, y0, x1, y1, r0, r1, col) {
+  var dx = x1 - x0, dy = y1 - y0, d = Math.hypot(dx, dy) || 0.001, nx = -dy / d, ny = dx / d;
+  c.beginPath(); c.moveTo(x0 + nx * r0, y0 + ny * r0); c.lineTo(x1 + nx * r1, y1 + ny * r1); c.lineTo(x1 - nx * r1, y1 - ny * r1); c.lineTo(x0 - nx * r0, y0 - ny * r0); c.closePath(); pFill(c, col);
+  pEll(c, x0, y0, r0, r0, col); pEll(c, x1, y1, r1, r1, col);
+}
+function pLine(c, x0, y0, x1, y1, w, col) { c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.lineWidth = w; c.lineCap = 'round'; c.strokeStyle = col; c.stroke(); }
+function pPath(c, pts, w, col) { c.beginPath(); c.moveTo(pts[0][0], pts[0][1]); for (var i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]); c.lineWidth = w; c.lineCap = 'round'; c.lineJoin = 'round'; c.strokeStyle = col; c.stroke(); }
+/* 形の中だけを塗る(陰影用) */
+function pClip(c, pathFn, fn) { c.save(); pathFn(); c.clip(); fn(); c.restore(); }
+/* 筒(腕・脚)を陰影付きで: 影は奥側(-法線)、光は手前上 */
+function pTube(c, x0, y0, x1, y1, r0, r1, cs, lit) {
+  var dx = x1 - x0, dy = y1 - y0, d = Math.hypot(dx, dy) || 0.001, nx = -dy / d, ny = dx / d;
+  if (ny > 0) { nx = -nx; ny = -ny; } /* 法線を上向きに */
+  lit = lit == null ? 1 : lit;
+  pCap(c, x0, y0, x1, y1, r0, r1, cs[0]);
+  pCap(c, x0 + nx * r0 * 0.28, y0 + ny * r0 * 0.28, x1 + nx * r1 * 0.28, y1 + ny * r1 * 0.28, r0 * 0.72, r1 * 0.72, cs[1]);
+  if (lit > 0 && cs[2]) pCap(c, x0 + nx * r0 * 0.55, y0 + ny * r0 * 0.55, x1 + nx * r1 * 0.55, y1 + ny * r1 * 0.55, r0 * 0.3, r1 * 0.3, cs[2]);
+}
+/* 1点を手で置く(縮小後の座標系、論理座標で指定) */
+function pPix(x, y, col) { PUP.px.push(Math.floor(x) - PUP.x0, Math.floor(y) - PUP.y0, col); }
+function pPixW(x, y, w, col) { for (var i = 0; i < w; i++) pPix(x + i, y, col); }
+/* 縮小→吸着→縁取り→手置き点。post(img,w,h,P) で後処理。結果をPUP.outへ */
+var PUPD = null;
+function pupEnd(post, opt) {
+  var P = PUP.pal, w = PUP.w, h = PUP.h, S = PSS, src = PUP.c.getImageData(0, 0, w * S, h * S).data, n = P.list.length;
+  var idx = new Int16Array(w * h), cnt = new Int16Array(n), tch = new Int16Array(16), x, y, sx, sy, k, a, best, bc, o, i;
+  for (y = 0; y < h; y++) for (x = 0; x < w; x++) {
+    var op = 0, nt = 0;
+    for (sy = 0; sy < S; sy++) { o = ((y * S + sy) * w * S + x * S) * 4; for (sx = 0; sx < S; sx++, o += 4) { a = src[o + 3]; if (a < 110) continue; op++; k = palNear(P, src[o], src[o + 1], src[o + 2]); if (cnt[k]++ === 0) tch[nt++] = k; } }
+    if (op < 7) { for (k = 0; k < nt; k++) cnt[tch[k]] = 0; idx[y * w + x] = -1; continue; }
+    best = 0; bc = -1; for (k = 0; k < nt; k++) { var tk = tch[k]; if (cnt[tk] > bc) { bc = cnt[tk]; best = tk; } cnt[tk] = 0; }
+    idx[y * w + x] = best;
+  }
+  var img = PUP.oc.createImageData(w, h), d = img.data, ol = !(opt && opt.noOutline);
+  for (i = 0; i < w * h; i++) {
+    k = idx[i]; o = i * 4;
+    if (k >= 0) { var q = P.rgb[k]; d[o] = q[0]; d[o + 1] = q[1]; d[o + 2] = q[2]; d[o + 3] = 255; continue; }
+    if (!ol) continue;
+    x = i % w; y = (i / w) | 0; var nb = -1;
+    if (x > 0 && idx[i - 1] >= 0) nb = idx[i - 1]; else if (x < w - 1 && idx[i + 1] >= 0) nb = idx[i + 1]; else if (y > 0 && idx[i - w] >= 0) nb = idx[i - w]; else if (y < h - 1 && idx[i + w] >= 0) nb = idx[i + w];
+    if (nb >= 0) { var q2 = P.ol[nb]; d[o] = q2[0]; d[o + 1] = q2[1]; d[o + 2] = q2[2]; d[o + 3] = 255; }
+  }
+  /* 手置きの点 */
+  for (i = 0; i < PUP.px.length; i += 3) {
+    x = PUP.px[i]; y = PUP.px[i + 1]; if (x < 0 || y < 0 || x >= w || y >= h) continue;
+    o = (y * w + x) * 4; var cc = PUP.px[i + 2];
+    if (cc === null) { d[o + 3] = 0; continue; }
+    var r3 = hex2rgb(cc); d[o] = r3[0]; d[o + 1] = r3[1]; d[o + 2] = r3[2]; d[o + 3] = 255;
+  }
+  PUPD = { idx: idx, w: w, h: h };
+  if (post) post(d, w, h, P, idx);
+  PUP.oc.clearRect(0, 0, PUP.out.width, PUP.out.height);
+  PUP.oc.putImageData(img, 0, 0);
+}
+/* 縮小結果を世界座標に置く。face=-1で左右反転(足元px基準) */
+function pupBlit(px, F, face, alpha) {
+  var c = ctx, ga = c.globalAlpha;
+  if (alpha != null) c.globalAlpha = ga * alpha;
+  c.save(); c.translate(px, F); if (face < 0) c.scale(-1, 1);
+  c.drawImage(PUP.out, 0, 0, PUP.w, PUP.h, PUP.x0, PUP.y0, PUP.w, PUP.h);
+  c.restore(); c.globalAlpha = ga;
+}
+/* 色の置換(後処理用): 各画素の色を fn(r,g,b,x,y) で置換 */
+function pMap(d, w, h, fn) {
+  for (var i = 0; i < w * h; i++) { var o = i * 4; if (d[o + 3] === 0) continue; var c2 = fn(d[o], d[o + 1], d[o + 2], i % w, (i / w) | 0); if (c2) { d[o] = c2[0]; d[o + 1] = c2[1]; d[o + 2] = c2[2]; } }
+}
+/* 2関節のIK: 肩S→手H、上腕L1・前腕L2、bend=+1で肘が下/後ろへ */
+function pIK(sx, sy, hx, hy, L1, L2, bend) {
+  var dx = hx - sx, dy = hy - sy, d = Math.hypot(dx, dy) || 0.001, dd = Math.min(d, L1 + L2 - 0.01), a = (L1 * L1 - L2 * L2 + dd * dd) / (2 * dd), hh = Math.sqrt(Math.max(0, L1 * L1 - a * a)), ux = dx / d, uy = dy / d;
+  var nx = -uy * bend, ny = ux * bend;
+  return [sx + ux * a + nx * hh, sy + uy * a + ny * hh];
+}
+
+/* 同じポーズなら描き直さない(座標は0.5px単位で比較) */
+var PCACHE = {};
+function pRound(k, v) { return typeof v === 'number' ? Math.round(v * 2) / 2 : v; }
+function pupCall(slot, extra, q, fn) {
+  var key = JSON.stringify(q, pRound) + '|' + extra, e = PCACHE[slot];
+  if (!e) { e = PCACHE[slot] = { cv: document.createElement('canvas'), key: null }; e.oc = e.cv.getContext('2d'); }
+  if (!PUP.cv) { PUP.cv = document.createElement('canvas'); PUP.c = PUP.cv.getContext('2d', { willReadFrequently: true }); }
+  PUP.out = e.cv; PUP.oc = e.oc;
+  if (e.key === key) { PUP.x0 = e.x0; PUP.y0 = e.y0; PUP.w = e.w; PUP.h = e.h; return; }
+  fn(); e.key = key; e.x0 = PUP.x0; e.y0 = PUP.y0; e.w = PUP.w; e.h = PUP.h;
+}
+
+/* ================= キャラクター(パーツ人形) ================= */
+/* 共通: スーツの胴。T=肩の高さ(y)、hipY=腰、ux=上体の前傾ずれ。S=スーツ色[暗,基,明,ハイ] */
+function pSuitTorso(c, hipY, T, ux, S, o) {
+  o = o || {};
+  var k = -ux / (hipY - T || 1), W = o.w || 1, ch = o.chest || 0, yS = (hipY - T) / 17;
+  c.save(); c.transform(1, 0, k, 1, -k * hipY, 0);
+  var r = function (x, y) { return [x * W, hipY + y * yS]; }, Y = function (y) { return hipY + y * yS; };
+  var sil = [r(-5.4, -17.1), r(-2.2, -17.9), r(2.6, -17.7), r(5.2, -16.8), r(6.4 + ch, -13), r(5.8 + ch, -8), r(4.7 + (o.belly ? 1.4 : 0), -3.2), r(5.3, 1.6), r(-4.7, 1.7), r(-4.5, -3.2), r(-5.9, -9), r(-6.5, -14)];
+  var path = function () { pSmooth(c, sil); };
+  path(); pFill(c, S[1]);
+  pClip(c, path, function () {
+    pBlob(c, [r(-7, -18), r(-2.6, -17), r(-3, -6), r(-2.6, 2.6), r(-7, 3)], S[0]);
+    pBlob(c, [r(3.2, -17.4), r(6.8 + ch, -15), r(7 + ch, -8), r(4.4, -6), r(3.6, -12)], S[2]);
+    pEll(c, (4.8 + ch) * W, Y(-15.4), 1.6 * W, 0.9, S[3]);
+    pEll(c, -3.2 * W, Y(-16.9), 1.8 * W, 0.7, S[2]);
+    if (o.belly) { pEll(c, 3.6 * W, Y(-4.6), 2.8 * W, 3.2 * yS, S[2]); pEll(c, 4.4 * W, Y(-5.6), 1.0 * W, 1.2 * yS, S[3]); }
+  });
+  if (o.shirt !== false) {
+    pPoly(c, [r(-0.4, -17.8), r(3.4, -17.6), r(2.0, -9.6)], o.shirtC || '#f2f2ec');
+    pPoly(c, [r(-0.4, -17.8), r(0.6, -17.7), r(1.7, -10.4), r(1.5, -9.8)], o.shirtD || '#b9c0cf');
+    if (o.tie) {
+      pPoly(c, [r(0.9, -17.3), r(2.6, -17.3), r(2.3, -15.6), r(1.2, -15.6)], o.tie[0]);
+      pPoly(c, [r(1.2, -15.6), r(2.3, -15.6), r(2.6, -11.2), r(2.0, -9.9), r(1.3, -11.2)], o.tie[1]);
+      if (o.tie[2]) { pLine(c, 1.3 * W, Y(-14.2), 2.4 * W, Y(-13.4), 0.55, o.tie[2]); pLine(c, 1.4 * W, Y(-12.2), 2.5 * W, Y(-11.4), 0.55, o.tie[2]); }
+    }
+    pPath(c, [r(-0.9, -17.5), r(0.6, -13.6), r(2.0, -9.6)], 0.8, S[3]);
+    pPath(c, [r(3.8, -17.3), r(3.3, -13.4), r(2.0, -9.6)], 0.7, S[0]);
+    pPath(c, [r(2.0, -9.6), r(2.5, -4), r(3.0, -0.4), r(5.0, 1.5)], 0.75, S[0]);
+  } else pPath(c, [r(0, -17.6), r(0.2, 1.4)], 0.6, S[0]);
+  if (o.belt) { pPath(c, [r(-4.6, -1.2), r(4.9, -1.2)], 1.1, '#1a1a1e'); pEll(c, 3.2 * W, Y(-1.2), 0.8, 0.6, '#e0b84a'); }
+  if (o.pocket) pPoly(c, [r(-3.7, -13.2), r(-1.6, -13.4), r(-2.0, -12.2), r(-3.3, -12.1)], o.pocket);
+  c.restore();
+}
+function pShoe(c, fx, fy, cs, lift) {
+  var a = lift || 0;
+  c.save(); c.translate(fx, fy); c.rotate(-a);
+  pBlob(c, [[-2.4, 0.5], [-2.6, -2.0], [-0.6, -2.8], [1.6, -2.4], [3.8, -1.4], [4.6, 0], [4.2, 0.7]], cs[0]);
+  pBlob(c, [[-1.8, -1.8], [0.4, -2.4], [2.6, -1.8], [1.4, -1.0], [-1.0, -1.1]], cs[1]);
+  c.restore();
+}
+/* 脚: L={h:[x,y],k:[x,y],f:[x,y]}  P=[暗,基,明]  靴cs */
+function pLeg(c, L, P, cs, o) {
+  o = o || {};
+  var ax = L.f[0], ay = L.f[1] - 2.3, r0 = o.r0 || 2.6, r1 = o.r1 || 2.15, r2 = o.r2 || 1.95;
+  if (!o.noShoe) pShoe(c, L.f[0], L.f[1], cs, L.lift);
+  pTube(c, L.h[0], L.h[1], L.k[0], L.k[1], r0, r1, P);
+  pTube(c, L.k[0], L.k[1], ax, ay, r1, r2, P);
+  if (o.crease) pLine(c, (L.k[0] + ax) / 2 + 0.6, (L.k[1] + ay) / 2, ax + 0.7, ay - 0.5, 0.5, P[2]);
+}
+/* 腕: S=肩 H=手  P=袖色  hand=手の描画関数 */
+function pArm(c, S, H, P, L1, L2, bend, o) {
+  o = o || {};
+  var E = pIK(S[0], S[1], H[0], H[1], L1, L2, bend), dx = H[0] - E[0], dy = H[1] - E[1], d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d;
+  var W = [H[0] - ux * 1.6, H[1] - uy * 1.6];
+  pTube(c, S[0], S[1], E[0], E[1], o.r0 || 2.3, o.r1 || 2.0, P);
+  pTube(c, E[0], E[1], W[0], W[1], o.r1 || 2.0, o.r2 || 1.75, P);
+  if (o.cuff) pCap(c, W[0] - ux * 0.4, W[1] - uy * 0.4, W[0] + ux * 0.5, W[1] + uy * 0.5, 1.45, 1.45, o.cuff);
+  if (o.watch) pCap(c, W[0] + ux * 0.2, W[1] + uy * 0.2, W[0] + ux * 1.0, W[1] + uy * 1.0, 1.35, 1.35, o.watch);
+  if (o.hand) o.hand(H, ux, uy, E);
+  return E;
+}
+function pFist(c, H, sk, r) { r = r || 1.9; pEll(c, H[0], H[1], r, r * 0.9, sk[1]); pEll(c, H[0] + 0.4, H[1] - 0.5, r * 0.55, r * 0.45, sk[2]); pEll(c, H[0] - 0.6, H[1] + 0.7, r * 0.6, r * 0.35, sk[0]); }
+
+/* ---------- 主人公 ---------- */
+var PLP = mkPal({
+  sk: '#e1aa80', skL: '#f6cea6', skD: '#b77752', skDD: '#80492f',
+  s0: '#11131c', s1: '#1f2331', s2: '#30364b', s3: '#4b5574', sp: '#2a3042',
+  t0: '#16244f', t1: '#27408a', t2: '#a9badc',
+  w0: '#f3f3ee', w1: '#b5bccb',
+  h0: '#130f0c', h1: '#2c2219', h2: '#5a4433',
+  sh0: '#0a0b0f', sh1: '#3c4354', sh2: '#8a94a8',
+  wd0: '#8f5a2a', wd1: '#c48a48', wd2: '#e8bb78', gr: '#26262c', silv: '#cfd6e2', red: '#c03a32',
+  b0: '#0c0e15', b1: '#171a26', b2: '#262b3d', l0: '#161924', l1: '#232838', l2: '#3a4260', shb: '#262b38'
+});
+var PLC = { suit: ['#11131c', '#1f2331', '#30364b', '#4b5574'], suitB: ['#0c0e15', '#171a26', '#262b3d'], sk: ['#b77752', '#e1aa80', '#f6cea6'], shoe: ['#0a0b0f', '#3c4354'] };
+/* pose: {hipY, ux, legs:[back,front], A:手前の手, B:奥の手, bat:{g,t,k}, ear, phone, head} 座標は右向き・足元(0,0) */
+function pupPlayer(q) {
+  var hipY = q.hipY, T = hipY - 17, ux = q.ux || 0, i, x0 = -14, y0 = T - 15, x1 = 14, y1 = 2;
+  function ext(p) { if (!p) return; x0 = Math.min(x0, p[0] - 4); x1 = Math.max(x1, p[0] + 4); y0 = Math.min(y0, p[1] - 4); y1 = Math.max(y1, p[1] + 4); }
+  ext(q.A); ext(q.B); if (q.bat) { ext(q.bat.g); ext(q.bat.t); }
+  var c = pupBegin(PLP, x0, y0, x1, y1);
+  var Sb = [ux - 1.4, T + 1.8], Sf = [ux + 1.6, T + 2.0];
+  /* 奥の腕 */
+  if (q.B) pArm(c, Sb, q.B, PLC.suitB, 8.4, 7.6, 1, { cuff: '#b5bccb', hand: function (H) { pFist(c, H, ['#80492f', '#b77752', '#e1aa80'], 1.7); } });
+  /* 奥の脚・手前の脚 */
+  pLeg(c, q.legs[0], PLC.suitB, ['#06070a', '#262b38']);
+  pLeg(c, q.legs[1], ['#161924', '#232838', '#3a4260'], PLC.shoe, { crease: true });
+  /* 胴 */
+  if (q.back) {
+    pSuitTorso(c, hipY, T, ux, ['#11131c', '#1f2331', '#2a3044', '#3a4360'], { shirt: false });
+    pPath(c, [[0, T + 1], [0.3, hipY + 1.4]], 0.6, '#11131c');
+    pTube(c, -5.2, T + 2.2, -6.2, T + 9.5, 2.0, 1.8, PLC.suitB); pTube(c, 5.2, T + 2.2, 6.2, T + 9.5, 2.0, 1.8, PLC.suitB);
+    var bhx = 0, bhy = T - 6.3;
+    pTube(c, 0, T + 0.6, 0, bhy + 3.5, 1.7, 1.6, ['#80492f', '#b77752']);
+    pEll(c, bhx, bhy, 4.8, 5.3, '#2c2219'); pEll(c, -4.6, bhy + 0.8, 0.9, 1.4, '#b77752'); pEll(c, 4.6, bhy + 0.8, 0.9, 1.4, '#b77752');
+    pClip(c, function () { c.beginPath(); c.ellipse(bhx, bhy, 4.8, 5.3, 0, 0, 6.2832); }, function () { pEll(c, -2.6, bhy + 1.5, 3, 4.5, '#130f0c'); pEll(c, 1.4, bhy - 3.6, 2.2, 1.3, '#5a4433'); });
+    pPath(c, [[-2.6, bhy - 4.4], [0, bhy - 3.2], [2.6, bhy - 4.4]], 0.6, '#5a4433');
+    if (!q.secret) { pEll(c, 4.8, T - 0.6, 2.5, 2.4, '#f6cfb0'); pEll(c, 4.0, T - 1.6, 1.0, 0.7, '#fff3e6'); }
+    pupEnd(function (d, w, h) { if (!q.secret) { } });
+    if (!q.secret) { /* イヤホンのコード */ }
+    return;
+  }
+  pSuitTorso(c, hipY, T, ux, PLC.suit, { tie: ['#16244f', '#27408a', '#a9badc'], pocket: '#f3f3ee' });
+  /* 首と頭 */
+  var hx = ux * 1.05 + 0.7, hy = T - 6.3;
+  pTube(c, ux + 0.4, T + 0.6, hx + 0.2, hy + 3.5, 1.7, 1.6, ['#80492f', '#b77752']);
+  pEll(c, hx, hy, 4.7, 5.2, '#e1aa80');
+  pPoly(c, [[hx - 2.2, hy + 1], [hx + 4.6, hy + 0.4], [hx + 4.3, hy + 3.6], [hx + 2.3, hy + 5.5], [hx - 0.8, hy + 5.2]], '#e1aa80');
+  pClip(c, function () { c.beginPath(); c.ellipse(hx, hy, 4.7, 5.2, 0, 0, 6.2832); c.moveTo(hx - 2.2, hy + 1); c.lineTo(hx + 4.6, hy + 0.4); c.lineTo(hx + 4.3, hy + 3.6); c.lineTo(hx + 2.3, hy + 5.5); c.lineTo(hx - 0.8, hy + 5.2); c.closePath(); }, function () {
+    pEll(c, hx - 3.5, hy + 2.5, 3.4, 4.4, '#b77752');
+    pEll(c, hx + 2.2, hy - 2.2, 2.0, 1.6, '#f6cea6');
+    pEll(c, hx + 1.4, hy + 5.4, 3.2, 1.2, '#b77752');
+  });
+  pPoly(c, [[hx + 4.0, hy - 1.0], [hx + 5.7, hy + 1.6], [hx + 4.2, hy + 2.0]], '#e1aa80');
+  pEll(c, hx - 1.3, hy + 0.6, 1.1, 1.5, '#b77752');
+  /* 髪(オールバック) */
+  pBlob(c, [[hx + 4.3, hy - 2.4], [hx + 4.9, hy - 4.6], [hx + 2.6, hy - 6.6], [hx - 1.6, hy - 6.8], [hx - 4.8, hy - 4.8], [hx - 5.4, hy - 1.2], [hx - 4.6, hy + 2.8], [hx - 2.8, hy + 1.4], [hx - 2.3, hy - 1.8], [hx + 1.4, hy - 3.1]], '#2c2219');
+  pPath(c, [[hx + 3.4, hy - 5.3], [hx + 0.5, hy - 5.9], [hx - 3.4, hy - 4.4]], 0.75, '#5a4433');
+  pPath(c, [[hx + 2.6, hy - 3.6], [hx - 0.4, hy - 4.3], [hx - 3.8, hy - 2.4]], 0.6, '#5a4433');
+  pPath(c, [[hx - 4.6, hy - 1.4], [hx - 3.6, hy + 2.2]], 0.8, '#130f0c');
+  if (q.bat) pupBat(c, q.bat);
+  /* 手前の腕 */
+  if (q.A) pArm(c, Sf, q.A, PLC.suit, 8.4, 7.6, 1, { cuff: '#f3f3ee', watch: '#cfd6e2', hand: function (H) { pFist(c, H, ['#b77752', '#e1aa80', '#f6cea6'], 1.9); } });
+  /* 顔の点(サングラス・口) */
+  var ex = Math.round(hx + 0.6), ey = Math.round(hy - 0.4);
+  pPixW(ex + 1, ey - 1, 4, '#c4ccd8'); pPixW(ex - 3, ey - 1, 4, '#7c8496');
+  pPixW(ex + 1, ey, 4, '#121626'); pPix(ex, ey, '#9aa3b4'); pPix(ex + 2, ey, q.glint ? '#ffffff' : '#5a78b4'); pPix(ex + 3, ey, '#2a3a66');
+  pPixW(ex + 1, ey + 1, 4, '#121626'); pPix(ex + 3, ey + 1, '#22305a');
+  pPix(Math.round(hx + 3.2), Math.round(hy + 3.4), '#8a4434'); pPix(Math.round(hx + 4.2), Math.round(hy + 3.4), '#b06050');
+  if (q.ear) { pPix(Math.round(hx - 1.4), Math.round(hy + 0.6), '#ffffff'); pPix(Math.round(hx - 1.4), Math.round(hy + 1.6), '#e8e8e8'); }
+  if (q.earPod) { pPix(Math.round(q.earPod[0]), Math.round(q.earPod[1]), '#ffffff'); pPix(Math.round(q.earPod[0]) + 1, Math.round(q.earPod[1]), (Math.floor(simT / 120) & 1) ? '#9fd8ff' : '#ffffff'); }
+  if (q.phone) { var phx = Math.round(q.phone[0]), phy = Math.round(q.phone[1]); pPixW(phx, phy, 3, '#14161c'); pPixW(phx, phy + 1, 3, '#14161c'); pPix(phx + 1, phy + 1, q.phone[2] ? '#ffffff' : '#6fd0ff'); pPixW(phx, phy + 2, 3, '#14161c'); pPix(phx + 1, phy + 2, q.phone[2] ? '#ffffff' : '#6fd0ff'); pPixW(phx, phy + 3, 3, '#14161c'); }
+  pupEnd(function (d, w, h, P, idx) {
+    var b1 = P.idx.s1, b2 = P.idx.s2, sp = P.rgb[P.idx.sp], s3 = P.rgb[P.idx.s2];
+    for (var i2 = 0; i2 < w * h; i2++) { var k2 = idx[i2]; if ((k2 === b1 || k2 === b2) && ((i2 % w) + PUP.x0) % 3 === 0) { var o2 = i2 * 4, qq = k2 === b1 ? sp : P.rgb[P.idx.s3]; d[o2] = qq[0]; d[o2 + 1] = qq[1]; d[o2 + 2] = qq[2]; } }
+  });
+}
+function pupBat(c, b) {
+  var gx = b.g[0], gy = b.g[1], tx = b.t[0], ty = b.t[1], dx = tx - gx, dy = ty - gy, d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d, k = b.k || 1;
+  var bx = gx - ux * 2.2, by = gy - uy * 2.2;
+  pCap(c, bx, by, gx + ux * d * 0.4, gy + uy * d * 0.4, 0.9 * k, 1.05 * k, '#8f5a2a');
+  pCap(c, gx + ux * d * 0.4, gy + uy * d * 0.4, tx, ty, 1.05 * k, 1.9 * k, '#c48a48');
+  pCap(c, gx + ux * d * 0.45 - uy * 0.5 * k, gy + uy * d * 0.45 + ux * 0.5 * k * 0 - 0.5 * k, tx - uy * 0.7 * k, ty - 0.7 * k, 0.4 * k, 0.8 * k, '#e8bb78');
+  pCap(c, bx, by, gx + ux * 2.6, gy + uy * 2.6, 1.0 * k, 1.0 * k, '#26262c');
+  pEll(c, bx, by, 1.25 * k, 1.25 * k, '#26262c');
+}
+
+/* ---------- 四天王 ---------- */
+var FOEP = {
+  box: { suit: ['#141a3e', '#232c62', '#34408a', '#5262b0'], back: ['#0e1230', '#1a2150', '#283270'], tie: ['#5a0c34', '#9a1c62', '#e070a8'], sk: ['#9a6440', '#d29a6c', '#f0c49a'], hair: ['#0c0a09', '#211a15', '#3e322a'], shoe: ['#0a0a0c', '#3a3a44'], glove: ['#7e1010', '#cf2a2a', '#ff8a76'], W: 1.28, ch: 1.4, tH: 18, arm: [2.9, 2.6, 2.3], L: [8.6, 8.0] },
+  yoga: { suit: ['#141230', '#22204a', '#33306a', '#4c4a90'], back: ['#0e0c24', '#19173a', '#262454'], tie: ['#7a5208', '#d09a1c', '#f6d26a'], sk: ['#6e4228', '#a87048', '#d0966a'], hair: ['#0c0a09', '#211a15', '#3e322a'], shoe: ['#6e4228', '#a87048'], W: 0.92, ch: 0, tH: 15, arm: [2.1, 1.9, 1.6], L: [8.4, 7.8], bare: true, pin: true },
+  sumo: { suit: ['#0a0a0d', '#17171c', '#26262e', '#3c3c48'], back: ['#060608', '#111115', '#1c1c22'], tie: ['#5a0c10', '#b0222a', '#f06a6a'], sk: ['#b07c62', '#e6bea2', '#fadcc6'], hair: ['#3a2216', '#6a3e24', '#9a6438'], shoe: ['#08080a', '#34343e'], W: 0.98, ch: 0.2, tH: 16, arm: [2.2, 2.0, 1.7], L: [8.4, 7.8] },
+  blanka: { suit: ['#0c1c12', '#163222', '#224a32', '#356a48'], back: ['#08140c', '#10261a', '#1a3a28'], tie: ['#6a1408', '#c03418', '#f07a4a'], sk: ['#94603e', '#cc9466', '#eebc8e'], hair: ['#7a2806', '#cc5a16', '#ffa040'], shoe: ['#0a0a0c', '#3a3a44'], W: 1.32, ch: 1.2, tH: 15, arm: [3.0, 2.7, 2.4], L: [8.6, 8.2] }
+};
+var FOEPAL = {};
+(function () {
+  for (var k in FOEP) {
+    var S = FOEP[k], o = {}, n = 0;
+    function add(a) { for (var i = 0; i < a.length; i++) o['c' + (n++)] = a[i]; }
+    add(S.suit); add(S.back); add(S.tie); add(S.sk); add(S.hair); add(S.shoe); if (S.glove) add(S.glove);
+    add(['#f2f2ec', '#b9c0cf', '#ffffff', '#0b0b0e', '#e8ebf0', '#9aa0ac', '#3a62c0', '#5c6676', '#aab4c4', '#f0f4fa', '#d23f31', '#fff2b0', '#2a1a10', '#16161a']);
+    FOEPAL[k] = mkPal(o);
+  }
+})();
+function pBraid(c, hx, hy, S) {
+  var hr = S.hair, i, bx = hx - 4.4, by = hy + 1;
+  for (i = 0; i < 7; i++) { var yy = by + i * 2.6, xx = bx - 1.2 - Math.sin(i * 0.5 + simT * 0.004) * 0.8 - i * 0.35; pEll(c, xx, yy, 1.5, 1.45, i % 2 ? hr[1] : hr[2]); pEll(c, xx - 0.4, yy + 0.5, 0.9, 0.6, hr[0]); }
+  pEll(c, bx - 4.0, by + 18.6, 1.1, 1.6, hr[0]);
+}
+function pFoeHead(c, ty, hx, hy, S, st) {
+  var sk = S.sk, hr = S.hair;
+  if (ty === 'blanka') { /* たてがみ(後ろ) */
+    pPoly(c, [[hx + 2, hy - 4], [hx + 1, hy - 10.5], [hx - 1.6, hy - 6.4], [hx - 4.6, hy - 11], [hx - 5, hy - 5.6], [hx - 9.6, hy - 8], [hx - 7.4, hy - 3.2], [hx - 11, hy - 1.6], [hx - 7.4, hy + 0.6], [hx - 9.8, hy + 4.4], [hx - 5.4, hy + 3.4], [hx - 5.8, hy + 7.4], [hx - 2.6, hy + 4.4], [hx + 3.6, hy - 1]], hr[1]);
+    pPoly(c, [[hx + 0.6, hy - 4.6], [hx - 1.8, hy - 5.6], [hx - 4.4, hy - 9.4], [hx - 4.6, hy - 4.6], [hx - 8.4, hy - 6.6], [hx - 6.4, hy - 2.6], [hx - 3.4, hy - 1.4]], hr[2]);
+    pPoly(c, [[hx - 6.6, hy + 0.4], [hx - 9.2, hy + 3.8], [hx - 5, hy + 2.6], [hx - 4.2, hy + 5.8], [hx - 3.4, hy + 1.8]], hr[0]);
+  }
+  var jw = ty === 'box' ? 1.25 : (ty === 'blanka' ? 1.2 : 1);
+  pEll(c, hx, hy, 4.5, 5.0, sk[1]);
+  pPoly(c, [[hx - 2.4, hy + 0.6], [hx + 4.5, hy + 0.2], [hx + 4.4 * jw, hy + 3.4], [hx + 2.4, hy + 5.4 * jw], [hx - 1.2, hy + 5.0 * jw]], sk[1]);
+  pClip(c, function () { c.beginPath(); c.ellipse(hx, hy, 4.5, 5, 0, 0, 6.2832); c.moveTo(hx - 2.4, hy + 0.6); c.lineTo(hx + 4.5, hy + 0.2); c.lineTo(hx + 4.4 * jw, hy + 3.4); c.lineTo(hx + 2.4, hy + 5.4 * jw); c.lineTo(hx - 1.2, hy + 5 * jw); c.closePath(); }, function () {
+    pEll(c, hx - 3.6, hy + 2.4, 3.2, 4.6, sk[0]); pEll(c, hx + 2.2, hy - 2.4, 1.9, 1.5, sk[2]); pEll(c, hx + 1.2, hy + 5.6 * jw, 3.4, 1.2, sk[0]);
+  });
+  pPoly(c, [[hx + 4.0, hy - 1.2], [hx + 5.6, hy + 1.4], [hx + 4.2, hy + 1.9]], sk[1]);
+  pEll(c, hx - 1.4, hy + 0.5, 1.1, 1.5, sk[0]);
+  if (ty === 'box') {
+    pPoly(c, [[hx - 4.6, hy - 1.4], [hx - 4.8, hy - 5.2], [hx - 2, hy - 6.3], [hx + 3.4, hy - 6.2], [hx + 4.4, hy - 4.8], [hx + 4.2, hy - 3.2], [hx - 2.4, hy - 3.2], [hx - 2.6, hy - 0.6]], hr[1]);
+    pPath(c, [[hx - 3.4, hy - 5.6], [hx + 3.2, hy - 5.6]], 0.6, hr[2]);
+  } else if (ty === 'yoga') {
+    pEll(c, hx - 0.6, hy - 2.6, 3.0, 1.6, sk[2]);
+    pEll(c, hx - 1.4, hy - 6.4, 1.7, 1.5, hr[1]); pEll(c, hx - 1.4, hy - 5.2, 1.3, 0.5, '#d09a1c');
+  } else if (ty === 'sumo') {
+    pBlob(c, [[hx + 3.6, hy - 3.2], [hx + 3.8, hy - 5], [hx + 1, hy - 6.4], [hx - 3, hy - 6.1], [hx - 5.2, hy - 3.6], [hx - 5.4, hy + 0.6], [hx - 3.6, hy + 2.4], [hx - 2.6, hy - 1.6], [hx + 1, hy - 3.6]], hr[1]);
+    pPath(c, [[hx + 2.6, hy - 5], [hx - 1, hy - 5.6], [hx - 4.2, hy - 3.4]], 0.6, hr[2]);
+    /* 仮面 */
+    pBlob(c, [[hx + 0.6, hy - 3.8], [hx + 4.6, hy - 3.4], [hx + 5.4, hy + 0.4], [hx + 4.6, hy + 4.6], [hx + 1.8, hy + 5.6], [hx + 0.2, hy + 3]], '#e8ebf0');
+    pBlob(c, [[hx + 0.6, hy - 3.6], [hx + 1.8, hy - 3.4], [hx + 1.6, hy + 3.4], [hx + 0.4, hy + 3]], '#9aa0ac');
+  } else if (ty === 'blanka') {
+    pPoly(c, [[hx + 3.6, hy - 2.6], [hx + 4.4, hy - 6.8], [hx + 1.6, hy - 4.6], [hx + 0.4, hy - 8.6], [hx - 1.4, hy - 4.6], [hx - 3.4, hy - 6.6], [hx - 3.6, hy - 2.6], [hx - 2.2, hy - 1]], hr[1]);
+    pPoly(c, [[hx + 2.8, hy - 3.2], [hx + 3.4, hy - 5.8], [hx + 1.2, hy - 3.8]], hr[2]);
+  }
+}
+function pFoeFace(ty, hx, hy, st) {
+  var ex = Math.round(hx + 2.4), ey = Math.round(hy - 0.6), my = Math.round(hy + 3.2);
+  if (ty === 'box') {
+    pPixW(ex - 1, ey - 1, 4, '#0b0b0e'); pPix(ex + 3, ey, '#0b0b0e');
+    pPix(ex, ey, '#ffffff'); pPix(ex + 1, ey, '#0b0b0e');
+    pPixW(ex, my, 3, '#5a2a1a'); pPix(ex - 1, my - 1, '#8a5030');
+  } else if (ty === 'yoga') {
+    pPixW(ex, ey, 2, '#2a1a10'); pPix(ex + 1, ey - 2, '#d23f31');
+    pPixW(ex, my - 1, 3, '#0b0b0e'); pPix(ex - 1, my, '#0b0b0e'); pPix(ex + 3, my, '#0b0b0e');
+  } else if (ty === 'sumo') {
+    pPixW(ex, ey, 3, '#0b0b0e'); pPix(ex + 1, ey, '#d23f31');
+    pPix(ex + 2, my - 1, '#3a62c0'); pPix(ex + 1, my, '#9aa0ac'); pPix(ex + 2, ey - 2, '#3a62c0'); pPix(ex - 1, ey - 2, '#3a62c0');
+  } else {
+    pPixW(ex - 1, ey - 1, 4, '#0b0b0e'); pPix(ex + 3, ey, '#0b0b0e');
+    pPix(ex, ey, '#fff2b0'); pPix(ex + 1, ey, '#0b0b0e');
+    pPixW(ex - 1, my, 4, '#ffffff'); pPixW(ex - 1, my + 1, 3, '#5a1a10'); pPix(ex - 1, my - 1, '#ffffff'); pPix(ex + 2, my + 1, '#ffffff');
+  }
+}
+/* q: {hipY, T, ux, legs, A, B, hx, hy, st} 右向き・足元基準 */
+function pupFoe(ty, q) {
+  var S = FOEP[ty], x0 = -18, y0 = q.T - 18, x1 = 18, y1 = 3, i;
+  function ext(p) { if (!p) return; x0 = Math.min(x0, p[0] - 6); x1 = Math.max(x1, p[0] + (ty === 'sumo' ? 16 : 6)); y0 = Math.min(y0, p[1] - 6); y1 = Math.max(y1, p[1] + 6); }
+  ext(q.A); ext(q.B); q.legs.forEach(function (L) { ext(L.f); ext(L.k); });
+  var c = pupBegin(FOEPAL[ty], x0, y0, x1, y1), ux = q.ux || 0, T = q.T, hipY = q.hipY, ar = S.arm;
+  var Sb = [ux - 1.6 * S.W, T + 2], Sf = [ux + 1.6 * S.W, T + 2.2];
+  var hand = function (H, back) {
+    if (S.glove) { var g = S.glove; pEll(c, H[0], H[1], 3.2, 3.0, back ? g[0] : g[1]); if (!back) { pEll(c, H[0] + 0.8, H[1] - 1.0, 1.4, 1.0, g[2]); pEll(c, H[0] - 0.9, H[1] + 1.3, 1.8, 0.8, g[0]); } pCap(c, H[0] - 2.6, H[1] - 1.6, H[0] - 2.6, H[1] + 1.6, 0.8, 0.8, '#f2f2ec'); }
+    else pFist(c, H, back ? [S.sk[0], S.sk[0], S.sk[1]] : S.sk, ty === 'blanka' ? 2.5 : 1.9);
+  };
+  function claws(H, back) {
+    var k, col = back ? ['#5c6676', '#aab4c4'] : ['#aab4c4', '#f0f4fa'];
+    for (k = -1; k <= 1; k++) { var tx = H[0] + 13, ty2 = H[1] - 2.4 + k * 2.2; c.beginPath(); c.moveTo(H[0] + 1, H[1] + k * 1.2); c.quadraticCurveTo(H[0] + 8, H[1] + k * 1.6 + 0.6, tx, ty2 - 1.4); c.lineWidth = 0.9; c.strokeStyle = col[0]; c.lineCap = 'round'; c.stroke(); pLine(c, H[0] + 3, H[1] + k * 1.3, H[0] + 8, H[1] + k * 1.5, 0.45, col[1]); }
+    pCap(c, H[0] - 1.6, H[1] - 1.6, H[0] + 1.2, H[1] - 1.6, 0.9, 0.9, '#5c6676'); pCap(c, H[0] - 1.6, H[1] + 1.6, H[0] + 1.2, H[1] + 1.6, 0.9, 0.9, '#5c6676');
+  }
+  if (q.B) { pArm(c, Sb, q.B, S.back, S.L[0], S.L[1], 1, { r0: ar[0], r1: ar[1], r2: ar[2], cuff: '#b9c0cf', hand: function (H) { hand(H, true); } }); if (ty === 'sumo') claws(q.B, true); }
+  var lp = { r0: ar[0] * 1.05, r1: ar[1], r2: ar[2] * 1.05, noShoe: S.bare };
+  pLeg(c, q.legs[0], S.back, [S.shoe[0], S.shoe[0]], lp);
+  pLeg(c, q.legs[1], [S.suit[0], S.suit[1], S.suit[2]], S.shoe, { r0: lp.r0, r1: lp.r1, r2: lp.r2, noShoe: S.bare, crease: true });
+  if (S.bare) q.legs.forEach(function (L, j) { pEll(c, L.f[0] + 1, L.f[1] - 0.9, 2.6, 1.3, j ? S.sk[1] : S.sk[0]); pEll(c, L.f[0] + 0.6, L.f[1] - 1.6, 1.4, 0.8, '#d09a1c'); });
+  if (ty === 'sumo') pBraid(c, q.hx, q.hy, S);
+  pSuitTorso(c, hipY, T, ux, S.suit, { w: S.W, chest: S.ch, tie: S.tie, pocket: ty === 'box' ? null : '#f2f2ec' });
+  var hx = q.hx, hy = q.hy;
+  if (ty === 'box' || ty === 'blanka') pTube(c, ux + 0.6, T + 0.6, hx, hy + 3, 2.4, 2.3, [S.sk[0], S.sk[1]]);
+  else pTube(c, ux + 0.4, T + 0.6, hx + 0.2, hy + 3.5, 1.6, 1.5, [S.sk[0], S.sk[1]]);
+  pFoeHead(c, ty, hx, hy, S, q.st);
+  if (q.A) { pArm(c, Sf, q.A, S.suit, S.L[0], S.L[1], 1, { r0: ar[0], r1: ar[1], r2: ar[2], cuff: '#f2f2ec', hand: function (H) { hand(H, false); } }); if (ty === 'sumo') claws(q.A, false); }
+  pFoeFace(ty, hx, hy, q.st);
+  pupEnd(S.pin ? function (d, w, h, P, idx) { var b1 = P.idx.c1, sp = P.rgb[P.idx.c2]; for (var i2 = 0; i2 < w * h; i2++) if (idx[i2] === b1 && ((i2 % w) + PUP.x0) % 3 === 0) { var o2 = i2 * 4; d[o2] = sp[0]; d[o2 + 1] = sp[1]; d[o2 + 2] = sp[2]; } } : null);
+}
+/* ブロンコの丸まり(回転) */
+function pupBall(ang) {
+  var S = FOEP.blanka, c = pupBegin(FOEPAL.blanka, -11, -21, 11, 1), cx = 0, cy = -9.5;
+  c.save(); c.translate(cx, cy); c.rotate(ang);
+  pEll(c, 0, 0, 9, 9, S.suit[1]);
+  pClip(c, function () { c.beginPath(); c.ellipse(0, 0, 9, 9, 0, 0, 6.2832); }, function () { pEll(c, -2.6, 3, 8, 7, S.suit[0]); pEll(c, 2.8, -3.4, 4.6, 3.4, S.suit[2]); pEll(c, 3.6, -4.6, 2, 1.2, S.suit[3]); });
+  var k; for (k = 0; k < 6; k++) { var a = k * 1.05 - 0.4, r0 = 7.6; pPoly(c, [[Math.cos(a - 0.3) * r0, Math.sin(a - 0.3) * r0], [Math.cos(a) * 11.4, Math.sin(a) * 11.4], [Math.cos(a + 0.35) * r0, Math.sin(a + 0.35) * r0]], k % 2 ? S.hair[1] : S.hair[2]); }
+  pEll(c, 3.4, 1.6, 2.6, 2.4, S.sk[1]); pEll(c, 2.6, 4.4, 1.2, 1.6, S.tie[1]); pEll(c, -3.6, -0.6, 2.2, 2.0, S.sk[0]);
+  pPath(c, [[-6, 2], [-1, 5.6], [5, 3.6]], 0.8, S.suit[0]);
+  c.restore();
+  pupEnd();
+}
+/* 回転して置く(倒れ・吹っ飛び用) */
+function pupBlitRot(x, y, face, rot, ox, oy) {
+  var c = ctx; c.save(); c.translate(x, y); c.rotate(rot); if (face < 0) c.scale(-1, 1);
+  c.drawImage(PUP.out, 0, 0, PUP.w, PUP.h, PUP.x0 - (ox || 0), PUP.y0 - (oy || 0), PUP.w, PUP.h); c.restore();
+}
+
+/* ---------- 社長 ---------- */
+var PRC = { suit: ['#34343c', '#4c4c58', '#64646f', '#8a8a98'], back: ['#26262d', '#383842', '#4c4c58'], tie: ['#6a1416', '#b8302c', '#e8645a'], sk: ['#c98e66', '#f2c29c', '#ffe2c4'], skP: ['#98a8cc', '#c4d2ee', '#e2ecff'], hair: ['#1c1612', '#2e2420', '#4a3c34'], shoe: ['#2a1a10', '#6a4428'] };
+var PRPAL = (function () { var o = {}, n = 0, k, a; for (k in PRC) { a = PRC[k]; for (var i = 0; i < a.length; i++) o['c' + (n++)] = a[i]; }
+  ['#f2f2ec', '#b9c0cf', '#1a1a1e', '#e0b84a', '#dca47c', '#ffb8a0', '#14161c', '#2a2d36', '#17120e', '#3d342c'].forEach(function (h) { o['c' + (n++)] = h; }); return mkPal(o); })();
+/* q: {legs, A, B, Af(手前はA?), hx, hy, pale, wig, back, shock, scream, run, kneel, bow, T, hipY} */
+function pupPres(q) {
+  var hipY = q.hipY, T = q.T, sk = q.pale ? PRC.skP : PRC.sk, W = 1.5, x0 = -16, y0 = T - 16, x1 = 16, y1 = 3;
+  function ext(p) { if (!p) return; x0 = Math.min(x0, p[0] - 5); x1 = Math.max(x1, p[0] + 5); y0 = Math.min(y0, p[1] - 5); y1 = Math.max(y1, p[1] + 5); }
+  ext(q.A); ext(q.B); if (q.kneel) { x0 -= 6; x1 += 12; }
+  var c = pupBegin(PRPAL, x0, y0, x1, y1), hx = q.hx, hy = q.hy;
+  var SA = q.SA, SB = q.SB, frontA = SA[0] > SB[0];
+  function arm(S, H, front) { pArm(c, S, H, front ? PRC.suit : PRC.back, 5.6, 5.4, 1, { r0: 2.5, r1: 2.2, r2: 2.0, cuff: front ? '#f2f2ec' : '#b9c0cf', hand: function (Hh) { pFist(c, Hh, front ? sk : [sk[0], sk[0], sk[1]], 1.8); } }); }
+  if (q.A && !frontA) arm(SA, q.A, false); if (q.B && frontA) arm(SB, q.B, false);
+  var leg = function (L, back) { pLeg(c, L, back ? PRC.back : [PRC.suit[0], PRC.suit[1], PRC.suit[2]], back ? [PRC.shoe[0], PRC.shoe[0]] : PRC.shoe, { r0: 2.9, r1: 2.6, r2: 2.4 }); };
+  leg(q.legs[0], true); leg(q.legs[1], false);
+  var pv = q.bow ? [q.pivot[0], q.pivot[1]] : null;
+  if (pv) { c.save(); c.translate(pv[0], pv[1]); c.rotate(q.bow); c.translate(-pv[0], -pv[1]); }
+  pSuitTorso(c, hipY, T, q.ux || 0, PRC.suit, q.back ? { w: W, chest: 0.8, shirt: false } : { w: W, chest: 0.8, belly: true, tie: PRC.tie, belt: true });
+  /* 頭 */
+  pTube(c, (q.ux || 0) + 0.4, T + 0.8, hx, hy + 3.5, 2.6, 2.6, [sk[0], sk[1]]);
+  pEll(c, hx, hy, 5.7, 5.5, sk[1]);
+  pClip(c, function () { c.beginPath(); c.ellipse(hx, hy, 5.7, 5.5, 0, 0, 6.2832); }, function () {
+    if (!q.back) { pEll(c, hx - 4.6, hy + 2.4, 3.4, 5.0, sk[0]); pEll(c, hx + 1.4, hy - 3.4, 2.6, 1.6, sk[2]); pEll(c, hx + 2.4, hy + 5.6, 4.2, 1.4, sk[0]); }
+    else { pEll(c, hx, hy + 4.2, 6, 2.4, sk[0]); pEll(c, hx - 1, hy - 3.6, 2.4, 1.3, sk[2]); }
+  });
+  if (!q.back) {
+    pEll(c, hx + 5.2, hy + 1.6, 1.0, 1.0, sk[1]);
+    pEll(c, hx - 1.6, hy + 0.8, 1.3, 1.7, sk[0]);
+    pBlob(c, [[hx - 2.6, hy - 1.2], [hx - 4.4, hy - 2.6], [hx - 5.8, hy - 0.6], [hx - 5.6, hy + 2.8], [hx - 3.6, hy + 2.4]], PRC.hair[1]);
+    pPath(c, [[hx - 4.8, hy - 1.2], [hx - 4.6, hy + 1.8]], 0.6, PRC.hair[2]);
+    pEll(c, hx + 3.6, hy + 2.6, 1.0, 0.7, '#ffb8a0');
+  } else {
+    pBlob(c, [[hx - 5.8, hy - 1.8], [hx - 3.6, hy + 2.2], [hx + 3.6, hy + 2.2], [hx + 5.8, hy - 1.8], [hx + 5.4, hy + 3.4], [hx, hy + 4.4], [hx - 5.4, hy + 3.4]], PRC.hair[1]);
+    pEll(c, hx - 5.8, hy + 0.6, 1.0, 1.4, sk[0]); pEll(c, hx + 5.8, hy + 0.6, 1.0, 1.4, sk[0]);
+  }
+  if (q.wig) { pBlob(c, [[hx + 4.6, hy - 2.4], [hx + 3.8, hy - 5.4], [hx, hy - 6.6], [hx - 4.4, hy - 5.4], [hx - 5.8, hy - 1.6], [hx - 3, hy - 3.6], [hx + 1, hy - 4.2]], '#17120e'); pPath(c, [[hx + 2.6, hy - 5.2], [hx - 2.6, hy - 5.2]], 0.6, '#3d342c'); }
+  if (pv) c.restore();
+  if (q.A && frontA) arm(SA, q.A, true); if (q.B && !frontA) arm(SB, q.B, true);
+  if (!q.back) {
+    var ex = Math.round(hx + 0.6), ey = Math.round(hy - 0.4);
+    if (!pv) {
+      pPixW(ex - 3, ey - 1, 3, '#2a2d36'); pPixW(ex, ey - 1, 6, '#2a2d36');
+      pPixW(ex, ey, 6, '#14161c'); pPix(ex + 1, ey, '#5c6272'); pPix(ex + 4, ey, '#3a3f4e');
+      pPixW(ex + 1, ey + 1, 4, '#14161c'); pPix(ex + 2, ey + 1, '#3a3f4e');
+      if (q.pale) { pPix(ex + 1, ey - 3, '#5a6fb0'); pPix(ex + 1, ey - 2, '#5a6fb0'); pPix(ex + 3, ey - 3, '#5a6fb0'); pPix(ex + 3, ey - 2, '#5a6fb0'); pPix(ex - 1, ey - 3, '#5a6fb0'); }
+      var my = Math.round(hy + 3.2);
+      if (q.shock || q.scream) { pPixW(ex + 2, my, 3, '#e8e8e8'); pPixW(ex + 2, my + 1, 3, '#5a1a14'); if (q.scream) pPixW(ex + 2, my + 2, 3, '#5a1a14'); }
+      else { pPixW(ex + 2, my + 1, 3, '#9a3a30'); pPix(ex + 1, my, '#9a3a30'); pPix(ex + 5, my, '#9a3a30'); }
+      if (q.run) pPix(ex + 5, ey - 3, '#9fd8ff');
+    }
+  }
+  var post = null;
+  if (q.crys || q.thr != null || q.ice) post = function (d, w, h) {
+    pMap(d, w, h, function (r, g, b, x, y) {
+      var wx = q.px + q.f * (x + PUP.x0), wy = q.F + y + PUP.y0;
+      if (!q.crys && wy < q.thr) return null;
+      return hex2rgb(cryCol(rgb2hex(r, g, b), Math.round(wx), Math.round(wy)));
+    });
+  };
+  pupEnd(post);
+}
+
+/* ---------- 用心棒(隻眼の侍) ---------- */
+var SMC = { kim: ['#3e3226', '#5e4c3a', '#7e6a52', '#a08a6c'], kimB: ['#2e251c', '#46392c', '#5e4c3a'], hak: ['#141a2e', '#232c48', '#33406a', '#4a5a8c'], sk: ['#9a6a48', '#cf9d74', '#ecc49c'], hair: ['#0c0a09', '#1e1814', '#3a302a'] };
+var SMPAL = (function () { var o = {}, n = 0, k, a; for (k in SMC) { a = SMC[k]; for (var i = 0; i < a.length; i++) o['c' + (n++)] = a[i]; }
+  ['#1d1b22', '#2e2c36', '#8a3a2c', '#e6d6b0', '#c8b890', '#f4f6fa', '#8f9bad', '#d9a63a', '#3a2418', '#a02a2a', '#c9505f', '#c9c45a', '#ffffff'].forEach(function (h) { o['c' + (n++)] = h; }); return mkPal(o); })();
+/* q: {s1(歩き), hnd:[x,y], a(刀の角度°), BL, fade} */
+function pupSam(q) {
+  var K = SC, hipY = -19.5, T = -39, c, i, rad = q.a * Math.PI / 180, dx = Math.cos(rad), dy = Math.sin(rad), BL = 21 * K, H = q.hnd;
+  var tip = [H[0] + dx * BL, H[1] + dy * BL];
+  c = pupBegin(SMPAL, Math.min(-16, tip[0] - 3), Math.min(T - 18, tip[1] - 3), Math.max(16, tip[0] + 3), Math.max(3, tip[1] + 3));
+  /* 後ろ髪 */
+  var sw = Math.sin(q.ph * 0.9) * 1.2;
+  pBlob(c, [[-3, -50], [-7.6, -47 + sw], [-9.6, -41 + sw], [-8.8, -37 + sw], [-6.4, -41], [-4, -45]], SMC.hair[1]);
+  /* 奥の腕 */
+  pArm(c, [-1.6, T + 2.2], [H[0] - 1, H[1] + 1.2], SMC.kimB, 8, 7.6, 1, { r0: 2.4, r1: 2.2, r2: 1.8, hand: function (Hh) { pFist(c, Hh, [SMC.sk[0], SMC.sk[0], SMC.sk[1]], 1.7); } });
+  /* 草履と袴 */
+  var s1 = q.s1 || 0;
+  [[-5 + s1, 0], [3 - s1, 1]].forEach(function (p) { pBlob(c, [[p[0] - 3, 0.6], [p[0] - 3, -1.2], [p[0] + 3.6, -1.4], [p[0] + 4.2, 0.6]], p[1] ? '#e6d6b0' : '#c8b890'); pEll(c, p[0] + 0.8, -2.2, 2.6, 1.3, '#f4f6fa'); });
+  var hk = [[-3.4, hipY], [3.8, hipY], [8, -2.2], [7.4, -1.2], [-8.6, -1.2], [-8.8, -2.2]];
+  pPoly(c, hk, SMC.hak[1]);
+  pClip(c, function () { c.beginPath(); c.moveTo(hk[0][0], hk[0][1]); for (i = 1; i < hk.length; i++) c.lineTo(hk[i][0], hk[i][1]); c.closePath(); }, function () {
+    pPoly(c, [[-4, hipY], [-1, hipY], [-4.2, -1], [-10, -1]], SMC.hak[0]); pPoly(c, [[2, hipY], [4, hipY], [8.4, -1], [5, -1]], SMC.hak[2]);
+    for (i = -2; i <= 2; i++) pLine(c, i * 1.4, hipY + 1, i * 3.2, -1.2, 0.5, i > 0 ? SMC.hak[3] : SMC.hak[0]);
+  });
+  pPath(c, [[0.2, -9], [0.4, -1.4]], 0.7, SMC.hak[0]);
+  /* 着物 */
+  var kim = [[-5.6, T + 0.4], [-1.8, T - 0.6], [2.8, T - 0.4], [5.4, T + 1], [6.2, T + 6], [5.2, hipY + 1], [-5.2, hipY + 1], [-6.4, T + 6]];
+  pBlob(c, kim, SMC.kim[1]);
+  pClip(c, function () { pSmooth(c, kim); }, function () { pBlob(c, [[-7, T - 1], [-2.2, T], [-3, hipY + 2], [-7, hipY + 2]], SMC.kim[0]); pBlob(c, [[3, T], [6.6, T + 2], [6.4, T + 9], [3.6, T + 9]], SMC.kim[2]); });
+  pPoly(c, [[-0.6, T - 0.4], [3.4, T - 0.2], [2.2, T + 9], [0.6, T + 9]], SMC.sk[1]);
+  pPoly(c, [[-0.6, T - 0.4], [0.5, T - 0.4], [1.0, T + 9], [0.6, T + 9]], SMC.sk[0]);
+  pPath(c, [[-0.8, T - 0.4], [1.2, T + 9.6]], 0.8, SMC.kim[3]); pPath(c, [[3.6, T - 0.2], [2.0, T + 9.6]], 0.8, SMC.kim[0]);
+  pPoly(c, [[-5.6, hipY - 2.6], [5.6, hipY - 2.6], [5.6, hipY + 0.2], [-5.6, hipY + 0.2]], '#1d1b22'); pLine(c, -5.4, hipY - 2.2, 5.4, hipY - 2.2, 0.5, '#2e2c36');
+  pCap(c, -6.8, hipY - 1.4, -9.6, hipY + 4, 0.9, 0.9, '#3a2418'); pEll(c, -6.2, hipY - 1.6, 1.0, 1.2, '#d9a63a');
+  /* 頭 */
+  var hx = 1.2, hy = -45.4;
+  pTube(c, 0.4, T + 0.6, hx + 0.2, hy + 3.5, 1.8, 1.7, [SMC.sk[0], SMC.sk[1]]);
+  pEll(c, hx, hy, 4.6, 5.1, SMC.sk[1]);
+  pPoly(c, [[hx - 2.2, hy + 1], [hx + 4.6, hy + 0.4], [hx + 4.4, hy + 3.6], [hx + 2.3, hy + 5.6], [hx - 1, hy + 5.2]], SMC.sk[1]);
+  pClip(c, function () { c.beginPath(); c.ellipse(hx, hy, 4.6, 5.1, 0, 0, 6.2832); c.moveTo(hx - 2.2, hy + 1); c.lineTo(hx + 4.6, hy + 0.4); c.lineTo(hx + 4.4, hy + 3.6); c.lineTo(hx + 2.3, hy + 5.6); c.lineTo(hx - 1, hy + 5.2); c.closePath(); }, function () {
+    pEll(c, hx - 3.6, hy + 2.4, 3.2, 4.6, SMC.sk[0]); pEll(c, hx + 2.2, hy - 2.4, 1.8, 1.4, SMC.sk[2]); pEll(c, hx + 1.4, hy + 5.6, 3.2, 1.2, SMC.sk[0]);
+  });
+  pPoly(c, [[hx + 4.0, hy - 1.0], [hx + 5.6, hy + 1.6], [hx + 4.2, hy + 2.0]], SMC.sk[1]);
+  pEll(c, hx - 1.4, hy + 0.6, 1.1, 1.5, SMC.sk[0]);
+  pBlob(c, [[hx + 4.4, hy - 2.2], [hx + 4.4, hy - 4.8], [hx + 1.6, hy - 6.4], [hx - 2.6, hy - 6.2], [hx - 5.2, hy - 3.4], [hx - 5.2, hy + 1.4], [hx - 3.4, hy + 2.6], [hx - 2.6, hy - 1.2], [hx + 1.2, hy - 2.8]], SMC.hair[1]);
+  pPoly(c, [[hx - 0.6, hy - 6], [hx + 0.2, hy - 9.4], [hx + 1.6, hy - 9.8], [hx + 1.4, hy - 6]], SMC.hair[1]);
+  pPath(c, [[hx + 2.8, hy - 5.2], [hx - 1.2, hy - 5.6], [hx - 4, hy - 3]], 0.6, SMC.hair[2]);
+  if (q.fade) for (i = 1; i <= 3; i++) { var ra = (q.a - i * 18) * Math.PI / 180; pLine(c, H[0] + Math.cos(ra) * 3, H[1] + Math.sin(ra) * 3, H[0] + Math.cos(ra) * BL, H[1] + Math.sin(ra) * BL, 0.9, i === 1 ? '#f4f6fa' : '#8f9bad'); }
+  /* 刀 */
+  pCap(c, H[0] - dx * 5, H[1] - dy * 5, H[0], H[1], 0.9, 0.9, '#3a2418');
+  pLine(c, H[0] - dy * 2.2 + dx * 0.6, H[1] + dx * 2.2 + dy * 0.6, H[0] + dy * 2.2 + dx * 0.6, H[1] - dx * 2.2 + dy * 0.6, 1.0, '#d9a63a');
+  pCap(c, H[0] + dx * 1.2, H[1] + dy * 1.2, tip[0], tip[1], 0.75, 0.45, '#8f9bad');
+  pLine(c, H[0] + dx * 1.4 - dy * 0.35, H[1] + dy * 1.4 + dx * 0.35 - 0.3, tip[0] - dy * 0.2, tip[1] + dx * 0.2 - 0.3, 0.45, '#f4f6fa');
+  /* 手前の腕 */
+  pArm(c, [1.8, T + 2.4], H, SMC.kim, 8, 7.6, 1, { r0: 2.5, r1: 2.3, r2: 1.9, hand: function (Hh) { pFist(c, Hh, SMC.sk, 1.9); } });
+  /* 顔の点(隻眼・傷・くわえ草) */
+  var ex = Math.round(hx + 2.4), ey = Math.round(hy - 0.6), my = Math.round(hy + 3.2);
+  pPixW(ex - 1, ey - 1, 4, '#0c0a09'); pPix(ex, ey, '#ffffff'); pPix(ex + 1, ey, '#0c0a09');
+  pPix(ex - 1, ey - 2, '#c9505f'); pPix(ex - 1, ey, '#c9505f'); pPix(ex - 1, ey + 1, '#c9505f'); pPix(ex - 1, ey + 2, '#c9505f');
+  pPixW(ex, my, 3, '#6a3a2a');
+  for (i = 0; i < 6; i++) pPix(ex + 3 + i, my - Math.round(i * 0.5), i > 3 ? '#e8e08a' : '#c9c45a');
+  if (q.shine) pPix(Math.round(tip[0]), Math.round(tip[1]), '#ffffff');
+  pupEnd();
+}
+
+/* ---------- 赤ちゃん社長 ---------- */
+var BBC = { sk: ['#d29a72', '#f6cfb0', '#fff0e0'], dp: ['#c8d0dc', '#ffffff'] };
+var BBPAL = mkPal({ a: '#d29a72', b: '#f6cfb0', c: '#fff0e0', d: '#c8d0dc', e: '#ffffff', f: '#1b1f27', g: '#e0b84a', h: '#f4a8a0', i: '#14161c' });
+function pBabyHead(c, hx, hy) {
+  pEll(c, hx, hy, 3.8, 3.6, BBC.sk[1]);
+  pClip(c, function () { c.beginPath(); c.ellipse(hx, hy, 3.8, 3.6, 0, 0, 6.2832); }, function () { pEll(c, hx - 2.8, hy + 1.6, 2.4, 3.2, BBC.sk[0]); pEll(c, hx + 0.6, hy - 2.2, 1.6, 1.0, BBC.sk[2]); });
+  pEll(c, hx - 1, hy + 0.4, 0.8, 1.0, BBC.sk[0]);
+}
+function pBabyFace(hx, hy) {
+  var ex = Math.round(hx + 1), ey = Math.round(hy - 0.2);
+  pPixW(ex, ey, 3, '#14161c'); pPix(ex + 1, ey + 2, '#ffffff'); pPix(ex + 2, ey + 2, '#ffffff'); pPix(ex + 2, ey + 3, '#f4a8a0'); pPix(ex + 3, ey + 1, '#f6cfb0');
+}
+function pupBaby(q) {
+  var c = pupBegin(BBPAL, -9, -16, 12, 2), s = q.s || 0, bob = q.bob || 0, a1 = s * 2, a2 = -a1;
+  pTube(c, -2.2, -5 - bob, -3.4 + a1, -0.8, 1.5, 1.3, [BBC.sk[0], BBC.sk[0]]);
+  pTube(c, 3.2, -5.4 - bob, 4.4 + a2, -0.6, 1.2, 1.1, [BBC.sk[0], BBC.sk[0]]);
+  pEll(c, 0.6, -6 - bob, 4.6, 2.6, BBC.sk[1]); pEll(c, 1.4, -7 - bob, 2.6, 1.0, BBC.sk[2]);
+  pEll(c, -3.2, -6.2 - bob, 2.6, 2.4, '#ffffff'); pEll(c, -3.6, -5.2 - bob, 1.8, 1.0, '#c8d0dc'); pEll(c, -2.2, -6.6 - bob, 0.5, 0.5, '#e0b84a');
+  pTube(c, -2.2, -4.8 - bob, -3.6 + a2, -0.8, 1.6, 1.4, BBC.sk);
+  pTube(c, 3.2, -5.2 - bob, 4.4 + a1, -0.6, 1.3, 1.2, BBC.sk);
+  var hx = 6.6, hy = -10.2 - bob;
+  pBabyHead(c, hx, hy); pBabyFace(hx, hy);
+  pupEnd();
+}
+function pupBabyHeld() {
+  var c = pupBegin(BBPAL, -7, -8, 8, 4);
+  pEll(c, -0.4, 0, 4.2, 2.2, BBC.sk[1]); pEll(c, -4.0, -0.2, 2.2, 2.4, '#ffffff'); pEll(c, -4.2, 0.8, 1.6, 0.8, '#c8d0dc');
+  pBabyHead(c, 4.4, -2.0); pBabyFace(4.4, -2.0);
+  pupEnd();
+}
+
 /* ---------- キラッ(メガネと革靴) ---------- */
 var GL = { g: { age: -1, wait: 1.6, dur: 0.34 }, s: { age: -1, wait: 3.4, dur: 0.3 } };
 function updGlint(dt) {
@@ -1512,36 +2064,54 @@ function drawFigureBack0() {
   if (!G.secret) { R(bx - 1, by - 2, 2, 1, '#fff6ea'); R(bx + 3, by - 3 + (Math.floor(simT / 250) & 1), 1, 2, '#f6cfb0'); }
   pl.gp = null;
 }
+function plLeg(hx, hipY, fx, fy) { var lift = fy < -0.5; return { h: [hx, hipY], k: [(hx + fx) / 2 + (lift ? 2.4 : 1.2), (hipY + fy) / 2 - (lift ? 1.2 : 0.3)], f: [fx, fy], lift: lift ? 0.25 : 0 }; }
 function drawFigure() {
-  if (pl.back) { drawFigureBack(); return; }
-  var P = pl.pose, f = pl.face, px = Math.round(pl.x), F0 = Math.round(pl.z), F = F0 - Math.round(pl.air || 0), moving = pl.moving, bob = moving && Math.sin(pl.ph * 2) > 0 ? 1 : 0;
-  var lean = Math.round((P.lean || 0) * SC), ux = lean * f, sw = P.sw || 0;
-  var hip = F - 17 - bob, y0 = F - 35 - bob, th = hip - y0 + 1, hy = F - 42 - bob, cx = px + ux;
-  var sh0 = Math.round(8 * SC);
+  var P = pl.pose || readyPose(), f = pl.face, px = Math.round(pl.x), F0 = Math.round(pl.z), F = F0 - Math.round(pl.air || 0), moving = pl.moving, bob = moving && Math.sin(pl.ph * 2) > 0 ? 1 : 0;
   R(px - 8, F0 + 1, 17, 1, 'rgba(0,0,0,0.38)'); R(px - 6, F0 + 2, 13, 1, 'rgba(0,0,0,0.26)'); R(px - 4, F0 + 3, 9, 1, 'rgba(0,0,0,0.14)');
-  var f1x = px + 3, f2x = px - 3, f1y = F, f2y = F;
-  if (sw > 0.02) {
-    f1x = px + f * Math.round(3 + 4 * sw); f2x = px - f * Math.round(3 + 5 * sw);
-    if (sw < 0.95 && sw > 0.62) f2y = F - 2;
-  } else if (moving) {
-    var st = Math.sin(pl.ph), cs = Math.cos(pl.ph);
-    f1x = px + Math.round(st * 5); f2x = px - Math.round(st * 5);
-    f1y = F - Math.max(0, Math.round(cs * 3)); f2y = F - Math.max(0, Math.round(-cs * 3));
+  if (pl.back) { drawPlayerBack(px, F0); return; }
+  var lean = (P.lean || 0) * SC, sw = P.sw || 0, hipY = -17 - bob;
+  var f1 = 2.6, f2 = -2.6, y1 = 0, y2 = 0;
+  if (sw > 0.02 && !pl.cut) { f1 = 3 + 4.5 * sw; f2 = -(3 + 5.5 * sw); if (sw < 0.95 && sw > 0.62) y2 = -1.5; }
+  else if (moving) { var st = Math.sin(pl.ph), cs = Math.cos(pl.ph); f1 = st * 5.2; f2 = -st * 5.2; y1 = -Math.max(0, cs * 2.6); y2 = -Math.max(0, -cs * 2.6); }
+  var q = { hipY: hipY, ux: lean, legs: [plLeg(-1.2, hipY, f2, y2), plLeg(1.4, hipY, f1, y1)], glint: glintA(GL.g) > 0.5, ear: pl.ear };
+  var lx = function (x) { return (x - px) * f; }, ly = function (y) { return y - F; };
+  if (!pl.cut) {
+    var H = hands(P); q.A = [lx(H.x), ly(H.y)]; q.B = [q.A[0] - 1, q.A[1] + 1];
+    q.bat = { g: q.A, t: [q.A[0] + P.tx, q.A[1] + P.ty], k: 1 + 0.45 * Math.max(0, P.sp || 0) };
+  } else plCutPose(q, bob);
+  pupCall('pl', (q.ear ? 1 : 0) + ':' + (q.phone ? Math.floor(simT / 120) & 1 : 0) + ':' + (q.earPod ? Math.floor(simT / 120) & 1 : 0), q, function () { pupPlayer(q); }); pupBlit(px, F, f);
+  if (pl.cut === 'hold') { pupCall('bh', '', {}, pupBabyHeld); pupBlit(px + f * 7, F - 28, f); }
+  var hx = lean * 1.05 + 0.7, hy = -17 - bob - 17 - 6.3;
+  pl.gp = { ex: px + f * (hx + 3) + 0.5, ey: F + hy - 0.4 + 0.5, sx: px + f * (f1 + 3) + 0.5, sy: F + y1 - 1 + 0.5 };
+  pl.fg = { cx: px, y0: F0 - 27 - bob, hy: F0 - 31 - bob, F: F0, px: px };
+  if (pl.st === 'chg' && pl.chgT > 0.22) { var cg = clamp((pl.chgT - 0.22) / 0.6, 0, 1), by = F + hy - 10; R(px - 8, by, 16, 4, 'rgba(0,0,0,0.6)'); R(px - 7, by + 1, Math.round(14 * cg), 2, cg >= 1 ? ((Math.floor(simT / 80) & 1) ? '#ff5a3a' : '#ffffff') : '#ffe14a'); }
+}
+/* 演出中の腕とバット(右向き座標・1.3倍済み) */
+function plCutPose(q, bob) {
+  var u = clamp(pl.cutU, 0, 1), e = u * u * (3 - 2 * u), f = pl.face, px = Math.round(pl.x), K = SC;
+  var swing = pl.moving ? Math.sin(pl.ph) * 2.4 : 0, hb = [-1.3, -19.5 - bob], tip = [26, 0], rest = [2.8 + swing, -20.6 - bob];
+  if (pl.cut === 'hold') {
+    var gx = (pl.batX - px) * f * K; q.bat = { g: [gx, 1], t: [gx - 31, 0], k: 1 };
+    q.A = [5.6, -27 - bob]; q.B = [4.4, -26 - bob]; return;
   }
-  var H = null;
-  if (!pl.cut && P) H = hands(P);
-  var lg = function (fx, fy) { var hx = px + (fx > px ? 1 : -1), kx = (hx + fx) / 2 + f * 2, ky = (hip + fy) / 2 - 1; return { hx: hx, hy: hip, kx: kx, ky: ky, fx: fx, fy: fy }; };
-  var lensCol = glintA(GL.g) > 0.5 ? '#ffffff' : '#a8d8f0';
-  var m = { px: px, F: F, fa: f, top: y0, th: th, hy: hy, ux: ux, hw: 6, hwB: 4.4, suit: PAL.black, pin: '#464b64', pocket: null, watch: true, tieStripe: true, skin: ['#e8b98f', '#f6d0aa', '#c8956c', '#a8764e', '#e09a84'],
-    tie: { d: '#0c1634', b: '#1c2f66', h: '#2e4a8c', s: '#c4ceE4'.toLowerCase() },
-    head: { shades: true, lens: glintA(GL.g) > 0.5 ? '#ffffff' : '#7d94c0', hair: ['#14100d', '#2a2019', '#4a3a2e'], hs: 'swept', skin: ['#e8b98f', '#f6d0aa', '#c8956c', '#a8764e', '#e09a84'] },
-    legs: [lg(f2x, f2y), lg(f1x, f1y)], A: H ? [H.x, H.y] : null, B: H ? [H.x - f, H.y + 1] : null };
-  drawMan(m);
-  var hcx = m.out.hcx;
-  if (pl.ear) { R(hcx - f * 3 - (f > 0 ? 0 : 1), hy, 2, 2, '#ffffff'); pline(hcx - f * 3, hy + 2, hcx - f, y0 + 1, '#e8e8e8'); pline(hcx - f, y0 + 1, hcx + f * 2, y0 + 8, '#e8e8e8'); }
-  pl.gp = { ex: hcx + f * 4 + 0.5, ey: hy + 0.5, sx: f1x + (f > 0 ? 3 : 2) + 0.5, sy: f1y - 1 + 0.5 };
-  pl.fg = { cx: px + Math.round(lean / SC) * f * 0 + Math.round(ux / SC), y0: F0 - 27 - bob, hy: F0 - 31 - bob, F: F0, px: px };
-  if (pl.st === 'chg' && pl.chgT > 0.22) { var cg = clamp((pl.chgT - 0.22) / 0.6, 0, 1); R(px - 8, hy - 11, 16, 4, 'rgba(0,0,0,0.6)'); R(px - 7, hy - 10, Math.round(14 * cg), 2, cg >= 1 ? ((Math.floor(simT / 80) & 1) ? '#ff5a3a' : '#ffffff') : '#ffe14a'); }
+  if (pl.cut === 'grip') {
+    var RP = readyPose(), Hx = (RP.gx) * K, Hy = (-25 + RP.gy) * K - bob, tx = Hx + RP.tx * K, ty = Hy + RP.ty * K;
+    var gx2 = hb[0] + (Hx - hb[0]) * e, gy2 = hb[1] + (Hy - hb[1]) * e;
+    q.bat = { g: [gx2, gy2], t: [tip[0] + (tx - tip[0]) * e, tip[1] + (ty - tip[1]) * e], k: 1 };
+    q.B = [gx2, gy2]; q.A = [rest[0] + (Hx - rest[0]) * e, rest[1] + (Hy - rest[1]) * e]; return;
+  }
+  var hf = rest;
+  if (pl.cut === 'ear') hf = [rest[0] + (-2.8 - rest[0]) * e, rest[1] + (-41 - bob - rest[1]) * e];
+  if (pl.cut === 'phone') hf = [rest[0] + (6.6 - rest[0]) * e, rest[1] + (-31.5 - bob - rest[1]) * e];
+  q.bat = { g: hb, t: tip, k: 1 }; q.B = hb; q.A = hf;
+  if (pl.cut === 'ear' && e > 0.25) q.earPod = [hf[0], hf[1] - 1];
+  if (pl.cut === 'phone' && e > 0.3) q.phone = [hf[0], hf[1] - 4, pl.tapFlash > 0];
+}
+/* 後ろ姿(赤ちゃんを抱いて花火を見る) */
+function drawPlayerBack(px, F) {
+  var qb = { hipY: -17, ux: 0, back: true, secret: G.secret, legs: [plLeg(-1.6, -17, -2.2, 0), plLeg(1.6, -17, 2.2, 0)] }; pupCall('pl', 'b', qb, function () { pupPlayer(qb); });
+  pupBlit(px, F, 1);
+  pl.gp = null;
 }
 function arm(sx, sy, hx, hy, back) {
   var f = pl.face, dx = hx - sx, dy = hy - sy, d = Math.hypot(dx, dy), bend = clamp(5 - d * 0.28, 1, 4);
@@ -1553,7 +2123,7 @@ function arm(sx, sy, hx, hy, back) {
   if (!back) R(Math.round(hx - ux2 * 3), Math.round(hy - uy2 * 3), 1, 1, '#cfd6e0');
 }
 function drawBat() {
-  var P = pl.pose, f = pl.face, H = hands(P), tx = H.x + f * P.tx, ty = H.y + P.ty, vx = tx - H.x, vy = ty - H.y, len = Math.hypot(vx, vy), i;
+  var i;
   for (i = TR.length - 1; i >= 0; i--) if (simT - TR[i].t > 230) TR.splice(i, 1);
   for (i = 1; i < TR.length; i++) {
     if (Math.hypot(TR[i].x - TR[i - 1].x, TR[i].y - TR[i - 1].y) > 22) continue;
@@ -1561,10 +2131,6 @@ function drawBat() {
     pline(TR[i - 1].x, TR[i - 1].y, TR[i].x, TR[i].y, '#ffffff');
   }
   ctx.globalAlpha = 1;
-  var k = 1 + 0.45 * Math.max(0, P.sp);
-  if (pl.back) { withScale(Math.round(pl.x), Math.round(pl.z), SC, function () { batLine(pl.batX, Math.round(pl.z) + 1, pl.batX - pl.face * 24, Math.round(pl.z), 1); }); return; }
-  if (pl.cut) { withScale(Math.round(pl.x), Math.round(pl.z), SC, drawCut); return; }
-  batLine(H.x, H.y, tx, ty, k * 1.3);
 }
 
 /* ---------- 逃げ回る社長(ハゲ・カツラ・汗)。カツラが落ちるとショックでクリスタルになる ---------- */
@@ -1584,86 +2150,50 @@ function cryCol(c, x, y) {
   return m;
 }
 /* opt: run(走り) ph shock mark(!!) wig crys(全身クリスタル) thr(この行より下がクリスタル) jump */
-function drawPres(px, F, f, opt) { withScale(px, F, SC, function () { drawPres0(px, F, f, opt); }); }
-function drawPres0(px, F, f, opt) {
-  var jy = Math.round(opt.jump || 0), B = F - jy, ph = opt.ph || 0, i, x, dx, dy;
-  var PALE = { '#f2c29c': '#c4d2ee', '#dca47c': '#a9b9da', '#c98e66': '#98a8cc' };
-  function P(x0, y0, w0, h0, c) {
-    if (opt.pale && PALE[c]) c = PALE[c];
-    if (opt.crys || (opt.thr != null && y0 >= opt.thr)) c = cryCol(c, x0, y0);
-    R(x0, y0, w0, h0, c);
+function drawPres(px, F, f, opt) {
+  var K = SC, jy = (opt.jump || 0) * K, ph = opt.ph || 0, B0 = -jy, dp = opt.droop || 0;
+  if (!opt.nosh) { R(px - 8, F + 1, 17, 1, 'rgba(0,0,0,0.36)'); R(px - 6, F + 2, 13, 1, 'rgba(0,0,0,0.24)'); }
+  var l1 = 2, l2 = -2, y1 = 0, y2 = 0;
+  if (opt.run) { var s = Math.sin(ph), c2 = Math.cos(ph); l1 = s * 3; l2 = -s * 3; y1 = -Math.max(0, c2 * 2); y2 = -Math.max(0, -c2 * 2); }
+  if (opt.shock) { l1 = 3; l2 = -3; }
+  var hipY = B0 - 7 * K, T = B0 - 18 * K, legs;
+  if (opt.sit) legs = [{ h: [-1, hipY], k: [5, hipY + 0.6], f: [5.4, B0] }, { h: [1.2, hipY], k: [6.4, hipY + 1], f: [6.8, B0] }];
+  else {
+    var a1 = l1 * f * K, a2 = l2 * f * K, b1 = B0 + y1 * K, b2 = B0 + y2 * K, LL = function (hx, fx, fy) { return { h: [hx, hipY], k: [(hx + fx) / 2 + 0.8, (hipY + fy) / 2], f: [fx, fy], lift: fy < B0 - 0.5 ? 0.3 : 0 }; };
+    legs = a1 > a2 ? [LL(-1.4, a2, b2), LL(1.6, a1, b1)] : [LL(-1.4, a1, b1), LL(1.6, a2, b2)];
   }
-  function L(x0, y0, x1, y1, c) {
-    x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
-    var n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) || 1, k;
-    for (k = 0; k <= n; k++) P(Math.round(x0 + (x1 - x0) * k / n), Math.round(y0 + (y1 - y0) * k / n), 1, 1, c);
-  }
-  if (!opt.nosh) { R(px - 5, F + 1, 11, 1, 'rgba(0,0,0,0.36)'); R(px - 3, F + 2, 7, 1, 'rgba(0,0,0,0.24)'); }
-  var l1 = px + 2, l2 = px - 2, y1 = B, y2 = B;
-  if (opt.run) { var s = Math.sin(ph), c2 = Math.cos(ph); l1 = px + Math.round(s * 3); l2 = px - Math.round(s * 3); y1 = B - Math.max(0, Math.round(c2 * 2)); y2 = B - Math.max(0, Math.round(-c2 * 2)); }
-  if (opt.shock) { l1 = px + 3; l2 = px - 3; }
-  var hip = B - 7;
-  if (opt.sit) {
-    l1 = px + f * 5; l2 = px + f * 4;
-    L(px, hip, l2, hip, '#4a4a56'); L(l2, hip, l2, B, '#383842'); L(px, hip + 1, l1, hip + 1, '#4a4a56'); L(l1, hip + 1, l1, B, '#4a4a56');
-  } else {
-  L(px - 1, hip, l2, y2, '#4a4a56'); L(px, hip, l2 + 1, y2, '#383842');
-  L(px, hip, l1, y1, '#4a4a56'); L(px + 1, hip, l1 + 1, y1, '#383842');
-  }
-  P(l1 + (f > 0 ? -1 : -1), y1, 3, 1, '#3a2418'); P(l2 - 1, y2, 3, 1, '#3a2418'); P(l1 + (f > 0 ? 1 : -1), y1, 1, 1, '#8a6a4e');
-  var HW = [3, 4, 5, 5, 6, 6, 6, 6, 5, 5, 4], SH = [0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0], top = B - 18;
-  for (i = 0; i < 11; i++) {
-    var hw = HW[i], c0 = px + SH[i] * f, yy = top + i;
-    for (x = -hw; x <= hw; x++) {
-      var col = (x === -hw || x === hw) ? '#2a2a32' : (i === 0 ? '#7e7e8c' : (x * f <= -hw + 2 ? '#52525e' : '#62626e'));
-      if (i === 10) col = (x === 0 || x === f ? '#e0b84a' : '#26262c');
-      if (x * f >= hw - 2 && i >= 3 && i <= 8) col = '#74747f';
-      P(c0 + x, yy, 1, 1, col);
-    }
-  }
-  P(px - 1, top, 3, 1, '#f4f4ee'); P(px - 1, top + 1, 1, 1, '#f4f4ee'); P(px + 1, top + 1, 1, 1, '#f4f4ee');
-  for (i = 1; i <= 7; i++) P(px + SH[i] * f, top + i, 1, 1, i === 7 ? '#8a2224' : '#c23a38');
-  P(px + SH[3] * f - 3 * f, top + 3, 1, 1, '#f4f4ee'); P(px + SH[3] * f + 3 * f, top + 3, 1, 1, '#f4f4ee');
-  /* 腕：逃げるときはバンザイ、ショックでは棒立ち */
-  var sA = [px - 3, top + 1], sB = [px + 3, top + 1], hA, hB;
-  if (opt.scream) { hA = [px + f - 3, top - 3]; hB = [px + f + 3, top - 3]; }
-  else if (opt.press != null) { hA = [px + f * Math.round(4 + 5 * opt.press), top + 8 + Math.round(opt.press)]; hB = [px + 4, top + 8]; }
-  else if (opt.hug) { hA = [px - 1, top + 4]; hB = [px + 2, top + 5]; }
-  else if (opt.sit) { hA = [px - 4, top + 8]; hB = [px + 4, top + 8]; }
-  else if (opt.droop > 0) { hA = [px - 4, top + 10]; hB = [px + 4, top + 10]; }
-  else if (opt.shock) { hA = [px - 5, top + 9]; hB = [px + 5, top + 9]; }
-  else if (opt.run) { hA = [px - 6, top - 5 + Math.round(Math.sin(ph * 2) * 2)]; hB = [px + 6, top - 4 - Math.round(Math.sin(ph * 2) * 2)]; }
-  else { hA = [px - 5, top + 7]; hB = [px + 5, top + 7]; }
-  L(sA[0], sA[1], hA[0], hA[1], '#4a4a56'); L(sA[0] - 1, sA[1], hA[0] - 1, hA[1], '#62626e');
-  L(sB[0], sB[1], hB[0], hB[1], '#4a4a56'); L(sB[0] + 1, sB[1], hB[0] + 1, hB[1], '#62626e');
-  P(hA[0] - 1, hA[1] - 1, 2, 2, '#f2c29c'); P(hB[0], hB[1] - 1, 2, 2, '#f2c29c');
-  /* 頭 */
-  var dp = opt.droop || 0, hx = px + f + f * Math.round(dp * 2), hy = B - 23 + Math.round(dp * 4);
-  for (dy = -4; dy <= 4; dy++) for (dx = -5; dx <= 5; dx++) if (dx * dx * 0.75 + dy * dy <= 17) {
-    var cc = dx * f <= -3 ? '#dca47c' : '#f2c29c';
-    if (dx * f <= -3 && dy >= -2 && dy <= 1) cc = '#2e2220';
-    if (dy >= 2 && dx * f >= 2 && dx * f <= 4) cc = '#f6b8a0';
-    P(hx + dx, hy + dy, 1, 1, cc);
-  }
-  P(hx - f * 2, hy, 1, 1, '#c98e66');
-  if (!opt.wig) { P(hx - f, hy - 3, 2, 1, '#fff4e4'); P(hx, hy - 4, 1, 1, '#fff4e4'); }
-  if (opt.pale) { P(hx + f, hy - 3, 1, 2, '#5a6fb0'); P(hx + f * 2, hy - 3, 1, 2, '#5a6fb0'); P(hx, hy - 3, 1, 1, '#5a6fb0'); }
-  var BX = function (d0, y0, w0, h0, c) { P(f > 0 ? hx + d0 : hx - d0 - w0 + 1, y0, w0, h0, c); };
-  BX(1, hy - 3, 4, 1, '#2e2220');
-  BX(1, hy - 2, 5, 3, '#14161c'); BX(1, hy - 2, 5, 1, '#3a3e4a'); BX(0, hy - 2, 1, 1, '#2a2d36'); BX(-2, hy - 2, 2, 1, '#2a2d36'); BX(2, hy - 1, 1, 1, '#5c6272'); BX(4, hy, 1, 1, '#3a3f4e');
-  BX(3, hy + 1, 1, 1, '#d8a080');
-  if (opt.shock || opt.scream) { BX(2, hy + 2, 3, 3, '#5a1a14'); BX(2, hy + 2, 3, 1, '#e8e8e8'); }
-  else { BX(2, hy + 2, 3, 1, '#9a3a30'); BX(1, hy + 1, 1, 1, '#9a3a30'); BX(5, hy + 1, 1, 1, '#9a3a30'); if (opt.run) BX(5, hy - 3, 1, 1, '#9fd8ff'); }
-  if (opt.wig) {
-    var wo = (opt.run && Math.sin(ph * 2) > 0.5) ? -1 : 0, wx = hx - (opt.run ? f : 0);
-    P(wx - 2, hy - 5 + wo, 5, 1, '#17120e'); P(wx - 3, hy - 4 + wo, 7, 1, '#17120e'); P(wx - 4, hy - 3 + wo, 8, 1, '#17120e');
-    P(wx - 1, hy - 5 + wo, 2, 1, '#3d342c');
-  }
-  if (opt.mark) {
-    P(hx - 2, hy - 12, 1, 4, '#ffe14a'); P(hx - 2, hy - 7, 1, 1, '#ffe14a');
-    P(hx + 1, hy - 12, 1, 4, '#ffe14a'); P(hx + 1, hy - 7, 1, 1, '#ffe14a');
-  }
-  if (opt.thr != null) { var ty = Math.round(opt.thr); for (x = px - 6; x <= px + 6; x++) if (((x + Math.floor(simT / 40)) & 3) === 0) R(x, ty, 1, 1, '#ffffff'); }
+  var top = -18, hA, hB;
+  if (opt.scream) { hA = [f - 3, top - 3]; hB = [f + 3, top - 3]; }
+  else if (opt.press != null) { hA = [f * (4 + 5 * opt.press), top + 8 + opt.press]; hB = [4, top + 8]; }
+  else if (opt.hug) { hA = [-1, top + 4]; hB = [2, top + 5]; }
+  else if (opt.sit) { hA = [-4, top + 8]; hB = [4, top + 8]; }
+  else if (dp > 0) { hA = [-4, top + 10]; hB = [4, top + 10]; }
+  else if (opt.shock) { hA = [-5, top + 9]; hB = [5, top + 9]; }
+  else if (opt.run) { hA = [-6, top - 5 + Math.sin(ph * 2) * 2]; hB = [6, top - 4 - Math.sin(ph * 2) * 2]; }
+  else { hA = [-5, top + 7]; hB = [5, top + 7]; }
+  var L = function (v) { return [v[0] * f * K, B0 + v[1] * K]; };
+  var hx = (1 + Math.round(dp * 2)) * K, hy = B0 + (-23 + dp * 4) * K - 1;
+  var thr = opt.thr != null ? F + (opt.thr - F) * K : null;
+  var qp = { hipY: hipY, T: T, legs: legs, A: L(hA), B: L(hB), SA: [-3 * f * K, B0 - 17 * K], SB: [3 * f * K, B0 - 17 * K], hx: hx, hy: hy, pale: opt.pale, wig: opt.wig, shock: opt.shock, scream: opt.scream, run: opt.run, crys: opt.crys, thr: thr, px: px, F: F, f: f };
+  pupCall(opt.crys ? 'prc' : 'pr', (opt.crys || thr != null) ? Math.floor(simT / 45) : '', qp, function () { pupPres(qp); });
+  pupBlit(px, F, f);
+  var hxw = px + f * hx, hyw = F + hy;
+  if (opt.mark) { R(Math.round(hxw) - 3, Math.round(hyw) - 16, 1, 5, '#ffe14a'); R(Math.round(hxw) - 3, Math.round(hyw) - 10, 1, 1, '#ffe14a'); R(Math.round(hxw) + 1, Math.round(hyw) - 16, 1, 5, '#ffe14a'); R(Math.round(hxw) + 1, Math.round(hyw) - 10, 1, 1, '#ffe14a'); }
+  if (thr != null) { var ty = Math.round(thr), x; for (x = px - 8; x <= px + 8; x++) if (((x + Math.floor(simT / 40)) & 3) === 0) R(x, ty, 1, 1, '#ffffff'); }
+}
+/* 土下座(u=0で立ち姿の手前、1で額を床につける) */
+function drawDogeza(px, F, f, u) {
+  var t = clamp((u - 0.3) / 0.6, 0, 1), e = t * t * (3 - 2 * t), hipY = -7.5, T = hipY - 15;
+  R(px - 10, F + 1, 22, 1, 'rgba(0,0,0,0.36)');
+  var legs = [{ h: [-3, hipY], k: [2.6, -2.2], f: [-7, 0], lift: 1.3 }, { h: [-2, hipY], k: [3.6, -2.0], f: [-6, 0], lift: 1.3 }];
+  var qd2 = { hipY: hipY, T: T, legs: legs, A: [7 + 6 * e, -2 - 10 * (1 - e)], B: [6 + 6 * e, -2.5 - 10 * (1 - e)], SA: [-1.5, T + 2], SB: [1.5, T + 2], hx: 1.2, hy: T - 6, bow: e * 1.2, pivot: [-2, hipY], kneel: true, px: px, F: F, f: f }; pupCall('pr', 'd', qd2, function () { pupPres(qd2); });
+  pupBlit(px, F, f);
+}
+function drawPresBack(px, F) {
+  var K = SC, hipY = -7 * K, T = -18 * K;
+  R(px - 8, F + 1, 17, 1, 'rgba(0,0,0,0.36)');
+  var qbk = { back: true, hipY: hipY, T: T, legs: [{ h: [-1.6, hipY], k: [-1.8, hipY / 2], f: [-2.6, 0] }, { h: [1.6, hipY], k: [1.8, hipY / 2], f: [2.6, 0] }], A: [-7.4, T + 13], B: [7.4, T + 13], SA: [-4.6, T + 2], SB: [4.6, T + 2.2], hx: 0, hy: -23 * K - 1, px: px, F: F, f: 1 }; pupCall('pr', 'bk', qbk, function () { pupPres(qbk); });
+  pupBlit(px, F, 1);
 }
 /* ---------- 赤ちゃん社長(クリスタルの破片から生まれ、ハイハイする。当たり判定なし) ---------- */
 var baby = null;
@@ -1734,67 +2264,14 @@ function drawBaby() {
   }
   drawBabySprite(1);
 }
-function drawBabySprite(alpha, noShadow) { withScale(Math.round(baby.x), Math.round(baby.z), SC, function () { drawBabySprite0(alpha, noShadow); }); }
-function drawBabySprite0(alpha, noShadow) {
-  var b = baby, f = b.face, px = Math.round(b.x), F = Math.round(b.z), s = Math.sin(b.ph), dx, dy;
-  var ga = ctx.globalAlpha; ctx.globalAlpha = ga * alpha;
-  if (!noShadow) R(px - 6, F + 1, 13, 1, 'rgba(0,0,0,0.3)');
-  var bob = b.mv && Math.cos(b.ph * 2) > 0 ? 1 : 0;
-  /* 手足(手と膝を交互に出す) */
-  var a1 = Math.round(s * 1.6), a2 = -a1;
-  R(px + f * 3 + a2, F - 3, 1, 3, '#e6b896'); R(px + f * 3 + a2, F, 2, 1, '#e6b896');
-  R(px - f * 3 + a1, F - 2, 2, 2, '#e6b896'); R(px - f * 4 + a1, F, 2, 1, '#e6b896');
-  /* 胴とおむつ */
-  R(px - 3, F - 6 - bob, 7, 3, '#f6cfb0'); R(px - 3, F - 6 - bob, 7, 1, '#ffe0c8');
-  R(px - f * 3 - (f > 0 ? 1 : 0), F - 7 - bob, 3, 5, '#ffffff'); R(px - f * 3 - (f > 0 ? 1 : 0), F - 3 - bob, 3, 1, '#d8dfe8');
-  R(px + f * 3 + a1, F - 3, 1, 3, '#f6cfb0'); R(px + f * 3 + a1, F, 2, 1, '#f6cfb0');
-  R(px - f * 2 + a2, F - 2, 2, 2, '#f6cfb0'); R(px - f * 3 + a2, F, 2, 1, '#f6cfb0');
-  R(px + f * 2, F - 3 - bob, 1, 2, '#e0b84a');
-  /* 頭：社長と同じハゲと口ひげ */
-  var hx = px + f * 5, hy = F - 8 - bob;
-  for (dy = -3; dy <= 3; dy++) for (dx = -3; dx <= 3; dx++) if (dx * dx + dy * dy <= 10) R(hx + dx, hy + dy, 1, 1, dx * f <= -2 ? '#e6b896' : '#f6cfb0');
-  R(hx - f, hy - 2, 2, 1, '#fff6ea');
-  R(hx + f * 2, hy - 1, 1, 1, '#1b1f27'); R(hx + f, hy + 1, 2, 1, '#e2e2e2'); R(hx + f * 2, hy + 2, 1, 1, '#c0605a'); R(hx, hy + 1, 1, 1, '#f4a8a0');
-  R(hx - f * 1, hy - 4, 1, 1, '#c8c8c8');
-  ctx.globalAlpha = ga;
+function drawBabySprite(alpha, noShadow) {
+  var b = baby, f = b.face, px = Math.round(b.x), F = Math.round(b.z);
+  if (!noShadow) R(px - 7, F + 1, 16, 1, 'rgba(0,0,0,0.3)');
+  var qbb = { s: Math.sin(b.ph) * 0.8, bob: b.mv && Math.cos(b.ph * 2) > 0 ? 1 : 0 }; pupCall('baby', '', qbb, function () { pupBaby(qbb); });
+  pupBlit(px, F, f, alpha);
 }
 /* 土下座(u=0で立ち姿の手前、1で額を床につける) */
-function drawDogeza(px, F, f, u) { withScale(px, F, SC, function () { drawDogeza0(px, F, f, u); }); }
-function drawDogeza0(px, F, f, u) {
-  var k = clamp(u / 0.3, 0, 1), t = clamp((u - 0.3) / 0.6, 0, 1), i, n = 8;
-  function bx(d0, y0, w, h, c) { R(f > 0 ? px + d0 : px - d0 - w + 1, y0, w, h, c); }
-  function pt(dx, y) { return [f > 0 ? px + dx : px - dx, y]; }
-  R(px - 8, F + 1, 18, 1, 'rgba(0,0,0,0.36)');
-  bx(-9, F - 2, 2, 2, '#2a1a10'); bx(-8, F - 2, 7, 2, '#4a3a2c');
-  bx(-4, F - 8, 4, 6, '#4a3a2c'); bx(-4, F - 8, 4, 1, '#5a4838');
-  var Hx = -2, Hy = F - 8, Sx = 7 * t, Sy = F - 19 + 13 * t;
-  for (i = 0; i <= n; i++) {
-    var s = i / n, x = Hx + (Sx - Hx) * s, y = Hy + (Sy - Hy) * s, q = pt(x - 2, Math.round(y - 2));
-    R(f > 0 ? q[0] : q[0] - 4, q[1], 5, 5, i & 1 ? '#7a5c3e' : '#6e5236');
-  }
-  var Dx = Sx + 1 + 2 * t, Dy = Sy - 6 + 8 * t, hq = pt(Math.round(Dx), Math.round(Dy)), dx, dy;
-  for (dy = -3; dy <= 3; dy++) for (dx = -3; dx <= 3; dx++) if (dx * dx + dy * dy <= 10) {
-    var back = (dx * f) <= -2 && dy >= -1;
-    R(hq[0] + dx, hq[1] + dy, 1, 1, back ? '#c8c8c8' : '#f2c29c');
-  }
-  R(hq[0] + f, hq[1] - 3, 1, 1, '#fff4e4');
-  var ax = 3 + (Sx + 6 - 3) * t, ay = F - 9 + 8 * t, sp = pt(Math.round(Sx), Math.round(Sy)), ap = pt(Math.round(ax), Math.round(ay));
-  for (i = 0; i <= 6; i++) R(Math.round(sp[0] + (ap[0] - sp[0]) * i / 6), Math.round(sp[1] + (ap[1] - sp[1]) * i / 6), 2, 2, '#6a4e34');
-  R(ap[0], ap[1], 2, 2, '#f2c29c');
-}
 /* 後ろ姿(花火を見るとき) */
-function drawPresBack(px, F) { withScale(px, F, SC, function () { drawPresBack0(px, F); }); }
-function drawPresBack0(px, F) {
-  var B = F, hip = B - 7, HW = [3, 3, 4, 4, 5, 5, 5, 5, 4, 4, 3], top = B - 18, i, x, dx, dy;
-  R(px - 5, F + 1, 11, 1, 'rgba(0,0,0,0.36)'); R(px - 3, F + 2, 7, 1, 'rgba(0,0,0,0.24)');
-  R(px - 2, hip, 2, 7, '#4a3a2c'); R(px + 1, hip, 2, 7, '#3a2c20'); R(px - 3, B, 3, 1, '#2a1a10'); R(px + 1, B, 3, 1, '#2a1a10');
-  for (i = 0; i < 11; i++) for (x = -HW[i]; x <= HW[i]; x++) R(px + x, top + i, 1, 1, (x === -HW[i] || x === HW[i]) ? '#3e2c1c' : (x === 0 && i > 1 ? '#6a4e34' : (i === 0 ? '#94724e' : '#7a5c3e')));
-  R(px - 1, top, 3, 1, '#f4f4ee');
-  R(px - 6, top + 1, 1, 9, '#6a4e34'); R(px + 6, top + 1, 1, 9, '#6a4e34'); R(px - 6, top + 10, 1, 2, '#f2c29c'); R(px + 6, top + 10, 1, 2, '#f2c29c');
-  var hy = B - 22;
-  for (dy = -4; dy <= 4; dy++) for (dx = -4; dx <= 4; dx++) if (dx * dx + dy * dy <= 17) R(px + dx, hy + dy, 1, 1, (dy >= 0 || Math.abs(dx) >= 3) ? '#c8c8c8' : '#f2c29c');
-  R(px - 2, hy - 3, 2, 1, '#fff4e4'); R(px - 5, hy, 1, 2, '#dca47c'); R(px + 5, hy, 1, 2, '#dca47c');
-}
 function presFallAngle() {
   var t = pr.t, a = t < 0.7 ? (t / 0.7) * (t / 0.7) : t < 2.3 ? 1 : Math.max(0, 1 - (t - 2.3) / 0.8);
   return -pr.face * a * 1.5708;
@@ -2205,63 +2682,18 @@ function drawSamPlace() {
   drawSamurai(px, F, sam.face, sam.st, sam.t, sam.ph);
   ctx.restore();
 }
-function drawSamurai(px, F, f, st, t, ph) { withScale(px, F, SC, function () { drawSamurai0(px, F, f, st, t, ph); }); }
-function drawSamurai0(px, F, f, st, t, ph) {
-  var i, x, bob = (st === 'walk' && Math.sin(ph * 2) > 0) ? 1 : 0, FY = F - bob;
-  function M(dx, dy, w, h, c) { R(f > 0 ? px + dx : px - dx - w + 1, FY + dy, w, h, c); }
-  function ML(x0, y0, x1, y1, c) { pline(Math.round(px + f * x0), Math.round(FY + y0), Math.round(px + f * x1), Math.round(FY + y1), c); }
-  if (st !== 'fly') { R(px - 7, F + 1, 15, 1, 'rgba(0,0,0,0.38)'); R(px - 5, F + 2, 11, 1, 'rgba(0,0,0,0.26)'); }
-  /* 袴 */
-  for (i = 0; i < 15; i++) {
-    var w = 4 + Math.floor(i / 4);
-    for (x = -w; x <= w; x++) { var cc = (x % 3 === 0) ? '#232a43' : '#2d3654'; if (x === -w || x === w) cc = '#171c2e'; if (i >= 10 && x === 0) cc = '#10131f'; M(x, -15 + i, 1, 1, cc); }
-  }
-  var s1 = st === 'walk' ? Math.round(Math.sin(ph) * 3) : 0;
-  M(-6 + s1, -1, 5, 2, '#d1bd94'); M(2 - s1, -1, 5, 2, '#d1bd94'); M(-6 + s1, -1, 5, 1, '#e6d6b0'); M(2 - s1, -1, 5, 1, '#e6d6b0');
-  /* 着流し */
-  for (i = 0; i < 15; i++) {
-    var hw = i < 10 ? 5 : 4;
-    for (x = -hw; x <= hw; x++) { var c2 = (x === -hw || x === hw) ? '#3e3226' : (x > 1 ? '#6a5742' : '#7a6650'); if (i === 14) c2 = '#33291f'; M(x, -30 + i, 1, 1, c2); }
-  }
-  for (i = 0; i < 5; i++) { var cw = 5 - i; M(-Math.floor(cw / 2), -30 + i, cw, 1, '#d7a37a'); }
-  M(0, -28, 1, 1, '#b78359'); M(-1, -26, 1, 1, '#b78359');
-  M(-5, -18, 11, 2, '#1d1b22'); M(-5, -18, 11, 1, '#2e2c36'); M(-6, -17, 2, 5, '#8a3a2c'); M(4, -17, 2, 4, '#7a5a3e');
-  /* 頭 */
-  var hx = 1, hy = -35, dy, dx;
-  for (dy = -4; dy <= 4; dy++) for (dx = -4; dx <= 4; dx++) if (dx * dx + dy * dy <= 17) M(hx + dx, hy + dy, 1, 1, dx <= -3 ? '#b8845d' : '#d7a37a');
-  M(hx - 4, hy - 6, 9, 3, '#15110f'); M(hx - 3, hy - 7, 7, 1, '#15110f'); M(hx - 4, hy - 3, 2, 4, '#15110f');
-  M(hx - 3, hy - 9, 1, 2, '#15110f'); M(hx, hy - 9, 1, 3, '#15110f'); M(hx + 2, hy - 8, 1, 2, '#15110f'); M(hx + 4, hy - 6, 1, 2, '#15110f');
-  var sw = Math.round(Math.sin(ph * 0.9) * 1);
-  M(hx - 7, hy - 3 + sw, 3, 2, '#15110f'); M(hx - 8, hy - 1 + sw, 2, 5, '#15110f'); M(hx - 8, hy + 3 + sw, 1, 2, '#15110f');
-  M(hx + 3, hy - 1, 1, 1, '#ffffff'); M(hx + 4, hy - 1, 1, 1, '#14100e'); M(hx + 2, hy - 3, 4, 1, '#15110f'); M(hx + 5, hy - 2, 1, 1, '#15110f');
-  M(hx, hy - 1, 2, 1, '#3a2a22'); M(hx - 1, hy - 3, 2, 1, '#15110f');
-  M(hx + 1, hy - 4, 1, 7, '#c9505f'); M(hx + 1, hy - 2, 1, 1, '#f0c8b8'); M(hx, hy, 1, 1, '#c9505f');
-  M(hx, hy + 3, 4, 1, '#6a5240'); M(hx + 3, hy + 2, 2, 1, '#6a2f2a');
-  ML(hx + 4, hy + 2, hx + 10, hy - 1, '#c9c45a'); M(hx + 10, hy - 1, 1, 1, '#ece48a'); M(hx + 8, hy, 1, 1, '#9aa44a');
-  /* 刀 */
-  var a, hnd, raise = 0, fade = 0;
+function drawSamurai(px, F, f, st, t, ph) {
+  var bob = (st === 'walk' && Math.sin(ph * 2) > 0) ? 1 : 0, K = SC;
+  if (st !== 'fly') { R(px - 9, F + 1, 19, 1, 'rgba(0,0,0,0.38)'); R(px - 7, F + 2, 15, 1, 'rgba(0,0,0,0.26)'); }
+  var a, raise = 0, fade = 0;
   if (st === 'wind') { var u = clamp(t / 0.6, 0, 1), eu = u * u * (3 - 2 * u); a = 20 - 100 * eu; raise = eu; }
   else if (st === 'slash') { var u2 = clamp(t / 0.2, 0, 1); a = -80 + 125 * u2; raise = 1 - u2; fade = 1; }
-  else if (st === 'rec') { a = 45 - 25 * clamp(t / 0.9, 0, 1); raise = 0; }
+  else if (st === 'rec') { a = 45 - 25 * clamp(t / 0.9, 0, 1); }
   else if (st === 'fly') { a = -35; raise = 0.6; }
-  else { a = 22 + (st === 'walk' ? Math.round(Math.sin(ph) * 2) : 0); }
-  hnd = [4 - raise * 2, -20 - 11 * raise];
-  var rad = a * Math.PI / 180, dxr = Math.cos(rad), dyr = Math.sin(rad), BL = 21;
-  ML(3, -28, hnd[0], hnd[1], '#6a5742'); ML(3, -27, hnd[0], hnd[1] + 1, '#7a6650'); ML(-3, -28, hnd[0] - 1, hnd[1] + 1, '#5a4836');
-  if (fade) {
-    for (i = 1; i <= 4; i++) {
-      var ra = (a - i * 16) * Math.PI / 180; ctx.globalAlpha = 0.5 / i;
-      ML(hnd[0] + Math.cos(ra) * 2, hnd[1] + Math.sin(ra) * 2, hnd[0] + Math.cos(ra) * BL, hnd[1] + Math.sin(ra) * BL, '#ffffff');
-    }
-    ctx.globalAlpha = 1;
-  }
-  ML(hnd[0] - dxr * 4, hnd[1] - dyr * 4, hnd[0], hnd[1], '#3a2418'); M(Math.round(hnd[0] - dxr * 2), Math.round(hnd[1] - dyr * 2), 1, 1, '#a02a2a');
-  ML(hnd[0] - dyr * 1.6 + dxr, hnd[1] + dxr * 1.6 + dyr, hnd[0] + dyr * 1.6 + dxr, hnd[1] - dxr * 1.6 + dyr, '#d9a63a');
-  ML(hnd[0] + dxr * 2, hnd[1] + dyr * 2, hnd[0] + dxr * BL, hnd[1] + dyr * BL, '#eef3f8');
-  ML(hnd[0] + dxr * 2, hnd[1] + dyr * 2 + 1, hnd[0] + dxr * BL, hnd[1] + dyr * BL + 1, '#8f9bad');
-  if ((st === 'idle' || st === 'walk') && ((Math.floor(simT / 180) & 3) === 0)) M(Math.round(hnd[0] + dxr * BL), Math.round(hnd[1] + dyr * BL), 1, 1, '#ffffff');
-  M(hx + 2, hy + 4, 3, 1, '#b8845d');
-  M(hnd[0] - 1, hnd[1] - 1, 2, 2, '#d7a37a');
+  else { a = 22 + (st === 'walk' ? Math.sin(ph) * 2 : 0); }
+  var hnd = [(4 - raise * 2) * K, (-20 - 11 * raise) * K - bob];
+  var qs = { hnd: hnd, a: a, fade: fade, ph: Math.round(ph * 4) / 4, s1: st === 'walk' ? Math.sin(ph) * 3 : 0, shine: (st === 'idle' || st === 'walk') && ((Math.floor(simT / 180) & 3) === 0) }; pupCall('sam', '', qs, function () { pupSam(qs); });
+  pupBlit(px, F, f);
 }
 
 /* ---------- 主人公の「避け」「捌き」「跳び越え」（敵の攻撃は当たらない） ---------- */
@@ -2517,12 +2949,11 @@ function drawFoe0(f) {
     if (f.t > 2.6 && (Math.floor(simT / 70) & 1)) return;
     var fd = f.dir, sc = 1;
     ctx.save(); ctx.translate(px, F); ctx.scale(sc, sc); ctx.translate(-px, -F); SCL = SC; SCX = px; SCY = F;
-    var MM = function (a, b, w, h, c) { R(fd > 0 ? px + a : px - a - w + 1, F + b, w, h, c); };
-    R(px - 12, F + 1, 25, 1, 'rgba(0,0,0,0.35)');
-    MM(-6, -3, 14, 3, TROU); MM(8, -3, 4, 3, TROU); MM(12, -3, 2, 3, '#07080a');
-    MM(-8, -7, 15, 5, SUIT); MM(-8, -7, 15, 1, HIL); MM(-3, -6, 6, 1, tie); MM(-2, -5, 1, 2, tie);
-    MM(-10, -6, 3, 4, SKIN); MM(-11, -7, 3, 3, '#0e0c0b'); MM(-9, -5, 1, 1, '#111');
-    MM(-4, -9, 6, 2, SUIT);
+    SCL = 1;
+    R(px - 16, F + 1, 33, 1, 'rgba(0,0,0,0.35)');
+    var Sd = FOEP[f.type], hipD = -17, TD = hipD - Sd.tH;
+    var qd = { hipY: hipD, T: TD, ux: 0, legs: [{ h: [-1.2, hipD], k: [-1.6, -8.6], f: [-2.6, 0] }, { h: [1.4, hipD], k: [2.4, -8.8], f: [3.4, -0.6] }], A: [6, TD + 4], B: [-6, TD + 4], hx: 0.8, hy: TD - 5.8, st: 'down' }; pupCall('f' + f.type, f.type, qd, function () { pupFoe(f.type, qd); });
+    pupBlitRot(px + fd * 20, F - 5, -fd, -fd * Math.PI / 2, 0, 0);
     SCL = 1; ctx.restore(); return;
   }
   var air = 0, bob = 0, hov = 0;
@@ -2541,11 +2972,8 @@ function drawFoe0(f) {
   if (ty === 'yoga') { R(px - 6, F + 1, 13, 1, 'rgba(255,230,120,0.35)'); if (hov > 7) for (i = 0; i < 3; i++) R(px - 3 + i * 3, F - 2 - ((Math.floor(simT / 120) + i) % 3) * 2, 1, 1, 'rgba(255,240,170,0.7)'); }
   /* blanka: ころがり */
   if (ty === 'blanka' && st === 'atk' && !elecMv(f) && f.t > 0.06 && f.t < 0.72) {
-    var cx0 = px, cy0 = F - 8, ang = f.t * 30 * fa;
-    for (i = 0; i < 8; i++) { var a0 = ang + i * 0.785; x = Math.round(cx0 + Math.cos(a0) * 7); dy = Math.round(cy0 + Math.sin(a0) * 7); R(x - 1, dy - 1, 3, 3, (i & 1) ? '#d9731e' : '#1d4a2f'); }
-    R(cx0 - 5, cy0 - 5, 11, 11, '#12301e'); R(cx0 - 4, cy0 - 4, 9, 9, '#1d4a2f'); R(cx0 - 4, cy0 - 4, 9, 2, '#3a8059');
-    var a1 = ang * 1.0; R(Math.round(cx0 + Math.cos(a1) * 4) - 1, Math.round(cy0 + Math.sin(a1) * 4) - 1, 3, 3, '#c23a38'); R(Math.round(cx0 + Math.cos(a1 + 2.2) * 4), Math.round(cy0 + Math.sin(a1 + 2.2) * 4), 2, 2, '#e0a878'); R(Math.round(cx0 + Math.cos(a1 + 3.6) * 4), Math.round(cy0 + Math.sin(a1 + 3.6) * 4), 3, 3, '#d9731e'); R(Math.round(cx0 + Math.cos(a1 + 4.4) * 5), Math.round(cy0 + Math.sin(a1 + 4.4) * 5), 2, 2, '#ffb04a');
-    for (i = 0; i < 5; i++) R(cx0 + rnd(-9, 9), cy0 + rnd(-9, 9), 1, 1, (i & 1) ? '#fff6a0' : '#8fff9a');
+    SCL = 1; var ba = Math.round(f.t * 30 * fa * 4) / 4; pupCall('fball', '', { a: ba }, function () { pupBall(ba); }); pupBlit(px, F, 1);
+    for (i = 0; i < 5; i++) R(px + rnd(-12, 12), F - 10 + rnd(-10, 10), 1, 1, (i & 1) ? '#fff6a0' : '#8fff9a');
     SCL = 1; ctx.restore(); return;
   }
   var lean = 0, Y0 = -28, hx = 1, hy = -32, A = null, B = null, glove = null, wideB = 0, legMode = 'stand';
@@ -2580,35 +3008,18 @@ function drawFoe0(f) {
     else { A = [8, -21 + (bob ? 1 : 0)]; B = [5, -24]; }
   }
   SCL = 1;
-  /* ===== 新ボディ(1.3倍・多色) ===== */
-  var TX = function (a) { return Math.round(px + fa * a * SC); }, TY = function (b) { return Math.round(F + (FY - F + b) * SC); };
-  var s1 = (st === 'walk') ? Math.round(Math.sin(ph) * 3) : 0, FST = FSTY[ty], nT = ty === 'yoga' || ty === 'blanka' ? 11 : 15;
-  var th = Math.max(16, Math.round(nT * SC)), hipY = TY(Y0 + nT), topY = hipY - th + 1, ux = Math.round(lean * SC) * fa;
-  var fy0 = TY(0), legs = [], hpx = px;
-  function LG(hxo, kxo, kyo, fxo, fyo) { return { hx: hpx + fa * hxo, hy: hipY, kx: Math.round(hpx + fa * kxo * SC), ky: TY(kyo), fx: Math.round(hpx + fa * fxo * SC), fy: fyo === undefined ? fy0 : fyo }; }
-  if (legMode === 'stand') legs = [LG(-1, -1 - s1 * 0.5, -6, -2 - s1), LG(1, 1 + s1 * 0.5, -6, 2 + s1)];
-  else if (legMode === 'wide') {
-    var lf = st === 'wind' ? ((Math.floor(f.t / 0.15) & 1) ? 1 : -1) : 0, ra = lf > 0 ? 6 : 0, la = lf < 0 ? 6 : 0;
-    legs = [LG(-1, -4, -8 - la * 0.4, -6, TY(-la)), LG(1, 4, -8 - ra * 0.4, 6, TY(-ra))];
-  } else if (legMode === 'lotus') {
-    var ky0 = f.kk > 0 ? 10 + 44 * f.kk : 0;
-    legs = [LG(-1, -9, -7, 0, TY(-5)), f.kk > 0 ? LG(1, 5 + ky0 * 0.5, -8, ky0, TY(-6 + 2 * f.kk)) : LG(1, 9, -7, 0, TY(-5))];
-  } else legs = [LG(-1, -4, -5, -2 - s1), LG(1, 5, -5, 3 + s1)];
-  var HP = function (v) { return v ? [TX(v[0]), TY(v[1])] : null; };
-  var mm = { px: px, F: F, fa: fa, top: topY, th: th, hy: TY(hy) - 1, ux: ux, hw: FST.hw, hwB: FST.hwB, suit: FST.suit, tie: FST.tie, sleeve: FST.suit, skin: FST.skin, glove: FST.fist ? ['#d9a070', '#f0c090', '#a8744c', '#e8b080'] : (glove ? ['#d23f31', '#ff9a8a', '#8e1f2f', '#ffc0b0'] : null),
-    pin: FST.pin, head: FST.head, hxo: ty === 'blanka' ? 2 : 0, legs: legs, A: HP(A), B: HP(B), pocket: FST.pocket };
-  drawMan(mm);
-  if (ty === 'sumo') {
-    var cc = [HP(A), HP(B)], ci, cA;
-    for (ci = 0; ci < 2; ci++) {
-      cA = cc[ci]; if (!cA) continue;
-      var cdx = fa, cl = ci ? ['#aab3c0', '#8a93a1', '#6a7380'] : ['#f4f7fb', '#cdd4dd', '#9aa4b2'];
-      pline(cA[0], cA[1] - 2, cA[0] + cdx * 12, cA[1] - 5, cl[0]); pline(cA[0], cA[1] - 1, cA[0] + cdx * 12, cA[1] - 4, cl[1]);
-      pline(cA[0], cA[1], cA[0] + cdx * 14, cA[1], cl[0]); pline(cA[0], cA[1] + 1, cA[0] + cdx * 14, cA[1] + 1, cl[1]);
-      pline(cA[0], cA[1] + 2, cA[0] + cdx * 12, cA[1] + 5, cl[1]); pline(cA[0], cA[1] + 3, cA[0] + cdx * 12, cA[1] + 6, cl[2]);
-      R(cA[0] - 2 + (fa > 0 ? 0 : 0), cA[1] - 3, 3, 7, '#3a3f4c'); R(cA[0] - 2, cA[1] - 3, 3, 1, '#6a7280');
-    }
-  }
+  /* ===== パーツ人形 ===== */
+  var TYl = function (b) { return (FY - F + b) * SC; };
+  var s1 = (st === 'walk') ? Math.sin(ph) * 3 : 0, nT = ty === 'yoga' || ty === 'blanka' ? 11 : 15, S9 = FOEP[ty];
+  var hipY = TYl(Y0 + nT), T = hipY - S9.tH, ux = lean * SC, fy0 = TYl(0), legs;
+  function LG(hxo, kxo, kyo, fxo, fyo) { return { h: [hxo, hipY], k: [kxo * SC, TYl(kyo)], f: [fxo * SC, fyo === undefined ? fy0 : fyo] }; }
+  if (legMode === 'stand') legs = [LG(-1.2, -1 - s1 * 0.5, -6.5, -2.4 - s1), LG(1.4, 1.6 + s1 * 0.5, -6.5, 2.6 + s1)];
+  else if (legMode === 'lotus') { var ky0 = f.kk > 0 ? 10 + 44 * f.kk : 0; legs = [LG(-1, -7, Y0 + nT + 2, 0, TYl(Y0 + nT + 4.5)), f.kk > 0 ? LG(1, 5 + ky0 * 0.5, -8, ky0, TYl(-6 + 2 * f.kk)) : LG(1, 7, Y0 + nT + 2, 0.5, TYl(Y0 + nT + 4.5))]; }
+  else legs = [LG(-1, -4, -5, -2 - s1), LG(1, 5, -5, 3 + s1)];
+  var HP = function (v) { return v ? [v[0] * SC, TYl(v[1])] : null; };
+  var hxx = ux + 0.8 + (ty === 'blanka' ? 2.2 : 0);
+  var qf = { hipY: hipY, T: T, ux: ux, legs: legs, A: HP(A), B: HP(B), hx: hxx, hy: T - 5.8, st: st }; pupCall('f' + ty, ty + (ty === 'sumo' ? Math.floor(simT / 90) : ''), qf, function () { pupFoe(ty, qf); });
+  pupBlit(px, F, fa);
   SCL = SC; SCX = px; SCY = F;
   if (ty === 'box' && st === 'atk' && t > 0.06 && t < 0.34) for (i = 0; i < 4; i++) pline(Math.round(px - fa * (6 + i * 4)), F - 28 + i * 6, Math.round(px - fa * (16 + i * 9)), F - 28 + i * 6, 'rgba(255,255,255,0.6)');
   if (ty === 'sumo' && st === 'atk' && t > 0.5 && t < 1.0) for (i = 0; i < 4; i++) pline(Math.round(px - fa * (5 + i * 3)), Math.round(FY - 30 + i * 6), Math.round(px - fa * (16 + i * 8)), Math.round(FY - 30 + i * 6), 'rgba(235,240,255,0.55)');
