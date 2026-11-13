@@ -277,7 +277,6 @@ function defsBoss() {
   [24, 140].forEach(function (x) { add({ t: 'lamp', mat: 'glass', x: x, fl: 96, el: 24, w: 10, h: 11, hp: 1 }); });
   add({ t: 'vase', mat: 'glass', x: 4, fl: 94, el: 12, w: 7, h: 10, hp: 1, block: true });
   add({ t: 'fire', deco: true, x: 98, fl: 88, w: 22, h: 34, hp: 1 });
-  add({ t: 'ln2', mat: 'glass', x: 114, fl: 102, el: 0, w: 8, h: 20, hp: 2, nocount: true, dz: 5 });
   add({ t: 'pot', mat: 'ceramic', x: 120, fl: 94, el: 12, w: 9, h: 14, hp: 1, block: true, prof: [3, 3, 5, 7, 9, 9, 9, 9, 8, 7, 6, 5, 5, 5] });
   add({ t: 'deskSw', deco: true, x: 130, fl: 100, w: 8, h: 12, hp: 1 });
   add({ t: 'chair', deco: true, x: 134, fl: 98, w: 17, h: 26, hp: 1, block: true });
@@ -1054,7 +1053,7 @@ function drawCable() {
 }
 function drawLnPool() {
   var g = G.ln; if (!g) return;
-  var rx = Math.round(g.r), ry = Math.max(1, Math.round(g.r * 0.3)), a = clamp((10 - g.t) / 2.5, 0, 1), dy, hw, k;
+  var rx = Math.round(g.r), ry = Math.max(1, Math.round(g.r * 0.35)), a = clamp((10 - g.t) / 2.5, 0, 1) * (g.out != null ? clamp(1 - g.out / 1.2, 0, 1) : 1), dy, hw, k;
   if (a <= 0 || rx < 2) return;
   for (dy = -ry; dy <= ry; dy++) {
     hw = Math.round(rx * Math.sqrt(1 - (dy / ry) * (dy / ry)));
@@ -1750,7 +1749,7 @@ function prUpdate(dt) {
   if (pr.st === 'tremble') {
     pr.pale = Math.max(pr.pale, 0.6); pr.sweat -= dt;
     if (pr.sweat <= 0) { pr.sweat = 0.14; addFx({ kind: 'drop', x: pr.x + rnd(-3, 4), y: pr.z - 27, vx: rnd(-25, 25), vy: -rnd(15, 40), r: rnd(0.3, 0.45), fy: pr.z + rnd(-1, 2), life: 0.8 }); }
-    if (pr.ln2 && lnCovers(pr.x, pr.z)) { pr.ln2 = false; pr.st = 'cry'; pr.t = 0; ctlOn = false; atkHeld = null; sCrystallize(); }
+    if (pr.ln2 && lnCovers(pr.x, pr.z)) { pr.ln2 = false; pr.st = 'cry'; pr.t = 0; ctlOn = false; atkHeld = null; sCrystallize(); G.ln.out = 0; }
     return;
   }
   if (pr.st === 'wait') { if (pr.t > 1.2) { pr.st = 'enter'; pr.t = 0; } return; }
@@ -1823,7 +1822,7 @@ function prUpdate(dt) {
     if (pr.sweat <= 0) { pr.sweat = 0.07; addFx({ kind: 'drop', x: pr.x + pr.face * rnd(-1, 4), y: pr.z - 27 + rnd(-1, 2), vx: rnd(-25, 25) - pr.face * 14, vy: -rnd(15, 40), r: rnd(0.3, 0.45), fy: pr.z + rnd(-1, 2), life: 0.8 }); }
     if (Math.random() < dt * 14) addFx({ kind: 'puff', x: pr.x - pr.face * 3, y: pr.z, vx: -pr.face * 8, vy: -2, r0: 1.2, r1: 4.5, col: '205,192,175', alpha: 0.4, life: 0.4 });
     if (dd < 2.5) {
-      pr.st = 'trip'; pr.t = 0; pr.tripSnd = 0; pr.face = ddx >= 0 ? 1 : (ddx < -1 ? -1 : pr.face);
+      pr.st = 'trip'; pr.t = 0; pr.tripSnd = 0; pr.dropped = 0; pr.face = ddx >= 0 ? 1 : (ddx < -1 ? -1 : pr.face);
       if (AC) { var tq = AC.currentTime; tn(tq, 520, 0.16, { f2: 210, type: 'triangle', g: 0.09 }); tn(tq + 0.05, 900, 0.1, { f2: 300, type: 'square', g: 0.03 }); }
     }
     return;
@@ -1835,10 +1834,13 @@ function prUpdate(dt) {
       for (var ti = 0; ti < 8; ti++) addFx({ kind: 'puff', x: pr.x + pr.face * rnd(4, 18), y: pr.z + rnd(-1, 1), vx: rnd(-14, 14), vy: -rnd(2, 8), r0: 1.5, r1: rnd(5, 8), col: '205,192,175', alpha: 0.45, life: rnd(0.4, 0.7) });
       if (AC) { var tt = AC.currentTime; tn(tt, 120, 0.2, { f2: 52, g: 0.2 }); nz(tt, 0.18, { type: 'lowpass', f: 700, f2: 200, g: 0.16 }); }
     }
-    if (pr.t >= 2.2) {
-      pr.st = 'tremble'; pr.t = 0; pr.ln2 = true; pr.sweat = 0; ctlOn = true; atkHeld = null;
-      for (var oi = 0; oi < objs.length; oi++) if (objs[oi].t === 'ln2' && objs[oi].dead) respawn(objs[oi]);
+    if (!pr.dropped && pr.t >= 0.25) {
+      /* コードに引っ張られて、棚の液体窒素の瓶が落ちてくる */
+      pr.dropped = 1;
+      var bo = { t: 'ln2', mat: 'glass', x: 114, fl: 102, el: 40, w: 8, h: 20, hp: 2, max: 2, hits: 0, dead: false, cracks: [], rem: null, respawnAt: 0, prof: null, nocount: true, dz: 5, falling: true, vy: 0 };
+      bo.y = bo.fl - bo.el - bo.h; objs.push(bo);
     }
+    if (pr.t >= 2.2) { pr.st = 'tremble'; pr.t = 0; pr.ln2 = true; pr.sweat = 0; ctlOn = true; atkHeld = null; }
     return;
   }
   if (pr.st === 'cry') {
@@ -2331,21 +2333,36 @@ function drawFoe(f) {
 /* ---------- 液体窒素の水たまり ---------- */
 function lnCovers(x, z) {
   var g = G.ln; if (!g || g.r < 4) return false;
-  var dx = (x - g.x) / g.r, dz = (z - g.z) / (g.r * 0.3);
+  if (g.out != null) return false;
+  var dx = (x - g.x) / g.r, dz = (z - g.z) / (g.r * 0.35);
   return dx * dx + dz * dz < 1;
 }
 function lnUpdate(dt) {
   var g = G.ln, i, m = G.melt;
   if (!dt) return;
+  for (i = 0; i < objs.length; i++) if (objs[i].t === 'ln2' && objs[i].falling) {
+    var bo = objs[i]; bo.vy += 300 * dt; bo.el -= bo.vy * dt;
+    if (bo.el <= 0) {
+      bo.el = 0;
+      if (bo.vy > 60) { bo.vy *= -0.28; shake(0.8, 90); if (AC) { tn(AC.currentTime, 700, 0.09, { f2: 380, g: 0.07, type: 'triangle' }); nz(AC.currentTime, 0.1, { type: 'bandpass', f: 2400, q: 1, g: 0.05 }); } }
+      else { bo.falling = false; bo.vy = 0; }
+    }
+    bo.y = bo.fl - bo.el - bo.h;
+  }
+  if (g && g.out == null && G.mode === 'play') {
+    /* 主人公は水たまりを踏まないように避ける */
+    var ex = pl.x - g.x, ez = (pl.z - g.z) / 0.35, ed = Math.hypot(ex, ez), lim = g.r + 4;
+    if (ed < lim) { if (ed < 0.01) { ex = pl.x < g.x ? -1 : 1; ez = 0; ed = 1; } var kk = lim / ed; pl.x = clamp(g.x + ex * kk, 4, 156); pl.z = clamp(g.z + ez * kk * 0.35, Z_MIN, Z_MAX); }
+  }
   if (g) {
-    g.t += dt; g.r = Math.min(38, g.r + 17 * dt * (g.r < 20 ? 1 : 0.7));
+    g.t += dt; if (g.out != null) g.out += dt; g.r = Math.min(20, g.r + 17 * dt * (g.r < 14 ? 1 : 0.6));
     g.mist = (g.mist || 0) - dt;
-    if (g.mist <= 0 && g.t < 9) {
+    if (g.mist <= 0 && g.t < 9 && g.out == null) {
       g.mist = 0.045;
       var ang = rnd(0, 6.283), rr = Math.sqrt(Math.random());
-      addFx({ kind: 'puff', x: g.x + Math.cos(ang) * g.r * rr, y: g.z + Math.sin(ang) * g.r * 0.3 * rr, vx: rnd(-4, 4), vy: -rnd(5, 12), r0: 2, r1: rnd(6, 10), col: '215,240,255', alpha: 0.5, life: rnd(0.8, 1.5) });
+      addFx({ kind: 'puff', x: g.x + Math.cos(ang) * g.r * rr, y: g.z + Math.sin(ang) * g.r * 0.35 * rr, vx: rnd(-4, 4), vy: -rnd(5, 12), r0: 2, r1: rnd(6, 10), col: '215,240,255', alpha: 0.5, life: rnd(0.8, 1.5) });
     }
-    if (g.t > 10.5) G.ln = null;
+    if (g.t > 10.5 || (g.out != null && g.out > 1.2)) G.ln = null;
   }
   if (m) {
     m.t += dt; m.s = (m.s || 0) - dt;
