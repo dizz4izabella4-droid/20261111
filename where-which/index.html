@@ -28,9 +28,9 @@ body{font-family:var(--ja);color:var(--ink);line-height:1.6;
 button,input,select{font-family:var(--ja);color:inherit}
 button{cursor:pointer}
 .hidden{display:none!important}
-.app{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:8px;height:calc(var(--vvh,100dvh) - 16px);min-height:540px;transform:translateY(var(--vvt,0px))}
+.app{max-width:520px;margin:0 auto;display:flex;flex-direction:column;justify-content:center;gap:8px;height:calc(var(--vvh,100dvh) - 16px);min-height:540px;transform:translateY(var(--vvt,0px))}
 .app>*{flex:none}
-.app>.stagewrap{flex:1 1 auto;min-height:0;display:flex}
+.app>.stagewrap{flex:0 1 auto;height:min(96vw,500px);min-height:200px;display:flex}
 .stagewrap>.room{flex:1 1 auto}
 
 /* ===== ヘッダー ===== */
@@ -46,7 +46,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px;pa
 .chip-btn .num{background:#fff;color:var(--lavD);border-radius:999px;padding:1px 9px;font-size:12px}
 
 /* ===== おへや ===== */
-.room{position:relative;width:100%;min-height:280px;display:flex;flex-direction:column;border-radius:26px;overflow:hidden;cursor:pointer;
+.room{position:relative;width:100%;min-height:0;display:flex;flex-direction:column;border-radius:26px;overflow:hidden;cursor:pointer;
   border:3px solid #fff;box-shadow:0 5px 0 var(--line),0 12px 22px rgba(107,74,122,.12);
   background:
     radial-gradient(circle at 20% 30%,rgba(255,255,255,.55) 0 3px,transparent 4px) 0 0/34px 34px,
@@ -158,8 +158,10 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px;pa
 .btn-s.main{background:var(--mint);color:#fff;box-shadow:0 3px 0 var(--mintD)}
 
 /* ===== セリフ ===== */
-.speech{position:relative;z-index:4;margin:auto 10px calc(var(--chsize,96px) + 24px);background:rgba(255,253,255,.97);border:3px solid #fff;border-radius:22px;padding:9px 12px 8px;
+.speech{position:relative;z-index:4;margin:auto 10px calc(var(--chsize,96px) + 24px);background:rgba(255,253,255,.93);border:3px solid #fff;border-radius:22px;padding:9px 12px 8px;
   display:flex;flex-direction:column;cursor:pointer;box-shadow:0 4px 0 var(--line),0 8px 18px rgba(107,74,122,.12);transition:transform .1s}
+.speech{transition:opacity 1.2s ease,transform .1s}
+.speech.dim{opacity:.14}
 .speech::after{content:"";position:absolute;left:50%;bottom:-11px;width:16px;height:16px;background:rgba(255,253,255,.97);transform:translateX(-50%) rotate(45deg);border-radius:0 0 4px 0;box-shadow:3px 3px 0 var(--line)}
 .speech:active{transform:scale(.995)}
 .speech-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px}
@@ -222,6 +224,7 @@ footer{display:none;text-align:center;font-size:10px;color:var(--ink2)}
 body.kb{--chsize:62px}
 body.kb header,body.kb .level,body.kb .teach-head{display:none}
 body.kb .room{min-height:0;height:100%}
+body.kb .app{justify-content:flex-start}
 body.kb .app{min-height:0}
 
 /* ===== はじめの子（植物スライム）SVG ===== */
@@ -239,6 +242,37 @@ body.kb .app{min-height:0}
 .nc .leaves{transform-origin:60px 34px;animation:ncSway 4.2s ease-in-out infinite}
 @keyframes ncBreathe{0%,100%{transform:scale(1,1)}50%{transform:scale(1.025,.972)}}
 @keyframes ncSway{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(4deg)}}
+
+/* ===== 森のすみか（背景は固定。水面・葉っぱ・ランタン・窓の灯りだけ うごく） ===== */
+.room{background:#cfe3b8}
+.room .deco{position:absolute;inset:0;overflow:hidden;border-radius:inherit}
+.scene{position:absolute;left:0;bottom:0;width:100%;aspect-ratio:1672/941}
+.sc-base{position:absolute;inset:0;width:100%;height:100%;display:block;user-select:none}
+.sp{position:absolute;height:auto;pointer-events:none;user-select:none;will-change:transform}
+.sp-water{filter:url(#ripple)}
+.glint{position:absolute;aspect-ratio:760/142;pointer-events:none;mix-blend-mode:screen;opacity:.65;
+  background-image:radial-gradient(ellipse 10px 1.6px at 30% 40%,rgba(255,255,255,.95),transparent),radial-gradient(ellipse 7px 1.2px at 72% 72%,rgba(255,255,255,.85),transparent),radial-gradient(ellipse 5px 1px at 50% 18%,rgba(255,255,255,.8),transparent);
+  background-size:74px 24px,57px 19px,91px 29px;animation:glintMove 16s linear infinite}
+@keyframes glintMove{from{background-position:0 0,0 0,0 0}to{background-position:74px 4px,-57px -3px,91px 0}}
+.lf-tl{transform-origin:0 0;animation:leafA 6.1s ease-in-out infinite}
+.lf-tc{transform-origin:50% 0;animation:leafB 7.3s ease-in-out -2s infinite}
+.lf-tr{transform-origin:100% 0;animation:leafA 8.3s ease-in-out -4s infinite}
+.lf-br{transform-origin:100% 100%;animation:leafB 6.7s ease-in-out -1s infinite}
+.lf-bl{transform-origin:0 100%;animation:leafA 7.7s ease-in-out -3s infinite}
+@keyframes leafA{0%,100%{transform:rotate(0) translate(0,0)}30%{transform:rotate(.9deg) translate(1px,.5px)}58%{transform:rotate(-.55deg) translate(-.6px,0)}80%{transform:rotate(.35deg) translate(.4px,.3px)}}
+@keyframes leafB{0%,100%{transform:rotate(0) translate(0,0)}25%{transform:rotate(-.8deg) translate(-.8px,.4px)}55%{transform:rotate(.7deg) translate(.8px,-.3px)}78%{transform:rotate(-.3deg) translate(0,.3px)}}
+.sp-lantern{transform-origin:32% 10%;animation:lanternSwing 5.6s ease-in-out infinite,lanternFlick 3.1s ease-in-out infinite}
+@keyframes lanternSwing{0%,100%{transform:rotate(-2.2deg)}50%{transform:rotate(2.2deg)}}
+@keyframes lanternFlick{0%,100%{filter:brightness(1)}18%{filter:brightness(1.14)}33%{filter:brightness(.97)}52%{filter:brightness(1.2)}71%{filter:brightness(1.04)}86%{filter:brightness(1.12)}}
+.sp-window{animation:winGlow 4.4s ease-in-out infinite}
+@keyframes winGlow{0%,100%{filter:brightness(1) saturate(1)}50%{filter:brightness(1.16) saturate(1.1)}}
+.halo{position:absolute;pointer-events:none;mix-blend-mode:screen;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,214,128,.62) 0,rgba(255,200,110,.22) 38%,transparent 68%)}
+.halo-window{left:77.2%;top:22%;width:16.4%;aspect-ratio:1;animation:haloPulse 4.4s ease-in-out infinite}
+.halo-lantern{left:50.4%;top:20.5%;width:12.6%;aspect-ratio:1;animation:haloFlick 3.1s ease-in-out infinite}
+@keyframes haloPulse{0%,100%{opacity:.35;transform:scale(.96)}50%{opacity:.8;transform:scale(1.06)}}
+@keyframes haloFlick{0%,100%{opacity:.55}18%{opacity:.95}33%{opacity:.45}52%{opacity:1}71%{opacity:.6}86%{opacity:.85}}
+@media(prefers-reduced-motion:reduce){.sp-water{filter:none!important}}
 
 /* ===== げんが（ローディングがめん風） ===== */
 #artov{position:fixed;inset:0;z-index:75;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;cursor:pointer;
@@ -353,12 +387,22 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
 
   <section aria-label="キャラクターのばしょ" class="stagewrap">
     <div id="character-stage" class="room" role="button" tabindex="0" title="しゃしん・がぞうを えらぶ">
-      <div id="room-decorations" class="deco">
-        <div class="frame">?</div>
-        <div class="shelf"></div>
-        <div class="window"><i></i></div>
-        <div class="floor"></div>
-        <div class="rug"></div>
+      <div id="room-decorations" class="deco" aria-hidden="true">
+        <div class="scene">
+          <img class="sc-base" src="scene/bg.jpg" alt="" draggable="false">
+          <img class="sp sp-water" src="scene/water.png" alt="" draggable="false" style="left:0.000%;top:58.448%;width:45.455%">
+          <div class="glint" style="left:0.000%;top:58.448%;width:45.455%;clip-path:polygon(0.0% 26.8%, 15.8% 21.1%, 32.9% 16.9%, 43.4% 11.3%, 57.9% 4.2%, 73.7% 5.6%, 86.8% 12.7%, 98.9% 19.7%, 98.0% 29.6%, 90.8% 50.7%, 81.6% 69.0%, 68.4% 80.3%, 50.0% 84.5%, 31.6% 90.1%, 15.8% 97.2%, 0.0% 85.9%)"></div>
+          <img class="sp sp-leaf lf-tl" src="scene/leafTL.png" alt="" draggable="false" style="left:0.000%;top:0.000%;width:28.110%">
+          <img class="sp sp-leaf lf-tc" src="scene/leafTC.png" alt="" draggable="false" style="left:41.268%;top:0.000%;width:19.438%">
+          <img class="sp sp-leaf lf-tr" src="scene/leafTR.png" alt="" draggable="false" style="left:64.892%;top:0.000%;width:35.108%">
+          <img class="sp sp-leaf lf-br" src="scene/leafBR.png" alt="" draggable="false" style="left:75.957%;top:73.326%;width:24.043%">
+          <img class="sp sp-leaf lf-bl" src="scene/leafBL.png" alt="" draggable="false" style="left:0.000%;top:66.419%;width:8.971%">
+          <div class="halo halo-window"></div>
+          <img class="sp sp-window" src="scene/window.png" alt="" draggable="false" style="left:80.443%;top:27.099%;width:9.868%">
+          <div class="halo halo-lantern"></div>
+          <img class="sp sp-lantern" src="scene/lantern.png" alt="" draggable="false" style="left:52.632%;top:10.096%;width:9.270%">
+        </div>
+        <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="ripple" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.006 0.03" numOctaves="2" seed="3" result="n"><animate attributeName="baseFrequency" dur="14s" values="0.006 0.03;0.01 0.042;0.006 0.03" repeatCount="indefinite"/></feTurbulence><feDisplacementMap in="SourceGraphic" in2="n" scale="3.2" xChannelSelector="R" yChannelSelector="G"/></filter></svg>
       </div>
 
       <div id="character-mover" class="hidden">
@@ -1268,6 +1312,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         hold: false,
         emoteTimer: null,
         phase: 'talk',
+        dimTimer: null,
         artOn: false,
         artTimer: null,
         sleepStart: 0,
@@ -1635,6 +1680,23 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         }, (120 + Math.random() * 180) * 1000);
       }
 
+      // 背景は ぜんたいを うめる大きさで かため、見える はば（右がわの窓まで）を そろえる
+      function layoutScene() {
+        const stage = dom.characterStage;
+        const w = stage.clientWidth, h = stage.clientHeight;
+        if (!w || !h) return;
+        const k = Math.max(w / 1672, h / 941);
+        const sw = 1672 * k, sh = 941 * k;
+        const f = w / sw;
+        const L = Math.min(Math.max(0.93 - f, 0), Math.max(0, 1 - f));
+        const sc = stage.querySelector('.scene');
+        sc.style.width = sw + 'px';
+        sc.style.height = sh + 'px';
+        sc.style.left = (-L * sw) + 'px';
+        sc.style.top = (h - sh) + 'px';
+        sc.style.bottom = 'auto';
+      }
+
       // ===== はじまりの流れ：キャラづくり → なまえ → ナレーション → ねんね → 三日後 → かいわ =====
       const SLEEP_MS = 40000;
       const wait = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -1894,7 +1956,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
           dom.characterMover.classList.remove('hidden');
           dom.characterPlaceholder.classList.add('hidden');
           dom.characterImageControls.classList.remove('hidden');
-          dom.characterStage.title = 'クリックで しゃしんを かえる';
+          dom.characterStage.title = '';
           startCharacterWalkLoop();
         } else {
           stopCharacterWalkLoop();
@@ -1902,7 +1964,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
           dom.characterMover.classList.add('hidden');
           dom.characterPlaceholder.classList.remove('hidden');
           dom.characterImageControls.classList.add('hidden');
-          dom.characterStage.title = 'しゃしん・がぞうを えらぶ';
+          dom.characterStage.title = '';
         }
       }
 
@@ -2859,7 +2921,24 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         return null;
       }
 
+      // しばらく なにも なければ、ふきだしを うすくして 背景の あかりを みせる
+      function undimBubble() {
+        clearTimeout(state.dimTimer);
+        dom.speechBox.classList.remove('dim');
+      }
+
+      function armDim() {
+        clearTimeout(state.dimTimer);
+        if (state.phase !== 'talk' || state.hold || state.pending) return;
+        state.dimTimer = setTimeout(() => {
+          if (state.phase === 'talk' && !state.isSpeaking && !state.hold && !state.pending && !userIsBusy()) {
+            dom.speechBox.classList.add('dim');
+          }
+        }, 7000);
+      }
+
       function speakDialogue(dialogue) {
+        undimBubble();
         clearChunkTimers();
         stopAutoTimers();
         releaseHold();
@@ -2964,6 +3043,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
       function scheduleNextAutoSpeech() {
         stopAutoTimers();
         dom.autoProgressBar.style.width = '0%';
+        armDim();
 
         if (state.phase !== 'talk' || !state.autoPlayEnabled || state.isSpeaking) {
           return;
@@ -3326,14 +3406,16 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         dom.characterStage.addEventListener('click', (e) => {
           if (state.phase !== 'talk') return;
           if (e.target.closest('#speech-box, .toggle, .controls, .status')) return;
-          dom.inputCharacterFile.click();
+          undimBubble();
+          armDim();
         });
 
         dom.characterStage.addEventListener('keydown', (e) => {
           if (e.target !== dom.characterStage || state.phase !== 'talk') return;
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            dom.inputCharacterFile.click();
+            undimBubble();
+            armDim();
           }
         });
 
@@ -3560,6 +3642,9 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
           window.visualViewport.addEventListener('scroll', syncViewport);
         }
         window.addEventListener('resize', syncViewport);
+        if (window.ResizeObserver) new ResizeObserver(layoutScene).observe(dom.characterStage);
+        window.addEventListener('resize', layoutScene);
+        layoutScene();
         loadData();
         renderCharacterImage();
         renderGenreSelect();
