@@ -13,6 +13,7 @@
 - **伸びるヒゲ**：キノコを取ると縦に伸び、敵に当たると縮む、レトロ風アクション（PC向け）。18章。
 - **イカロス〜蝋で固めた鳥の羽〜**：高層ビルの谷間を羽ばたいて飛ぶ、一人称視点の鳥人間ゲーム（スマホ・PC両対応）。19章。
 - **WHERE WHICH**（旧名：ことばのおへや）：ひらがなの言葉を教えると、イリスが覚えて話す育成アプリ（スマホ・PC両対応）。21章。
+- **Noche sin Luna — Ritmo**：フラメンコ曲専用の2レーン音ゲー（スマホ・PC両対応。test ver.）。25章。
 
 ---
 
@@ -32,10 +33,12 @@
 | 　伸びるヒゲ | https://dizz4izabella4-droid.github.io/20261111/nobiru-hige/ | |
 | 　イカロス | https://dizz4izabella4-droid.github.io/20261111/icarus/ | |
 | 　WHERE WHICH | https://dizz4izabella4-droid.github.io/20261111/where-which/ | 旧名：ことばのおへや（フォルダ kotoba-oheya） |
+| 　Noche sin Luna | https://dizz4izabella4-droid.github.io/20261111/noche-sin-luna/ | |
 | claude.ai アーティファクト（PC版） | https://claude.ai/artifact/NctPezS87FshtyQGQ1YaDf | 開発中の確認用。曲2つも同梱して公開済み |
 | claude.ai アーティファクト（コウモリ） | https://claude.ai/artifact/RtGte1cpPBFfU2wHBe8bEi | 開発の正本はこちら。リポジトリの tori-to-kemono/index.html は、その写し |
 | claude.ai アーティファクト（GLASS BREAKER） | https://claude.ai/artifact/35FutrJp3Aag1QnQRN6Nmg | 開発の正本はこちら。リポジトリの glass-breaker/index.html は、その写し |
 | claude.ai アーティファクト（イカロス） | https://claude.ai/artifact/9HeYU5kUoepJMdZ3wUpJ3X | 確認用。リポジトリの icarus/index.html は、その写し（断片版。全面作り直し後の最新を反映） |
+| claude.ai アーティファクト（Noche sin Luna） | https://claude.ai/artifact/19pEEfxhWj1sVAtjrNZD3M | テスト公開用。リポジトリの noche-sin-luna/index.html と同じ内容 |
 | claude.ai アーティファクト（旧スマホ版） | https://claude.ai/artifact/TwbhHpCo6BMetgr6v178bd | 試作（フリック入力と偉人の名言）。新しいスマホ版に置き換えたので使わない |
 
 ### リポジトリの構成
@@ -58,6 +61,8 @@ nobiru-hige/index.html              伸びるヒゲ の本体（HTML/CSS/JS す�
 glass-breaker/index.html            GLASS BREAKER の本体（HTML/CSS/JS すべて1ファイル、外部読み込みなし。アーティファクトの写し）
 icarus/index.html                   イカロス の本体（HTML/CSS/JS と three.js r160 をすべて1ファイルに埋め込み、外部読み込みなし）
 icarus/_src/                        イカロス のソース（src/*.js と build.py。README.md を参照）
+noche-sin-luna/index.html           Noche sin Luna の本体（曲・譜面・画像・手拍子をすべて1ファイルに埋め込み、約6.2MB。外部読み込みなし）
+noche-sin-luna/_src/                Noche sin Luna のソース（template.html・chart.json・build.py・譜面を作る道具。25章）
 README.md
 HANDOFF.md                         本書
 ```
@@ -831,3 +836,23 @@ PC版の筋立てと仕組み（防御→追跡→反撃、攻撃信号、耐久
 
 ### 21-h. キーボード(フリック)表示時の位置
 - `body.kb`（視覚ビューポート高 <600px）で `.app` に下余白 `--kbgap`(56px) を追加し、部屋(.stagewrap)を縮めて入力欄・「うん/いいえ/ちょっとまって」を持ち上げる。ブラウザ下部のアドレス表示と重ならないため。
+
+---
+
+## 25. Noche sin Luna — Ritmo（noche-sin-luna）
+
+- 2026-11-13 に、渡されたHTML（UIと打感が悪かったもの）を全面作り直して置いた。Ver.2.0 から始めた（ガラス割りと同じく、作り直しのため）。test ver.。
+- 1ファイル（約6.2MB）。曲（mp3、約3分3秒）・譜面・タイトル画像（ギター）・手拍子2つ（CC0）を base64 で埋め込み、外部読み込みなし。claude.ai のアーティファクト版（テスト公開用）もある。
+- 操作：2レーン。左＝I（薬指）、右＝O または 0（中指）。F/J・D/K・←/→ でも可。スマホは画面の左半分・右半分をタップ（同時押し可）。Esc/P で一時停止（3拍のカウントで再開）。
+- 譜面（`_src/chart.json`）：曲を librosa で解析して作った（約120BPM。拍の格子を局所的に合わせ、打楽器成分の立ち上がりを16分の位置に寄せ、強さ順に選ぶ）。SUAVE 175 / COMPÁS 362 / FUEGO 635 ノーツ（同時押しを含む）。作り直す手順：`_src/tools/analyze.py 曲.mp3` → `grid.py` → `chart.py 曲.mp3`（作業ディレクトリに analysis.json・grid.json・chart.json ができる）→ chart.json を `_src/` に置いて `python3 _src/build.py`。
+- 判定：PERFECT ±45ms / GREAT ±90ms / GOOD ±135ms。ノーツのない所を叩いても罰はない。スコアは最大1,000,000（PERFECT 1・GREAT 0.7・GOOD 0.3 の割合）。ランク S+(99%)/S(95)/A(90)/B(80)/C(70)/D。ベストは難易度ごとに localStorage（`nslBest_*`）、設定は `nslSettings`。
+- 時計：Web Audio で曲を鳴らし、`getOutputTimestamp` で「今聞こえている位置」を求め、performance.now と滑らかにつないで、描画と入力（イベントの timeStamp）を同じ時間軸で判定する。一時停止は AudioContext の suspend。
+- 打音：押した瞬間に鳴る。ゴルペ（共鳴体の合成音、左右で高さが違う）／パルマ（手拍子の録音）／なし。50コンボごとに「¡Olé!」と手拍子。
+- 設定：ノーツ速度、判定タイミング（±150ms。メトロノームに合わせて叩く自動調整あり）、音楽・打音の音量、演出（フル／控えめ）。
+- `<head>` に `navigator.audioSession.type='ambient'` を入れてあり、iPhoneのマナーモードでは鳴らない。`html{touch-action:manipulation}` でダブルタップのズームを防ぐ。
+- フォントは標準の日本語ゴシックのみ（Google Fonts は使わない）。
+- 直すとき：`_src/template.html` を直して `python3 noche-sin-luna/_src/build.py`（音源は既存の index.html から取り出す。差し替えるときは mp3 のパスを引数に渡す）。
+- 確認のしかた：Playwright（Chrome）で `index.html?auto` を開くと自動演奏になる（`?auto&go` で読み込み後すぐ開始）。`window.__nsl` で状態（state・st・clock）を見られる。
+- 未確認：実機での打音の聞こえ方と、端末ごとの音の遅れ（判定タイミングの自動調整で合わせてもらう）。
+- この作品からトップへ戻る手段は付けない（他の作品と同じ）。
+
