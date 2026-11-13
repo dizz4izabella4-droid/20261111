@@ -228,9 +228,10 @@ footer{display:none;text-align:center;font-size:10px;color:var(--ink2)}
 @media(min-height:820px){body:not(.kb) footer{display:block}}
 body.kb{--chsize:62px}
 body.kb header,body.kb .level,body.kb .teach-head{display:none}
-body.kb .room{min-height:0;height:100%}
+body.kb .room{min-height:0;height:100%;flex:1 1 0}
+body.kb .app>.stagewrap{height:auto;min-height:120px;flex:1 1 0}
 body.kb .app{justify-content:flex-start}
-body.kb .app{min-height:0}
+body.kb .app{min-height:0;box-sizing:border-box;padding-bottom:var(--kbgap,56px)} /* キーボードの上の アドレス表示と かさならないよう、「ちょっと まって」ぶん あげる */
 
 /* ===== はじめの子（植物スライム）SVG ===== */
 #character-svg{width:var(--chsize,96px);height:var(--chsize,96px);filter:drop-shadow(0 4px 4px rgba(0,0,0,.18))}
