@@ -12,7 +12,7 @@
 - **電卓ドリル（CALCULATOR DRILL）**：電卓ドリルを自動生成するツール（CASIO DS-20WKA 想定）。16章。
 - **伸びるヒゲ**：キノコを取ると縦に伸び、敵に当たると縮む、レトロ風アクション（PC向け）。18章。
 - **イカロス〜蝋で固めた鳥の羽〜**：高層ビルの谷間を羽ばたいて飛ぶ、一人称視点の鳥人間ゲーム（スマホ・PC両対応）。19章。
-- **ことばのおへや**：ひらがなの言葉を教えると、イリスが覚えて話す育成アプリ（スマホ・PC両対応）。21章。
+- **WHERE WHICH**（旧名：ことばのおへや）：ひらがなの言葉を教えると、イリスが覚えて話す育成アプリ（スマホ・PC両対応）。21章。
 
 ---
 
@@ -31,7 +31,7 @@
 | 　電卓ドリル | https://dizz4izabella4-droid.github.io/20261111/dentaku-drill/ | |
 | 　伸びるヒゲ | https://dizz4izabella4-droid.github.io/20261111/nobiru-hige/ | |
 | 　イカロス | https://dizz4izabella4-droid.github.io/20261111/icarus/ | |
-| 　ことばのおへや | https://dizz4izabella4-droid.github.io/20261111/kotoba-oheya/ | |
+| 　WHERE WHICH | https://dizz4izabella4-droid.github.io/20261111/where-which/ | 旧名：ことばのおへや（フォルダ kotoba-oheya） |
 | claude.ai アーティファクト（PC版） | https://claude.ai/artifact/NctPezS87FshtyQGQ1YaDf | 開発中の確認用。曲2つも同梱して公開済み |
 | claude.ai アーティファクト（コウモリ） | https://claude.ai/artifact/RtGte1cpPBFfU2wHBe8bEi | 開発の正本はこちら。リポジトリの tori-to-kemono/index.html は、その写し |
 | claude.ai アーティファクト（GLASS BREAKER） | https://claude.ai/artifact/35FutrJp3Aag1QnQRN6Nmg | 開発の正本はこちら。リポジトリの glass-breaker/index.html は、その写し |
@@ -648,9 +648,10 @@ PC版の筋立てと仕組み（防御→追跡→反撃、攻撃信号、耐久
 - ステージ1はBGMなし、環境音（空調ノイズ+100Hz、キーボード/電話/給水機が時々。`ambStart/ambTick/ambStop`）。ブラックアウト開始で環境音を止める。
 - イヤホン→スマホタップ→BGM開始の演出はボス戦の入場（bossIntro step1〜2）へ移動。
 
-## 21. ことばのおへや（kotoba-oheya）
+## 21. WHERE WHICH（where-which。旧名：ことばのおへや）
 
-- 2026-11-13 追加。Gemini で作られた1ファイルのHTML（v0.2）を、ほぼそのまま置いた。制作開始日は追加日。
-- 内容：切り抜いた写真のキャラクター（初期名「イリス」）が部屋を歩き、ひらがな5文字までの言葉とグループ（いきもの・たべもの等）を教えると、セリフに織り込んで話す。言葉帳に保存（localStorage）。外部通信なし（Tailwind の CDN のみ）。
-- 置くときに直した点：Google Fonts（Zen Maru Gothic）の読み込みを外し、標準のゴシック体（ヒラギノ・游ゴシック・メイリオ・Noto Sans JP）に統一。セリフ「あっ, 」の半角カンマを「あっ、」に修正。
+- 2026-11-13 追加。Gemini で作られた1ファイルのHTML（v0.2）が元。同日、名前を「WHERE WHICH」に変え（フォルダも kotoba-oheya → where-which）、見た目を作り直した。
+- 内容：切り抜いた写真のキャラクター（初期名「イリス」）が部屋を歩き、ひらがな5文字までの言葉とグループ（いきもの・たべもの等）を教えると、セリフに織り込んで話す。言葉帳に保存（localStorage。キーは元のまま）。
+- デザイン：トップ画面と同じパステル調（ミント・ラベンダー・ピンク）、太い下影のボタン。部屋は窓・棚・ラグ付きの絵。Tailwind の CDN をやめ、CSS をファイル内に持つ（外部通信なし）。文字は標準の日本語ゴシック体のみ。ロジック（JS）は元のまま、見た目に関わるクラス名の付け外しだけ作り直した。
+- 直した点：セリフ「あっ, 」の半角カンマを「あっ、」に修正。
 - この作品からトップへ戻る手段は付けない（他の作品と同じ）。

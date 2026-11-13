@@ -1,565 +1,366 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ことばのおへや - イリス (v0.2)</title>
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['"Hiragino Sans"', '"Hiragino Kaku Gothic ProN"', '"Yu Gothic"', '"Meiryo"', '"Noto Sans JP"', '"Noto Sans CJK JP"', 'sans-serif'],
-            maru: ['"Hiragino Sans"', '"Hiragino Kaku Gothic ProN"', '"Yu Gothic"', '"Meiryo"', '"Noto Sans JP"', '"Noto Sans CJK JP"', 'sans-serif'],
-          },
-          colors: {
-            base: {
-              bg: '#F7F5F0',
-              card: '#FFFFFF',
-              surface: '#EFECE6',
-              border: '#E2DDD3',
-            },
-            iris: {
-              primary: '#4E728A',
-              light: '#759AB3',
-              dark: '#345063',
-              accent: '#E0845C',
-              soft: '#E6EFF5',
-            }
-          }
-        }
-      }
-    }
-  </script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#e3f6ee">
+<title>WHERE WHICH</title>
+<script>/* iPhoneのマナーモードに従わせる */try{ if(navigator.audioSession) navigator.audioSession.type="ambient"; }catch(e){}</script>
+<style>
+/* WHERE WHICH: パステルのお部屋。外部の読み込みはなし。文字は標準の日本語ゴシック体だけ */
+:root{
+  --sky1:#e3f6ee; --sky2:#efe6ff; --sky3:#ffe6f0;
+  --ink:#4a3d63; --ink2:#8a7ca3; --line:#e4dcf0; --white:#fffdff;
+  --mint:#5fcfae; --mintD:#35a888; --mintS:#dff6ee;
+  --pink:#ff8fb8; --pinkD:#e8668f; --pinkS:#ffe3ee;
+  --lav:#b39cf2; --lavD:#8e72e0; --lavS:#efe8ff;
+  --lemon:#ffd66b; --lemonD:#f0b93a;
+  --ja:"Yu Gothic UI","游ゴシック","YuGothic","Hiragino Sans","ヒラギノ角ゴシック","Hiragino Kaku Gothic ProN",Meiryo,"Noto Sans JP","Noto Sans CJK JP",sans-serif;
+  color-scheme: light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{font-family:var(--ja);color:var(--ink);line-height:1.6;
+  background:linear-gradient(160deg,var(--sky1) 0%,var(--sky2) 55%,var(--sky3) 100%) fixed;
+  padding:max(14px,env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right,0px)) max(22px,env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px));
+  -webkit-tap-highlight-color:transparent}
+button,input,select{font-family:var(--ja);color:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+.app{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
 
-  <style>
-    body {
-      background-color: #F7F5F0;
-      color: #2F373D;
-      -webkit-tap-highlight-color: transparent;
-    }
+/* ===== ヘッダー ===== */
+header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 2px 0}
+.logo{display:flex;flex-direction:column;line-height:1.1}
+.logo h1{margin:0;white-space:nowrap;font-size:clamp(20px,5.8vw,28px);font-weight:900;letter-spacing:.06em;color:var(--ink)}
+.logo h1 b{color:var(--mintD);font-weight:900}
+.logo small{font-size:11px;font-weight:700;color:var(--ink2);letter-spacing:.14em;margin-top:3px}
+.chip-btn{white-space:nowrap;flex:none;display:inline-flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:9px 14px 10px;background:var(--lav);color:#fff;
+  font-weight:800;font-size:13px;box-shadow:0 4px 0 var(--lavD);transition:transform .08s,box-shadow .08s}
+.chip-btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--lavD)}
+.chip-btn svg{width:18px;height:18px}
+.chip-btn .num{background:#fff;color:var(--lavD);border-radius:999px;padding:1px 9px;font-size:12px}
 
-    .speech-bubble {
-      position: relative;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    .speech-bubble:active {
-      transform: scale(0.995);
-    }
+/* ===== おへや ===== */
+.room{position:relative;width:100%;height:268px;border-radius:30px;overflow:hidden;cursor:pointer;
+  border:4px solid #fff;box-shadow:0 8px 0 var(--line),0 18px 30px rgba(107,74,122,.14);
+  background:
+    radial-gradient(circle at 20% 30%,rgba(255,255,255,.55) 0 3px,transparent 4px) 0 0/34px 34px,
+    linear-gradient(180deg,#d8f3ea 0%,#e9f8f2 100%);
+  transition:transform .15s,box-shadow .15s}
+.room.stage-dragover{transform:scale(1.015);box-shadow:0 8px 0 var(--lavD),0 18px 30px rgba(142,114,224,.3)}
+.room .floor{position:absolute;left:0;right:0;bottom:0;height:34%;
+  background:repeating-linear-gradient(90deg,rgba(150,100,50,.10) 0 2px,transparent 2px 64px),linear-gradient(180deg,#f3d9a8,#e9c78c);
+  border-top:4px solid #fff7e6}
+.room .rug{position:absolute;left:50%;bottom:6%;width:62%;height:17%;transform:translateX(-50%);border-radius:50%;
+  background:radial-gradient(ellipse at center,#ffd0e2 0 38%,#ffb5d0 39% 62%,#ff9fc0 63%);box-shadow:0 2px 0 rgba(200,90,130,.25)}
+.room .window{position:absolute;top:50px;right:26px;width:84px;height:70px;border-radius:14px;background:#cfeeff;border:5px solid #fff;
+  box-shadow:0 3px 0 var(--line);overflow:hidden}
+.room .window::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:4px;background:#fff;transform:translateX(-50%)}
+.room .window::after{content:"";position:absolute;left:0;right:0;top:50%;height:4px;background:#fff;transform:translateY(-50%)}
+.room .window i{position:absolute;left:8px;top:10px;width:26px;height:10px;border-radius:999px;background:#fff;opacity:.95;z-index:1}
+.room .frame{position:absolute;top:56px;left:30px;width:56px;height:46px;border-radius:8px;background:var(--pinkS);border:4px solid #fff;box-shadow:0 3px 0 var(--line);
+  display:grid;place-items:center;font-weight:900;color:var(--pinkD);font-size:18px}
+.room .shelf{position:absolute;top:128px;left:22px;width:84px;height:8px;border-radius:4px;background:#e9c78c;box-shadow:0 3px 0 rgba(150,100,50,.2)}
+.room .shelf::before{content:"";position:absolute;bottom:8px;left:10px;width:18px;height:22px;border-radius:5px;background:var(--lemon)}
+.room .shelf::after{content:"";position:absolute;bottom:8px;left:36px;width:14px;height:30px;border-radius:5px;background:var(--lav)}
+.deco{pointer-events:none;user-select:none}
 
-    @keyframes wordPopIn {
-      0% {
-        opacity: 0;
-        transform: translateY(5px) scale(0.97);
-      }
-      100% {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-      }
-    }
-    .speech-chunk {
-      display: inline-block;
-      animation: wordPopIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-    }
+#character-mover{position:absolute;bottom:13%;left:50%;pointer-events:none;user-select:none;will-change:transform;transform:translateX(-50%)}
+#character-mover .shadow{width:64px;height:12px;margin:-12px auto 0;border-radius:50%;background:rgba(90,60,40,.22);filter:blur(1px)}
+#character-sprite-inner{display:flex;flex-direction:column;align-items:center}
+#character-image{width:104px;height:104px;object-fit:contain;filter:drop-shadow(0 4px 4px rgba(0,0,0,.18));user-select:none}
 
-    @keyframes speakingPulse {
-      0%, 100% { opacity: 0.25; transform: scale(0.85); }
-      50% { opacity: 1; transform: scale(1.1); }
-    }
-    .speaking-indicator {
-      display: inline-block;
-      width: 6px;
-      height: 6px;
-      border-radius: 9999px;
-      background-color: #E0845C;
-      margin-left: 6px;
-      vertical-align: middle;
-      animation: speakingPulse 0.8s ease-in-out infinite;
-    }
+#character-placeholder{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(82%,300px);text-align:center;
+  background:rgba(255,255,255,.92);border:3px dashed var(--mint);border-radius:22px;padding:16px 14px;user-select:none}
+#character-placeholder .ico{width:46px;height:46px;border-radius:15px;background:var(--mintS);color:var(--mintD);display:grid;place-items:center;margin:0 auto 8px}
+#character-placeholder .ico svg{width:26px;height:26px}
+#character-placeholder b{display:block;font-size:15px;font-weight:900;color:var(--ink)}
+#character-placeholder span{display:block;font-size:12px;color:var(--ink2);margin-top:3px}
+.room:hover #character-placeholder{border-color:var(--mintD)}
 
-    @keyframes gentleFloat {
-      0%, 100% { transform: translateY(0px); }
-      50% { transform: translateY(-4px); }
-    }
-    .presence-float {
-      animation: gentleFloat 4.5s ease-in-out infinite;
-    }
+.status{position:absolute;top:12px;left:12px;display:flex;align-items:center;gap:6px;padding:4px 11px;border-radius:999px;background:rgba(255,255,255,.92);font-size:11px;font-weight:800;color:var(--ink2);z-index:2}
+.status .dot{width:8px;height:8px;border-radius:50%;background:var(--mint)}
+.status .dot.off{background:#bdb4cc}
+.toggle{position:absolute;top:12px;right:12px;border:0;border-radius:999px;padding:5px 12px 6px;background:var(--mint);color:#fff;font-size:11px;font-weight:800;box-shadow:0 3px 0 var(--mintD);z-index:2}
+.toggle:active{transform:translateY(2px);box-shadow:0 1px 0 var(--mintD)}
+.toggle.off{background:#bdb4cc;box-shadow:0 3px 0 #9d94ae}
+.room .controls{position:absolute;bottom:10px;right:12px;display:flex;gap:6px;z-index:2}
+.mini{border:0;border-radius:999px;padding:5px 12px 6px;background:rgba(255,255,255,.95);color:var(--ink);font-size:11px;font-weight:800;box-shadow:0 2px 0 var(--line)}
+.mini:hover{background:var(--lavS)}
+.mini.danger:hover{background:var(--pinkS);color:var(--pinkD)}
 
-    @keyframes walkBob {
-      0%, 100% { transform: translateY(0px) rotate(0deg); }
-      25% { transform: translateY(-6px) rotate(-2deg); }
-      75% { transform: translateY(-6px) rotate(2deg); }
-    }
-    .walk-bobbing {
-      animation: walkBob 0.55s ease-in-out infinite;
-    }
+@keyframes gentleFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.presence-float{animation:gentleFloat 4.5s ease-in-out infinite}
+@keyframes walkBob{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-6px) rotate(-2deg)}75%{transform:translateY(-6px) rotate(2deg)}}
+.walk-bobbing{animation:walkBob .55s ease-in-out infinite}
 
-    .room-backdrop {
-      background:
-        radial-gradient(circle at 82% 24%, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0) 36%),
-        linear-gradient(180deg, #E8F1F6 0%, #F4EFE6 68%, #E4D7C3 68.5%, #D9C7AE 100%);
-    }
+/* ===== なまえ ===== */
+.namebar{align-self:center;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;background:var(--white);border-radius:999px;padding:6px 8px 6px 16px;box-shadow:0 3px 0 var(--line);font-size:13px}
+.namebar .lbl{color:var(--ink2);font-weight:700}
+.namebar #speech-speaker-name{font-weight:900;color:var(--mintD);font-size:15px}
+.name-edit{display:flex;align-items:center;gap:6px}
+.name-edit input{width:120px;border:2px solid var(--line);border-radius:999px;padding:5px 12px;font-size:13px;background:#fff;outline:none}
+.name-edit input:focus{border-color:var(--mint)}
+.btn-s{white-space:nowrap;border:0;border-radius:999px;padding:6px 14px 7px;background:var(--lavS);color:var(--lavD);font-weight:800;font-size:12px}
+.btn-s:hover{background:var(--lav);color:#fff}
+.btn-s.main{background:var(--mint);color:#fff;box-shadow:0 3px 0 var(--mintD)}
 
-    .checkerboard-bg {
-      background-color: #f8fafc;
-      background-image:
-        linear-gradient(45deg, #e2e8f0 25%, transparent 25%),
-        linear-gradient(-45deg, #e2e8f0 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, #e2e8f0 75%),
-        linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
-      background-size: 16px 16px;
-      background-position: 0 0, 0 8px, 8px -8px, -8px 0;
-    }
+/* ===== セリフ ===== */
+.speech{position:relative;margin-top:6px;background:var(--white);border:3px solid #fff;border-radius:28px;padding:16px 18px 14px;min-height:176px;
+  display:flex;flex-direction:column;cursor:pointer;box-shadow:0 6px 0 var(--line),0 14px 26px rgba(107,74,122,.1);transition:transform .1s}
+.speech:active{transform:scale(.995)}
+.speech-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.speaker{display:flex;align-items:center;gap:8px}
+#speech-speaker-label{background:var(--mint);color:#fff;font-weight:900;font-size:13px;padding:3px 13px 4px;border-radius:999px}
+#speech-category-tag{background:var(--lavS);color:var(--lavD);font-weight:800;font-size:11px;padding:3px 11px;border-radius:999px}
+.next{border:0;border-radius:999px;padding:6px 13px 7px;background:var(--pink);color:#fff;font-weight:800;font-size:12px;box-shadow:0 3px 0 var(--pinkD);display:inline-flex;align-items:center;gap:3px}
+.next:active{transform:translateY(2px);box-shadow:0 1px 0 var(--pinkD)}
+.next svg{width:13px;height:13px}
+.speech-body{flex:1;display:flex;align-items:center;padding:6px 2px}
+#speech-text{width:100%;font-size:clamp(18px,5.2vw,22px);font-weight:700;line-height:1.9;letter-spacing:.04em;color:var(--ink)}
+#speech-text p{margin:0}
+#speech-text p+p{margin-top:6px}
+.speech-foot{display:flex;align-items:center;gap:10px;margin-top:10px}
+.bar{flex:1;height:5px;border-radius:999px;background:var(--line);overflow:hidden}
+#auto-progress-bar{height:100%;width:0;background:var(--lav);transition:width .2s linear}
+#speech-hint-text{font-size:10px;color:var(--ink2);user-select:none}
+@keyframes wordPopIn{0%{opacity:0;transform:translateY(5px) scale(.97)}100%{opacity:1;transform:none}}
+.speech-chunk{display:inline-block;animation:wordPopIn .28s cubic-bezier(.22,1,.36,1) forwards}
+@keyframes speakingPulse{0%,100%{opacity:.25;transform:scale(.85)}50%{opacity:1;transform:scale(1.1)}}
+.speaking-indicator{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--pink);margin-left:6px;vertical-align:middle;animation:speakingPulse .8s ease-in-out infinite}
 
-    .stage-dragover {
-      border-color: #4E728A !important;
-      background-color: #E6EFF5 !important;
-      transform: scale(1.015);
-    }
+/* ===== おしえる ===== */
+.teach{background:var(--white);border:3px solid #fff;border-radius:28px;padding:16px 16px 14px;box-shadow:0 6px 0 var(--line),0 14px 26px rgba(107,74,122,.1)}
+.teach-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.teach h2{margin:0;font-size:15px;font-weight:900;color:var(--ink);display:flex;align-items:center;gap:8px}
+.teach h2::before{content:"";width:12px;height:12px;border-radius:50%;background:var(--pink);box-shadow:0 0 0 4px var(--pinkS)}
+.teach .limit{font-size:11px;font-weight:700;color:var(--ink2)}
+.teach form{display:flex;flex-direction:column;gap:10px}
+.field{position:relative}
+.field input{width:100%;height:50px;border:3px solid var(--line);border-radius:18px;padding:0 54px 0 16px;font-size:18px;font-weight:700;background:#fff;outline:none;transition:border-color .15s}
+.field input:focus{border-color:var(--mint)}
+.field input::placeholder{color:#b9aecb;font-weight:500}
+#char-counter{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:800;color:var(--ink2);user-select:none}
+#char-counter.over{color:var(--pinkD)}
+.row2{display:flex;gap:10px}
+.row2 select{flex:1;min-width:0;height:50px;border:3px solid var(--line);border-radius:18px;padding:0 12px;font-size:14px;font-weight:800;background:#fff;outline:none}
+.row2 select:focus{border-color:var(--mint)}
+.go{border:0;height:50px;padding:0 26px 3px;border-radius:18px;background:var(--mint);color:#fff;font-size:16px;font-weight:900;letter-spacing:.1em;box-shadow:0 5px 0 var(--mintD);transition:transform .08s,box-shadow .08s;flex:none}
+.go:active{transform:translateY(4px);box-shadow:0 1px 0 var(--mintD)}
+.feedback{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;min-height:20px;font-size:12px}
+#feedback-message{margin:0;color:var(--ink2);font-weight:700}
+#feedback-message.ok{color:var(--mintD)}
+#feedback-message.err{color:var(--pinkD)}
+.sample{border:0;background:none;color:var(--lavD);font-weight:800;font-size:12px;padding:2px 0;flex:none}
+.sample:hover{text-decoration:underline}
+footer{text-align:center;font-size:11px;color:var(--ink2);padding-top:2px}
 
-    .timer-bar {
-      transition: width 0.2s linear;
-    }
+/* ===== モーダル ===== */
+.modal{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:14px;background:rgba(74,61,99,.45)}
+.modal.flex{display:flex}
+.sheet{width:100%;max-width:560px;max-height:88vh;display:flex;flex-direction:column;background:var(--white);border-radius:28px;overflow:hidden;box-shadow:0 20px 50px rgba(74,61,99,.35)}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 18px;background:var(--lavS)}
+.sheet-head h2{margin:0;font-size:17px;font-weight:900;color:var(--ink)}
+.sheet-head .sub{font-size:11px;color:var(--ink2);margin:2px 0 0}
+.badge-n{margin-left:8px;font-size:12px;font-weight:800;padding:2px 11px;border-radius:999px;background:#fff;color:var(--lavD)}
+.x{border:0;width:36px;height:36px;border-radius:50%;background:#fff;color:var(--ink2);display:grid;place-items:center;flex:none}
+.x:hover{background:var(--pinkS);color:var(--pinkD)}
+.x svg{width:18px;height:18px}
+.filterbar{padding:10px 16px;overflow-x:auto;border-bottom:2px solid var(--line)}
+#genre-filter-bar{display:flex;gap:6px;min-width:max-content}
+.fchip{border:0;border-radius:999px;padding:6px 13px;background:var(--lavS);color:var(--ink2);font-size:12px;font-weight:800}
+.fchip:hover{background:var(--line)}
+.fchip.on{background:var(--lav);color:#fff;box-shadow:0 3px 0 var(--lavD)}
+#wordbook-list-container{flex:1;overflow-y:auto;padding:14px 16px;background:#faf7ff}
+.wgrid{display:grid;grid-template-columns:1fr;gap:8px}
+@media(min-width:520px){.wgrid{grid-template-columns:1fr 1fr}}
+.wcard{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;background:#fff;border-radius:18px;box-shadow:0 3px 0 var(--line)}
+.wcard .info{display:flex;align-items:center;gap:8px;min-width:0}
+.wcard .w{font-weight:900;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wcard .g{flex:none;font-size:10px;font-weight:800;padding:2px 9px;border-radius:999px;background:var(--mintS);color:var(--mintD)}
+.wcard .acts{display:flex;gap:4px;flex:none}
+.act{border:0;border-radius:12px;padding:6px 10px;background:transparent;font-size:11px;font-weight:800;color:var(--lavD)}
+.act:hover{background:var(--lavS)}
+.act.del{color:var(--ink2)}
+.act.del:hover{background:var(--pinkS);color:var(--pinkD)}
+.act.confirm{background:var(--pink);color:#fff}
+.empty{padding:40px 0;text-align:center;color:var(--ink2);font-size:13px}
+.empty b{display:block;font-size:15px;color:var(--ink);margin-bottom:4px}
+.sheet-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;border-top:2px solid var(--line);font-size:11px;color:var(--ink2);background:#fff}
+.sheet-foot .btn-s{background:var(--lavS)}
 
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #D1CBC0;
-      border-radius: 9999px;
-    }
-  </style>
+/* きりぬき */
+.crop-tools{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 16px;border-bottom:2px solid var(--line)}
+.seg{display:flex;gap:6px}
+.seg button{border:0;border-radius:999px;padding:6px 13px;background:var(--lavS);color:var(--ink2);font-size:12px;font-weight:800}
+.seg button.on{background:var(--lav);color:#fff;box-shadow:0 3px 0 var(--lavD)}
+.crop-area{flex:1;display:flex;align-items:center;justify-content:center;padding:14px;overflow:hidden;user-select:none;
+  background-color:#f6f3fb;background-image:linear-gradient(45deg,#e9e3f4 25%,transparent 25%),linear-gradient(-45deg,#e9e3f4 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e9e3f4 75%),linear-gradient(-45deg,transparent 75%,#e9e3f4 75%);
+  background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0}
+#crop-canvas{max-width:100%;max-height:50vh;border-radius:12px;touch-action:none;cursor:crosshair;box-shadow:0 3px 10px rgba(0,0,0,.15)}
+.crop-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-top:2px solid var(--line);background:#fff}
+.btn-m{border:0;border-radius:16px;padding:10px 18px 11px;font-weight:800;font-size:13px;background:var(--lavS);color:var(--lavD)}
+.btn-m.main{background:var(--mint);color:#fff;box-shadow:0 4px 0 var(--mintD)}
+.btn-m.main:active{transform:translateY(3px);box-shadow:0 1px 0 var(--mintD)}
+
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
 </head>
-<body class="min-h-screen flex flex-col justify-between selection:bg-iris-soft selection:text-iris-dark">
+<body>
+<div class="app">
 
-  <!-- ==================== ヘッダー ==================== -->
-  <header class="sticky top-0 z-20 bg-white/85 backdrop-blur-md border-b border-base-border">
-    <div class="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
-      <div class="flex items-center gap-2.5">
-        <span class="w-2.5 h-2.5 rounded-full bg-iris-primary inline-block animate-pulse"></span>
-        <h1 id="app-name-header" class="font-maru font-bold text-base sm:text-lg text-iris-dark tracking-wide">
-          ことばのおへや - イリス
-        </h1>
-        <span class="text-[11px] font-medium px-2 py-0.5 rounded-full bg-base-surface text-iris-primary">
-          v0.2
-        </span>
-      </div>
-
-      <!-- 言葉帳ボタン -->
-      <div class="flex items-center gap-2">
-        <button
-          id="btn-open-wordbook"
-          type="button"
-          class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-iris-soft hover:bg-iris-primary hover:text-white text-iris-dark text-xs sm:text-sm font-maru font-bold transition-colors shadow-2xs"
-          aria-label="ことばちょうをひらく"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-          </svg>
-          <span>ことばちょう</span>
-          <span id="word-count-badge" class="px-2 py-0.5 text-xs font-bold rounded-full bg-white text-iris-primary">
-            0こ
-          </span>
-        </button>
-      </div>
+  <header>
+    <div class="logo">
+      <h1>WHERE <b>WHICH</b></h1>
+      <small>ことばを おぼえる おへや</small>
     </div>
+    <button id="btn-open-wordbook" type="button" class="chip-btn" aria-label="ことばちょうをひらく">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+      <span>ことばちょう</span>
+      <span id="word-count-badge" class="num">0こ</span>
+    </button>
   </header>
 
-  <!-- ==================== メインコンテンツ ==================== -->
-  <main class="flex-1 w-full max-w-3xl mx-auto px-4 py-5 sm:py-8 flex flex-col gap-5">
+  <input id="input-character-file" type="file" accept="image/*" class="hidden" aria-label="しゃしん・がぞうを えらぶ">
 
-    <!-- 1. キャラクター表示エリア（仮背景の上を移動するステージ＋切り抜き取り込み） -->
-    <section aria-label="キャラクターのばしょ" class="flex flex-col items-center">
-      <input
-        id="input-character-file"
-        type="file"
-        accept="image/*"
-        class="hidden"
-        aria-label="しゃしん・がぞうを えらぶ"
-      />
-
-      <div
-        id="character-stage"
-        role="button"
-        tabindex="0"
-        title="しゃしん・がぞうを えらぶ"
-        class="room-backdrop relative w-full max-w-lg h-56 sm:h-64 rounded-3xl border-2 border-dashed border-base-border hover:border-iris-light flex flex-col items-center justify-center p-4 shadow-2xs overflow-hidden group cursor-pointer transition-all"
-      >
-        <!-- 仮背景の窓・装飾 -->
-        <div id="room-decorations" class="hidden pointer-events-none select-none">
-          <div class="absolute top-6 right-10 w-20 h-16 rounded-xl bg-white/75 border-2 border-white shadow-2xs grid grid-cols-2 grid-rows-2 gap-0.5 p-1">
-            <div class="bg-sky-100/80 rounded-tl-md"></div>
-            <div class="bg-sky-100/80 rounded-tr-md"></div>
-            <div class="bg-sky-100/80 rounded-bl-md"></div>
-            <div class="bg-sky-100/80 rounded-br-md"></div>
-          </div>
-          <div class="absolute bottom-3 left-1/2 -translate-x-1/2 w-64 h-8 rounded-[100%] bg-amber-900/10 border border-amber-900/10"></div>
-        </div>
-
-        <!-- 仮背景の上を移動するキャラクターラッパー -->
-        <div
-          id="character-mover"
-          class="hidden absolute bottom-6 left-1/2 pointer-events-none select-none will-change-transform"
-          style="transform: translateX(-50%);"
-        >
-          <div class="w-16 h-3 mx-auto -mb-1.5 rounded-[100%] bg-slate-900/20 blur-[1px]"></div>
-          <div id="character-sprite-inner" class="presence-float flex flex-col items-center">
-            <img
-              id="character-image"
-              src=""
-              alt="キャラクター"
-              class="w-24 h-24 sm:w-28 sm:h-28 object-contain drop-shadow-md select-none"
-            />
-          </div>
-        </div>
-
-        <!-- 画像未設定時のプレースホルダー枠 -->
-        <div id="character-placeholder" class="flex flex-col items-center text-center select-none px-3 py-3 rounded-2xl bg-white/80 backdrop-blur-2xs border border-white">
-          <div class="w-12 h-12 rounded-2xl bg-base-surface group-hover:bg-iris-soft text-iris-light group-hover:text-iris-primary flex items-center justify-center mb-2 transition-colors">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z"></path>
-            </svg>
-          </div>
-          <p class="font-maru font-bold text-sm text-iris-dark tracking-wider">しゃしんから きりぬいて おく</p>
-          <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">
-            タップ または ドラッグ＆ドロップ<br>
-            <span class="text-[10px] text-slate-400">（きりぬいた キャラクターが おへやを あるくよ）</span>
-          </p>
-        </div>
-
-        <!-- 状態インジケーター -->
-        <div class="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-2xs border border-base-border text-[11px] text-slate-500">
-          <span id="status-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-          <span id="status-text">かんがえちゅう…</span>
-        </div>
-
-        <!-- 自動発言切り替え -->
-        <button
-          id="btn-toggle-auto"
-          type="button"
-          title="かってに おはなしするのを きりかえる"
-          class="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-2xs hover:bg-iris-soft border border-base-border text-[11px] text-iris-primary font-medium transition-colors"
-        >
-          ひとりごと: ON
-        </button>
-
-        <!-- 画像設定時コントロール -->
-        <div
-          id="character-image-controls"
-          class="hidden absolute bottom-2.5 right-3 flex items-center gap-1.5 opacity-95 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
-        >
-          <button
-            id="btn-change-image"
-            type="button"
-            class="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-2xs hover:bg-iris-soft border border-base-border text-[11px] font-maru font-bold text-iris-dark shadow-2xs transition-colors"
-          >
-            べつのしゃしん
-          </button>
-          <button
-            id="btn-remove-image"
-            type="button"
-            class="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-2xs hover:bg-rose-50 border border-base-border text-[11px] font-maru font-medium text-slate-500 hover:text-rose-600 shadow-2xs transition-colors"
-          >
-            けす
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <!-- キャラクター名変更バー -->
-    <section aria-label="なまえのへんこう" class="w-full flex items-center justify-center">
-      <div class="flex items-center gap-2 bg-white px-4 py-2 rounded-2xl border border-base-border shadow-2xs text-xs font-maru">
-        <span class="text-slate-500">なまえ：</span>
-        <span id="speech-speaker-name" class="font-bold text-iris-primary text-sm">イリス</span>
-        <button
-          id="btn-edit-name"
-          type="button"
-          class="px-2 py-1 rounded-xl bg-base-surface hover:bg-iris-soft text-slate-700 hover:text-iris-primary transition-colors ml-1"
-        >
-          なまえを かえる
-        </button>
-
-        <div id="name-edit-box" class="hidden flex items-center gap-1.5 ml-1">
-          <input
-            id="character-name-input"
-            type="text"
-            maxlength="10"
-            class="w-28 px-2 py-1 rounded-xl bg-base-bg border border-base-border focus:border-iris-primary focus:bg-white focus:outline-none text-xs font-maru"
-            placeholder="あたらしいなまえ"
-          />
-          <button
-            id="btn-save-name"
-            type="button"
-            class="px-2.5 py-1 rounded-xl bg-iris-primary hover:bg-iris-dark text-white font-bold transition-colors"
-          >
-            きめる
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <!-- 2. セリフ欄 -->
-    <section aria-label="キャラクターのおはなし" class="w-full">
-      <div
-        id="speech-box"
-        role="button"
-        tabindex="0"
-        title="おすと つぎの おはなしを きけるよ"
-        class="speech-bubble w-full rounded-3xl bg-white border border-base-border shadow-sm hover:shadow-md cursor-pointer p-5 sm:p-7 flex flex-col justify-between min-h-[176px] sm:min-h-[192px]"
-      >
-        <div class="flex items-center justify-between gap-2 mb-3">
-          <div class="flex items-center gap-2">
-            <span id="speech-speaker-label" class="font-maru font-bold text-sm sm:text-base text-iris-primary">
-              イリス
-            </span>
-            <span
-              id="speech-category-tag"
-              class="text-[11px] px-2.5 py-0.5 rounded-full bg-base-surface text-slate-600 font-maru font-medium"
-            >
-              ひとりごと
-            </span>
-          </div>
-
-          <button
-            id="btn-next-speech"
-            type="button"
-            class="inline-flex items-center gap-1 text-xs font-maru font-bold text-iris-primary hover:text-iris-dark bg-iris-soft/75 hover:bg-iris-soft px-3 py-1.5 rounded-full transition-colors"
-          >
-            <span>つぎの おはなし</span>
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-            </svg>
-          </button>
-        </div>
-
-        <div class="flex-1 flex items-center">
-          <div
-            id="speech-text"
-            class="font-maru text-base sm:text-lg leading-relaxed sm:leading-loose text-slate-800 tracking-wide w-full"
-            aria-live="polite"
-          ></div>
-        </div>
-
-        <div class="mt-4 pt-2 flex items-center gap-3">
-          <div class="flex-1 h-1 bg-base-surface rounded-full overflow-hidden">
-            <div id="auto-progress-bar" class="timer-bar h-full bg-iris-light/65 w-0"></div>
-          </div>
-          <span id="speech-hint-text" class="text-[10px] text-slate-400 select-none">
-            おすと つぎへ すすむよ
-          </span>
-        </div>
-      </div>
-    </section>
-
-    <!-- 3. 言葉を教える操作エリア -->
-    <section aria-label="ことばを おしえる" class="w-full rounded-3xl bg-white border border-base-border p-5 sm:p-6 shadow-2xs">
-      <div class="flex items-center justify-between mb-3.5">
-        <h2 class="font-maru font-bold text-sm sm:text-base text-iris-dark flex items-center gap-2">
-          <svg class="w-4 h-4 text-iris-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-          </svg>
-          <span id="teach-title-text">イリスに ことばを おしえる</span>
-        </h2>
-        <span class="text-xs text-slate-400 font-maru">ひらがな・5もじまで</span>
+  <section aria-label="キャラクターのばしょ">
+    <div id="character-stage" class="room" role="button" tabindex="0" title="しゃしん・がぞうを えらぶ">
+      <div id="room-decorations" class="deco">
+        <div class="frame">?</div>
+        <div class="shelf"></div>
+        <div class="window"><i></i></div>
+        <div class="floor"></div>
+        <div class="rug"></div>
       </div>
 
-      <form id="teach-form" class="flex flex-col sm:flex-row gap-3" novalidate>
-        <div class="flex-1 relative">
-          <input
-            id="input-word"
-            type="text"
-            inputmode="text"
-            maxlength="5"
-            autocomplete="off"
-            placeholder="れい：りんご、さんぽ"
-            class="w-full h-12 px-4 pr-12 rounded-2xl bg-base-bg border border-base-border focus:border-iris-primary focus:bg-white focus:outline-none text-base font-maru text-slate-800 placeholder:text-slate-400 transition-colors"
-            aria-label="おしえる ことば（ひらがな5もじまで）"
-          />
-          <span
-            id="char-counter"
-            class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400 select-none"
-          >
-            0/5
-          </span>
+      <div id="character-mover" class="hidden">
+        <div id="character-sprite-inner" class="presence-float">
+          <img id="character-image" src="" alt="キャラクター">
         </div>
-
-        <div class="sm:w-44">
-          <select
-            id="select-genre"
-            aria-label="ことばの グループ"
-            class="w-full h-12 px-3.5 rounded-2xl bg-base-bg border border-base-border focus:border-iris-primary focus:bg-white focus:outline-none text-sm font-maru font-medium text-slate-700 cursor-pointer transition-colors"
-          ></select>
-        </div>
-
-        <button
-          type="submit"
-          class="h-12 px-6 rounded-2xl bg-iris-primary hover:bg-iris-dark active:scale-[0.98] text-white font-maru font-bold text-sm sm:text-base shadow-2xs transition-all cursor-pointer shrink-0"
-        >
-          おしえる
-        </button>
-      </form>
-
-      <div id="form-feedback" class="mt-2.5 min-h-[20px] flex items-center justify-between text-xs">
-        <p id="feedback-message" class="text-slate-500">
-          いみは かかなくて だいじょうぶ。ことばと グループだけで おぼえるよ。
-        </p>
-
-        <button
-          id="btn-sample-word"
-          type="button"
-          class="text-iris-primary hover:underline shrink-0 ml-2 font-maru"
-        >
-          + おためしで 1ついれる
-        </button>
-      </div>
-    </section>
-
-  </main>
-
-  <footer class="py-4 text-center text-[11px] text-slate-400">
-    おぼえた ことばは この ブラウザの なかに ほぞん されるよ
-  </footer>
-
-  <!-- ==================== 言葉帳モーダル ==================== -->
-  <div
-    id="wordbook-modal"
-    class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-2xs p-0 sm:p-4"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="wordbook-title"
-  >
-    <div class="w-full max-w-2xl bg-white rounded-t-3xl sm:rounded-3xl shadow-xl border border-base-border flex flex-col max-h-[88vh] overflow-hidden">
-      
-      <div class="px-5 py-4 border-b border-base-border flex items-center justify-between bg-base-bg/60">
-        <div class="flex items-center gap-2.5">
-          <h2 id="wordbook-title" class="font-maru font-bold text-base sm:text-lg text-iris-dark">
-            ことばちょう
-          </h2>
-          <span id="modal-word-count" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-iris-soft text-iris-primary">
-            0こ
-          </span>
-        </div>
-        <button
-          id="btn-close-wordbook"
-          type="button"
-          class="p-2 rounded-full hover:bg-base-surface text-slate-500 hover:text-slate-800 transition-colors"
-          aria-label="ことばちょうを とじる"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
-        </button>
+        <div class="shadow"></div>
       </div>
 
-      <div class="px-5 py-3 border-b border-base-border bg-white overflow-x-auto">
-        <div id="genre-filter-bar" class="flex items-center gap-1.5 min-w-max"></div>
+      <div id="character-placeholder">
+        <div class="ico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z"/></svg></div>
+        <b>しゃしんから きりぬいて おく</b>
+        <span>タップ または ドラッグ＆ドロップ</span>
+        <span>（きりぬいた キャラクターが おへやを あるくよ）</span>
       </div>
 
-      <div id="wordbook-list-container" class="flex-1 overflow-y-auto p-5 bg-base-bg/35"></div>
+      <div class="status"><span id="status-dot" class="dot"></span><span id="status-text">かんがえちゅう…</span></div>
+      <button id="btn-toggle-auto" type="button" class="toggle" title="かってに おはなしするのを きりかえる">ひとりごと: ON</button>
 
-      <div class="px-5 py-3 border-t border-base-border bg-white flex items-center justify-between text-xs text-slate-400">
-        <span id="wordbook-footer-hint">おぼえた ことばは おはなしにも でてくるよ</span>
-        <button
-          id="btn-close-wordbook-bottom"
-          type="button"
-          class="px-4 py-1.5 rounded-full bg-base-surface hover:bg-base-border text-slate-700 font-maru font-medium transition-colors"
-        >
-          とじる
-        </button>
+      <div id="character-image-controls" class="controls hidden">
+        <button id="btn-change-image" type="button" class="mini">べつのしゃしん</button>
+        <button id="btn-remove-image" type="button" class="mini danger">けす</button>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- ==================== 画像切り抜き（トリミング）モーダル ==================== -->
-  <div
-    id="crop-modal"
-    class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-2xs p-3 sm:p-5"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="crop-modal-title"
-  >
-    <div class="w-full max-w-lg bg-white rounded-3xl shadow-xl border border-base-border flex flex-col max-h-[92vh] overflow-hidden">
-      <div class="px-5 py-3.5 border-b border-base-border flex items-center justify-between bg-base-bg/60">
-        <div>
-          <h2 id="crop-modal-title" class="font-maru font-bold text-base text-iris-dark">
-            キャラクターを きりぬく
-          </h2>
-          <p class="text-[11px] text-slate-500 mt-0.5">
-            ゆび や マウスで なぞって かこむか、しかくで えらんでね
-          </p>
+  <section aria-label="なまえのへんこう" class="namebar">
+    <span class="lbl">なまえ：</span>
+    <span id="speech-speaker-name">イリス</span>
+    <button id="btn-edit-name" type="button" class="btn-s">なまえを かえる</button>
+    <div id="name-edit-box" class="name-edit hidden">
+      <input id="character-name-input" type="text" maxlength="10" placeholder="あたらしいなまえ">
+      <button id="btn-save-name" type="button" class="btn-s main">きめる</button>
+    </div>
+  </section>
+
+  <section aria-label="キャラクターのおはなし">
+    <div id="speech-box" class="speech" role="button" tabindex="0" title="おすと つぎの おはなしを きけるよ">
+      <div class="speech-head">
+        <div class="speaker">
+          <span id="speech-speaker-label">イリス</span>
+          <span id="speech-category-tag">ひとりごと</span>
         </div>
-        <button
-          id="btn-close-crop"
-          type="button"
-          class="p-2 rounded-full hover:bg-base-surface text-slate-500 hover:text-slate-800 transition-colors"
-          aria-label="きりぬきを やめる"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
+        <button id="btn-next-speech" type="button" class="next">
+          <span>つぎの おはなし</span>
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"/></svg>
         </button>
       </div>
-
-      <div class="px-5 py-2.5 border-b border-base-border bg-white flex items-center justify-between gap-2">
-        <div class="flex items-center gap-1.5">
-          <button
-            id="btn-crop-mode-freehand"
-            type="button"
-            class="px-3 py-1.5 rounded-full bg-iris-primary text-white text-xs font-maru font-bold transition-colors"
-          >
-            じゆうに かこむ
-          </button>
-          <button
-            id="btn-crop-mode-rect"
-            type="button"
-            class="px-3 py-1.5 rounded-full bg-base-surface text-slate-600 hover:bg-base-border text-xs font-maru font-medium transition-colors"
-          >
-            しかくで えらぶ
-          </button>
-        </div>
-        <button
-          id="btn-crop-reset"
-          type="button"
-          class="px-2.5 py-1 rounded-full text-xs font-maru text-slate-500 hover:text-iris-primary hover:bg-iris-soft transition-colors"
-        >
-          やりなおす
-        </button>
-      </div>
-
-      <div class="flex-1 p-4 checkerboard-bg flex items-center justify-center overflow-hidden select-none">
-        <canvas
-          id="crop-canvas"
-          class="max-w-full max-h-[52vh] rounded-xl shadow-sm touch-none cursor-crosshair"
-        ></canvas>
-      </div>
-
-      <div class="px-5 py-3.5 border-t border-base-border bg-white flex items-center justify-between gap-3">
-        <button
-          id="btn-cancel-crop"
-          type="button"
-          class="px-4 py-2 rounded-2xl bg-base-surface hover:bg-base-border text-slate-700 font-maru font-medium text-xs sm:text-sm transition-colors"
-        >
-          やめる
-        </button>
-        <button
-          id="btn-apply-crop"
-          type="button"
-          class="px-5 py-2 rounded-2xl bg-iris-primary hover:bg-iris-dark text-white font-maru font-bold text-xs sm:text-sm shadow-2xs transition-colors"
-        >
-          このかたちで きりぬく
-        </button>
+      <div class="speech-body"><div id="speech-text" aria-live="polite"></div></div>
+      <div class="speech-foot">
+        <div class="bar"><div id="auto-progress-bar"></div></div>
+        <span id="speech-hint-text">おすと つぎへ すすむよ</span>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- ==================== アプリケーションロジック ==================== -->
-  <script>
+  <section class="teach" aria-label="ことばを おしえる">
+    <div class="teach-head">
+      <h2 id="teach-title-text">イリスに ことばを おしえる</h2>
+      <span class="limit">ひらがな・5もじまで</span>
+    </div>
+    <form id="teach-form" novalidate>
+      <div class="field">
+        <input id="input-word" type="text" inputmode="text" maxlength="5" autocomplete="off" placeholder="れい：りんご、さんぽ" aria-label="おしえる ことば（ひらがな5もじまで）">
+        <span id="char-counter">0/5</span>
+      </div>
+      <div class="row2">
+        <select id="select-genre" aria-label="ことばの グループ"></select>
+        <button type="submit" class="go">おしえる</button>
+      </div>
+    </form>
+    <div class="feedback">
+      <p id="feedback-message">いみは かかなくて だいじょうぶ。ことばと グループだけで おぼえるよ。</p>
+      <button id="btn-sample-word" type="button" class="sample">+ おためしで 1ついれる</button>
+    </div>
+  </section>
+
+  <footer>おぼえた ことばは この ブラウザの なかに ほぞん されるよ</footer>
+</div>
+
+<!-- ことばちょう -->
+<div id="wordbook-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="wordbook-title">
+  <div class="sheet">
+    <div class="sheet-head">
+      <div style="display:flex;align-items:center">
+        <h2 id="wordbook-title">ことばちょう</h2>
+        <span id="modal-word-count" class="badge-n">0こ</span>
+      </div>
+      <button id="btn-close-wordbook" type="button" class="x" aria-label="ことばちょうを とじる">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="filterbar"><div id="genre-filter-bar"></div></div>
+    <div id="wordbook-list-container"></div>
+    <div class="sheet-foot">
+      <span id="wordbook-footer-hint">おぼえた ことばは おはなしにも でてくるよ</span>
+      <button id="btn-close-wordbook-bottom" type="button" class="btn-s">とじる</button>
+    </div>
+  </div>
+</div>
+
+<!-- きりぬき -->
+<div id="crop-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="crop-modal-title">
+  <div class="sheet" style="max-width:520px;max-height:92vh">
+    <div class="sheet-head">
+      <div>
+        <h2 id="crop-modal-title">キャラクターを きりぬく</h2>
+        <p class="sub">ゆび や マウスで なぞって かこむか、しかくで えらんでね</p>
+      </div>
+      <button id="btn-close-crop" type="button" class="x" aria-label="きりぬきを やめる">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="crop-tools">
+      <div class="seg">
+        <button id="btn-crop-mode-freehand" type="button" class="on">じゆうに かこむ</button>
+        <button id="btn-crop-mode-rect" type="button">しかくで えらぶ</button>
+      </div>
+      <button id="btn-crop-reset" type="button" class="btn-s">やりなおす</button>
+    </div>
+    <div class="crop-area"><canvas id="crop-canvas"></canvas></div>
+    <div class="crop-foot">
+      <button id="btn-cancel-crop" type="button" class="btn-m">やめる</button>
+      <button id="btn-apply-crop" type="button" class="btn-m main">このかたちで きりぬく</button>
+    </div>
+  </div>
+</div>
+
+<script>
     (function () {
       'use strict';
 
@@ -862,7 +663,6 @@
         btnCloseWordbookBottom: document.getElementById('btn-close-wordbook-bottom'),
         genreFilterBar: document.getElementById('genre-filter-bar'),
         wordbookListContainer: document.getElementById('wordbook-list-container'),
-        appNameHeader: document.getElementById('app-name-header'),
         speechSpeakerLabel: document.getElementById('speech-speaker-label'),
         characterNameInput: document.getElementById('character-name-input'),
         btnEditName: document.getElementById('btn-edit-name'),
@@ -916,7 +716,6 @@
       function updateCharacterNameUI() {
         const name = state.characterName;
         dom.speechSpeakerLabel.textContent = name;
-        dom.appNameHeader.textContent = `ことばのおへや - ${name}`;
         dom.teachTitleText.textContent = `${name}に ことばを おしえる`;
         dom.wordbookTitle.textContent = `${name}の ことばちょう`;
         dom.wordbookFooterHint.textContent = `おぼえた ことばは ${name}の おはなしにも でてくるよ。`;
@@ -949,22 +748,16 @@
         if (state.characterImage) {
           dom.characterImage.src = state.characterImage;
           dom.characterMover.classList.remove('hidden');
-          dom.roomDecorations.classList.remove('hidden');
           dom.characterPlaceholder.classList.add('hidden');
           dom.characterImageControls.classList.remove('hidden');
-          dom.characterStage.classList.remove('border-dashed');
-          dom.characterStage.classList.add('border-solid');
           dom.characterStage.title = 'クリックで しゃしんを かえる';
           startCharacterWalkLoop();
         } else {
           stopCharacterWalkLoop();
           dom.characterImage.removeAttribute('src');
           dom.characterMover.classList.add('hidden');
-          dom.roomDecorations.classList.add('hidden');
           dom.characterPlaceholder.classList.remove('hidden');
           dom.characterImageControls.classList.add('hidden');
-          dom.characterStage.classList.add('border-dashed');
-          dom.characterStage.classList.remove('border-solid');
           dom.characterStage.title = 'しゃしん・がぞうを えらぶ';
         }
       }
@@ -1077,12 +870,8 @@
 
       function updateCropModeButtons() {
         const isFree = state.crop.mode === 'freehand';
-        dom.btnCropModeFreehand.className = isFree
-          ? 'px-3 py-1.5 rounded-full bg-iris-primary text-white text-xs font-maru font-bold transition-colors'
-          : 'px-3 py-1.5 rounded-full bg-base-surface text-slate-600 hover:bg-base-border text-xs font-maru font-medium transition-colors';
-        dom.btnCropModeRect.className = !isFree
-          ? 'px-3 py-1.5 rounded-full bg-iris-primary text-white text-xs font-maru font-bold transition-colors'
-          : 'px-3 py-1.5 rounded-full bg-base-surface text-slate-600 hover:bg-base-border text-xs font-maru font-medium transition-colors';
+        dom.btnCropModeFreehand.classList.toggle('on', isFree);
+        dom.btnCropModeRect.classList.toggle('on', !isFree);
       }
 
       function setupCropCanvas() {
@@ -1419,7 +1208,6 @@
         dom.speechText.innerHTML = '';
         state.currentSentences.forEach((chunks, sIdx) => {
           const p = document.createElement('p');
-          if (sIdx > 0) p.className = 'mt-1.5';
           chunks.forEach((chunkText) => {
             const span = document.createElement('span');
             span.textContent = chunkText;
@@ -1454,7 +1242,6 @@
 
         dialogue.sentences.forEach((chunks, sIdx) => {
           const p = document.createElement('p');
-          if (sIdx > 0) p.className = 'mt-1.5';
           dom.speechText.appendChild(p);
 
           chunks.forEach((chunkText) => {
@@ -1532,14 +1319,16 @@
         state.autoPlayEnabled = !state.autoPlayEnabled;
         if (state.autoPlayEnabled) {
           dom.btnToggleAuto.textContent = 'ひとりごと: ON';
-          dom.statusDot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500';
+          dom.btnToggleAuto.classList.remove('off');
+          dom.statusDot.className = 'dot';
           if (!state.isSpeaking) {
             dom.statusText.textContent = 'かんがえちゅう…';
             scheduleNextAutoSpeech();
           }
         } else {
           dom.btnToggleAuto.textContent = 'ひとりごと: OFF';
-          dom.statusDot.className = 'w-1.5 h-1.5 rounded-full bg-slate-400';
+          dom.btnToggleAuto.classList.add('off');
+          dom.statusDot.className = 'dot off';
           if (!state.isSpeaking) {
             dom.statusText.textContent = 'おやすみちゅう';
           }
@@ -1558,18 +1347,13 @@
 
       function showFeedback(message, isError = false) {
         dom.feedbackMessage.textContent = message;
-        dom.feedbackMessage.className = isError
-          ? 'text-rose-600 font-maru font-medium'
-          : 'text-iris-primary font-maru font-medium';
+        dom.feedbackMessage.className = isError ? 'err' : 'ok';
       }
 
       function updateCharCounter() {
         const val = normalizeHiraganaInput(dom.inputWord.value);
         dom.charCounter.textContent = `${val.length}/5`;
-        dom.charCounter.className =
-          val.length > 5
-            ? 'absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-rose-500 select-none'
-            : 'absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400 select-none';
+        dom.charCounter.className = val.length > 5 ? 'over' : '';
       }
 
       function teachWord(rawWord, genreId) {
@@ -1673,10 +1457,7 @@
       function createFilterChip(genreId, label) {
         const btn = document.createElement('button');
         btn.type = 'button';
-        const isActive = state.selectedFilterGenre === genreId;
-        btn.className = isActive
-          ? 'px-3 py-1.5 rounded-full bg-iris-primary text-white text-xs font-maru font-bold shadow-2xs transition-colors'
-          : 'px-3 py-1.5 rounded-full bg-base-surface hover:bg-base-border text-slate-600 text-xs font-maru font-medium transition-colors';
+        btn.className = 'fchip' + (state.selectedFilterGenre === genreId ? ' on' : '');
         btn.textContent = label;
         btn.addEventListener('click', () => {
           state.selectedFilterGenre = genreId;
@@ -1696,46 +1477,40 @@
 
         if (filteredWords.length === 0) {
           const emptyDiv = document.createElement('div');
-          emptyDiv.className = 'py-12 text-center flex flex-col items-center justify-center text-slate-400';
-          emptyDiv.innerHTML = `
-            <p class="font-maru text-sm text-slate-500">まだ ことばが ないよ</p>
-            <p class="text-xs mt-1">まえの がめんから ひらがなの ことばを おしえてあげてね。</p>
-          `;
+          emptyDiv.className = 'empty';
+          emptyDiv.innerHTML = '<b>まだ ことばが ないよ</b>まえの がめんから ひらがなの ことばを おしえてあげてね。';
           dom.wordbookListContainer.appendChild(emptyDiv);
           return;
         }
 
         const grid = document.createElement('div');
-        grid.className = 'grid grid-cols-1 sm:grid-cols-2 gap-2.5';
+        grid.className = 'wgrid';
 
         filteredWords.forEach((wordObj) => {
           const card = document.createElement('div');
-          card.className =
-            'flex items-center justify-between p-3.5 rounded-2xl bg-white border border-base-border shadow-2xs hover:border-iris-light transition-colors';
+          card.className = 'wcard';
 
           const infoDiv = document.createElement('div');
-          infoDiv.className = 'flex items-center gap-2.5 min-w-0';
+          infoDiv.className = 'info';
 
           const wordSpan = document.createElement('span');
-          wordSpan.className = 'font-maru font-bold text-base text-slate-800 truncate';
+          wordSpan.className = 'w';
           wordSpan.textContent = wordObj.text;
 
           const genreBadge = document.createElement('span');
-          genreBadge.className =
-            'text-[11px] px-2.5 py-0.5 rounded-full bg-iris-soft text-iris-dark font-maru font-medium shrink-0';
+          genreBadge.className = 'g';
           genreBadge.textContent = getGenreLabel(wordObj.genreId);
 
           infoDiv.appendChild(wordSpan);
           infoDiv.appendChild(genreBadge);
 
           const actionsDiv = document.createElement('div');
-          actionsDiv.className = 'flex items-center gap-1 shrink-0';
+          actionsDiv.className = 'acts';
 
           const talkBtn = document.createElement('button');
           talkBtn.type = 'button';
           talkBtn.title = `「${wordObj.text}」の おはなしを きく`;
-          talkBtn.className =
-            'px-2.5 py-1 rounded-xl text-[11px] font-maru font-bold text-iris-primary hover:bg-iris-soft transition-colors';
+          talkBtn.className = 'act';
           talkBtn.textContent = 'おはなし';
           talkBtn.addEventListener('click', () => {
             closeWordbook();
@@ -1748,8 +1523,7 @@
           const delBtn = document.createElement('button');
           delBtn.type = 'button';
           delBtn.title = 'わすれる（けす）';
-          delBtn.className =
-            'px-2.5 py-1 rounded-xl text-[11px] font-maru font-medium text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors';
+          delBtn.className = 'act del';
           delBtn.textContent = 'けす';
 
           let confirmPending = false;
@@ -1759,13 +1533,11 @@
             if (!confirmPending) {
               confirmPending = true;
               delBtn.textContent = 'ほんとうに？';
-              delBtn.className =
-                'px-2.5 py-1 rounded-xl text-[11px] font-maru font-bold text-white bg-rose-500 transition-colors';
+              delBtn.className = 'act del confirm';
               confirmTimer = setTimeout(() => {
                 confirmPending = false;
                 delBtn.textContent = 'けす';
-                delBtn.className =
-                  'px-2.5 py-1 rounded-xl text-[11px] font-maru font-medium text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors';
+                delBtn.className = 'act del';
               }, 2500);
             } else {
               clearTimeout(confirmTimer);
@@ -2032,6 +1804,7 @@
 
       window.addEventListener('DOMContentLoaded', initApp);
     })();
-  </script>
+  
+</script>
 </body>
 </html>
