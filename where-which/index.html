@@ -240,6 +240,18 @@ body.kb .app{min-height:0}
 @keyframes ncBreathe{0%,100%{transform:scale(1,1)}50%{transform:scale(1.025,.972)}}
 @keyframes ncSway{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(4deg)}}
 
+/* ===== げんが（ローディングがめん風） ===== */
+#artov{position:fixed;inset:0;z-index:75;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;cursor:pointer;
+  background:radial-gradient(ellipse at 50% 45%,#faf3e3 0%,#f0e5cd 75%,#e8dabb 100%);opacity:0;pointer-events:none;transition:opacity .9s ease}
+#artov.on{opacity:1;pointer-events:auto}
+#artov img{max-width:90vw;max-height:64vh;mix-blend-mode:multiply;transform:scale(.96);transition:transform 7s ease-out}
+#artov.on img{transform:scale(1)}
+.art-dots{display:flex;gap:9px;height:10px}
+.art-dots i{width:8px;height:8px;border-radius:50%;background:#b39a78;opacity:.25;animation:artDot 1.2s ease-in-out infinite}
+.art-dots i:nth-child(2){animation-delay:.2s}.art-dots i:nth-child(3){animation-delay:.4s}
+@keyframes artDot{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-4px)}}
+.art-hint{font-size:11px;color:#a58f6c;letter-spacing:.1em}
+
 /* ===== はじまり（キャラづくり・ナレーション・ねんね・三日後） ===== */
 body:not(.ph-talk) .level,body:not(.ph-talk) .teach,body:not(.ph-talk) #speech-box,body:not(.ph-talk) footer,
 body:not(.ph-talk) .status,body:not(.ph-talk) .toggle,body:not(.ph-talk) .controls,body:not(.ph-talk) header .chip-btn{display:none!important}
@@ -455,6 +467,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
 </div>
 <div id="intro" class="ov"><div id="intro-text"></div></div>
 <div id="blackout" class="ov"><div id="blackout-text">三日後..</div></div>
+<div id="artov" aria-hidden="true"><img id="art-img" alt=""><div class="art-dots"><i></i><i></i><i></i></div><div class="art-hint">タップで とじるよ</div></div>
 <button id="skip-btn" type="button">とばす ›</button>
 
 <div id="levelup" class="levelup hidden" role="status" aria-live="polite">
@@ -1255,6 +1268,8 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         hold: false,
         emoteTimer: null,
         phase: 'talk',
+        artOn: false,
+        artTimer: null,
         sleepStart: 0,
         napping: false,
         zzzTimer: null,
@@ -1352,6 +1367,8 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         topicCount: document.getElementById('topic-count'),
         characterEmote: document.getElementById('character-emote'),
         characterSvg: document.getElementById('character-svg'),
+        artov: document.getElementById('artov'),
+        artImg: document.getElementById('art-img'),
         setupPrev1: document.getElementById('setup-prev1'),
         setupDefault: document.getElementById('setup-default'),
         setup: document.getElementById('setup'),
@@ -1509,6 +1526,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
           renderWordbookFilterBar();
           renderWordbookList();
         }
+        if (Math.random() < 0.6) setTimeout(showArt, 12000);
         dom.levelupNum.textContent = `Lv.${to}`;
         dom.levelupGenres.textContent = added.length > 0 ? `あたらしい グループ：${added.join('・')}` : '';
         dom.levelup.classList.remove('hidden');
@@ -1560,6 +1578,61 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         }
         state.pending = null;
         grantExp('continue');
+      }
+
+      // ===== げんが：なにかの ひょうしに でてくる、ローディングがめん風の いちまい =====
+      const ART_LIST = ['main', 'rain', 'sprout', 'swim', 'forest', 'eraser', 'growth', 'king'];
+      const ART_SEEN_KEY = 'iris_art_seen_v1';
+      const ART_SHOW_MS = 7000;
+
+      function pickArt() {
+        let seen = [];
+        try { seen = JSON.parse(localStorage.getItem(ART_SEEN_KEY) || '[]'); } catch (err) { seen = []; }
+        let rest = ART_LIST.filter((a) => !seen.includes(a));
+        if (rest.length === 0) { rest = ART_LIST.slice(); seen = []; }
+        const a = rest[Math.floor(Math.random() * rest.length)];
+        seen.push(a);
+        try { localStorage.setItem(ART_SEEN_KEY, JSON.stringify(seen)); } catch (err) { /* ok */ }
+        return a;
+      }
+
+      function artCanShow() {
+        return state.phase === 'talk' && !state.artOn && !state.isSpeaking && !state.hold && !state.pending && !state.levelUpQueue
+          && !userIsBusy() && dom.levelup.classList.contains('hidden');
+      }
+
+      function showArt() {
+        if (!artCanShow()) return;
+        state.artOn = true;
+        const im = new Image();
+        im.onload = () => {
+          if (state.phase !== 'talk') { state.artOn = false; return; }
+          stopAutoTimers();
+          dom.artImg.src = im.src;
+          dom.artov.classList.add('on');
+          clearTimeout(state.artTimer);
+          state.artTimer = setTimeout(closeArt, ART_SHOW_MS);
+        };
+        im.onerror = () => { state.artOn = false; };
+        im.src = 'art/' + pickArt() + '.jpg';
+      }
+
+      function closeArt() {
+        clearTimeout(state.artTimer);
+        if (!dom.artov.classList.contains('on')) { state.artOn = false; return; }
+        dom.artov.classList.remove('on');
+        setTimeout(() => {
+          state.artOn = false;
+          if (state.phase === 'talk' && !state.isSpeaking) scheduleNextAutoSpeech();
+        }, 1000);
+      }
+
+      function scheduleArtChecks() {
+        // ときどき（2〜5分に いちど）、しずかな ときだけ
+        setTimeout(() => {
+          showArt();
+          scheduleArtChecks();
+        }, (120 + Math.random() * 180) * 1000);
       }
 
       // ===== はじまりの流れ：キャラづくり → なまえ → ナレーション → ねんね → 三日後 → かいわ =====
@@ -1725,6 +1798,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         dom.blackout.classList.remove('on');
         await wait(1500);
         triggerNextSpeech({ preferredTypes: ['あいさつ'] });
+        setTimeout(showArt, 16000);
       }
 
       function skipPhase() {
@@ -1753,6 +1827,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         });
         dom.intro.addEventListener('click', () => { if (state.introAdvance) state.introAdvance(); });
         dom.skipBtn.addEventListener('click', skipPhase);
+        dom.artov.addEventListener('click', closeArt);
       }
 
       function startPhaseFlow() {
@@ -3500,6 +3575,8 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         startPhaseFlow();
 
         if (state.phase === 'talk') triggerNextSpeech({ preferredTypes: ['あいさつ'] });
+        scheduleArtChecks();
+        if (state.phase === 'talk' && Math.random() < 0.3) setTimeout(showArt, 14000);
       }
 
       window.addEventListener('DOMContentLoaded', initApp);
