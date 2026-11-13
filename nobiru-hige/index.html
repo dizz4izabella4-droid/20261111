@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>伸びるヒゲ</title>
+<title>Stretchy Mustache</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
   body {
@@ -120,25 +120,25 @@
 </head>
 <body>
 <div id="wrap">
-  <div id="top"><button id="resetBtn" type="button">詰み（リセット）</button></div>
+  <div id="top"><button id="resetBtn" type="button">Stuck? (Reset)</button></div>
   <div id="stage">
     <canvas id="game" width="512" height="448"></canvas>
     <div id="start">
       <div class="t">NOBIRU HIGE</div>
-      <div class="s">焼かないと菌は増える</div>
+      <div class="s">Burn it, or the fungus keeps spreading</div>
       <button id="startBtn" type="button">START</button>
-      <div class="h">← → ：あるく　スペース：ジャンプ<br>スマホは画面下のボタン</div>
+      <div class="h">← → : Walk　Space: Jump<br>On mobile, use the stick and buttons at the bottom</div>
     </div>
     <div id="endov">
       <div class="t">BAD END</div>
-      <div class="s">焼いても、土の中の菌は 消えなかった…<br>地球は、菌の星になった。</div>
-      <button id="endBtn" type="button">もういちど</button>
+      <div class="s">Even after the fire, the fungus in the soil never died…<br>The Earth became a planet of fungus.</div>
+      <button id="endBtn" type="button">Play again</button>
     </div>
   </div>
   <div id="pad">
     <div id="stick"><div id="stick-knob"></div></div>
     <div class="pad-g">
-      <div class="pb fire" id="pad-fire">火</div>
+      <div class="pb fire" id="pad-fire">FIRE</div>
       <div class="pb jump" id="pad-jump">▲</div>
     </div>
   </div>
@@ -1312,18 +1312,18 @@ function drawBanners() {
   ctx.textAlign = 'center';
   if (phase === 'flower') {
     ctx.font = `bold 18px ${jp}`;
-    txt('しろい花が あらわれた！', W / 2, 84, '#fff', '#000');
+    txt('A white flower appeared!', W / 2, 84, '#fff', '#000');
   } else if (phase === 'fire' && transform) {
     ctx.font = 'bold 26px "Courier New", monospace';
     txt('HENSHIN!', W / 2, 90, '#ffec27', '#a0301c');
   } else if (phase === 'fire' && blink && firing === 0 && enemies.length > 0) {
     ctx.font = `bold 16px ${jp}`;
-    txt('ほのお：Xキー ／ 火ボタン', W / 2, 84, '#ffec27', '#a0301c');
+    txt('Flame: X key / FIRE button', W / 2, 84, '#ffec27', '#a0301c');
   } else if (phase === 'clear' && phaseT > 8 && phaseT < 330) {
     ctx.font = 'bold 38px "Courier New", monospace';
     txt('STAGE CLEAR!', W / 2, 130, ['#ffec27', '#ff8c12', '#ff6090', '#60e0ff'][Math.floor(phaseT / 6) % 4], '#000');
     ctx.font = `bold 16px ${jp}`;
-    txt('ぜんしょう！', W / 2, 158, '#fff', '#000');
+    txt('Burned to the ground!', W / 2, 158, '#fff', '#000');
   }
   ctx.textAlign = 'left';
 }
@@ -1510,7 +1510,7 @@ function drawSpace() {
     ctx.font = `bold 18px ${jp}`;
     ctx.textAlign = 'center';
     ctx.globalAlpha = Math.min(1, (spaceT - 50) / 20, (210 - spaceT) / 20);
-    txt('…数日後。', W / 2, H - 36, '#fff', '#000');
+    txt('…A few days later.', W / 2, H - 36, '#fff', '#000');
     ctx.globalAlpha = 1;
     ctx.textAlign = 'left';
   }
