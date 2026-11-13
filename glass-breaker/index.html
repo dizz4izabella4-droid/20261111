@@ -145,7 +145,7 @@ body {
 }
 .stick {
   position: absolute;
-  left: 10cqw;
+  left: 4cqw;
   top: 4.5cqw;
   width: 27cqw;
   height: 27cqw;
@@ -1081,6 +1081,160 @@ function drawShutter(k) {
   if (u > 0.02 && u < 1) R(x, bot, 6, 2, 'rgba(255,255,255,0.35)');
 }
 
+/* ================= 新キャラクター描画(約1.3倍・多色) ================= */
+var SC = 1.3, SCL = 1, SCX = 0, SCY = 0;
+function R(x, y, w, h, c) {
+  ctx.fillStyle = c;
+  if (SCL !== 1) {
+    var x0 = Math.round(SCX + (x - SCX) * SCL), y0 = Math.round(SCY + (y - SCY) * SCL), x1 = Math.round(SCX + (x + w - SCX) * SCL), y1 = Math.round(SCY + (y + h - SCY) * SCL);
+    ctx.fillRect(x0, y0, Math.max(1, x1 - x0), Math.max(1, y1 - y0)); return;
+  }
+  ctx.fillRect(x, y, w, h);
+}
+function pline(x0, y0, x1, y1, col, test) {
+  if (SCL !== 1) { var a = SCX + (x0 - SCX) * SCL, b = SCY + (y0 - SCY) * SCL, c = SCX + (x1 - SCX) * SCL, d = SCY + (y1 - SCY) * SCL; x0 = a; y0 = b; x1 = c; y1 = d; }
+  x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
+  var dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1, e = dx + dy, n = 0, sc = SCL !== 1;
+  ctx.fillStyle = col;
+  for (;;) {
+    if (!test || test(x0, y0)) ctx.fillRect(x0, y0, sc && n % 3 === 0 ? 2 : 1, sc && n % 3 === 1 ? 2 : 1);
+    if ((x0 === x1 && y0 === y1) || n++ > 500) break;
+    var e2 = 2 * e;
+    if (e2 >= dy) { e += dy; x0 += sx; }
+    if (e2 <= dx) { e += dx; y0 += sy; }
+  }
+}
+function withScale(px, F, s, fn) {
+  var a = SCL, b = SCX, c = SCY; SCL = s; SCX = px; SCY = F;
+  try { fn(); } finally { SCL = a; SCX = b; SCY = c; }
+}
+/* 太い線(輪郭→塗り→ハイライト→影) */
+function tline(x0, y0, x1, y1, w, c) {
+  x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
+  var dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1, e = dx + dy, n = 0, h = w >> 1;
+  ctx.fillStyle = c;
+  for (;;) {
+    ctx.fillRect(x0 - h, y0 - h, w, w);
+    if ((x0 === x1 && y0 === y1) || n++ > 500) break;
+    var e2 = 2 * e;
+    if (e2 >= dy) { e += dy; x0 += sx; }
+    if (e2 <= dx) { e += dx; y0 += sy; }
+  }
+}
+function limb(pts, w, P, fa) {
+  var i, a, b, hor;
+  for (i = 0; i < pts.length - 1; i++) tline(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], w + 2, P.o);
+  for (i = 0; i < pts.length - 1; i++) tline(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], w, P.b);
+  for (i = 0; i < pts.length - 1; i++) {
+    a = pts[i]; b = pts[i + 1]; hor = Math.abs(b[0] - a[0]) > Math.abs(b[1] - a[1]);
+    var ox = hor ? 0 : -fa, oy = hor ? -1 : 0;
+    tline(a[0] + ox, a[1] + oy, b[0] + ox, b[1] + oy, 1, P.h);
+    tline(a[0] - ox, a[1] - oy, b[0] - ox, b[1] - oy, 1, P.d);
+  }
+}
+function ikElbow(sx, sy, hx, hy, L1, L2, dir) {
+  var dx = hx - sx, dy = hy - sy, d = Math.hypot(dx, dy) || 1, dd = Math.min(d, L1 + L2 - 0.01), a = (L1 * L1 - L2 * L2 + dd * dd) / (2 * dd), h = Math.sqrt(Math.max(0, L1 * L1 - a * a)), ux = dx / d, uy = dy / d, nx = -uy, ny = ux;
+  if (ny * dir < 0) { nx = -nx; ny = -ny; }
+  return [sx + ux * a + nx * h, sy + uy * a + ny * h];
+}
+var PAL = {
+  navy: { o: '#0d111d', d: '#1b2340', b: '#2b3760', m: '#37457a', h: '#4d5f9c', hh: '#7184c0' },
+  black: { o: '#06070b', d: '#101219', b: '#1a1d29', m: '#252a3a', h: '#363d55', hh: '#555f80' },
+  trou: { o: '#07080c', d: '#10131c', b: '#1a2033', h: '#2b3552' },
+  skin: ['#f6d3b4', '#ffe6cf', '#dcaa82', '#b98660', '#f09a8a']
+};
+function drawHead(cx, hy, fa, o) {
+  var sk = o.skin || PAL.skin, hr = o.hair || ['#120e0b', '#2a1f18', '#4a382b'], dx, dy, xp, col, r2, hairy, k;
+  for (dy = -5; dy <= 5; dy++) for (dx = -5; dx <= 5; dx++) {
+    r2 = dx * dx + dy * dy; if (r2 > 27) continue;
+    xp = dx * fa;
+    hairy = o.hs === 'bald' ? false : (dy <= -3 || (xp <= -2 && dy <= 1) || (dy === -2 && Math.abs(dx) >= 4) || (o.hs === 'long' && xp <= -3 && dy <= 3));
+    if (hairy) col = (dy <= -4 && xp >= -1 && xp <= 2) ? hr[2] : (xp <= -3 || dy >= 0 ? hr[0] : hr[1]);
+    else {
+      col = sk[0];
+      if (xp <= -3 || (dy >= 3 && xp <= 1)) col = sk[2]; if (dy >= 4) col = sk[3];
+      if (xp >= 1 && xp <= 3 && dy === -1 && !o.mask) col = sk[1];
+      if (xp === 3 && dy === 2) col = sk[4];
+    }
+    if (r2 > 21) col = hairy ? hr[0] : (o.mask ? '#9aa0aa' : sk[3]);
+    R(cx + dx, hy + dy, 1, 1, col);
+  }
+  function hp(x, y, w, h, c) { R(cx + fa * x - (fa < 0 ? w - 1 : 0), hy + y, w, h, c); }
+  hp(-2, 0, 2, 2, o.mask ? '#c9c9c2' : sk[2]); /* 耳 */
+  if (o.hs === 'knot') { hp(-1, -8, 3, 3, hr[0]); hp(0, -9, 1, 1, hr[2]); hp(-1, -6, 3, 1, o.tilak || hr[1]); }
+  if (o.hs === 'spiky') { hp(-3, -7, 2, 2, hr[0]); hp(0, -8, 2, 3, hr[1]); hp(2, -7, 2, 2, hr[0]); hp(-5, -5, 2, 2, hr[1]); hp(4, -5, 2, 2, hr[0]); if (o.hl) { hp(0, -8, 1, 1, o.hl); hp(-3, -7, 1, 1, o.hl); } }
+  if (o.mask) {
+    hp(-2, -4, 7, 8, '#f4f4ee'); hp(-2, -4, 1, 8, '#cfd0c8'); hp(-2, 3, 7, 1, o.mc || '#2f62c8'); hp(-2, -5, 1, 2, o.mc || '#2f62c8'); hp(4, -5, 1, 2, o.mc || '#2f62c8');
+    hp(1, -1, 4, 1, '#0e0c0b'); hp(3, -1, 1, 1, '#ff4a3a'); hp(2, 1, 1, 1, '#c8cbd2'); hp(3, 2, 1, 1, '#c8cbd2'); hp(0, 0, 4, 1, 'rgba(0,0,0,0.12)');
+    return;
+  }
+  /* 目・眉・鼻・口 */
+  hp(2, -1, 3, 2, '#ffffff'); hp(4, -1, 1, 2, o.eye || '#1c140f'); hp(3, 0, 1, 1, o.eye2 || '#3a2a20');
+  if (o.angry) { hp(1, -3, 2, 1, hr[0]); hp(3, -2, 2, 1, hr[0]); hp(2, -2, 1, 1, hr[0]); } else hp(2, -3, 3, 1, hr[1]);
+  hp(5, 1, 1, 2, sk[2]);
+  hp(3, 3, 2, 1, o.fang ? '#ffffff' : '#a5483c'); if (o.fang) { hp(3, 4, 1, 1, '#ffffff'); hp(5, 3, 1, 1, '#ffffff'); }
+  if (o.mouth2) hp(3, 3, 3, 1, '#7a2e26');
+  if (o.stache) hp(3, 2, 3, 1, hr[0]);
+  if (o.stub) for (k = 0; k < 6; k++) hp(1 + k % 3, 3 + (k >> 1) % 2 + 1, 1, 1, 'rgba(60,40,30,0.5)');
+  if (o.glasses) {
+    hp(2, -2, 4, 1, '#d7dde6'); hp(2, 1, 4, 1, '#d7dde6'); hp(2, -2, 1, 4, '#d7dde6'); hp(5, -2, 1, 4, '#d7dde6');
+    hp(3, -1, 2, 2, o.lens || '#a8d8f0'); hp(-2, -1, 4, 1, '#aeb6c2');
+  }
+  if (o.band) { hp(-4, -3, 9, 1, o.band); hp(-4, -2, 2, 1, o.band); }
+}
+function drawTorso(m) {
+  var px = m.px, fa = m.fa, y0 = m.top, th = m.th, ux = m.ux, P = m.suit, i, x, u, hw, c0, col, rel, y, cc;
+  for (i = 0; i < th; i++) {
+    u = i / (th - 1); hw = Math.round(m.hw - (m.hw - m.hwB) * u) - (i === 0 ? 2 : i === 1 ? 1 : 0); c0 = px + Math.round(ux * (1 - u)); y = y0 + i;
+    for (x = -hw; x <= hw; x++) {
+      rel = x * fa;
+      if (x === -hw || x === hw) col = P.o; else if (rel <= -hw + 1) col = P.d; else if (rel <= -hw + 3) col = P.b; else if (rel >= hw - 1) col = P.h; else if (rel >= hw - 3) col = P.m; else col = P.b;
+      if (i === 0 && x !== -hw && x !== hw) col = P.h;
+      if (i >= th - 2) col = (x === -hw || x === hw) ? P.o : P.d;
+      R(c0 + x, y, 1, 1, col);
+    }
+    if (i === 6 || i === th - 5) R(c0 - hw + 1, y, 2, 1, P.o);
+  }
+  cc = px + Math.round(ux * (1 - 3 / (th - 1))) + fa;
+  var T = m.tie || { d: '#6c1522', b: '#8e1f2f', h: '#b02a3d', s: '#d85a6a' };
+  R(cc - 3, y0, 7, 1, '#f6f6f0');
+  for (i = 1; i <= 6; i++) { var hv = 3 - (i >> 1); R(cc - hv, y0 + i, hv * 2 + 1, 1, '#f6f6f0'); R(cc - hv, y0 + i, 1, 1, '#cfd2da'); }
+  pline(cc - 4, y0 + 1, cc - 1, y0 + 10, P.hh); pline(cc + 4, y0 + 1, cc + 1, y0 + 10, P.o);
+  R(cc - 1, y0 + 2, 3, 2, T.h); R(cc - 1, y0 + 3, 3, 1, T.b);
+  for (i = 4; i <= 13; i++) { var tw = i < 11 ? 3 : (i < 13 ? 2 : 1); R(cc - 1 + (tw === 1 ? 1 : 0), y0 + i, tw, 1, T.b); R(cc - 1, y0 + i, 1, 1, T.d); if (i < 11) R(cc + 1, y0 + i, 1, 1, T.h); if (i % 3 === 0 && i < 12) R(cc, y0 + i, 1, 1, T.s); }
+  var by = y0 + th - 4;
+  R(cc + fa * 2 - 1, y0 + 10, 2, 2, '#0a0c12'); R(cc + fa * 2 - 1, y0 + 10, 1, 1, '#5a6890'); R(cc + fa * 2 - 1, y0 + 14, 2, 2, '#0a0c12'); R(cc + fa * 2 - 1, y0 + 14, 1, 1, '#5a6890');
+  var pk = cc - fa * 5 - (fa > 0 ? 0 : 1); R(pk, y0 + 7, 3, 1, P.h); R(pk, y0 + 6, 2, 1, '#f6f6f0'); if (m.pocket) R(pk + 1, y0 + 6, 1, 1, m.pocket);
+  var hwb = Math.round(m.hwB);
+  R(px + Math.round(ux * 0.1) - hwb + 1, by, hwb * 2 - 1, 2, '#08090e'); R(cc - 1, by, 3, 2, '#d9c46a'); R(cc, by, 1, 1, '#fff2a8');
+}
+/* 人型を描く。m: px, F, fa, top(胴上端y), th(胴の高さ), hy(頭中心y), ux(上端の横ずれ), hw, hwB, suit, tie, head{}, legs:[{hx,hy,fx,fy,kx,ky}], A,B(手の絶対座標), glove */
+function drawMan(m) {
+  var px = m.px, fa = m.fa, P = m.suit, i, L, sleeve = m.sleeve || P, sh = [px + m.ux - fa * 2 + Math.round(m.ux * 0.0), m.top + 3], sh2 = [px + m.ux + fa * 3, m.top + 3];
+  for (i = 0; i < m.legs.length; i++) {
+    L = m.legs[i];
+    limb([[L.hx, L.hy], [L.kx, L.ky], [L.fx, L.fy]], 4, PAL.trou, fa);
+    var fx0 = fa > 0 ? L.fx - 2 : L.fx - 4;
+    R(fx0, L.fy - 2, 6, 3, '#06070a'); R(fx0 + (fa > 0 ? 2 : 1), L.fy - 2, 3, 1, '#555e72'); R(fx0, L.fy - 2, 6, 1, '#161922'); R(fx0 + (fa > 0 ? 4 : 0), L.fy - 2, 1, 1, '#8b95aa'); R(fx0, L.fy + 1, 6, 1, '#000');
+  }
+  function arm(S, H, back) {
+    if (!H) return;
+    var SK = m.skin || PAL.skin, sl = back ? { o: sleeve.o, d: sleeve.o, b: sleeve.d, h: sleeve.b } : sleeve, E = ikElbow(S[0], S[1], H[0], H[1], 9.5, 9.5, 1);
+    limb([S, E, H], 4, sl, fa);
+    var dx = H[0] - E[0], dy = H[1] - E[1], dd = Math.hypot(dx, dy) || 1, ux = dx / dd, uy = dy / dd;
+    R(Math.round(H[0] - ux * 3), Math.round(H[1] - uy * 3), 2, 2, '#f6f6f0'); R(Math.round(H[0] - ux * 3), Math.round(H[1] - uy * 3), 1, 1, '#cfd2da');
+    if (m.glove) { var g = m.glove; R(H[0] - 3, H[1] - 3, 6, 6, g[0]); R(H[0] - 3, H[1] - 3, 6, 1, g[1]); R(H[0] - 3, H[1] + 2, 6, 1, g[2]); R(H[0] - 2, H[1] - 2, 2, 2, g[3]); R(H[0] - 3, H[1] - 3, 1, 6, g[1]); }
+    else { R(H[0] - 2, H[1] - 2, 4, 4, SK[0]); R(H[0] - 2, H[1] + 1, 4, 1, SK[2]); R(H[0] - 2, H[1] - 2, 4, 1, SK[1]); R(H[0] + (fa > 0 ? 1 : -2), H[1] - 1, 1, 2, SK[2]); }
+  }
+  if (!m.armsLater) { arm(sh, m.B, true); }
+  drawTorso(m);
+  if (!m.armsLater) arm(sh2, m.A, false);
+  R(m.px + m.ux - 2, m.top - 2, 4, 3, (m.skin || PAL.skin)[2]);
+  var hcx = px + Math.round(m.ux) + fa + (m.hxo || 0);
+  drawHead(hcx, m.hy, fa, m.head || {});
+  m.out = { hcx: hcx, sh: sh, sh2: sh2 };
+}
+
 /* ---------- キラッ(メガネと革靴) ---------- */
 var GL = { g: { age: -1, wait: 1.6, dur: 0.34 }, s: { age: -1, wait: 3.4, dur: 0.3 } };
 function updGlint(dt) {
@@ -1128,6 +1282,7 @@ function swingPose(phi, lean, sw, gyx) {
 function poseAt(t) {
   var q0 = poseAt0(t);
   if (pl.kind === 'full' && pl.reach > 1) { q0.tx *= pl.reach; q0.ty *= pl.reach; q0.gx += (pl.reach - 1) * 4; }
+  q0.tx *= SC; q0.ty *= SC;
   return q0;
 }
 function poseAt0(t) {
@@ -1139,7 +1294,14 @@ function poseAt0(t) {
   u = clamp((t - tf) / P.rec, 0, 1);
   return mixPose(swingPose(P.p2, P.lean1, P.sw * 0.7, P.gyf), readyPose(), u * u * (3 - 2 * u));
 }
+function hands0(P) {
+  return { x: Math.round(pl.x) + pl.face * (P.gx + 0.6 * (P.lean || 0)), y: Math.round(pl.z) - 25 + P.gy - Math.round(pl.air || 0) - (pl.moving && Math.sin(pl.ph * 2) > 0 ? 1 : 0) };
+}
 function hands(P) {
+  var h = hands0(P), px = Math.round(pl.x), F = Math.round(pl.z);
+  return { x: px + (h.x - px) * SC, y: F + (h.y - F) * SC };
+}
+function handsOld(P) {
   return { x: Math.round(pl.x) + pl.face * (P.gx + 0.6 * (P.lean || 0)), y: Math.round(pl.z) - 25 + P.gy - Math.round(pl.air || 0) - (pl.moving && Math.sin(pl.ph * 2) > 0 ? 1 : 0) };
 }
 /* バットの点(x, y)に当たる物。同じ奥行き(dz以内)で、高さが合うものだけ */
@@ -1280,7 +1442,7 @@ function drawCut() {
     return;
   }
   if (pl.cut === 'grip') {
-    var RP = readyPose(), H = hands(RP), rt = [H.x + f * RP.tx, H.y + RP.ty];
+    var RP = readyPose(), H = hands0(RP), rt = [H.x + f * RP.tx, H.y + RP.ty];
     var hx = hb[0] + (H.x - hb[0]) * e, hyy = hb[1] + (H.y - hb[1]) * e;
     batLine(hx, hyy, tip[0] + (rt[0] - tip[0]) * e, tip[1] + (rt[1] - tip[1]) * e, 1);
     arm(sB[0], sB[1], hx, hyy, true);
@@ -1312,7 +1474,8 @@ function shoe(x, y, f) {
   R(f > 0 ? x0 + 2 : x0 + 1, y - 1, 1, 1, '#a9b4c4'); R(f > 0 ? x0 + 1 : x0 + 2, y - 1, 1, 1, '#4a5262');
 }
 /* 後ろ姿(赤ちゃんを抱いて、窓の外の花火を見る) */
-function drawFigureBack() {
+function drawFigureBack() { withScale(Math.round(pl.x), Math.round(pl.z), SC, drawFigureBack0); }
+function drawFigureBack0() {
   var px = Math.round(pl.x), F = Math.round(pl.z), hip = F - 13, y0 = F - 27, th = hip - y0 + 1, hy = F - 31, i, x, dx, dy;
   R(px - 6, F + 1, 13, 1, 'rgba(0,0,0,0.38)'); R(px - 4, F + 2, 9, 1, 'rgba(0,0,0,0.26)');
   leg(px - 2, hip, px - 2, F); leg(px + 1, hip, px + 1, F);
@@ -1343,52 +1506,32 @@ function drawFigureBack() {
 function drawFigure() {
   if (pl.back) { drawFigureBack(); return; }
   var P = pl.pose, f = pl.face, px = Math.round(pl.x), F0 = Math.round(pl.z), F = F0 - Math.round(pl.air || 0), moving = pl.moving, bob = moving && Math.sin(pl.ph * 2) > 0 ? 1 : 0;
-  var lean = Math.round(P.lean || 0), ux = lean * f, sw = P.sw || 0;
-  var hip = F - 13 - bob, y0 = F - 27 - bob, th = hip - y0 + 1, hy = F - 31 - bob, cx = px + ux, i, x, dx, dy;
-  R(px - 6, F0 + 1, 13, 1, 'rgba(0,0,0,0.38)'); R(px - 4, F0 + 2, 9, 1, 'rgba(0,0,0,0.26)');
-  var f1x = px + 2, f2x = px - 2, f1y = F, f2y = F;
+  var lean = Math.round((P.lean || 0) * SC), ux = lean * f, sw = P.sw || 0;
+  var hip = F - 17 - bob, y0 = F - 35 - bob, th = hip - y0 + 1, hy = F - 42 - bob, cx = px + ux;
+  var sh0 = Math.round(8 * SC);
+  R(px - 8, F0 + 1, 17, 1, 'rgba(0,0,0,0.38)'); R(px - 6, F0 + 2, 13, 1, 'rgba(0,0,0,0.26)'); R(px - 4, F0 + 3, 9, 1, 'rgba(0,0,0,0.14)');
+  var f1x = px + 3, f2x = px - 3, f1y = F, f2y = F;
   if (sw > 0.02) {
-    f1x = px + f * Math.round(2 + 3 * sw); f2x = px - f * Math.round(2 + 4 * sw);
-    if (sw < 0.95 && sw > 0.62) f2y = F - 1;
+    f1x = px + f * Math.round(3 + 4 * sw); f2x = px - f * Math.round(3 + 5 * sw);
+    if (sw < 0.95 && sw > 0.62) f2y = F - 2;
   } else if (moving) {
     var st = Math.sin(pl.ph), cs = Math.cos(pl.ph);
-    f1x = px + Math.round(st * 4); f2x = px - Math.round(st * 4);
-    f1y = F - Math.max(0, Math.round(cs * 2)); f2y = F - Math.max(0, Math.round(-cs * 2));
+    f1x = px + Math.round(st * 5); f2x = px - Math.round(st * 5);
+    f1y = F - Math.max(0, Math.round(cs * 3)); f2y = F - Math.max(0, Math.round(-cs * 3));
   }
-  leg(px, hip, f1x, f1y); leg(px, hip, f2x, f2y);
-  shoe(f1x, f1y, f); shoe(f2x, f2y, f);
-  function cxr(k) { return px + Math.round(ux * (1 - k / (th - 1))); }
-  for (i = 0; i < th; i++) {
-    var hw = Math.round(4.4 - 2.2 * (i / (th - 1))), c0 = cxr(i), y = y0 + i;
-    for (x = -hw; x <= hw; x++) {
-      var col = (x === -hw || x === hw) ? '#151a2b' : ((x & 1) ? '#303c5c' : '#2a3552');
-      if (i === 0 && x !== -hw && x !== hw) col = '#44527c';
-      if (i === th - 1) col = '#1b2238';
-      R(c0 + x, y, 1, 1, col);
-    }
-  }
-  R(cxr(0) - 1, y0, 3, 1, '#f4f4ee');
-  R(cxr(1) - 1, y0 + 1, 3, 1, '#f4f4ee'); R(cxr(1), y0 + 1, 1, 1, '#a42537');
-  for (i = 2; i <= 9; i++) {
-    R(cxr(i), y0 + i, 1, 1, i === 9 ? '#6c1522' : (i % 3 === 0 ? '#b02a3d' : '#8e1f2f'));
-    if (i <= 3) { R(cxr(i) - 1, y0 + i, 1, 1, '#f4f4ee'); R(cxr(i) + 1, y0 + i, 1, 1, '#f4f4ee'); }
-  }
-  for (i = 2; i <= 8; i++) { R(cxr(i) - 2, y0 + i, 1, 1, '#4d5d8c'); R(cxr(i) + 2, y0 + i, 1, 1, '#4d5d8c'); }
-  R(cxr(11), y0 + 11, 1, 1, '#0e1220');
-  R(cxr(3) + 3, y0 + 3, 1, 1, '#ffffff');
-  for (dy = -3; dy <= 3; dy++) for (dx = -3; dx <= 3; dx++) if (dx * dx + dy * dy <= 9) {
-    var hair = dy <= -2 || (dy === -1 && Math.abs(dx) >= 3) || (dx * f <= -2 && dy <= 0);
-    R(cx + dx, hy + dy, 1, 1, hair ? '#1d1612' : (dx * f <= -2 ? '#e4b992' : '#f3cfae'));
-  }
-  R(cx - f, hy - 3, 1, 1, '#54402f'); R(cx, hy - 3, 1, 1, '#3d2e22');
-  var lensCol = glintA(GL.g) > 0.5 ? '#ffffff' : '#a8d8f0', SILV = '#d7dde6';
-  R(cx + f * 2, hy - 1, 1, 1, SILV); R(cx + f * 2, hy, 1, 1, lensCol); R(cx + f * 3, hy, 1, 1, SILV); R(cx + f * 2, hy + 1, 1, 1, SILV);
-  R(cx + f, hy, 1, 1, SILV); R(cx, hy, 1, 1, '#aeb6c2');
-  R(cx + f * 2, hy + 2, 1, 1, '#b0604a');
-  if (pl.ear) { R(cx - f * 2, hy, 1, 1, '#ffffff'); pline(cx - f * 2, hy + 1, cx - f, y0 + 1, '#e8e8e8'); pline(cx - f, y0 + 1, cx + f * 1, y0 + 6, '#e8e8e8'); }
-  pl.gp = { ex: cx + f * 2 + 0.5, ey: hy + 0.5, sx: f1x + (f > 0 ? 2 : 1) + 0.5, sy: f1y - 1 + 0.5 };
-  pl.fg = { cx: cx, y0: y0, hy: hy, F: F, px: px };
-  if (pl.st === 'chg' && pl.chgT > 0.22) { var cg = clamp((pl.chgT - 0.22) / 0.6, 0, 1); R(px - 8, hy - 9, 16, 4, 'rgba(0,0,0,0.6)'); R(px - 7, hy - 8, Math.round(14 * cg), 2, cg >= 1 ? ((Math.floor(simT / 80) & 1) ? '#ff5a3a' : '#ffffff') : '#ffe14a'); }
+  var H = null;
+  if (!pl.cut && P) H = hands(P);
+  var lg = function (fx, fy) { var hx = px + (fx > px ? 1 : -1), kx = (hx + fx) / 2 + f * 2, ky = (hip + fy) / 2 - 1; return { hx: hx, hy: hip, kx: kx, ky: ky, fx: fx, fy: fy }; };
+  var lensCol = glintA(GL.g) > 0.5 ? '#ffffff' : '#a8d8f0';
+  var m = { px: px, F: F, fa: f, top: y0, th: th, hy: hy, ux: ux, hw: 6, hwB: 4.4, suit: PAL.navy, pocket: '#d23f31',
+    head: { glasses: true, lens: lensCol, hair: ['#120e0b', '#2a1f18', '#4a382b'], hs: 'short' },
+    legs: [lg(f2x, f2y), lg(f1x, f1y)], A: H ? [H.x, H.y] : null, B: H ? [H.x - f, H.y + 1] : null };
+  drawMan(m);
+  var hcx = m.out.hcx;
+  if (pl.ear) { R(hcx - f * 3 - (f > 0 ? 0 : 1), hy, 2, 2, '#ffffff'); pline(hcx - f * 3, hy + 2, hcx - f, y0 + 1, '#e8e8e8'); pline(hcx - f, y0 + 1, hcx + f * 2, y0 + 8, '#e8e8e8'); }
+  pl.gp = { ex: hcx + f * 4 + 0.5, ey: hy + 0.5, sx: f1x + (f > 0 ? 3 : 2) + 0.5, sy: f1y - 1 + 0.5 };
+  pl.fg = { cx: px + Math.round(lean / SC) * f * 0 + Math.round(ux / SC), y0: F0 - 27 - bob, hy: F0 - 31 - bob, F: F0, px: px };
+  if (pl.st === 'chg' && pl.chgT > 0.22) { var cg = clamp((pl.chgT - 0.22) / 0.6, 0, 1); R(px - 8, hy - 11, 16, 4, 'rgba(0,0,0,0.6)'); R(px - 7, hy - 10, Math.round(14 * cg), 2, cg >= 1 ? ((Math.floor(simT / 80) & 1) ? '#ff5a3a' : '#ffffff') : '#ffe14a'); }
 }
 function arm(sx, sy, hx, hy, back) {
   var f = pl.face, dx = hx - sx, dy = hy - sy, d = Math.hypot(dx, dy), bend = clamp(5 - d * 0.28, 1, 4);
@@ -1409,12 +1552,9 @@ function drawBat() {
   }
   ctx.globalAlpha = 1;
   var k = 1 + 0.45 * Math.max(0, P.sp);
-  if (pl.back) { batLine(pl.batX, Math.round(pl.z) + 1, pl.batX - pl.face * 24, Math.round(pl.z), 1); return; }
-  if (pl.cut) { drawCut(); return; }
-  batLine(H.x, H.y, tx, ty, k);
-  var fg = pl.fg || { cx: Math.round(pl.x), y0: Math.round(pl.z) - 27 };
-  arm(fg.cx - f, fg.y0 + 2, H.x, H.y, true);
-  arm(fg.cx + f * 2, fg.y0 + 2, H.x, H.y, false);
+  if (pl.back) { withScale(Math.round(pl.x), Math.round(pl.z), SC, function () { batLine(pl.batX, Math.round(pl.z) + 1, pl.batX - pl.face * 24, Math.round(pl.z), 1); }); return; }
+  if (pl.cut) { withScale(Math.round(pl.x), Math.round(pl.z), SC, drawCut); return; }
+  batLine(H.x, H.y, tx, ty, k * 1.3);
 }
 
 /* ---------- 逃げ回る社長(ハゲ・カツラ・汗)。カツラが落ちるとショックでクリスタルになる ---------- */
@@ -1434,7 +1574,8 @@ function cryCol(c, x, y) {
   return m;
 }
 /* opt: run(走り) ph shock mark(!!) wig crys(全身クリスタル) thr(この行より下がクリスタル) jump */
-function drawPres(px, F, f, opt) {
+function drawPres(px, F, f, opt) { withScale(px, F, SC, function () { drawPres0(px, F, f, opt); }); }
+function drawPres0(px, F, f, opt) {
   var jy = Math.round(opt.jump || 0), B = F - jy, ph = opt.ph || 0, i, x, dx, dy;
   var PALE = { '#f2c29c': '#c4d2ee', '#dca47c': '#a9b9da', '#c98e66': '#98a8cc' };
   function P(x0, y0, w0, h0, c) {
@@ -1522,7 +1663,7 @@ var BFORM = 2.7;
 function spawnBaby(x, z, f) {
   baby = { x: x, z: z, face: f, ph: 0, dx: f, dz: 0, t: 0, turn: 2, mv: false, popped: false, fp: [] };
   /* 赤ちゃんの絵を一度だけ別キャンバスに描き、不透明な点をガラスの粉の行き先にする */
-  var mc = maskCv.getContext('2d', { willReadFrequently: true }), keep = ctx, px = Math.round(x), F = Math.round(z), x0 = px - 14, y0 = F - 16, w = 29, h = 17, i, j;
+  var mc = maskCv.getContext('2d', { willReadFrequently: true }), keep = ctx, px = Math.round(x), F = Math.round(z), x0 = px - 19, y0 = F - 22, w = 39, h = 23, i, j;
   mc.setTransform(1, 0, 0, 1, 0, 0); mc.clearRect(0, 0, DW, DH);
   ctx = mc; drawBabySprite(1, true); ctx = keep;
   var d = mc.getImageData(x0, y0, w, h).data, SC = [[223, 244, 255], [191, 230, 255], [255, 255, 255], [159, 208, 240]];
@@ -1585,7 +1726,8 @@ function drawBaby() {
   }
   drawBabySprite(1);
 }
-function drawBabySprite(alpha, noShadow) {
+function drawBabySprite(alpha, noShadow) { withScale(Math.round(baby.x), Math.round(baby.z), SC, function () { drawBabySprite0(alpha, noShadow); }); }
+function drawBabySprite0(alpha, noShadow) {
   var b = baby, f = b.face, px = Math.round(b.x), F = Math.round(b.z), s = Math.sin(b.ph), dx, dy;
   var ga = ctx.globalAlpha; ctx.globalAlpha = ga * alpha;
   if (!noShadow) R(px - 6, F + 1, 13, 1, 'rgba(0,0,0,0.3)');
@@ -1609,7 +1751,8 @@ function drawBabySprite(alpha, noShadow) {
   ctx.globalAlpha = ga;
 }
 /* 土下座(u=0で立ち姿の手前、1で額を床につける) */
-function drawDogeza(px, F, f, u) {
+function drawDogeza(px, F, f, u) { withScale(px, F, SC, function () { drawDogeza0(px, F, f, u); }); }
+function drawDogeza0(px, F, f, u) {
   var k = clamp(u / 0.3, 0, 1), t = clamp((u - 0.3) / 0.6, 0, 1), i, n = 8;
   function bx(d0, y0, w, h, c) { R(f > 0 ? px + d0 : px - d0 - w + 1, y0, w, h, c); }
   function pt(dx, y) { return [f > 0 ? px + dx : px - dx, y]; }
@@ -1632,7 +1775,8 @@ function drawDogeza(px, F, f, u) {
   R(ap[0], ap[1], 2, 2, '#f2c29c');
 }
 /* 後ろ姿(花火を見るとき) */
-function drawPresBack(px, F) {
+function drawPresBack(px, F) { withScale(px, F, SC, function () { drawPresBack0(px, F); }); }
+function drawPresBack0(px, F) {
   var B = F, hip = B - 7, HW = [3, 3, 4, 4, 5, 5, 5, 5, 4, 4, 3], top = B - 18, i, x, dx, dy;
   R(px - 5, F + 1, 11, 1, 'rgba(0,0,0,0.36)'); R(px - 3, F + 2, 7, 1, 'rgba(0,0,0,0.24)');
   R(px - 2, hip, 2, 7, '#4a3a2c'); R(px + 1, hip, 2, 7, '#3a2c20'); R(px - 3, B, 3, 1, '#2a1a10'); R(px + 1, B, 3, 1, '#2a1a10');
@@ -1692,7 +1836,7 @@ function presMask() {
   var keep = ctx, px = Math.round(pr.x), F = Math.round(pr.z), mc = maskCv.getContext('2d', { willReadFrequently: true });
   mc.setTransform(1, 0, 0, 1, 0, 0); mc.clearRect(0, 0, DW, DH);
   ctx = mc; drawPres(px, F, pr.face, { shock: true, hug: true, nosh: true }); ctx = keep;
-  var y0 = F - 30, h = 31, x0 = px - 9, w = 19, d = mc.getImageData(x0, y0, w, h).data, rows = [], ix, iy;
+  var y0 = F - 40, h = 41, x0 = px - 12, w = 25, d = mc.getImageData(x0, y0, w, h).data, rows = [], ix, iy;
   for (iy = 0; iy < h; iy++) {
     var a = -1, b = -1;
     for (ix = 0; ix < w; ix++) if (d[(iy * w + ix) * 4 + 3] > 100) { if (a < 0) a = ix; b = ix; }
@@ -1708,7 +1852,7 @@ function makeCrystal() {
 }
 function drawCrystalObj(o) {
   if (o.dead) return;
-  R(o.cx - 6, o.fl + 1, 13, 1, 'rgba(120,200,255,0.35)');
+  R(o.cx - 8, o.fl + 1, 17, 1, 'rgba(120,200,255,0.35)');
   drawPres(o.cx, o.fl, o.face, { shock: true, hug: true, crys: true, nosh: true });
   drawCracks(o, '#ffffff');
 }
@@ -1951,7 +2095,7 @@ function samHit(t0, t1) {
     for (d = 5; d <= len; d += 2) {
       x = H.x + vx * d / len; y = H.y + vy * d / len;
       if ((x - px) * f < 4) continue;
-      if (Math.abs(x - sam.x) <= 7 && y >= sam.z - 38 && y <= sam.z + 3) return { t: tt, x: x };
+      if (Math.abs(x - sam.x) <= 9 && y >= sam.z - 50 && y <= sam.z + 4) return { t: tt, x: x };
     }
   }
   return null;
@@ -2053,7 +2197,8 @@ function drawSamPlace() {
   drawSamurai(px, F, sam.face, sam.st, sam.t, sam.ph);
   ctx.restore();
 }
-function drawSamurai(px, F, f, st, t, ph) {
+function drawSamurai(px, F, f, st, t, ph) { withScale(px, F, SC, function () { drawSamurai0(px, F, f, st, t, ph); }); }
+function drawSamurai0(px, F, f, st, t, ph) {
   var i, x, bob = (st === 'walk' && Math.sin(ph * 2) > 0) ? 1 : 0, FY = F - bob;
   function M(dx, dy, w, h, c) { R(f > 0 ? px + dx : px - dx - w + 1, FY + dy, w, h, c); }
   function ML(x0, y0, x1, y1, c) { pline(Math.round(px + f * x0), Math.round(FY + y0), Math.round(px + f * x1), Math.round(FY + y1), c); }
@@ -2149,6 +2294,7 @@ var FOE = {
   sumo: { tie: '#2f62c8', speed: 30, rng: 58, aggro: 105, wind: 0.6, atk: 0.95, rec: 0.9, ev: [{ t: 0.3, r: 46, k: 'dodge' }, { t: 0.62, r: 34, k: 'parry' }] },
   blanka: { tie: '#3aa04a', speed: 36, rng: 62, aggro: 115, wind: 0.6, atk: 0.85, rec: 0.9, ev: [] }
 };
+(function () { for (var k in FOE) { FOE[k].rng = Math.round(FOE[k].rng * SC); FOE[k].ev.forEach(function (e) { e.r = Math.round(e.r * SC); }); } })();
 var ROOMS = [[36, 180], [186, 300], [306, 420], [426, 592]], SHX = [183, 303, 423], CHN = [];
 var FNAME = { box: '拳闘家', yoga: 'ヨガ行者', sumo: '仮面の爪使い', blanka: '野獣' };
 function foeSetup() {
@@ -2214,14 +2360,14 @@ function foeHit(t0, t1) {
   var f = pl.face, px = Math.round(pl.x), k, d, P, H, tx, ty, vx, vy, len, x, y, tt, i, q, w;
   for (i = 0; i < foes.length; i++) {
     q = foes[i]; if (q.st === 'fly' || q.st === 'down' || q.st === 'tele' || Math.abs(pl.z - q.z) > 10) continue;
-    w = 7;
+    w = 9;
     for (k = 1; k <= 6; k++) {
       tt = t0 + (t1 - t0) * k / 6; P = poseAt(tt); if (P.cs < 0.15) continue;
       H = hands(P); tx = H.x + f * P.tx; ty = H.y + P.ty; vx = tx - H.x; vy = ty - H.y; len = Math.hypot(vx, vy);
       for (d = 5; d <= len; d += 2) {
         x = H.x + vx * d / len; y = H.y + vy * d / len;
         if ((x - px) * f < 4) continue;
-        if (Math.abs(x - q.x) <= w && y >= q.z - 34 - (q.type === 'yoga' ? 8 : q.type === 'sumo' ? 14 : 0) && y <= q.z + 3) return { t: tt, x: x, f: q };
+        if (Math.abs(x - q.x) <= w && y >= q.z - 45 - (q.type === 'yoga' ? 10 : q.type === 'sumo' ? 18 : 0) && y <= q.z + 4) return { t: tt, x: x, f: q };
       }
     }
   }
@@ -2330,6 +2476,22 @@ function drawFoe(f) {
   ctx.globalAlpha = ga;
   if (f.fire) { f.fire.y0 = f.z - 22; drawFireBall(f.fire); }
 }
+var TIEP = {
+  red: { d: '#6c1522', b: '#a42537', h: '#d0384c', s: '#ee7a88' },
+  saf: { d: '#8a4a08', b: '#d98a1a', h: '#f2b24a', s: '#ffe0a0' },
+  yel: { d: '#8a7410', b: '#d8b820', h: '#f4dc4a', s: '#fff2a0' },
+  blu: { d: '#142a6a', b: '#2f62c8', h: '#5a8ae8', s: '#a8c4ff' }
+};
+var FSTY = {
+  box: { suit: { o: '#07070b', d: '#15161e', b: '#22242f', m: '#2e3140', h: '#444a60', hh: '#6a7292' }, tie: TIEP.red, hw: 7, hwB: 5, skin: ['#f0c8a4', '#ffe0c4', '#d09a74', '#b0805a', '#e8907e'], pocket: '#d23f31',
+    head: { hs: 'short', angry: true, stub: true, band: '#d23f31', hair: ['#0e0c0b', '#1e1713', '#3a2c22'] } },
+  yoga: { suit: { o: '#120d1f', d: '#2a2142', b: '#3d3260', m: '#4d4178', h: '#6a5ea0', hh: '#8e84c4' }, tie: TIEP.saf, hw: 6, hwB: 4.6, skin: ['#d39a6c', '#eab586', '#b07a50', '#8f5e3a', '#cf7c68'], pocket: '#f2b24a',
+    head: { hs: 'knot', tilak: '#d23f31', stache: true, hair: ['#0e0c0b', '#1e1713', '#3a2c22'], skin: ['#d39a6c', '#eab586', '#b07a50', '#8f5e3a', '#cf7c68'] } },
+  sumo: { suit: { o: '#0a0710', d: '#1c1430', b: '#2c2048', m: '#3b2d62', h: '#52407e', hh: '#7a66a8' }, tie: TIEP.blu, hw: 6, hwB: 4.6, skin: PAL.skin, pocket: '#2f62c8',
+    head: { mask: true, mc: '#2f62c8', hs: 'short', hair: ['#0e0c0b', '#1e1713', '#3a2c22'] } },
+  blanka: { suit: { o: '#08140c', d: '#12301e', b: '#1d4a2f', m: '#286142', h: '#3a8059', hh: '#5fa87e' }, tie: TIEP.yel, hw: 7, hwB: 5, skin: ['#e0a878', '#f4c298', '#c08856', '#a06a40', '#dc8a76'], pocket: '#8fff9a',
+    head: { hs: 'spiky', angry: true, fang: true, hl: '#ffd28a', hair: ['#a8480e', '#d9731e', '#ffb04a'], skin: ['#e0a878', '#f4c298', '#c08856', '#a06a40', '#dc8a76'] } }
+};
 function drawFoe0(f) {
   var d = FOE[f.type], st = f.st, t = f.t, ph = f.ph, tie = d.tie, ty = f.type, px = Math.round(f.x), F = Math.round(f.z), fa = f.face;
   var SUIT = '#1b1e28', EDGE = '#0a0b10', HIL = '#2c3140', SKIN = '#e4b992', SHADE = '#c99d78', SHIRT = '#f2f2ec', TROU = '#15171d';
@@ -2337,14 +2499,14 @@ function drawFoe0(f) {
   if (st === 'down') {
     if (f.t > 2.6 && (Math.floor(simT / 70) & 1)) return;
     var fd = f.dir, sc = 1;
-    ctx.save(); ctx.translate(px, F); ctx.scale(sc, sc); ctx.translate(-px, -F);
+    ctx.save(); ctx.translate(px, F); ctx.scale(sc, sc); ctx.translate(-px, -F); SCL = SC; SCX = px; SCY = F;
     var MM = function (a, b, w, h, c) { R(fd > 0 ? px + a : px - a - w + 1, F + b, w, h, c); };
     R(px - 12, F + 1, 25, 1, 'rgba(0,0,0,0.35)');
     MM(-6, -3, 14, 3, TROU); MM(8, -3, 4, 3, TROU); MM(12, -3, 2, 3, '#07080a');
     MM(-8, -7, 15, 5, SUIT); MM(-8, -7, 15, 1, HIL); MM(-3, -6, 6, 1, tie); MM(-2, -5, 1, 2, tie);
     MM(-10, -6, 3, 4, SKIN); MM(-11, -7, 3, 3, '#0e0c0b'); MM(-9, -5, 1, 1, '#111');
     MM(-4, -9, 6, 2, SUIT);
-    ctx.restore(); return;
+    SCL = 1; ctx.restore(); return;
   }
   var air = 0, bob = 0, hov = 0;
   if (ty === 'yoga') hov = 9 + Math.round(Math.sin(ph * 0.5) * 1.5);
@@ -2356,6 +2518,7 @@ function drawFoe0(f) {
   if (st === 'fly') { var cy = F - air - 14; ctx.translate(px, cy); ctx.rotate(f.rot); ctx.translate(-px, -cy); }
   function M(a, b, w, h, c) { R(fa > 0 ? px + a : px - a - w + 1, FY + b, w, h, c); }
   function ML(x0, y0, x1, y1, c) { pline(Math.round(px + fa * x0), Math.round(FY + y0), Math.round(px + fa * x1), Math.round(FY + y1), c); }
+  SCL = SC; SCX = px; SCY = F;
   var shw = 11; R(px - Math.floor(shw / 2), F + 1, shw, 1, 'rgba(0,0,0,' + (0.36 - Math.min(0.2, air * 0.01)).toFixed(2) + ')'); R(px - Math.floor(shw / 2) + 2, F + 2, shw - 4, 1, 'rgba(0,0,0,0.22)');
   if (ty === 'yoga') { R(px - 6, F + 1, 13, 1, 'rgba(255,230,120,0.35)'); if (hov > 7) for (i = 0; i < 3; i++) R(px - 3 + i * 3, F - 2 - ((Math.floor(simT / 120) + i) % 3) * 2, 1, 1, 'rgba(255,240,170,0.7)'); }
   /* blanka: ころがり */
@@ -2365,7 +2528,7 @@ function drawFoe0(f) {
     R(cx0 - 5, cy0 - 5, 11, 11, SUIT); R(cx0 - 4, cy0 - 4, 9, 9, HIL);
     var a1 = ang * 1.0; R(Math.round(cx0 + Math.cos(a1) * 4) - 1, Math.round(cy0 + Math.sin(a1) * 4) - 1, 3, 3, tie); R(Math.round(cx0 + Math.cos(a1 + 2.2) * 4), Math.round(cy0 + Math.sin(a1 + 2.2) * 4), 2, 2, SKIN); R(Math.round(cx0 + Math.cos(a1 + 3.6) * 4), Math.round(cy0 + Math.sin(a1 + 3.6) * 4), 2, 2, '#0e0c0b');
     for (i = 0; i < 5; i++) R(cx0 + rnd(-9, 9), cy0 + rnd(-9, 9), 1, 1, (i & 1) ? '#fff6a0' : '#8fff9a');
-    ctx.restore(); return;
+    SCL = 1; ctx.restore(); return;
   }
   var lean = 0, Y0 = -28, hx = 1, hy = -32, A = null, B = null, glove = null, wideB = 0, legMode = 'stand';
   /* ポーズ */
@@ -2395,47 +2558,37 @@ function drawFoe0(f) {
     else if (st === 'rec') { A = [5, -12]; B = [2, -11]; lean = 0; }
     else { A = [8, -21 + (bob ? 1 : 0)]; B = [5, -24]; }
   }
-  /* 脚 */
-  var s1 = (st === 'walk') ? Math.round(Math.sin(ph) * 3) : 0;
-  if (legMode === 'stand') { ML(0, -13, 2 + s1, 0, TROU); ML(1, -13, 3 + s1, 0, SUIT); ML(0, -13, -2 - s1, 0, TROU); ML(-1, -13, -3 - s1, 0, SUIT); M(1 + s1, -1, 4, 2, '#07080a'); M(-5 - s1, -1, 4, 2, '#07080a'); }
+  SCL = 1;
+  /* ===== 新ボディ(1.3倍・多色) ===== */
+  var TX = function (a) { return Math.round(px + fa * a * SC); }, TY = function (b) { return Math.round(F + (FY - F + b) * SC); };
+  var s1 = (st === 'walk') ? Math.round(Math.sin(ph) * 3) : 0, FST = FSTY[ty], nT = ty === 'yoga' || ty === 'blanka' ? 11 : 15;
+  var th = Math.max(16, Math.round(nT * SC)), hipY = TY(Y0 + nT), topY = hipY - th + 1, ux = Math.round(lean * SC) * fa;
+  var fy0 = TY(0), legs = [], hpx = px;
+  function LG(hxo, kxo, kyo, fxo, fyo) { return { hx: hpx + fa * hxo, hy: hipY, kx: Math.round(hpx + fa * kxo * SC), ky: TY(kyo), fx: Math.round(hpx + fa * fxo * SC), fy: fyo === undefined ? fy0 : fyo }; }
+  if (legMode === 'stand') legs = [LG(-1, -1 - s1 * 0.5, -6, -2 - s1), LG(1, 1 + s1 * 0.5, -6, 2 + s1)];
   else if (legMode === 'wide') {
     var lf = st === 'wind' ? ((Math.floor(f.t / 0.15) & 1) ? 1 : -1) : 0, ra = lf > 0 ? 6 : 0, la = lf < 0 ? 6 : 0;
-    ML(0, -12, 6, -ra, TROU); ML(1, -12, 7, -ra, SUIT); ML(0, -12, -6, -la, TROU); ML(-1, -12, -7, -la, SUIT);
-    M(5, -1 - ra, 5, 2, '#07080a'); M(-9, -1 - la, 5, 2, '#07080a');
-  } else if (legMode === 'lotus') { M(-6, -9, 13, 3, TROU); M(-7, -8, 3, 3, SUIT); M(5, -8, 3, 3, SUIT); M(-5, -6, 4, 2, '#07080a'); M(2, -6, 4, 2, '#07080a');
-    if (f.kk > 0) { ML(0, -8, 10 + 44 * f.kk, -6 + 2 * f.kk, TROU); ML(0, -7, 10 + 44 * f.kk, -5 + 2 * f.kk, SUIT); M(Math.round(10 + 44 * f.kk), -8, 4, 3, '#07080a'); } }
-  else { ML(0, -9, 5, -4, TROU); ML(5, -4, 3 + s1, 0, TROU); ML(0, -9, -4, -4, TROU); ML(-4, -4, -2 - s1, 0, TROU); M(1 + s1, -1, 4, 2, '#07080a'); M(-5 - s1, -1, 4, 2, '#07080a'); }
-  /* 胴 */
-  var n = ty === 'yoga' ? 11 : (ty === 'blanka' ? 11 : 15), hw = 4;
-  for (i = 0; i < n; i++) {
-    var ox = Math.round(lean * (1 - i / n)), hwi = hw;
-    for (x = -hwi; x <= hwi; x++) M(ox + x, Y0 + i, 1, 1, (x === -hwi || x === hwi) ? EDGE : (x < -hwi + 2 ? HIL : SUIT));
-    if (i < 7) M(ox, Y0 + i, 1 + (i < 2 ? 2 : 0), 1, SHIRT);
-    if (i > 0 && i < 11) M(ox, Y0 + i, 1, 1, tie);
-  }
-  /* 腕 */
-  var sh = [3 + lean, Y0 + 2], sh2 = [-3 + lean, Y0 + 2];
-  if (A) { ML(sh[0], sh[1], A[0], A[1], SUIT); ML(sh[0], sh[1] + 1, A[0], A[1] + 1, HIL); }
-  if (B) { ML(sh2[0], sh2[1], B[0], B[1], SUIT); ML(sh2[0], sh2[1] + 1, B[0], B[1] + 1, EDGE); }
-  var hc = glove || SKIN, hsz = glove ? 4 : 2;
-  if (B) { M(B[0] - 1, B[1] - 1, hsz, hsz, hc); if (glove) M(B[0], B[1] - 1, 1, 1, '#ff8a7a'); }
-  if (A) { M(A[0] - 1, A[1] - 1, hsz, hsz, hc); if (glove) M(A[0], A[1] - 1, 1, 1, '#ff8a7a'); }
-  if (ty === 'blanka' && st !== 'rec') { M(A[0] + 2, A[1] - 1, 1, 1, '#fff'); M(A[0] + 2, A[1] + 1, 1, 1, '#fff'); M(B[0] + 2, B[1] - 1, 1, 1, '#fff'); }
-  /* 頭 */
-  var HX = hx + lean + (ty === 'blanka' ? 2 : 0), HY = hy;
-  for (dy = -3; dy <= 3; dy++) for (dx = -3; dx <= 3; dx++) if (dx * dx + dy * dy <= 10) M(HX + dx, HY + dy, 1, 1, dx <= -2 ? SHADE : SKIN);
-  M(HX - 3, HY - 4, 7, 2, '#0e0c0b'); M(HX - 3, HY - 2, 2, 3, '#0e0c0b');
-  if (ty === 'blanka') { M(HX - 3, HY - 6, 1, 2, '#0e0c0b'); M(HX - 1, HY - 7, 1, 3, '#0e0c0b'); M(HX + 1, HY - 6, 1, 2, '#0e0c0b'); M(HX + 3, HY - 5, 1, 2, '#0e0c0b'); }
-  if (ty === 'yoga') { M(HX - 1, HY - 6, 3, 2, '#0e0c0b'); M(HX + 1, HY - 1, 2, 1, '#111'); }
-  else { M(HX + 1, HY - 1, 1, 1, '#fff'); M(HX + 2, HY - 1, 1, 1, '#111'); }
-  if (ty === 'box') M(HX + 1, HY - 2, 3, 1, '#0e0c0b');
-  if (ty === 'blanka') { M(HX + 1, HY + 1, 3, 1, '#fff'); M(HX + 1, HY + 2, 2, 1, '#8a3a30'); } else M(HX + 1, HY + 2, 2, 1, '#8a3a30');
+    legs = [LG(-1, -4, -8 - la * 0.4, -6, TY(-la)), LG(1, 4, -8 - ra * 0.4, 6, TY(-ra))];
+  } else if (legMode === 'lotus') {
+    var ky0 = f.kk > 0 ? 10 + 44 * f.kk : 0;
+    legs = [LG(-1, -9, -7, 0, TY(-5)), f.kk > 0 ? LG(1, 5 + ky0 * 0.5, -8, ky0, TY(-6 + 2 * f.kk)) : LG(1, 9, -7, 0, TY(-5))];
+  } else legs = [LG(-1, -4, -5, -2 - s1), LG(1, 5, -5, 3 + s1)];
+  var HP = function (v) { return v ? [TX(v[0]), TY(v[1])] : null; };
+  var mm = { px: px, F: F, fa: fa, top: topY, th: th, hy: TY(hy) - 1, ux: ux, hw: FST.hw, hwB: FST.hwB, suit: FST.suit, tie: FST.tie, sleeve: FST.suit, skin: FST.skin, glove: glove ? ['#d23f31', '#ff9a8a', '#8e1f2f', '#ffc0b0'] : null,
+    head: FST.head, hxo: ty === 'blanka' ? 2 : 0, legs: legs, A: HP(A), B: HP(B), pocket: FST.pocket };
+  drawMan(mm);
   if (ty === 'sumo') {
-    M(HX - 2, HY - 3, 6, 6, '#f2f2ec'); M(HX - 2, HY - 3, 1, 6, '#c9c9c2'); M(HX - 2, HY + 2, 6, 1, '#2f62c8'); M(HX - 2, HY - 4, 1, 1, '#2f62c8'); M(HX + 3, HY - 4, 1, 1, '#2f62c8');
-    M(HX + 1, HY - 1, 3, 1, '#0e0c0b'); M(HX + 2, HY - 1, 1, 1, '#ff4a3a'); M(HX + 2, HY + 1, 1, 1, '#9aa0aa');
-    var cc = [A, B], ci, cA;
-    for (ci = 0; ci < 2; ci++) { cA = cc[ci]; if (!cA) continue; ML(cA[0], cA[1] - 1, cA[0] + 8, cA[1] - 3, ci ? '#aab3c0' : '#eef2f7'); ML(cA[0], cA[1], cA[0] + 9, cA[1], ci ? '#aab3c0' : '#eef2f7'); ML(cA[0], cA[1] + 1, cA[0] + 8, cA[1] + 3, ci ? '#8a93a1' : '#cdd4dd'); }
+    var cc = [HP(A), HP(B)], ci, cA;
+    for (ci = 0; ci < 2; ci++) {
+      cA = cc[ci]; if (!cA) continue;
+      var cdx = fa, cl = ci ? ['#aab3c0', '#8a93a1', '#6a7380'] : ['#f4f7fb', '#cdd4dd', '#9aa4b2'];
+      pline(cA[0], cA[1] - 2, cA[0] + cdx * 12, cA[1] - 5, cl[0]); pline(cA[0], cA[1] - 1, cA[0] + cdx * 12, cA[1] - 4, cl[1]);
+      pline(cA[0], cA[1], cA[0] + cdx * 14, cA[1], cl[0]); pline(cA[0], cA[1] + 1, cA[0] + cdx * 14, cA[1] + 1, cl[1]);
+      pline(cA[0], cA[1] + 2, cA[0] + cdx * 12, cA[1] + 5, cl[1]); pline(cA[0], cA[1] + 3, cA[0] + cdx * 12, cA[1] + 6, cl[2]);
+      R(cA[0] - 2 + (fa > 0 ? 0 : 0), cA[1] - 3, 3, 7, '#3a3f4c'); R(cA[0] - 2, cA[1] - 3, 3, 1, '#6a7280');
+    }
   }
+  SCL = SC; SCX = px; SCY = F;
   if (ty === 'box' && st === 'atk' && t > 0.06 && t < 0.34) for (i = 0; i < 4; i++) pline(Math.round(px - fa * (6 + i * 4)), F - 28 + i * 6, Math.round(px - fa * (16 + i * 9)), F - 28 + i * 6, 'rgba(255,255,255,0.6)');
   if (ty === 'sumo' && st === 'atk' && t > 0.08 && t < 0.55) for (i = 0; i < 4; i++) pline(Math.round(px - fa * (5 + i * 3)), Math.round(FY - 30 + i * 6), Math.round(px - fa * (16 + i * 8)), Math.round(FY - 30 + i * 6), 'rgba(235,240,255,0.55)');
   if (ty === 'sumo' && st === 'atk' && t >= 0.55 && t < 0.78) { var sa = (t - 0.55) / 0.23; for (i = 0; i < 3; i++) pline(Math.round(px + fa * (6 + 12 * sa + i * 3)), Math.round(F - 30 + 14 * sa + i * 2), Math.round(px + fa * (10 + 18 * sa + i * 3)), Math.round(F - 14 + 8 * sa), 'rgba(255,255,255,0.7)'); }
@@ -2445,7 +2598,7 @@ function drawFoe0(f) {
       for (bk = 1; bk <= bn; bk++) { nx2 = Math.round(px + Math.cos(ba) * bl * bk / bn + rnd(-3, 3)); ny2 = Math.round(F - 14 + Math.sin(ba) * bl * 0.8 * bk / bn + rnd(-3, 3)); pline(bx, by, nx2, ny2, (i & 1) ? '#fff8a0' : '#8fffd0'); bx = nx2; by = ny2; }
     }
   }
-  ctx.restore();
+  SCL = 1; ctx.restore();
 }
 
 /* ---------- 液体窒素の水たまり ---------- */
