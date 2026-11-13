@@ -76,7 +76,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px;pa
 .status{position:absolute;top:12px;left:12px;display:flex;align-items:center;gap:6px;padding:4px 11px;border-radius:999px;background:rgba(255,255,255,.92);font-size:11px;font-weight:800;color:var(--ink2);z-index:2}
 .status .dot{width:8px;height:8px;border-radius:50%;background:var(--mint)}
 .status .dot.off{background:#bdb4cc}
-.toggle{position:absolute;top:12px;right:12px;border:0;border-radius:999px;padding:5px 12px 6px;background:var(--mint);color:#fff;font-size:11px;font-weight:800;box-shadow:0 3px 0 var(--mintD);z-index:2}
+.toggle{position:static;border:0;border-radius:999px;padding:5px 12px 6px;background:var(--mint);color:#fff;font-size:11px;font-weight:800;box-shadow:0 3px 0 var(--mintD);z-index:2}
 .toggle:active{transform:translateY(2px);box-shadow:0 1px 0 var(--mintD)}
 .toggle.off{background:#bdb4cc;box-shadow:0 3px 0 #9d94ae}
 .room .controls{position:absolute;bottom:10px;right:12px;display:flex;gap:6px;z-index:2}
@@ -159,7 +159,10 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px;pa
 #speech-speaker-label{font-weight:900;font-size:12px}
 .name-tag{border:0;display:inline-flex;align-items:center;gap:5px;background:var(--mint);color:#fff;padding:2px 10px 3px;border-radius:999px}
 .name-tag i{font-style:normal;font-size:11px;opacity:.85}
-#speech-box .name-edit{margin:4px 0 2px}
+.name-edit{margin:4px 2px 0;display:flex;align-items:center;gap:6px}
+.metarow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:-2px 4px 0}
+.quick{justify-content:center;margin:0 0 8px}
+#input-word::placeholder{font-size:12px}
 #speech-category-tag{background:var(--lavS);color:var(--lavD);font-weight:800;font-size:10px;padding:2px 9px;border-radius:999px}
 .next{border:0;border-radius:999px;padding:4px 11px 5px;background:var(--pink);color:#fff;font-weight:800;font-size:12px;box-shadow:0 3px 0 var(--pinkD);display:inline-flex;align-items:center;gap:3px}
 .next:active{transform:translateY(2px);box-shadow:0 1px 0 var(--pinkD)}
@@ -292,7 +295,7 @@ body.kb .app{min-height:0}
 
 /* ===== はじまり（キャラづくり・ナレーション・ねんね・三日後） ===== */
 body:not(.ph-talk) .level,body:not(.ph-talk) .teach,body:not(.ph-talk) #speech-box,body:not(.ph-talk) footer,
-body:not(.ph-talk) .status,body:not(.ph-talk) .toggle,body:not(.ph-talk) .controls,body:not(.ph-talk) header .chip-btn{display:none!important}
+body:not(.ph-talk) .status,body:not(.ph-talk) .metarow,body:not(.ph-talk) .name-edit,body:not(.ph-talk) .quick,body:not(.ph-talk) .toggle,body:not(.ph-talk) .controls,body:not(.ph-talk) header .chip-btn{display:none!important}
 body:not(.ph-talk) .room{cursor:default}
 .ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;text-align:center}
 #setup{z-index:70;padding:22px;background:linear-gradient(160deg,var(--sky1) 0%,var(--sky2) 55%,var(--sky3) 100%)}
@@ -448,54 +451,43 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
       </div>
 
       <div class="status"><span id="status-dot" class="dot"></span><span id="status-text">かんがえちゅう…</span></div>
-      <button id="btn-toggle-auto" type="button" class="toggle" title="かってに おはなしするのを きりかえる">ひとりごと: ON</button>
 
     <div id="speech-box" class="speech" role="button" tabindex="0" title="おすと つぎの おはなしを きけるよ">
-      <div class="speech-head">
-        <div class="speaker">
-          <button id="btn-edit-name" type="button" class="name-tag" title="なまえを かえる"><span id="speech-speaker-label">んちょ</span><i>✎</i></button>
-          <span id="speech-category-tag">ひとりごと</span>
-        </div>
-        <button id="btn-next-speech" type="button" class="next">
-          <span>つぎ</span>
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"/></svg>
-        </button>
-      </div>
-      <div id="name-edit-box" class="name-edit hidden">
-        <input id="character-name-input" type="text" maxlength="10" placeholder="あたらしいなまえ" aria-label="あたらしいなまえ">
-        <button id="btn-save-name" type="button" class="btn-s main">きめる</button>
-      </div>
       <div class="speech-body"><div id="speech-text" aria-live="polite"></div></div>
-      <div id="quick-replies" class="quick hidden" aria-label="へんじ">
-        <button type="button" id="qr-yes" class="qr yes">うん</button>
-        <button type="button" id="qr-no" class="qr no">いいえ</button>
-        <button type="button" id="qr-wait" class="qr wait">ちょっと まって</button>
-      </div>
-      <div class="speech-foot">
-        <span id="speech-hint-text">おすと つぎへ すすむよ</span>
+      <div hidden aria-hidden="true">
+        <span id="speech-category-tag"></span>
+        <button id="btn-next-speech" type="button" tabindex="-1">つぎ</button>
+        <span id="speech-hint-text"></span>
       </div>
     </div>
 
     </div>
   </section>
 
-  <section class="level" aria-label="こうりゅうレベル">
-    <div class="level-row">
-      <span class="lv" id="level-label">Lv.1</span>
-      <div class="lvbar"><i id="level-bar"></i></div>
-      <span class="lvnext" id="level-next">つぎまで あと 15</span>
+  <div class="metarow">
+    <div class="metaL">
+      <button id="btn-edit-name" type="button" class="name-tag" title="なまえを かえる"><span id="speech-speaker-label">んちょ</span><i>✎</i></button>
     </div>
-    <div class="lvhint" id="level-hint"></div>
-  </section>
+    <button id="btn-toggle-auto" type="button" class="toggle" title="かってに おはなしするのを きりかえる">ひとりごと: ON</button>
+  </div>
+  <div id="name-edit-box" class="name-edit hidden">
+    <input id="character-name-input" type="text" maxlength="10" placeholder="あたらしいなまえ" aria-label="あたらしいなまえ">
+    <button id="btn-save-name" type="button" class="btn-s main">きめる</button>
+  </div>
 
   <section class="teach" aria-label="ことばを おしえる">
+    <div id="quick-replies" class="quick hidden" aria-label="へんじ">
+      <button type="button" id="qr-yes" class="qr yes">うん</button>
+      <button type="button" id="qr-no" class="qr no">いいえ</button>
+      <button type="button" id="qr-wait" class="qr wait">ちょっと まって</button>
+    </div>
     <div class="teach-head">
       <h2 id="teach-title-text">んちょに ことばを おしえる</h2>
       <span class="limit">ひらがな・5もじまで</span>
     </div>
     <form id="teach-form" novalidate>
       <div class="field">
-        <input id="input-word" type="text" inputmode="text" maxlength="5" autocomplete="off" placeholder="れい：りんご、さんぽ" aria-label="おしえる ことば（ひらがな5もじまで）">
+        <input id="input-word" type="text" inputmode="text" maxlength="5" autocomplete="off" placeholder="ごもじのことば" aria-label="おしえる ことば（ひらがな5もじまで）">
         <span id="char-counter">0/5</span>
       </div>
       <div class="row2">
@@ -510,6 +502,15 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
   </section>
 
   <footer>おぼえた ことばは この ブラウザの なかに ほぞん されるよ<br><span id="topic-count">はなした ネタ：0こ</span></footer>
+
+  <section class="level" aria-label="こうりゅうレベル">
+    <div class="level-row">
+      <span class="lv" id="level-label">Lv.1</span>
+      <div class="lvbar"><i id="level-bar"></i></div>
+      <span class="lvnext" id="level-next">つぎまで あと 15</span>
+    </div>
+    <div class="lvhint" id="level-hint"></div>
+  </section>
 </div>
 
 <!-- はじまり -->
