@@ -153,6 +153,13 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:0;border-radiu
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .seg button{padding:7px 12px;font-size:12px;color:var(--muted)}
 .seg button.on{background:rgba(214,168,90,.18);color:var(--gold2)}
+.tones{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:4px}
+.tone{text-align:left;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:rgba(243,232,214,.03);transition:border-color .2s,background .2s}
+.tone:hover{border-color:var(--line2)}
+.tone.on{border-color:rgba(214,168,90,.75);background:rgba(214,168,90,.13)}
+.tone b{display:block;font-size:13px;font-weight:600}
+.tone i{display:block;font-style:normal;font-size:10px;letter-spacing:.08em;color:var(--gold2);margin-top:2px}
+.tone small{display:block;font-size:10px;color:var(--dim);margin-top:4px;line-height:1.5}
 .mini{font-size:11px;color:var(--gold2);border:1px solid rgba(214,168,90,.4);border-radius:16px;padding:5px 11px}
 .settings-card{width:min(480px,100%);max-height:calc(100vh - 40px);overflow:auto}
 .closer{display:flex;justify-content:space-between;align-items:center}
@@ -306,14 +313,14 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:0;border-radiu
   <div class="card settings-card">
     <div class="closer"><h2>AJUSTES · 設定</h2><button class="x" data-close aria-label="閉じる">✕</button></div>
     <div style="margin-top:14px">
+      <div class="row"><label>打音</label><output id="oTone"></output><div class="tones" id="sTone"></div>
+        <div class="hint">キーを押した瞬間に鳴ります。選ぶと試し聞きできます。</div></div>
       <div class="row"><label for="sHs">ノーツ速度</label><output id="oHs" class="num"></output>
         <input type="range" id="sHs" min="0.8" max="3" step="0.1"><div class="hint">数値が大きいほどノーツが速く流れ、間隔が広く見えます。</div></div>
       <div class="row"><label for="sOff">判定タイミング</label><output id="oOff" class="num"></output>
         <input type="range" id="sOff" min="-150" max="150" step="1"><div class="hint">いつも「SLOW」が多いならプラス、「FAST」が多いならマイナスへ。Bluetoothイヤホンは +100ms 以上が目安です。<button class="mini" id="calBtn2" style="margin-left:6px">自動調整</button></div></div>
       <div class="row"><label for="sMv">音楽の音量</label><output id="oMv" class="num"></output><input type="range" id="sMv" min="0" max="100" step="1"></div>
       <div class="row"><label for="sHv">打音の音量</label><output id="oHv" class="num"></output><input type="range" id="sHv" min="0" max="100" step="1"></div>
-      <div class="row"><label>打音</label><div class="seg" id="sTone"><button data-v="golpe">ゴルペ</button><button data-v="palma">パルマ</button><button data-v="off">なし</button></div>
-        <div class="hint">キーを押した瞬間に鳴ります。ゴルペ＝ギターの表板を指で叩く音。</div></div>
       <div class="row"><label>演出</label><div class="seg" id="sFx"><button data-v="2">フル</button><button data-v="1">控えめ</button></div></div>
     </div>
   </div>
@@ -357,7 +364,7 @@ const qs = new URLSearchParams(location.search);
 const AUTO = qs.has('auto');
 
 /* ================= SETTINGS ================= */
-const S = Object.assign({diff:'normal', hs:1.6, off:0, mv:80, hv:80, tone:'golpe', fx:2},
+const S = Object.assign({diff:'normal', hs:1.6, off:0, mv:80, hv:80, tone:'palma', fx:2},
   (()=>{try{return JSON.parse(localStorage.getItem('nslSettings')||'{}')}catch(e){return {}}})());
 function saveS(){try{localStorage.setItem('nslSettings',JSON.stringify(S))}catch(e){}}
 function getBest(d){try{return JSON.parse(localStorage.getItem('nslBest_'+d)||'null')}catch(e){return null}}
@@ -405,19 +412,78 @@ function playBuf(buf, gain=1, rate=1, dest=hitGain, when=0){
   const s=actx.createBufferSource(); s.buffer=buf; s.playbackRate.value=rate;
   const g=actx.createGain(); g.gain.value=gain; s.connect(g); g.connect(dest); s.start(when||0); return s;
 }
-let hitAlt=0;
+/* ---- 打音（フラメンコ風の音色）: 左右レーンで少し違う音を鳴らす ---- */
+const SR=()=>actx.sampleRate;
+function rng(seed){let s=seed;return()=>{s=(s*16807)%2147483647;return s/1073741823.5-1}}
+function burst(len,ms,rnd,shape=2){const n=Math.floor(SR()*ms/1000),e=new Float32Array(len);for(let i=0;i<n&&i<len;i++)e[i]=rnd()*Math.pow(1-i/n,shape);return e}
+function resonate(d,exc,f,tau,amp){const sr=SR(),r=Math.exp(-1/(tau*sr)),w=2*Math.PI*f/sr,c=2*r*Math.cos(w),r2=r*r,k=(1-r)*2*Math.sin(w)*80*amp;let y1=0,y2=0;
+  for(let i=0;i<d.length;i++){const y=exc[i]+c*y1-r2*y2;y2=y1;y1=y;d[i]+=y*k}}
+function sweep(d,f0,f1,glide,tau,amp,att=.0008){const sr=SR();let ph=0;for(let i=0;i<d.length;i++){const t=i/sr,f=f1+(f0-f1)*Math.exp(-t/glide);ph+=2*Math.PI*f/sr;d[i]+=Math.sin(ph)*(1-Math.exp(-t/att))*Math.exp(-t/tau)*amp}}
+function clickHP(d,ms,amp,rnd){const n=Math.floor(SR()*ms/1000);let lp=0;for(let i=0;i<n&&i<d.length;i++){const x=rnd(),h=x-lp;lp=x;d[i]+=h*amp*(1-i/n)}}
+function finish_(buf,peak=.92,fadeMs=15){const d=buf.getChannelData(0);let m=0;for(const x of d)m=Math.max(m,Math.abs(x));if(m>0)for(let i=0;i<d.length;i++)d[i]=d[i]/m*peak;
+  const fo=Math.min(d.length,Math.floor(SR()*fadeMs/1000));for(let i=0;i<fo;i++)d[d.length-1-i]*=i/fo;return buf}
+function newBuf(sec){return actx.createBuffer(1,Math.floor(SR()*sec),SR())}
+function makeBank(sec,excMs,modes,seed,extra){const b=newBuf(sec),d=b.getChannelData(0),rnd=rng(seed),e=burst(d.length,excMs,rnd);
+  for(const [f,tau,a] of modes) resonate(d,e,f,tau,a); if(extra) extra(d,rnd); return finish_(b)}
+// カスタネット: 硬い木の打ち合わせ。右は少し高い（雌）
+function makeCastanet(v){const k=v?1.17:1;return makeBank(.13,.6,[[700*k,.012,.5],[1250*k,.02,1],[2300*k,.014,2.5],[3500*k,.009,3],[5200*k,.006,2]],v?424242:777,(d,r)=>clickHP(d,.8,1.2,r))}
+// サパテアード: 左＝つま先（planta、床板の低い響き）／右＝かかと（tacón、鋭い）
+function makeZapato(v){ if(!v) return makeBank(.28,3,[[170,.06,1.2],[430,.035,1.5],[1400,.012,2.4],[2600,.006,2.4],[3600,.004,1.8]],1357,(d,r)=>{sweep(d,95,48,.02,.07,.5);clickHP(d,1.5,1.4,r)});
+  return makeBank(.22,1.2,[[300,.03,1],[900,.02,2],[2200,.01,4],[3800,.005,3]],2468,(d,r)=>{sweep(d,140,80,.01,.03,.25);clickHP(d,1,1.2,r)}) }
+// カホン: 左＝低音（中央）／右＝スラップ（縁、響き線つき）
+function makeCajon(v){ if(!v) return makeBank(.45,2,[[180,.04,.5],[420,.015,.7],[1300,.008,1.6]],1111,(d,r)=>{sweep(d,110,62,.015,.14,1.3,.0012);clickHP(d,1.4,.9,r)});
+  return makeBank(.32,2,[[900,.02,1.5],[1800,.014,2],[3200,.008,2]],2222,(d,r)=>{sweep(d,230,190,.01,.03,.25);
+    let lp=0;for(let i=0;i<d.length;i++){const t=i/SR(),x=r(),h=x-lp;lp=x;d[i]+=h*.18*Math.exp(-t/.075)*(1-Math.exp(-t/.004))}}) }
+// パルマ・ソルダ: 手をくぼませた、こもった手拍子（録音した手拍子を低域に絞る）
+function lowpass(src,fc,q=.7){const b=newBuf(src.duration),d=b.getChannelData(0),x=src.getChannelData(0),w=2*Math.PI*fc/SR(),al=Math.sin(w)/(2*q),c=Math.cos(w),
+  a0=1+al,b0=(1-c)/2/a0,b1=(1-c)/a0,b2=b0,a1=-2*c/a0,a2=(1-al)/a0;let x1=0,x2=0,y1=0,y2=0;
+  const n=Math.min(d.length,x.length);for(let i=0;i<n;i++){const y=b0*x[i]+b1*x1+b2*x2-a1*y1-a2*y2;x2=x1;x1=x[i];y2=y1;y1=y;d[i]=y} return b}
+function makeSorda(src,fc){const b=lowpass(lowpass(src,fc),fc*1.4);return finish_(b,.92,30)}
+// ラスゲアード: ギターのかき鳴らし（Karplus-Strong）。左＝E（ミ）、右＝F（ファ）＝フリギア終止の2和音
+function makeRasgueo(v){
+  const sr=SR(),sec=.85,b=newBuf(sec),d=b.getChannelData(0),rnd=rng(v?9090:8080);
+  const ch = v? [87.31,130.81,174.61,220.00,261.63,349.23] : [82.41,123.47,164.81,207.65,246.94,329.63];
+  ch.forEach((f,i)=>{ const N=Math.max(2,Math.round(sr/f)), st=Math.floor(sr*i*.0065), ring=new Float32Array(N); let lp=0;
+    for(let k=0;k<N;k++){ lp=lp*.45+rnd()*.55; ring[k]=lp; }
+    const amp=(1-i*.06)*(i===0?.8:1), dec=.9965-i*.0004; let p=0, prev=ring[N-1];
+    for(let n=st;n<d.length;n++){ const cur=ring[p], nx=(cur+prev)*.5*dec; prev=cur; ring[p]=nx; p=(p+1)%N; d[n]+=cur*amp; } });
+  clickHP(d,2.2,.5,rnd);
+  for(let i=0;i<d.length;i++){ const t=i/sr; d[i]*=t<.45?1:Math.max(0,1-(t-.45)/.4); }
+  return finish_(b,.85,40);
+}
+const TONES=[
+  {id:'palma',  es:'Palmas secas',  ja:'パルマ・セカ',  d:'乾いた手拍子（録音）'},
+  {id:'sorda',  es:'Palmas sordas', ja:'パルマ・ソルダ',d:'くぼませた手の、こもった手拍子'},
+  {id:'golpe',  es:'Golpe',         ja:'ゴルペ',        d:'ギターの表板を指で叩く音'},
+  {id:'castanet',es:'Castañuelas',  ja:'カスタネット',  d:'硬い木の打ち合わせ。右が少し高い'},
+  {id:'zapato', es:'Zapateado',     ja:'サパテアード',  d:'床を踏む足音。左＝つま先、右＝かかと'},
+  {id:'cajon',  es:'Cajón',         ja:'カホン',        d:'左＝低い中央打ち、右＝縁のスラップ'},
+  {id:'rasgueo',es:'Rasgueado',     ja:'ラスゲアード',  d:'ギターのかき鳴らし。左＝E、右＝F'},
+  {id:'off',    es:'Silencio',      ja:'なし',          d:'打音を鳴らさない'},
+];
+const TONEBUF={}; const TONEGAIN={palma:.9,sorda:1,golpe:.95,castanet:.75,zapato:.95,cajon:1,rasgueo:.7};
 function hitSound(lane){
   if(S.tone==='off' || actx.state!=='running') return;
-  hitAlt^=1;
-  if(S.tone==='palma' && clapBufs.length) playBuf(clapBufs[hitAlt%clapBufs.length], .9, lane?1.06:.97);
-  else if(golpeBufs.length) playBuf(golpeBufs[lane], .95, 1+(Math.random()-.5)*.03);
+  const bs=TONEBUF[S.tone]||TONEBUF.palma; if(!bs) return;
+  playBuf(bs[lane], TONEGAIN[S.tone]||.9, 1+(Math.random()-.5)*.025);
 }
+function previewTone(){ actx.resume().then(()=>{ const bs=TONEBUF[S.tone]; if(S.tone==='off'||!bs) return; const t=actx.currentTime+.02;
+  playBuf(bs[0],TONEGAIN[S.tone],1,hitGain,t); playBuf(bs[1],TONEGAIN[S.tone],1,hitGain,t+.24); playBuf(bs[0],TONEGAIN[S.tone],1,hitGain,t+.48); }).catch(()=>{}); }
 function claps(){ if(!clapBufs.length || actx.state!=='running') return; const t=actx.currentTime;
   playBuf(clapBufs[0],.55,1,hitGain,t); playBuf(clapBufs[1%clapBufs.length],.45,1.04,hitGain,t+.11); }
 
 async function loadAudio(){
-  golpeBufs=[makeGolpe(0),makeGolpe(1)]; tickBuf=makeTick();
+  tickBuf=makeTick();
+  TONEBUF.golpe=[makeGolpe(0),makeGolpe(1)];
+  TONEBUF.castanet=[makeCastanet(0),makeCastanet(1)];
+  TONEBUF.zapato=[makeZapato(0),makeZapato(1)];
+  TONEBUF.cajon=[makeCajon(0),makeCajon(1)];
+  TONEBUF.rasgueo=[makeRasgueo(0),makeRasgueo(1)];
   try{ clapBufs = await Promise.all(CLAP_B64.map(b=>decode(b64ToBuf(b)))); }catch(e){ clapBufs=[]; }
+  if(clapBufs.length){ TONEBUF.palma=[clapBufs[0],clapBufs[1%clapBufs.length]];
+    TONEBUF.sorda=[makeSorda(clapBufs[0],900),makeSorda(clapBufs[1%clapBufs.length],1100)]; }
+  else TONEBUF.palma=TONEBUF.golpe;
+  if(!TONES.some(t=>t.id===S.tone)) S.tone='palma';
   musicBuf = await decode(b64ToBuf(AUDIO_B64));
 }
 
@@ -1016,10 +1082,14 @@ function syncSettingsUI(){
   const map=[['#sHs','hs',v=>(+v).toFixed(1)+'×'],['#sOff','off',v=>(v>0?'+':'')+v+'ms'],['#sMv','mv',v=>v+'%'],['#sHv','hv',v=>v+'%']];
   for(const [sel,key,fmt] of map){ const el=$(sel), out=$('#o'+sel.slice(2)); el.value=S[key]; out.textContent=fmt(S[key]); setRangeFill(el);
     el.oninput=()=>{ S[key]=+el.value; out.textContent=fmt(el.value); setRangeFill(el); if(key==='mv'||key==='hv') applyVolumes(); saveS(); };
-    if(key==='hv') el.onchange=()=>{ actx.resume().then(()=>hitSound(0)); }; }
-  segBind('#sTone','tone',v=>v,()=>{ actx.resume().then(()=>hitSound(0)); });
+    if(key==='hv') el.onchange=previewTone; }
+  renderTones();
   segBind('#sFx','fx',v=>+v);
 }
+function renderTones(){ const box=$('#sTone'); box.innerHTML=''; const cur=TONES.find(t=>t.id===S.tone)||TONES[0]; $('#oTone').textContent=cur.ja;
+  for(const t of TONES){ const b=document.createElement('button'); b.className='tone'+(t.id===S.tone?' on':'');
+    b.innerHTML=`<b>${t.ja}</b><i>${t.es}</i><small>${t.d}</small>`;
+    b.onclick=()=>{ S.tone=t.id; saveS(); renderTones(); previewTone(); }; box.appendChild(b); } }
 function segBind(sel,key,conv,after){ const box=$(sel); box.querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',String(S[key])===b.dataset.v);
   b.onclick=()=>{ S[key]=conv(b.dataset.v); saveS(); box.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); after&&after(); }; }); }
 
