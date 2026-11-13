@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>火の箱庭（仮）</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#0b0e1a;overflow:hidden;color:#ece6d6;
+  font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;
+  touch-action:none;user-select:none;-webkit-user-select:none}
+#app{position:fixed;inset:0;display:flex;flex-direction:column}
+#stageWrap{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;position:relative}
+canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+#hud{position:absolute;left:0;right:0;top:0;display:flex;justify-content:space-between;align-items:flex-start;
+  padding:8px 10px;pointer-events:none;font-size:14px;line-height:1.5;text-shadow:0 1px 2px #000}
+#hud b{font-size:18px;color:#ffd27a}
+#hud .btns{display:flex;gap:6px;pointer-events:auto}
+#hud button{font:inherit;font-size:13px;color:#ece6d6;background:rgba(20,24,40,.8);border:1px solid #4a5170;
+  border-radius:6px;padding:6px 10px;cursor:pointer}
+#hud button:active{background:#3a4268}
+#hud button{white-space:nowrap}
+@media(max-width:480px){#hud{font-size:12px;padding:6px 8px}#hud b{font-size:15px}#hud button{padding:5px 8px;font-size:12px}}
+#banner{position:absolute;left:0;right:0;top:12%;text-align:center;font-size:34px;font-weight:700;color:#ffb347;
+  text-shadow:0 2px 0 #7a2a10,0 0 14px #ff6a1a;opacity:0;transition:opacity .25s;pointer-events:none;letter-spacing:.2em}
+#banner small{display:block;font-size:14px;letter-spacing:.1em;color:#ffe6b8;text-shadow:0 1px 2px #000;margin-top:6px}
+#pads{display:none;height:min(36vh,210px);flex:none;position:relative;border-top:1px solid #1d2238;background:#0e1222}
+body.touch #pads{display:flex}
+.zone{flex:1;position:relative;overflow:hidden}
+.zone+.zone{border-left:1px dashed #232a44}
+.zone .lbl{position:absolute;left:0;right:0;bottom:12px;text-align:center;font-size:13px;color:#5c6588;pointer-events:none}
+.stick{position:absolute;width:88px;height:88px;border-radius:50%;border:2px solid rgba(255,255,255,.28);
+  background:rgba(255,255,255,.06);display:none;pointer-events:none}
+.stick i{position:absolute;left:50%;top:50%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;
+  background:rgba(255,255,255,.35)}
+.zone.fire .stick{border-color:rgba(255,150,60,.55);background:rgba(255,120,40,.1)}
+.zone.fire .stick i{background:rgba(255,160,70,.6)}
+#title{position:absolute;inset:0;background:rgba(6,8,18,.82);display:flex;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;padding:20px;z-index:5}
+#title h1{margin:0 0 4px;font-size:34px;letter-spacing:.12em;color:#ffb347;text-shadow:0 2px 0 #7a2a10,0 0 16px #ff6a1a}
+#title .sub{font-size:13px;color:#9aa3c4;margin-bottom:22px}
+#title p{margin:4px 0;font-size:14px;line-height:1.7;color:#d9d4c4}
+#title button{margin-top:22px;font:inherit;font-size:20px;font-weight:700;letter-spacing:.3em;padding:12px 40px;
+  color:#2a0e04;background:linear-gradient(#ffd27a,#ff9a3c);border:0;border-radius:8px;cursor:pointer;
+  box-shadow:0 3px 0 #8a3a10}
+#title button:active{transform:translateY(2px);box-shadow:0 1px 0 #8a3a10}
+.pc-only{display:block}.touch-only{display:none}
+body.touch .pc-only{display:none}body.touch .touch-only{display:block}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stageWrap">
+    <canvas id="cv"></canvas>
+    <div id="hud">
+      <div>Wave <b id="hWave">1</b>　Mushrooms <b id="hLeft">0</b>　Mycelium <b id="hMyc">0</b>　Score <b id="hScore">0</b></div>
+      <div class="btns"><button id="bMute" type="button">Sound ON</button><button id="bReset" type="button">Reset</button></div>
+    </div>
+    <div id="banner">ALL BURNED<small id="bSub"></small></div>
+    <div id="title">
+      <h1>火の箱庭（仮）</h1>
+      <div class="sub">Quarter-view prototype</div>
+      <p class="pc-only">WASD / Arrow keys: move　Mouse: aim<br>Hold left click (or Space / X): fire</p>
+      <p class="touch-only">Left thumb: move<br>Right thumb: aim and fire</p>
+      <p>Mushrooms sprout from the ground and keep multiplying.<br>Grass and trees burn fast. Rocks do not.<br>Burnt mushrooms may leave mycelium that spawns more.</p>
+      <button id="bStart" type="button">START</button>
+    </div>
+  </div>
+  <div id="pads">
+    <div class="zone" id="zL"><div class="stick"><i></i></div><div class="lbl">Move</div></div>
+    <div class="zone fire" id="zR"><div class="stick"><i></i></div><div class="lbl">Aim + Fire</div></div>
+  </div>
+</div>
+
+<script>
+(()=>{
+'use strict';
+/* ====== 定数 ====== */
+const W=416,H=288,TW=32,TH=16,N=12,OX=208,OY=44,CAP=120,T_SIDE=18;
+const BMAX=[50,66,88];            // サイズ別の燃焼フレーム数
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+cv.width=W;cv.height=H;
+const rnd=(a,b)=>a+Math.random()*(b-a), irnd=(a,b)=>Math.floor(rnd(a,b+1));
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const SX=(x,y)=>OX+(x-y)*TW/2;
+const SY=(x,y,z=0)=>OY+(x+y)*TH/2-z;
+const s2w=(dx,dy)=>[(dx/(TW/2)+dy/(TH/2))/2,(dy/(TH/2)-dx/(TW/2))/2];
+const w2sLen=(wx,wy)=>Math.hypot((wx-wy)*TW/2,(wx+wy)*TH/2);
+
+/* ====== 状態 ====== */
+let player,mush,trees,rocks,grass,mycs,obs,parts,tiles,wave,score,tickN,phase,clearT,shakeAmt,idSeq,started=false;
+const input={keys:{},mouseDown:false,mx:0,my:0,mouseT:-1e9,L:{active:false,x:0,y:0,k:0},R:{active:false,x:0,y:0,k:0}};
+
+/* ====== 背景（静的）の事前描画 ====== */
+const bg=document.createElement('canvas');bg.width=W;bg.height=H;
+function buildBG(){
+  const c=bg.getContext('2d');
+  const g=c.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#0a0d20');g.addColorStop(.55,'#161a38');g.addColorStop(1,'#0f1224');
+  c.fillStyle=g;c.fillRect(0,0,W,H);
+  const r=mulberry(11);
+  for(let i=0;i<70;i++){
+    const x=Math.floor(r()*W),y=Math.floor(r()*H*.7),b=r();
+    c.fillStyle=b>.85?'#ffffff':b>.5?'#b8c0e8':'#6a72a0';
+    c.fillRect(x,y,1,1);
+  }
+  // 影（箱庭の下）
+  c.fillStyle='rgba(0,0,0,.28)';
+  for(let k=0;k<9;k++){
+    const w=N*30-k*24,y=OY+N*TH+T_SIDE+10+k;
+    c.fillRect(Math.round(OX-w/2),y,w,1);
+  }
+  // 側面（左下面・右下面）
+  const rs=mulberry(5);
+  const bandsL=[[0,2,'#2a5a3a'],[2,7,'#5d3f2c'],[7,9,'#4b3223'],[9,14,'#6a4833'],[14,T_SIDE,'#3e2a1e']];
+  const bandsR=[[0,2,'#1f4a30'],[2,7,'#48301f'],[7,9,'#3a2619'],[9,14,'#533826'],[14,T_SIDE,'#2e1f16']];
+  const half=N*TW/2;
+  for(let col=0;col<half;col++){
+    const yl=OY+N*TH/2+Math.floor(col/2);
+    for(const [a,b,clr] of bandsL){c.fillStyle=clr;c.fillRect(OX-half+col,yl+a,1,b-a);}
+    const yr=OY+N*TH-Math.floor(col/2)-1;
+    for(const [a,b,clr] of bandsR){c.fillStyle=clr;c.fillRect(OX+col,yr+a,1,b-a);}
+  }
+  // 小石の点
+  for(let i=0;i<46;i++){
+    const col=Math.floor(rs()*half),d=2+Math.floor(rs()*(T_SIDE-3));
+    c.fillStyle=rs()>.5?'#7d5a40':'#2a1c13';
+    c.fillRect(OX-half+col,OY+N*TH/2+Math.floor(col/2)+d,1,1);
+    const col2=Math.floor(rs()*half),d2=2+Math.floor(rs()*(T_SIDE-3));
+    c.fillStyle=rs()>.5?'#6a4a33':'#22160f';
+    c.fillRect(OX+col2,OY+N*TH-Math.floor(col2/2)-1+d2,1,1);
+  }
+  // ビネット
+  const v=c.createRadialGradient(W/2,H/2,H*.35,W/2,H/2,H*.9);
+  v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.45)');
+  c.fillStyle=v;c.fillRect(0,0,W,H);
+}
+
+/* ====== 世界の生成 ====== */
+function buildWorld(){
+  tiles=[];
+  const r=mulberry(23);
+  for(let j=0;j<N;j++)for(let i=0;i<N;i++){
+    const tu=[];
+    for(let k=0;k<5;k++){
+      const u=r(),v=r();
+      tu.push([Math.round(SX(i+u,j+v)),Math.round(SY(i+u,j+v)),r()>.5?1:0]);
+    }
+    tiles.push({sc:0,tuft:tu,tone:(i+j)%2});
+  }
+  trees=[];rocks=[];obs=[];
+  const rs=mulberry(7);
+  const place=(list,count,radF,minD)=>{
+    let tries=0;
+    while(list.length<count&&tries++<400){
+      const x=0.9+rs()*(N-1.8),y=0.9+rs()*(N-1.8);
+      if(Math.hypot(x-N/2,y-N/2)<2.2)continue;
+      if(obs.some(o=>Math.hypot(o.x-x,o.y-y)<minD))continue;
+      const o={x,y,r:radF(),seed:rs()};list.push(o);obs.push(o);
+    }
+  };
+  place(trees,11,()=>0.3,1.5);
+  place(rocks,14,()=>rs()<0.4?0.46:0.3,1.4);
+  for(const t of trees){t.kind='tree';t.heat=0;t.burn=0;t.burnt=false;t.d=t.x+t.y;}
+  for(const o of rocks){o.kind='rock';o.d=o.x+o.y;o.big=o.r>0.4;}
+  // 長い草（よく燃える）：群生をいくつか
+  grass=[];
+  for(let p=0;p<11;p++){
+    const cx=1.4+rs()*(N-2.8),cy=1.4+rs()*(N-2.8);
+    for(let k=0;k<10;k++){
+      const x=cx+(rs()-.5)*2.6,y=cy+(rs()-.5)*2.6;
+      if(x<.6||y<.6||x>N-.6||y>N-.6)continue;
+      if(obs.some(o=>Math.hypot(o.x-x,o.y-y)<o.r+0.15))continue;
+      if(Math.hypot(x-N/2,y-N/2)<0.8)continue;
+      grass.push({kind:'grass',x,y,d:x+y,seed:rs()*6.28,burn:0,dead:0,regrow:0,grow:1});
+    }
+  }
+}
+
+function resetGame(){
+  buildWorld();
+  player={x:N/2,y:N/2,aim:Math.PI/2,walk:0,moving:false,fireF:0,firing:false,pilotT:0};
+  mush=[];mycs=[];parts=[];wave=1;score=0;tickN=0;phase='play';clearT=0;shakeAmt=0;idSeq=0;
+  spawnWave(wave);
+  document.getElementById('banner').style.opacity=0;
+}
+
+const blocked=(x,y,r)=>{
+  if(x<0.35||y<0.35||x>N-0.35||y>N-0.35)return true;
+  for(const o of obs){const dx=o.x-x,dy=o.y-y,rr=o.r+r;if(dx*dx+dy*dy<rr*rr)return true;}
+  return false;
+};
+function moveEnt(e,dx,dy,r){
+  let moved=false;
+  if(!blocked(e.x+dx,e.y,r)){e.x+=dx;moved=true;}
+  if(!blocked(e.x,e.y+dy,r)){e.y+=dy;moved=true;}
+  return moved;
+}
+function scorchAt(x,y,a){
+  const i=Math.floor(x),j=Math.floor(y);
+  if(i<0||j<0||i>=N||j>=N)return;
+  const t=tiles[j*N+i];t.sc=Math.min(1,t.sc+a);
+}
+
+/* ====== キノコ ====== */
+function makeMush(x,y,sz,delay){
+  return {id:idSeq++,x,y,z:0,vz:0,sz,hue:irnd(0,359),spot:irnd(0,3),burn:0,sp:0,hd:rnd(0,6.28),wt:irnd(10,80),
+    age:irnd(0,300),grow:irnd(250,700),dsg:irnd(0,3),delay:delay||0,pop:0};
+}
+function freeSpot(minPlayer){
+  for(let t=0;t<60;t++){
+    const x=rnd(0.8,N-0.8),y=rnd(0.8,N-0.8);
+    if(blocked(x,y,0.3))continue;
+    if(minPlayer&&Math.hypot(x-player.x,y-player.y)<minPlayer)continue;
+    return [x,y];
+  }
+  return null;
+}
+function spawnWave(n){
+  const count=Math.min(64,10+n*5);
+  for(let i=0;i<count;i++){
+    const p=freeSpot(2.2);if(!p)continue;
+    mush.push(makeMush(p[0],p[1],i%5===0?2:(i%4===0?0:1),i*5+irnd(0,6)));
+  }
+}
+function spawnBaby(m){
+  for(let t=0;t<8;t++){
+    const a=rnd(0,6.28),x=m.x+Math.cos(a)*0.6,y=m.y+Math.sin(a)*0.6;
+    if(!blocked(x,y,0.25)){const b=makeMush(x,y,0,0);b.pop=24;mush.push(b);puff(x,y);dirt(x,y,7);return;}
+  }
+}
+function ignite(m){
+  if(canIgnite(m)){m.burn=1;m.sp=0;spark(m.x,m.y,10,3);}
+}
+let lastCrack=0;
+function burnTick(m,burningCount){
+  m.burn++;
+  const bm=BMAX[m.sz],pe=bm*0.6,hh=[8,12,16][m.sz];
+  scorchAt(m.x,m.y,0.005);
+  if(m.burn<pe){
+    if(m.burn===2)m.sp=rnd(0.05,0.075);
+    if(tickN%7===0)m.hd+=rnd(-1.2,1.2);
+    if(!moveEnt(m,Math.cos(m.hd)*m.sp,Math.sin(m.hd)*m.sp,0.2))m.hd+=rnd(2,4);
+    if(m.z===0&&Math.random()<0.07)m.vz=1.6;
+    m.z+=m.vz;m.vz-=0.18;if(m.z<=0){m.z=0;m.vz=0;}
+    if(Math.random()<0.6)smallFlame(m.x,m.y,hh+m.z,2.0);
+    if((tickN+m.id)%3===0){
+      for(const o of mush){
+        if(o.burn===0&&o.delay===0&&Math.abs(o.x-m.x)<0.8&&Math.abs(o.y-m.y)<0.8&&Math.random()<0.7)ignite(o);
+      }
+      for(const t of trees){if(!t.burnt&&t.burn===0&&Math.hypot(t.x-m.x,t.y-m.y)<1.0)t.heat+=6;}
+      for(const g of grass)if(Math.abs(g.x-m.x)<0.7&&Math.abs(g.y-m.y)<0.7&&Math.random()<0.6)igniteGrass(g);
+    }
+    if(m.burn%9===0)crackle();
+  }else{
+    m.sp*=0.8;
+    moveEnt(m,Math.cos(m.hd)*m.sp,Math.sin(m.hd)*m.sp,0.2);
+    m.z=0;
+    if(Math.random()<0.2)smallFlame(m.x,m.y,hh*0.6,1.5);
+  }
+  if(m.burn>=bm){
+    score+=50*(1+Math.floor(burningCount/10));
+    for(let k=0;k<5;k++)parts.push({k:'a',x:m.x+rnd(-.15,.15),y:m.y+rnd(-.15,.15),z:rnd(hh*.4,hh),vx:rnd(-.01,.01),vy:rnd(-.01,.01),vz:rnd(0.02,0.3),life:0,max:irnd(50,90),sz:1});
+    for(let k=0;k<2;k++)smoke(m.x,m.y,hh);
+    scorchAt(m.x,m.y,0.35);
+    if(Math.random()<[0.04,0.15,0.28][m.sz]&&mycs.length<10&&!mycs.some(c=>Math.hypot(c.x-m.x,c.y-m.y)<0.9))mycs.push(makeMyc(m.x,m.y));
+    scorchAt(m.x+.7,m.y,0.1);scorchAt(m.x-.7,m.y,0.1);scorchAt(m.x,m.y+.7,0.1);scorchAt(m.x,m.y-.7,0.1);
+    return true;
+  }
+  return false;
+}
+function updateMush(m,bc){
+  if(m.delay>0){m.delay--;if(m.delay===0){m.pop=24;puff(m.x,m.y);dirt(m.x,m.y,8);}return false;}
+  if(m.pop>0){m.pop--;if(m.pop%6===0)dirt(m.x,m.y,2);if(m.burn===0)return false;}
+  if(m.burn>0)return burnTick(m,bc);
+  m.age++;
+  if(m.sz<2&&m.age>(m.sz===0?360:1000)){m.sz++;m.age=0;}
+  if(m.sz>=1){m.grow--;if(m.grow<=0){m.grow=irnd(550,950);if(mush.length<CAP)spawnBaby(m);}}
+  m.wt--;
+  if(m.wt<=0){
+    if(Math.random()<0.4)m.sp=0;else{m.sp=0.011;m.hd=rnd(0,6.28);}
+    m.wt=irnd(40,140);
+  }
+  if(m.sp>0){
+    if(!moveEnt(m,Math.cos(m.hd)*m.sp,Math.sin(m.hd)*m.sp,0.2))m.hd+=rnd(2,4);
+    m.z=Math.abs(Math.sin(tickN*0.18+m.id))*1.2;
+  }else m.z=0;
+  return false;
+}
+
+
+function canIgnite(m){return m.burn===0&&m.delay===0&&m.pop<=8;}
+function dirt(x,y,n){for(let k=0;k<n;k++)parts.push({k:'d',x:x+rnd(-.12,.12),y:y+rnd(-.12,.12),z:1,vx:rnd(-.025,.025),vy:rnd(-.025,.025),vz:rnd(.8,1.8),life:0,max:40,sz:1,c:Math.random()<.5?0:1});}
+
+/* ====== 長い草 ====== */
+function igniteGrass(g){if(!g.dead&&g.burn===0&&g.grow>=0.6)g.burn=1;}
+function updateGrass(g){
+  if(g.dead)return;
+  if(g.grow<1)g.grow=Math.min(1,g.grow+0.012);
+  if(g.burn>0){
+    g.burn++;
+    if(Math.random()<0.5)smallFlame(g.x,g.y,rnd(3,9),rnd(1.6,2.6));
+    if(g.burn%4===0){
+      for(const o of grass)if(o.burn===0&&!o.dead&&Math.abs(o.x-g.x)<0.75&&Math.abs(o.y-g.y)<0.75&&Math.random()<0.55)igniteGrass(o);
+      for(const o of mush)if(o.burn===0&&o.delay===0&&Math.abs(o.x-g.x)<0.7&&Math.abs(o.y-g.y)<0.7&&Math.random()<0.5)ignite(o);
+      for(const t of trees)if(!t.burnt&&t.burn===0&&Math.hypot(t.x-g.x,t.y-g.y)<1.0)t.heat+=4;
+      scorchAt(g.x,g.y,0.03);
+    }
+    if(g.burn%11===0)crackle();
+    if(g.burn>70){g.burn=0;g.dead=1;g.regrow=irnd(1500,2600);scorchAt(g.x,g.y,0.25);if(Math.random()<0.5)smoke(g.x,g.y,6);}
+  }
+}
+
+/* ====== 菌糸 ====== */
+function makeMyc(x,y){
+  const arms=[],n=irnd(5,7);
+  for(let i=0;i<n;i++){
+    let a=rnd(0,6.28),px=0,py=0;const pts=[[0,0]],segs=irnd(3,4);
+    for(let s=0;s<segs;s++){a+=rnd(-0.6,0.6);const l=rnd(0.22,0.4);px+=Math.cos(a)*l;py+=Math.sin(a)*l;pts.push([px,py]);}
+    arms.push(pts);
+  }
+  return {x,y,hp:90,max:90,lastDmg:-999,age:0,spT:irnd(150,300),rootT:irnd(2400,3600),arms,hit:0};
+}
+function spawnAround(x,y,rad){
+  for(let t=0;t<8;t++){
+    const a=rnd(0,6.28),r=rnd(0.2,rad),nx=x+Math.cos(a)*r,ny=y+Math.sin(a)*r;
+    if(!blocked(nx,ny,0.2)){const b=makeMush(nx,ny,0,0);b.pop=24;mush.push(b);puff(nx,ny);dirt(nx,ny,7);return;}
+  }
+}
+function updateMyc(c){
+  c.age++;if(c.hit>0)c.hit--;
+  if(tickN%4===0){
+    for(const m of mush)if(m.burn>0&&Math.abs(m.x-c.x)<0.9&&Math.abs(m.y-c.y)<0.9){c.hp-=0.5;c.lastDmg=tickN;}
+    for(const t of trees)if(t.burn>0&&Math.hypot(t.x-c.x,t.y-c.y)<1.3){c.hp-=0.8;c.lastDmg=tickN;}
+    for(const g of grass)if(g.burn>0&&Math.abs(g.x-c.x)<0.8&&Math.abs(g.y-c.y)<0.8){c.hp-=0.5;c.lastDmg=tickN;}
+  }
+  if(c.hp>0&&c.hp<c.max&&tickN-c.lastDmg>30)c.hp=Math.min(c.max,c.hp+0.15); // 火を離すと次第に復活
+  if(c.hp<=0){spark(c.x,c.y,3,8);for(let k=0;k<3;k++)smoke(c.x,c.y,2);scorchAt(c.x,c.y,0.2);return true;}
+  if(c.age>60){
+    c.spT--;
+    if(c.spT<=0){
+      c.spT=irnd(110,220);
+      const n=Math.random()<0.3?2:1;
+      for(let k=0;k<n;k++)if(mush.length<CAP)spawnAround(c.x,c.y,0.9);
+    }
+  }
+  c.rootT--;
+  if(c.rootT<=0){
+    c.rootT=irnd(2400,3600);
+    if(mycs.length<10){
+      const a=rnd(0,6.28),r=rnd(1.3,2.6),nx=c.x+Math.cos(a)*r,ny=c.y+Math.sin(a)*r;
+      if(!blocked(nx,ny,0.25)&&!mycs.some(o=>Math.hypot(o.x-nx,o.y-ny)<1.0))mycs.push(makeMyc(nx,ny));
+    }
+  }
+  return false;
+}
+function drawMyc(c){
+  const g=Math.min(1,c.age/240),dmg=1-c.hp/c.max;
+  const pulse=0.78+0.22*Math.sin(tickN*0.05+c.x*3);
+  const RAMP=[[0,[214,204,240]],[.3,[255,170,200]],[.6,[255,130,50]],[.85,[255,70,30]],[1,[70,25,20]]];
+  const q=Math.min(1,dmg+(c.hit>0&&((tickN>>1)&1)?0.08:0));
+  let c0=RAMP[0],c1=RAMP[RAMP.length-1];
+  for(let i=0;i<RAMP.length-1;i++)if(q>=RAMP[i][0]&&q<=RAMP[i+1][0]){c0=RAMP[i];c1=RAMP[i+1];break;}
+  const tt=c1[0]===c0[0]?0:(q-c0[0])/(c1[0]-c0[0]);
+  const rc=[lerp(c0[1][0],c1[1][0],tt),lerp(c0[1][1],c1[1][1],tt),lerp(c0[1][2],c1[1][2],tt)];
+  const col=(k)=>'rgba('+Math.min(255,Math.round(rc[0]*k))+','+Math.min(255,Math.round(rc[1]*k))+','+Math.min(255,Math.round(rc[2]*k))+','+(0.9*pulse).toFixed(2)+')';
+  const cx=Math.round(SX(c.x,c.y)),cy=Math.round(SY(c.x,c.y));
+  ctx.fillStyle='rgba(120,90,160,.18)';
+  ctx.fillRect(cx-6,cy-2,12,4);ctx.fillRect(cx-3,cy-3,6,6);
+  ctx.fillStyle=col(1);
+  for(const pts of c.arms){
+    for(let i=0;i<pts.length-1;i++){
+      const ax=SX(c.x+pts[i][0]*g,c.y+pts[i][1]*g),ay=SY(c.x+pts[i][0]*g,c.y+pts[i][1]*g);
+      const bx=SX(c.x+pts[i+1][0]*g,c.y+pts[i+1][1]*g),by=SY(c.x+pts[i+1][0]*g,c.y+pts[i+1][1]*g);
+      const st=Math.max(1,Math.round(Math.max(Math.abs(bx-ax),Math.abs(by-ay))));
+      for(let s=0;s<=st;s++)ctx.fillRect(Math.round(ax+(bx-ax)*s/st),Math.round(ay+(by-ay)*s/st),1,1);
+    }
+    const e=pts[pts.length-1];
+    ctx.fillStyle=col(1.15);
+    ctx.fillRect(Math.round(SX(c.x+e[0]*g,c.y+e[1]*g))-1,Math.round(SY(c.x+e[0]*g,c.y+e[1]*g)),2,1);
+    ctx.fillStyle=col(1);
+  }
+  ctx.fillStyle=col(1.2);ctx.fillRect(cx-2,cy-1,4,2);
+  ctx.fillStyle='rgba(255,252,240,'+(0.9*pulse).toFixed(2)+')';ctx.fillRect(cx-1,cy-1,2,1);
+}
+function drawGrass(g){
+  const x=Math.round(SX(g.x,g.y)),y=Math.round(SY(g.x,g.y));
+  const f=g.burn>0?Math.min(1,g.burn/70):0,sc=g.grow*(1-f*0.5);
+  const offs=[-3,-1,0,2,3],hs=[7,10,12,8,6];
+  const fl=(Math.floor(tickN/3)%2)?[255,150,40]:[255,210,90];
+  for(let i=0;i<5;i++){
+    const h=Math.max(1,Math.round(hs[i]*sc));
+    const sw=Math.round(Math.sin(tickN*0.05+g.seed+i*0.9)*1.3*(h/10));
+    let c1=i%2?'#3f8a54':'#4e9c62',c2='#8fd68a';
+    if(f>0){
+      if(f<0.6){c1=(i+Math.floor(tickN/4))%2?'#ff7a2a':'#e04a1e';c2=fl.length?'rgb('+fl[0]+','+fl[1]+','+fl[2]+')':'#fc0';}
+      else{c1='#3a2c26';c2='#5a3a2a';}
+    }
+    const lo=Math.floor(h/2);
+    ctx.fillStyle=c1;ctx.fillRect(x+offs[i],y-lo,1,lo);
+    ctx.fillRect(x+offs[i]+sw,y-h,1,h-lo);
+    ctx.fillStyle=c2;ctx.fillRect(x+offs[i]+sw,y-h,1,1);
+  }
+}
+
+/* ====== 木 ====== */
+function updateTree(t){
+  if(t.burnt)return;
+  if(t.burn>0){
+    t.burn++;
+    for(let k=irnd(1,2);k>0;k--)parts.push({k:'f',x:t.x+rnd(-.18,.18),y:t.y+rnd(-.18,.18),z:rnd(10,24),vx:rnd(-.01,.01),vy:rnd(-.01,.01),vz:rnd(.3,.7),life:0,max:irnd(18,30),sz:rnd(2,3.6),seed:rnd(0,6.28),b:0.034});
+    if(Math.random()<0.1)spark(t.x,t.y,rnd(14,26),1);
+    if(t.burn%4===0){
+      for(const o of mush)if(o.burn===0&&o.delay===0&&Math.hypot(o.x-t.x,o.y-t.y)<1.3&&Math.random()<0.4)ignite(o);
+      for(const o of trees)if(!o.burnt&&o.burn===0&&o.heat<24&&Math.hypot(o.x-t.x,o.y-t.y)<1.8)o.heat+=5;
+      for(const g of grass)if(Math.hypot(g.x-t.x,g.y-t.y)<1.3&&Math.random()<0.5)igniteGrass(g);
+      scorchAt(t.x,t.y,0.02);scorchAt(t.x+.6,t.y,0.01);scorchAt(t.x-.6,t.y,0.01);scorchAt(t.x,t.y+.6,0.01);scorchAt(t.x,t.y-.6,0.01);
+    }
+    if(t.burn%10===0)crackle();
+    if(t.burn>260){t.burnt=true;t.burn=0;for(let k=0;k<4;k++)smoke(t.x,t.y,16);}
+  }else if(t.heat>0){
+    t.heat=Math.max(0,t.heat-0.15);
+    if(t.heat>=24){t.burn=1;t.heat=24;}
+  }
+}
+
+/* ====== パーティクル ====== */
+function smoke(x,y,z){if(parts.length>1900)return;parts.push({k:'s',x:x+rnd(-.1,.1),y:y+rnd(-.1,.1),z,vx:rnd(-.004,.004),vy:rnd(-.004,.004),vz:rnd(.2,.4),life:0,max:irnd(40,70),sz:rnd(2,3)});}
+function puff(x,y){for(let k=0;k<6;k++)parts.push({k:'p',x:x+rnd(-.1,.1),y:y+rnd(-.1,.1),z:1,vx:rnd(-.03,.03),vy:rnd(-.03,.03),vz:rnd(.2,.6),life:0,max:irnd(10,18),sz:rnd(1.5,2.5)});}
+function spark(x,y,z,n){for(let k=0;k<n;k++)parts.push({k:'e',x,y,z,vx:rnd(-.035,.035),vy:rnd(-.035,.035),vz:rnd(.5,1.4),life:0,max:irnd(14,30),sz:1});}
+function smallFlame(x,y,z,sz){if(parts.length>1900)return;parts.push({k:'f',x:x+rnd(-.05,.05),y:y+rnd(-.05,.05),z,vx:rnd(-.004,.004),vy:rnd(-.004,.004),vz:rnd(.3,.6),life:0,max:irnd(10,16),sz:rnd(sz*.75,sz*1.2),seed:rnd(0,6.28),b:0.03});}
+function updateParts(){
+  for(let i=parts.length-1;i>=0;i--){
+    const p=parts[i];
+    p.life++;p.x+=p.vx;p.y+=p.vy;p.z+=p.vz;
+    let dead=p.life>=p.max;
+    if(p.k==='f'){
+      const b=p.b||0.032;
+      if(!p.b){p.vx*=0.972;p.vy*=0.972;}
+      p.vz+=b+Math.sin(p.life*0.5+p.seed)*0.03;
+      p.sz+=p.b?0.04:0.1;
+      if(p.z<0){p.z=0;p.vz*=-0.25;p.vx*=0.85;p.vy*=0.85;scorchAt(p.x,p.y,0.003);}
+      if(dead&&p.sz>2.5&&Math.random()<0.18)smoke(p.x,p.y,p.z);
+    }else if(p.k==='s'){p.sz+=0.05;}
+    else if(p.k==='e'){p.vz-=0.07;if(p.z<0)dead=true;}
+    else if(p.k==='a'){p.vz-=0.01;if(p.vz<-0.12)p.vz=-0.12;if(p.z<0){p.z=0;p.vz=0;p.vx=0;p.vy=0;}}
+    else if(p.k==='p'){p.vx*=0.9;p.vy*=0.9;p.vz*=0.9;}
+    else if(p.k==='d'){p.vz-=0.12;if(p.z<0)dead=true;}
+    if(dead){parts[i]=parts[parts.length-1];parts.pop();}
+  }
+}
+
+/* ====== 火炎放射 ====== */
+let AC=null,master,flameGain,flameLP,muted=false;
+function initAudio(){
+  if(AC)return;
+  try{
+    AC=new (window.AudioContext||window.webkitAudioContext)();
+    const comp=AC.createDynamicsCompressor();comp.threshold.value=-20;comp.ratio.value=8;
+    master=AC.createGain();master.gain.value=muted?0:0.7;master.connect(comp);comp.connect(AC.destination);
+    const len=Math.floor(AC.sampleRate*1.5),buf=AC.createBuffer(1,len,AC.sampleRate),d=buf.getChannelData(0);
+    for(let i=0;i<len;i++)d[i]=Math.random()*2-1;
+    const src=AC.createBufferSource();src.buffer=buf;src.loop=true;
+    flameLP=AC.createBiquadFilter();flameLP.type='lowpass';flameLP.frequency.value=700;
+    flameGain=AC.createGain();flameGain.gain.value=0;
+    src.connect(flameLP);flameLP.connect(flameGain);flameGain.connect(master);src.start();
+  }catch(e){AC=null;}
+}
+let flameOn=false;
+function flameSound(on){
+  if(!AC||!flameGain)return;
+  const t=AC.currentTime;
+  if(on!==flameOn){flameGain.gain.cancelScheduledValues(t);flameGain.gain.setTargetAtTime(on?0.3:0,t,on?0.03:0.08);flameOn=on;}
+  if(on)flameLP.frequency.value=450+Math.random()*600;
+}
+function crackle(){
+  if(!AC||muted)return;
+  const t=AC.currentTime;if(t-lastCrack<0.06)return;lastCrack=t;
+  const o=AC.createOscillator(),g=AC.createGain();
+  o.type='square';o.frequency.value=200+Math.random()*700;
+  g.gain.setValueAtTime(0.025,t);g.gain.exponentialRampToValueAtTime(0.0001,t+0.02);
+  o.connect(g);g.connect(master);o.start(t);o.stop(t+0.03);
+}
+
+function fireTick(dirx,diry){
+  const f=player.fireF;
+  const sl=w2sLen(dirx,diry),nd=9/sl;
+  const nx=player.x+dirx*nd,ny=player.y+diry*nd;
+  if(parts.length<1300){
+    const n=f<=3?2:5;
+    const base=Math.atan2(diry,dirx);
+    for(let i=0;i<n;i++){
+      const a=base+rnd(-0.15,0.15),sp=rnd(0.15,0.24);
+      parts.push({k:'f',x:nx,y:ny,z:9+rnd(-1,1),vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,vz:rnd(-0.35,0.25),life:0,max:irnd(24,38),sz:rnd(1.8,3.4),seed:rnd(0,6.28)});
+    }
+    if(Math.random()<0.3){
+      const a=base+rnd(-0.3,0.3);
+      parts.push({k:'e',x:nx,y:ny,z:9,vx:Math.cos(a)*rnd(.1,.2),vy:Math.sin(a)*rnd(.1,.2),vz:rnd(.3,1),life:0,max:irnd(14,28),sz:1});
+    }
+  }
+  // 当たり判定：ノズル前方の扇形
+  const L=0.9+3.3*Math.min(1,f/10);
+  for(const m of mush){
+    if(!canIgnite(m))continue;
+    const rx=m.x-nx,ry=m.y-ny,al=rx*dirx+ry*diry;
+    if(al<-0.2||al>L)continue;
+    const pe=Math.abs(rx*diry-ry*dirx);
+    if(pe<0.34+0.1*Math.max(0,al))ignite(m);
+  }
+  for(const g of grass){
+    if(g.dead||g.burn>0)continue;
+    const rx=g.x-nx,ry=g.y-ny,al=rx*dirx+ry*diry;
+    if(al<-0.2||al>L+0.3)continue;
+    if(Math.abs(rx*diry-ry*dirx)<0.42+0.1*Math.max(0,al))igniteGrass(g);
+  }
+  for(const c of mycs){
+    const rx=c.x-nx,ry=c.y-ny,al=rx*dirx+ry*diry;
+    if(al<-0.2||al>L)continue;
+    if(Math.abs(rx*diry-ry*dirx)<0.45+0.1*Math.max(0,al)){c.hp-=1.0;c.hit=6;c.lastDmg=tickN;if(Math.random()<0.3)spark(c.x,c.y,2,1);}
+  }
+  for(const t of trees){
+    if(t.burnt||t.burn>0)continue;
+    const rx=t.x-nx,ry=t.y-ny,al=rx*dirx+ry*diry;
+    if(al<-0.2||al>L+0.3)continue;
+    const pe=Math.abs(rx*diry-ry*dirx);
+    if(pe<0.45+0.1*Math.max(0,al))t.heat+=1.5;
+  }
+}
+
+/* ====== 更新 ====== */
+function inputVec(){
+  const k=input.keys;
+  let mx=(k.KeyD||k.ArrowRight?1:0)-(k.KeyA||k.ArrowLeft?1:0);
+  let my=(k.KeyS||k.ArrowDown?1:0)-(k.KeyW||k.ArrowUp?1:0);
+  if(input.L.active){mx=input.L.x*input.L.k;my=input.L.y*input.L.k;}
+  const l=Math.hypot(mx,my);if(l>1){mx/=l;my/=l;}
+  return [mx,my];
+}
+function update(){
+  tickN++;
+  const p=player;
+  const [mx,my]=inputVec();
+  const keyFire=input.keys.Space||input.keys.KeyX||input.keys.KeyF||input.keys.KeyJ||input.keys.ShiftLeft||input.keys.ShiftRight;
+  const firing=!!(keyFire||input.mouseDown||input.R.active);
+  p.firing=firing;
+  p.moving=Math.hypot(mx,my)>0.1;
+  // 向き
+  if(input.R.active&&input.R.k>0.2)p.aim=Math.atan2(input.R.y,input.R.x);
+  else if(performance.now()-input.mouseT<2500){
+    p.aim=Math.atan2(input.my-SY(p.x,p.y,8),input.mx-SX(p.x,p.y));
+  }else if(p.moving)p.aim=Math.atan2(my,mx);
+  // 移動（画面上で等速）
+  if(p.moving){
+    const sp=firing?0.9:1.4;
+    const [wx,wy]=s2w(mx*sp,my*sp);
+    moveEnt(p,wx,wy,0.22);
+    p.walk+=sp;
+  }
+  // 炎
+  const [dx0,dy0]=s2w(Math.cos(p.aim),Math.sin(p.aim));
+  const dl=Math.hypot(dx0,dy0)||1,dirx=dx0/dl,diry=dy0/dl;
+  if(firing){
+    p.fireF++;fireTick(dirx,diry);
+    if(tickN%3===0)shakeAmt=0.9;
+  }else{
+    p.fireF=0;
+    if(tickN%3===0&&parts.length<1300){
+      const nd=9/w2sLen(dirx,diry);
+      smallFlame(p.x+dirx*nd,p.y+diry*nd,9,1.6);
+    }
+  }
+  flameSound(firing&&started);
+  // 敵
+  let bc=0;for(const m of mush)if(m.burn>0)bc++;
+  for(let i=mush.length-1;i>=0;i--){
+    if(updateMush(mush[i],bc)){mush[i]=mush[mush.length-1];mush.pop();}
+  }
+  for(const t of trees)updateTree(t);
+  for(const g of grass)updateGrass(g);
+  for(let i=mycs.length-1;i>=0;i--)if(updateMyc(mycs[i])){mycs[i]=mycs[mycs.length-1];mycs.pop();}
+  updateParts();
+  // 波
+  if(phase==='play'&&mush.length===0&&mycs.length===0){
+    phase='clear';clearT=0;
+    const b=document.getElementById('banner');
+    document.getElementById('bSub').textContent='Wave '+wave+' cleared — the next one is bigger';
+    b.style.opacity=1;
+  }else if(phase==='clear'){
+    clearT++;
+    if(clearT>150){
+      wave++;phase='play';document.getElementById('banner').style.opacity=0;spawnWave(wave);
+    }
+  }
+  if(tickN%6===0){
+    document.getElementById('hWave').textContent=wave;
+    document.getElementById('hLeft').textContent=mush.length;
+    document.getElementById('hMyc').textContent=mycs.length;
+    document.getElementById('hScore').textContent=score;
+  }
+}
+
+/* ====== 描画 ====== */
+const lerp=(a,b,t)=>a+(b-a)*t;
+function drawTiles(){
+  for(let j=0;j<N;j++)for(let i=0;i<N;i++){
+    const t=tiles[j*N+i],s=t.sc;
+    const b=t.tone?[40,92,66]:[35,84,60];
+    const cr=Math.round(lerp(b[0],26,s)),cg=Math.round(lerp(b[1],20,s)),cb=Math.round(lerp(b[2],20,s));
+    ctx.fillStyle='rgb('+cr+','+cg+','+cb+')';
+    const cx=SX(i,j),cy=SY(i,j);          // 菱形の上頂点
+    for(let r=0;r<16;r++){
+      const w=r<8?4*(r+1):4*(16-r);
+      ctx.fillRect(cx-w/2,cy+r,w,1);
+    }
+    if(s<0.75){
+      for(const [x,y,ty] of t.tuft){ctx.fillStyle=ty?'#4f9c60':'#1f4a31';ctx.fillRect(x,y,1,2);}
+    }else{
+      ctx.fillStyle='#3a302c';
+      for(const [x,y] of t.tuft)ctx.fillRect(x,y,1,1);
+    }
+  }
+}
+function rows(x,y,list,col){ // list: 各行の幅（偶数）
+  ctx.fillStyle=col;
+  for(let k=0;k<list.length;k++){const w=list[k];ctx.fillRect(Math.round(x-w/2),y+k,w,1);}
+}
+function mixHex(h,tone,t){ // [r,g,b]同士
+  return 'rgb('+Math.round(lerp(h[0],tone[0],t))+','+Math.round(lerp(h[1],tone[1],t))+','+Math.round(lerp(h[2],tone[2],t))+')';
+}
+function hsl2rgb(h,s,l){
+  h/=360;const a=s*Math.min(l,1-l);
+  const f=n=>{const k=(n+h*12)%12;return l-a*Math.max(-1,Math.min(k-3,9-k,1));};
+  return [Math.round(f(0)*255),Math.round(f(8)*255),Math.round(f(4)*255)];
+}
+const DES=[
+  {cap:[[4,6,6],[4,8,10,10],[6,10,12,14,14]],stem:[[2,2],[4,4],[6,5]]},            // 0 丸い傘＋斑点
+  {cap:[[6,8],[8,12,12],[10,14,16,16]],stem:[[2,3],[4,3],[6,4]]},                   // 1 平たい傘＋しま
+  {cap:[[2,4,6],[2,4,6,8,10],[2,4,6,8,10,12,14]],stem:[[2,3],[2,5],[4,6]]},         // 2 とんがり帽子
+  {cap:[[4,6,8],[4,8,10,12],[6,10,12,14,16]],stem:[[2,2],[4,4],[4,5]]}              // 3 つば付き
+];
+function drawMush(m){
+  if(m.delay>0)return;
+  const x=Math.round(SX(m.x,m.y)),y=Math.round(SY(m.x,m.y));
+  // 影
+  ctx.fillStyle='rgba(0,0,0,.3)';
+  const dg=DES[m.dsg||0],cap=dg.cap[m.sz],[sw2,sh]=dg.stem[m.sz];
+  const sw=Math.max(4,cap[cap.length-1]);ctx.fillRect(x-sw/2,y-1,sw,2);
+  const z=Math.round(m.z);
+  let capC=hsl2rgb(m.hue,.62,.5),stemC=[239,228,204],capHi=hsl2rgb(m.hue,.62,.64);
+  let alpha=1;
+  if(m.burn>0){
+    const bm=BMAX[m.sz],f=m.burn/bm;
+    const flick=(Math.floor(m.burn/3)%2)?[255,120,30]:[230,60,30];
+    if(f<0.6){const q=Math.min(1,f*3);capC=[lerp(capC[0],flick[0],q*.7),lerp(capC[1],flick[1],q*.7),lerp(capC[2],flick[2],q*.7)];stemC=[lerp(239,flick[0],q*.5),lerp(228,flick[1],q*.5),lerp(204,flick[2],q*.5)];capHi=capC;}
+    else{const q=Math.min(1,(f-.6)/.2);capC=[lerp(flick[0],36,q),lerp(flick[1],26,q),lerp(flick[2],23,q)];stemC=[lerp(flick[0],58,q),lerp(flick[1],45,q),lerp(flick[2],40,q)];capHi=capC;}
+    if(f>0.7)alpha=1-(f-0.7)/0.3;
+  }
+  ctx.save();
+  if(m.pop>0){
+    ctx.beginPath();ctx.rect(0,0,W,y+1);ctx.clip();
+  }
+  ctx.globalAlpha=Math.max(0,alpha);
+  let oy=0;
+  if(m.pop>0){const q=1-m.pop/24,c1=1.70158,c3=c1+1,e=1+c3*Math.pow(q-1,3)+c1*Math.pow(q-1,2);oy=Math.round((1-e)*(sh+cap.length+2));}
+  const base=y-z+oy;
+  // 柄
+  ctx.fillStyle=mixHex(stemC,stemC,0);
+  ctx.fillRect(x-sw2/2,base-sh,sw2,sh);
+  ctx.fillStyle=mixHex(stemC,[0,0,0],.18);
+  ctx.fillRect(x+sw2/2-1,base-sh,1,sh);
+  if(m.sz>=1&&m.burn===0){ctx.fillStyle='#3a2a22';ctx.fillRect(x-1,base-sh+1,1,1);ctx.fillRect(x+1,base-sh+1,1,1);}
+  // 傘
+  const top=base-sh-cap.length+1;
+  rows(x,top,cap,mixHex(capC,capC,0));
+  ctx.fillStyle=mixHex(capHi,capHi,0);ctx.fillRect(Math.round(x-cap[0]/2),top,cap[0],1);
+  if(m.burn===0||m.burn<BMAX[m.sz]*.3){
+    const dsg=m.dsg||0;
+    if(dsg===0){
+      ctx.fillStyle='rgba(255,255,255,.9)';
+      if(m.sz===0)ctx.fillRect(x-1,top+1,1,1);
+      else{ctx.fillRect(x-3+m.spot,top+1,2,1);ctx.fillRect(x+1,top+2,2,1);if(m.sz===2)ctx.fillRect(x-5,top+3,2,1);}
+    }else if(dsg===1){
+      ctx.fillStyle='rgba(0,0,0,.25)';
+      const rw=cap[Math.min(1,cap.length-1)];ctx.fillRect(Math.round(x-rw/2),top+1,rw,1);
+      if(cap.length>2){const rw2=cap[cap.length-1];ctx.fillRect(Math.round(x-rw2/2),top+cap.length-1,rw2,1);}
+    }else if(dsg===2){
+      ctx.fillStyle='rgba(255,255,255,.9)';
+      ctx.fillRect(x-1,top+(m.sz===0?2:3),1,1);if(m.sz===2)ctx.fillRect(x+2,top+5,1,1);
+    }else{
+      const lw=cap[cap.length-1];
+      ctx.fillStyle='#f1e6c8';ctx.fillRect(Math.round(x-lw/2),top+cap.length-1,lw,1);
+      ctx.fillStyle='rgba(255,255,255,.9)';ctx.fillRect(x-2+(m.spot&1),top+1,1,1);if(m.sz>0)ctx.fillRect(x+2,top+2,1,1);
+    }
+  }
+  ctx.restore();
+  if(m.pop>3){ctx.fillStyle='#4a3022';ctx.fillRect(x-3,y-1,6,2);ctx.fillStyle='#7d5a40';ctx.fillRect(x-2,y-2,4,1);}
+}
+function drawTree(t){
+  const x=Math.round(SX(t.x,t.y)),y=Math.round(SY(t.x,t.y));
+  ctx.fillStyle='rgba(0,0,0,.3)';ctx.fillRect(x-6,y-1,12,2);
+  // 幹
+  ctx.fillStyle=t.burnt?'#1b1512':'#4a2f20';ctx.fillRect(x-1,y-6,2,6);
+  if(t.burnt){
+    ctx.fillStyle='#2a201b';ctx.fillRect(x-3,y-10,1,1);ctx.fillRect(x+2,y-12,1,1);ctx.fillRect(x-1,y-9,1,3);
+    if((tickN>>4)%3===0){ctx.fillStyle='#ff7a2a';ctx.fillRect(x,y-7,1,1);}
+    return;
+  }
+  const f=t.burn>0?Math.min(1,t.burn/260):0,heat=Math.min(1,t.heat/24);
+  const tiers=[[ [14,12,10,8,6],y-18 ],[ [12,10,8,6,4],y-23 ],[ [8,6,4,2],y-28 ]];
+  const gL=[70,158,98],gD=[22,76,52];
+  const flick=(Math.floor(tickN/3)%2)?[255,130,40]:[230,70,30];
+  for(const [rw,ty] of tiers){
+    let c1=gD,c2=gL;
+    if(f>0){const q=Math.min(1,f*2.2);c1=[lerp(gD[0],flick[0]*.6,q),lerp(gD[1],flick[1]*.6,q),lerp(gD[2],flick[2]*.6,q)];c2=[lerp(gL[0],flick[0],q),lerp(gL[1],flick[1],q),lerp(gL[2],flick[2],q)];
+      if(f>0.5){const c=Math.min(1,(f-.5)*2);c1=[lerp(c1[0],28,c),lerp(c1[1],22,c),lerp(c1[2],20,c)];c2=[lerp(c2[0],48,c),lerp(c2[1],34,c),lerp(c2[2],26,c)];}}
+    else if(heat>0){c2=[lerp(gL[0],255,heat*.5),lerp(gL[1],150,heat*.5),lerp(gL[2],60,heat*.5)];}
+    rows(x,ty,rw,mixHex(c1,c1,0));
+    for(let k=0;k<rw.length;k++){const w=rw[k];ctx.fillStyle=mixHex(c2,c2,0);ctx.fillRect(x,ty+k,Math.floor(w/2)-(k===0?0:0),1);}
+  }
+}
+function drawRock(o){
+  const x=Math.round(SX(o.x,o.y)),y=Math.round(SY(o.x,o.y));
+  if(o.big){
+    ctx.fillStyle='rgba(0,0,0,.3)';ctx.fillRect(x-9,y-1,18,3);
+    rows(x,y-11,[6,10,14,16,18,18,16,14],'#656a7c');
+    ctx.fillStyle='#8c92a4';ctx.fillRect(x-2,y-11,5,1);ctx.fillRect(x-5,y-10,9,1);ctx.fillRect(x-7,y-9,8,1);
+    ctx.fillStyle='#4a4e5e';ctx.fillRect(x+4,y-8,4,6);ctx.fillRect(x+1,y-3,6,2);
+    ctx.fillStyle='#7a8094';ctx.fillRect(x-6,y-6,3,1);
+    return;
+  }
+  ctx.fillStyle='rgba(0,0,0,.3)';ctx.fillRect(x-6,y-1,12,2);
+  rows(x,y-7,[6,10,12,12,10,8,0].slice(0,6),'#6a6f80');
+  ctx.fillStyle='#8c92a4';ctx.fillRect(x-1,y-7,4,1);ctx.fillRect(x-3,y-6,6,1);
+  ctx.fillStyle='#4d5160';ctx.fillRect(x+3,y-4,2,3);
+}
+function drawPlayer(){
+  const p=player;
+  const x=Math.round(SX(p.x,p.y)),y=Math.round(SY(p.x,p.y));
+  ctx.fillStyle='rgba(0,0,0,.35)';ctx.fillRect(x-5,y-1,10,2);ctx.fillRect(x-3,y-2,6,1);
+  const c=Math.cos(p.aim),s=Math.sin(p.aim),toward=s>=0;
+  const step=p.moving?(Math.floor(p.walk/5)%2):0;
+  // 脚
+  ctx.fillStyle='#b8431e';
+  ctx.fillRect(x-3,y-4-(step?1:0),2,4+(step?1:0)-0);
+  ctx.fillRect(x+1,y-4-(step?0:1),2,4+(step?0:1)-0);
+  ctx.fillStyle='#3a2a22';ctx.fillRect(x-3,y-1,2,1);ctx.fillRect(x+1,y-1,2,1);
+  const drawTank=()=>{
+    const tx=Math.round(x-c*4),ty=Math.round(y-9-s*2);
+    ctx.fillStyle='#c8382a';ctx.fillRect(tx-2,ty-4,4,8);
+    ctx.fillStyle='#ee6a50';ctx.fillRect(tx-2,ty-4,1,8);
+    ctx.fillStyle='#7a2018';ctx.fillRect(tx-2,ty+3,4,1);
+  };
+  if(toward)drawTank();
+  // 胴
+  ctx.fillStyle='#f4f1e8';ctx.fillRect(x-3,y-10,6,3);
+  ctx.fillStyle='#e0561f';ctx.fillRect(x-3,y-7,6,4);
+  ctx.fillStyle='#f4f1e8';ctx.fillRect(x-2,y-8,1,1);ctx.fillRect(x+1,y-8,1,1);
+  // 頭
+  ctx.fillStyle='#f0c9a0';ctx.fillRect(x-3,y-16,6,6);
+  ctx.fillStyle='#e0561f';ctx.fillRect(x-3,y-17,6,2);ctx.fillRect(x-4,y-15,1,1);ctx.fillRect(x+3,y-15,1,1);
+  if(toward){
+    const ex=Math.round(c*1.5);
+    ctx.fillStyle='#2a1c14';ctx.fillRect(x-2+ex,y-13,1,2);ctx.fillRect(x+1+ex,y-13,1,2);
+  }else{
+    ctx.fillStyle='#e0561f';ctx.fillRect(x-3,y-17,6,5);
+  }
+  if(!toward)drawTank();
+  // ノズル
+  const sxh=x,syh=y-9;
+  for(let t=2;t<=9;t++){
+    ctx.fillStyle=t>=7?'#9a9aa6':'#4a4a54';
+    ctx.fillRect(Math.round(sxh+c*t),Math.round(syh+s*t),2,2);
+  }
+  ctx.fillStyle=p.firing?'#ffffff':((tickN>>2)&1?'#ffe9a0':'#ffc060');
+  ctx.fillRect(Math.round(sxh+c*10),Math.round(syh+s*10),2,2);
+}
+function flameCol(t){
+  if(t<.12)return [255,255,238];
+  if(t<.28)return [255,243,168];
+  if(t<.46)return [255,212,78];
+  if(t<.66)return [255,148,40];
+  if(t<.85)return [228,68,30];
+  return [110,30,20];
+}
+function drawParts(){
+  // 煙 → 炎 → 灰 → 火の粉（加算）の順
+  for(const p of parts){
+    if(p.k!=='s')continue;
+    const a=0.5*(1-p.life/p.max),s=Math.round(p.sz);
+    ctx.fillStyle='rgba(78,72,84,'+a.toFixed(2)+')';
+    ctx.fillRect(Math.round(SX(p.x,p.y))-(s>>1),Math.round(SY(p.x,p.y,p.z))-(s>>1),s,s);
+  }
+  for(const p of parts){
+    if(p.k!=='f')continue;
+    const t=p.life/p.max,c=flameCol(t),a=t>.75?Math.max(0,1-(t-.75)*4):1,s=Math.max(1,Math.round(p.sz));
+    ctx.fillStyle='rgba('+c[0]+','+c[1]+','+c[2]+','+a.toFixed(2)+')';
+    ctx.fillRect(Math.round(SX(p.x,p.y))-(s>>1),Math.round(SY(p.x,p.y,p.z))-(s>>1),s,s);
+  }
+  for(const p of parts){
+    if(p.k==='a'){ctx.fillStyle='rgba(140,134,128,'+(1-p.life/p.max).toFixed(2)+')';ctx.fillRect(Math.round(SX(p.x,p.y)),Math.round(SY(p.x,p.y,p.z)),1,1);}
+    else if(p.k==='d'){ctx.fillStyle=p.c?'#7d5a40':'#4a3022';ctx.fillRect(Math.round(SX(p.x,p.y)),Math.round(SY(p.x,p.y,p.z)),1,1);}
+    else if(p.k==='p'){ctx.fillStyle='rgba(210,196,170,'+(1-p.life/p.max).toFixed(2)+')';const s=Math.round(p.sz);ctx.fillRect(Math.round(SX(p.x,p.y)),Math.round(SY(p.x,p.y,p.z)),s,s);}
+  }
+  ctx.globalCompositeOperation='lighter';
+  for(const p of parts){
+    if(p.k!=='e')continue;
+    ctx.fillStyle='rgba(255,'+(150+Math.round(80*(1-p.life/p.max)))+',60,'+(1-p.life/p.max).toFixed(2)+')';
+    ctx.fillRect(Math.round(SX(p.x,p.y)),Math.round(SY(p.x,p.y,p.z)),1,1);
+  }
+  ctx.globalCompositeOperation='source-over';
+}
+function glow(x,y,r,a,col){
+  const g=ctx.createRadialGradient(x,y,0,x,y,r);
+  g.addColorStop(0,'rgba('+col+','+a+')');g.addColorStop(1,'rgba('+col+',0)');
+  ctx.fillStyle=g;ctx.fillRect(x-r,y-r,r*2,r*2);
+}
+function drawGlows(){
+  ctx.globalCompositeOperation='lighter';
+  let n=0;
+  const p=player;
+  if(p.firing){
+    const [dx0,dy0]=s2w(Math.cos(p.aim),Math.sin(p.aim));const dl=Math.hypot(dx0,dy0)||1;
+    const L=0.9+3.3*Math.min(1,p.fireF/10)*0.6;
+    const gx=p.x+dx0/dl*L,gy=p.y+dy0/dl*L;
+    glow(Math.round(SX(gx,gy)),Math.round(SY(gx,gy,8)),46,0.32,'255,130,40');
+    glow(Math.round(SX(p.x,p.y)),Math.round(SY(p.x,p.y,9)),22,0.3,'255,200,120');
+  }
+  for(const t of trees){if(t.burn>0&&n<20){n++;glow(Math.round(SX(t.x,t.y)),Math.round(SY(t.x,t.y,18)),38,0.38,'255,120,40');}}
+  for(const g of grass){if(g.burn>0&&g.burn<60&&n<34){n++;glow(Math.round(SX(g.x,g.y)),Math.round(SY(g.x,g.y,6)),12,0.2,'255,120,30');}}
+  for(const m of mush){if(m.burn>0&&n<34&&m.burn<BMAX[m.sz]*.8){n++;glow(Math.round(SX(m.x,m.y)),Math.round(SY(m.x,m.y,10)),16,0.28,'255,110,30');}}
+  ctx.globalCompositeOperation='source-over';
+}
+function render(){
+  ctx.save();
+  if(shakeAmt>0.05){ctx.translate(Math.round(rnd(-1,1)*shakeAmt),Math.round(rnd(-1,1)*shakeAmt));shakeAmt*=0.6;}
+  ctx.drawImage(bg,0,0);
+  drawTiles();
+  for(const c of mycs)drawMyc(c);
+  const items=[];
+  for(const t of trees)items.push([t.d,0,t]);
+  for(const o of rocks)items.push([o.d,1,o]);
+  for(const m of mush)items.push([m.x+m.y,2,m]);
+  for(const g of grass)if(!g.dead)items.push([g.d,4,g]);
+  items.push([player.x+player.y,3,player]);
+  items.sort((a,b)=>a[0]-b[0]);
+  for(const [,k,o] of items){
+    if(k===0)drawTree(o);else if(k===1)drawRock(o);else if(k===2)drawMush(o);else if(k===4)drawGrass(o);else drawPlayer();
+  }
+  drawParts();
+  drawGlows();
+  ctx.restore();
+}
+
+/* ====== 入力 ====== */
+const PREVENT=new Set(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight']);
+addEventListener('keydown',e=>{if(PREVENT.has(e.code))e.preventDefault();input.keys[e.code]=true;});
+addEventListener('keyup',e=>{input.keys[e.code]=false;});
+addEventListener('blur',()=>{input.keys={};input.mouseDown=false;});
+function toLogical(e){const r=cv.getBoundingClientRect();return [(e.clientX-r.left)*W/r.width,(e.clientY-r.top)*H/r.height];}
+cv.addEventListener('pointerdown',e=>{
+  if(e.pointerType==='touch')return;
+  [input.mx,input.my]=toLogical(e);input.mouseT=performance.now();
+  if(e.button===0)input.mouseDown=true;
+});
+addEventListener('pointermove',e=>{
+  if(e.pointerType==='touch')return;
+  [input.mx,input.my]=toLogical(e);input.mouseT=performance.now();
+});
+addEventListener('pointerup',e=>{if(e.pointerType!=='touch'&&e.button===0)input.mouseDown=false;});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+
+function bindStick(zone,s){
+  const base=zone.querySelector('.stick'),knob=base.querySelector('i');
+  let id=null,ox=0,oy=0;const R=44;
+  zone.addEventListener('pointerdown',e=>{
+    if(id!==null)return;
+    id=e.pointerId;try{zone.setPointerCapture(id);}catch(_){}
+    const r=zone.getBoundingClientRect();ox=e.clientX;oy=e.clientY;
+    base.style.display='block';base.style.left=(ox-r.left-44)+'px';base.style.top=(oy-r.top-44)+'px';
+    knob.style.transform='translate(0,0)';
+    s.active=true;s.x=0;s.y=0;s.k=0;
+  });
+  zone.addEventListener('pointermove',e=>{
+    if(e.pointerId!==id)return;
+    const dx=e.clientX-ox,dy=e.clientY-oy,l=Math.hypot(dx,dy);
+    const k=l<8?0:Math.min(1,l/R);
+    s.k=k;if(l>0){s.x=dx/l;s.y=dy/l;}
+    const kl=Math.min(l,R);
+    knob.style.transform='translate('+(l?dx/l*kl:0)+'px,'+(l?dy/l*kl:0)+'px)';
+  });
+  const end=e=>{
+    if(e.pointerId!==id)return;
+    id=null;s.active=false;s.k=0;base.style.display='none';
+  };
+  zone.addEventListener('pointerup',end);zone.addEventListener('pointercancel',end);
+}
+bindStick(document.getElementById('zL'),input.L);
+bindStick(document.getElementById('zR'),input.R);
+
+const isTouch=matchMedia('(pointer:coarse)').matches||('ontouchstart' in window&&navigator.maxTouchPoints>0);
+if(isTouch)document.body.classList.add('touch');
+
+/* ====== UI ====== */
+function fit(){
+  const wrap=document.getElementById('stageWrap');
+  const aw=wrap.clientWidth,ah=wrap.clientHeight;
+  let sc=Math.min(aw/W,ah/H);if(sc>=2)sc=Math.floor(sc);
+  cv.style.width=Math.floor(W*sc)+'px';cv.style.height=Math.floor(H*sc)+'px';
+}
+addEventListener('resize',fit);
+document.getElementById('bStart').addEventListener('click',()=>{
+  initAudio();if(AC&&AC.state==='suspended')AC.resume();
+  document.getElementById('title').style.display='none';
+  started=true;resetGame();
+});
+document.getElementById('bReset').addEventListener('click',()=>{resetGame();});
+document.getElementById('bMute').addEventListener('click',e=>{
+  muted=!muted;e.target.textContent=muted?'Sound OFF':'Sound ON';
+  if(master)master.gain.value=muted?0:0.7;
+});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){input.keys={};input.mouseDown=false;flameSound(false);}});
+
+/* ====== ループ（固定60Hz） ====== */
+buildBG();resetGame();fit();
+let last=performance.now(),acc=0;
+function frame(now){
+  acc+=Math.min(100,now-last);last=now;
+  let n=0;
+  while(acc>=1000/60&&n<5){update();acc-=1000/60;n++;}
+  if(n===5)acc=0;
+  render();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* 動作確認用フック */
+window.__g={makeMyc,makeMush,get grass(){return grass},get mycs(){return mycs},get mush(){return mush},get trees(){return trees},get player(){return player},get parts(){return parts},
+  get wave(){return wave},get score(){return score},get phase(){return phase},update,input,resetGame,ignite,
+  get started(){return started}};
+})();
+</script>
+</body>
+</html>
