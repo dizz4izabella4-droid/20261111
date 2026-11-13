@@ -2146,11 +2146,11 @@ var foes = [];
 var FOE = {
   box: { tie: '#d23f31', speed: 32, rng: 26, aggro: 105, wind: 0.45, atk: 0.55, rec: 0.8, ev: [{ t: 0.08, r: 30, k: 'parry' }, { t: 0.36, r: 36, k: 'dodge' }] },
   yoga: { tie: '#e8c32a', speed: 22, rng: 48, aggro: 105, wind: 0.7, atk: 0.75, rec: 1.0, ev: [{ t: 0.2, r: 54, k: 'dodge' }, { t: 0.5, r: 56, k: 'hop' }] },
-  sumo: { tie: '#2f62c8', speed: 15, rng: 26, aggro: 95, wind: 0.9, atk: 1.2, rec: 1.0, ev: [{ t: 0.1, r: 30, k: 'parry' }, { t: 0.22, r: 30, k: 'parry' }, { t: 0.34, r: 30, k: 'parry' }, { t: 0.46, r: 30, k: 'parry' }, { t: 0.58, r: 30, k: 'parry' }, { t: 0.7, r: 30, k: 'parry' }, { t: 0.94, r: 38, k: 'dodge' }] },
+  sumo: { tie: '#2f62c8', speed: 30, rng: 58, aggro: 105, wind: 0.6, atk: 0.95, rec: 0.9, ev: [{ t: 0.3, r: 46, k: 'dodge' }, { t: 0.62, r: 34, k: 'parry' }] },
   blanka: { tie: '#3aa04a', speed: 36, rng: 62, aggro: 115, wind: 0.6, atk: 0.85, rec: 0.9, ev: [] }
 };
 var ROOMS = [[36, 180], [186, 300], [306, 420], [426, 592]], SHX = [183, 303, 423], CHN = [];
-var FNAME = { box: '拳闘家', yoga: 'ヨガ行者', sumo: '力士', blanka: '野獣' };
+var FNAME = { box: '拳闘家', yoga: 'ヨガ行者', sumo: '仮面の爪使い', blanka: '野獣' };
 function foeSetup() {
   foes.length = 0; CHN.length = 0;
   G.rm = 0; G.lim = ROOMS[0][1]; G.sh = [0, 0, 0]; G.clr = null; G.opening = false; G.goT = null; G.cold = 0;
@@ -2214,14 +2214,14 @@ function foeHit(t0, t1) {
   var f = pl.face, px = Math.round(pl.x), k, d, P, H, tx, ty, vx, vy, len, x, y, tt, i, q, w;
   for (i = 0; i < foes.length; i++) {
     q = foes[i]; if (q.st === 'fly' || q.st === 'down' || q.st === 'tele' || Math.abs(pl.z - q.z) > 10) continue;
-    w = q.type === 'sumo' ? 9 : 7;
+    w = 7;
     for (k = 1; k <= 6; k++) {
       tt = t0 + (t1 - t0) * k / 6; P = poseAt(tt); if (P.cs < 0.15) continue;
       H = hands(P); tx = H.x + f * P.tx; ty = H.y + P.ty; vx = tx - H.x; vy = ty - H.y; len = Math.hypot(vx, vy);
       for (d = 5; d <= len; d += 2) {
         x = H.x + vx * d / len; y = H.y + vy * d / len;
         if ((x - px) * f < 4) continue;
-        if (Math.abs(x - q.x) <= w && y >= q.z - 34 - (q.type === 'yoga' ? 8 : 0) && y <= q.z + 3) return { t: tt, x: x, f: q };
+        if (Math.abs(x - q.x) <= w && y >= q.z - 34 - (q.type === 'yoga' ? 8 : q.type === 'sumo' ? 14 : 0) && y <= q.z + 3) return { t: tt, x: x, f: q };
       }
     }
   }
@@ -2250,12 +2250,12 @@ function foeUpdate(dt) {
       if (Math.abs(dx) > d.rng || Math.abs(dz) > 6) {
         f.x = clamp(f.x + (Math.abs(dx) > d.rng ? f.face * d.speed : 0) * dt, f.eL - 6, f.eR + 6);
         f.z = clamp(f.z + (Math.abs(dz) > 6 ? (dz > 0 ? 1 : -1) * 16 : 0) * dt, Z_MIN, Z_MAX);
-      } else { f.st = 'wind'; f.t = 0; f.ev = 0; f.rolled = false; f.sn = 0; f.mv = (f.mv || 0) + 1; f.fireShot = false; f.elec = false; if (f.type === 'blanka' && AC) nz(AC.currentTime, 0.6, { type: 'bandpass', f: 3000, f2: 6000, q: 2, g: 0.04 }); }
-      if (f.type === 'blanka' && Math.abs(dz) <= 8 && Math.abs(dx) < d.rng + 8 && Math.abs(dx) > 30) { f.st = 'wind'; f.t = 0; f.ev = 0; f.rolled = false; f.sn = 0; f.mv = (f.mv || 0) + 1; f.fireShot = false; f.elec = false; if (AC) nz(AC.currentTime, 0.6, { type: 'bandpass', f: 3000, f2: 6000, q: 2, g: 0.04 }); }
+      } else { f.st = 'wind'; f.t = 0; f.ev = 0; f.rolled = false; f.sn = 0; f.mv = (f.mv || 0) + 1; f.fireShot = false; f.elec = false; f.land = false; if (f.type === 'blanka' && AC) nz(AC.currentTime, 0.6, { type: 'bandpass', f: 3000, f2: 6000, q: 2, g: 0.04 }); }
+      if (f.type === 'blanka' && Math.abs(dz) <= 8 && Math.abs(dx) < d.rng + 8 && Math.abs(dx) > 30) { f.st = 'wind'; f.t = 0; f.ev = 0; f.rolled = false; f.sn = 0; f.mv = (f.mv || 0) + 1; f.fireShot = false; f.elec = false; f.land = false; if (AC) nz(AC.currentTime, 0.6, { type: 'bandpass', f: 3000, f2: 6000, q: 2, g: 0.04 }); }
       continue;
     }
     if (f.st === 'wind') {
-      if (f.type === 'sumo') { var s = Math.floor(f.t / 0.3); if (s > f.sn && s <= 2) { f.sn = s; shake(0.9, 120); if (AC) { tn(AC.currentTime, 75, 0.2, { f2: 45, g: 0.16 }); nz(AC.currentTime, 0.12, { type: 'lowpass', f: 400, g: 0.12 }); } } }
+      if (f.type === 'none') { var s = Math.floor(f.t / 0.3); if (s > f.sn && s <= 2) { f.sn = s; shake(0.9, 120); if (AC) { tn(AC.currentTime, 75, 0.2, { f2: 45, g: 0.16 }); nz(AC.currentTime, 0.12, { type: 'lowpass', f: 400, g: 0.12 }); } } }
       if (f.type === 'blanka' && Math.random() < dt * 14) addFx({ kind: 'spark', x: f.x + rnd(-6, 6), y: f.z - rnd(4, 20), vx: rnd(-50, 50), vy: -rnd(10, 50), r: rnd(0.3, 0.6), fy: f.z, life: rnd(0.2, 0.45) });
       if (f.t >= d.wind) { f.st = 'atk'; f.t = 0; f.ev = 0; if (AC) { if (f.type === 'blanka') { nz(AC.currentTime, 0.7, { type: 'bandpass', f: 800, f2: 2200, q: 1.2, g: 0.1 }); } else nz(AC.currentTime, 0.16, { type: 'bandpass', f: 1400, f2: 3600, q: 1.4, g: 0.1 }); } }
       continue;
@@ -2264,10 +2264,13 @@ function foeUpdate(dt) {
       t = f.t;
       var yFire = f.type === 'yoga' && f.mv % 3 === 0;
       while (!yFire && f.ev < d.ev.length && t >= d.ev[f.ev].t) { foeStrike(f, d.ev[f.ev]); f.ev++; }
-      if (f.type === 'sumo') f.x = clamp(f.x + f.face * (t > 0.84 && t < 1.04 ? 90 : 12) * dt, f.eL - 6, f.eR + 6);
+      if (f.type === 'sumo') {
+        f.x = clamp(f.x + f.face * (t > 0.08 && t < 0.55 ? 175 : 0) * dt, f.eL - 6, f.eR + 6);
+        if (!f.land && t >= 0.55) { f.land = true; shake(0.8, 90); for (j = 0; j < 4; j++) addFx({ kind: 'puff', x: f.x + rnd(-6, 6), y: f.z, vx: rnd(-14, 14), vy: -rnd(2, 6), r0: 1.5, r1: rnd(4, 7), col: '205,205,215', alpha: 0.4, life: rnd(0.3, 0.6) }); if (AC) { nz(AC.currentTime, 0.12, { type: 'bandpass', f: 3200, f2: 1800, q: 2, g: 0.07 }); tn(AC.currentTime, 1900, 0.08, { f2: 900, g: 0.03, type: 'square' }); } }
+      }
       if (f.type === 'box') f.x = clamp(f.x + f.face * (t > 0.06 && t < 0.3 ? 135 : 8) * dt, f.eL - 6, f.eR + 6);
       if (yFire && !f.fireShot && t >= 0.12) { f.fireShot = true; f.fire = { x: f.x + f.face * 12, dir: f.face, t: 0, hit: false }; if (AC) { nz(AC.currentTime, 0.7, { type: 'bandpass', f: 500, f2: 1600, q: 1, g: 0.08 }); tn(AC.currentTime, 180, 0.4, { f2: 90, g: 0.05, type: 'sawtooth' }); } }
-      if (f.type === 'sumo' && t < 0.8 && Math.floor(t / 0.06) !== f.sl) { f.sl = Math.floor(t / 0.06); if (AC && (f.sl & 1)) nz(AC.currentTime, 0.05, { type: 'bandpass', f: 1800, f2: 900, q: 1, g: 0.04 }); }
+      if (f.type === 'none' && Math.floor(t / 0.06) !== f.sl) { f.sl = Math.floor(t / 0.06); if (AC && (f.sl & 1)) nz(AC.currentTime, 0.05, { type: 'bandpass', f: 1800, f2: 900, q: 1, g: 0.04 }); }
       if (f.type === 'blanka' && f.mv % 2 === 1) {
         if (!f.elec && t >= 0.12) { f.elec = true; foeStrike(f, { r: 34, k: 'dodge' }); if (AC) { nz(AC.currentTime, 0.6, { type: 'bandpass', f: 2600, f2: 5200, q: 1.5, g: 0.09 }); } }
         if (Math.random() < dt * 40) addFx({ kind: 'spark', x: f.x + rnd(-16, 16), y: f.z - rnd(4, 26), vx: rnd(-60, 60), vy: -rnd(10, 60), r: rnd(0.3, 0.7), fy: f.z, life: rnd(0.15, 0.4) });
@@ -2333,7 +2336,7 @@ function drawFoe0(f) {
   var i, x, dy, dx;
   if (st === 'down') {
     if (f.t > 2.6 && (Math.floor(simT / 70) & 1)) return;
-    var fd = f.dir, sc = ty === 'sumo' ? 1.25 : 1;
+    var fd = f.dir, sc = 1;
     ctx.save(); ctx.translate(px, F); ctx.scale(sc, sc); ctx.translate(-px, -F);
     var MM = function (a, b, w, h, c) { R(fd > 0 ? px + a : px - a - w + 1, F + b, w, h, c); };
     R(px - 12, F + 1, 25, 1, 'rgba(0,0,0,0.35)');
@@ -2347,12 +2350,13 @@ function drawFoe0(f) {
   if (ty === 'yoga') hov = 9 + Math.round(Math.sin(ph * 0.5) * 1.5);
   if (st === 'idle' || st === 'walk') bob = (ty === 'box' || ty === 'blanka') ? ((Math.sin(ph * 2.2) > 0) ? 1 : 0) : 0;
   if (st === 'fly') air = f.alt;
+  if (ty === 'sumo' && st === 'atk') air = 20 * Math.sin(Math.PI * clamp((t - 0.08) / 0.47, 0, 1));
   var FY = F - bob - hov - Math.round(air);
   ctx.save();
   if (st === 'fly') { var cy = F - air - 14; ctx.translate(px, cy); ctx.rotate(f.rot); ctx.translate(-px, -cy); }
   function M(a, b, w, h, c) { R(fa > 0 ? px + a : px - a - w + 1, FY + b, w, h, c); }
   function ML(x0, y0, x1, y1, c) { pline(Math.round(px + fa * x0), Math.round(FY + y0), Math.round(px + fa * x1), Math.round(FY + y1), c); }
-  var shw = ty === 'sumo' ? 17 : 11; R(px - Math.floor(shw / 2), F + 1, shw, 1, 'rgba(0,0,0,' + (0.36 - Math.min(0.2, air * 0.01)).toFixed(2) + ')'); R(px - Math.floor(shw / 2) + 2, F + 2, shw - 4, 1, 'rgba(0,0,0,0.22)');
+  var shw = 11; R(px - Math.floor(shw / 2), F + 1, shw, 1, 'rgba(0,0,0,' + (0.36 - Math.min(0.2, air * 0.01)).toFixed(2) + ')'); R(px - Math.floor(shw / 2) + 2, F + 2, shw - 4, 1, 'rgba(0,0,0,0.22)');
   if (ty === 'yoga') { R(px - 6, F + 1, 13, 1, 'rgba(255,230,120,0.35)'); if (hov > 7) for (i = 0; i < 3; i++) R(px - 3 + i * 3, F - 2 - ((Math.floor(simT / 120) + i) % 3) * 2, 1, 1, 'rgba(255,240,170,0.7)'); }
   /* blanka: ころがり */
   if (ty === 'blanka' && st === 'atk' && f.mv % 2 === 0 && f.t > 0.06 && f.t < 0.72) {
@@ -2379,11 +2383,11 @@ function drawFoe0(f) {
     else if (st === 'rec') { A = [6, -13]; B = [4, -13]; }
     else { A = [6, -14]; B = [4, -13]; }
   } else if (ty === 'sumo') {
-    wideB = 2; legMode = 'wide';
-    if (st === 'wind') { var sp = Math.floor(f.t / 0.3) % 2; A = [7, -14 + (sp ? 0 : 0)]; B = [-6, -14]; f.lift = sp; }
-    else if (st === 'atk') { var sl2 = Math.floor(t / 0.06) & 1, hs2 = t < 0.8; if (hs2) { lean = 1; A = [14 + (sl2 ? 7 : 0), -19 + (sl2 ? 0 : 2)]; B = [14 + (sl2 ? 0 : 7), -17 + (sl2 ? 2 : 0)]; } else { var hb = foePulse(t, 0.84, 0.08, 0.14, 0.1); lean = Math.round(hb * 4); A = [8 + 6 * hb, -17]; B = [-6, -16]; } }
-    else if (st === 'rec') { A = [7, -14]; B = [-6, -14]; }
-    else { A = [7, -15]; B = [-6, -15]; }
+    legMode = 'crouch'; Y0 = -23; hy = -27; lean = 1;
+    if (st === 'wind') { var cw = clamp(t / 0.6, 0, 1); lean = -Math.round(2 * cw); A = [-1, -19]; B = [-4, -21]; Y0 = -22; hy = -25; }
+    else if (st === 'atk') { if (t < 0.55) { lean = 3; A = [13, -27]; B = [10, -23]; } else { var sw = clamp((t - 0.55) / 0.2, 0, 1); lean = 2; A = [14 - 4 * sw, -24 + 12 * sw]; B = [8, -12 - 2 * sw]; } }
+    else if (st === 'rec') { A = [5, -14]; B = [3, -13]; lean = 0; }
+    else { A = [8, -23 + (Math.sin(ph * 3) > 0 ? 1 : 0)]; B = [6, -26]; }
   } else { /* blanka */
     legMode = 'crouch'; Y0 = -22; hy = -26; lean = 2;
     if (st === 'wind') { A = [9, -23 + (Math.sin(ph * 4) > 0 ? 1 : 0)]; B = [6, -27 + (Math.sin(ph * 4) > 0 ? 0 : 1)]; if (f.mv % 2 === 1) { A = [10, -27 + (Math.sin(ph * 6) > 0 ? 1 : 0)]; B = [-9, -27 + (Math.sin(ph * 6) > 0 ? 0 : 1)]; } }
@@ -2402,21 +2406,18 @@ function drawFoe0(f) {
     if (f.kk > 0) { ML(0, -8, 10 + 44 * f.kk, -6 + 2 * f.kk, TROU); ML(0, -7, 10 + 44 * f.kk, -5 + 2 * f.kk, SUIT); M(Math.round(10 + 44 * f.kk), -8, 4, 3, '#07080a'); } }
   else { ML(0, -9, 5, -4, TROU); ML(5, -4, 3 + s1, 0, TROU); ML(0, -9, -4, -4, TROU); ML(-4, -4, -2 - s1, 0, TROU); M(1 + s1, -1, 4, 2, '#07080a'); M(-5 - s1, -1, 4, 2, '#07080a'); }
   /* 胴 */
-  var n = ty === 'yoga' ? 11 : (ty === 'blanka' ? 11 : 15), hw = ty === 'sumo' ? 6 : 4;
+  var n = ty === 'yoga' ? 11 : (ty === 'blanka' ? 11 : 15), hw = 4;
   for (i = 0; i < n; i++) {
-    var ox = Math.round(lean * (1 - i / n)), hwi = hw + ((ty === 'sumo' && i > 3 && i < 12) ? 1 : 0);
+    var ox = Math.round(lean * (1 - i / n)), hwi = hw;
     for (x = -hwi; x <= hwi; x++) M(ox + x, Y0 + i, 1, 1, (x === -hwi || x === hwi) ? EDGE : (x < -hwi + 2 ? HIL : SUIT));
-    if (ty === 'sumo' && i > 4 && i < 12) M(ox + hwi + 1, Y0 + i, 1, 1, SUIT);
     if (i < 7) M(ox, Y0 + i, 1 + (i < 2 ? 2 : 0), 1, SHIRT);
     if (i > 0 && i < 11) M(ox, Y0 + i, 1, 1, tie);
-    if (ty === 'sumo' && i === 8) M(ox + 2, Y0 + i, 2, 1, '#c9a43a');
   }
-  if (ty === 'sumo') M(-6, Y0 + 12, 13, 2, '#0e0f14');
   /* 腕 */
   var sh = [3 + lean, Y0 + 2], sh2 = [-3 + lean, Y0 + 2];
   if (A) { ML(sh[0], sh[1], A[0], A[1], SUIT); ML(sh[0], sh[1] + 1, A[0], A[1] + 1, HIL); }
   if (B) { ML(sh2[0], sh2[1], B[0], B[1], SUIT); ML(sh2[0], sh2[1] + 1, B[0], B[1] + 1, EDGE); }
-  var hc = glove || SKIN, hsz = glove ? 4 : (ty === 'sumo' ? 4 : 2);
+  var hc = glove || SKIN, hsz = glove ? 4 : 2;
   if (B) { M(B[0] - 1, B[1] - 1, hsz, hsz, hc); if (glove) M(B[0], B[1] - 1, 1, 1, '#ff8a7a'); }
   if (A) { M(A[0] - 1, A[1] - 1, hsz, hsz, hc); if (glove) M(A[0], A[1] - 1, 1, 1, '#ff8a7a'); }
   if (ty === 'blanka' && st !== 'rec') { M(A[0] + 2, A[1] - 1, 1, 1, '#fff'); M(A[0] + 2, A[1] + 1, 1, 1, '#fff'); M(B[0] + 2, B[1] - 1, 1, 1, '#fff'); }
@@ -2424,15 +2425,20 @@ function drawFoe0(f) {
   var HX = hx + lean + (ty === 'blanka' ? 2 : 0), HY = hy;
   for (dy = -3; dy <= 3; dy++) for (dx = -3; dx <= 3; dx++) if (dx * dx + dy * dy <= 10) M(HX + dx, HY + dy, 1, 1, dx <= -2 ? SHADE : SKIN);
   M(HX - 3, HY - 4, 7, 2, '#0e0c0b'); M(HX - 3, HY - 2, 2, 3, '#0e0c0b');
-  if (ty === 'sumo') { M(HX - 1, HY - 6, 3, 2, '#0e0c0b'); M(HX + 2, HY - 5, 2, 1, '#0e0c0b'); }
   if (ty === 'blanka') { M(HX - 3, HY - 6, 1, 2, '#0e0c0b'); M(HX - 1, HY - 7, 1, 3, '#0e0c0b'); M(HX + 1, HY - 6, 1, 2, '#0e0c0b'); M(HX + 3, HY - 5, 1, 2, '#0e0c0b'); }
   if (ty === 'yoga') { M(HX - 1, HY - 6, 3, 2, '#0e0c0b'); M(HX + 1, HY - 1, 2, 1, '#111'); }
   else { M(HX + 1, HY - 1, 1, 1, '#fff'); M(HX + 2, HY - 1, 1, 1, '#111'); }
   if (ty === 'box') M(HX + 1, HY - 2, 3, 1, '#0e0c0b');
   if (ty === 'blanka') { M(HX + 1, HY + 1, 3, 1, '#fff'); M(HX + 1, HY + 2, 2, 1, '#8a3a30'); } else M(HX + 1, HY + 2, 2, 1, '#8a3a30');
-  if (ty === 'sumo') M(HX - 2, HY + 2, 5, 1, SKIN);
+  if (ty === 'sumo') {
+    M(HX - 2, HY - 3, 6, 6, '#f2f2ec'); M(HX - 2, HY - 3, 1, 6, '#c9c9c2'); M(HX - 2, HY + 2, 6, 1, '#2f62c8'); M(HX - 2, HY - 4, 1, 1, '#2f62c8'); M(HX + 3, HY - 4, 1, 1, '#2f62c8');
+    M(HX + 1, HY - 1, 3, 1, '#0e0c0b'); M(HX + 2, HY - 1, 1, 1, '#ff4a3a'); M(HX + 2, HY + 1, 1, 1, '#9aa0aa');
+    var cc = [A, B], ci, cA;
+    for (ci = 0; ci < 2; ci++) { cA = cc[ci]; if (!cA) continue; ML(cA[0], cA[1] - 1, cA[0] + 8, cA[1] - 3, ci ? '#aab3c0' : '#eef2f7'); ML(cA[0], cA[1], cA[0] + 9, cA[1], ci ? '#aab3c0' : '#eef2f7'); ML(cA[0], cA[1] + 1, cA[0] + 8, cA[1] + 3, ci ? '#8a93a1' : '#cdd4dd'); }
+  }
   if (ty === 'box' && st === 'atk' && t > 0.06 && t < 0.34) for (i = 0; i < 4; i++) pline(Math.round(px - fa * (6 + i * 4)), F - 28 + i * 6, Math.round(px - fa * (16 + i * 9)), F - 28 + i * 6, 'rgba(255,255,255,0.6)');
-  if (ty === 'sumo' && st === 'atk' && t < 0.8) for (i = 0; i < 3; i++) { var by0 = F - 22 + i * 3 + ((Math.floor(simT / 50) + i) & 1); pline(Math.round(px + fa * (16 + i * 3)), by0, Math.round(px + fa * (26 + i * 4)), by0, 'rgba(255,255,255,0.55)'); }
+  if (ty === 'sumo' && st === 'atk' && t > 0.08 && t < 0.55) for (i = 0; i < 4; i++) pline(Math.round(px - fa * (5 + i * 3)), Math.round(FY - 30 + i * 6), Math.round(px - fa * (16 + i * 8)), Math.round(FY - 30 + i * 6), 'rgba(235,240,255,0.55)');
+  if (ty === 'sumo' && st === 'atk' && t >= 0.55 && t < 0.78) { var sa = (t - 0.55) / 0.23; for (i = 0; i < 3; i++) pline(Math.round(px + fa * (6 + 12 * sa + i * 3)), Math.round(F - 30 + 14 * sa + i * 2), Math.round(px + fa * (10 + 18 * sa + i * 3)), Math.round(F - 14 + 8 * sa), 'rgba(255,255,255,0.7)'); }
   if (ty === 'blanka' && st === 'atk' && f.mv % 2 === 1 && t > 0.1 && t < 0.78) {
     for (i = 0; i < 7; i++) {
       var ba = rnd(0, 6.283), bl = rnd(10, 26), bx = px, by = F - 14, bn = 4, bk, nx2, ny2;
