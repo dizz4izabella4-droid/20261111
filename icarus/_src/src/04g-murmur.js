@@ -24,7 +24,7 @@ const murmur=(function(){
       fragmentShader:FS_PRE+SKY_GLSL+`varying vec3 vWP;
       void main(){vec2 c=gl_PointCoord-0.5;if(dot(c,c)>0.25)discard;
         vec3 col=vec3(0.13,0.10,0.11)*(uSunCol*0.4+vec3(0.55));col=applyFog(col,vWP);gl_FragColor=vec4(col,1.0);}`});
-    const o=new T.Points(g,mat);o.frustumCulled=false;scene.add(o);objs.push({o:o,mat:mat,sc:0});
+    const o=new T.Points(g,mat);o.frustumCulled=false;o.visible=false;scene.add(o);objs.push({o:o,mat:mat,sc:0});
   }
   function wrapTo(v,c,S){return ((v-c+S*0.5)%S+S)%S-S*0.5+c;}
   function update(t,px,py,pz,dt){

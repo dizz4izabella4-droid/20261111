@@ -1716,7 +1716,7 @@ const murmur=(function(){
       fragmentShader:FS_PRE+SKY_GLSL+`varying vec3 vWP;
       void main(){vec2 c=gl_PointCoord-0.5;if(dot(c,c)>0.25)discard;
         vec3 col=vec3(0.13,0.10,0.11)*(uSunCol*0.4+vec3(0.55));col=applyFog(col,vWP);gl_FragColor=vec4(col,1.0);}`});
-    const o=new T.Points(g,mat);o.frustumCulled=false;scene.add(o);objs.push({o:o,mat:mat,sc:0});
+    const o=new T.Points(g,mat);o.frustumCulled=false;o.visible=false;scene.add(o);objs.push({o:o,mat:mat,sc:0});
   }
   function wrapTo(v,c,S){return ((v-c+S*0.5)%S+S)%S-S*0.5+c;}
   function update(t,px,py,pz,dt){
@@ -2140,7 +2140,7 @@ function onImpact(v,nx,ny,nz){
 let thAll=[],thAct=[],thFrame=0;
 // 太陽へ向かう「光の柱」のルート。行くほど高く、行くほど遠い。
 const ROUTE=[];
-for(let k=0;k<40;k++)ROUTE.push({x:k===0?-85:Math.round(120*Math.sin(0.9*k)),z:-250-430*k,y0:0,top:Math.min(3500,420+250*k),R:46,d:0,k:k});
+for(let k=0;k<0;k++)ROUTE.push({x:k===0?-85:Math.round(120*Math.sin(0.9*k)),z:-250-430*k,y0:0,top:Math.min(3500,420+250*k),R:46,d:0,k:k});
 function buildThermals(x,z){
   for(const t of ROUTE)t.d=Math.hypot(t.x-x,t.z-z);
   thAll=ROUTE.slice().sort((p,q)=>p.d-q.d);
@@ -2362,7 +2362,8 @@ function autoCtl(dt){
     const wp=m2==='item'?Math.atan2(tgt.y+3-b.y,Math.max(hd,1))+0.02:(inside?0.04:-0.03+0.02*Math.sin(t*0.5));
     sy=clamp((wp-b.pitch)*2.2,-1,1);
   }else{
-    sx=clamp(wander*2,-1,1);sy=clamp((0-b.pitch)*2,-1,1);
+    const dy=Math.atan2(Math.sin(b.yaw),Math.cos(b.yaw));
+    sx=clamp(dy*2+wander*1.2,-1,1);sy=clamp((0.2-b.pitch)*2.2,-1,1);
   }
   // ビルをよける
   const nearItem=m2==='item'&&Math.hypot(b.x-ROCKET_POS.x,b.z-ROCKET_POS.z)<80;
@@ -2579,7 +2580,6 @@ function updateView(dt){
   puffs.mesh.visible=false;// puffs.update(cam.position.x,cam.position.y,cam.position.z,VMU.uSunV.value);
   ice.update(dt,G.rocket?G.frost:0);birds.update(G.t,thAct);birds.updateFlocks(G.t,b.x,b.y,b.z);
   birds.updateCrew(dt,{x:b.x,y:b.y,z:b.z,yaw:b.yaw,speed:b.speed,fly:G.mode==='fly',rocket:G.rocket,age:G.modeT,vx:b.vx,vy:b.vy,vz:b.vz},G.t);
-  murmur.update(G.t,b.x,b.y,b.z,dt);
   legacy.update(b.x,b.z);
   sunGate.update(b.y);
   rocketItem.update(G.t,Math.hypot(b.x-ROCKET_POS.x,b.y-ROCKET_POS.y,b.z-ROCKET_POS.z));
