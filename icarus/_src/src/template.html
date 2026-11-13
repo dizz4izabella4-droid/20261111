@@ -29,6 +29,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b1422;col
 #auto{position:fixed;left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));height:36px;border:0;border-radius:18px;padding:0 15px;background:rgba(10,20,34,.22);color:#fff;opacity:.6;font:inherit;font-size:12px;letter-spacing:.22em;cursor:pointer}
 #auto:hover{opacity:.95}
 #auto.on{opacity:1;background:rgba(255,170,90,.55);box-shadow:0 0 16px rgba(255,190,110,.5)}
+#title .rec{margin-top:14px;font-size:clamp(10px,2.6vw,13px);letter-spacing:.25em;padding-left:.25em;color:rgba(255,255,255,.75)}
 #title .tg{margin-top:2px;font-size:clamp(11px,2.8vw,14px);letter-spacing:.3em;opacity:.8}
 #title .note{margin-top:10px;font-size:clamp(10px,2.6vw,13px);letter-spacing:.2em;color:#8a6a40;opacity:.9}
 #end .note{margin-top:6px;font-size:clamp(11px,2.9vw,15px);letter-spacing:.22em;color:#8a6a40;opacity:.95}
@@ -40,7 +41,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b1422;col
 </head>
 <body>
 <canvas id="c" tabindex="0"></canvas>
-<div id="title" class="ov"><h1>イカロス</h1><p>蝋で固めた鳥の羽</p><p class="tg">勇気を、連れていく。</p><div class="note" id="bestTxt"></div><div class="go" id="go">タップで飛び立つ</div></div>
+<div id="title" class="ov"><h1>イカロス</h1><p>蝋で固めた鳥の羽</p><p class="tg">勇気を、連れていく。</p><div class="note" id="bestTxt"></div><div class="go" id="go">タップで飛び立つ</div><div class="rec">スマートフォン推奨</div></div>
 <div id="hint" class="ov"></div>
 <div id="end" class="ov"><p id="endTxt"></p><div class="go">タップでもう一度</div><div class="note" id="endNote"></div></div>
 <button id="auto" type="button" aria-label="自動操作モード">オート</button>
