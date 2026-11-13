@@ -52,7 +52,6 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px;pa
     radial-gradient(circle at 20% 30%,rgba(255,255,255,.55) 0 3px,transparent 4px) 0 0/34px 34px,
     linear-gradient(180deg,#d8f3ea 0%,#e9f8f2 100%);
   transition:transform .15s,box-shadow .15s}
-.room.stage-dragover{transform:scale(1.015);box-shadow:0 8px 0 var(--lavD),0 18px 30px rgba(142,114,224,.3)}
 .room .floor{position:absolute;left:0;right:0;bottom:0;height:34%;
   background:repeating-linear-gradient(90deg,rgba(150,100,50,.10) 0 2px,transparent 2px 64px),linear-gradient(180deg,#f3d9a8,#e9c78c);
   border-top:4px solid #fff7e6}
@@ -73,15 +72,6 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px;pa
 #character-mover{position:absolute;bottom:8px;left:50%;pointer-events:none;user-select:none;will-change:transform;transform:translateX(-50%)}
 #character-mover .shadow{width:64px;height:12px;margin:-12px auto 0;border-radius:50%;background:rgba(90,60,40,.22);filter:blur(1px)}
 #character-sprite-inner{display:flex;flex-direction:column;align-items:center}
-#character-image{width:var(--chsize,96px);height:var(--chsize,96px);object-fit:contain;filter:drop-shadow(0 4px 4px rgba(0,0,0,.18));user-select:none}
-
-#character-placeholder{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);width:min(86%,300px);text-align:center;
-  background:rgba(255,255,255,.92);border:3px dashed var(--mint);border-radius:18px;padding:8px 12px;user-select:none}
-#character-placeholder .ico{display:none}
-#character-placeholder .ico svg{width:26px;height:26px}
-#character-placeholder b{display:block;font-size:15px;font-weight:900;color:var(--ink)}
-#character-placeholder span{display:block;font-size:12px;color:var(--ink2);margin-top:3px}
-.room:hover #character-placeholder{border-color:var(--mintD)}
 
 .status{position:absolute;top:12px;left:12px;display:flex;align-items:center;gap:6px;padding:4px 11px;border-radius:999px;background:rgba(255,255,255,.92);font-size:11px;font-weight:800;color:var(--ink2);z-index:2}
 .status .dot{width:8px;height:8px;border-radius:50%;background:var(--mint)}
@@ -180,8 +170,6 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px;pa
 #speech-text p{margin:0}
 #speech-text p+p{margin-top:6px}
 .speech-foot{display:flex;align-items:center;gap:8px;margin-top:4px}
-.bar{flex:1;height:5px;border-radius:999px;background:var(--line);overflow:hidden}
-#auto-progress-bar{height:100%;width:0;background:var(--lav);transition:width .2s linear}
 #speech-hint-text{font-size:10px;color:var(--ink2);user-select:none}
 .quick{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
 .qr{border:0;border-radius:14px;padding:7px 18px 9px;font-size:15px;font-weight:900;letter-spacing:.06em;color:#fff;transition:transform .08s,box-shadow .08s}
@@ -351,20 +339,6 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
 .sheet-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;border-top:2px solid var(--line);font-size:11px;color:var(--ink2);background:#fff}
 .sheet-foot .btn-s{background:var(--lavS)}
 
-/* きりぬき */
-.crop-tools{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 16px;border-bottom:2px solid var(--line)}
-.seg{display:flex;gap:6px}
-.seg button{border:0;border-radius:999px;padding:6px 13px;background:var(--lavS);color:var(--ink2);font-size:12px;font-weight:800}
-.seg button.on{background:var(--lav);color:#fff;box-shadow:0 3px 0 var(--lavD)}
-.crop-area{flex:1;display:flex;align-items:center;justify-content:center;padding:14px;overflow:hidden;user-select:none;
-  background-color:#f6f3fb;background-image:linear-gradient(45deg,#e9e3f4 25%,transparent 25%),linear-gradient(-45deg,#e9e3f4 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e9e3f4 75%),linear-gradient(-45deg,transparent 75%,#e9e3f4 75%);
-  background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0}
-#crop-canvas{max-width:100%;max-height:50vh;border-radius:12px;touch-action:none;cursor:crosshair;box-shadow:0 3px 10px rgba(0,0,0,.15)}
-.crop-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-top:2px solid var(--line);background:#fff}
-.btn-m{border:0;border-radius:16px;padding:10px 18px 11px;font-weight:800;font-size:13px;background:var(--lavS);color:var(--lavD)}
-.btn-m.main{background:var(--mint);color:#fff;box-shadow:0 4px 0 var(--mintD)}
-.btn-m.main:active{transform:translateY(3px);box-shadow:0 1px 0 var(--mintD)}
-
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -383,10 +357,8 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
     </button>
   </header>
 
-  <input id="input-character-file" type="file" accept="image/*" class="hidden" aria-label="しゃしん・がぞうを えらぶ">
-
   <section aria-label="キャラクターのばしょ" class="stagewrap">
-    <div id="character-stage" class="room" role="button" tabindex="0" title="しゃしん・がぞうを えらぶ">
+    <div id="character-stage" class="room" role="button" tabindex="0">
       <div id="room-decorations" class="deco" aria-hidden="true">
         <div class="scene">
           <img class="sc-base" src="scene/bg.jpg" alt="" draggable="false">
@@ -407,17 +379,10 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
 
       <div id="character-mover" class="hidden">
         <div id="character-sprite-inner" class="presence-float">
-          <div id="character-emote"><img id="character-image" src="" alt="キャラクター"><div id="character-svg" class="hidden"></div></div>
+          <div id="character-emote"><div id="character-svg"></div></div>
           <div id="emote-fx" aria-hidden="true"></div>
         </div>
         <div class="shadow"></div>
-      </div>
-
-      <div id="character-placeholder">
-        <div class="ico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z"/></svg></div>
-        <b>しゃしんから きりぬいて おく</b>
-        <span>タップ または ドラッグ＆ドロップ</span>
-        <span>（きりぬいた キャラクターが おへやを あるくよ）</span>
       </div>
 
       <div class="status"><span id="status-dot" class="dot"></span><span id="status-text">かんがえちゅう…</span></div>
@@ -445,15 +410,10 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         <button type="button" id="qr-wait" class="qr wait">ちょっと まって</button>
       </div>
       <div class="speech-foot">
-        <div class="bar"><div id="auto-progress-bar"></div></div>
         <span id="speech-hint-text">おすと つぎへ すすむよ</span>
       </div>
     </div>
 
-      <div id="character-image-controls" class="controls hidden">
-        <button id="btn-change-image" type="button" class="mini">べつのしゃしん</button>
-        <button id="btn-remove-image" type="button" class="mini danger">けす</button>
-      </div>
     </div>
   </section>
 
@@ -492,21 +452,13 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
 
 <!-- はじまり -->
 <div id="setup" class="ov hidden">
-  <div class="setup-card" id="setup-step1">
+  <div class="setup-card" id="setup-step2">
     <h2>WHERE <b>WHICH</b></h2>
-    <p>はじめに、いっしょに すごす<br>キャラクターを きめよう。</p>
-    <div id="setup-prev1" class="setup-prev" aria-hidden="true"></div>
-    <p>この子は「んちょ」。<br>しゃしんから、べつの キャラクターを<br>つくることも できるよ。</p>
-    <button id="setup-default" type="button" class="setup-big">この子に する</button>
-    <button id="setup-pick" type="button" class="setup-link">しゃしんから つくる</button>
-  </div>
-  <div class="setup-card hidden" id="setup-step2">
-    <div id="setup-preview" class="setup-prev"></div>
-    <p>なまえを つけてあげよう。</p>
+    <div id="setup-preview" class="setup-prev" aria-hidden="true"></div>
+    <p>この子と いっしょに すごすよ。<br>なまえを つけてあげよう。</p>
     <input id="setup-name" class="setup-name" type="text" maxlength="10" value="んちょ" placeholder="なまえ（10もじまで）" autocomplete="off" aria-label="キャラクターの なまえ">
     <div id="setup-err" class="setup-err"></div>
     <button id="setup-decide" type="button" class="setup-big">きめる</button>
-    <button id="setup-redo" type="button" class="setup-link">べつの キャラに する</button>
   </div>
 </div>
 <div id="intro" class="ov"><div id="intro-text"></div></div>
@@ -536,33 +488,6 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
     <div class="sheet-foot">
       <span id="wordbook-footer-hint">おぼえた ことばは おはなしにも でてくるよ</span>
       <button id="btn-close-wordbook-bottom" type="button" class="btn-s">とじる</button>
-    </div>
-  </div>
-</div>
-
-<!-- きりぬき -->
-<div id="crop-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="crop-modal-title">
-  <div class="sheet" style="max-width:520px;max-height:92vh">
-    <div class="sheet-head">
-      <div>
-        <h2 id="crop-modal-title">キャラクターを きりぬく</h2>
-        <p class="sub">ゆび や マウスで なぞって かこむか、しかくで えらんでね</p>
-      </div>
-      <button id="btn-close-crop" type="button" class="x" aria-label="きりぬきを やめる">
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
-    </div>
-    <div class="crop-tools">
-      <div class="seg">
-        <button id="btn-crop-mode-freehand" type="button" class="on">じゆうに かこむ</button>
-        <button id="btn-crop-mode-rect" type="button">しかくで えらぶ</button>
-      </div>
-      <button id="btn-crop-reset" type="button" class="btn-s">やりなおす</button>
-    </div>
-    <div class="crop-area"><canvas id="crop-canvas"></canvas></div>
-    <div class="crop-foot">
-      <button id="btn-cancel-crop" type="button" class="btn-m">やめる</button>
-      <button id="btn-apply-crop" type="button" class="btn-m main">このかたちで きりぬく</button>
     </div>
   </div>
 </div>
@@ -808,7 +733,6 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
           {
             type: "おぼえたこと",
             lines: [
-              "わたし、{word}を　おぼえたよ！",
               "{word}っていう　ことば、すきに　なっちゃった。",
               "もう　{word}を　わすれないよ。",
               "まえに　おしえてくれた　{word}、おぼえてるよ。",
@@ -1292,7 +1216,8 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
       const state = {
         genres: [],
         words: [],
-        characterImage: null,
+        characterImage: 'default',
+        hadImage: false,
         characterName: 'んちょ',
         selectedFilterGenre: 'all',
         recentSpeechIds: [],
@@ -1342,14 +1267,6 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
           isMoving: false,
           waitTimer: 0,
         },
-        crop: {
-          sourceImg: null,
-          mode: 'freehand',
-          isDrawing: false,
-          points: [],
-          rectStart: null,
-          rectEnd: null,
-        },
       };
 
       const dom = {
@@ -1359,12 +1276,6 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         roomDecorations: document.getElementById('room-decorations'),
         characterMover: document.getElementById('character-mover'),
         characterSpriteInner: document.getElementById('character-sprite-inner'),
-        inputCharacterFile: document.getElementById('input-character-file'),
-        characterImage: document.getElementById('character-image'),
-        characterPlaceholder: document.getElementById('character-placeholder'),
-        characterImageControls: document.getElementById('character-image-controls'),
-        btnChangeImage: document.getElementById('btn-change-image'),
-        btnRemoveImage: document.getElementById('btn-remove-image'),
         statusDot: document.getElementById('status-dot'),
         statusText: document.getElementById('status-text'),
         btnToggleAuto: document.getElementById('btn-toggle-auto'),
@@ -1373,7 +1284,6 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         speechText: document.getElementById('speech-text'),
         speechHintText: document.getElementById('speech-hint-text'),
         btnNextSpeech: document.getElementById('btn-next-speech'),
-        autoProgressBar: document.getElementById('auto-progress-bar'),
         teachForm: document.getElementById('teach-form'),
         inputWord: document.getElementById('input-word'),
         charCounter: document.getElementById('char-counter'),
@@ -1394,14 +1304,6 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         teachTitleText: document.getElementById('teach-title-text'),
         wordbookTitle: document.getElementById('wordbook-title'),
         wordbookFooterHint: document.getElementById('wordbook-footer-hint'),
-        cropModal: document.getElementById('crop-modal'),
-        btnCloseCrop: document.getElementById('btn-close-crop'),
-        btnCancelCrop: document.getElementById('btn-cancel-crop'),
-        btnApplyCrop: document.getElementById('btn-apply-crop'),
-        btnCropModeFreehand: document.getElementById('btn-crop-mode-freehand'),
-        btnCropModeRect: document.getElementById('btn-crop-mode-rect'),
-        btnCropReset: document.getElementById('btn-crop-reset'),
-        cropCanvas: document.getElementById('crop-canvas'),
         levelLabel: document.getElementById('level-label'),
         levelBar: document.getElementById('level-bar'),
         levelNext: document.getElementById('level-next'),
@@ -1414,17 +1316,12 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         characterSvg: document.getElementById('character-svg'),
         artov: document.getElementById('artov'),
         artImg: document.getElementById('art-img'),
-        setupPrev1: document.getElementById('setup-prev1'),
-        setupDefault: document.getElementById('setup-default'),
         setup: document.getElementById('setup'),
-        setupStep1: document.getElementById('setup-step1'),
         setupStep2: document.getElementById('setup-step2'),
-        setupPick: document.getElementById('setup-pick'),
         setupPreview: document.getElementById('setup-preview'),
         setupName: document.getElementById('setup-name'),
         setupErr: document.getElementById('setup-err'),
         setupDecide: document.getElementById('setup-decide'),
-        setupRedo: document.getElementById('setup-redo'),
         intro: document.getElementById('intro'),
         introText: document.getElementById('intro-text'),
         blackout: document.getElementById('blackout'),
@@ -1448,11 +1345,13 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         }
 
         try {
-          const savedImage = localStorage.getItem(STORAGE_KEYS.IMAGE);
-          state.characterImage = savedImage || null;
+          // むかしの しゃしん キャラは つかわない（はじめの子に そろえる）
+          state.hadImage = !!localStorage.getItem(STORAGE_KEYS.IMAGE);
+          localStorage.removeItem(STORAGE_KEYS.IMAGE);
         } catch (err) {
-          state.characterImage = null;
+          state.hadImage = false;
         }
+        state.characterImage = 'default';
 
         try {
           const savedName = localStorage.getItem(STORAGE_KEYS.CHAR_NAME);
@@ -1717,9 +1616,8 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
           state.sleepStart = Number(saved.t) || 0;
         } else {
           // いままで あそんでいた ひとは、そのまま かいわから
-          state.phase = state.words.length > 0 || state.characterImage ? 'talk' : 'setup';
+          state.phase = state.words.length > 0 || state.hadImage ? 'talk' : 'setup';
         }
-        if (state.phase !== 'setup' && !state.characterImage) state.phase = 'setup';
       }
 
       function applyPhaseClass() {
@@ -1734,18 +1632,8 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
 
       function showSetupStep() {
         dom.setup.classList.remove('hidden');
-        dom.setupPrev1.innerHTML = NC_SVG;
-        if (state.characterImage) {
-          dom.setupPreview.innerHTML = state.characterImage === 'default' ? NC_SVG : '<img alt="つくった キャラクター">';
-          const img = dom.setupPreview.querySelector('img');
-          if (img) img.src = state.characterImage;
-          dom.setupStep1.classList.add('hidden');
-          dom.setupStep2.classList.remove('hidden');
-          dom.setupErr.textContent = '';
-        } else {
-          dom.setupStep2.classList.add('hidden');
-          dom.setupStep1.classList.remove('hidden');
-        }
+        dom.setupPreview.innerHTML = NC_SVG;
+        dom.setupErr.textContent = '';
       }
 
       function decideName() {
@@ -1872,17 +1760,6 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
       }
 
       function bindStartEvents() {
-        dom.setupPick.addEventListener('click', () => dom.inputCharacterFile.click());
-        dom.setupDefault.addEventListener('click', () => {
-          saveCharacterImage('default');
-          renderCharacterImage();
-          showSetupStep();
-        });
-        dom.setupRedo.addEventListener('click', () => {
-          saveCharacterImage(null);
-          renderCharacterImage();
-          showSetupStep();
-        });
         dom.setupDecide.addEventListener('click', decideName);
         dom.setupName.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') { e.preventDefault(); decideName(); }
@@ -1930,42 +1807,9 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         }
       }
 
-      function saveCharacterImage(dataUrl) {
-        try {
-          if (dataUrl) {
-            localStorage.setItem(STORAGE_KEYS.IMAGE, dataUrl);
-          } else {
-            localStorage.removeItem(STORAGE_KEYS.IMAGE);
-          }
-          state.characterImage = dataUrl || null;
-          return true;
-        } catch (err) {
-          showFeedback('がぞうが おおきすぎて ほぞん できませんでした。べつの がぞうを ためしてね。', true);
-          return false;
-        }
-      }
-
       function renderCharacterImage() {
-        const isDefault = state.characterImage === 'default';
-        dom.characterImage.classList.toggle('hidden', isDefault);
-        dom.characterSvg.classList.toggle('hidden', !isDefault);
-        dom.btnRemoveImage.textContent = 'はじめの子に もどす';
-        dom.btnRemoveImage.classList.toggle('hidden', isDefault);
-        if (state.characterImage) {
-          if (!isDefault) dom.characterImage.src = state.characterImage;
-          dom.characterMover.classList.remove('hidden');
-          dom.characterPlaceholder.classList.add('hidden');
-          dom.characterImageControls.classList.remove('hidden');
-          dom.characterStage.title = '';
-          startCharacterWalkLoop();
-        } else {
-          stopCharacterWalkLoop();
-          dom.characterImage.removeAttribute('src');
-          dom.characterMover.classList.add('hidden');
-          dom.characterPlaceholder.classList.remove('hidden');
-          dom.characterImageControls.classList.add('hidden');
-          dom.characterStage.title = '';
-        }
+        dom.characterMover.classList.remove('hidden');
+        startCharacterWalkLoop();
       }
 
       function pickNextWalkTarget() {
@@ -2019,7 +1863,6 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         }
 
         dom.characterMover.style.transform = `translate3d(calc(-50% + ${state.walk.x.toFixed(1)}px), ${state.walk.y.toFixed(1)}px, 0)`;
-        dom.characterImage.style.transform = state.walk.facingLeft ? 'scaleX(-1)' : 'scaleX(1)';
         dom.characterSvg.style.transform = state.walk.facingLeft ? 'scaleX(-1)' : 'scaleX(1)';
 
         state.walk.rafId = requestAnimationFrame(updateWalkLoop);
@@ -2039,249 +1882,6 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         if (state.walk.rafId) {
           cancelAnimationFrame(state.walk.rafId);
           state.walk.rafId = null;
-        }
-      }
-
-      function openCropModalWithFile(file) {
-        if (!file || !file.type || !file.type.startsWith('image/')) {
-          showFeedback('しゃしん や イラストの ファイルを えらんでね。', true);
-          return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = function (event) {
-          const img = new Image();
-          img.onload = function () {
-            state.crop.sourceImg = img;
-            state.crop.mode = 'freehand';
-            state.crop.points = [];
-            state.crop.rectStart = null;
-            state.crop.rectEnd = null;
-            state.crop.isDrawing = false;
-
-            updateCropModeButtons();
-            setupCropCanvas();
-
-            dom.cropModal.classList.remove('hidden');
-            dom.cropModal.classList.add('flex');
-          };
-          img.onerror = function () {
-            showFeedback('その がぞうは よみこめなかったみたい。べつの ファイルを えらんでね。', true);
-          };
-          img.src = event.target.result;
-        };
-        reader.readAsDataURL(file);
-      }
-
-      function closeCropModal() {
-        dom.cropModal.classList.add('hidden');
-        dom.cropModal.classList.remove('flex');
-        state.crop.isDrawing = false;
-      }
-
-      function updateCropModeButtons() {
-        const isFree = state.crop.mode === 'freehand';
-        dom.btnCropModeFreehand.classList.toggle('on', isFree);
-        dom.btnCropModeRect.classList.toggle('on', !isFree);
-      }
-
-      function setupCropCanvas() {
-        const img = state.crop.sourceImg;
-        if (!img) return;
-
-        const maxDim = 480;
-        let w = img.width;
-        let h = img.height;
-        if (w > maxDim || h > maxDim) {
-          if (w > h) {
-            h = Math.round((h * maxDim) / w);
-            w = maxDim;
-          } else {
-            w = Math.round((w * maxDim) / h);
-            h = maxDim;
-          }
-        }
-        dom.cropCanvas.width = w;
-        dom.cropCanvas.height = h;
-        drawCropCanvas();
-      }
-
-      function drawCropCanvas() {
-        const canvas = dom.cropCanvas;
-        const ctx = canvas.getContext('2d');
-        const img = state.crop.sourceImg;
-        if (!img) return;
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-        const hasFreehand = state.crop.mode === 'freehand' && state.crop.points.length > 2;
-        const hasRect = state.crop.mode === 'rect' && state.crop.rectStart && state.crop.rectEnd;
-
-        if (!hasFreehand && !hasRect) return;
-
-        ctx.save();
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.48)';
-        ctx.beginPath();
-        ctx.rect(0, 0, canvas.width, canvas.height);
-
-        if (hasFreehand) {
-          ctx.moveTo(state.crop.points[0].x, state.crop.points[0].y);
-          for (let i = 1; i < state.crop.points.length; i++) {
-            ctx.lineTo(state.crop.points[i].x, state.crop.points[i].y);
-          }
-          ctx.closePath();
-        } else if (hasRect) {
-          const rx = Math.min(state.crop.rectStart.x, state.crop.rectEnd.x);
-          const ry = Math.min(state.crop.rectStart.y, state.crop.rectEnd.y);
-          const rw = Math.abs(state.crop.rectEnd.x - state.crop.rectStart.x);
-          const rh = Math.abs(state.crop.rectEnd.y - state.crop.rectStart.y);
-          ctx.rect(rx, ry, rw, rh);
-        }
-        ctx.fill('evenodd');
-        ctx.restore();
-
-        ctx.save();
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.lineWidth = 2.5;
-        ctx.setLineDash([6, 4]);
-        ctx.beginPath();
-        if (hasFreehand) {
-          ctx.moveTo(state.crop.points[0].x, state.crop.points[0].y);
-          for (let i = 1; i < state.crop.points.length; i++) {
-            ctx.lineTo(state.crop.points[i].x, state.crop.points[i].y);
-          }
-          ctx.closePath();
-        } else if (hasRect) {
-          const rx = Math.min(state.crop.rectStart.x, state.crop.rectEnd.x);
-          const ry = Math.min(state.crop.rectStart.y, state.crop.rectEnd.y);
-          const rw = Math.abs(state.crop.rectEnd.x - state.crop.rectStart.x);
-          const rh = Math.abs(state.crop.rectEnd.y - state.crop.rectStart.y);
-          ctx.rect(rx, ry, rw, rh);
-        }
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      function getCanvasCoords(e) {
-        const rect = dom.cropCanvas.getBoundingClientRect();
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        const scaleX = dom.cropCanvas.width / rect.width;
-        const scaleY = dom.cropCanvas.height / rect.height;
-        return {
-          x: Math.max(0, Math.min(dom.cropCanvas.width, (clientX - rect.left) * scaleX)),
-          y: Math.max(0, Math.min(dom.cropCanvas.height, (clientY - rect.top) * scaleY)),
-        };
-      }
-
-      function applyCroppedCharacter() {
-        const canvas = dom.cropCanvas;
-        const img = state.crop.sourceImg;
-        if (!img) return;
-
-        let minX = 0;
-        let minY = 0;
-        let maxX = canvas.width;
-        let maxY = canvas.height;
-        let hasSelection = false;
-
-        if (state.crop.mode === 'freehand' && state.crop.points.length > 5) {
-          hasSelection = true;
-          minX = canvas.width;
-          minY = canvas.height;
-          maxX = 0;
-          maxY = 0;
-          state.crop.points.forEach((p) => {
-            if (p.x < minX) minX = p.x;
-            if (p.y < minY) minY = p.y;
-            if (p.x > maxX) maxX = p.x;
-            if (p.y > maxY) maxY = p.y;
-          });
-        } else if (state.crop.mode === 'rect' && state.crop.rectStart && state.crop.rectEnd) {
-          minX = Math.min(state.crop.rectStart.x, state.crop.rectEnd.x);
-          minY = Math.min(state.crop.rectStart.y, state.crop.rectEnd.y);
-          maxX = Math.max(state.crop.rectStart.x, state.crop.rectEnd.x);
-          maxY = Math.max(state.crop.rectStart.y, state.crop.rectEnd.y);
-          if (maxX - minX > 10 && maxY - minY > 10) {
-            hasSelection = true;
-          }
-        }
-
-        const cropW = Math.max(20, Math.round(maxX - minX));
-        const cropH = Math.max(20, Math.round(maxY - minY));
-
-        const MAX_OUT = 320;
-        let outW = cropW;
-        let outH = cropH;
-        if (outW > MAX_OUT || outH > MAX_OUT) {
-          if (outW > outH) {
-            outH = Math.round((outH * MAX_OUT) / outW);
-            outW = MAX_OUT;
-          } else {
-            outW = Math.round((outW * MAX_OUT) / outH);
-            outH = MAX_OUT;
-          }
-        }
-        const ratio = outW / cropW;
-
-        const outCanvas = document.createElement('canvas');
-        outCanvas.width = outW;
-        outCanvas.height = outH;
-        const outCtx = outCanvas.getContext('2d');
-
-        if (hasSelection && state.crop.mode === 'freehand') {
-          outCtx.beginPath();
-          state.crop.points.forEach((p, idx) => {
-            const px = (p.x - minX) * ratio;
-            const py = (p.y - minY) * ratio;
-            if (idx === 0) outCtx.moveTo(px, py);
-            else outCtx.lineTo(px, py);
-          });
-          outCtx.closePath();
-          outCtx.clip();
-        }
-
-        outCtx.drawImage(
-          img,
-          (minX / canvas.width) * img.width,
-          (minY / canvas.height) * img.height,
-          (cropW / canvas.width) * img.width,
-          (cropH / canvas.height) * img.height,
-          0,
-          0,
-          outW,
-          outH
-        );
-
-        const dataUrl = outCanvas.toDataURL('image/png');
-        if (saveCharacterImage(dataUrl)) {
-          closeCropModal();
-          renderCharacterImage();
-          if (state.phase === 'setup') {
-            showSetupStep();
-            return;
-          }
-          showFeedback('きりぬいた キャラクターが おへやに きたよ！', false);
-
-          const photoReactions = [
-            {
-              id: `photo_react_1_${Date.now()}`,
-              category: 'きぶん',
-              sentences: [['えへへ、', 'しあわせかも。']],
-            },
-            {
-              id: `photo_react_2_${Date.now()}`,
-              category: 'はんのう',
-              sentences: [['ふふ、', 'なんだか　', 'たのしく　なってきた。']],
-            },
-            {
-              id: `photo_react_3_${Date.now()}`,
-              category: 'きぶん',
-              sentences: [['なんだか、', 'わくわくしてきた！']],
-            },
-          ];
-          speakDialogue(photoReactions[Math.floor(Math.random() * photoReactions.length)]);
         }
       }
 
@@ -2697,7 +2297,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         const typingRecently = Date.now() - (state.lastTypedAt || 0) < TYPING_GRACE_MS;
         if (dom.inputWord.value.trim() !== '') return true;
         if (document.activeElement === dom.inputWord && typingRecently) return true;
-        return dom.wordbookModal.classList.contains('flex') || dom.cropModal.classList.contains('flex');
+        return dom.wordbookModal.classList.contains('flex');
       }
 
       // ===== はじめの子「んちょ」（植物スライム）：からだ・葉っぱ・目・口を わけた SVG =====
@@ -2952,7 +2552,6 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         dom.speechText.innerHTML = '';
         dom.statusText.textContent = 'おはなしちゅう…';
         dom.speechHintText.textContent = 'おすと ぜんぶ みえるよ';
-        dom.autoProgressBar.style.width = '0%';
 
         const indicator = document.createElement('span');
         indicator.className = 'speaking-indicator';
@@ -3042,7 +2641,6 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
 
       function scheduleNextAutoSpeech() {
         stopAutoTimers();
-        dom.autoProgressBar.style.width = '0%';
         armDim();
 
         if (state.phase !== 'talk' || !state.autoPlayEnabled || state.isSpeaking) {
@@ -3063,13 +2661,6 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         const duration = 5500 + Math.floor(Math.random() * 4000);
         state.nextSpeechDurationMs = duration;
         state.elapsedMs = 0;
-
-        const stepMs = 100;
-        state.progressIntervalId = setInterval(() => {
-          state.elapsedMs += stepMs;
-          const pct = Math.min(100, (state.elapsedMs / state.nextSpeechDurationMs) * 100);
-          dom.autoProgressBar.style.width = `${pct}%`;
-        }, stepMs);
 
         state.autoTimerId = setTimeout(() => {
           if (userIsBusy()) {
@@ -3098,8 +2689,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
             dom.statusText.textContent = 'おやすみちゅう';
           }
           stopAutoTimers();
-          dom.autoProgressBar.style.width = '0%';
-        }
+          }
       }
 
       function normalizeHiraganaInput(raw) {
@@ -3154,8 +2744,6 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
           existing.updatedAt = Date.now();
           saveWords();
           updateWordCountUI();
-          showFeedback(`「${cleanWord}」の グループを 「${getGenreLabel(genreId)}」に なおしたよ。`, false);
-
           consumePendingAnswer(cleanWord);
           if (!maybeSpeakLevelUp()) {
             triggerNextSpeech({
@@ -3178,8 +2766,6 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         state.words.unshift(newEntry);
         saveWords();
         updateWordCountUI();
-
-        showFeedback(`「${cleanWord}」（${getGenreLabel(genreId)}）を おぼえたよ！`, false);
 
         // 経験値：はじめて教えた言葉だけ（けして また教えても出ない）
         if (!state.everTaught.has(cleanWord)) {
@@ -3378,7 +2964,6 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         renderWordbookList();
 
         if (target) {
-          showFeedback(`「${target.text}」を ことばちょうから けしたよ。`, false);
         }
       }
 
@@ -3419,112 +3004,6 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
           }
         });
 
-        dom.inputCharacterFile.addEventListener('change', (e) => {
-          const file = e.target.files && e.target.files[0];
-          if (file) {
-            openCropModalWithFile(file);
-          }
-          e.target.value = '';
-        });
-
-        dom.btnChangeImage.addEventListener('click', (e) => {
-          e.stopPropagation();
-          dom.inputCharacterFile.click();
-        });
-
-        dom.btnRemoveImage.addEventListener('click', (e) => {
-          e.stopPropagation();
-          saveCharacterImage('default');
-          renderCharacterImage();
-          showFeedback('はじめの子に もどしたよ。しゃしんは いつでも えらびなおせるよ。', false);
-        });
-
-        dom.characterStage.addEventListener('dragover', (e) => {
-          e.preventDefault();
-          dom.characterStage.classList.add('stage-dragover');
-        });
-
-        dom.characterStage.addEventListener('dragleave', () => {
-          dom.characterStage.classList.remove('stage-dragover');
-        });
-
-        dom.characterStage.addEventListener('drop', (e) => {
-          e.preventDefault();
-          dom.characterStage.classList.remove('stage-dragover');
-          const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-          if (file) {
-            openCropModalWithFile(file);
-          }
-        });
-
-        dom.btnCloseCrop.addEventListener('click', closeCropModal);
-        dom.btnCancelCrop.addEventListener('click', closeCropModal);
-        dom.btnApplyCrop.addEventListener('click', applyCroppedCharacter);
-
-        dom.btnCropModeFreehand.addEventListener('click', () => {
-          state.crop.mode = 'freehand';
-          state.crop.points = [];
-          state.crop.rectStart = null;
-          state.crop.rectEnd = null;
-          updateCropModeButtons();
-          drawCropCanvas();
-        });
-
-        dom.btnCropModeRect.addEventListener('click', () => {
-          state.crop.mode = 'rect';
-          state.crop.points = [];
-          state.crop.rectStart = null;
-          state.crop.rectEnd = null;
-          updateCropModeButtons();
-          drawCropCanvas();
-        });
-
-        dom.btnCropReset.addEventListener('click', () => {
-          state.crop.points = [];
-          state.crop.rectStart = null;
-          state.crop.rectEnd = null;
-          drawCropCanvas();
-        });
-
-        const startCropDraw = (e) => {
-          e.preventDefault();
-          const pos = getCanvasCoords(e);
-          state.crop.isDrawing = true;
-          if (state.crop.mode === 'freehand') {
-            state.crop.points = [pos];
-          } else {
-            state.crop.rectStart = pos;
-            state.crop.rectEnd = pos;
-          }
-          drawCropCanvas();
-        };
-
-        const moveCropDraw = (e) => {
-          if (!state.crop.isDrawing) return;
-          e.preventDefault();
-          const pos = getCanvasCoords(e);
-          if (state.crop.mode === 'freehand') {
-            state.crop.points.push(pos);
-          } else {
-            state.crop.rectEnd = pos;
-          }
-          drawCropCanvas();
-        };
-
-        const endCropDraw = () => {
-          if (!state.crop.isDrawing) return;
-          state.crop.isDrawing = false;
-          drawCropCanvas();
-        };
-
-        dom.cropCanvas.addEventListener('mousedown', startCropDraw);
-        dom.cropCanvas.addEventListener('mousemove', moveCropDraw);
-        window.addEventListener('mouseup', endCropDraw);
-
-        dom.cropCanvas.addEventListener('touchstart', startCropDraw, { passive: false });
-        dom.cropCanvas.addEventListener('touchmove', moveCropDraw, { passive: false });
-        window.addEventListener('touchend', endCropDraw);
-
         dom.teachForm.addEventListener('submit', (e) => {
           e.preventDefault();
           const success = teachWord(dom.inputWord.value, dom.selectGenre.value);
@@ -3552,7 +3031,6 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
             state.characterName = newName;
             localStorage.setItem(STORAGE_KEYS.CHAR_NAME, newName);
             updateCharacterNameUI();
-            showFeedback(`なまえを 「${newName}」に かえたよ！`, false);
           }
           dom.nameEditBox.classList.add('hidden');
         });
