@@ -43,6 +43,21 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px;pa
   font-weight:800;font-size:12px;box-shadow:0 3px 0 var(--lavD);transition:transform .08s,box-shadow .08s}
 .chip-btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--lavD)}
 .chip-btn svg{width:18px;height:18px}
+.hbtns{display:flex;align-items:center;gap:6px}
+.chip-btn.gear{padding:6px 8px 7px;background:var(--lavS);color:var(--lavD);box-shadow:0 3px 0 var(--line)}
+#options-list{overflow:auto;padding:6px 16px 10px}
+.opt-row{padding:9px 0;border-bottom:2px dashed var(--line)}
+.opt-row:last-child{border-bottom:0}
+.opt-row b{display:block;font-size:13px;color:var(--ink);margin-bottom:6px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{border:0;border-radius:999px;padding:6px 12px 7px;background:var(--lavS);color:var(--lavD);font-weight:800;font-size:12px}
+.seg button.on{background:var(--mint);color:#fff;box-shadow:0 3px 0 var(--mintD)}
+.opt-extra{display:flex;flex-wrap:wrap;gap:8px;padding-top:10px}
+.opt-extra .danger{background:#ffe3e8;color:#c2415f}
+.opt-extra .danger.sure{background:#ff6b8a;color:#fff}
+body.fs-s #speech-text{font-size:clamp(13px,3.8vw,16px)}
+body.fs-l #speech-text{font-size:clamp(19px,5.6vw,24px)}
+body.nofx #emote-fx{display:none}
 .chip-btn .num{background:#fff;color:var(--lavD);border-radius:999px;padding:1px 9px;font-size:12px}
 
 /* ===== おへや ===== */
@@ -387,11 +402,16 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
       <h1>WHERE <b>WHICH</b></h1>
       <small>ことばを おぼえる おへや</small>
     </div>
+    <div class="hbtns">
+    <button id="btn-open-options" type="button" class="chip-btn gear" aria-label="せっていを ひらく" title="せってい">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
+    </button>
     <button id="btn-open-wordbook" type="button" class="chip-btn" aria-label="ことばちょうをひらく">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
       <span>ことばちょう</span>
       <span id="word-count-badge" class="num">0こ</span>
     </button>
+    </div>
   </header>
 
   <div class="metarow">
@@ -570,6 +590,22 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
     <div class="sheet-foot">
       <span id="wordbook-footer-hint">おぼえた ことばは おはなしにも でてくるよ</span>
       <button id="btn-close-wordbook-bottom" type="button" class="btn-s">とじる</button>
+    </div>
+  </div>
+</div>
+
+ <div id="options-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="options-title">
+  <div class="sheet">
+    <div class="sheet-head">
+      <div><h2 id="options-title">せってい</h2><p class="sub">えらんで「きめる」を おすと、へやが ととのうよ</p></div>
+      <button id="btn-close-options" type="button" class="x" aria-label="せっていを とじる">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div id="options-list"></div>
+    <div class="sheet-foot">
+      <button id="btn-options-reset" type="button" class="btn-s">ぜんぶ もどす</button>
+      <button id="btn-options-save" type="button" class="btn-s main">きめる</button>
     </div>
   </div>
 </div>
@@ -1638,29 +1674,38 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
           && !userIsBusy() && dom.levelup.classList.contains('hidden');
       }
 
-      function showArt() {
-        if (!artCanShow()) return;
+      function runArtCb() {
+        const c = state.artCb;
+        state.artCb = null;
+        if (c) c();
+      }
+
+      function showArt(force, ms, cb) {
+        if (force === true ? state.artOn : !artCanShow()) { if (force === true && cb) cb(); return; }
+        if (force !== true && opts.loading === 'never') return;
         state.artOn = true;
+        state.artCb = cb || null;
         const im = new Image();
         im.onload = () => {
-          if (state.phase !== 'talk') { state.artOn = false; return; }
+          if (state.phase !== 'talk') { state.artOn = false; runArtCb(); return; }
           stopAutoTimers();
           dom.artImg.src = im.src;
           dom.artov.classList.add('on');
           clearTimeout(state.artTimer);
-          state.artTimer = setTimeout(closeArt, ART_SHOW_MS);
+          state.artTimer = setTimeout(closeArt, ms || ART_SHOW_MS);
         };
-        im.onerror = () => { state.artOn = false; };
+        im.onerror = () => { state.artOn = false; runArtCb(); };
         im.src = 'art/' + pickArt() + '.jpg';
       }
 
       function closeArt() {
         clearTimeout(state.artTimer);
-        if (!dom.artov.classList.contains('on')) { state.artOn = false; return; }
+        if (!dom.artov.classList.contains('on')) { state.artOn = false; runArtCb(); return; }
         dom.artov.classList.remove('on');
         setTimeout(() => {
           state.artOn = false;
           if (state.phase === 'talk' && !state.isSpeaking) scheduleNextAutoSpeech();
+          runArtCb();
         }, 1000);
       }
 
@@ -1669,7 +1714,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         setTimeout(() => {
           showArt();
           scheduleArtChecks();
-        }, (120 + Math.random() * 180) * 1000);
+        }, (opts.loading === 'often' ? 40 + Math.random() * 50 : 120 + Math.random() * 180) * 1000);
       }
 
       // 背景は ぜんたいを うめる大きさで かため、見える はば（右がわの窓まで）を そろえる
@@ -1687,6 +1732,112 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         sc.style.left = (-L * sw) + 'px';
         sc.style.top = (h - sh) + 'px';
         sc.style.bottom = 'auto';
+      }
+
+      // ===== せってい（むだに ある オプションがめん。ひらく ときと きめる ときに ローディングが でるよ）=====
+      const OPTS_KEY = 'iris_options_v1';
+      const OPT_DEFS = [
+        { k: 'speed', label: 'おはなしの はやさ', def: 'normal', vals: [['slow', 'ゆっくり'], ['normal', 'ふつう'], ['fast', 'はやい']] },
+        { k: 'freq', label: 'ひとりごとの ひんど', def: 'normal', vals: [['low', 'すくない'], ['normal', 'ふつう'], ['high', 'おおい']] },
+        { k: 'scene', label: 'へやの ようす', def: 'auto', vals: [['auto', 'じかんで かわる'], ['day', 'ひる'], ['dusk', 'ゆうがた'], ['night', 'よる'], ['rain', 'あめ']] },
+        { k: 'font', label: 'もじの おおきさ', def: 'm', vals: [['s', 'ちいさい'], ['m', 'ふつう'], ['l', 'おおきい']] },
+        { k: 'move', label: 'んちょの うごき', def: 'normal', vals: [['many', 'おおい'], ['normal', 'ふつう'], ['none', 'じっと']] },
+        { k: 'fx', label: 'きもちの エフェクト', def: 'on', vals: [['on', 'あり'], ['off', 'なし']] },
+        { k: 'loading', label: 'ローディングがめん', def: 'normal', vals: [['often', 'よく でる'], ['normal', 'ふつう'], ['never', 'でない']] },
+      ];
+      const SPEED_MUL = { slow: 1.5, normal: 1, fast: 0.65 };
+      const FREQ_MUL = { low: 1.8, normal: 1, high: 0.6 };
+      let opts = {};
+      let optsDraft = null;
+      let resetArmed = false;
+
+      function loadOpts() {
+        let o = {};
+        try { o = JSON.parse(localStorage.getItem(OPTS_KEY) || '{}') || {}; } catch (err) { o = {}; }
+        opts = {};
+        OPT_DEFS.forEach((d) => { opts[d.k] = d.vals.some((v) => v[0] === o[d.k]) ? o[d.k] : d.def; });
+      }
+      loadOpts();
+
+      function applyOpts() {
+        document.body.classList.toggle('fs-s', opts.font === 's');
+        document.body.classList.toggle('fs-l', opts.font === 'l');
+        document.body.classList.toggle('nofx', opts.fx === 'off');
+        updateScene(false);
+      }
+
+      function renderOptions() {
+        const box = document.getElementById('options-list');
+        box.innerHTML = '';
+        OPT_DEFS.forEach((d) => {
+          const row = document.createElement('div');
+          row.className = 'opt-row';
+          const b = document.createElement('b');
+          b.textContent = d.label;
+          const seg = document.createElement('div');
+          seg.className = 'seg';
+          d.vals.forEach(([v, label]) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = label;
+            if (optsDraft[d.k] === v) btn.classList.add('on');
+            btn.addEventListener('click', () => {
+              optsDraft[d.k] = v;
+              seg.querySelectorAll('button').forEach((x) => x.classList.remove('on'));
+              btn.classList.add('on');
+            });
+            seg.appendChild(btn);
+          });
+          row.appendChild(b);
+          row.appendChild(seg);
+          box.appendChild(row);
+        });
+        const ex = document.createElement('div');
+        ex.className = 'opt-extra';
+        const peek = document.createElement('button');
+        peek.type = 'button'; peek.className = 'btn-s'; peek.textContent = 'ローディングを いま みる';
+        peek.addEventListener('click', () => {
+          closeOptions();
+          showArt(true, 3000, openOptionsNow);
+        });
+        const wipe = document.createElement('button');
+        wipe.type = 'button'; wipe.className = 'btn-s danger'; wipe.textContent = 'ぜんぶ さいしょから';
+        wipe.addEventListener('click', () => {
+          if (!resetArmed) {
+            resetArmed = true;
+            wipe.classList.add('sure');
+            wipe.textContent = 'ほんとうに？ もういちど おす';
+            setTimeout(() => { resetArmed = false; wipe.classList.remove('sure'); wipe.textContent = 'ぜんぶ さいしょから'; }, 4000);
+            return;
+          }
+          try {
+            Object.keys(localStorage).filter((k) => k.indexOf('iris_') === 0).forEach((k) => localStorage.removeItem(k));
+          } catch (err) { /* むし */ }
+          location.reload();
+        });
+        ex.appendChild(peek);
+        ex.appendChild(wipe);
+        box.appendChild(ex);
+      }
+
+      function openOptionsNow() {
+        optsDraft = Object.assign({}, opts);
+        renderOptions();
+        document.getElementById('options-modal').classList.add('flex');
+      }
+      function openOptions() {
+        if (state.phase !== 'talk') return;
+        showArt(true, 2200, openOptionsNow); // ひらく ときも ローディング
+      }
+      function closeOptions() {
+        document.getElementById('options-modal').classList.remove('flex');
+      }
+      function saveOptions() {
+        opts = Object.assign({}, optsDraft);
+        try { localStorage.setItem(OPTS_KEY, JSON.stringify(opts)); } catch (err) { /* むし */ }
+        closeOptions();
+        applyOpts();
+        showArt(true, 1800); // きめる ときも ローディング
       }
 
       // ===== じかんに あわせて へんか（ひる・ゆうがた・よる・あめ） =====
@@ -1719,7 +1870,8 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
       function updateScene(instant) {
         let forced = '';
         try { forced = new URLSearchParams(location.search).get('scene') || ''; } catch (err) { forced = ''; }
-        setScene(['day', 'dusk', 'night', 'rain'].includes(forced) ? forced : sceneByClock(new Date()), instant);
+        const opt = opts.scene && opts.scene !== 'auto' ? opts.scene : '';
+        setScene(['day', 'dusk', 'night', 'rain'].includes(forced) ? forced : (opt || sceneByClock(new Date())), instant);
       }
       updateScene(true);
       setInterval(() => updateScene(false), 60000);
@@ -2706,7 +2858,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         const typingRecently = Date.now() - (state.lastTypedAt || 0) < TYPING_GRACE_MS;
         if (dom.inputWord.value.trim() !== '') return true;
         if (document.activeElement === dom.inputWord && typingRecently) return true;
-        return dom.wordbookModal.classList.contains('flex');
+        return dom.wordbookModal.classList.contains('flex') || document.getElementById('options-modal').classList.contains('flex');
       }
 
       // ===== はじめの子「んちょ」（植物スライム）：からだ・葉っぱ・目・口を わけた SVG =====
@@ -2782,7 +2934,8 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
       // ひとりで ちょこちょこ うごく（みまわす・はねる・にっこり・あくび）
       function startIdleLoop() {
         const tick = () => {
-          setTimeout(tick, 3200 + Math.random() * 3800);
+          setTimeout(tick, (3200 + Math.random() * 3800) * (opts.move === 'many' ? 0.55 : 1));
+          if (opts.move === 'none') return;
           const el = ncEl();
           if (!el || state.phase !== 'talk' || state.isSpeaking || state.napping || state.idleBusy) return;
           if (dom.characterEmote.className !== '') return;
@@ -3069,9 +3222,9 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
             if (/[、]/.test(chunkText)) pause += 110;
             if (/[。！？]/.test(chunkText)) pause += 230;
             if (/……/.test(chunkText)) pause += 240;
-            cumulativeDelay += pause;
+            cumulativeDelay += Math.round(pause * (SPEED_MUL[opts.speed] || 1));
           });
-          cumulativeDelay += 450;
+          cumulativeDelay += Math.round(450 * (SPEED_MUL[opts.speed] || 1));
         });
 
         const endTimerId = setTimeout(() => {
@@ -3159,7 +3312,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
           return;
         }
 
-        const duration = 2600 + Math.floor(Math.random() * 2600);
+        const duration = Math.round((2600 + Math.floor(Math.random() * 2600)) * (FREQ_MUL[opts.freq] || 1));
         state.nextSpeechDurationMs = duration;
         state.elapsedMs = 0;
 
@@ -3628,6 +3781,14 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         });
 
         dom.btnOpenWordbook.addEventListener('click', openWordbook);
+        document.getElementById('btn-open-options').addEventListener('click', openOptions);
+        document.getElementById('btn-close-options').addEventListener('click', closeOptions);
+        document.getElementById('btn-options-save').addEventListener('click', saveOptions);
+        document.getElementById('btn-options-reset').addEventListener('click', () => {
+          optsDraft = {};
+          OPT_DEFS.forEach((d) => { optsDraft[d.k] = d.def; });
+          renderOptions();
+        });
         dom.btnCloseWordbook.addEventListener('click', closeWordbook);
         dom.btnCloseWordbookBottom.addEventListener('click', closeWordbook);
 
@@ -3663,6 +3824,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         updateTopicCount();
         bindEvents();
         dom.characterSvg.innerHTML = NC_SVG;
+        applyOpts();
         applyGrowth();
         startNcLoops();
         startIdleLoop();
