@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Stretchy Mustache</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
@@ -91,6 +91,7 @@
     color: #fff; background: #c8282a; border: 4px solid #fff; box-shadow: 4px 4px 0 #000; padding: 8px 28px; cursor: pointer;
   }
   @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+  html, body { touch-action: manipulation; -webkit-touch-callout: none; }
   #endov.good { justify-content: flex-end; padding-bottom: 7%; }
   #endov.good .t, #endov.good .s { display: none; }
   #stage { position: relative; display: flex; max-width: 100%; }
@@ -150,6 +151,12 @@
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 ctx.imageSmoothingEnabled = false;
+
+// iPhone Safari の拡大（ダブルタップ・ピンチ）を止める
+['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault()));
+let lastTouchEnd = 0;
+document.addEventListener('touchend', e => { const n = Date.now(); if (n - lastTouchEnd < 350) e.preventDefault(); lastTouchEnd = n; }, { passive: false });
+document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
 
 // --- Web Audio API (ファミコン風チップチューン音源) ---
 let audioCtx = null;
