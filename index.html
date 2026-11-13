@@ -38,7 +38,7 @@ body{font-family:var(--ja);color:var(--ink);background:linear-gradient(160deg,va
 .stage .sub{align-self:center}
 #sky{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
 body.abyss #sky{z-index:9}
-.wrap{position:relative;z-index:1;max-width:540px;padding-top:40px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+.wrap{position:relative;z-index:1;max-width:540px;padding-top:92px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
 
 /* 見出し: リボンの帯 */
 header{display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:6px;text-align:center}
@@ -56,21 +56,14 @@ header{display:flex;flex-direction:column;align-items:center;gap:10px;padding-to
 /* 画面の名前: 左上に小さく */
 .boxname{position:fixed;z-index:4;margin:0;top:max(12px,env(safe-area-inset-top,0px));left:max(12px,env(safe-area-inset-left,0px));
   padding:7px 12px;border-radius:0;background:var(--white);color:var(--ink);font:800 12px var(--ja);letter-spacing:.08em;
-  box-shadow:0 3px 0 #e6d3ea,0 6px 14px rgba(107,74,122,.12);cursor:pointer}
-.boxname:active{transform:translateY(2px);box-shadow:0 1px 0 #e6d3ea}
-.boxname:focus-visible{outline:3px solid var(--lav);outline-offset:2px}
+  box-shadow:0 3px 0 #e6d3ea,0 6px 14px rgba(107,74,122,.12)}
 
-/* コンセプトの表示: 名前を押すと出て、画面のどこかをタップすると消える */
-#concept{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;
-  padding:24px max(24px,env(safe-area-inset-right,0px)) 24px max(24px,env(safe-area-inset-left,0px));
-  background:rgba(40,16,52,.55);opacity:0;visibility:hidden;cursor:pointer;
-  transition:opacity .25s,visibility 0s .25s;-webkit-tap-highlight-color:transparent}
-#concept.on{opacity:1;visibility:visible;transition:opacity .25s}
-#concept p{margin:0;max-width:min(92vw,440px);padding:26px 24px;border-radius:22px;background:var(--white);color:var(--ink);text-align:center;
-  font:800 clamp(18px,5.2vw,24px)/1.8 var(--ja);letter-spacing:.06em;box-shadow:0 6px 0 #e6d3ea,0 16px 36px rgba(20,4,30,.35);
-  transform:scale(.94);transition:transform .25s}
-#concept.on p{transform:none}
-@media (prefers-reduced-motion:reduce){#concept,#concept.on,#concept p{transition:none}}
+/* コンセプト: 名前の下に常に表示する */
+.concept{position:fixed;z-index:4;margin:0;top:calc(max(12px,env(safe-area-inset-top,0px)) + 36px);left:max(12px,env(safe-area-inset-left,0px));
+  max-width:min(calc(100vw - 24px),300px);padding:5px 10px 6px;border-radius:0;background:rgba(255,250,252,.82);color:var(--ink);
+  font:700 11px/1.6 var(--ja);letter-spacing:.06em;box-shadow:0 2px 0 #e6d3ea;pointer-events:none}
+.concept span{display:block}
+.concept .wait{color:var(--ink2);font-weight:600}
 
 /* 音楽ボタン */
 .music{position:fixed;z-index:5;top:max(12px,env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));
@@ -134,7 +127,7 @@ body.abyss .byiz{color:#c9a35a;opacity:.55}
   .ds{font-size:14px}
   footer .keys{display:none}
   .music{padding:7px 12px 7px 10px;font-size:12px}
-  .wrap{padding-top:52px}
+  .wrap{padding-top:96px}
 }
 
 /* ===== 主題歌モード「ABYSS CODE」: かわいい画面が崩れ落ち、ダークファンタジーのカラオケ画面になる ===== */
@@ -230,8 +223,8 @@ body.abyss .music.on .sw{background:#c41a2a}
 </head>
 <body>
 <canvas id="sky" aria-hidden="true"></canvas>
-<h1 class="boxname" id="boxname" role="button" tabindex="0">izのおもちゃ箱</h1>
-<div id="concept" role="dialog" aria-label="コンセプト" aria-hidden="true"><p><span style="display:inline-block">自分が欲しかったものを、</span><span style="display:inline-block">ひたすら作りまくる。</span><span style="display:inline-block">がコンセプト</span></p></div>
+<h1 class="boxname" id="boxname">izのおもちゃ箱</h1>
+<p class="concept" id="concept"><span>自分が欲しかったものを、ひたすら作りまくる。</span><span class="wait">ちょっとした待ち時間にどうぞ</span></p>
 <button type="button" class="music" id="music" role="switch" aria-checked="false"><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span><span id="mLabel">主題歌を流す</span><span class="sw" aria-hidden="true"></span></button>
 <div class="wrap">
   <section class="stage" aria-label="ゲームをえらぶ">
@@ -488,15 +481,6 @@ function tick(){ if(!abyss){ tickOn=false; return; } const d=bgm.duration||180.8
 // 枠の外をタップすると終わる（題名を見せている間は反応しない）
 $('abyss').addEventListener('click',e=>{ if(!abyss||!$('scroll').classList.contains('open')) return; if(e.target.closest('#lyr')) return; exitAbyss(); });
 document.addEventListener('keydown',e=>{ if(abyss&&e.key==='Escape') exitAbyss(); });
-
-// ===== コンセプト表示: 「izのおもちゃ箱」を押すと出て、どこかをタップすると消える =====
-(()=>{ const bn=$('boxname'), cc=$('concept');
-  const set=on=>{ cc.classList.toggle('on',on); cc.setAttribute('aria-hidden',String(!on)); };
-  bn.addEventListener('click',e=>{ e.stopPropagation(); set(true); });
-  bn.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); e.stopPropagation(); set(true); } });
-  cc.addEventListener('click',()=>set(false));
-  document.addEventListener('keydown',e=>{ if(cc.classList.contains('on')){ if(e.key==='Escape'||e.key==='Enter'||e.key===' '){ e.preventDefault(); e.stopPropagation(); set(false); } } },true);
-})();
 
 // ===== 効果音: ぽわん（選ぶ）、きらりん（決定） =====
 let ac=null;
