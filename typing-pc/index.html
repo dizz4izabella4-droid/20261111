@@ -151,9 +151,12 @@ body.alert .neon{animation:alarm .5s steps(1) infinite}
 #sPh{color:var(--gold)}
 #res{margin-top:10px;white-space:pre-wrap;font-size:13px}
 #ime{color:var(--err);font-size:12px}
-#banner{position:absolute;left:0;right:0;top:0;height:27px;z-index:4;pointer-events:none;border:1px solid var(--gold);background:#000;
-  color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:13px;letter-spacing:.16em;white-space:nowrap;overflow:hidden;box-shadow:0 0 18px rgba(216,242,122,.3)}
-#banner.show{animation:pop 1.6s ease-out forwards}
+#banner{position:absolute;left:0;right:0;top:0;height:44px;z-index:4;pointer-events:none;border:1px solid var(--gold);background:#000;
+  color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:21px;font-weight:bold;letter-spacing:.2em;white-space:nowrap;overflow:hidden;box-shadow:0 0 28px rgba(216,242,122,.55),inset 0 0 14px rgba(216,242,122,.25);text-shadow:0 0 10px var(--gold)}
+#banner.show{animation:pop 2.6s ease-out forwards}
+.phf{animation:phf 2.2s ease-out}
+@keyframes phf{0%,40%{background:var(--gold);color:#000;text-shadow:none}100%{background:transparent}}
+#sPh.phf{padding:0 6px;font-size:14px}
 @keyframes pop{0%{opacity:0;transform:scaleX(.2)}12%{opacity:1;transform:scaleX(1)}80%{opacity:1}100%{opacity:0}}
 
 /* tiles: left / center / right, 1.2% gutters, nothing overlaps */
@@ -1477,9 +1480,11 @@ function dummiesMiss(){
   Lf.line('[!] decode error - packet dropped','r');
   ['wBreach','wFeed','wTrace','wDump','wKey','wMon','wCopy'].forEach(id=>{ const w=$(id); w.classList.add('alarm'); clearTimeout(alarmT[id]); alarmT[id]=setTimeout(()=>w.classList.remove('alarm'),350); });
 }
+// フェーズが変わったとき、ステータスのフェーズ表示と窓のタイトルを目立たせる
+function phaseFlash(){ ['sPh','mTitle'].forEach(id=>{ const e=$(id); if(!e) return; e.classList.remove('phf'); void e.offsetWidth; e.classList.add('phf'); }); }
 function banner(msg){
   const b=$('banner'); b.textContent='>> '+msg+' <<'; b.hidden=false; b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
-  clearTimeout(alarmT.ban); alarmT.ban=setTimeout(()=>{b.hidden=true;},1600);
+  clearTimeout(alarmT.ban); alarmT.ban=setTimeout(()=>{b.hidden=true;},2600);
 }
 function openWin(id,delay){
   const myTok=token;
@@ -1812,7 +1817,7 @@ function startPhase(p){
   $('mTitle').textContent=P.title; $('sPh').textContent=(p+1)+'/3 '+P.name; $('sMl').textContent=P.meter;
   $('dTitle').textContent=P.copy;
   $('bTitle').textContent=['defense@node7: ~/firewall','trace@node7: ~/origin','counter@node7: ~/strike'][p];
-  if(p>0){ banner('PHASE '+(p+1)+': '+P.name); playBanner(); later(()=>{ document.body.classList.remove('hush'); bgmLevel(1,.35); },700); }
+  if(p>0){ banner('PHASE '+(p+1)+' / 3　'+P.name); playBanner(); bgmLevel(1,.2); phaseFlash(); }
   marquee('第'+(p+1)+'段階　'+['防御','追跡','反撃'][p],'gold');
   const d0=p>0?700:150;
   P.wins.forEach((id,k)=>openWin(id,d0+k*260));
@@ -1891,8 +1896,8 @@ function key(ch){
 // フェーズの切り替え: 静（曲が引いて画面が落ち着き、成功の知らせが静かに出る）→ 動（せり上がる音 → 衝撃で曲が戻り、窓が開く）
 function phaseBreak(){
   state='boot'; clockStop(); update();
-  document.body.classList.add('hush'); bgmLevel(.2,.8);
-  later(()=>{ musicSuccess(); typeLines(PH[phase].end,()=>later(()=>startPhase(phase+1),800),{n:2,ms:22,gap:240}); },550);
+  // 曲を引いたり画面を暗くしたりはしない（静かにしない）。成功の知らせを出して、すぐ次のフェーズへ
+  later(()=>{ musicSuccess(); typeLines(PH[phase].end,()=>later(()=>startPhase(phase+1),400),{n:2,ms:22,gap:240}); },250);
 }
 function wordDone(){
   const [w,ja,ms]=words[wi]; playChord(w.length);
