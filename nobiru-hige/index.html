@@ -46,6 +46,21 @@
     display: flex; align-items: center; justify-content: center;
     touch-action: none;
   }
+  /* スティック（左右だけ受け付ける。つまみを左右にスライドさせる） */
+  #stick {
+    position: relative; width: 168px; height: 76px; border-radius: 38px;
+    background: rgba(255,255,255,0.12); border: 3px solid rgba(255,255,255,0.5);
+    touch-action: none; user-select: none; -webkit-user-select: none;
+  }
+  #stick::before { content: '◀'; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.45); font-size: 16px; }
+  #stick::after { content: '▶'; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.45); font-size: 16px; }
+  #stick-knob {
+    position: absolute; left: 50%; top: 50%; width: 58px; height: 58px; margin: -29px 0 0 -29px;
+    border-radius: 50%; background: rgba(255,255,255,0.4); border: 3px solid rgba(255,255,255,0.85);
+    box-shadow: 0 3px 0 rgba(0,0,0,0.35); pointer-events: none;
+  }
+  #stick.on { background: rgba(255,255,255,0.2); }
+  #stick.on #stick-knob { background: rgba(255,255,255,0.7); }
   .pb.jump { width: 92px; height: 92px; border-color: #f88; background: rgba(220,60,60,0.3); }
   .pb.on { background: rgba(255,255,255,0.42); }
   .pb.jump.on { background: rgba(255,90,90,0.6); }
@@ -121,10 +136,7 @@
     </div>
   </div>
   <div id="pad">
-    <div class="pad-g">
-      <div class="pb" id="pad-left">◀</div>
-      <div class="pb" id="pad-right">▶</div>
-    </div>
+    <div id="stick"><div id="stick-knob"></div></div>
     <div class="pad-g">
       <div class="pb fire" id="pad-fire">火</div>
       <div class="pb jump" id="pad-jump">▲</div>
@@ -316,8 +328,44 @@ function bindPad(id, code) {
   ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => el.addEventListener(t, off));
   el.addEventListener('contextmenu', e => e.preventDefault());
 }
-bindPad('pad-left', 'ArrowLeft');
-bindPad('pad-right', 'ArrowRight');
+
+// スティック：つまみを左右にスライド。受け付けるのは左右だけ（縦は無視）。ふちの内側でも外へドラッグし続けられる
+(function () {
+  const stick = document.getElementById('stick');
+  const knob = document.getElementById('stick-knob');
+  const DEAD = 0.28; // 中心付近は入力なし
+  let pid = null;
+  function setAxis(a) {
+    keys['ArrowLeft'] = a < -DEAD;
+    keys['ArrowRight'] = a > DEAD;
+  }
+  function move(e) {
+    const r = stick.getBoundingClientRect();
+    const max = (r.width - 58) / 2 - 2;           // つまみが動ける幅
+    let dx = e.clientX - (r.left + r.width / 2);
+    dx = Math.max(-max, Math.min(max, dx));
+    knob.style.transform = 'translateX(' + dx + 'px)';
+    setAxis(dx / max);
+  }
+  function release() {
+    pid = null;
+    knob.style.transform = 'translateX(0)';
+    stick.classList.remove('on');
+    setAxis(0);
+  }
+  stick.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    if (!started) { startGame(); return; }
+    initAudio();
+    pid = e.pointerId;
+    try { stick.setPointerCapture(pid); } catch (_) {}
+    stick.classList.add('on');
+    move(e);
+  });
+  stick.addEventListener('pointermove', e => { if (e.pointerId === pid) { e.preventDefault(); move(e); } });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => stick.addEventListener(t, e => { if (e.pointerId === pid) release(); }));
+  stick.addEventListener('contextmenu', e => e.preventDefault());
+})();
 bindPad('pad-jump', 'Space');
 bindPad('pad-fire', 'KeyX');
 

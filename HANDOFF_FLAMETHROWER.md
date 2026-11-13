@@ -71,7 +71,7 @@
 ### 2-2. 要る道具（火炎放射器が前提にしているもの）
 
 - 描画：`canvas`（512×448）、`ctx`、`GROUND_Y`（= 400）、`tick`（経過フレーム）。
-- 入力：`keys['KeyX']` 等のマップ。スマホのボタンは `bindPad('pad-fire','KeyX')`（pointer イベントで `keys` を書き換える方式）。
+- 入力：`keys['KeyX']` 等のマップ。スマホのボタンは `bindPad('pad-fire','KeyX')`（pointer イベントで `keys` を書き換える方式）。左右の移動は、横スライドのスティック（`#stick`、左右だけ受け付ける）が `keys['ArrowLeft'/'ArrowRight']` を書き換える。
 - 音：`audioCtx` / `masterOut`（コンプレッサー経由のマスター）/ `playTone()`（同時発音数の上限つき）。`initAudio()` は START ボタンの後で呼ぶ。
 - 敵の形：`{x, y, w, h, vx, vy, size, hue, light, capColor, darkColor, burn, frame, safeTimer}`。`makeEnemy()` で作る。`burn` が 0 なら燃えていない、1 以上で燃えている。
 - 画面効果：`shake`（画面揺れ）、`flash`（白いフラッシュ）、`dusk`（暗くする量。炎を見やすくするため、火炎放射中は 0.3 に近づける）。
