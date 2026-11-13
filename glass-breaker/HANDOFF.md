@@ -35,3 +35,7 @@
 - `pupCall(slot, extra, q, fn)`: ポーズqを0.5px単位で比較し、同じなら再描画しないキャッシュ(1フレーム約3ms@desktop)。
 - 主人公`pupPlayer`(ピンストライプは後処理)、四天王`pupFoe`(`FOEP`で体格・配色、倒れは90°回転、ブロンコの転がり`pupBall`)、社長`pupPres`(凍結/クリスタルは後処理で`cryCol`)、土下座/後ろ姿、用心棒`pupSam`、赤ちゃん`pupBaby`/抱っこ`pupBabyHeld`。
 - 開発用: スクラッチの`dev/mk.py`で単体プレビュー可能。
+
+## 31. 液体窒素の演出をカット(v33)
+- 社長の流れを元に戻した: 逃げる→ズラが取れる(`wig`)→2.4秒後に`cry`(足元から凍る)→`makeCrystal`。ダッシュ/コードにつまずく/瓶落下/液体窒素の池/暖炉で溶ける湯気は不使用。
+- 変更点: pres.js `wig`の遷移先を`cry`+`sCrystallize()`に、tail.jsで`drawCable/drawLnPool`呼び出しとクリスタル破壊時の`G.melt`(湯気・水たまり)を削除。関数自体(lnUpdate等)は残っているが発火しない。
