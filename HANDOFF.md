@@ -653,7 +653,7 @@ PC版の筋立てと仕組み（防御→追跡→反撃、攻撃信号、耐久
 
 ## 13. 静と動の緩急・静かな〆（PC / フリック共通）
 - フェーズ移行: `phaseBreak()` で入力を止め、250ms 後に区切りの音とログ → 400ms 置いて次フェーズ。以前あった静（`hush`・BGMを絞る）は**やめた**（2026-11-13）。代わりに、新フェーズの開始で `banner()`（高さ44px・21px太字・約2.6秒）を大きく出し、`phaseFlash()` でステータスの Phase 表示と窓タイトルを黄色く反転させて目立たせる。`hush` は終了時の `quietClose()` だけで使う。
-- 終了: 反撃の衝撃（`impact`）で一瞬だけ音量を戻し、約0.8秒後から `bgmFadeOut(5)`（`gGate` を `setTargetAtTime` で下げて停止）。窓を順に閉じ → `quietClose()`（ログ3行→ `hush` →「Closing all sessions / node7 is going offline / shutdown /s」）→ `powerOff()`（CRT の横線→点で消灯、電源断SE）→ 約1.5秒後 `finish()` で結果表示。衝撃から結果まで約11秒。
+- 終了（2026-11-13 に見直し。画面で実際に起こりうる表示だけにした）: 攻撃信号が膨らむ → 打ち消し波が走って平らになる（波形は緑に戻る）→ `impact()` は閃光・画面揺れ・低音の衝撃を**やめ**、警告の赤い灯（`body.alert`）を外し、短い完了チャイムとログ「Counterstrike delivered」だけにする。攻撃元につながっていた窓は順に「CONNECTION CLOSED」と出て（小さなクリック音）フェードして閉じる → `quietClose()`（ログ → `hush` →「Closing all sessions / node7 is going offline / shutdown /s」）→ `powerOff()`（CRT 消灯）→ `finish()` で結果表示。フェーズ移行の音（`musicSuccess`）からも低音の衝撃を外した。
 - `clearOver()` で `hush`/`pwroff` を外し `pwron` を付ける（リトライ・再開で暗転が残らない）。ゲームオーバーのテープストップ演出は従来のまま。
 - PC版の時間計測も入力時間のみ加算する方式（tAcc/tRun/clockStart/clockStop）に統一。フェーズ間の待ちは含まれないため、スコアは以前より高めに出る。
 - 注意: `clockStart` 内は `clearInterval(timer)`（`clockStop()` にすると時計が0のままになる）。

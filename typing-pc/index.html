@@ -276,10 +276,10 @@ body.danger .crt .neon.top{animation:alarm .4s steps(1) infinite}
 @keyframes impact{0%{opacity:0}6%{opacity:1}30%{opacity:.6}100%{opacity:0}}
 body.strike .crt .neon.bot,body.strike .crt .neon.top{background:#fff;box-shadow:0 0 6px #fff,0 0 18px #39ff88,0 0 40px #39ff88,0 0 90px #39ff88,0 0 160px rgba(57,255,136,.7)}
 /* window cut-off on the final strike */
-.win.kill{border-color:var(--err);animation:kill .52s steps(6) forwards}
-.win.kill::after{content:"CONNECTION TERMINATED";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(30,0,4,.92);
+.win.kill{border-color:var(--err);animation:kill .52s linear forwards}
+.win.kill::after{content:"CONNECTION CLOSED";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(30,0,4,.92);
   color:var(--err);font-size:11px;letter-spacing:.2em;text-align:center}
-@keyframes kill{0%{transform:none;opacity:1}55%{transform:scaleY(1);opacity:1}80%{transform:scaleY(.06);opacity:1}100%{transform:scale(0,.02);opacity:0}}
+@keyframes kill{0%{opacity:1}70%{opacity:1}100%{opacity:0}}
 
 /* result overlay */
 #ov{position:fixed;inset:0;z-index:50;background:rgba(0,4,1,.86);display:flex;align-items:center;justify-content:center;overflow:auto;
@@ -1108,10 +1108,8 @@ function playBanner(){ if(!ok()) return;
   boom(.7,.9,120,1.1); hiss(.7,.5,.3,4000,300);
   [0,2,4,7].forEach(k=>voice({f0:freqOf(k-7),t:.7,dur:1.4,vol:.07,lp0:3000,lp1:400,q:2})); }
 // クリア: 爆発音と長い低音の和音
-function playClear(){ if(!ok()) return;
-  boom(0,1,140,1.6); hiss(0,1.4,.45,6000,120);
-  [-7,-5,-3,0,2].forEach((k,i)=>voice({f0:freqOf(k),t:.05+i*.03,dur:2.6,vol:.07,lp0:2400,lp1:200,q:3}));
-  voice({type:'sine',f0:freqOf(-14),t:.05,dur:2.6,vol:.25,lp0:500,wet:false}); }
+function playClear(){ if(!ok()) return;   // 完了音: 短い上昇チャイム（低音の衝撃やノイズなし）
+  [0,4,7,12].forEach((k,i)=>voice({type:'sine',f0:midiF(76+k),t:i*.11,dur:.5,vol:.09,lp0:4000,lp1:1500,q:1,wet:true})); }
 // 電源投入: ブラウン管の「ブォン」
 function playPower(){ if(!ok()) return; const t=ac.currentTime;
   voice({type:'sine',f0:70,f1:32,dur:1.1,vol:.55,lp0:400,wet:false}); voice({f0:50,dur:.9,vol:.12,lp0:200,lp1:900,q:3,wet:false});
@@ -1243,7 +1241,7 @@ function bgmFadeOut(sec){
 // ハッキング成功（フェーズ突破）: 専用の成功音（効果音。曲は変えない）
 function musicSuccess(){
   if(!ok()) return; [0,4,7,12,16].forEach((s,i)=>voice({type:'square',f0:midiF(74+s),t:i*.07,dur:.35,vol:.07,lp0:2000,lp1:7000,q:4}));
-  voice({f0:midiF(86),t:.35,dur:1.2,vol:.06,lp0:4000,lp1:900,q:2}); boom(.35,.7,110,.7); hiss(0,.5,.15,300,8000);
+  voice({f0:midiF(86),t:.35,dur:1.2,vol:.06,lp0:4000,lp1:900,q:2});
 }
 // 開始前の画面の曲
 function deckStatus(live,msg){ $('trkStatus').textContent=msg||(live?'PLAYING [LIVE]':(bgmOn?'STANDBY':'MUTED')); $('trkStatus').classList.toggle('live',live);
@@ -1427,7 +1425,7 @@ function waveFrame(ts){
   wx.save(); wx.setLineDash([6*d,5*d]); wx.strokeStyle='rgba(255,77,94,.45)';
   [-1,1].forEach(sg=>{ wx.beginPath(); wx.moveTo(0,mid+sg*full*LIMIT); wx.lineTo(W,mid+sg*full*LIMIT); wx.stroke(); }); wx.restore();
   const now=performance.now(); ripples=ripples.filter(t=>now-t<650); const rx=ripples.map(t=>(now-t)/650);
-  const k=Math.max(0,Math.min(1,(aAmp-.25)/.6)), base=mixc([34,227,106],[255,77,94],Math.max(k,wRed));
+  const k=Math.max(0,Math.min(1,(aAmp-.25)/.6)), base=mixc([34,227,106],[255,77,94],(fin&&front>=1)?0:Math.max(k,wRed));
   const fq=1+aAmp*2.4, amp=full*(.04+aAmp*.96);
   WAVES.forEach((w,j)=>{
     const c=mixc(base,[255,255,255],j===3?.25:0);
@@ -1445,7 +1443,7 @@ function waveFrame(ts){
   if(front>=0&&front<1){ const fx=front*W; const g=wx.createLinearGradient(fx-80*d,0,fx+8*d,0); g.addColorStop(0,'rgba(57,255,136,0)'); g.addColorStop(1,'rgba(200,255,220,.75)'); wx.fillStyle=g; wx.fillRect(fx-80*d,0,88*d,H);
     wx.strokeStyle='#39ff88'; wx.lineWidth=2*d; wx.beginPath(); wx.moveTo(0,mid); wx.lineTo(fx,mid); wx.stroke(); }
   const pct=Math.round(aAmp*100);
-  $('wWave').classList.toggle('red',wRed>.05||aAmp>=LIMIT);
+  $('wWave').classList.toggle('red',!(fin&&front>=1)&&(wRed>.05||aAmp>=LIMIT));
   $('wvSig').textContent=(fin&&front>=1?0:pct)+'%'; $('wvHz').textContent=Math.round(180*fq)+' Hz';
   $('wvSt').textContent=fin?(front>=1?'NEUTRALIZED':front>0?'CANCELLING':'OVERLOAD'):state==='done'?'NEUTRALIZED':aAmp>=LIMIT?'CRITICAL':aAmp>.45?'RISING':'CONTAINED';
   requestAnimationFrame(waveFrame);
@@ -1916,20 +1914,21 @@ function ending(){
   const w=$('wWave'); w.classList.add('focus');
   typeLines([['',''],['ph','== FINAL STRIKE =='],['warn','[!] Attack signal overloading ...'],['','[*] Inverting waveform ...'],['','[*] Injecting cancellation wave ...']]);
   banner('SIGNAL OVERLOAD'); bgmLevel(.45,1.4);
-  if(ok()){ hiss(0,.8,.25,200,6000); voice({f0:55,f1:440,dur:.8,vol:.1,lp0:300,lp1:5000,q:8});
-    voice({type:'sine',f0:2400,f1:120,t:.8,dur:1.3,vol:.12,lp0:9000,wet:true}); hiss(.8,1.3,.18,9000,300); boom(.8,.6,90,.5); }
+  // 音は、警告音の上昇音と、打ち消しの間の細い下降音だけ（爆発音・ノイズは使わない）
+  if(ok()){ voice({type:'sine',f0:300,f1:1200,dur:.8,vol:.06,lp0:3000,wet:false});
+    voice({type:'sine',f0:1800,f1:400,t:.8,dur:1.3,vol:.05,lp0:5000,wet:false}); }
   later(()=>banner('CANCELLING'),800);
   waveFinale(()=>{ w.classList.remove('focus'); addLine('ok','[+] Attack signal cancelled.'); impact(); });
 }
 function impact(){
-  const f=$('impact'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go');
-  document.body.classList.add('strike'); later(()=>document.body.classList.remove('strike'),1400);
+  // 画面全体の閃光・発光はしない。ログと表示の変化と、短い完了音だけで知らせる
+  document.body.classList.remove('alert');   // 攻撃が止まったので、警告の赤いライトを通常の緑に戻す
   playClear(); bgmLevel(1,.12); later(()=>bgmFadeOut(5),800); banner('TARGET DOWN'); setTension(0); mqClear();
   addLine('ok','[+] Counterstrike delivered.');
   // 攻撃者に接続していた窓から順に、間をあけて「切断」して閉じる
   const order=['wDump','wFeed','wKey','wTrace','wMon','wBreach','wCopy'];
   order.forEach((id,i)=>later(()=>{ const w=$(id); if(w.hidden) return; w.classList.add('kill');
-      if(ok()) boom(0,.28,60+i*8,.3);
+      if(ok()) clack(ac.currentTime,.25,900);
       later(()=>{ w.hidden=true; w.classList.remove('kill'); },520); },700+i*280));
   later(quietClose,700+order.length*280+500);
 }
