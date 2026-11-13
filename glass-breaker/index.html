@@ -1162,8 +1162,9 @@ function drawHead(cx, hy, fa, o) {
   function hp(x, y, w, h, c) { R(cx + fa * x - (fa < 0 ? w - 1 : 0), hy + y, w, h, c); }
   hp(-2, 0, 2, 2, o.mask ? '#c9c9c2' : sk[2]); /* 耳 */
   if (o.hs === 'swept') { hp(-3, -6, 7, 2, hr[0]); hp(-1, -7, 5, 1, hr[1]); hp(1, -7, 3, 1, hr[2]); hp(3, -5, 3, 1, hr[1]); hp(-4, -4, 2, 5, hr[0]); hp(2, -6, 1, 1, hr[2]); hp(-2, -8, 2, 1, hr[0]); }
+  if (o.hs === 'braid') { hp(-4, -4, 3, 7, hr[0]); hp(-6, -2, 2, 6, hr[1]); hp(-7, 3, 2, 6, hr[1]); hp(-6, 8, 2, 3, hr[0]); hp(-8, 9, 2, 2, hr[2]); hp(-3, -6, 7, 2, hr[0]); hp(0, -7, 4, 1, hr[1]); hp(-6, 4, 1, 1, hr[2]); hp(-7, 7, 1, 1, hr[2]); }
   if (o.hs === 'knot') { hp(-1, -8, 3, 3, hr[0]); hp(0, -9, 1, 1, hr[2]); hp(-1, -6, 3, 1, o.tilak || hr[1]); }
-  if (o.hs === 'spiky') { hp(-3, -7, 2, 2, hr[0]); hp(0, -8, 2, 3, hr[1]); hp(2, -7, 2, 2, hr[0]); hp(-5, -5, 2, 2, hr[1]); hp(4, -5, 2, 2, hr[0]); if (o.hl) { hp(0, -8, 1, 1, o.hl); hp(-3, -7, 1, 1, o.hl); } }
+  if (o.hs === 'spiky') { hp(-7, -4, 3, 2, hr[0]); hp(-8, -2, 3, 2, hr[1]); hp(-6, -7, 3, 2, hr[1]); hp(-4, -9, 3, 2, hr[0]); hp(-1, -10, 2, 3, hr[2]); hp(-3, -7, 2, 2, hr[0]); hp(0, -8, 2, 3, hr[1]); hp(2, -7, 2, 2, hr[0]); hp(-5, -5, 2, 2, hr[1]); hp(4, -5, 2, 2, hr[0]); if (o.hl) { hp(0, -8, 1, 1, o.hl); hp(-3, -7, 1, 1, o.hl); } }
   if (o.mask) {
     hp(-2, -4, 7, 8, '#f4f4ee'); hp(-2, -4, 1, 8, '#cfd0c8'); hp(-2, 3, 7, 1, o.mc || '#2f62c8'); hp(-2, -5, 1, 2, o.mc || '#2f62c8'); hp(4, -5, 1, 2, o.mc || '#2f62c8');
     hp(1, -1, 4, 1, '#0e0c0b'); hp(3, -1, 1, 1, '#ff4a3a'); hp(2, 1, 1, 1, '#c8cbd2'); hp(3, 2, 1, 1, '#c8cbd2'); hp(0, 0, 4, 1, 'rgba(0,0,0,0.12)');
@@ -2486,16 +2487,17 @@ var TIEP = {
   red: { d: '#6c1522', b: '#a42537', h: '#d0384c', s: '#ee7a88' },
   saf: { d: '#8a4a08', b: '#d98a1a', h: '#f2b24a', s: '#ffe0a0' },
   yel: { d: '#8a7410', b: '#d8b820', h: '#f4dc4a', s: '#fff2a0' },
+  mag: { d: '#4a0a2c', b: '#8e1c5a', h: '#c0307e', s: '#ee80b8' },
   blu: { d: '#142a6a', b: '#2f62c8', h: '#5a8ae8', s: '#a8c4ff' }
 };
 var FSTY = {
-  box: { suit: { o: '#07070b', d: '#15161e', b: '#22242f', m: '#2e3140', h: '#444a60', hh: '#6a7292' }, tie: TIEP.red, hw: 7, hwB: 5, skin: ['#f0c8a4', '#ffe0c4', '#d09a74', '#b0805a', '#e8907e'], pocket: '#d23f31',
-    head: { hs: 'short', angry: true, stub: true, band: '#d23f31', hair: ['#0e0c0b', '#1e1713', '#3a2c22'] } },
-  yoga: { suit: { o: '#120d1f', d: '#2a2142', b: '#3d3260', m: '#4d4178', h: '#6a5ea0', hh: '#8e84c4' }, tie: TIEP.saf, hw: 6, hwB: 4.6, skin: ['#d39a6c', '#eab586', '#b07a50', '#8f5e3a', '#cf7c68'], pocket: '#f2b24a',
+  box: { suit: { o: '#0a0d1e', d: '#1c2350', b: '#2b3470', m: '#38428a', h: '#4d58a8', hh: '#7480cc' }, tie: TIEP.mag, hw: 8, hwB: 5.6, skin: ['#e2b088', '#f4caa4', '#c08860', '#a06c48', '#dc8a76'], pocket: null, fist: true,
+    head: { hs: 'short', angry: true, stub: true, hair: ['#0e0c0b', '#1e1713', '#3a2c22'], skin: ['#e2b088', '#f4caa4', '#c08860', '#a06c48', '#dc8a76'] } },
+  yoga: { suit: { o: '#0c0a1a', d: '#1c1a36', b: '#2a2850', m: '#383668', h: '#504e8a', hh: '#7472b0' }, pin: '#5a5890', tie: TIEP.saf, hw: 6, hwB: 4.6, skin: ['#d39a6c', '#eab586', '#b07a50', '#8f5e3a', '#cf7c68'], pocket: '#f2b24a',
     head: { hs: 'knot', tilak: '#d23f31', stache: true, hair: ['#0e0c0b', '#1e1713', '#3a2c22'], skin: ['#d39a6c', '#eab586', '#b07a50', '#8f5e3a', '#cf7c68'] } },
-  sumo: { suit: { o: '#0a0710', d: '#1c1430', b: '#2c2048', m: '#3b2d62', h: '#52407e', hh: '#7a66a8' }, tie: TIEP.blu, hw: 6, hwB: 4.6, skin: PAL.skin, pocket: '#2f62c8',
-    head: { mask: true, mc: '#2f62c8', hs: 'short', hair: ['#0e0c0b', '#1e1713', '#3a2c22'] } },
-  blanka: { suit: { o: '#08140c', d: '#12301e', b: '#1d4a2f', m: '#286142', h: '#3a8059', hh: '#5fa87e' }, tie: TIEP.yel, hw: 7, hwB: 5, skin: ['#e0a878', '#f4c298', '#c08856', '#a06a40', '#dc8a76'], pocket: '#8fff9a',
+  sumo: { suit: { o: '#050506', d: '#101013', b: '#1b1b21', m: '#26262e', h: '#3a3a46', hh: '#585868' }, tie: TIEP.red, hw: 6, hwB: 4.4, skin: PAL.skin, pocket: null,
+    head: { mask: true, mc: '#2f62c8', hs: 'braid', hair: ['#4a2a1c', '#7a4a2c', '#a8703e'] } },
+  blanka: { suit: { o: '#08140c', d: '#12301e', b: '#1d4a2f', m: '#286142', h: '#3a8059', hh: '#5fa87e' }, tie: TIEP.red, hw: 8, hwB: 5.6, skin: ['#e0a878', '#f4c298', '#c08856', '#a06a40', '#dc8a76'], pocket: '#8fff9a',
     head: { hs: 'spiky', angry: true, fang: true, hl: '#ffd28a', hair: ['#a8480e', '#d9731e', '#ffb04a'], skin: ['#e0a878', '#f4c298', '#c08856', '#a06a40', '#dc8a76'] } }
 };
 function drawFoe0(f) {
@@ -2580,8 +2582,8 @@ function drawFoe0(f) {
     legs = [LG(-1, -9, -7, 0, TY(-5)), f.kk > 0 ? LG(1, 5 + ky0 * 0.5, -8, ky0, TY(-6 + 2 * f.kk)) : LG(1, 9, -7, 0, TY(-5))];
   } else legs = [LG(-1, -4, -5, -2 - s1), LG(1, 5, -5, 3 + s1)];
   var HP = function (v) { return v ? [TX(v[0]), TY(v[1])] : null; };
-  var mm = { px: px, F: F, fa: fa, top: topY, th: th, hy: TY(hy) - 1, ux: ux, hw: FST.hw, hwB: FST.hwB, suit: FST.suit, tie: FST.tie, sleeve: FST.suit, skin: FST.skin, glove: glove ? ['#d23f31', '#ff9a8a', '#8e1f2f', '#ffc0b0'] : null,
-    head: FST.head, hxo: ty === 'blanka' ? 2 : 0, legs: legs, A: HP(A), B: HP(B), pocket: FST.pocket };
+  var mm = { px: px, F: F, fa: fa, top: topY, th: th, hy: TY(hy) - 1, ux: ux, hw: FST.hw, hwB: FST.hwB, suit: FST.suit, tie: FST.tie, sleeve: FST.suit, skin: FST.skin, glove: FST.fist ? ['#d9a070', '#f0c090', '#a8744c', '#e8b080'] : (glove ? ['#d23f31', '#ff9a8a', '#8e1f2f', '#ffc0b0'] : null),
+    pin: FST.pin, head: FST.head, hxo: ty === 'blanka' ? 2 : 0, legs: legs, A: HP(A), B: HP(B), pocket: FST.pocket };
   drawMan(mm);
   if (ty === 'sumo') {
     var cc = [HP(A), HP(B)], ci, cA;
