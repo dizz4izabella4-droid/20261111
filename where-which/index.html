@@ -160,10 +160,10 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px;pa
 .btn-s.main{background:var(--mint);color:#fff;box-shadow:0 3px 0 var(--mintD)}
 
 /* ===== セリフ ===== */
-.speech{position:relative;z-index:4;margin:auto 10px calc(var(--chsize,96px) + 24px);background:rgba(255,253,255,.93);border:2px solid var(--ink);border-radius:8px;padding:9px 12px 8px;
+.speech{position:relative;z-index:4;align-self:center;width:fit-content;min-width:72px;max-width:calc(100% - 20px);margin:auto 10px calc(var(--chsize,96px) + 24px);background:rgba(255,253,255,.93);border:2px solid var(--ink);border-radius:8px;padding:9px 12px 8px;
   display:flex;flex-direction:column;cursor:pointer;box-shadow:none;transition:transform .1s}
-.speech{transition:opacity 1.2s ease,transform .1s}
-.speech.dim{opacity:.14}
+.speech{transition:opacity .5s ease,transform .1s}
+.speech.dim{opacity:0;pointer-events:none}
 .speech:active{transform:scale(.995)}
 .speech-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px}
 .speaker{display:flex;align-items:center;gap:8px}
@@ -180,9 +180,11 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px;pa
 .next:active{transform:translateY(2px);box-shadow:0 1px 0 var(--pinkD)}
 .next svg{width:13px;height:13px}
 .speech-body{display:flex;align-items:center;padding:2px 2px}
-#speech-text{width:100%;font-size:clamp(16px,4.7vw,20px);font-weight:700;line-height:1.65;letter-spacing:.04em;color:var(--ink)}
+#speech-text{width:auto;font-size:clamp(16px,4.7vw,20px);font-weight:700;line-height:1.65;letter-spacing:.04em;color:var(--ink)}
 #speech-text{word-break:keep-all;overflow-wrap:anywhere}
-#speech-text p{margin:0}
+#speech-text p{margin:0;display:grid}
+#speech-text .ghost,#speech-text .live{grid-area:1/1}
+#speech-text .ghost{visibility:hidden}
 #speech-text p+p{margin-top:6px}
 .speech-foot{display:flex;align-items:center;gap:8px;margin-top:4px}
 #speech-hint-text{font-size:10px;color:var(--ink2);user-select:none}
@@ -196,7 +198,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px;pa
 @keyframes wordPopIn{0%{opacity:0;transform:translateY(5px) scale(.97)}100%{opacity:1;transform:none}}
 .speech-chunk{display:inline-block;animation:wordPopIn .28s cubic-bezier(.22,1,.36,1) forwards}
 @keyframes speakingPulse{0%,100%{opacity:.25;transform:scale(.85)}50%{opacity:1;transform:scale(1.1)}}
-.speaking-indicator{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--pink);margin-left:6px;vertical-align:middle;animation:speakingPulse .8s ease-in-out infinite}
+.speaking-indicator{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--pink);margin-left:6px;margin-right:-13px;vertical-align:middle;animation:speakingPulse .8s ease-in-out infinite}
 
 /* ===== おしえる ===== */
 .teach{background:var(--white);border:3px solid #fff;border-radius:22px;padding:8px 10px 7px;box-shadow:0 4px 0 var(--line),0 8px 18px rgba(107,74,122,.1)}
@@ -478,7 +480,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
 
       <div class="status"><span id="status-dot" class="dot"></span><span id="status-text">かんがえちゅう…</span></div>
 
-    <div id="speech-box" class="speech" role="button" tabindex="0" title="おすと つぎの おはなしを きけるよ">
+    <div id="speech-box" class="speech dim" role="button" tabindex="0" title="おすと つぎの おはなしを きけるよ">
       <div class="speech-body"><div id="speech-text" aria-live="polite"></div></div>
       <div hidden aria-hidden="true">
         <span id="speech-category-tag"></span>
@@ -3001,7 +3003,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
           if (state.phase === 'talk' && !state.isSpeaking && !state.hold && !state.pending && !userIsBusy()) {
             dom.speechBox.classList.add('dim');
           }
-        }, 7000);
+        }, 2500);
       }
 
       function speakDialogue(dialogue) {
@@ -3029,6 +3031,15 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         let lastEmo = emo;
         dialogue.sentences.forEach((chunks, sIdx) => {
           const p = document.createElement('p');
+          // ぜんぶの もじが はいった ときの おおきさを さきに とっておく（ふきだしが ぴくぴく かわらない）
+          const ghost = document.createElement('span');
+          ghost.className = 'ghost';
+          ghost.setAttribute('aria-hidden', 'true');
+          ghost.textContent = chunks.join('');
+          const live = document.createElement('span');
+          live.className = 'live';
+          p.appendChild(ghost);
+          p.appendChild(live);
           if (sIdx === 0) dom.speechText.appendChild(p);
           else {
             // つぎの ひとことが はじまる ときに、まえの ひとことを けす
@@ -3048,8 +3059,8 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
               const span = document.createElement('span');
               span.className = 'speech-chunk';
               span.textContent = chunkText;
-              p.appendChild(span);
-              p.appendChild(indicator);
+              live.appendChild(span);
+              live.appendChild(indicator);
             }, cumulativeDelay);
             state.chunkTimers.push(timerId);
 
@@ -3508,8 +3519,10 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         dom.characterStage.addEventListener('click', (e) => {
           if (state.phase !== 'talk') return;
           if (e.target.closest('#speech-box, .toggle, .controls, .status')) return;
+          const wasHidden = dom.speechBox.classList.contains('dim');
           undimBubble();
           armDim();
+          if (wasHidden && !state.isSpeaking && !state.hold && !userIsBusy()) userNext();
         });
 
         dom.characterStage.addEventListener('keydown', (e) => {
