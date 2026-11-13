@@ -1823,7 +1823,9 @@ function startPhase(p){
 // ---- 読み上げ: 事前に作った音声ファイル（voice/<単語>.mp3。espeak-ng のロボット風の声。作り方は tools/gen_voice.py）を再生する ----
 // 端末の音声合成は使わないので、どの環境でも同じ声になる。単語が出たら、まず読み上げを聞かせ、終わってから入力できる
 // （読み上げ中のキーは無視する。タイムは入力している間だけ数えるので、聞いている時間は入らない）。Tab で、もう一度読む（このときは入力を止めない）
-let voiceOn=true, hearing=false, hearT=null, vNow=null; const VC={};
+let voiceOn=true, hearing=false, hearT=null, vNow=null, voiceWarned=false; const VC={};
+// 再生できなかったとき、理由を画面に1回だけ出す（音が出ない原因をつかむため）
+function voiceWarn(why){ if(voiceWarned) return; voiceWarned=true; try{ addLine('warn','[!] 読み上げ音声を再生できません: '+why); }catch(e){} }
 function voiceAudio(w){ let a=VC[w]; if(!a){ a=new Audio('voice/'+w+'.mp3'); a.preload='auto'; VC[w]=a; } return a; }
 function hearDone(){ clearTimeout(hearT); hearT=null; hearing=false; vNow=null; const l=newWord.line; if(l) l.classList.remove('hearing'); }
 function speakStop(){ if(vNow){ try{ vNow.pause(); }catch(e){} } hearDone(); }
@@ -1832,9 +1834,9 @@ function speakWord(w,gate){
   const a=voiceAudio(w); vNow=a; a.volume=.9;
   if(gate){ hearing=true; if(newWord.line) newWord.line.classList.add('hearing'); hearT=setTimeout(hearDone,3000); }   // 3秒たっても終わらなければ（読み込み失敗など）入力を許す
   const end=()=>{ if(vNow===a) hearDone(); };
-  a.onended=end; a.onerror=end;
+  a.onended=end; a.onerror=()=>{ voiceWarn('voice/'+w+'.mp3 を読み込めません'); end(); };
   try{ a.currentTime=0; }catch(e){}
-  const pr=a.play(); if(pr&&pr.catch) pr.catch(end);
+  const pr=a.play(); if(pr&&pr.catch) pr.catch(err=>{ const n=err&&err.name; voiceWarn(n==='NotAllowedError'?'ブラウザが自動再生を止めました（NotAllowedError）':n==='NotSupportedError'?'音声ファイル voice/'+w+'.mp3 が見つかりません（NotSupportedError）':(n||'再生が拒否されました')); end(); });
 }
 function newWord(){
   const [w,ja]=words[wi]; const d=document.createElement('div'); d.className='wl';
