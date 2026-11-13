@@ -677,7 +677,7 @@ function flameSound(on) {
 function enterFlower() {
   setPhase('flower');
   items.length = 0;
-  flower = { x: 250, y: -40, w: 12, h: 14, landed: 0 }; // 半分の大きさ
+  flower = { x: 244, y: -40, w: 24, h: 28, landed: 0 };
   sfxFlower();
 }
 function updateFlower() {
@@ -689,7 +689,7 @@ function updateFlower() {
   } else if (++f.landed > 26) {
     pickFlower();
   }
-  if (tick % 3 === 0) flames.push({ kind: 'tw', x: f.x + Math.random() * 12, y: f.y + Math.random() * 13, vx: 0, vy: -0.3, life: 0, max: 22, size: 2 });
+  if (tick % 3 === 0) flames.push({ kind: 'tw', x: f.x + Math.random() * 24, y: f.y + Math.random() * 26, vx: 0, vy: -0.3, life: 0, max: 22, size: 3 });
 }
 function pickFlower() {
   flower = null;
@@ -918,8 +918,6 @@ function drawFlower() {
   if (!flower) return;
   const f = flower;
   ctx.save();
-  ctx.translate(f.x, f.y); ctx.scale(0.5, 0.5); ctx.translate(-f.x, -f.y);
-  ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   const g = ctx.createRadialGradient(f.x + 12, f.y + 10, 2, f.x + 12, f.y + 10, 46 + Math.sin(tick * 0.2) * 6);
   g.addColorStop(0, 'rgba(255,255,255,0.65)');
@@ -938,7 +936,6 @@ function drawFlower() {
   });
   ctx.fillStyle = '#ffd21f'; ctx.fillRect(f.x + 8 + sw, f.y + 7, 8, 7);
   ctx.fillStyle = '#ff8c12'; ctx.fillRect(f.x + 10 + sw, f.y + 9, 4, 3);
-  ctx.restore();
 }
 // プレイヤー（ローカル座標、+xが前）の火炎放射器
 function drawTank() {
@@ -2104,7 +2101,8 @@ function update() {
   }
 
   if (pendingLand !== null) { landingCrush(pendingLand); pendingLand = null; }
-  if (phase === 'play' && player.h >= canvas.height) { if (goodRoute) enterShroom(); else enterFlower(); }
+  if (phase === 'play' && player.h >= canvas.height / 2) { // 画面の高さの半分（以前の半分の大きさ）で花が出る
+    if (goodRoute) enterShroom(); else enterFlower(); }
   if (phase === 'flower') updateFlower();
   if (phase === 'fire') updateFire();
   updateFlames();
