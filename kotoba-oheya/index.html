@@ -1,0 +1,2037 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ことばのおへや - イリス (v0.2)</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Hiragino Sans"', '"Hiragino Kaku Gothic ProN"', '"Yu Gothic"', '"Meiryo"', '"Noto Sans JP"', '"Noto Sans CJK JP"', 'sans-serif'],
+            maru: ['"Hiragino Sans"', '"Hiragino Kaku Gothic ProN"', '"Yu Gothic"', '"Meiryo"', '"Noto Sans JP"', '"Noto Sans CJK JP"', 'sans-serif'],
+          },
+          colors: {
+            base: {
+              bg: '#F7F5F0',
+              card: '#FFFFFF',
+              surface: '#EFECE6',
+              border: '#E2DDD3',
+            },
+            iris: {
+              primary: '#4E728A',
+              light: '#759AB3',
+              dark: '#345063',
+              accent: '#E0845C',
+              soft: '#E6EFF5',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #F7F5F0;
+      color: #2F373D;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .speech-bubble {
+      position: relative;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .speech-bubble:active {
+      transform: scale(0.995);
+    }
+
+    @keyframes wordPopIn {
+      0% {
+        opacity: 0;
+        transform: translateY(5px) scale(0.97);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    .speech-chunk {
+      display: inline-block;
+      animation: wordPopIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    @keyframes speakingPulse {
+      0%, 100% { opacity: 0.25; transform: scale(0.85); }
+      50% { opacity: 1; transform: scale(1.1); }
+    }
+    .speaking-indicator {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 9999px;
+      background-color: #E0845C;
+      margin-left: 6px;
+      vertical-align: middle;
+      animation: speakingPulse 0.8s ease-in-out infinite;
+    }
+
+    @keyframes gentleFloat {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-4px); }
+    }
+    .presence-float {
+      animation: gentleFloat 4.5s ease-in-out infinite;
+    }
+
+    @keyframes walkBob {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      25% { transform: translateY(-6px) rotate(-2deg); }
+      75% { transform: translateY(-6px) rotate(2deg); }
+    }
+    .walk-bobbing {
+      animation: walkBob 0.55s ease-in-out infinite;
+    }
+
+    .room-backdrop {
+      background:
+        radial-gradient(circle at 82% 24%, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0) 36%),
+        linear-gradient(180deg, #E8F1F6 0%, #F4EFE6 68%, #E4D7C3 68.5%, #D9C7AE 100%);
+    }
+
+    .checkerboard-bg {
+      background-color: #f8fafc;
+      background-image:
+        linear-gradient(45deg, #e2e8f0 25%, transparent 25%),
+        linear-gradient(-45deg, #e2e8f0 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #e2e8f0 75%),
+        linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+    }
+
+    .stage-dragover {
+      border-color: #4E728A !important;
+      background-color: #E6EFF5 !important;
+      transform: scale(1.015);
+    }
+
+    .timer-bar {
+      transition: width 0.2s linear;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #D1CBC0;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-iris-soft selection:text-iris-dark">
+
+  <!-- ==================== ヘッダー ==================== -->
+  <header class="sticky top-0 z-20 bg-white/85 backdrop-blur-md border-b border-base-border">
+    <div class="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <span class="w-2.5 h-2.5 rounded-full bg-iris-primary inline-block animate-pulse"></span>
+        <h1 id="app-name-header" class="font-maru font-bold text-base sm:text-lg text-iris-dark tracking-wide">
+          ことばのおへや - イリス
+        </h1>
+        <span class="text-[11px] font-medium px-2 py-0.5 rounded-full bg-base-surface text-iris-primary">
+          v0.2
+        </span>
+      </div>
+
+      <!-- 言葉帳ボタン -->
+      <div class="flex items-center gap-2">
+        <button
+          id="btn-open-wordbook"
+          type="button"
+          class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-iris-soft hover:bg-iris-primary hover:text-white text-iris-dark text-xs sm:text-sm font-maru font-bold transition-colors shadow-2xs"
+          aria-label="ことばちょうをひらく"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+          </svg>
+          <span>ことばちょう</span>
+          <span id="word-count-badge" class="px-2 py-0.5 text-xs font-bold rounded-full bg-white text-iris-primary">
+            0こ
+          </span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== メインコンテンツ ==================== -->
+  <main class="flex-1 w-full max-w-3xl mx-auto px-4 py-5 sm:py-8 flex flex-col gap-5">
+
+    <!-- 1. キャラクター表示エリア（仮背景の上を移動するステージ＋切り抜き取り込み） -->
+    <section aria-label="キャラクターのばしょ" class="flex flex-col items-center">
+      <input
+        id="input-character-file"
+        type="file"
+        accept="image/*"
+        class="hidden"
+        aria-label="しゃしん・がぞうを えらぶ"
+      />
+
+      <div
+        id="character-stage"
+        role="button"
+        tabindex="0"
+        title="しゃしん・がぞうを えらぶ"
+        class="room-backdrop relative w-full max-w-lg h-56 sm:h-64 rounded-3xl border-2 border-dashed border-base-border hover:border-iris-light flex flex-col items-center justify-center p-4 shadow-2xs overflow-hidden group cursor-pointer transition-all"
+      >
+        <!-- 仮背景の窓・装飾 -->
+        <div id="room-decorations" class="hidden pointer-events-none select-none">
+          <div class="absolute top-6 right-10 w-20 h-16 rounded-xl bg-white/75 border-2 border-white shadow-2xs grid grid-cols-2 grid-rows-2 gap-0.5 p-1">
+            <div class="bg-sky-100/80 rounded-tl-md"></div>
+            <div class="bg-sky-100/80 rounded-tr-md"></div>
+            <div class="bg-sky-100/80 rounded-bl-md"></div>
+            <div class="bg-sky-100/80 rounded-br-md"></div>
+          </div>
+          <div class="absolute bottom-3 left-1/2 -translate-x-1/2 w-64 h-8 rounded-[100%] bg-amber-900/10 border border-amber-900/10"></div>
+        </div>
+
+        <!-- 仮背景の上を移動するキャラクターラッパー -->
+        <div
+          id="character-mover"
+          class="hidden absolute bottom-6 left-1/2 pointer-events-none select-none will-change-transform"
+          style="transform: translateX(-50%);"
+        >
+          <div class="w-16 h-3 mx-auto -mb-1.5 rounded-[100%] bg-slate-900/20 blur-[1px]"></div>
+          <div id="character-sprite-inner" class="presence-float flex flex-col items-center">
+            <img
+              id="character-image"
+              src=""
+              alt="キャラクター"
+              class="w-24 h-24 sm:w-28 sm:h-28 object-contain drop-shadow-md select-none"
+            />
+          </div>
+        </div>
+
+        <!-- 画像未設定時のプレースホルダー枠 -->
+        <div id="character-placeholder" class="flex flex-col items-center text-center select-none px-3 py-3 rounded-2xl bg-white/80 backdrop-blur-2xs border border-white">
+          <div class="w-12 h-12 rounded-2xl bg-base-surface group-hover:bg-iris-soft text-iris-light group-hover:text-iris-primary flex items-center justify-center mb-2 transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z"></path>
+            </svg>
+          </div>
+          <p class="font-maru font-bold text-sm text-iris-dark tracking-wider">しゃしんから きりぬいて おく</p>
+          <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">
+            タップ または ドラッグ＆ドロップ<br>
+            <span class="text-[10px] text-slate-400">（きりぬいた キャラクターが おへやを あるくよ）</span>
+          </p>
+        </div>
+
+        <!-- 状態インジケーター -->
+        <div class="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-2xs border border-base-border text-[11px] text-slate-500">
+          <span id="status-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          <span id="status-text">かんがえちゅう…</span>
+        </div>
+
+        <!-- 自動発言切り替え -->
+        <button
+          id="btn-toggle-auto"
+          type="button"
+          title="かってに おはなしするのを きりかえる"
+          class="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-2xs hover:bg-iris-soft border border-base-border text-[11px] text-iris-primary font-medium transition-colors"
+        >
+          ひとりごと: ON
+        </button>
+
+        <!-- 画像設定時コントロール -->
+        <div
+          id="character-image-controls"
+          class="hidden absolute bottom-2.5 right-3 flex items-center gap-1.5 opacity-95 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
+        >
+          <button
+            id="btn-change-image"
+            type="button"
+            class="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-2xs hover:bg-iris-soft border border-base-border text-[11px] font-maru font-bold text-iris-dark shadow-2xs transition-colors"
+          >
+            べつのしゃしん
+          </button>
+          <button
+            id="btn-remove-image"
+            type="button"
+            class="px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-2xs hover:bg-rose-50 border border-base-border text-[11px] font-maru font-medium text-slate-500 hover:text-rose-600 shadow-2xs transition-colors"
+          >
+            けす
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- キャラクター名変更バー -->
+    <section aria-label="なまえのへんこう" class="w-full flex items-center justify-center">
+      <div class="flex items-center gap-2 bg-white px-4 py-2 rounded-2xl border border-base-border shadow-2xs text-xs font-maru">
+        <span class="text-slate-500">なまえ：</span>
+        <span id="speech-speaker-name" class="font-bold text-iris-primary text-sm">イリス</span>
+        <button
+          id="btn-edit-name"
+          type="button"
+          class="px-2 py-1 rounded-xl bg-base-surface hover:bg-iris-soft text-slate-700 hover:text-iris-primary transition-colors ml-1"
+        >
+          なまえを かえる
+        </button>
+
+        <div id="name-edit-box" class="hidden flex items-center gap-1.5 ml-1">
+          <input
+            id="character-name-input"
+            type="text"
+            maxlength="10"
+            class="w-28 px-2 py-1 rounded-xl bg-base-bg border border-base-border focus:border-iris-primary focus:bg-white focus:outline-none text-xs font-maru"
+            placeholder="あたらしいなまえ"
+          />
+          <button
+            id="btn-save-name"
+            type="button"
+            class="px-2.5 py-1 rounded-xl bg-iris-primary hover:bg-iris-dark text-white font-bold transition-colors"
+          >
+            きめる
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. セリフ欄 -->
+    <section aria-label="キャラクターのおはなし" class="w-full">
+      <div
+        id="speech-box"
+        role="button"
+        tabindex="0"
+        title="おすと つぎの おはなしを きけるよ"
+        class="speech-bubble w-full rounded-3xl bg-white border border-base-border shadow-sm hover:shadow-md cursor-pointer p-5 sm:p-7 flex flex-col justify-between min-h-[176px] sm:min-h-[192px]"
+      >
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <div class="flex items-center gap-2">
+            <span id="speech-speaker-label" class="font-maru font-bold text-sm sm:text-base text-iris-primary">
+              イリス
+            </span>
+            <span
+              id="speech-category-tag"
+              class="text-[11px] px-2.5 py-0.5 rounded-full bg-base-surface text-slate-600 font-maru font-medium"
+            >
+              ひとりごと
+            </span>
+          </div>
+
+          <button
+            id="btn-next-speech"
+            type="button"
+            class="inline-flex items-center gap-1 text-xs font-maru font-bold text-iris-primary hover:text-iris-dark bg-iris-soft/75 hover:bg-iris-soft px-3 py-1.5 rounded-full transition-colors"
+          >
+            <span>つぎの おはなし</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </button>
+        </div>
+
+        <div class="flex-1 flex items-center">
+          <div
+            id="speech-text"
+            class="font-maru text-base sm:text-lg leading-relaxed sm:leading-loose text-slate-800 tracking-wide w-full"
+            aria-live="polite"
+          ></div>
+        </div>
+
+        <div class="mt-4 pt-2 flex items-center gap-3">
+          <div class="flex-1 h-1 bg-base-surface rounded-full overflow-hidden">
+            <div id="auto-progress-bar" class="timer-bar h-full bg-iris-light/65 w-0"></div>
+          </div>
+          <span id="speech-hint-text" class="text-[10px] text-slate-400 select-none">
+            おすと つぎへ すすむよ
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. 言葉を教える操作エリア -->
+    <section aria-label="ことばを おしえる" class="w-full rounded-3xl bg-white border border-base-border p-5 sm:p-6 shadow-2xs">
+      <div class="flex items-center justify-between mb-3.5">
+        <h2 class="font-maru font-bold text-sm sm:text-base text-iris-dark flex items-center gap-2">
+          <svg class="w-4 h-4 text-iris-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+          </svg>
+          <span id="teach-title-text">イリスに ことばを おしえる</span>
+        </h2>
+        <span class="text-xs text-slate-400 font-maru">ひらがな・5もじまで</span>
+      </div>
+
+      <form id="teach-form" class="flex flex-col sm:flex-row gap-3" novalidate>
+        <div class="flex-1 relative">
+          <input
+            id="input-word"
+            type="text"
+            inputmode="text"
+            maxlength="5"
+            autocomplete="off"
+            placeholder="れい：りんご、さんぽ"
+            class="w-full h-12 px-4 pr-12 rounded-2xl bg-base-bg border border-base-border focus:border-iris-primary focus:bg-white focus:outline-none text-base font-maru text-slate-800 placeholder:text-slate-400 transition-colors"
+            aria-label="おしえる ことば（ひらがな5もじまで）"
+          />
+          <span
+            id="char-counter"
+            class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400 select-none"
+          >
+            0/5
+          </span>
+        </div>
+
+        <div class="sm:w-44">
+          <select
+            id="select-genre"
+            aria-label="ことばの グループ"
+            class="w-full h-12 px-3.5 rounded-2xl bg-base-bg border border-base-border focus:border-iris-primary focus:bg-white focus:outline-none text-sm font-maru font-medium text-slate-700 cursor-pointer transition-colors"
+          ></select>
+        </div>
+
+        <button
+          type="submit"
+          class="h-12 px-6 rounded-2xl bg-iris-primary hover:bg-iris-dark active:scale-[0.98] text-white font-maru font-bold text-sm sm:text-base shadow-2xs transition-all cursor-pointer shrink-0"
+        >
+          おしえる
+        </button>
+      </form>
+
+      <div id="form-feedback" class="mt-2.5 min-h-[20px] flex items-center justify-between text-xs">
+        <p id="feedback-message" class="text-slate-500">
+          いみは かかなくて だいじょうぶ。ことばと グループだけで おぼえるよ。
+        </p>
+
+        <button
+          id="btn-sample-word"
+          type="button"
+          class="text-iris-primary hover:underline shrink-0 ml-2 font-maru"
+        >
+          + おためしで 1ついれる
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="py-4 text-center text-[11px] text-slate-400">
+    おぼえた ことばは この ブラウザの なかに ほぞん されるよ
+  </footer>
+
+  <!-- ==================== 言葉帳モーダル ==================== -->
+  <div
+    id="wordbook-modal"
+    class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-2xs p-0 sm:p-4"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="wordbook-title"
+  >
+    <div class="w-full max-w-2xl bg-white rounded-t-3xl sm:rounded-3xl shadow-xl border border-base-border flex flex-col max-h-[88vh] overflow-hidden">
+      
+      <div class="px-5 py-4 border-b border-base-border flex items-center justify-between bg-base-bg/60">
+        <div class="flex items-center gap-2.5">
+          <h2 id="wordbook-title" class="font-maru font-bold text-base sm:text-lg text-iris-dark">
+            ことばちょう
+          </h2>
+          <span id="modal-word-count" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-iris-soft text-iris-primary">
+            0こ
+          </span>
+        </div>
+        <button
+          id="btn-close-wordbook"
+          type="button"
+          class="p-2 rounded-full hover:bg-base-surface text-slate-500 hover:text-slate-800 transition-colors"
+          aria-label="ことばちょうを とじる"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <div class="px-5 py-3 border-b border-base-border bg-white overflow-x-auto">
+        <div id="genre-filter-bar" class="flex items-center gap-1.5 min-w-max"></div>
+      </div>
+
+      <div id="wordbook-list-container" class="flex-1 overflow-y-auto p-5 bg-base-bg/35"></div>
+
+      <div class="px-5 py-3 border-t border-base-border bg-white flex items-center justify-between text-xs text-slate-400">
+        <span id="wordbook-footer-hint">おぼえた ことばは おはなしにも でてくるよ</span>
+        <button
+          id="btn-close-wordbook-bottom"
+          type="button"
+          class="px-4 py-1.5 rounded-full bg-base-surface hover:bg-base-border text-slate-700 font-maru font-medium transition-colors"
+        >
+          とじる
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 画像切り抜き（トリミング）モーダル ==================== -->
+  <div
+    id="crop-modal"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-2xs p-3 sm:p-5"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="crop-modal-title"
+  >
+    <div class="w-full max-w-lg bg-white rounded-3xl shadow-xl border border-base-border flex flex-col max-h-[92vh] overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-base-border flex items-center justify-between bg-base-bg/60">
+        <div>
+          <h2 id="crop-modal-title" class="font-maru font-bold text-base text-iris-dark">
+            キャラクターを きりぬく
+          </h2>
+          <p class="text-[11px] text-slate-500 mt-0.5">
+            ゆび や マウスで なぞって かこむか、しかくで えらんでね
+          </p>
+        </div>
+        <button
+          id="btn-close-crop"
+          type="button"
+          class="p-2 rounded-full hover:bg-base-surface text-slate-500 hover:text-slate-800 transition-colors"
+          aria-label="きりぬきを やめる"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <div class="px-5 py-2.5 border-b border-base-border bg-white flex items-center justify-between gap-2">
+        <div class="flex items-center gap-1.5">
+          <button
+            id="btn-crop-mode-freehand"
+            type="button"
+            class="px-3 py-1.5 rounded-full bg-iris-primary text-white text-xs font-maru font-bold transition-colors"
+          >
+            じゆうに かこむ
+          </button>
+          <button
+            id="btn-crop-mode-rect"
+            type="button"
+            class="px-3 py-1.5 rounded-full bg-base-surface text-slate-600 hover:bg-base-border text-xs font-maru font-medium transition-colors"
+          >
+            しかくで えらぶ
+          </button>
+        </div>
+        <button
+          id="btn-crop-reset"
+          type="button"
+          class="px-2.5 py-1 rounded-full text-xs font-maru text-slate-500 hover:text-iris-primary hover:bg-iris-soft transition-colors"
+        >
+          やりなおす
+        </button>
+      </div>
+
+      <div class="flex-1 p-4 checkerboard-bg flex items-center justify-center overflow-hidden select-none">
+        <canvas
+          id="crop-canvas"
+          class="max-w-full max-h-[52vh] rounded-xl shadow-sm touch-none cursor-crosshair"
+        ></canvas>
+      </div>
+
+      <div class="px-5 py-3.5 border-t border-base-border bg-white flex items-center justify-between gap-3">
+        <button
+          id="btn-cancel-crop"
+          type="button"
+          class="px-4 py-2 rounded-2xl bg-base-surface hover:bg-base-border text-slate-700 font-maru font-medium text-xs sm:text-sm transition-colors"
+        >
+          やめる
+        </button>
+        <button
+          id="btn-apply-crop"
+          type="button"
+          class="px-5 py-2 rounded-2xl bg-iris-primary hover:bg-iris-dark text-white font-maru font-bold text-xs sm:text-sm shadow-2xs transition-colors"
+        >
+          このかたちで きりぬく
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== アプリケーションロジック ==================== -->
+  <script>
+    (function () {
+      'use strict';
+
+      const STORAGE_KEYS = {
+        WORDS: 'iris_child_app_words_v02',
+        GENRES: 'iris_child_app_genres_v02',
+        IMAGE: 'iris_character_image_v1',
+        CHAR_NAME: 'iris_character_name_v1',
+      };
+
+      const DEFAULT_GENRES = [
+        { id: 'ikimono', label: 'いきもの' },
+        { id: 'tabemono', label: 'たべもの' },
+        { id: 'basho', label: 'ばしょ' },
+        { id: 'hito', label: 'ひと・かんけい' },
+        { id: 'kodo', label: 'こうどう' },
+        { id: 'kimochi', label: 'きもち' },
+        { id: 'mono', label: 'もの' },
+        { id: 'sonota', label: 'その他' },
+      ];
+
+      const SAMPLE_WORDS = [
+        { text: 'りんご', genreId: 'tabemono' },
+        { text: 'さんぽ', genreId: 'kodo' },
+        { text: 'ねこ', genreId: 'ikimono' },
+        { text: 'おやつ', genreId: 'tabemono' },
+        { text: 'ひみつ', genreId: 'kimochi' },
+      ];
+
+      const DIALOGUE_DATA = {
+        character: "iris_child",
+        language: "ひらがなのみ",
+        word_placeholder: "{word}",
+        dialogues: [
+          {
+            type: "ひとりごと",
+            lines: [
+              "うーん、なんだろう。",
+              "あれれ？",
+              "なんだか、ふしぎ。",
+              "もうちょっと、かんがえよう。",
+              "わたし、いいことをおもいついたかも。",
+              "むむむ……。",
+              "あっ、そういうこと？",
+              "まだ、わからないことだらけだね。",
+              "なんとなく、わかったきがする。",
+              "ふふん、わたしってば、あたまがいいのかも。"
+            ]
+          },
+          {
+            type: "きづき",
+            lines: [
+              "{word}って、なんだかおもしろいね。",
+              "あっ、また{word}をおもいだしちゃった。",
+              "{word}って、そういうものなんだね。",
+              "ねえねえ、{word}ってふしぎじゃない？",
+              "あれ？ {word}って、まえにもきいたよね。",
+              "{word}のこと、ちょっとわかってきたよ。",
+              "そうか、{word}ってそういうことなんだ。",
+              "ふうん、{word}っておくがふかいね。",
+              "あっ、{word}とにているものをしってるよ。",
+              "わたし、{word}のことがきになってきた。"
+            ]
+          },
+          {
+            type: "しつもん",
+            lines: [
+              "ねえ、これはどういうこと？",
+              "どうしてそうなるの？",
+              "それって、ほんとうなの？",
+              "ねえねえ、もうひとつきいていい？",
+              "どうして{word}なの？",
+              "{word}って、どこにあるの？",
+              "{word}って、なにをするもの？",
+              "それは、いつからあるの？",
+              "ほかにもおなじものがあるの？",
+              "わたしにも、おしえてよ。"
+            ]
+          },
+          {
+            type: "おねだり",
+            lines: [
+              "ねえ、もっとおしえて。",
+              "もうひとつ、いい？",
+              "それ、わたしもしりたい！",
+              "ねえねえ、つづきは？",
+              "まだおわりじゃないよね？",
+              "もうちょっとだけ、はなして。",
+              "わたし、もっとかしこくなりたいの。",
+              "ねえ、こんどはべつのことをおしえて。",
+              "まだまだ、ききたいことがあるよ。",
+              "えへへ、もういっこだけ！"
+            ]
+          },
+          {
+            type: "はんのう",
+            lines: [
+              "へえー、そうなんだ！",
+              "えっ、ほんとう？",
+              "なるほどね。",
+              "それはしらなかったなあ。",
+              "ふうん、ちょっとおもしろいね。",
+              "えーっ、びっくり！",
+              "そういうかんがえもあるんだね。",
+              "うんうん、わかるよ。",
+              "それは、すごいことだね。",
+              "ふふ、なんだかたのしくなってきた。"
+            ]
+          },
+          {
+            type: "ほめる",
+            lines: [
+              "きみって、ものしりだね。",
+              "そんなことまでしってるの？",
+              "すごいね、びっくりしちゃった。",
+              "きみからおしえてもらうの、すきだよ。",
+              "きみって、なかなかやるね。",
+              "えへへ、きみのおかげでひとつかしこくなった。",
+              "わたしも、いつかそれくらいしりたいな。",
+              "きみのはなしって、おもしろいね。",
+              "またひとつ、べんきょうになっちゃった。"
+            ]
+          },
+          {
+            type: "つっこみ",
+            lines: [
+              "えー、それはちょっとへんじゃない？",
+              "ほんとうにそうかなあ？",
+              "うーん、それはなっとくできないな。",
+              "ちょっとまって、はなしがとんでるよ。",
+              "それって、いいわけじゃないの？",
+              "ふふん、わたしはごまかされないよ。",
+              "もう、ちゃんとせつめいしてよ。",
+              "それだけじゃ、わからないよ。",
+              "きみ、てきとうにいってない？",
+              "むむ、なかなかむずかしいもんだいだね。"
+            ]
+          },
+          {
+            type: "かんがえる",
+            lines: [
+              "もしも、そうだったらどうなるかな？",
+              "べつのほうほうもありそうだね。",
+              "うーん、もういちどかんがえてみよう。",
+              "ひとつずつ、たしかめてみようよ。",
+              "それとこれって、つながっているのかな？",
+              "もしかして、こたえはちがうところにある？",
+              "まだ、きめつけるのははやいよね。",
+              "あっ、そうかんがえるとつじつまがあうね。",
+              "わたしなりに、かんがえてみたよ。",
+              "こたえはひとつとはかぎらないよね。"
+            ]
+          },
+          {
+            type: "きぶん",
+            lines: [
+              "なんだか、うれしいな。",
+              "ちょっと、たいくつしてきちゃった。",
+              "きょうは、いいきぶん！",
+              "うーん、なんだかもやもやする。",
+              "えへへ、しあわせかも。",
+              "ちょっぴり、さみしいな。",
+              "なんだか、わくわくしてきた！",
+              "むう、ちょっとふまん。",
+              "ああ、ほっとした。",
+              "なんだか、ねむくなってきたよ。"
+            ]
+          },
+          {
+            type: "あいさつ",
+            lines: [
+              "あっ、おかえり！",
+              "やっときたね。",
+              "きょうはなにをおしえてくれるの？",
+              "ねえねえ、きいてほしいことがあるの。",
+              "まってたよ。",
+              "おはよう！ きょうもよろしくね。",
+              "あれ、もういっちゃうの？",
+              "またあとでおはなししようね。",
+              "きょうも、いっしょにかんがえよう。",
+              "じゃあね、またきてね。"
+            ]
+          },
+          {
+            type: "おぼえたこと",
+            lines: [
+              "わたし、{word}をおぼえたよ！",
+              "{word}っていうことば、すきになっちゃった。",
+              "もう{word}をわすれないよ。",
+              "まえにおしえてくれた{word}、おぼえてるよ。",
+              "{word}って、いいことばだね。",
+              "またひとつ、しっていることがふえたよ。",
+              "わたしのあたまに、{word}がのこってる。",
+              "ねえ、{word}のこと、もういちどはなそうよ。",
+              "おぼえるって、たのしいね。",
+              "わたし、ちゃんとおぼえてるんだから！"
+            ]
+          },
+          {
+            type: "あそび",
+            lines: [
+              "ねえ、なぞなぞしようよ。",
+              "どっちがすきか、あててみて。",
+              "わたしから、もんだいをだすね。",
+              "ふふん、これはむずかしいよ。",
+              "あそびながら、おぼえるのもいいね。",
+              "つぎは、きみのばんだよ。",
+              "もういっかい、ちょうせんしよう！",
+              "わたし、いいことをおもいついた！",
+              "あてられるかな？",
+              "えへへ、ひっかかったね。"
+            ]
+          },
+          {
+            type: "かってなはなし",
+            lines: [
+              "そういえば、きょうはなにをしようかな。",
+              "わたし、もっといろんなことをしりたいな。",
+              "あっ、いまちょっとおもしろいことをかんがえてたの。",
+              "ねえ、しってる？ ふしぎなことっていっぱいあるんだよ。",
+              "わたしのしらないこと、まだまだありそうだね。",
+              "あれこれかんがえていたら、じかんがたっちゃった。",
+              "きょうは、なにかいいことがありそうなきがする。",
+              "なんでもないことが、いちばんおもしろかったりするよね。",
+              "ねえ、ちょっとだけ、わたしのはなしをきいて。",
+              "わたしって、けっこうおしゃべりなのかも。"
+            ]
+          }
+        ]
+      };
+
+      const state = {
+        genres: [],
+        words: [],
+        characterImage: null,
+        characterName: 'イリス',
+        selectedFilterGenre: 'all',
+        recentSpeechIds: [],
+        recentCategories: [],
+        autoPlayEnabled: true,
+        isSpeaking: false,
+        chunkTimers: [],
+        currentSentences: [],
+        autoTimerId: null,
+        progressIntervalId: null,
+        nextSpeechDurationMs: 8000,
+        elapsedMs: 0,
+        walk: {
+          rafId: null,
+          lastTime: 0,
+          x: 0,
+          y: 0,
+          targetX: 0,
+          targetY: 0,
+          facingLeft: false,
+          isMoving: false,
+          waitTimer: 0,
+        },
+        crop: {
+          sourceImg: null,
+          mode: 'freehand',
+          isDrawing: false,
+          points: [],
+          rectStart: null,
+          rectEnd: null,
+        },
+      };
+
+      const dom = {
+        wordCountBadge: document.getElementById('word-count-badge'),
+        modalWordCount: document.getElementById('modal-word-count'),
+        characterStage: document.getElementById('character-stage'),
+        roomDecorations: document.getElementById('room-decorations'),
+        characterMover: document.getElementById('character-mover'),
+        characterSpriteInner: document.getElementById('character-sprite-inner'),
+        inputCharacterFile: document.getElementById('input-character-file'),
+        characterImage: document.getElementById('character-image'),
+        characterPlaceholder: document.getElementById('character-placeholder'),
+        characterImageControls: document.getElementById('character-image-controls'),
+        btnChangeImage: document.getElementById('btn-change-image'),
+        btnRemoveImage: document.getElementById('btn-remove-image'),
+        statusDot: document.getElementById('status-dot'),
+        statusText: document.getElementById('status-text'),
+        btnToggleAuto: document.getElementById('btn-toggle-auto'),
+        speechBox: document.getElementById('speech-box'),
+        speechCategoryTag: document.getElementById('speech-category-tag'),
+        speechText: document.getElementById('speech-text'),
+        speechHintText: document.getElementById('speech-hint-text'),
+        btnNextSpeech: document.getElementById('btn-next-speech'),
+        autoProgressBar: document.getElementById('auto-progress-bar'),
+        teachForm: document.getElementById('teach-form'),
+        inputWord: document.getElementById('input-word'),
+        charCounter: document.getElementById('char-counter'),
+        selectGenre: document.getElementById('select-genre'),
+        feedbackMessage: document.getElementById('feedback-message'),
+        btnSampleWord: document.getElementById('btn-sample-word'),
+        btnOpenWordbook: document.getElementById('btn-open-wordbook'),
+        wordbookModal: document.getElementById('wordbook-modal'),
+        btnCloseWordbook: document.getElementById('btn-close-wordbook'),
+        btnCloseWordbookBottom: document.getElementById('btn-close-wordbook-bottom'),
+        genreFilterBar: document.getElementById('genre-filter-bar'),
+        wordbookListContainer: document.getElementById('wordbook-list-container'),
+        appNameHeader: document.getElementById('app-name-header'),
+        speechSpeakerLabel: document.getElementById('speech-speaker-label'),
+        characterNameInput: document.getElementById('character-name-input'),
+        btnEditName: document.getElementById('btn-edit-name'),
+        btnSaveName: document.getElementById('btn-save-name'),
+        nameEditBox: document.getElementById('name-edit-box'),
+        teachTitleText: document.getElementById('teach-title-text'),
+        wordbookTitle: document.getElementById('wordbook-title'),
+        wordbookFooterHint: document.getElementById('wordbook-footer-hint'),
+        cropModal: document.getElementById('crop-modal'),
+        btnCloseCrop: document.getElementById('btn-close-crop'),
+        btnCancelCrop: document.getElementById('btn-cancel-crop'),
+        btnApplyCrop: document.getElementById('btn-apply-crop'),
+        btnCropModeFreehand: document.getElementById('btn-crop-mode-freehand'),
+        btnCropModeRect: document.getElementById('btn-crop-mode-rect'),
+        btnCropReset: document.getElementById('btn-crop-reset'),
+        cropCanvas: document.getElementById('crop-canvas'),
+      };
+
+      function loadData() {
+        try {
+          const savedGenres = localStorage.getItem(STORAGE_KEYS.GENRES);
+          state.genres = savedGenres ? JSON.parse(savedGenres) : [...DEFAULT_GENRES];
+        } catch (err) {
+          state.genres = [...DEFAULT_GENRES];
+        }
+
+        try {
+          const savedWords = localStorage.getItem(STORAGE_KEYS.WORDS);
+          state.words = savedWords ? JSON.parse(savedWords) : [];
+        } catch (err) {
+          state.words = [];
+        }
+
+        try {
+          const savedImage = localStorage.getItem(STORAGE_KEYS.IMAGE);
+          state.characterImage = savedImage || null;
+        } catch (err) {
+          state.characterImage = null;
+        }
+
+        try {
+          const savedName = localStorage.getItem(STORAGE_KEYS.CHAR_NAME);
+          state.characterName = savedName ? savedName.trim() : 'イリス';
+        } catch (err) {
+          state.characterName = 'イリス';
+        }
+
+        updateCharacterNameUI();
+      }
+
+      function updateCharacterNameUI() {
+        const name = state.characterName;
+        dom.speechSpeakerLabel.textContent = name;
+        dom.appNameHeader.textContent = `ことばのおへや - ${name}`;
+        dom.teachTitleText.textContent = `${name}に ことばを おしえる`;
+        dom.wordbookTitle.textContent = `${name}の ことばちょう`;
+        dom.wordbookFooterHint.textContent = `おぼえた ことばは ${name}の おはなしにも でてくるよ。`;
+      }
+
+      function saveWords() {
+        try {
+          localStorage.setItem(STORAGE_KEYS.WORDS, JSON.stringify(state.words));
+        } catch (err) {
+          showFeedback('ほぞんする ばしょが いっぱいで ほぞん できませんでした。', true);
+        }
+      }
+
+      function saveCharacterImage(dataUrl) {
+        try {
+          if (dataUrl) {
+            localStorage.setItem(STORAGE_KEYS.IMAGE, dataUrl);
+          } else {
+            localStorage.removeItem(STORAGE_KEYS.IMAGE);
+          }
+          state.characterImage = dataUrl || null;
+          return true;
+        } catch (err) {
+          showFeedback('がぞうが おおきすぎて ほぞん できませんでした。べつの がぞうを ためしてね。', true);
+          return false;
+        }
+      }
+
+      function renderCharacterImage() {
+        if (state.characterImage) {
+          dom.characterImage.src = state.characterImage;
+          dom.characterMover.classList.remove('hidden');
+          dom.roomDecorations.classList.remove('hidden');
+          dom.characterPlaceholder.classList.add('hidden');
+          dom.characterImageControls.classList.remove('hidden');
+          dom.characterStage.classList.remove('border-dashed');
+          dom.characterStage.classList.add('border-solid');
+          dom.characterStage.title = 'クリックで しゃしんを かえる';
+          startCharacterWalkLoop();
+        } else {
+          stopCharacterWalkLoop();
+          dom.characterImage.removeAttribute('src');
+          dom.characterMover.classList.add('hidden');
+          dom.roomDecorations.classList.add('hidden');
+          dom.characterPlaceholder.classList.remove('hidden');
+          dom.characterImageControls.classList.add('hidden');
+          dom.characterStage.classList.add('border-dashed');
+          dom.characterStage.classList.remove('border-solid');
+          dom.characterStage.title = 'しゃしん・がぞうを えらぶ';
+        }
+      }
+
+      function pickNextWalkTarget() {
+        const stageWidth = dom.characterStage.clientWidth || 360;
+        const maxOffsetX = Math.max(40, stageWidth / 2 - 68);
+        state.walk.targetX = (Math.random() * 2 - 1) * maxOffsetX;
+        state.walk.targetY = Math.random() * 22 - 10;
+        state.walk.isMoving = true;
+        dom.characterSpriteInner.classList.remove('presence-float');
+        dom.characterSpriteInner.classList.add('walk-bobbing');
+      }
+
+      function updateWalkLoop(timestamp) {
+        if (!state.characterImage) return;
+
+        if (!state.walk.lastTime) {
+          state.walk.lastTime = timestamp;
+        }
+        const dt = Math.min((timestamp - state.walk.lastTime) / 1000, 0.1);
+        state.walk.lastTime = timestamp;
+
+        if (state.walk.isMoving) {
+          const dx = state.walk.targetX - state.walk.x;
+          const dy = state.walk.targetY - state.walk.y;
+          const dist = Math.hypot(dx, dy);
+          const speed = 52;
+
+          if (dist < 2) {
+            state.walk.x = state.walk.targetX;
+            state.walk.y = state.walk.targetY;
+            state.walk.isMoving = false;
+            state.walk.waitTimer = 1.4 + Math.random() * 2.4;
+            dom.characterSpriteInner.classList.remove('walk-bobbing');
+            dom.characterSpriteInner.classList.add('presence-float');
+          } else {
+            state.walk.x += (dx / dist) * speed * dt;
+            state.walk.y += (dy / dist) * speed * dt;
+            if (Math.abs(dx) > 1.5) {
+              state.walk.facingLeft = dx < 0;
+            }
+          }
+        } else {
+          state.walk.waitTimer -= dt;
+          if (state.walk.waitTimer <= 0) {
+            pickNextWalkTarget();
+          }
+        }
+
+        dom.characterMover.style.transform = `translate3d(calc(-50% + ${state.walk.x.toFixed(1)}px), ${state.walk.y.toFixed(1)}px, 0)`;
+        dom.characterImage.style.transform = state.walk.facingLeft ? 'scaleX(-1)' : 'scaleX(1)';
+
+        state.walk.rafId = requestAnimationFrame(updateWalkLoop);
+      }
+
+      function startCharacterWalkLoop() {
+        stopCharacterWalkLoop();
+        state.walk.x = 0;
+        state.walk.y = 0;
+        state.walk.waitTimer = 0.7;
+        state.walk.isMoving = false;
+        state.walk.lastTime = 0;
+        state.walk.rafId = requestAnimationFrame(updateWalkLoop);
+      }
+
+      function stopCharacterWalkLoop() {
+        if (state.walk.rafId) {
+          cancelAnimationFrame(state.walk.rafId);
+          state.walk.rafId = null;
+        }
+      }
+
+      function openCropModalWithFile(file) {
+        if (!file || !file.type || !file.type.startsWith('image/')) {
+          showFeedback('しゃしん や イラストの ファイルを えらんでね。', true);
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function (event) {
+          const img = new Image();
+          img.onload = function () {
+            state.crop.sourceImg = img;
+            state.crop.mode = 'freehand';
+            state.crop.points = [];
+            state.crop.rectStart = null;
+            state.crop.rectEnd = null;
+            state.crop.isDrawing = false;
+
+            updateCropModeButtons();
+            setupCropCanvas();
+
+            dom.cropModal.classList.remove('hidden');
+            dom.cropModal.classList.add('flex');
+          };
+          img.onerror = function () {
+            showFeedback('その がぞうは よみこめなかったみたい。べつの ファイルを えらんでね。', true);
+          };
+          img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function closeCropModal() {
+        dom.cropModal.classList.add('hidden');
+        dom.cropModal.classList.remove('flex');
+        state.crop.isDrawing = false;
+      }
+
+      function updateCropModeButtons() {
+        const isFree = state.crop.mode === 'freehand';
+        dom.btnCropModeFreehand.className = isFree
+          ? 'px-3 py-1.5 rounded-full bg-iris-primary text-white text-xs font-maru font-bold transition-colors'
+          : 'px-3 py-1.5 rounded-full bg-base-surface text-slate-600 hover:bg-base-border text-xs font-maru font-medium transition-colors';
+        dom.btnCropModeRect.className = !isFree
+          ? 'px-3 py-1.5 rounded-full bg-iris-primary text-white text-xs font-maru font-bold transition-colors'
+          : 'px-3 py-1.5 rounded-full bg-base-surface text-slate-600 hover:bg-base-border text-xs font-maru font-medium transition-colors';
+      }
+
+      function setupCropCanvas() {
+        const img = state.crop.sourceImg;
+        if (!img) return;
+
+        const maxDim = 480;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        dom.cropCanvas.width = w;
+        dom.cropCanvas.height = h;
+        drawCropCanvas();
+      }
+
+      function drawCropCanvas() {
+        const canvas = dom.cropCanvas;
+        const ctx = canvas.getContext('2d');
+        const img = state.crop.sourceImg;
+        if (!img) return;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        const hasFreehand = state.crop.mode === 'freehand' && state.crop.points.length > 2;
+        const hasRect = state.crop.mode === 'rect' && state.crop.rectStart && state.crop.rectEnd;
+
+        if (!hasFreehand && !hasRect) return;
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.48)';
+        ctx.beginPath();
+        ctx.rect(0, 0, canvas.width, canvas.height);
+
+        if (hasFreehand) {
+          ctx.moveTo(state.crop.points[0].x, state.crop.points[0].y);
+          for (let i = 1; i < state.crop.points.length; i++) {
+            ctx.lineTo(state.crop.points[i].x, state.crop.points[i].y);
+          }
+          ctx.closePath();
+        } else if (hasRect) {
+          const rx = Math.min(state.crop.rectStart.x, state.crop.rectEnd.x);
+          const ry = Math.min(state.crop.rectStart.y, state.crop.rectEnd.y);
+          const rw = Math.abs(state.crop.rectEnd.x - state.crop.rectStart.x);
+          const rh = Math.abs(state.crop.rectEnd.y - state.crop.rectStart.y);
+          ctx.rect(rx, ry, rw, rh);
+        }
+        ctx.fill('evenodd');
+        ctx.restore();
+
+        ctx.save();
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        if (hasFreehand) {
+          ctx.moveTo(state.crop.points[0].x, state.crop.points[0].y);
+          for (let i = 1; i < state.crop.points.length; i++) {
+            ctx.lineTo(state.crop.points[i].x, state.crop.points[i].y);
+          }
+          ctx.closePath();
+        } else if (hasRect) {
+          const rx = Math.min(state.crop.rectStart.x, state.crop.rectEnd.x);
+          const ry = Math.min(state.crop.rectStart.y, state.crop.rectEnd.y);
+          const rw = Math.abs(state.crop.rectEnd.x - state.crop.rectStart.x);
+          const rh = Math.abs(state.crop.rectEnd.y - state.crop.rectStart.y);
+          ctx.rect(rx, ry, rw, rh);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function getCanvasCoords(e) {
+        const rect = dom.cropCanvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const scaleX = dom.cropCanvas.width / rect.width;
+        const scaleY = dom.cropCanvas.height / rect.height;
+        return {
+          x: Math.max(0, Math.min(dom.cropCanvas.width, (clientX - rect.left) * scaleX)),
+          y: Math.max(0, Math.min(dom.cropCanvas.height, (clientY - rect.top) * scaleY)),
+        };
+      }
+
+      function applyCroppedCharacter() {
+        const canvas = dom.cropCanvas;
+        const img = state.crop.sourceImg;
+        if (!img) return;
+
+        let minX = 0;
+        let minY = 0;
+        let maxX = canvas.width;
+        let maxY = canvas.height;
+        let hasSelection = false;
+
+        if (state.crop.mode === 'freehand' && state.crop.points.length > 5) {
+          hasSelection = true;
+          minX = canvas.width;
+          minY = canvas.height;
+          maxX = 0;
+          maxY = 0;
+          state.crop.points.forEach((p) => {
+            if (p.x < minX) minX = p.x;
+            if (p.y < minY) minY = p.y;
+            if (p.x > maxX) maxX = p.x;
+            if (p.y > maxY) maxY = p.y;
+          });
+        } else if (state.crop.mode === 'rect' && state.crop.rectStart && state.crop.rectEnd) {
+          minX = Math.min(state.crop.rectStart.x, state.crop.rectEnd.x);
+          minY = Math.min(state.crop.rectStart.y, state.crop.rectEnd.y);
+          maxX = Math.max(state.crop.rectStart.x, state.crop.rectEnd.x);
+          maxY = Math.max(state.crop.rectStart.y, state.crop.rectEnd.y);
+          if (maxX - minX > 10 && maxY - minY > 10) {
+            hasSelection = true;
+          }
+        }
+
+        const cropW = Math.max(20, Math.round(maxX - minX));
+        const cropH = Math.max(20, Math.round(maxY - minY));
+
+        const MAX_OUT = 320;
+        let outW = cropW;
+        let outH = cropH;
+        if (outW > MAX_OUT || outH > MAX_OUT) {
+          if (outW > outH) {
+            outH = Math.round((outH * MAX_OUT) / outW);
+            outW = MAX_OUT;
+          } else {
+            outW = Math.round((outW * MAX_OUT) / outH);
+            outH = MAX_OUT;
+          }
+        }
+        const ratio = outW / cropW;
+
+        const outCanvas = document.createElement('canvas');
+        outCanvas.width = outW;
+        outCanvas.height = outH;
+        const outCtx = outCanvas.getContext('2d');
+
+        if (hasSelection && state.crop.mode === 'freehand') {
+          outCtx.beginPath();
+          state.crop.points.forEach((p, idx) => {
+            const px = (p.x - minX) * ratio;
+            const py = (p.y - minY) * ratio;
+            if (idx === 0) outCtx.moveTo(px, py);
+            else outCtx.lineTo(px, py);
+          });
+          outCtx.closePath();
+          outCtx.clip();
+        }
+
+        outCtx.drawImage(
+          img,
+          (minX / canvas.width) * img.width,
+          (minY / canvas.height) * img.height,
+          (cropW / canvas.width) * img.width,
+          (cropH / canvas.height) * img.height,
+          0,
+          0,
+          outW,
+          outH
+        );
+
+        const dataUrl = outCanvas.toDataURL('image/png');
+        if (saveCharacterImage(dataUrl)) {
+          closeCropModal();
+          renderCharacterImage();
+          showFeedback('きりぬいた キャラクターが おへやに きたよ！', false);
+
+          const photoReactions = [
+            {
+              id: `photo_react_1_${Date.now()}`,
+              category: 'きぶん',
+              sentences: [['えへへ、', 'しあわせかも。']],
+            },
+            {
+              id: `photo_react_2_${Date.now()}`,
+              category: 'はんのう',
+              sentences: [['ふふ、', 'なんだか', 'たのしくなってきた。']],
+            },
+            {
+              id: `photo_react_3_${Date.now()}`,
+              category: 'きぶん',
+              sentences: [['なんだか、', 'わくわくしてきた！']],
+            },
+          ];
+          speakDialogue(photoReactions[Math.floor(Math.random() * photoReactions.length)]);
+        }
+      }
+
+      function getGenreLabel(genreId) {
+        const found = state.genres.find((g) => g.id === genreId);
+        return found ? found.label : 'そのほか';
+      }
+
+      function splitLineIntoChunks(line) {
+        const primaryParts = line
+          .split(/(?<=[、。！？\s])/)
+          .map((s) => s.trim())
+          .filter(Boolean);
+
+        const chunks = [];
+        primaryParts.forEach((part) => {
+          if (part.length <= 7) {
+            chunks.push(part);
+            return;
+          }
+          const subParts = part
+            .split(/(?<=……|って|を|に|が|は|の|も|と|で|から|まで|けど|より)/)
+            .filter(Boolean);
+
+          let buffer = '';
+          subParts.forEach((sp) => {
+            if ((buffer + sp).length <= 7) {
+              buffer += sp;
+            } else {
+              if (buffer) chunks.push(buffer);
+              buffer = sp;
+            }
+          });
+          if (buffer) chunks.push(buffer);
+        });
+
+        return chunks.length > 0 ? chunks : [line];
+      }
+
+      function pickRandomItem(arr) {
+        return arr[Math.floor(Math.random() * arr.length)];
+      }
+
+      function buildNextDialogue(options = {}) {
+        const { preferredTypes = null, forceWord = null } = options;
+        const hasWords = state.words.length > 0 || Boolean(forceWord);
+
+        const candidates = [];
+        DIALOGUE_DATA.dialogues.forEach((group, groupIdx) => {
+          if (preferredTypes && !preferredTypes.includes(group.type)) {
+            return;
+          }
+
+          group.lines.forEach((rawLine, lineIdx) => {
+            const needsWord = rawLine.includes('{word}');
+            if (needsWord && !hasWords) {
+              return;
+            }
+
+            const baseId = `${groupIdx}_${lineIdx}`;
+            candidates.push({
+              baseId,
+              type: group.type,
+              rawLine,
+              needsWord,
+            });
+          });
+        });
+
+        let filtered = candidates.filter((c) => !state.recentSpeechIds.includes(c.baseId));
+        if (filtered.length === 0) {
+          filtered = candidates;
+        }
+
+        if (!preferredTypes && state.recentCategories.length > 0) {
+          const diffCat = filtered.filter((c) => !state.recentCategories.includes(c.type));
+          if (diffCat.length > 0) {
+            filtered = diffCat;
+          }
+        }
+
+        let chosen;
+        const wordCandidates = filtered.filter((c) => c.needsWord);
+        if (hasWords && wordCandidates.length > 0 && (forceWord || Math.random() < 0.45)) {
+          chosen = pickRandomItem(wordCandidates);
+        } else {
+          chosen = pickRandomItem(filtered);
+        }
+
+        state.recentSpeechIds.push(chosen.baseId);
+        if (state.recentSpeechIds.length > 14) {
+          state.recentSpeechIds.shift();
+        }
+        state.recentCategories.push(chosen.type);
+        if (state.recentCategories.length > 2) {
+          state.recentCategories.shift();
+        }
+
+        let finalLine = chosen.rawLine;
+        if (chosen.needsWord) {
+          const targetWord = forceWord || pickRandomItem(state.words).text;
+          finalLine = finalLine.replace(/\{word\}/g, targetWord);
+        }
+
+        const sentences = [splitLineIntoChunks(finalLine)];
+
+        if (!forceWord && Math.random() < 0.25) {
+          const followUpTypes = ['ひとりごと', 'かんがえる', 'しつもん', 'きぶん'];
+          const followGroup = DIALOGUE_DATA.dialogues.find(
+            (g) => g.type === pickRandomItem(followUpTypes)
+          );
+          if (followGroup) {
+            const safeFollowLines = followGroup.lines.filter(
+              (l) => !l.includes('{word}') && l !== chosen.rawLine
+            );
+            if (safeFollowLines.length > 0) {
+              sentences.push(splitLineIntoChunks(pickRandomItem(safeFollowLines)));
+            }
+          }
+        }
+
+        return {
+          id: `${chosen.baseId}_${Date.now()}`,
+          category: chosen.type,
+          sentences,
+        };
+      }
+
+      function clearChunkTimers() {
+        state.chunkTimers.forEach((id) => clearTimeout(id));
+        state.chunkTimers = [];
+      }
+
+      function finishSpeakingImmediately() {
+        if (!state.isSpeaking) return;
+        clearChunkTimers();
+        state.isSpeaking = false;
+
+        dom.speechText.innerHTML = '';
+        state.currentSentences.forEach((chunks, sIdx) => {
+          const p = document.createElement('p');
+          if (sIdx > 0) p.className = 'mt-1.5';
+          chunks.forEach((chunkText) => {
+            const span = document.createElement('span');
+            span.textContent = chunkText;
+            p.appendChild(span);
+          });
+          dom.speechText.appendChild(p);
+        });
+
+        dom.statusText.textContent = state.autoPlayEnabled ? 'かんがえちゅう…' : 'おやすみちゅう';
+        dom.speechHintText.textContent = 'おすと つぎへ すすむよ';
+        scheduleNextAutoSpeech();
+      }
+
+      function speakDialogue(dialogue) {
+        clearChunkTimers();
+        stopAutoTimers();
+
+        state.isSpeaking = true;
+        state.currentSentences = dialogue.sentences;
+
+        dom.speechCategoryTag.textContent = dialogue.category;
+        dom.speechText.innerHTML = '';
+        dom.statusText.textContent = 'おはなしちゅう…';
+        dom.speechHintText.textContent = 'おすと ぜんぶ みえるよ';
+        dom.autoProgressBar.style.width = '0%';
+
+        const indicator = document.createElement('span');
+        indicator.className = 'speaking-indicator';
+        indicator.setAttribute('aria-hidden', 'true');
+
+        let cumulativeDelay = 60;
+
+        dialogue.sentences.forEach((chunks, sIdx) => {
+          const p = document.createElement('p');
+          if (sIdx > 0) p.className = 'mt-1.5';
+          dom.speechText.appendChild(p);
+
+          chunks.forEach((chunkText) => {
+            const timerId = setTimeout(() => {
+              const span = document.createElement('span');
+              span.className = 'speech-chunk';
+              span.textContent = chunkText;
+              p.appendChild(span);
+              p.appendChild(indicator);
+            }, cumulativeDelay);
+            state.chunkTimers.push(timerId);
+
+            let pause = 230 + Math.min(chunkText.length * 32, 220);
+            if (/[、]/.test(chunkText)) pause += 180;
+            if (/[。！？]/.test(chunkText)) pause += 340;
+            if (/……/.test(chunkText)) pause += 320;
+            cumulativeDelay += pause;
+          });
+        });
+
+        const endTimerId = setTimeout(() => {
+          state.isSpeaking = false;
+          if (indicator.parentNode) {
+            indicator.parentNode.removeChild(indicator);
+          }
+          dom.statusText.textContent = state.autoPlayEnabled ? 'かんがえちゅう…' : 'おやすみちゅう';
+          dom.speechHintText.textContent = 'おすと つぎへ すすむよ';
+          scheduleNextAutoSpeech();
+        }, cumulativeDelay + 120);
+
+        state.chunkTimers.push(endTimerId);
+      }
+
+      function triggerNextSpeech(options = {}) {
+        const next = buildNextDialogue(options);
+        speakDialogue(next);
+      }
+
+      function stopAutoTimers() {
+        if (state.autoTimerId) {
+          clearTimeout(state.autoTimerId);
+          state.autoTimerId = null;
+        }
+        if (state.progressIntervalId) {
+          clearInterval(state.progressIntervalId);
+          state.progressIntervalId = null;
+        }
+      }
+
+      function scheduleNextAutoSpeech() {
+        stopAutoTimers();
+        dom.autoProgressBar.style.width = '0%';
+
+        if (!state.autoPlayEnabled || state.isSpeaking) {
+          return;
+        }
+
+        const duration = 5500 + Math.floor(Math.random() * 4000);
+        state.nextSpeechDurationMs = duration;
+        state.elapsedMs = 0;
+
+        const stepMs = 100;
+        state.progressIntervalId = setInterval(() => {
+          state.elapsedMs += stepMs;
+          const pct = Math.min(100, (state.elapsedMs / state.nextSpeechDurationMs) * 100);
+          dom.autoProgressBar.style.width = `${pct}%`;
+        }, stepMs);
+
+        state.autoTimerId = setTimeout(() => {
+          triggerNextSpeech();
+        }, duration);
+      }
+
+      function toggleAutoPlay() {
+        state.autoPlayEnabled = !state.autoPlayEnabled;
+        if (state.autoPlayEnabled) {
+          dom.btnToggleAuto.textContent = 'ひとりごと: ON';
+          dom.statusDot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500';
+          if (!state.isSpeaking) {
+            dom.statusText.textContent = 'かんがえちゅう…';
+            scheduleNextAutoSpeech();
+          }
+        } else {
+          dom.btnToggleAuto.textContent = 'ひとりごと: OFF';
+          dom.statusDot.className = 'w-1.5 h-1.5 rounded-full bg-slate-400';
+          if (!state.isSpeaking) {
+            dom.statusText.textContent = 'おやすみちゅう';
+          }
+          stopAutoTimers();
+          dom.autoProgressBar.style.width = '0%';
+        }
+      }
+
+      function normalizeHiraganaInput(raw) {
+        return raw.trim().replace(/[\s\u3000]/g, '');
+      }
+
+      function isValidHiraganaWord(str) {
+        return /^[ぁ-ゖー]{1,5}$/.test(str);
+      }
+
+      function showFeedback(message, isError = false) {
+        dom.feedbackMessage.textContent = message;
+        dom.feedbackMessage.className = isError
+          ? 'text-rose-600 font-maru font-medium'
+          : 'text-iris-primary font-maru font-medium';
+      }
+
+      function updateCharCounter() {
+        const val = normalizeHiraganaInput(dom.inputWord.value);
+        dom.charCounter.textContent = `${val.length}/5`;
+        dom.charCounter.className =
+          val.length > 5
+            ? 'absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-rose-500 select-none'
+            : 'absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400 select-none';
+      }
+
+      function teachWord(rawWord, genreId) {
+        const cleanWord = normalizeHiraganaInput(rawWord);
+
+        if (!cleanWord) {
+          showFeedback('おしえる ことばを ひらがなで いれてね。', true);
+          dom.inputWord.focus();
+          return false;
+        }
+
+        if (cleanWord.length > 5) {
+          showFeedback('5もじ までの ひらがなで おしえてね。', true);
+          dom.inputWord.focus();
+          return false;
+        }
+
+        if (!isValidHiraganaWord(cleanWord)) {
+          showFeedback('ひらがな だけで おしえてね（かんじ や カタカナは まだ むずかしいの）。', true);
+          dom.inputWord.focus();
+          return false;
+        }
+
+        const existing = state.words.find((w) => w.text === cleanWord);
+        if (existing) {
+          existing.genreId = genreId;
+          existing.updatedAt = Date.now();
+          saveWords();
+          updateWordCountUI();
+          showFeedback(`「${cleanWord}」の グループを 「${getGenreLabel(genreId)}」に なおしたよ。`, false);
+
+          triggerNextSpeech({
+            preferredTypes: ['おぼえたこと'],
+            forceWord: cleanWord,
+          });
+          return true;
+        }
+
+        const newEntry = {
+          id: `word_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          text: cleanWord,
+          genreId,
+          createdAt: Date.now(),
+        };
+
+        state.words.unshift(newEntry);
+        saveWords();
+        updateWordCountUI();
+
+        showFeedback(`「${cleanWord}」（${getGenreLabel(genreId)}）を おぼえたよ！`, false);
+
+        triggerNextSpeech({
+          preferredTypes: ['おぼえたこと', 'きづき'],
+          forceWord: cleanWord,
+        });
+
+        return true;
+      }
+
+      function renderGenreSelect() {
+        dom.selectGenre.innerHTML = '';
+        state.genres.forEach((genre) => {
+          const opt = document.createElement('option');
+          opt.value = genre.id;
+          opt.textContent = genre.label;
+          dom.selectGenre.appendChild(opt);
+        });
+      }
+
+      function updateWordCountUI() {
+        const countText = `${state.words.length}こ`;
+        dom.wordCountBadge.textContent = countText;
+        dom.modalWordCount.textContent = countText;
+      }
+
+      function openWordbook() {
+        renderWordbookFilterBar();
+        renderWordbookList();
+        dom.wordbookModal.classList.remove('hidden');
+        dom.wordbookModal.classList.add('flex');
+      }
+
+      function closeWordbook() {
+        dom.wordbookModal.classList.add('hidden');
+        dom.wordbookModal.classList.remove('flex');
+      }
+
+      function renderWordbookFilterBar() {
+        dom.genreFilterBar.innerHTML = '';
+
+        const allBtn = createFilterChip('all', `ぜんぶ (${state.words.length})`);
+        dom.genreFilterBar.appendChild(allBtn);
+
+        state.genres.forEach((genre) => {
+          const count = state.words.filter((w) => w.genreId === genre.id).length;
+          const chip = createFilterChip(genre.id, `${genre.label} (${count})`);
+          dom.genreFilterBar.appendChild(chip);
+        });
+      }
+
+      function createFilterChip(genreId, label) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        const isActive = state.selectedFilterGenre === genreId;
+        btn.className = isActive
+          ? 'px-3 py-1.5 rounded-full bg-iris-primary text-white text-xs font-maru font-bold shadow-2xs transition-colors'
+          : 'px-3 py-1.5 rounded-full bg-base-surface hover:bg-base-border text-slate-600 text-xs font-maru font-medium transition-colors';
+        btn.textContent = label;
+        btn.addEventListener('click', () => {
+          state.selectedFilterGenre = genreId;
+          renderWordbookFilterBar();
+          renderWordbookList();
+        });
+        return btn;
+      }
+
+      function renderWordbookList() {
+        const filteredWords =
+          state.selectedFilterGenre === 'all'
+            ? state.words
+            : state.words.filter((w) => w.genreId === state.selectedFilterGenre);
+
+        dom.wordbookListContainer.innerHTML = '';
+
+        if (filteredWords.length === 0) {
+          const emptyDiv = document.createElement('div');
+          emptyDiv.className = 'py-12 text-center flex flex-col items-center justify-center text-slate-400';
+          emptyDiv.innerHTML = `
+            <p class="font-maru text-sm text-slate-500">まだ ことばが ないよ</p>
+            <p class="text-xs mt-1">まえの がめんから ひらがなの ことばを おしえてあげてね。</p>
+          `;
+          dom.wordbookListContainer.appendChild(emptyDiv);
+          return;
+        }
+
+        const grid = document.createElement('div');
+        grid.className = 'grid grid-cols-1 sm:grid-cols-2 gap-2.5';
+
+        filteredWords.forEach((wordObj) => {
+          const card = document.createElement('div');
+          card.className =
+            'flex items-center justify-between p-3.5 rounded-2xl bg-white border border-base-border shadow-2xs hover:border-iris-light transition-colors';
+
+          const infoDiv = document.createElement('div');
+          infoDiv.className = 'flex items-center gap-2.5 min-w-0';
+
+          const wordSpan = document.createElement('span');
+          wordSpan.className = 'font-maru font-bold text-base text-slate-800 truncate';
+          wordSpan.textContent = wordObj.text;
+
+          const genreBadge = document.createElement('span');
+          genreBadge.className =
+            'text-[11px] px-2.5 py-0.5 rounded-full bg-iris-soft text-iris-dark font-maru font-medium shrink-0';
+          genreBadge.textContent = getGenreLabel(wordObj.genreId);
+
+          infoDiv.appendChild(wordSpan);
+          infoDiv.appendChild(genreBadge);
+
+          const actionsDiv = document.createElement('div');
+          actionsDiv.className = 'flex items-center gap-1 shrink-0';
+
+          const talkBtn = document.createElement('button');
+          talkBtn.type = 'button';
+          talkBtn.title = `「${wordObj.text}」の おはなしを きく`;
+          talkBtn.className =
+            'px-2.5 py-1 rounded-xl text-[11px] font-maru font-bold text-iris-primary hover:bg-iris-soft transition-colors';
+          talkBtn.textContent = 'おはなし';
+          talkBtn.addEventListener('click', () => {
+            closeWordbook();
+            triggerNextSpeech({
+              preferredTypes: ['きづき', 'しつもん', 'おぼえたこと'],
+              forceWord: wordObj.text,
+            });
+          });
+
+          const delBtn = document.createElement('button');
+          delBtn.type = 'button';
+          delBtn.title = 'わすれる（けす）';
+          delBtn.className =
+            'px-2.5 py-1 rounded-xl text-[11px] font-maru font-medium text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors';
+          delBtn.textContent = 'けす';
+
+          let confirmPending = false;
+          let confirmTimer = null;
+
+          delBtn.addEventListener('click', () => {
+            if (!confirmPending) {
+              confirmPending = true;
+              delBtn.textContent = 'ほんとうに？';
+              delBtn.className =
+                'px-2.5 py-1 rounded-xl text-[11px] font-maru font-bold text-white bg-rose-500 transition-colors';
+              confirmTimer = setTimeout(() => {
+                confirmPending = false;
+                delBtn.textContent = 'けす';
+                delBtn.className =
+                  'px-2.5 py-1 rounded-xl text-[11px] font-maru font-medium text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors';
+              }, 2500);
+            } else {
+              clearTimeout(confirmTimer);
+              deleteWord(wordObj.id);
+            }
+          });
+
+          actionsDiv.appendChild(talkBtn);
+          actionsDiv.appendChild(delBtn);
+
+          card.appendChild(infoDiv);
+          card.appendChild(actionsDiv);
+          grid.appendChild(card);
+        });
+
+        dom.wordbookListContainer.appendChild(grid);
+      }
+
+      function deleteWord(wordId) {
+        const target = state.words.find((w) => w.id === wordId);
+        state.words = state.words.filter((w) => w.id !== wordId);
+        saveWords();
+        updateWordCountUI();
+        renderWordbookFilterBar();
+        renderWordbookList();
+
+        if (target) {
+          showFeedback(`「${target.text}」を ことばちょうから けしたよ。`, false);
+        }
+      }
+
+      function bindEvents() {
+        dom.inputWord.addEventListener('input', updateCharCounter);
+
+        dom.characterStage.addEventListener('click', () => {
+          dom.inputCharacterFile.click();
+        });
+
+        dom.characterStage.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            dom.inputCharacterFile.click();
+          }
+        });
+
+        dom.inputCharacterFile.addEventListener('change', (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (file) {
+            openCropModalWithFile(file);
+          }
+          e.target.value = '';
+        });
+
+        dom.btnChangeImage.addEventListener('click', (e) => {
+          e.stopPropagation();
+          dom.inputCharacterFile.click();
+        });
+
+        dom.btnRemoveImage.addEventListener('click', (e) => {
+          e.stopPropagation();
+          saveCharacterImage(null);
+          renderCharacterImage();
+          showFeedback('がぞうを けしたよ。また いつでも えらべるよ。', false);
+        });
+
+        dom.characterStage.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          dom.characterStage.classList.add('stage-dragover');
+        });
+
+        dom.characterStage.addEventListener('dragleave', () => {
+          dom.characterStage.classList.remove('stage-dragover');
+        });
+
+        dom.characterStage.addEventListener('drop', (e) => {
+          e.preventDefault();
+          dom.characterStage.classList.remove('stage-dragover');
+          const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+          if (file) {
+            openCropModalWithFile(file);
+          }
+        });
+
+        dom.btnCloseCrop.addEventListener('click', closeCropModal);
+        dom.btnCancelCrop.addEventListener('click', closeCropModal);
+        dom.btnApplyCrop.addEventListener('click', applyCroppedCharacter);
+
+        dom.btnCropModeFreehand.addEventListener('click', () => {
+          state.crop.mode = 'freehand';
+          state.crop.points = [];
+          state.crop.rectStart = null;
+          state.crop.rectEnd = null;
+          updateCropModeButtons();
+          drawCropCanvas();
+        });
+
+        dom.btnCropModeRect.addEventListener('click', () => {
+          state.crop.mode = 'rect';
+          state.crop.points = [];
+          state.crop.rectStart = null;
+          state.crop.rectEnd = null;
+          updateCropModeButtons();
+          drawCropCanvas();
+        });
+
+        dom.btnCropReset.addEventListener('click', () => {
+          state.crop.points = [];
+          state.crop.rectStart = null;
+          state.crop.rectEnd = null;
+          drawCropCanvas();
+        });
+
+        const startCropDraw = (e) => {
+          e.preventDefault();
+          const pos = getCanvasCoords(e);
+          state.crop.isDrawing = true;
+          if (state.crop.mode === 'freehand') {
+            state.crop.points = [pos];
+          } else {
+            state.crop.rectStart = pos;
+            state.crop.rectEnd = pos;
+          }
+          drawCropCanvas();
+        };
+
+        const moveCropDraw = (e) => {
+          if (!state.crop.isDrawing) return;
+          e.preventDefault();
+          const pos = getCanvasCoords(e);
+          if (state.crop.mode === 'freehand') {
+            state.crop.points.push(pos);
+          } else {
+            state.crop.rectEnd = pos;
+          }
+          drawCropCanvas();
+        };
+
+        const endCropDraw = () => {
+          if (!state.crop.isDrawing) return;
+          state.crop.isDrawing = false;
+          drawCropCanvas();
+        };
+
+        dom.cropCanvas.addEventListener('mousedown', startCropDraw);
+        dom.cropCanvas.addEventListener('mousemove', moveCropDraw);
+        window.addEventListener('mouseup', endCropDraw);
+
+        dom.cropCanvas.addEventListener('touchstart', startCropDraw, { passive: false });
+        dom.cropCanvas.addEventListener('touchmove', moveCropDraw, { passive: false });
+        window.addEventListener('touchend', endCropDraw);
+
+        dom.teachForm.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const success = teachWord(dom.inputWord.value, dom.selectGenre.value);
+          if (success) {
+            dom.inputWord.value = '';
+            updateCharCounter();
+          }
+        });
+
+        dom.btnEditName.addEventListener('click', () => {
+          dom.characterNameInput.value = state.characterName;
+          dom.btnEditName.classList.add('hidden');
+          dom.nameEditBox.classList.remove('hidden');
+          dom.characterNameInput.focus();
+        });
+
+        dom.btnSaveName.addEventListener('click', () => {
+          const newName = dom.characterNameInput.value.trim();
+          if (newName) {
+            state.characterName = newName;
+            localStorage.setItem(STORAGE_KEYS.CHAR_NAME, newName);
+            updateCharacterNameUI();
+            showFeedback(`なまえを 「${newName}」に かえたよ！`, false);
+          }
+          dom.nameEditBox.classList.add('hidden');
+          dom.btnEditName.classList.remove('hidden');
+        });
+
+        dom.characterNameInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            dom.btnSaveName.click();
+          }
+        });
+
+        dom.btnSampleWord.addEventListener('click', () => {
+          const unregistered = SAMPLE_WORDS.filter(
+            (sw) => !state.words.some((w) => w.text === sw.text)
+          );
+          const pick =
+            unregistered.length > 0
+              ? pickRandomItem(unregistered)
+              : pickRandomItem(SAMPLE_WORDS);
+
+          dom.inputWord.value = pick.text;
+          dom.selectGenre.value = pick.genreId;
+          updateCharCounter();
+
+          const success = teachWord(pick.text, pick.genreId);
+          if (success) {
+            dom.inputWord.value = '';
+            updateCharCounter();
+          }
+        });
+
+        dom.speechBox.addEventListener('click', (e) => {
+          if (e.target.closest('#btn-next-speech')) return;
+          if (state.isSpeaking) {
+            finishSpeakingImmediately();
+          } else {
+            triggerNextSpeech();
+          }
+        });
+
+        dom.speechBox.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            if (state.isSpeaking) {
+              finishSpeakingImmediately();
+            } else {
+              triggerNextSpeech();
+            }
+          }
+        });
+
+        dom.btnNextSpeech.addEventListener('click', (e) => {
+          e.stopPropagation();
+          triggerNextSpeech();
+        });
+
+        dom.btnToggleAuto.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleAutoPlay();
+        });
+
+        dom.btnOpenWordbook.addEventListener('click', openWordbook);
+        dom.btnCloseWordbook.addEventListener('click', closeWordbook);
+        dom.btnCloseWordbookBottom.addEventListener('click', closeWordbook);
+
+        dom.wordbookModal.addEventListener('click', (e) => {
+          if (e.target === dom.wordbookModal) {
+            closeWordbook();
+          }
+        });
+
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && !dom.wordbookModal.classList.contains('hidden')) {
+            closeWordbook();
+          }
+        });
+      }
+
+      function initApp() {
+        loadData();
+        renderCharacterImage();
+        renderGenreSelect();
+        updateWordCountUI();
+        updateCharCounter();
+        bindEvents();
+
+        triggerNextSpeech({ preferredTypes: ['あいさつ'] });
+      }
+
+      window.addEventListener('DOMContentLoaded', initApp);
+    })();
+  </script>
+</body>
+</html>

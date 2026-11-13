@@ -12,5 +12,6 @@
 | ワイヤダ（数字で輪を作るパズル。ルール説明つき） | `kumiwake-bou/` | スマホ・PC |
 | ガラス割り（GLASS BREAKER） | `glass-breaker/` | スマホ |
 | 電卓ドリル（電卓ドリルの自動生成） | `dentaku-drill/` | スマホ・PC |
+| ことばのおへや（ひらがなを教える育成アプリ） | `kotoba-oheya/` | スマホ・PC |
 
 作品を増やすときは、フォルダを作って中に `index.html` を置き、トップの `index.html` にある `APPS` の先頭に1件足します（新しい作品が上に並びます）。詳しくは [HANDOFF.md](HANDOFF.md) を見てください。
