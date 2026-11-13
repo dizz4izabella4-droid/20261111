@@ -539,9 +539,24 @@ function fireTick(dirx,diry){
     if(Math.abs(rx*diry-ry*dirx)<0.42+0.1*Math.max(0,al))igniteGrass(g);
   }
   for(const c of mycs){
-    const rx=c.x-nx,ry=c.y-ny,al=rx*dirx+ry*diry;
-    if(al<-0.2||al>L)continue;
-    if(Math.abs(rx*diry-ry*dirx)<0.45+0.1*Math.max(0,al)){c.hp-=1.0;c.hit=6;c.lastDmg=tickN;if(Math.random()<0.3)spark(c.x,c.y,2,1);}
+    // 見えている糸（中心と各枝の節）のどれかが炎の範囲に入ればダメージ
+    const gk=Math.min(1,c.age/240);
+    let hitX=null,hitY=null;
+    const test=(px,py)=>{
+      const rx=px-nx,ry=py-ny,al=rx*dirx+ry*diry;
+      if(al<-0.2||al>L+0.2)return false;
+      return Math.abs(rx*diry-ry*dirx)<0.4+0.1*Math.max(0,al);
+    };
+    if(test(c.x,c.y)){hitX=c.x;hitY=c.y;}
+    else outer:for(const pts of c.arms){
+      for(let i=1;i<pts.length;i++){
+        const px=c.x+pts[i][0]*gk,py=c.y+pts[i][1]*gk;
+        const mx=c.x+(pts[i][0]+pts[i-1][0])*0.5*gk,my=c.y+(pts[i][1]+pts[i-1][1])*0.5*gk;
+        if(test(px,py)){hitX=px;hitY=py;break outer;}
+        if(test(mx,my)){hitX=mx;hitY=my;break outer;}
+      }
+    }
+    if(hitX!==null){c.hp-=1.0;c.hit=6;c.lastDmg=tickN;if(Math.random()<0.3)spark(hitX,hitY,2,1);}
   }
   for(const t of trees){
     if(t.burnt||t.burn>0)continue;
