@@ -2339,11 +2339,11 @@ let slowFactor = 1;
 let slowAcc = 0;
 function loop() {
   const n = enemies.length + spores.length;
-  slowFactor = n <= SLOW_START ? 1 : Math.max(0.4, 1 - (n - SLOW_START) / 400 * 0.6);
+  slowFactor = n <= SLOW_START ? 1 : Math.max(0.85, 1 - (n - SLOW_START) / 400 * 0.15);
   slowAcc += slowFactor;
   while (slowAcc >= 1) { if (started) update(); slowAcc -= 1; }
   // たまに描画をスキップ（ファミコンのチラつき・処理落ち風）
-  if (slowFactor < 1 && Math.random() < (1 - slowFactor) * 0.45) {
+  if (slowFactor < 1 && Math.random() < (1 - slowFactor) * 0.2) {
     requestAnimationFrame(loop);
     return;
   }
