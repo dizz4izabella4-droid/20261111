@@ -24,7 +24,7 @@ node pc98-novel/_engine/build.js --check    # 検証だけ
 pc98-novel/
 ├── index.html            公開される本体（build.js が作る。直接は直さない）
 ├── data/                 ★作品のデータ（ここを書き換える）
-│   ├── config.json       作品ID・題名・版・文章表示の初期値・フラグの初期値
+│   ├── config.json       作品ID・題名・版・タイトルの注意書き(titleNote)・文章表示の初期値・フラグの初期値
 │   ├── scenario.txt      シナリオ（簡易テキスト記法）。これが正
 │   ├── scenario.json     scenario.txt から自動で作られる JSON（手では直さない）
 │   ├── characters.json   登場人物（名前・色・仮の立ち絵の色）

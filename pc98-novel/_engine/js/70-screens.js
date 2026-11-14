@@ -132,6 +132,7 @@
     noEsc: true,
     custom: function (el, c) {
       var g = PN.game.config, box = PN.el('div', 'pn-title');
+      if (g.titleNote) box.appendChild(PN.el('div', 'note', g.titleNote));   /* タイトル上部の注意書き（config.json の titleNote） */
       box.appendChild(PN.el('h1', '', g.title));
       box.appendChild(PN.el('div', 'sub', g.subtitle || ''));
       var menu = PN.el('div', 'menu');
