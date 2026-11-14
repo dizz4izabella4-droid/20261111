@@ -92,3 +92,14 @@
   - カット絵は `cutCanvas(kind)` で一度だけ作る。背景は普通に描き、人物は pup(`CUTPAL`、`pPresBust`/`pGirlBust`を拡大描画→縮小・吸着)。ろうそくの炎・ハート・涙・雨は `drawTrueEnd` で上に重ねる。
   - トゥルーエンド中は敵の更新を止める(`foeUpdate`)。
 - 追記(TRUE END): 発動した瞬間に主人公とボクサー(foes)を画面から消す(`G.hide`、`render()`の描画リストに積まない)。同時に階段を降りる足音(ダッ×7、だんだん小さく低く=`startTrueEnd`内)。`resetGame()`で`G.hide=false`。
+
+## 38. 社長室を貴族の部屋に・液体窒素で凍る・金の社長(2026-11-14)
+- 社長室(`renderStatic`のfrontCv部分): 金の格天井、金の柱、赤いビロードのカーテン(スワッグ+房)、寄木の床と赤い絨毯(金縁・中央の紋)、奥に金の飾り台とマホガニーのサイドボード+金の燭台。
+- 調度品(`defsBoss`、新規 `drawCandle/drawClock/drawChand/drawMirror/drawStainPane`): 柱時計(ガラス扉)、ガラスの燭台×2、シャンデリア×2(吊り下げ、`STY.crystal`の破片)、ステンドグラスの衝立(`pane`に`stain:true`、`STY.stain`)、青白磁の壺(`pot`)、姿見(`STY.mirror`)。モニター・カップ・水差し・ランプ・花瓶・水槽は撤去。破損額は`COST`に追加。
+- 流れ: 7割壊す(`brTotal*0.7`)→`focus`→`lnwalk`(暖炉の前 x109,z95 へ)→`lnlift`(液体窒素の瓶を掲げる)→`lnpour`(かぶる。上から凍る=`drawPres`の`thrTop`)→`makeCrystal`(`pr.frz=FRZ`の両手を上げた姿で凍結、瓶も凍る)。ここまで黒帯付きの演出。
+- 凍った後は `CUT THE ROPE!`(大きく脈打つ英語+下に `SWING THE BAT AT HER!`、娘の上に矢印、`drawRopeHint`)。操作可能。
+  - 娘を救出 → 起き上がった時点で `startGoodEnd()`: 凍った社長はそのまま、娘と花火 → `GOOD END`。
+  - 救出前に凍った社長を壊す → `startGold()`(`G.mode='gold'`): 破片が床に落ち→ゆっくり元の位置へ集まりながら金色に(`p.gfix`/`ox,oy,orot`)→金の社長像(`drawPres`の`gold`)→主人公が担いで左へ退場(`drawGoldHeld`)→娘は縛られたまま泣く→`THE END`(`G.goldEnd`)。
+  - 赤ちゃんは出ない(`spawnBaby`/`startEnding`は呼ばれない)。
+- フォーカス演出(社長への寄り・用心棒登場などのズーム、`prFocus`)の間は、画面の上下に黒帯(`#lbT/#lbB`、最大12.5%ずつ)。
+- `prClearFront` の範囲を社長の左右±22pxに縮小(遠くの調度品まで消えないように)。
