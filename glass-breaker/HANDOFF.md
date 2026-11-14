@@ -73,3 +73,12 @@
 - 割れた破片(`shatter()`が出す`sh.lit=1`のもの)が寿命で消える時、床に止まっていれば約9%を床レイヤー(`litterCv`、世界幅×DHの1倍キャンバス)に1〜2pxで焼き込む(`litterAdd`)。動く粒子としては残さないので負荷は増えない。
 - 上限は1ステージ140個(`LITTER_MAX`)、確率は`LITTER_RATE`。`build()`→`litterReset()`で作り直すので、やり直し/ステージ切替で消える。
 - 描画は`render()`で`frontCv`の直後(キャラ・物より下)に`drawImage(litterCv)`1回。
+
+## 36. 娘の追加とエンディング3種(2026-11-14)
+- ボス部屋の左奥(x41,z92)に、ロープで椅子に縛られたブロンドの娘(`G.dau`、`dauSetup()`は`setupBoss()`から)。絵は pup 方式(`pupGirl`/`GPAL`、座り・立ち・後ろ姿、泣き顔・喜び顔、涙の点アニメ)。`resetGame()`で消える。
+- 状態: `bound`→(クリスタル化後に近くでバットを振る=`tryAttack`内`dauTryRescue()`)→`freeing`(縄が飛び散る)→`stand`→(エンディング中)`walk`→`watch`(後ろ姿で主人公の横から花火を見る)。クリスタルがある間だけ救出可能。近づくと `SWING TO CUT THE ROPE` と「!」を表示。
+- エンディング(英語表示のみ・「HAPPY HAPPY」は削除):
+  - 救出してからクリスタルを割る → `TRUE END`(`G.trueEnd`。主人公・赤ちゃん・娘で花火)。
+  - 救出せずにクリスタルを割る → `THE END`(娘は縛られたまま泣くモーション=`face:'cry'`)。
+  - 社長が土下座して生存(旧 SECRET END) → `ANOTHER WORLD`(娘は縛られたまま泣く)。
+- 開発用: index.html をコピーし `layout(); resetGame();` の前に `window.__e=function(x){return eval(x)};` を足すと、`setupBoss(); G.mode='play'; ...` でボス部屋へ直接入って検証できる。

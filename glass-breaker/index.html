@@ -2133,7 +2133,7 @@ function tryAttack(kind, scripted) {
   var P = SPEC[kind];
   if (AC) { if (kind === 'full') sWhoosh(AC.currentTime + (pl.pre + P.wind + P.sweep * 0.5) / 1000); else sWhooshS(AC.currentTime + (P.wind + P.sweep * 0.5) / 1000); }
   pl.st = 'atk'; pl.t0 = simT; pl.prevT = pl.pre + P.wind; pl.moving = false; TR.length = 0; lastTr = -1;
-  prDodgeCheck();
+  prDodgeCheck(); dauTryRescue();
 }
 function beginCharge() { pl.dn = false; if (pl.st !== 'idle') return; pl.st = 'chg'; pl.chgT = 0; pl.chgSnd = false; pl.chgMax = false; pl.moving = false; pl.reach = 1; }
 function updatePlayer(dt) {
@@ -2503,6 +2503,139 @@ function drawBabySprite(alpha, noShadow) {
 }
 /* 土下座(u=0で立ち姿の手前、1で額を床につける) */
 /* 後ろ姿(花火を見るとき) */
+/* ---------- 娘(ブロンド): 4倍で描いて縮小する方式(pup)。縛られた姿・立ち姿・後ろ姿 ---------- */
+var GC = { sk0: '#d49a78', sk1: '#f0c4a0', sk2: '#ffdcc0', hr0: '#c9962a', hr1: '#e8bd4a', hr2: '#f6d878', hr3: '#fff0a8',
+  dr0: '#c4527a', dr1: '#e87aa0', dr2: '#ffa8c4', rp0: '#6a4a22', rp1: '#a67c3e', rp2: '#d2a85e', ch0: '#2a2118', ch1: '#4a3a2a',
+  sh0: '#3a2a30', sh1: '#6a4a52', ey: '#2a2f4a', wh: '#ffffff', tr: '#9fd8ff', tr2: '#d8f0ff', ck: '#f0907a', lp: '#c4506a', mo: '#5a1a2a' };
+var GPAL = mkPal(GC, '#1a0f10');
+function pGirlHead(c, hx, hy, back) {
+  var P = back ? [[hx - 5.9, hy - 1], [hx - 5.3, hy - 5.6], [hx, hy - 6.8], [hx + 5.3, hy - 5.6], [hx + 5.9, hy - 1], [hx + 6.3, hy + 7], [hx + 4, hy + 10], [hx - 4, hy + 10], [hx - 6.3, hy + 7]]
+    : [[hx - 5.6, hy - 1], [hx - 5.1, hy - 5.4], [hx, hy - 6.6], [hx + 5.1, hy - 5.4], [hx + 5.6, hy - 1], [hx + 6, hy + 6], [hx + 4.2, hy + 8.4], [hx - 4.2, hy + 8.4], [hx - 6, hy + 6]];
+  pBlob(c, P, GC.hr1);
+  pEll(c, hx + 3.6, hy + 2.5, 2.2, 6, GC.hr0);
+  if (back) { pLine(c, hx - 2.6, hy - 4.5, hx - 3.4, hy + 9, 0.6, GC.hr2); pLine(c, hx, hy - 5.8, hx - 0.4, hy + 9.6, 0.6, GC.hr0); pLine(c, hx + 2.4, hy - 4.5, hx + 3, hy + 9, 0.6, GC.hr2); pEll(c, hx - 1.8, hy - 4.6, 2.2, 0.8, GC.hr3); }
+}
+function pGirlFace(c, hx, hy, q) {
+  pEll(c, hx, hy + 0.4, 3.9, 4.3, GC.sk1); pEll(c, hx - 0.7, hy - 0.2, 2.7, 3.1, GC.sk2); pEll(c, hx + 1.6, hy + 2.2, 2.1, 1.6, GC.sk0);
+  pBlob(c, [[hx - 4.3, hy - 0.6], [hx - 3.7, hy - 4.7], [hx, hy - 5.5], [hx + 3.7, hy - 4.7], [hx + 4.3, hy - 0.6], [hx + 2.6, hy - 2.7], [hx + 0.2, hy - 1.7], [hx - 2.3, hy - 3.1]], GC.hr1);
+  pEll(c, hx - 1.8, hy - 4.1, 1.7, 0.7, GC.hr3);
+  pTube(c, hx - 4.3, hy - 0.5, hx - 4.8, hy + 7, 1.1, 1.0, [GC.hr1, GC.hr1, GC.hr2]); pTube(c, hx + 4.3, hy - 0.5, hx + 4.8, hy + 7, 1.1, 1.0, [GC.hr0, GC.hr0]);
+}
+function pGirlFacePix(hx, hy, q) {
+  var ey = Math.round(hy + 0.4), x1 = Math.round(hx) - 2, x2 = Math.round(hx) + 1, my = Math.round(hy + 3.4), k = q.face;
+  if (k === 'cry') {
+    pPix(x1 - 1, ey, GC.ey); pPix(x1, ey, GC.ey); pPix(x2, ey, GC.ey); pPix(x2 + 1, ey, GC.ey);
+    pPix(x1 - 1, ey - 2, GC.hr0); pPix(x1, ey - 1, GC.hr0); pPix(x2 + 1, ey - 2, GC.hr0); pPix(x2, ey - 1, GC.hr0);
+    pPix(x1 + 1, my, GC.mo); pPix(x1 + 2, my, GC.mo); pPix(x1 + 1, my + 1, GC.mo);
+    var tp = q.tp || 0, kk, ty;
+    for (kk = 0; kk < 3; kk++) { ty = ey + 1 + ((tp + kk * 2) % 6); pPix(x1 - 1 + (kk & 1 ? 0 : -1), ty, kk === 1 ? GC.tr2 : GC.tr); pPix(x2 + 2 + (kk & 1 ? 0 : 1), ty, kk === 1 ? GC.tr2 : GC.tr); }
+  } else if (k === 'glad') {
+    pPix(x1, ey - 1, GC.ey); pPix(x1 - 1, ey, GC.ey); pPix(x1 + 1, ey, GC.ey); pPix(x2, ey - 1, GC.ey); pPix(x2 - 1, ey, GC.ey); pPix(x2 + 1, ey, GC.ey);
+    pPix(x1 - 1, my - 1, GC.ck); pPix(x2 + 1, my - 1, GC.ck); pPix(x1, my, GC.lp); pPix(x2, my, GC.lp); pPix(x1 + 1, my + 1, GC.lp); pPix(x1 + 2, my + 1, GC.lp);
+    if (q.joy) { pPix(x1 - 1, ey + 2, GC.tr); pPix(x2 + 2, ey + 2, GC.tr); }
+  } else {
+    pPix(x1, ey - 1, GC.wh); pPix(x2, ey - 1, GC.wh); pPix(x1, ey, GC.ey); pPix(x2, ey, GC.ey); pPix(x1 - 1, ey - 2, GC.hr0); pPix(x2 + 1, ey - 2, GC.hr0);
+    pPix(x1 - 1, my - 1, GC.ck); pPix(x2 + 1, my - 1, GC.ck); pPix(x1 + 1, my, GC.lp); pPix(x1 + 2, my, GC.lp); pPix(x1, my + 1, GC.lp); pPix(x1 + 3, my + 1, GC.lp);
+  }
+}
+function pupGirl(q) {
+  var c = pupBegin(GPAL, -12, -37, 12, 3), m = q.m, bob = q.bob || 0, hy, hx = q.hx || 0, SK = [GC.sk0, GC.sk1, GC.sk2], i, s = q.sw || 0;
+  if (m === 'sit') {
+    hy = -23.5 + bob + (q.dn || 0);
+    pPoly(c, [[-6.8, -20], [-5.4, -20], [-5.4, -1], [-6.8, -1]], GC.ch1); pPoly(c, [[5.4, -20], [6.8, -20], [6.8, -1], [5.4, -1]], GC.ch0);
+    pPoly(c, [[-6.8, -20], [6.8, -20], [6.8, -18.6], [-6.8, -18.6]], GC.ch1);
+    pGirlHead(c, hx, hy, false);
+    pTube(c, -3.6, -17.8 + bob, -5.9, -12.6, 1.0, 0.9, SK); pTube(c, 3.6, -17.8 + bob, 5.9, -12.6, 1.0, 0.9, [SK[0], SK[0]]);
+    pTube(c, -2.4, -7.8, -2.7, -1.6, 1.25, 1.1, SK); pTube(c, 2.4, -7.8, 2.7, -1.6, 1.25, 1.1, SK);
+    pPoly(c, [[-5.2, -2], [-4.2, -2], [-4.2, 0], [-5.2, 0]], GC.ch0); pPoly(c, [[4.2, -2], [5.2, -2], [5.2, 0], [4.2, 0]], GC.ch0);
+    pEll(c, -2.9, -0.7, 2.0, 1.1, GC.sh0); pEll(c, 2.9, -0.7, 2.0, 1.1, GC.sh0); pEll(c, -3.3, -1.1, 1, 0.4, GC.sh1); pEll(c, 2.5, -1.1, 1, 0.4, GC.sh1);
+    pPoly(c, [[-3.5, -18.5 + bob], [3.5, -18.5 + bob], [3.1, -13], [5.9, -7.2], [-5.9, -7.2], [-3.1, -13]], GC.dr1);
+    pPoly(c, [[1.2, -18.3 + bob], [3.5, -18.5 + bob], [3.1, -13], [5.9, -7.2], [2.8, -7.2]], GC.dr0); pPoly(c, [[-3.3, -18.2 + bob], [-1.7, -18.2 + bob], [-2.3, -12], [-4.6, -8]], GC.dr2);
+    pEll(c, 0, -18.5 + bob, 1.8, 0.8, GC.wh);
+    if (q.rope) {
+      pLine(c, -3.4, -17.4 + bob, 3.3, -13.2, 1.1, GC.rp1); pLine(c, 3.4, -17.4 + bob, -3.3, -13.2, 1.1, GC.rp0); pLine(c, -3.7, -15.6, 3.7, -15.6, 1.2, GC.rp1);
+      pEll(c, 0, -15.2, 0.9, 0.9, GC.rp2); pEll(c, -5.9, -12.4, 1.2, 1, GC.rp1); pEll(c, 5.9, -12.4, 1.2, 1, GC.rp0);
+      pLine(c, -4.2, -2.7, -1.3, -2.3, 1.0, GC.rp1); pLine(c, 4.2, -2.7, 1.3, -2.3, 1.0, GC.rp0);
+    }
+    pGirlFace(c, hx, hy, q); pGirlFacePix(hx, hy, q);
+  } else if (m === 'back') {
+    hy = -23.5 + bob; hx += s;
+    pGirlHead(c, hx, hy, true);
+    pTube(c, -3.6, -17.8, -4.7, -10.6, 1.0, 0.9, SK); pTube(c, 3.6, -17.8, 4.7, -10.6, 1.0, 0.9, [SK[0], SK[0]]);
+    pTube(c, -1.8, -9, -1.9, -1.4, 1.25, 1.1, SK); pTube(c, 1.8, -9, 1.9, -1.4, 1.25, 1.1, SK);
+    pEll(c, -2.2, -0.7, 2.0, 1.1, GC.sh0); pEll(c, 2.2, -0.7, 2.0, 1.1, GC.sh0);
+    pPoly(c, [[-3.5, -18.5], [3.5, -18.5], [3.1, -13], [5.9, -7.2], [-5.9, -7.2], [-3.1, -13]], GC.dr1); pPoly(c, [[1.2, -18.3], [3.5, -18.5], [3.1, -13], [5.9, -7.2], [2.8, -7.2]], GC.dr0);
+    pEll(c, 0, -13.6, 2.4, 1.1, GC.dr2); pEll(c, -2.2, -12.4, 1.2, 1.7, GC.dr2); pEll(c, 2.2, -12.4, 1.2, 1.7, GC.dr2);
+    pTube(c, -3.6, -17.8, -4.7, -10.6, 0.9, 0.8, [SK[1], SK[1]]);
+    pEll(c, hx + 0.2, hy + 8.2, 4.4, 2.4, GC.hr1); pLine(c, hx - 2.6, hy + 4, hx - 3, hy + 10, 0.6, GC.hr2);
+  } else {
+    var w = q.ph != null ? Math.sin(q.ph) * 1.5 : 0, lift = q.ph != null ? Math.max(0, Math.cos(q.ph)) * 0.9 : 0, lift2 = q.ph != null ? Math.max(0, -Math.cos(q.ph)) * 0.9 : 0;
+    hy = -23.5 + bob;
+    pGirlHead(c, hx, hy, false);
+    pTube(c, -1.8 + w, -9, -1.9 + w, -1.4 - lift, 1.25, 1.1, SK); pTube(c, 1.8 - w, -9, 1.9 - w, -1.4 - lift2, 1.25, 1.1, SK);
+    pEll(c, -2.2 + w, -0.7 - lift, 2.0, 1.1, GC.sh0); pEll(c, 2.2 - w, -0.7 - lift2, 2.0, 1.1, GC.sh0); pEll(c, -2.6 + w, -1.1 - lift, 1, 0.4, GC.sh1); pEll(c, 1.8 - w, -1.1 - lift2, 1, 0.4, GC.sh1);
+    pPoly(c, [[-3.5, -18.5 + bob], [3.5, -18.5 + bob], [3.1, -13], [5.9, -7.2], [-5.9, -7.2], [-3.1, -13]], GC.dr1);
+    pPoly(c, [[1.2, -18.3 + bob], [3.5, -18.5 + bob], [3.1, -13], [5.9, -7.2], [2.8, -7.2]], GC.dr0); pPoly(c, [[-3.3, -18.2 + bob], [-1.7, -18.2 + bob], [-2.3, -12], [-4.6, -8]], GC.dr2);
+    pEll(c, 0, -18.5 + bob, 1.8, 0.8, GC.wh);
+    if (q.clasp) { pTube(c, -3.6, -17.6 + bob, -1.2, -14.4, 1.0, 0.9, SK); pTube(c, 3.6, -17.6 + bob, 1.2, -14.4, 1.0, 0.9, SK); pEll(c, 0, -14.4, 1.4, 1.1, SK[1]); }
+    else { pTube(c, -3.6, -17.8 + bob, -4.7, -10.6, 1.0, 0.9, SK); pTube(c, 3.6, -17.8 + bob, 4.7, -10.6, 1.0, 0.9, SK); }
+    pGirlFace(c, hx, hy, q); pGirlFacePix(hx, hy, q);
+  }
+  pupEnd();
+}
+/* 娘の状態: bound(縛られている) → freeing(縄が切れる) → stand(立つ) → walk → watch(後ろ姿で花火を見る) */
+function dauSetup() { G.dau = { x: 41, z: 92, st: 'bound', t: 0, freed: false, ph: 0, face: 1 }; G.trueEnd = false; }
+function dauRopeBits(D) {
+  var i, a;
+  for (i = 0; i < 14; i++) {
+    a = rnd(0, 6.283);
+    addFx({ kind: 'poly', x: D.x + rnd(-5, 5), y: D.z - rnd(3, 17), verts: [-1.4, -0.35, 1.4, -0.35, 1.4, 0.35, -1.4, 0.35], rot: a, sy: 1, vr: rnd(-9, 9), vx: rnd(-30, 30), vy: -rnd(20, 70), fy: D.z + rnd(0, 3), rest: 0.3,
+      life: rnd(1.6, 2.4), fade: 0.5, fill: i & 1 ? '#a67c3e' : '#6a4a22', stroke: '#3a2410', lw: 0.2, alpha: 1, glint: false, seed: 0, pop: false, tint: null, hl: false });
+  }
+}
+function dauTryRescue() {
+  var D = G.dau;
+  if (!D || D.st !== 'bound' || G.mode !== 'play' || G.stage !== 'boss') return;
+  if (!(pr.st === 'crystal' && pr.obj && !pr.obj.dead)) return;
+  if (Math.abs(pl.x - D.x) > 22 || Math.abs(pl.z - D.z) > 14 || (D.x - pl.x) * pl.face < -6) return;
+  D.st = 'freeing'; D.t = 0; D.freed = true; dauRopeBits(D);
+  if (AC) { var t = AC.currentTime; nz(t, 0.14, { type: 'highpass', f: 1800, f2: 4200, g: 0.07 }); tn(t + 0.12, 1319, 0.3, { g: 0.04 }); tn(t + 0.26, 1760, 0.4, { g: 0.04 }); }
+}
+function dauMove(tx, tz, sp, dt) {
+  var D = G.dau, dx = tx - D.x, dz = tz - D.z, d = Math.hypot(dx, dz * 2);
+  if (d < 1) return true;
+  var ms = Math.min(d, sp * dt); D.x += dx / d * ms; D.z += dz * 2 / d * ms * 0.5; D.ph += dt * 9; return false;
+}
+function updDau(dt) {
+  var D = G.dau; if (!D || !dt) return;
+  D.t += dt;
+  if (D.st === 'freeing') { if (D.t > 1.1) { D.st = 'stand'; D.t = 0; } return; }
+  if (D.freed && (G.mode === 'ending' || G.mode === 'end' || G.mode === 'secret') && (D.st === 'stand' || D.st === 'walk')) {
+    var side = pl.x > 80 ? -1 : 1, tx = clamp(pl.x + side * 12, 8, 152), tz = pl.z;
+    if (G.mode === 'ending' && baby) { side = (baby.x < pl.x ? 1 : -1); tx = clamp(pl.x + side * 12, 8, 152); }
+    D.st = 'walk';
+    if (dauMove(tx, tz, 46, dt)) { D.st = 'watch'; D.t = 0; }
+  }
+}
+function dauQ(D) {
+  var ms = simT, cry = D.st === 'bound' && (G.mode === 'ending' || G.mode === 'end' || G.mode === 'secret');
+  if (D.st === 'bound') {
+    if (cry) return { m: 'sit', rope: 1, face: 'cry', tp: Math.floor(ms / 110) % 6, bob: (Math.floor(ms / 230) & 1) * 0.5, dn: 1.2, hx: ((Math.floor(ms / 460) & 1) ? 0.5 : 0) };
+    var st = (ms % 3400) < 380;
+    return { m: 'sit', rope: 1, face: 'fear', bob: 0, hx: st ? ((Math.floor(ms / 60) & 1) ? 0.5 : -0.5) : 0 };
+  }
+  if (D.st === 'freeing') return D.t < 0.5 ? { m: 'sit', rope: 0, face: 'glad', bob: 0 } : { m: 'stand', face: 'glad', joy: 1, bob: -Math.abs(Math.sin((D.t - 0.5) * 9)) * 1.2 * (1.1 - D.t) };
+  if (D.st === 'walk') return { m: 'stand', face: 'glad', ph: D.ph, bob: Math.abs(Math.sin(D.ph)) * -0.5, clasp: 1 };
+  if (D.st === 'watch') return { m: 'back', bob: 0, sw: Math.sin(D.t * 1.3) * 0.5 };
+  return { m: 'stand', face: 'glad', clasp: 1, joy: ((Math.floor(ms / 700) & 1) ? 1 : 0), bob: 0 };
+}
+function drawDau() {
+  var D = G.dau; if (!D) return;
+  var px = Math.round(D.x), F = Math.round(D.z), q = dauQ(D);
+  R(px - 6, F + 1, 13, 1, 'rgba(0,0,0,0.32)');
+  pupCall('dau', '', q, function () { pupGirl(q); });
+  pupBlit(px, F, 1, 1);
+}
 function presFallAngle() {
   var t = pr.t, a = t < 0.7 ? (t / 0.7) * (t / 0.7) : t < 1.4 ? 1 : Math.max(0, 1 - (t - 1.4) / 0.7);
   return -pr.face * a * 1.5708;
@@ -4127,6 +4260,7 @@ function render() {
   L.push({ z: pl.z, k: 1 });
   if (prVisible()) L.push({ z: pr.z, k: 2 });
   if (baby && !baby.held) L.push({ z: baby.z, k: 3 });
+  if (G.dau) L.push({ z: G.dau.z, k: 9 });
   if (sam.vis) L.push({ z: sam.z, k: 5 });
   for (i = 0; i < foes.length; i++) L.push({ z: foes[i].z, k: 6, f: foes[i] });
   if (STAGE === 'corr') for (i = 0; i < 3; i++) L.push({ z: 300, k: 7, i: i });
@@ -4140,6 +4274,7 @@ function render() {
     else if (L[i].k === 6) drawFoe(L[i].f);
     else if (L[i].k === 7) drawShutter(L[i].i);
     else if (L[i].k === 8) drawProp(L[i].p);
+    else if (L[i].k === 9) drawDau();
     else drawBaby();
   }
   if (G.cold > 0.01) {
@@ -4285,6 +4420,12 @@ function drawHUD(c) {
     c.fillText('BEST ON SMARTPHONE', 80, 96);
     c.fillText('PC: WASD TO MOVE / SPACE TO SWING', 80, 101.5);
   }
+  if (G.dau && G.dau.st === 'bound' && G.mode === 'play' && pr.st === 'crystal' && pr.obj && !pr.obj.dead) {
+    var hd = G.dau, near = Math.abs(pl.x - hd.x) < 46 && Math.abs(pl.z - hd.z) < 22, bl = Math.floor(G.t * 3.2) % 2 === 0;
+    c.font = 'bold 6px ' + JP; c.lineJoin = 'round'; c.lineWidth = 1.6; c.strokeStyle = 'rgba(0,0,0,0.85)'; c.fillStyle = '#ffe14a';
+    if (bl || near) { c.strokeText('!', hd.x - camX, hd.z - 39); c.fillText('!', hd.x - camX, hd.z - 39); }
+    if (near && bl) { c.font = 'bold 4px ' + JP; c.lineWidth = 1.2; c.fillStyle = '#ffffff'; c.strokeText('SWING TO CUT THE ROPE', 80, 111); c.fillText('SWING TO CUT THE ROPE', 80, 111); }
+  }
   if (G.startT >= 0 && G.startT < 1.8) {
     var u = G.startT / 1.8, v = 0.5 + Math.pow((u - 0.5) * 2, 3) / 2, x = 190 - 300 * v;
     c.font = 'bold 18px ' + JP; c.lineJoin = 'round'; c.lineWidth = 2.4; c.strokeStyle = '#3a1204'; var bn = G.banner || 'START'; c.strokeText(bn, x, 58);
@@ -4296,8 +4437,8 @@ function drawHUD(c) {
     if (k > 1.3) {
       c.globalAlpha = clamp((k - 1.3) / 0.6, 0, 1);
       var by = 40 + Math.sin(G.t * 2.2) * 1.2;
-      c.font = 'bold 12px ' + JP; c.lineJoin = 'round'; c.lineWidth = 2.6; c.strokeStyle = '#ffffff'; var etxt = G.secret ? 'SECRET END' : 'HAPPY HAPPY END'; c.strokeText(etxt, 80, by);
-      c.fillStyle = G.secret ? '#ffd25a' : '#ff6f9d'; c.fillText(etxt, 80, by);
+      c.font = 'bold 12px ' + JP; c.lineJoin = 'round'; c.lineWidth = 2.6; c.strokeStyle = '#ffffff'; var etxt = G.secret ? 'ANOTHER WORLD' : (G.trueEnd ? 'TRUE END' : 'THE END'); c.strokeText(etxt, 80, by);
+      c.fillStyle = G.secret ? '#ffd25a' : (G.trueEnd ? '#ff6f9d' : '#cfe3ff'); c.fillText(etxt, 80, by);
       c.globalAlpha = 1;
       if (k > 2.2) {
         c.globalAlpha = clamp((k - 2.2) / 0.6, 0, 1); c.lineJoin = 'round';
@@ -4367,6 +4508,7 @@ function setupBoss() {
   pr.x = 141; pr.z = 99; pr.face = -1; pr.st = 'sit'; pr.t = 0; pr.fear = 0; pr.wig = true; pr.hop = 0; pr.pale = 0; pr.jt = 0; pr.scream = 0; pr.obj = null; pr.ln2 = false; G.ln = null; G.melt = null; G.cold = 0;
   baby = null; TR.length = 0; CG.length = 0; sgReset(); FW.q.length = 0; FW.sh.length = 0; FW.sp.length = 0; FW.fl = 0; G.secret = false; G.quiet = 0;
   samReset(); G.zoom = null; G.trap = 0; G.sw = 0; G.plat = 0; G.pressed = false; G.rumb = false; pl.dodgeT = 0; GHOST.length = 0; LINES.length = 0; pl.ear = false;
+  dauSetup();
 }
 function setTitleUI(on) { var el = document.getElementById('titlePoster'); if (!el) return; el.classList.toggle('off', !on); if (on) { var b = document.getElementById('titleStartBtn'); if (b) try { b.focus({ preventScroll: true }); } catch (_) {} } }
 function startIntro() { setTitleUI(false); G.mode = 'intro'; G.t = 0; G.step = 0; G.st = 0; G.elev = 0; G.pin = false; G.dsnd = false; initAudio(); loadBGM(); ambStart(); }
@@ -4395,14 +4537,14 @@ function ambTick(dt) {
   else { nz(t, 1.1, { type: 'bandpass', f: 900, f2: 600, q: 1.5, g: 0.025 }); ambT = 5 + Math.random() * 4; }
 }
 
-function startEnding() { G.mode = 'ending'; G.t = 0; G.step = 0; ctlOn = false; atkHeld = null; }
+function startEnding() { G.trueEnd = !!(G.dau && G.dau.freed); G.mode = 'ending'; G.t = 0; G.step = 0; ctlOn = false; atkHeld = null; }
 function gameUpdate(dt, rdt) {
   updCost(rdt);
   if (pl.tapFlash > 0) pl.tapFlash -= rdt;
   if (G.startT >= 0) { G.startT += rdt; if (G.startT > 2) G.startT = -1; }
   if (G.mode === 'title') { G.t += rdt; return; }
   if (!dt) return;
-  G.t += dt; G.st += dt;
+  G.t += dt; G.st += dt; updDau(dt);
   var u;
   if (G.stage === 'corr') {
     if (G.pin && pl.x > 36 && G.elev > 0) { G.elev = Math.max(0, G.elev - dt); if (G.elev === 0 && AC) { nz(AC.currentTime, 0.16, { type: 'lowpass', f: 500, f2: 150, g: 0.12 }); tn(AC.currentTime, 90, 0.2, { f2: 60, g: 0.1 }); } }
@@ -4536,6 +4678,7 @@ function gameUpdate(dt, rdt) {
   }
 }
 function resetGame() {
+  G.dau = null; G.trueEnd = false;
   build('corr'); G.stage = 'corr'; G.banner = 'START'; G.hintT = 0; G.bt = 0;
   pl.x = -20; pl.z = 108; pl.face = 1; pl.st = 'idle'; pl.bk = false; pl.pose = readyPose(); pl.cut = null; pl.cutU = 0; pl.ear = false; pl.back = false; pl.moving = false; pl.tapFlash = 0;
   pr.x = 141; pr.z = 99; pr.face = -1; pr.st = 'gone'; pr.t = 0; pr.fear = 0; pr.wig = true; pr.hop = 0; pr.pale = 0; pr.jt = 0; pr.scream = 0; pr.obj = null; pr.ln2 = false; G.ln = null; G.melt = null;
