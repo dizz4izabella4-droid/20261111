@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b1030">
+<title>実験室 — izのおもちゃ箱</title>
+<script>try{ if(navigator.audioSession) navigator.audioSession.type="ambient"; }catch(e){}</script>
+<meta name="description" content="　">
+<meta property="og:title" content="izのおもちゃ箱">
+<meta property="og:description" content="　">
+<style>
+/* 実験室: テスト段階の作品を置く部屋。おもちゃ箱（トップ）の最下部の扉から入る。作品は下の LAB に書く（新しいものが上） */
+:root{
+  --ink:#e8f0ff; --ink2:#9fb0d8; --glow:#7dff8a; --amber:#ffc65a;
+  --pink:#ff8fb8; --pinkD:#e8668f; --mint:#6fd6b8; --mintD:#3fb393; --lav:#b39cf2; --lavD:#8e72e0; --lemon:#ffd66b; --lemonD:#f0b93a;
+  --ja: "Yu Gothic UI","游ゴシック","YuGothic","Hiragino Sans","ヒラギノ角ゴシック","Hiragino Kaku Gothic ProN",Meiryo,"Noto Sans JP",sans-serif;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{font-family:var(--ja);color:var(--ink);background:#0b1030;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:max(18px,env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-bottom,0px));
+  -webkit-tap-highlight-color:transparent;overflow-x:hidden}
+/* 背景: 実験室のドット絵。画面に固定（iPhone でも効くよう、固定した要素に貼る） */
+#bg{position:fixed;inset:0;z-index:0;background:#0b1030 url(lab-bg.jpg) center 30%/cover no-repeat;image-rendering:pixelated}
+#bg::after{content:"";position:absolute;inset:0;background:
+  linear-gradient(180deg,rgba(6,8,28,.55) 0%,rgba(6,8,28,.1) 22%,rgba(6,8,28,.15) 60%,rgba(6,8,28,.78) 100%)}
+/* 稲光: ときどき青白く光る */
+#flash{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse at 25% 15%,rgba(170,200,255,.55),rgba(120,150,255,0) 60%);opacity:0;mix-blend-mode:screen}
+#flash.go{animation:fl .9s steps(6,end)}
+@keyframes fl{0%{opacity:0}10%{opacity:1}22%{opacity:.15}34%{opacity:.85}60%{opacity:.1}100%{opacity:0}}
+.wrap{position:relative;z-index:2;max-width:540px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+/* 名札: 古い真鍮のプレート */
+header{display:flex;flex-direction:column;align-items:center;gap:6px;padding-top:8px;text-align:center}
+.plate{margin:0;padding:8px 26px 9px;background:linear-gradient(180deg,#c9a14e,#8c6624);color:#2a1806;border:2px solid #3b2508;
+  box-shadow:0 0 0 2px #e6c77a inset,0 6px 0 #3b2508,0 12px 26px rgba(0,0,0,.5);font:800 clamp(22px,6.4vw,30px) var(--ja);letter-spacing:.4em;padding-right:calc(26px - .4em)}
+.lead{font:700 11px var(--ja);letter-spacing:.12em;color:var(--ink2);text-shadow:0 1px 2px #000;padding:3px 10px;background:rgba(6,8,28,.55)}
+/* カード: 標本ケースのような暗いガラス。選ぶと緑に光る */
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.app{--c:var(--pink);--cD:var(--pinkD);
+  position:relative;display:flex;align-items:center;gap:12px;padding:9px 12px 9px 9px;color:inherit;text-decoration:none;
+  background:rgba(8,12,36,.5);border:2px solid rgba(160,190,255,.45);border-radius:6px;
+  box-shadow:0 4px 0 rgba(0,0,0,.35),0 10px 22px rgba(0,0,0,.45);transition:transform .18s cubic-bezier(.3,1.6,.5,1),border-color .18s,box-shadow .18s,background .18s;
+  opacity:0;transform:translateY(14px)}
+.app.mint{--c:var(--mint);--cD:var(--mintD)}.app.lav{--c:var(--lav);--cD:var(--lavD)}.app.lemon{--c:var(--lemon);--cD:var(--lemonD)}
+.app.show{opacity:1;transform:none;transition:opacity .35s,transform .45s cubic-bezier(.3,1.6,.5,1),border-color .18s,box-shadow .18s,background .18s}
+.app.sel,.app:hover,.app:focus-visible{border-color:var(--glow);background:rgba(10,30,30,.55);box-shadow:0 0 14px rgba(125,255,138,.45),0 10px 22px rgba(0,0,0,.45);transform:translateY(-2px);outline:none}
+.app:active{transform:translateY(2px)}
+.icon{flex:none;width:48px;height:48px;border-radius:8px;background:var(--c);display:grid;place-items:center;box-shadow:inset 0 -4px 0 var(--cD)}
+.icon svg{width:32px;height:32px}
+.txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;padding:6px 11px;border-radius:4px;background:rgba(6,8,24,.86)}
+.en{font-size:10px;font-weight:700;color:var(--ink2);letter-spacing:.08em;line-height:1.3}
+.ds{font-size:15px;font-weight:700;color:#f2f6ff;letter-spacing:.04em}
+.dt{width:fit-content;margin:4px auto 0 10px;font-size:7px;line-height:1.4;color:rgba(255,255,255,.62);text-shadow:0 0 3px rgba(0,0,0,.9);letter-spacing:.03em}
+.go{flex:none;width:28px;height:28px;border-radius:50%;background:var(--c);display:grid;place-items:center;box-shadow:0 3px 0 var(--cD)}
+.go svg{width:13px;height:13px}
+footer{text-align:center;font-size:12px;font-weight:700;color:var(--ink2);letter-spacing:.08em;display:flex;flex-direction:column;gap:4px;text-shadow:0 1px 2px #000}
+footer .keys{opacity:.8}
+/* 出口: おもちゃ箱へ戻る小さな扉（最下部・中央） */
+.exit{display:flex;flex-direction:column;align-items:center;gap:4px;width:fit-content;margin:22px auto 0;padding:8px 14px 6px;color:var(--ink2);text-decoration:none;border-radius:6px;opacity:.85;background:rgba(6,8,28,.5);transition:opacity .2s,background .2s}
+.exit svg{width:32px;height:36px;image-rendering:pixelated;transform:scaleX(-1)}
+.exit span{font:700 11px var(--ja);letter-spacing:.14em;text-shadow:0 1px 2px #000}
+.exit:hover,.exit:focus-visible{opacity:1;background:rgba(6,8,28,.6);outline:none}
+.byiz{position:fixed;z-index:3;right:max(12px,env(safe-area-inset-right,0px));bottom:max(10px,env(safe-area-inset-bottom,0px));
+  font:italic 600 12px/1 "Times New Roman","Liberation Serif",serif;letter-spacing:.08em;color:var(--ink2);opacity:.6;pointer-events:none}
+@media (max-width:480px){ .app{gap:10px} .ds{font-size:14px} footer .keys{display:none} }
+@media (prefers-reduced-motion:reduce){ .app,.app.show{opacity:1;transform:none;transition:none} #flash{display:none} }
+</style>
+<!--IZ-GAME-BASE:START-->
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black">
+<script>
+/* iz-game-base v1 — 全ゲーム共通の基本設計
+ *  1. iOS の「ダブルタップで拡大」「ピンチ拡大」を無効にする
+ *  2. 全画面表示の切り替え（Fullscreen API。iPhone は非対応のため「ホーム画面に追加」を案内）
+ *  3. 画面の向き（自動 / 縦 / 横）の選択（Androidは全画面時に固定、非対応端末は回転の案内を出す）
+ * 各作品の <head> へ tools/apply_game_base.py が埋め込む（作品は1ファイル完結のため、外部読み込みはしない）。
+ * 位置を変えたいときは、この前に window.IZ_BASE={pos:'tr'|'tl'|'br'|'bl'} を書く。
+ */
+(function () {
+  'use strict';
+  if (window.__izGameBase) return;
+  window.__izGameBase = 1;
+  var D = document, W = window, DE = D.documentElement;
+  var KEY = 'izGameBase.orient';
+  var cfg = W.IZ_BASE || {};
+  /* 表示文言。作品側で window.IZ_BASE={lang:'en'} を書くと英語になる（既定は日本語） */
+  var T = cfg.lang === 'en'
+    ? { set: 'Display settings', scr: 'SCREEN', fs: 'Go full screen', fsOff: 'Exit full screen', ori: 'ORIENTATION', auto: 'Auto', port: 'Portrait', land: 'Landscape', close: 'Close', nAuto: 'Follows your device orientation.', nFix: 'Locks the orientation in full screen. If it cannot be locked, please rotate your device.', rot: function (m) { return '\u21bb Please turn your device to ' + (m === 'land' ? 'landscape' : 'portrait'); } }
+    : { set: '表示設定', scr: '画面', fs: '全画面にする', fsOff: '全画面をやめる', ori: '向き', auto: '自動', port: '縦', land: '横', close: '閉じる', nAuto: '端末の向きに合わせます。', nFix: '全画面のときに向きを固定します。固定できない場合は、端末を回してください。', rot: function (m) { return '\u21bb 端末を' + (m === 'land' ? '横' : '縦') + '向きにしてください'; } };
+
+  /* ---------- 1. 拡大の無効化 ---------- */
+  function fixViewport() {
+    var m = D.querySelector('meta[name="viewport"]');
+    if (!m) {
+      m = D.createElement('meta');
+      m.name = 'viewport';
+      (D.head || DE).appendChild(m);
+      m.content = 'width=device-width,initial-scale=1,viewport-fit=cover';
+    }
+    var c = m.getAttribute('content') || '';
+    c = c.replace(/(^|,)\s*(maximum-scale|minimum-scale|user-scalable)\s*=\s*[^,]*/gi, '').replace(/^,/, '');
+    m.setAttribute('content', c + ',maximum-scale=1,user-scalable=no');
+  }
+  fixViewport();
+
+  var st = D.createElement('style');
+  st.textContent = 'html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}';
+  (D.head || DE).appendChild(st);
+
+  // iOS Safari はピンチを gesture イベントで受ける
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (t) {
+    D.addEventListener(t, function (e) { e.preventDefault(); }, { passive: false });
+  });
+  // 2本指の拡大（scale が 1 から動いたとき）だけを止める。マルチタッチ操作そのものは妨げない
+  D.addEventListener('touchmove', function (e) {
+    if (e.touches && e.touches.length > 1 && e.scale && e.scale !== 1) e.preventDefault();
+  }, { passive: false });
+  // ダブルタップ拡大の保険。ボタン・入力欄などは click を壊さないよう除外し、CSS の touch-action に任せる
+  var lastEnd = 0;
+  var SKIP = 'input,textarea,select,button,a,label,summary,video,audio,[contenteditable],[role="button"],[data-iz-base-ui]';
+  D.addEventListener('touchend', function (e) {
+    var now = Date.now();
+    var t = e.target;
+    var skip = t && t.closest && t.closest(SKIP);
+    if (!skip && now - lastEnd < 350 && e.cancelable) e.preventDefault();
+    lastEnd = now;
+  }, { passive: false });
+
+  /* ---------- 2・3. 全画面と向き ---------- */
+  var fsEl = DE;
+  var fsReq = fsEl.requestFullscreen || fsEl.webkitRequestFullscreen || fsEl.msRequestFullscreen;
+  var fsOk = !!fsReq && (D.fullscreenEnabled !== false) && (D.webkitFullscreenEnabled !== false);
+  function isFs() { return !!(D.fullscreenElement || D.webkitFullscreenElement); }
+  function standalone() {
+    return !!(navigator.standalone || (W.matchMedia && W.matchMedia('(display-mode: standalone)').matches));
+  }
+  function enterFs() {
+    try {
+      var p = fsReq.call(fsEl, { navigationUI: 'hide' });
+      if (p && p.catch) p.catch(function () {});
+      return p;
+    } catch (e) { return null; }
+  }
+  function exitFs() {
+    var f = D.exitFullscreen || D.webkitExitFullscreen || D.msExitFullscreen;
+    try { var p = f && f.call(D); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+  }
+  function lockApi() { return W.screen && screen.orientation && screen.orientation.lock; }
+  // 変更できない機能は表示しない（iPhone は両方とも不可なので、ボタン自体を出さない）
+  var orOk = !!lockApi() && (navigator.maxTouchPoints > 0);
+  var uiOk = fsOk || orOk;
+  function applyOrient(mode, wantFs) {
+    // 戻り値は使わず、結果は banner() が画面の向きで判定する
+    if (mode === 'auto') {
+      try { if (W.screen && screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (e) {}
+      return;
+    }
+    var tgt = mode === 'land' ? 'landscape' : 'portrait';
+    function lock() {
+      if (!lockApi()) return;
+      try { var p = screen.orientation.lock(tgt); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+    }
+    if (isFs() || standalone()) lock();
+    else if (wantFs && fsOk) {
+      var p = enterFs();
+      if (p && p.then) p.then(lock, function () {}); else lock();
+    }
+  }
+  var mode = 'auto';
+  try { mode = localStorage.getItem(KEY) || 'auto'; } catch (e) {}
+  if ((mode !== 'land' && mode !== 'port') || !orOk) mode = 'auto';
+
+  /* ---------- UI ---------- */
+  var ui, btn, panel, banner, bT;
+  var pos = cfg.pos || 'tr';
+  function build() {
+    if (ui || !D.body || !uiOk) return;
+    var css = D.createElement('style');
+    css.textContent =
+      '#izb{position:fixed;z-index:2147483646;font:12px/1.4 "Hiragino Sans","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;color:#fff;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}' +
+      '#izb *{box-sizing:border-box}' +
+      '#izb.tr{top:calc(6px + env(safe-area-inset-top,0px));right:calc(6px + env(safe-area-inset-right,0px))}' +
+      '#izb.tl{top:calc(6px + env(safe-area-inset-top,0px));left:calc(6px + env(safe-area-inset-left,0px))}' +
+      '#izb.br{bottom:calc(6px + env(safe-area-inset-bottom,0px));right:calc(6px + env(safe-area-inset-right,0px))}' +
+      '#izb.bl{bottom:calc(6px + env(safe-area-inset-bottom,0px));left:calc(6px + env(safe-area-inset-left,0px))}' +
+      '#izb button{font:inherit;color:inherit;border:0;margin:0;cursor:pointer;-webkit-appearance:none;appearance:none}' +
+      '#izb .iz-b{width:30px;height:30px;border-radius:8px;background:rgba(20,20,24,.45);border:1px solid rgba(255,255,255,.25);font-size:16px;line-height:28px;text-align:center;padding:0;opacity:.45;transition:opacity .2s}' +
+      '#izb .iz-b:active,#izb.open .iz-b{opacity:1}' +
+      '#izb .iz-p{display:none;position:absolute;width:210px;padding:10px;border-radius:10px;background:rgba(18,18,22,.94);border:1px solid rgba(255,255,255,.22);box-shadow:0 4px 18px rgba(0,0,0,.5)}' +
+      '#izb.open .iz-p{display:block}' +
+      '#izb.tr .iz-p,#izb.tl .iz-p{top:36px}#izb.br .iz-p,#izb.bl .iz-p{bottom:36px}' +
+      '#izb.tr .iz-p,#izb.br .iz-p{right:0}#izb.tl .iz-p,#izb.bl .iz-p{left:0}' +
+      '#izb .iz-h{font-size:11px;color:#aab;margin:0 0 5px}' +
+      '#izb .iz-r{display:flex;gap:4px;margin-bottom:9px}' +
+      '#izb .iz-r button{flex:1;padding:8px 0;border-radius:7px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);font-size:13px}' +
+      '#izb .iz-r button.on{background:#e8c13a;color:#111;border-color:#e8c13a;font-weight:700}' +
+      '#izb .iz-r button[disabled]{opacity:.4}' +
+      '#izb .iz-n{font-size:10.5px;color:#9a9aa8;margin:-3px 0 6px}' +
+      '#izb .iz-x{display:block;width:100%;padding:6px 0;border-radius:7px;background:transparent;border:1px solid rgba(255,255,255,.18);font-size:12px;color:#ccd}' +
+      '#izbn{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:2147483645;padding:7px 14px;border-radius:18px;background:rgba(18,18,22,.88);border:1px solid rgba(255,255,255,.25);color:#fff;font:13px/1.3 "Hiragino Sans","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;pointer-events:none;display:none;white-space:nowrap}';
+    (D.head || DE).appendChild(css);
+
+    ui = D.createElement('div');
+    ui.id = 'izb';
+    ui.className = pos;
+    ui.setAttribute('data-iz-base-ui', '');
+    ui.innerHTML =
+      '<button type="button" class="iz-b" tabindex="-1" aria-label="' + T.set + '">⛶</button>' +
+      '<div class="iz-p">' +
+      (fsOk ? '<div class="iz-h">' + T.scr + '</div><div class="iz-r"><button type="button" tabindex="-1" data-fs="1">' + T.fs + '</button></div>' : '') +
+      (orOk ? '<div class="iz-h">' + T.ori + '</div><div class="iz-r" id="izor"><button type="button" tabindex="-1" data-o="auto">' + T.auto + '</button><button type="button" tabindex="-1" data-o="port">' + T.port + '</button><button type="button" tabindex="-1" data-o="land">' + T.land + '</button></div><div class="iz-n" id="izon"></div>' : '') +
+      '<button type="button" class="iz-x" tabindex="-1" data-close="1">' + T.close + '</button>' +
+      '</div>';
+    D.body.appendChild(ui);
+    btn = ui.querySelector('.iz-b');
+    panel = ui.querySelector('.iz-p');
+
+    banner = D.createElement('div');
+    banner.id = 'izbn';
+    D.body.appendChild(banner);
+
+    // UI 上の操作はゲーム側へ伝えない
+    ['touchstart', 'touchend', 'pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'dblclick', 'keydown', 'keyup'].forEach(function (t) {
+      ui.addEventListener(t, function (e) { e.stopPropagation(); });
+    });
+    ui.addEventListener('click', function (e) {
+      var t = e.target.closest('button');
+      if (!t) return;
+      if (t === btn) { ui.classList.toggle('open'); refresh(); }
+      else if (t.getAttribute('data-close')) ui.classList.remove('open');
+      else if (t.getAttribute('data-fs')) { isFs() ? exitFs() : enterFs(); setTimeout(refresh, 250); }
+      else if (t.getAttribute('data-o')) setMode(t.getAttribute('data-o'), true);
+      if (t.blur) t.blur();
+    });
+    refresh();
+  }
+  function setMode(m, fromUser) {
+    mode = m;
+    try { localStorage.setItem(KEY, m); } catch (e) {}
+    applyOrient(m, fromUser);
+    refresh();
+    setTimeout(banner_, 400);
+  }
+  function refresh() {
+    if (!ui) return;
+    var fb = ui.querySelector('[data-fs]');
+    if (fb) fb.textContent = isFs() ? T.fsOff : T.fs;
+    var bs = ui.querySelectorAll('[data-o]');
+    for (var i = 0; i < bs.length; i++) bs[i].classList.toggle('on', bs[i].getAttribute('data-o') === mode);
+    var on = ui.querySelector('#izon');
+    if (on) on.textContent = mode === 'auto' ? T.nAuto : T.nFix;
+  }
+  function banner_() {
+    if (!banner) return;
+    var land = W.innerWidth > W.innerHeight;
+    var bad = (mode === 'land' && !land) || (mode === 'port' && land);
+    if (bad) {
+      banner.textContent = T.rot(mode);
+      banner.style.display = 'block';
+      clearTimeout(bT);
+      bT = setTimeout(function () { banner.style.display = 'none'; }, 6000);
+    } else banner.style.display = 'none';
+  }
+  function onChange() { refresh(); setTimeout(banner_, 300); }
+  D.addEventListener('fullscreenchange', onChange);
+  D.addEventListener('webkitfullscreenchange', onChange);
+  W.addEventListener('orientationchange', onChange);
+  W.addEventListener('resize', function () { setTimeout(banner_, 300); });
+
+  function init() {
+    build();
+    if (mode !== 'auto') { applyOrient(mode, false); setTimeout(banner_, 600); }
+  }
+  if (D.body) init(); else D.addEventListener('DOMContentLoaded', init);
+
+  W.IZBase = { fullscreen: function (on) { on === false ? exitFs() : enterFs(); }, orientation: setMode, get mode() { return mode; } };
+})();
+</script>
+<!--IZ-GAME-BASE:END-->
+</head>
+<body>
+<div id="bg" aria-hidden="true"></div>
+<div id="flash" aria-hidden="true"></div>
+<div class="wrap">
+  <header><h1 class="plate">実験室</h1><div class="lead">テスト段階の作品</div></header>
+  <ul class="list" id="list" aria-label="実験室の作品"></ul>
+  <footer><span id="count"></span><span class="keys">↑↓ でえらんで Enter であそぶ</span></footer>
+  <a class="exit" href="../" aria-label="おもちゃ箱へもどる" title="おもちゃ箱へもどる"><svg viewBox="0 0 16 18" shape-rendering="crispEdges" aria-hidden="true"><rect x="5" y="0" width="6" height="1" fill="#4f4a43"/><rect x="3" y="1" width="2" height="1" fill="#4f4a43"/><rect x="5" y="1" width="1" height="1" fill="#7d776c"/><rect x="6" y="1" width="1" height="1" fill="#6f8a4a"/><rect x="7" y="1" width="4" height="1" fill="#7d776c"/><rect x="11" y="1" width="2" height="1" fill="#4f4a43"/><rect x="2" y="2" width="1" height="1" fill="#4f4a43"/><rect x="3" y="2" width="3" height="1" fill="#7d776c"/><rect x="6" y="2" width="4" height="1" fill="#1e140e"/><rect x="10" y="2" width="3" height="1" fill="#7d776c"/><rect x="13" y="2" width="1" height="1" fill="#4f4a43"/><rect x="1" y="3" width="1" height="1" fill="#4f4a43"/><rect x="2" y="3" width="2" height="1" fill="#7d776c"/><rect x="4" y="3" width="2" height="1" fill="#1e140e"/><rect x="6" y="3" width="4" height="1" fill="#8b5a2b"/><rect x="10" y="3" width="2" height="1" fill="#1e140e"/><rect x="12" y="3" width="2" height="1" fill="#7d776c"/><rect x="14" y="3" width="1" height="1" fill="#4f4a43"/><rect x="1" y="4" width="1" height="1" fill="#4f4a43"/><rect x="2" y="4" width="1" height="1" fill="#7d776c"/><rect x="3" y="4" width="1" height="1" fill="#1e140e"/><rect x="4" y="4" width="2" height="1" fill="#8b5a2b"/><rect x="6" y="4" width="1" height="1" fill="#4a2c14"/><rect x="7" y="4" width="2" height="1" fill="#8b5a2b"/><rect x="9" y="4" width="1" height="1" fill="#4a2c14"/><rect x="10" y="4" width="2" height="1" fill="#8b5a2b"/><rect x="12" y="4" width="1" height="1" fill="#1e140e"/><rect x="13" y="4" width="1" height="1" fill="#7d776c"/><rect x="14" y="4" width="1" height="1" fill="#4f4a43"/><rect x="0" y="5" width="1" height="1" fill="#4f4a43"/><rect x="1" y="5" width="2" height="1" fill="#7d776c"/><rect x="3" y="5" width="1" height="1" fill="#1e140e"/><rect x="4" y="5" width="2" height="1" fill="#8b5a2b"/><rect x="6" y="5" width="1" height="1" fill="#4a2c14"/><rect x="7" y="5" width="2" height="1" fill="#8b5a2b"/><rect x="9" y="5" width="1" height="1" fill="#4a2c14"/><rect x="10" y="5" width="2" height="1" fill="#8b5a2b"/><rect x="12" y="5" width="1" height="1" fill="#1e140e"/><rect x="13" y="5" width="2" height="1" fill="#7d776c"/><rect x="15" y="5" width="1" height="1" fill="#4f4a43"/><rect x="0" y="6" width="1" height="1" fill="#4f4a43"/><rect x="1" y="6" width="1" height="1" fill="#7d776c"/><rect x="2" y="6" width="1" height="1" fill="#1e140e"/><rect x="3" y="6" width="1" height="1" fill="#3d3d44"/><rect x="4" y="6" width="1" height="1" fill="#b8b8c0"/><rect x="5" y="6" width="6" height="1" fill="#3d3d44"/><rect x="11" y="6" width="1" height="1" fill="#b8b8c0"/><rect x="12" y="6" width="1" height="1" fill="#3d3d44"/><rect x="13" y="6" width="1" height="1" fill="#1e140e"/><rect x="14" y="6" width="1" height="1" fill="#7d776c"/><rect x="15" y="6" width="1" height="1" fill="#4f4a43"/><rect x="0" y="7" width="1" height="1" fill="#4f4a43"/><rect x="1" y="7" width="1" height="1" fill="#7d776c"/><rect x="2" y="7" width="1" height="1" fill="#1e140e"/><rect x="3" y="7" width="3" height="1" fill="#8b5a2b"/><rect x="6" y="7" width="1" height="1" fill="#4a2c14"/><rect x="7" y="7" width="2" height="1" fill="#8b5a2b"/><rect x="9" y="7" width="1" height="1" fill="#4a2c14"/><rect x="10" y="7" width="3" height="1" fill="#8b5a2b"/><rect x="13" y="7" width="1" height="1" fill="#1e140e"/><rect x="14" y="7" width="1" height="1" fill="#7d776c"/><rect x="15" y="7" width="1" height="1" fill="#4f4a43"/><rect x="0" y="8" width="1" height="1" fill="#4f4a43"/><rect x="1" y="8" width="1" height="1" fill="#7d776c"/><rect x="2" y="8" width="1" height="1" fill="#1e140e"/><rect x="3" y="8" width="3" height="1" fill="#8b5a2b"/><rect x="6" y="8" width="1" height="1" fill="#4a2c14"/><rect x="7" y="8" width="2" height="1" fill="#8b5a2b"/><rect x="9" y="8" width="1" height="1" fill="#4a2c14"/><rect x="10" y="8" width="3" height="1" fill="#8b5a2b"/><rect x="13" y="8" width="1" height="1" fill="#1e140e"/><rect x="14" y="8" width="1" height="1" fill="#7d776c"/><rect x="15" y="8" width="1" height="1" fill="#4f4a43"/><rect x="0" y="9" width="1" height="1" fill="#4f4a43"/><rect x="1" y="9" width="1" height="1" fill="#6f8a4a"/><rect x="2" y="9" width="1" height="1" fill="#1e140e"/><rect x="3" y="9" width="3" height="1" fill="#8b5a2b"/><rect x="6" y="9" width="1" height="1" fill="#4a2c14"/><rect x="7" y="9" width="2" height="1" fill="#8b5a2b"/><rect x="9" y="9" width="1" height="1" fill="#4a2c14"/><rect x="10" y="9" width="1" height="1" fill="#8b5a2b"/><rect x="11" y="9" width="1" height="1" fill="#e0b84a"/><rect x="12" y="9" width="1" height="1" fill="#8b5a2b"/><rect x="13" y="9" width="1" height="1" fill="#1e140e"/><rect x="14" y="9" width="1" height="1" fill="#7d776c"/><rect x="15" y="9" width="1" height="1" fill="#4f4a43"/><rect x="0" y="10" width="1" height="1" fill="#4f4a43"/><rect x="1" y="10" width="1" height="1" fill="#7d776c"/><rect x="2" y="10" width="1" height="1" fill="#1e140e"/><rect x="3" y="10" width="3" height="1" fill="#8b5a2b"/><rect x="6" y="10" width="1" height="1" fill="#4a2c14"/><rect x="7" y="10" width="2" height="1" fill="#8b5a2b"/><rect x="9" y="10" width="1" height="1" fill="#4a2c14"/><rect x="10" y="10" width="1" height="1" fill="#e0b84a"/><rect x="11" y="10" width="1" height="1" fill="#8b5a2b"/><rect x="12" y="10" width="1" height="1" fill="#e0b84a"/><rect x="13" y="10" width="1" height="1" fill="#1e140e"/><rect x="14" y="10" width="1" height="1" fill="#7d776c"/><rect x="15" y="10" width="1" height="1" fill="#4f4a43"/><rect x="0" y="11" width="1" height="1" fill="#4f4a43"/><rect x="1" y="11" width="1" height="1" fill="#7d776c"/><rect x="2" y="11" width="1" height="1" fill="#1e140e"/><rect x="3" y="11" width="3" height="1" fill="#8b5a2b"/><rect x="6" y="11" width="1" height="1" fill="#4a2c14"/><rect x="7" y="11" width="2" height="1" fill="#8b5a2b"/><rect x="9" y="11" width="1" height="1" fill="#4a2c14"/><rect x="10" y="11" width="1" height="1" fill="#8b5a2b"/><rect x="11" y="11" width="1" height="1" fill="#e0b84a"/><rect x="12" y="11" width="1" height="1" fill="#8b5a2b"/><rect x="13" y="11" width="1" height="1" fill="#1e140e"/><rect x="14" y="11" width="1" height="1" fill="#7d776c"/><rect x="15" y="11" width="1" height="1" fill="#4f4a43"/><rect x="0" y="12" width="1" height="1" fill="#4f4a43"/><rect x="1" y="12" width="1" height="1" fill="#7d776c"/><rect x="2" y="12" width="1" height="1" fill="#1e140e"/><rect x="3" y="12" width="1" height="1" fill="#3d3d44"/><rect x="4" y="12" width="1" height="1" fill="#b8b8c0"/><rect x="5" y="12" width="6" height="1" fill="#3d3d44"/><rect x="11" y="12" width="1" height="1" fill="#b8b8c0"/><rect x="12" y="12" width="1" height="1" fill="#3d3d44"/><rect x="13" y="12" width="1" height="1" fill="#1e140e"/><rect x="14" y="12" width="1" height="1" fill="#6f8a4a"/><rect x="15" y="12" width="1" height="1" fill="#4f4a43"/><rect x="0" y="13" width="1" height="1" fill="#4f4a43"/><rect x="1" y="13" width="1" height="1" fill="#7d776c"/><rect x="2" y="13" width="1" height="1" fill="#1e140e"/><rect x="3" y="13" width="3" height="1" fill="#8b5a2b"/><rect x="6" y="13" width="1" height="1" fill="#4a2c14"/><rect x="7" y="13" width="2" height="1" fill="#8b5a2b"/><rect x="9" y="13" width="1" height="1" fill="#4a2c14"/><rect x="10" y="13" width="3" height="1" fill="#8b5a2b"/><rect x="13" y="13" width="1" height="1" fill="#1e140e"/><rect x="14" y="13" width="1" height="1" fill="#7d776c"/><rect x="15" y="13" width="1" height="1" fill="#4f4a43"/><rect x="0" y="14" width="1" height="1" fill="#4f4a43"/><rect x="1" y="14" width="1" height="1" fill="#7d776c"/><rect x="2" y="14" width="1" height="1" fill="#1e140e"/><rect x="3" y="14" width="3" height="1" fill="#8b5a2b"/><rect x="6" y="14" width="1" height="1" fill="#4a2c14"/><rect x="7" y="14" width="2" height="1" fill="#8b5a2b"/><rect x="9" y="14" width="1" height="1" fill="#4a2c14"/><rect x="10" y="14" width="3" height="1" fill="#8b5a2b"/><rect x="13" y="14" width="1" height="1" fill="#1e140e"/><rect x="14" y="14" width="1" height="1" fill="#7d776c"/><rect x="15" y="14" width="1" height="1" fill="#4f4a43"/><rect x="0" y="15" width="1" height="1" fill="#4f4a43"/><rect x="1" y="15" width="1" height="1" fill="#7d776c"/><rect x="2" y="15" width="1" height="1" fill="#1e140e"/><rect x="3" y="15" width="3" height="1" fill="#8b5a2b"/><rect x="6" y="15" width="1" height="1" fill="#4a2c14"/><rect x="7" y="15" width="2" height="1" fill="#8b5a2b"/><rect x="9" y="15" width="1" height="1" fill="#4a2c14"/><rect x="10" y="15" width="3" height="1" fill="#8b5a2b"/><rect x="13" y="15" width="1" height="1" fill="#1e140e"/><rect x="14" y="15" width="1" height="1" fill="#7d776c"/><rect x="15" y="15" width="1" height="1" fill="#4f4a43"/><rect x="0" y="16" width="2" height="1" fill="#4f4a43"/><rect x="2" y="16" width="12" height="1" fill="#1e140e"/><rect x="14" y="16" width="2" height="1" fill="#4f4a43"/><rect x="0" y="17" width="1" height="1" fill="#7d776c"/><rect x="1" y="17" width="14" height="1" fill="#4f4a43"/><rect x="15" y="17" width="1" height="1" fill="#7d776c"/></svg><span>おもちゃ箱へ</span></a>
+</div>
+<div class="byiz">by iz</div>
+<script>
+// ===== 実験室の作品（テスト段階）=====
+// 書き方はトップ（../index.html）の APPS と同じ。path はトップから見た場所ではなく、この部屋から見た場所（../フォルダ名/）
+// ある程度完成したら、ここから消してトップの APPS に移す
+const LAB=[
+  {path:'../pc98-novel/', ja:'土台（未完）', label:'PC98ノベル test ver.（土台・未完）', name:'PC98 NOVEL', color:'mint', icon:'novel',
+   start:'2026-11-14', upd:'2026-11-14', ver:'0.1'},
+  {path:'../fire-hakoniwa/', ja:'燃やし尽くす（未完）', label:'伸びるヒゲ2 test ver.（燃やし尽くす・未完）', name:'NOBIRU HIGE2', color:'pink', icon:'flame',
+   start:'2026-11-13', upd:'2026-11-14', ver:'0.2'},
+  {path:'../where-which/', ja:'ことばのいみ（開発休止）', label:'ウェア・ウィッチ test ver.（ことばのいみ・開発休止）', name:'WHERE WHICH', color:'mint', icon:'star',
+   start:'2026-11-13', upd:'2026-11-13', ver:'0.2', stopped:true},
+  {path:'../icarus/', ja:'雰囲気だけ（未完）', label:'イカロス〜蝋で固めた鳥の羽〜 test ver.（雰囲気だけ・未完）', name:'ICARUS', color:'lav', icon:'wing',
+   start:'2026-11-12', upd:'2026-11-13', ver:'1.0'},
+];
+const ICONS={
+  novel:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="7" width="38" height="28" rx="3" fill="rgba(255,255,255,.25)"/><path d="M11 22h26v8H11zM15 26h12M18 41h12M24 35v6"/></svg>',
+  wing:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 34C8 18 20 8 42 8c-2 12-10 22-24 24l-6 8z" fill="rgba(255,255,255,.25)"/><path d="M16 28c6-2 12-8 18-16M22 30c4-2 9-6 13-12"/></svg>',
+  flame:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M24 5c2 8 11 12 11 23a11 11 0 0 1-22 0c0-5 3-8 5-11 1 4 3 5 4 5 0-6 0-11 2-17z" fill="rgba(255,255,255,.25)"/></svg>',
+  star:'<svg viewBox="0 0 48 48" fill="#fff"><path d="M24 6l5.5 11.6 12.5 1.7-9.2 8.7 2.3 12.5L24 34.4 12.9 40.5l2.3-12.5L6 19.3l12.5-1.7z"/></svg>'
+};
+const GO='<svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l5 5-5 5"/></svg>';
+const $=id=>document.getElementById(id), reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+let sel=0, ac=null;
+function audio(){ if(!ac){ try{ ac=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(ac&&ac.state==='suspended') ac.resume(); return ac; }
+function tone(f,t,d,v,type){ if(!ac) return; const o=ac.createOscillator(), g=ac.createGain(), s=ac.currentTime+t; o.type=type||'sine'; o.frequency.setValueAtTime(f,s);
+  g.gain.setValueAtTime(0,s); g.gain.linearRampToValueAtTime(v,s+.01); g.gain.exponentialRampToValueAtTime(.0001,s+d); o.connect(g).connect(ac.destination); o.start(s); o.stop(s+d+.02); }
+const items=LAB.map((a,i)=>{
+  const li=document.createElement('li'), el=document.createElement('a');
+  el.className='app '+(a.color||'pink'); el.href=a.path; el.setAttribute('aria-label',a.label||a.ja);
+  el.innerHTML='<span class="icon">'+(ICONS[a.icon]||ICONS.star)+'</span>';
+  const tx=document.createElement('span'); tx.className='txt';
+  const en=document.createElement('span'); en.className='en'; en.textContent=a.name;
+  const ds=document.createElement('span'); ds.className='ds'; ds.textContent=a.ja;
+  tx.append(en,ds); el.appendChild(tx);
+  const go=document.createElement('span'); go.className='go'; go.innerHTML=GO; el.appendChild(go);
+  el.addEventListener('mouseenter',()=>{ sel=i; mark(); });
+  el.addEventListener('click',e=>{ e.preventDefault(); launch(i); });
+  li.appendChild(el);
+  const f=d=>d.replace(/-/g,'.'), t=[]; if(a.start) t.push('開始 '+f(a.start)); if(a.upd) t.push('更新 '+f(a.upd)); if(a.ver) t.push('Ver.'+a.ver); if(a.stopped) t.push('開発中止');
+  if(t.length){ const dt=document.createElement('div'); dt.className='dt'; dt.textContent=t.join(' ／ '); li.appendChild(dt); }
+  $('list').appendChild(li); return el;
+});
+function mark(){ items.forEach((el,i)=>el.classList.toggle('sel',i===sel)); }
+function launch(i){ sel=i; mark(); if(audio()){ [392,523,659].forEach((f,k)=>tone(f,k*.07,.35,.07,'triangle')); } setTimeout(()=>{ location.href=LAB[i].path; },reduce?0:260); }
+$('count').textContent='ぜんぶで '+LAB.length+' こ';
+items.forEach((el,i)=>setTimeout(()=>el.classList.add('show'),reduce?0:150+i*120));
+mark();
+document.addEventListener('keydown',e=>{
+  if(e.ctrlKey||e.metaKey||e.altKey) return;
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){ e.preventDefault(); sel=(sel+(e.key==='ArrowDown'?1:-1)+items.length)%items.length; mark(); items[sel].focus(); }
+  else if(e.key==='Enter'&&(document.activeElement===document.body||items.includes(document.activeElement))){ e.preventDefault(); launch(items.includes(document.activeElement)?items.indexOf(document.activeElement):sel); }
+});
+// 稲光: 5〜11秒おきに1回
+if(!reduce){ const fl=$('flash'); (function next(){ setTimeout(()=>{ fl.classList.remove('go'); void fl.offsetWidth; fl.classList.add('go'); next(); },5000+Math.random()*6000); })(); }
+</script>
+</body>
+</html>
