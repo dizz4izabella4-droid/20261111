@@ -255,6 +255,9 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:0;border-radiu
     try { var p = f && f.call(D); if (p && p.catch) p.catch(function () {}); } catch (e) {}
   }
   function lockApi() { return W.screen && screen.orientation && screen.orientation.lock; }
+  // 変更できない機能は表示しない（iPhone は両方とも不可なので、ボタン自体を出さない）
+  var orOk = !!lockApi() && (navigator.maxTouchPoints > 0);
+  var uiOk = fsOk || orOk;
   function applyOrient(mode, wantFs) {
     // 戻り値は使わず、結果は banner() が画面の向きで判定する
     if (mode === 'auto') {
@@ -274,13 +277,13 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:0;border-radiu
   }
   var mode = 'auto';
   try { mode = localStorage.getItem(KEY) || 'auto'; } catch (e) {}
-  if (mode !== 'land' && mode !== 'port') mode = 'auto';
+  if ((mode !== 'land' && mode !== 'port') || !orOk) mode = 'auto';
 
   /* ---------- UI ---------- */
   var ui, btn, panel, banner, bT;
   var pos = cfg.pos || 'tr';
   function build() {
-    if (ui || !D.body) return;
+    if (ui || !D.body || !uiOk) return;
     var css = D.createElement('style');
     css.textContent =
       '#izb{position:fixed;z-index:2147483646;font:12px/1.4 "Hiragino Sans","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;color:#fff;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}' +
@@ -313,12 +316,8 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:0;border-radiu
     ui.innerHTML =
       '<button type="button" class="iz-b" tabindex="-1" aria-label="表示設定">⛶</button>' +
       '<div class="iz-p">' +
-      '<div class="iz-h">画面</div>' +
-      '<div class="iz-r"><button type="button" tabindex="-1" data-fs="1">全画面にする</button></div>' +
-      '<div class="iz-n" id="izfsn" style="display:none"></div>' +
-      '<div class="iz-h">向き</div>' +
-      '<div class="iz-r" id="izor"><button type="button" tabindex="-1" data-o="auto">自動</button><button type="button" tabindex="-1" data-o="port">縦</button><button type="button" tabindex="-1" data-o="land">横</button></div>' +
-      '<div class="iz-n" id="izon"></div>' +
+      (fsOk ? '<div class="iz-h">画面</div><div class="iz-r"><button type="button" tabindex="-1" data-fs="1">全画面にする</button></div>' : '') +
+      (orOk ? '<div class="iz-h">向き</div><div class="iz-r" id="izor"><button type="button" tabindex="-1" data-o="auto">自動</button><button type="button" tabindex="-1" data-o="port">縦</button><button type="button" tabindex="-1" data-o="land">横</button></div><div class="iz-n" id="izon"></div>' : '') +
       '<button type="button" class="iz-x" tabindex="-1" data-close="1">閉じる</button>' +
       '</div>';
     D.body.appendChild(ui);
@@ -354,23 +353,11 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:0;border-radiu
   function refresh() {
     if (!ui) return;
     var fb = ui.querySelector('[data-fs]');
-    var fn = ui.querySelector('#izfsn');
-    if (fsOk) {
-      fb.disabled = false;
-      fb.textContent = isFs() ? '全画面をやめる' : '全画面にする';
-      fn.style.display = 'none';
-    } else {
-      fb.disabled = true;
-      fb.textContent = standalone() ? '全画面（表示中）' : '全画面にする';
-      fn.style.display = 'block';
-      fn.textContent = standalone() ? 'ホーム画面から起動中のため、全画面で表示されています。' : 'iPhoneは「共有」→「ホーム画面に追加」から開くと全画面になります。';
-    }
+    if (fb) fb.textContent = isFs() ? '全画面をやめる' : '全画面にする';
     var bs = ui.querySelectorAll('[data-o]');
     for (var i = 0; i < bs.length; i++) bs[i].classList.toggle('on', bs[i].getAttribute('data-o') === mode);
     var on = ui.querySelector('#izon');
-    if (mode === 'auto') on.textContent = '端末の向きに合わせます。';
-    else if (lockApi()) on.textContent = '全画面のときに向きを固定します。固定できない場合は、端末を回してください。';
-    else on.textContent = 'この端末は向きを固定できません。表示に合わせて端末を回してください。';
+    if (on) on.textContent = mode === 'auto' ? '端末の向きに合わせます。' : '全画面のときに向きを固定します。固定できない場合は、端末を回してください。';
   }
   function banner_() {
     if (!banner) return;
