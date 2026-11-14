@@ -284,6 +284,8 @@ const GRAVITY = 0.55;
 const GROUND_Y = 400;
 const MAX_SCALE = 1e9;  // 大きくなる上限（事実上なし）
 const MIN_SCALE = 0.2;  // 小さくなる下限
+const JUMP_VY = -10.4;  // ジャンプの初速（以前は -11.5。高さ約120px→約98px）
+const JUMP_SCALE = 0.9; // 踏んだときの跳ね返りにも同じ低めの倍率をかける
 
 const keys = {};
 let started = false;
@@ -300,7 +302,7 @@ function startGame() {
 function resetGame() {
   if (!started) return;
   score = 0;
-  items.length = 0; enemies.length = 0; spores.length = 0;
+  items.length = 0; enemies.length = 0; spores.length = 0; mycs.length = 0; blocks.length = 0; blockTimer = 0;
   splats.length = 0; rings.length = 0; particles.length = 0;
   player.scaleX = 1; player.scaleY = 1;
   player.x = 240; player.y = GROUND_Y - player.h;
@@ -395,6 +397,8 @@ const player = {
   lastSin: 0, // 歩きの足運び判定用
   fire: false, // 白い花で変身（火炎放射器）
   walkFrame: 0,
+  stompWin: 0, // 敵を踏んだ直後にジャンプできる猶予フレーム
+  peerT: 0, peerK: 0, // 端で止まっている時間／下を覗き込む度合い(0〜1)
   get w() { return Math.max(2, this.baseW * this.scaleX); },
   get h() { return Math.max(2, this.baseH * this.scaleY); }
 };
@@ -425,7 +429,7 @@ function stompBounce(e, harmless) {
   const sizeF = 0.8 + 0.2 * Math.min(1, e.size / ENEMY_BASE); // 小さい敵ほど少しだけ弾まない
   const decay = Math.max(0.55, Math.pow(0.93, player.chain));
   player.chain++;
-  return -Math.max(3.4, base * sizeF * decay);
+  return -Math.max(3.4, base * sizeF * decay * JUMP_SCALE);
 }
 
 // ---- 潰す演出・胞子 ----
@@ -462,20 +466,91 @@ function splatEnemy(e) {
   }
 }
 
-// 潰れたキノコの分の胞子を飛ばす（vxsの数だけ）
-function emitSpores(e, ox, oy, vxs) {
-  const cs = Math.max(ENEMY_MIN, e.size * ENEMY_SHRINK);
-  const room = MAX_ENEMIES - enemies.length - spores.length;
-  const n = Math.min(room, vxs.length);
+// ---- 菌糸：倒した場所（や時間経過）で地面に糸が伸び、二股に分かれて先端からキノコが生える ----
+let mycs = [];
+const MYC_GROW = 54;   // 糸が伸びきるまでのフレーム
+const MYC_FADE = 150;  // 伸びきってから糸が薄れて消えるまで
+function pendingBranches() { let n = 0; for (const m of mycs) if (!m.done) n += m.br.length; return n; }
+// 潰れたキノコの分だけ（vxsの数）糸を伸ばす。向きはvxsの符号
+function emitSpores(e, ox, oy, vxs, shrink) {
+  const cs = Math.max(ENEMY_MIN, e.size * (shrink || ENEMY_SHRINK));
+  const room = MAX_ENEMIES - enemies.length - pendingBranches();
+  const n = Math.min(room, vxs.length, 2);
+  if (n <= 0 || mycs.length > 220) return;
+  const br = [];
   for (let k = 0; k < n; k++) {
-    spores.push({
-      x: ox, y: oy, vx: vxs[k], vy: -3.5 - Math.random() * 3,
-      size: cs,
-      hue: (e.hue + (Math.random() - 0.5) * 40 + 360) % 360,
-      light: Math.max(28, Math.min(62, e.light + (Math.random() - 0.5) * 16)),
-      safe: e.w < footSize() ? 0 : 45,
-      age: 0
-    });
+    const dir = vxs[k] >= 0 ? 1 : -1;
+    const len = 26 + Math.random() * 22 + k * 8;
+    br.push({ dir, len, fork: (k === 0 ? 1 : -1) });
+  }
+  mycs.push({
+    x: Math.max(6, Math.min(canvas.width - 6, ox)), t: 0, done: false, fade: 0, br,
+    size: cs, hue: e.hue, light: e.light, seed: Math.random() * 6.28,
+    safe: cs < footSize() ? 0 : 45
+  });
+}
+function updateMycs() {
+  for (let i = mycs.length - 1; i >= 0; i--) {
+    const m = mycs[i];
+    if (!m.done) {
+      m.t++;
+      if (m.t >= MYC_GROW) {
+        m.done = true;
+        for (const b of m.br) {
+          if (enemies.length >= MAX_ENEMIES) break;
+          const sz = m.size;
+          const tx = Math.max(0, Math.min(canvas.width - sz, m.x + b.dir * b.len - sz / 2));
+          const ne = makeEnemy(tx, GROUND_Y - sz, sz,
+            (m.hue + (Math.random() - 0.5) * 40 + 360) % 360,
+            Math.max(28, Math.min(62, m.light + (Math.random() - 0.5) * 16)),
+            (Math.random() < 0.5 ? -1 : 1) * (0.3 + Math.random() * 0.6), 0, m.safe);
+          ne.born = 0;
+          enemies.push(ne);
+        }
+        if (particles.length < 160) addParticles(m.x, GROUND_Y - 2, '#f4ecd8', 3);
+      }
+    } else if (++m.fade > MYC_FADE) {
+      mycs.splice(i, 1);
+    }
+  }
+}
+function drawMycs() {
+  for (const m of mycs) {
+    const p = m.done ? 1 : m.t / MYC_GROW;
+    const al = m.done ? Math.max(0, 1 - m.fade / MYC_FADE) : 1;
+    ctx.globalAlpha = al;
+    for (const b of m.br) {
+      const reach = b.len * Math.min(1, p * 1.15);
+      const yy = GROUND_Y + 4;
+      // 糸（影＋本体）
+      for (let d = 0; d <= reach; d += 2) {
+        const wob = Math.round(Math.sin(d * 0.35 + m.seed) * 1);
+        const x = Math.round(m.x + b.dir * d);
+        ctx.fillStyle = 'rgba(40,20,10,0.55)'; ctx.fillRect(x, yy + wob + 2, 2, 2);
+        ctx.fillStyle = '#f4ecd8'; ctx.fillRect(x, yy + wob, 2, 2);
+      }
+      // 二股：途中から二本に分かれて先端へ
+      if (p > 0.45) {
+        const fx = 0.5 * b.len, fp = Math.min(1, (p - 0.45) / 0.55);
+        for (let sgn = -1; sgn <= 1; sgn += 2) {
+          const L = (b.len - fx) * fp;
+          for (let d = 0; d <= L; d += 2) {
+            const x = Math.round(m.x + b.dir * (fx + d));
+            const y = Math.round(yy + sgn * (d / (b.len - fx)) * 5);
+            ctx.fillStyle = 'rgba(40,20,10,0.5)'; ctx.fillRect(x, y + 2, 2, 2);
+            ctx.fillStyle = '#fff6e0'; ctx.fillRect(x, y, 2, 2);
+          }
+        }
+      }
+      // 先端の光
+      if (!m.done && p > 0.9) {
+        ctx.fillStyle = `hsl(${m.hue},85%,70%)`;
+        ctx.fillRect(Math.round(m.x + b.dir * b.len) - 2, yy - 2, 4, 4);
+      }
+    }
+    // 起点の結び目
+    ctx.fillStyle = '#fff6e0'; ctx.fillRect(Math.round(m.x) - 2, GROUND_Y + 2, 4, 4);
+    ctx.globalAlpha = 1;
   }
 }
 
@@ -544,7 +619,8 @@ function makeEnemy(x, y, size, hue, light, vx, vy, safeTimer) {
     type: 'goomba', x, y, vx, vy,
     w: size, h: size, size, hue, light,
     capColor: c.cap, darkColor: c.dark,
-    safeTimer: safeTimer || 0, frame: Math.random() * 4, burn: 0
+    safeTimer: safeTimer || 0, frame: Math.random() * 4, burn: 0,
+    born: 1, growT: 420 + Math.random() * 360 // 時間経過で増える（約7〜13秒ごとに分裂）
   };
 }
 
@@ -821,7 +897,7 @@ function updateFire() {
   }
   flameSound(want);
   // 全焼したらクリア
-  if (enemies.length === 0 && spores.length === 0) {
+  if (enemies.length === 0 && spores.length === 0 && mycs.length === 0) {
     if (++clearTimer > 45) startClear();
   } else {
     clearTimer = 0;
@@ -1249,7 +1325,7 @@ function renderShroom(nb) {
 }
 function enterShroom() {
   setPhase('shroom');
-  items.length = 0; enemies.length = 0; spores.length = 0; splats.length = 0; rings.length = 0; particles.length = 0;
+  items.length = 0; enemies.length = 0; spores.length = 0; mycs.length = 0; blocks.length = 0; blockTimer = 0; splats.length = 0; rings.length = 0; particles.length = 0;
   pendingLand = null; flash = 1;
   player.scaleX = player.scaleY = 1; player.x = 90; player.y = GROUND_Y - player.h;
   player.vx = player.vy = 0; player.dir = 1; player.onGround = true; player.walkFrame = 0; player.invuln = 0;
@@ -1950,6 +2026,94 @@ function drawDissolve(k) {
 }
 
 // --- 更新処理 ---
+// ================= 壊せるブロック =================
+// 下から頭で突くと壊れる。上に乗れる。端で1秒止まると下を覗き込む
+const BLK = 32;
+const BLK_Y = GROUND_Y - 80;   // ブロックの上面（地面から80px。ジャンプで乗れる高さ）
+let blocks = [];
+let blockTimer = 0;
+const MAX_BLOCKS = 15;
+function addBlockRow() {
+  const n = 2 + Math.floor(Math.random() * 3); // 2〜4個
+  for (let tries = 0; tries < 12; tries++) {
+    const x0 = 16 + Math.floor(Math.random() * ((canvas.width - 32 - n * BLK) / 8)) * 8;
+    if (blocks.some(b => b.x < x0 + n * BLK + 24 && b.x + BLK > x0 - 24)) continue;
+    for (let i = 0; i < n; i++) blocks.push({ x: x0 + i * BLK, y: BLK_Y, w: BLK, h: BLK });
+    return;
+  }
+}
+function initBlocks() { blocks.length = 0; for (let i = 0; i < 3; i++) addBlockRow(); }
+function breakBlock(b) {
+  const i = blocks.indexOf(b); if (i < 0) return;
+  blocks.splice(i, 1);
+  score += 20;
+  sfxThump();
+  shake = Math.max(shake, 2.5);
+  for (let k = 0; k < 10; k++) {
+    particles.push({ x: b.x + b.w / 2, y: b.y + b.h / 2, vx: (Math.random() - 0.5) * 7, vy: -2 - Math.random() * 4,
+      life: 25 + Math.random() * 15, color: k % 2 ? '#c84c0c' : '#fc9838' });
+  }
+}
+// 戻り値：乗っているブロック（なければ null）
+function blockCollide() {
+  let onB = null, bump = null, bumpOv = -1;
+  const prevTop = player.y - player.vy, prevBot = prevTop + player.h;
+  const prevCx = player.x - player.vx + player.w / 2;
+  for (let i = blocks.length - 1; i >= 0; i--) {
+    const b = blocks[i];
+    if (!rectHit(player, b)) continue;
+    if (player.h > 44) { breakBlock(b); continue; } // 大きいと突き抜けて壊す
+    if (player.vy >= 0 && prevBot <= b.y + 6) {
+      player.y = b.y - player.h; player.vy = 0; player.onGround = true; player.chain = 0; onB = b;
+    } else if (player.vy < 0 && prevTop >= b.y + b.h - 6) {
+      const ov = Math.min(player.x + player.w, b.x + b.w) - Math.max(player.x, b.x);
+      if (ov > bumpOv) { bumpOv = ov; bump = b; }
+    } else if (prevCx < b.x + b.w / 2) {
+      player.x = b.x - player.w; player.vx = 0;
+    } else {
+      player.x = b.x + b.w; player.vx = 0;
+    }
+  }
+  if (bump) { player.y = bump.y + bump.h; player.vy = 1.5; breakBlock(bump); }
+  return onB;
+}
+// 乗っているブロック列の端で止まっていたら、下を覗き込む
+function updatePeer(onB, moving) {
+  let want = false;
+  if (onB && player.onGround && !moving && Math.abs(player.vx) < 0.4 && !(phase === 'fire' && firing > 0)) {
+    // 同じ高さで隣り合うブロックをつないだ範囲
+    let L = onB.x, R = onB.x + onB.w, grow = true;
+    while (grow) {
+      grow = false;
+      for (const b of blocks) {
+        if (b.y !== onB.y) continue;
+        if (b.x + b.w === L) { L = b.x; grow = true; } else if (b.x === R) { R = b.x + b.w; grow = true; }
+      }
+    }
+    const cx = player.x + player.w / 2;
+    const edge = Math.max(8, player.w * 0.35);
+    if (cx >= R - edge) { want = true; player.peerDir = 1; }
+    else if (cx <= L + edge) { want = true; player.peerDir = -1; }
+  }
+  player.peerT = want ? player.peerT + 1 : 0;
+  const on = want && player.peerT >= 60; // 1秒
+  if (on) player.dir = player.peerDir;
+  player.peerK = Math.max(0, Math.min(1, player.peerK + (on ? 0.1 : -0.18)));
+}
+function drawBlocks() {
+  for (const b of blocks) {
+    const x = b.x, y = b.y;
+    ctx.fillStyle = '#b8480c'; ctx.fillRect(x, y, b.w, b.h);
+    ctx.fillStyle = '#fc9838'; ctx.fillRect(x, y, b.w, 2);
+    ctx.fillStyle = '#3a1608';
+    for (const ry of [8, 16, 24]) ctx.fillRect(x, y + ry, b.w, 2);
+    ctx.fillRect(x + 15, y, 2, 8); ctx.fillRect(x + 7, y + 8, 2, 8); ctx.fillRect(x + 23, y + 8, 2, 8);
+    ctx.fillRect(x + 15, y + 16, 2, 8); ctx.fillRect(x + 7, y + 24, 2, 8); ctx.fillRect(x + 23, y + 24, 2, 8);
+    ctx.fillStyle = '#e8741c'; ctx.fillRect(x, y + 2, 2, 6);
+    ctx.fillStyle = '#3a1608'; ctx.fillRect(x, y + b.h - 2, b.w, 2); ctx.fillRect(x + b.w - 2, y, 2, b.h);
+  }
+}
+
 function update() {
   tick++;
   phaseT++;
@@ -1961,6 +2125,11 @@ function update() {
   if (spawnTimer > 60) {
     spawnTimer = 0;
     if (phase === 'play' || phase === 'flower') spawnDrop();
+  }
+  // 壊せるブロック：減ったらときどき新しい列が出る
+  if (phase === 'play' || phase === 'flower') {
+    if (blocks.length === 0 && blockTimer === 0) initBlocks();
+    if (++blockTimer > 420) { blockTimer = 1; if (blocks.length <= MAX_BLOCKS - 4) addBlockRow(); }
   }
 
   // プレイヤー移動
@@ -1978,9 +2147,12 @@ function update() {
     player.walkFrame = 0;
   }
 
-  if ((keys['Space'] || keys['ArrowUp'] || keys['KeyW'] || keys['KeyZ']) && player.onGround) {
-    player.vy = -11.5;
+  if (player.stompWin > 0) player.stompWin--;
+  // 地面・ブロックの上のほか、敵を踏んだ直後（猶予9フレーム）にもジャンプできる
+  if ((keys['Space'] || keys['ArrowUp'] || keys['KeyW'] || keys['KeyZ']) && (player.onGround || player.stompWin > 0)) {
+    player.vy = JUMP_VY;
     player.onGround = false;
+    player.stompWin = 0;
     sfxJump();
   }
 
@@ -2006,6 +2178,10 @@ function update() {
     player.chain = 0;
     if (!wasOn && fallVy > 2.5) pendingLand = player.x + player.w / 2; // 着地の衝撃
   }
+
+  // ブロックとの衝突（乗る・下から突いて壊す・横から止まる）
+  const onBlock = (phase === 'play' || phase === 'flower' || phase === 'fire') ? blockCollide() : null;
+  updatePeer(onBlock, !!(keys['ArrowLeft'] || keys['KeyA'] || keys['ArrowRight'] || keys['KeyD']));
 
   // 歩き：足が着くたびに片足ずつ潰す
   if (player.onGround && Math.abs(player.vx) > 1) {
@@ -2050,7 +2226,14 @@ function update() {
     const e = enemies[i];
     if (e.safeTimer > 0) e.safeTimer--;
     e.frame += 0.15;
+    if (e.born < 1) e.born = Math.min(1, e.born + 0.06);
     if (e.burn > 0 && burnTick(e, i)) continue;
+    // 倒さなくても時間で増える（倍々）。火炎放射中は増えない
+    if ((phase === 'play' || phase === 'flower') && e.born >= 1 && --e.growT <= 0) {
+      e.growT = 420 + Math.random() * 360;
+      const wallDir = e.x + e.w / 2 < canvas.width / 2 ? 1 : -1;
+      emitSpores(e, e.x + e.w / 2, GROUND_Y, [Math.random() < 0.75 ? wallDir : -wallDir], 0.98);
+    }
 
     e.vy += GRAVITY * 0.8;
     // 波のように：群れ全体が寄せては返し、ぴょこぴょこと跳ねの波が横に伝わる
@@ -2080,6 +2263,7 @@ function update() {
         // 踏んだ！ 小さい敵は軽く踏める（バウンドも小さい）
         const impactVy = player.vy;
         player.vy = stompBounce(e, harmless);
+        player.stompWin = 9;
         sfxStomp();
         score += 100;
 
@@ -2110,6 +2294,7 @@ function update() {
   if (pendingLand !== null) { landingCrush(pendingLand); pendingLand = null; }
   if (phase === 'play' && player.h >= canvas.height / 2) { // 画面の高さの半分（以前の半分の大きさ）で花が出る
     if (goodRoute) enterShroom(); else enterFlower(); }
+  updateMycs();
   if (phase === 'flower') updateFlower();
   if (phase === 'fire') updateFire();
   updateFlames();
@@ -2161,12 +2346,16 @@ function drawPlayer() {
   ctx.save();
   ctx.translate(player.x + player.w / 2, player.y + player.h);
   ctx.scale(player.dir * player.scaleX, player.scaleY);
-  drawManBody(player.walkFrame, player.fire, player.fire && phase === 'fire');
+  if (player.peerK > 0) { // 前足を支点に前へ傾く
+    ctx.translate(4, 0); ctx.rotate(player.peerK * 0.32); ctx.translate(-4, 0);
+  }
+  drawManBody(player.walkFrame, player.fire, player.fire && phase === 'fire', player.peerK);
   ctx.restore();
 }
 
 // 基準サイズ 24x32（原点は足元中央、+xが前）
-function drawManBody(wf, fireSuit, armed) {
+function drawManBody(wf, fireSuit, armed, peer) {
+  peer = peer || 0;
   if (armed) drawTank();
   // オーバーオール（青）
   ctx.fillStyle = fireSuit ? '#e0481a' : '#c88a1a';
@@ -2180,7 +2369,9 @@ function drawManBody(wf, fireSuit, armed) {
   ctx.fillRect(-5, -13, 2, 2);
   ctx.fillRect(3, -13, 2, 2);
 
-  // 顔（肌色）
+  // 顔（肌色）— 覗き込み中は頭を前下へ
+  ctx.save();
+  ctx.translate(Math.round(peer * 3), Math.round(peer * 3));
   ctx.fillStyle = '#ffa044';
   ctx.fillRect(-7, -27, 14, 10);
 
@@ -2189,7 +2380,7 @@ function drawManBody(wf, fireSuit, armed) {
 
   // 目
   ctx.fillStyle = '#000';
-  ctx.fillRect(3, -26, 2, 3);
+  ctx.fillRect(3, -26 + (peer > 0.5 ? 1 : 0), 2, 3);
 
   // 立派なヒゲ！
   ctx.fillStyle = '#381800';
@@ -2200,6 +2391,8 @@ function drawManBody(wf, fireSuit, armed) {
   ctx.fillStyle = fireSuit ? '#ffffff' : '#7a3fb0';
   ctx.fillRect(-8, -32, 16, 5);
   ctx.fillRect(-6, -29, 17, 2); // ツバ
+  ctx.restore();
+  if (peer > 0.9 && Math.floor(tick / 8) % 2 === 0) { ctx.fillStyle = '#7fd0ff'; ctx.fillRect(-9, -33, 2, 3); } // 冷や汗
   drawFeet(wf, '#6b2c00');
   if (armed) drawGun();
 }
@@ -2242,9 +2435,10 @@ function drawEnemies() {
       if (e.burn > 42) ctx.globalAlpha = Math.max(0, 1 - (e.burn - 42) / 22);
     }
     ctx.save();
-    ctx.translate(e.x, e.y);
+    const bk = e.born < 1 ? 1 - Math.pow(1 - e.born, 2) : 1; // 地面からにょきっと生える
+    ctx.translate(e.x, e.y + e.h * (1 - bk));
     const sc = e.size / ENEMY_BASE;
-    ctx.scale(sc, sc);
+    ctx.scale(sc, sc * bk);
     // 傘（個体ごとに微妙に違う色）
     ctx.fillStyle = cap;
     ctx.fillRect(4, 0, 16, 6);
@@ -2338,7 +2532,7 @@ function drawUI() {
 let slowFactor = 1;
 let slowAcc = 0;
 function loop() {
-  const n = enemies.length + spores.length;
+  const n = enemies.length + spores.length + pendingBranches();
   slowFactor = n <= SLOW_START ? 1 : Math.max(0.85, 1 - (n - SLOW_START) / 400 * 0.15);
   slowAcc += slowFactor;
   while (slowAcc >= 1) { if (started) update(); slowAcc -= 1; }
@@ -2360,6 +2554,8 @@ function loop() {
   drawBackground();
   drawBad();
   drawSplats();
+  drawMycs();
+  if (phase === 'play' || phase === 'flower' || phase === 'fire') drawBlocks();
   drawItems();
   drawEnemies();
   drawSpores();
