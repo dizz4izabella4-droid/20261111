@@ -1,4 +1,5 @@
-<!doctype html><html lang="ja"><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body><title>GLASS BREAKER Mobile</title>
+<!doctype html><html lang="ja"><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>GLASS BREAKER Mobile</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
 /* Layout: 暗い部屋に筐体を1台。マーキー、4:3のブラウン管、操作パネル(十字キーと攻撃ボタンだけ)の縦並び */
@@ -263,7 +264,7 @@ function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
    奥行きあり。fl = 床に接する画面のy(奥ほど小さい)、el = 床からの高さ、dz = 当たる奥行きの幅 */
 var BANDS = ['#1b2a4a', '#3b3a63', '#c9795a', '#f0b070'];
 var WALL_B = 82, Z_MIN = 88, Z_MAX = 117;
-var COST = { wall: 4800, pane: 1200, door: 6500, monitor: 750, cup: 15, wine: 60, table: 1400, jug: 30, cabinet: 8500, lamp: 1100, vase: 350, aquarium: 2800, pot: 180000, server: 650, plant: 90, gate: 9000, ln2: 0, fire: 0 };
+var COST = { wall: 4800, pane: 1200, door: 6500, monitor: 750, cup: 15, wine: 60, table: 1400, jug: 30, cabinet: 8500, lamp: 1100, vase: 350, aquarium: 2800, pot: 180000, server: 650, plant: 90, gate: 18000, ln2: 0, fire: 0 };
 var DEFS = [], WW = 160, STAGE = 'boss', camX = 0;
 function defsBoss() {
   var DEFS = [];
@@ -307,7 +308,7 @@ function defsCorr() {
     else add({ t: 'pane', mat: 'glass', x: x0 + 20, fl: 112, w: 5, h: 44, hp: 1, block: true });
   }
   [150, 330].forEach(function (x) { add({ t: 'lamp', mat: 'glass', x: x, fl: 96, el: 24, w: 10, h: 11, hp: 1 }); });
-  add({ t: 'gate', mat: 'glass', x: 560, fl: 90, el: 0, w: 28, h: 44, hp: 3, dz: 12, block: true });
+  add({ t: 'gate', mat: 'temper', x: 556, fl: 90, el: 0, w: 36, h: 51, hp: 7, dz: 12, block: true });
   return D;
 }
 var objs = [], simT = 0, hitstop = 0, brTotal = 0, brokenN = 0, prFocus = 0;
@@ -651,6 +652,12 @@ function sShatter(o, x) {
     smp('sh', { rate: 1.12, g: 1, hp: 700, pan: pan, rev: 0.34, jit: 0.04 });
     smp('gl', { rate: 0.8, g: 0.6, pan: pan });
     sTinkle(t + 0.3, 8, 1.0, 3000, 7000, 0.05);
+  } else if (o.t === 'gate') {
+    smp('sh', { rate: 0.7, g: 1, pan: pan, rev: 0.45, jit: 0.02 });
+    smp('sh', { t: t + 0.06, rate: 1.0, g: 0.75, pan: pan, rev: 0.35 });
+    smp('gh', { rate: 0.45, g: 1, lp: 1600, pan: pan });
+    tn(t, 90, 0.45, { f2: 32, g: 0.9 }); nz(t, 0.55, { type: 'lowpass', f: 2000, f2: 260, g: 0.6 });
+    sTinkle(t + 0.35, 12, 1.4, 3000, 8000, 0.05);
   } else if (o.t === 'showcase' || o.t === 'cabinet') {
     smp('sh', { rate: 0.78, g: 1, pan: pan, rev: 0.4, jit: 0.02 });
     smp('sh', { t: t + 0.05, rate: 1.05, g: 0.6, pan: pan, rev: 0.3 });
@@ -950,16 +957,19 @@ function drawPlant(o) {
   drawCracks(o, '#ffffff');
 }
 function drawGate(o) {
-  var x = o.x, y = o.y, w = o.w, h = o.h;
-  fshadow(o, w + 4);
-  R(x - 3, y - 2, w + 6, 2, '#aab3c0'); R(x - 3, y - 2, 2, h + 2, '#8a93a1'); R(x + w + 1, y - 2, 2, h + 2, '#8a93a1'); R(x - 3, y - 2, w + 6, 1, '#d6dce4');
-  if (o.dead) { drawRem(o, '#cfeaf5'); return; }
-  R(x, y, w, h, 'rgba(176,222,244,0.30)');
-  R(x + (w >> 1) - 1, y, 2, h, '#8a93a1'); R(x + (w >> 1) - 1, y, 1, h, '#d6dce4');
-  R(x, y, 1, h, 'rgba(255,255,255,0.85)'); R(x + w - 1, y, 1, h, 'rgba(120,170,200,0.7)');
-  R(x + (w >> 1) - 4, y + 18, 1, 10, '#d7dde6'); R(x + (w >> 1) + 3, y + 18, 1, 10, '#d7dde6');
-  R(x + 3, y + 6, 1, 14, 'rgba(255,255,255,0.4)'); R(x + w - 7, y + 24, 1, 10, 'rgba(255,255,255,0.3)');
-  R(x, y + h - 6, w, 1, '#8a93a1');
+  /* 社長室の入口：分厚い強化ガラスの一枚扉(割れにくい) */
+  var x = o.x, y = o.y, w = o.w, h = o.h, i;
+  fshadow(o, w + 6);
+  R(x - 4, y - 3, w + 8, 3, '#9aa3b0'); R(x - 4, y - 3, w + 8, 1, '#dfe4ea'); R(x - 4, y - 3, 3, h + 3, '#7e8794'); R(x + w + 1, y - 3, 3, h + 3, '#7e8794');
+  R(x - 3, y - 2, 1, h + 2, '#c4cad3'); R(x + w + 2, y - 2, 1, h + 2, '#5c6470');
+  if (o.dead) { drawRem(o, '#bfe6dc'); return; }
+  R(x, y, w, h, 'rgba(160,214,206,0.34)');
+  R(x, y, 2, h, 'rgba(110,190,170,0.75)'); R(x + w - 2, y, 2, h, 'rgba(80,160,140,0.75)'); R(x, y, w, 1, 'rgba(110,190,170,0.75)');
+  R(x + 2, y, 1, h, 'rgba(255,255,255,0.85)');
+  for (i = 0; i < 3; i++) R(x + 6 + i * 2, y + 6 + i * 3, 1, 18 - i * 4, 'rgba(255,255,255,' + (0.45 - i * 0.1).toFixed(2) + ')');
+  R(x + w - 9, y + 30, 1, 12, 'rgba(255,255,255,0.3)');
+  R(x + 6, y + 18, 2, 22, '#d7dde6'); R(x + 6, y + 18, 1, 22, '#ffffff'); R(x + 5, y + 18, 1, 1, '#8a93a1'); R(x + 5, y + 39, 1, 1, '#8a93a1');
+  R(x, y + h - 4, w, 1, '#8a93a1');
   drawCracks(o, '#ffffff');
 }
 function drawObj(o) {
@@ -1619,7 +1629,7 @@ function pupFoe(ty, q) {
   pFoeFace(ty, hx, hy, q.st);
   pupEnd(S.pin ? function (d, w, h, P, idx) { var b1 = P.idx.c1, sp = P.rgb[P.idx.c2]; for (var i2 = 0; i2 < w * h; i2++) if (idx[i2] === b1 && ((i2 % w) + PUP.x0) % 3 === 0) { var o2 = i2 * 4; d[o2] = sp[0]; d[o2 + 1] = sp[1]; d[o2 + 2] = sp[2]; } } : null);
 }
-/* ブロンコの丸まり(回転) */
+/* ブランタの丸まり(回転) */
 function pupBall(ang) {
   var S = FOEP.blanka, c = pupBegin(FOEPAL.blanka, -11, -21, 11, 1), cx = 0, cy = -9.5;
   c.save(); c.translate(cx, cy); c.rotate(ang);
@@ -1699,66 +1709,79 @@ function pupPres(q) {
   pupEnd(post);
 }
 
-/* ---------- 用心棒(隻眼の侍) ---------- */
-var SMC = { kim: ['#3e3226', '#5e4c3a', '#7e6a52', '#a08a6c'], kimB: ['#2e251c', '#46392c', '#5e4c3a'], hak: ['#141a2e', '#232c48', '#33406a', '#4a5a8c'], sk: ['#9a6a48', '#cf9d74', '#ecc49c'], hair: ['#0c0a09', '#1e1814', '#3a302a'] };
+/* ---------- 用心棒(侍) ---------- */
+var SMC = { kim: ['#15141b', '#23222c', '#34333f', '#4a4958'], kimB: ['#0e0d12', '#191820', '#26252f'], hak: ['#2b282d', '#403c45', '#58535e', '#77717e'], sk: ['#9a6a48', '#cf9d74', '#ecc49c'], hair: ['#0c0a09', '#1e1814', '#3a302a'], saka: ['#b08a72', '#c9a48a'], inner: ['#4a3a2c', '#6e5a44'] };
 var SMPAL = (function () { var o = {}, n = 0, k, a; for (k in SMC) { a = SMC[k]; for (var i = 0; i < a.length; i++) o['c' + (n++)] = a[i]; }
-  ['#1d1b22', '#2e2c36', '#8a3a2c', '#e6d6b0', '#c8b890', '#f4f6fa', '#8f9bad', '#d9a63a', '#3a2418', '#a02a2a', '#c9505f', '#c9c45a', '#ffffff'].forEach(function (h) { o['c' + (n++)] = h; }); return mkPal(o); })();
-/* q: {s1(歩き), hnd:[x,y], a(刀の角度°), BL, fade} */
+  ['#e8e4d8', '#c8c2b0', '#f4f6fa', '#8f9bad', '#d9a63a', '#3a2418', '#121118', '#2c2a36', '#6a3a2a', '#ffffff', '#e6d6b0'].forEach(function (h) { o['c' + (n++)] = h; }); return mkPal(o); })();
+/* 幕末の侍の古写真(浪人の立ち姿)を参考: ちょんまげ(月代+髷)、黒の羽織に紋、縞の袴、腰に大小二本(抜いた刀の鞘と脇差)、足袋に草履
+   q: {s1(歩き), hnd:[x,y], a(刀の角度°), fade, ph, shine} */
 function pupSam(q) {
-  var K = SC, hipY = -19.5, T = -39, c, i, rad = q.a * Math.PI / 180, dx = Math.cos(rad), dy = Math.sin(rad), BL = 21 * K, H = q.hnd;
+  var hipY = -19.5, T = -39, c, i, rad = q.a * Math.PI / 180, dx = Math.cos(rad), dy = Math.sin(rad), BL = 21 * SC, H = q.hnd;
   var tip = [H[0] + dx * BL, H[1] + dy * BL];
-  c = pupBegin(SMPAL, Math.min(-16, tip[0] - 3), Math.min(T - 18, tip[1] - 3), Math.max(16, tip[0] + 3), Math.max(3, tip[1] + 3));
-  /* 後ろ髪 */
-  var sw = Math.sin(q.ph * 0.9) * 1.2;
-  pBlob(c, [[-3, -50], [-7.6, -47 + sw], [-9.6, -41 + sw], [-8.8, -37 + sw], [-6.4, -41], [-4, -45]], SMC.hair[1]);
-  /* 奥の腕 */
-  pArm(c, [-1.6, T + 2.2], [H[0] - 1, H[1] + 1.2], SMC.kimB, 8, 7.6, 1, { r0: 2.4, r1: 2.2, r2: 1.8, hand: function (Hh) { pFist(c, Hh, [SMC.sk[0], SMC.sk[0], SMC.sk[1]], 1.7); } });
-  /* 草履と袴 */
+  c = pupBegin(SMPAL, Math.min(-19, tip[0] - 3), Math.min(T - 18, tip[1] - 3), Math.max(16, tip[0] + 3), Math.max(3, tip[1] + 3));
+  /* 腰の鞘(体の向こう側、左腰に差す)：刀の鞘(抜いて空)と脇差の鞘 */
+  pCap(c, -1.5, hipY - 1.6, -17, hipY + 4.6, 1.0, 0.85, '#121118'); pLine(c, -2, hipY - 2.3, -16.4, hipY + 3.7, 0.4, '#2c2a36'); pEll(c, -17, hipY + 4.6, 0.9, 0.9, '#d9a63a');
+  pCap(c, -1, hipY - 3.4, -12, hipY - 0.2, 0.9, 0.8, '#121118'); pLine(c, -1.4, hipY - 4.0, -11.6, hipY - 0.9, 0.35, '#2c2a36');
+  /* 奥の腕(羽織の広い袖) */
+  pArm(c, [-1.6, T + 2.2], [H[0] - 1, H[1] + 1.2], SMC.kimB, 8, 7.6, 1, { r0: 2.9, r1: 2.6, r2: 1.8, hand: function (Hh) { pFist(c, Hh, [SMC.sk[0], SMC.sk[0], SMC.sk[1]], 1.7); } });
+  /* 足袋と草履 */
   var s1 = q.s1 || 0;
-  [[-5 + s1, 0], [3 - s1, 1]].forEach(function (p) { pBlob(c, [[p[0] - 3, 0.6], [p[0] - 3, -1.2], [p[0] + 3.6, -1.4], [p[0] + 4.2, 0.6]], p[1] ? '#e6d6b0' : '#c8b890'); pEll(c, p[0] + 0.8, -2.2, 2.6, 1.3, '#f4f6fa'); });
-  var hk = [[-3.4, hipY], [3.8, hipY], [8, -2.2], [7.4, -1.2], [-8.6, -1.2], [-8.8, -2.2]];
+  [[-5 + s1, 0], [3 - s1, 1]].forEach(function (p) { pBlob(c, [[p[0] - 3, 0.6], [p[0] - 3, -1.2], [p[0] + 3.6, -1.4], [p[0] + 4.2, 0.6]], p[1] ? '#e6d6b0' : '#c8c2b0'); pEll(c, p[0] + 0.8, -2.2, 2.6, 1.3, '#f4f6fa'); });
+  /* 縞の袴 */
+  var hk = [[-4.2, hipY], [4.4, hipY], [8.8, -2.2], [8.2, -1.2], [-9.4, -1.2], [-9.6, -2.2]];
   pPoly(c, hk, SMC.hak[1]);
   pClip(c, function () { c.beginPath(); c.moveTo(hk[0][0], hk[0][1]); for (i = 1; i < hk.length; i++) c.lineTo(hk[i][0], hk[i][1]); c.closePath(); }, function () {
-    pPoly(c, [[-4, hipY], [-1, hipY], [-4.2, -1], [-10, -1]], SMC.hak[0]); pPoly(c, [[2, hipY], [4, hipY], [8.4, -1], [5, -1]], SMC.hak[2]);
-    for (i = -2; i <= 2; i++) pLine(c, i * 1.4, hipY + 1, i * 3.2, -1.2, 0.5, i > 0 ? SMC.hak[3] : SMC.hak[0]);
+    pPoly(c, [[-4.4, hipY], [-1, hipY], [-4.4, -1], [-10.4, -1]], SMC.hak[0]); pPoly(c, [[2.2, hipY], [4.6, hipY], [8.8, -1], [5.2, -1]], SMC.hak[2]);
+    for (i = -6; i <= 6; i++) pLine(c, i * 0.75, hipY + 0.5, i * 1.55, -1.2, 0.32, (i & 1) ? SMC.hak[3] : SMC.hak[0]);
   });
-  pPath(c, [[0.2, -9], [0.4, -1.4]], 0.7, SMC.hak[0]);
-  /* 着物 */
-  var kim = [[-5.6, T + 0.4], [-1.8, T - 0.6], [2.8, T - 0.4], [5.4, T + 1], [6.2, T + 6], [5.2, hipY + 1], [-5.2, hipY + 1], [-6.4, T + 6]];
+  pPath(c, [[0.2, -9.5], [0.4, -1.4]], 0.7, SMC.hak[0]);
+  /* 羽織(黒、腰の下まで)。胸元に着物と白い襟 */
+  var kim = [[-6, T + 0.4], [-1.8, T - 0.6], [2.8, T - 0.4], [5.6, T + 1], [6.6, T + 6], [6.4, hipY + 4.6], [-6.8, hipY + 4.6], [-6.8, T + 6]];
   pBlob(c, kim, SMC.kim[1]);
-  pClip(c, function () { pSmooth(c, kim); }, function () { pBlob(c, [[-7, T - 1], [-2.2, T], [-3, hipY + 2], [-7, hipY + 2]], SMC.kim[0]); pBlob(c, [[3, T], [6.6, T + 2], [6.4, T + 9], [3.6, T + 9]], SMC.kim[2]); });
-  pPoly(c, [[-0.6, T - 0.4], [3.4, T - 0.2], [2.2, T + 9], [0.6, T + 9]], SMC.sk[1]);
-  pPoly(c, [[-0.6, T - 0.4], [0.5, T - 0.4], [1.0, T + 9], [0.6, T + 9]], SMC.sk[0]);
-  pPath(c, [[-0.8, T - 0.4], [1.2, T + 9.6]], 0.8, SMC.kim[3]); pPath(c, [[3.6, T - 0.2], [2.0, T + 9.6]], 0.8, SMC.kim[0]);
-  pPoly(c, [[-5.6, hipY - 2.6], [5.6, hipY - 2.6], [5.6, hipY + 0.2], [-5.6, hipY + 0.2]], '#1d1b22'); pLine(c, -5.4, hipY - 2.2, 5.4, hipY - 2.2, 0.5, '#2e2c36');
-  pCap(c, -6.8, hipY - 1.4, -9.6, hipY + 4, 0.9, 0.9, '#3a2418'); pEll(c, -6.2, hipY - 1.6, 1.0, 1.2, '#d9a63a');
-  /* 頭 */
+  pClip(c, function () { pSmooth(c, kim); }, function () {
+    pBlob(c, [[-7.4, T - 1], [-2.4, T], [-3.2, hipY + 6], [-7.4, hipY + 6]], SMC.kim[0]); pBlob(c, [[3.2, T], [7, T + 2], [6.8, T + 10], [3.8, T + 10]], SMC.kim[2]);
+    pPoly(c, [[4.6, hipY - 3], [7, hipY - 3], [7, hipY + 5], [5.4, hipY + 5]], SMC.hak[1]);
+  });
+  pPoly(c, [[-0.4, T - 0.4], [3.6, T - 0.2], [2.4, T + 9], [0.8, T + 9]], SMC.inner[1]);
+  pPoly(c, [[-0.4, T - 0.4], [0.7, T - 0.4], [1.2, T + 9], [0.8, T + 9]], SMC.inner[0]);
+  pPath(c, [[0.2, T - 0.6], [1.6, T + 6]], 0.6, '#e8e4d8'); pPath(c, [[3.2, T - 0.4], [2.2, T + 6]], 0.6, '#c8c2b0');
+  pPath(c, [[-0.8, T - 0.4], [1.4, T + 9.6], [1.6, hipY + 4.4]], 0.9, SMC.kim[3]); pPath(c, [[3.8, T - 0.2], [2.4, T + 9.6]], 0.9, SMC.kim[0]);
+  pEll(c, 2.2, T + 8.4, 0.9, 0.7, '#e8e4d8'); pLine(c, 2.2, T + 8.6, 2.6, T + 10.4, 0.4, '#c8c2b0');
+  pEll(c, 4.6, T + 2.8, 0.8, 0.8, '#e8e4d8'); pEll(c, 4.6, T + 2.8, 0.35, 0.35, SMC.kim[1]);
+  /* 脇差の柄(腹の前に突き出る) */
+  pCap(c, 0.4, hipY - 3.4, 6.6, hipY - 5.6, 0.75, 0.7, '#121118');
+  for (i = 0; i < 3; i++) pEll(c, 2 + i * 1.6, hipY - 4 - i * 0.55, 0.32, 0.32, '#e8e4d8');
+  pEll(c, 0.5, hipY - 3.4, 0.5, 1.3, '#d9a63a', -0.35);
+  /* 頭：月代(剃った頭頂)と髷、鬢、耳 */
   var hx = 1.2, hy = -45.4;
   pTube(c, 0.4, T + 0.6, hx + 0.2, hy + 3.5, 1.8, 1.7, [SMC.sk[0], SMC.sk[1]]);
   pEll(c, hx, hy, 4.6, 5.1, SMC.sk[1]);
   pPoly(c, [[hx - 2.2, hy + 1], [hx + 4.6, hy + 0.4], [hx + 4.4, hy + 3.6], [hx + 2.3, hy + 5.6], [hx - 1, hy + 5.2]], SMC.sk[1]);
   pClip(c, function () { c.beginPath(); c.ellipse(hx, hy, 4.6, 5.1, 0, 0, 6.2832); c.moveTo(hx - 2.2, hy + 1); c.lineTo(hx + 4.6, hy + 0.4); c.lineTo(hx + 4.4, hy + 3.6); c.lineTo(hx + 2.3, hy + 5.6); c.lineTo(hx - 1, hy + 5.2); c.closePath(); }, function () {
-    pEll(c, hx - 3.6, hy + 2.4, 3.2, 4.6, SMC.sk[0]); pEll(c, hx + 2.2, hy - 2.4, 1.8, 1.4, SMC.sk[2]); pEll(c, hx + 1.4, hy + 5.6, 3.2, 1.2, SMC.sk[0]);
+    pEll(c, hx - 0.4, hy - 4.2, 4.6, 2.6, SMC.saka[0]); pEll(c, hx + 1, hy - 4.6, 2.4, 1.2, SMC.saka[1]);
+    pEll(c, hx - 3.6, hy + 2.4, 3.2, 4.6, SMC.sk[0]); pEll(c, hx + 2.6, hy - 1.2, 1.6, 1.1, SMC.sk[2]); pEll(c, hx + 1.4, hy + 5.6, 3.2, 1.2, SMC.sk[0]);
   });
   pPoly(c, [[hx + 4.0, hy - 1.0], [hx + 5.6, hy + 1.6], [hx + 4.2, hy + 2.0]], SMC.sk[1]);
-  pEll(c, hx - 1.4, hy + 0.6, 1.1, 1.5, SMC.sk[0]);
-  pBlob(c, [[hx + 4.4, hy - 2.2], [hx + 4.4, hy - 4.8], [hx + 1.6, hy - 6.4], [hx - 2.6, hy - 6.2], [hx - 5.2, hy - 3.4], [hx - 5.2, hy + 1.4], [hx - 3.4, hy + 2.6], [hx - 2.6, hy - 1.2], [hx + 1.2, hy - 2.8]], SMC.hair[1]);
-  pPoly(c, [[hx - 0.6, hy - 6], [hx + 0.2, hy - 9.4], [hx + 1.6, hy - 9.8], [hx + 1.4, hy - 6]], SMC.hair[1]);
-  pPath(c, [[hx + 2.8, hy - 5.2], [hx - 1.2, hy - 5.6], [hx - 4, hy - 3]], 0.6, SMC.hair[2]);
+  pBlob(c, [[hx - 1.0, hy - 1.4], [hx - 3.4, hy - 2.2], [hx - 5.1, hy - 0.8], [hx - 5.1, hy + 2.2], [hx - 3.8, hy + 4.2], [hx - 2.4, hy + 2.6], [hx - 1.6, hy + 0.2]], SMC.hair[1]);
+  pPath(c, [[hx - 1.4, hy - 1.4], [hx - 4.0, hy - 1.4], [hx - 4.6, hy + 1.8]], 0.5, SMC.hair[2]);
+  pEll(c, hx - 1.6, hy + 0.6, 1.1, 1.5, SMC.sk[0]); pEll(c, hx - 1.4, hy + 0.4, 0.5, 0.8, SMC.sk[1]);
+  pEll(c, hx - 4.4, hy - 2.6, 1.6, 1.5, SMC.hair[1]);
+  pCap(c, hx - 3.8, hy - 4.2, hx + 2.0, hy - 6.4, 1.25, 0.95, SMC.hair[1]); pLine(c, hx - 2.8, hy - 5.2, hx + 1.6, hy - 6.9, 0.45, SMC.hair[2]);
+  pEll(c, hx - 3.4, hy - 4.4, 0.55, 0.8, '#e8e4d8');
   if (q.fade) for (i = 1; i <= 3; i++) { var ra = (q.a - i * 18) * Math.PI / 180; pLine(c, H[0] + Math.cos(ra) * 3, H[1] + Math.sin(ra) * 3, H[0] + Math.cos(ra) * BL, H[1] + Math.sin(ra) * BL, 0.9, i === 1 ? '#f4f6fa' : '#8f9bad'); }
   /* 刀 */
-  pCap(c, H[0] - dx * 5, H[1] - dy * 5, H[0], H[1], 0.9, 0.9, '#3a2418');
+  pCap(c, H[0] - dx * 5, H[1] - dy * 5, H[0], H[1], 0.9, 0.9, '#121118');
+  for (i = 1; i <= 2; i++) pEll(c, H[0] - dx * (i * 1.7), H[1] - dy * (i * 1.7), 0.3, 0.3, '#e8e4d8');
   pLine(c, H[0] - dy * 2.2 + dx * 0.6, H[1] + dx * 2.2 + dy * 0.6, H[0] + dy * 2.2 + dx * 0.6, H[1] - dx * 2.2 + dy * 0.6, 1.0, '#d9a63a');
   pCap(c, H[0] + dx * 1.2, H[1] + dy * 1.2, tip[0], tip[1], 0.75, 0.45, '#8f9bad');
   pLine(c, H[0] + dx * 1.4 - dy * 0.35, H[1] + dy * 1.4 + dx * 0.35 - 0.3, tip[0] - dy * 0.2, tip[1] + dx * 0.2 - 0.3, 0.45, '#f4f6fa');
-  /* 手前の腕 */
-  pArm(c, [1.8, T + 2.4], H, SMC.kim, 8, 7.6, 1, { r0: 2.5, r1: 2.3, r2: 1.9, hand: function (Hh) { pFist(c, Hh, SMC.sk, 1.9); } });
-  /* 顔の点(隻眼・傷・くわえ草) */
+  /* 手前の腕(羽織の広い袖) */
+  pArm(c, [1.8, T + 2.4], H, SMC.kim, 8, 7.6, 1, { r0: 3.0, r1: 2.7, r2: 1.9, hand: function (Hh) { pFist(c, Hh, SMC.sk, 1.9); } });
+  /* 顔の点(太い眉、鋭い目、への字口) */
   var ex = Math.round(hx + 2.4), ey = Math.round(hy - 0.6), my = Math.round(hy + 3.2);
-  pPixW(ex - 1, ey - 1, 4, '#0c0a09'); pPix(ex, ey, '#ffffff'); pPix(ex + 1, ey, '#0c0a09');
-  pPix(ex - 1, ey - 2, '#c9505f'); pPix(ex - 1, ey, '#c9505f'); pPix(ex - 1, ey + 1, '#c9505f'); pPix(ex - 1, ey + 2, '#c9505f');
-  pPixW(ex, my, 3, '#6a3a2a');
-  for (i = 0; i < 6; i++) pPix(ex + 3 + i, my - Math.round(i * 0.5), i > 3 ? '#e8e08a' : '#c9c45a');
+  pPixW(ex - 1, ey - 2, 3, '#0c0a09'); pPix(ex + 2, ey - 1, '#0c0a09');
+  pPixW(ex, ey, 2, '#0c0a09'); pPix(ex + 1, ey - 1, '#3a302a');
+  pPixW(ex, my, 3, '#6a3a2a'); pPix(ex - 1, my + 1, '#6a3a2a');
   if (q.shine) pPix(Math.round(tip[0]), Math.round(tip[1]), '#ffffff');
   pupEnd();
 }
@@ -2151,18 +2174,23 @@ function cryCol(c, x, y) {
 }
 /* opt: run(走り) ph shock mark(!!) wig crys(全身クリスタル) thr(この行より下がクリスタル) jump */
 function drawPres(px, F, f, opt) {
-  var K = SC, jy = (opt.jump || 0) * K, ph = opt.ph || 0, B0 = -jy, dp = opt.droop || 0;
+  var K = SC, jy = (opt.jump || 0) * K, ph = opt.ph || 0, B0 = -jy, dp = opt.droop || 0, cr = opt.crouch || 0;
   if (!opt.nosh) { R(px - 8, F + 1, 17, 1, 'rgba(0,0,0,0.36)'); R(px - 6, F + 2, 13, 1, 'rgba(0,0,0,0.24)'); }
   var l1 = 2, l2 = -2, y1 = 0, y2 = 0;
   if (opt.run) { var s = Math.sin(ph), c2 = Math.cos(ph); l1 = s * 3; l2 = -s * 3; y1 = -Math.max(0, c2 * 2); y2 = -Math.max(0, -c2 * 2); }
   if (opt.shock) { l1 = 3; l2 = -3; }
-  var hipY = B0 - 7 * K, T = B0 - 18 * K, legs;
+  var hipY = B0 - (7 - 3.2 * cr) * K, T = B0 - (18 - 6 * cr) * K, legs;
   if (opt.sit) legs = [{ h: [-1, hipY], k: [5, hipY + 0.6], f: [5.4, B0] }, { h: [1.2, hipY], k: [6.4, hipY + 1], f: [6.8, B0] }];
   else {
     var a1 = l1 * f * K, a2 = l2 * f * K, b1 = B0 + y1 * K, b2 = B0 + y2 * K, LL = function (hx, fx, fy) { return { h: [hx, hipY], k: [(hx + fx) / 2 + 0.8, (hipY + fy) / 2], f: [fx, fy], lift: fy < B0 - 0.5 ? 0.3 : 0 }; };
     legs = a1 > a2 ? [LL(-1.4, a2, b2), LL(1.6, a1, b1)] : [LL(-1.4, a1, b1), LL(1.6, a2, b2)];
   }
-  var top = -18, hA, hB;
+  if (cr > 0) {
+    var cl = [{ h: [-1, hipY], k: [5.2, hipY - 1.2], f: [3.2, B0] }, { h: [1.2, hipY], k: [6.2, hipY - 0.8], f: [4.6, B0] }];
+    var mx = function (a, b) { return [a[0] + (b[0] - a[0]) * cr, a[1] + (b[1] - a[1]) * cr]; };
+    legs = legs.map(function (l, i) { return { h: mx(l.h, cl[i].h), k: mx(l.k, cl[i].k), f: mx(l.f, cl[i].f), lift: 0 }; });
+  }
+  var top = -18 + 6 * cr, hA, hB;
   if (opt.scream) { hA = [f - 3, top - 3]; hB = [f + 3, top - 3]; }
   else if (opt.press != null) { hA = [f * (4 + 5 * opt.press), top + 8 + opt.press]; hB = [4, top + 8]; }
   else if (opt.hug) { hA = [-1, top + 4]; hB = [2, top + 5]; }
@@ -2172,9 +2200,9 @@ function drawPres(px, F, f, opt) {
   else if (opt.run) { hA = [-6, top - 5 + Math.sin(ph * 2) * 2]; hB = [6, top - 4 - Math.sin(ph * 2) * 2]; }
   else { hA = [-5, top + 7]; hB = [5, top + 7]; }
   var L = function (v) { return [v[0] * f * K, B0 + v[1] * K]; };
-  var hx = (1 + Math.round(dp * 2)) * K, hy = B0 + (-23 + dp * 4) * K - 1;
+  var hx = (1 + Math.round(dp * 2) + 2 * cr) * K, hy = B0 + (-23 + 6 * cr + dp * 4) * K - 1;
   var thr = opt.thr != null ? F + (opt.thr - F) * K : null;
-  var qp = { hipY: hipY, T: T, legs: legs, A: L(hA), B: L(hB), SA: [-3 * f * K, B0 - 17 * K], SB: [3 * f * K, B0 - 17 * K], hx: hx, hy: hy, pale: opt.pale, wig: opt.wig, shock: opt.shock, scream: opt.scream, run: opt.run, crys: opt.crys, thr: thr, px: px, F: F, f: f };
+  var qp = { hipY: hipY, T: T, legs: legs, A: L(hA), B: L(hB), SA: [-3 * f * K, B0 - (17 - 6 * cr) * K], SB: [3 * f * K, B0 - (17 - 6 * cr) * K], hx: hx, hy: hy, pale: opt.pale, wig: opt.wig, shock: opt.shock, scream: opt.scream, run: opt.run, crys: opt.crys, thr: thr, px: px, F: F, f: f };
   pupCall(opt.crys ? 'prc' : 'pr', (opt.crys || thr != null) ? Math.floor(simT / 45) : '', qp, function () { pupPres(qp); });
   pupBlit(px, F, f);
   var hxw = px + f * hx, hyw = F + hy;
@@ -2273,12 +2301,104 @@ function drawBabySprite(alpha, noShadow) {
 /* 土下座(u=0で立ち姿の手前、1で額を床につける) */
 /* 後ろ姿(花火を見るとき) */
 function presFallAngle() {
-  var t = pr.t, a = t < 0.7 ? (t / 0.7) * (t / 0.7) : t < 2.3 ? 1 : Math.max(0, 1 - (t - 2.3) / 0.8);
+  var t = pr.t, a = t < 0.7 ? (t / 0.7) * (t / 0.7) : t < 1.4 ? 1 : Math.max(0, 1 - (t - 1.4) / 0.7);
   return -pr.face * a * 1.5708;
 }
 function presTripAngle() {
   var t = pr.t, a = t < 0.5 ? (t / 0.5) * (t / 0.5) : t < 1.5 ? 1 : Math.max(0, 1 - (t - 1.5) / 0.7);
   return pr.face * a * 1.5708;
+}
+/* 演出が見えるよう、社長より手前のガラスを(破損額には数えず)取り除く。破片は画面の内側に飛んできて、下に溜まる */
+/* ---------- 画面の内側に貼りつくガラス片。滑り落ちて止まったものは1枚の絵に焼き込み、毎フレームの描画は1回で済ませる ---------- */
+var SG = { live: [], pile: [], hm: new Float32Array(160), cv: null, cx: null, key: '', snd: 0 };
+function sgReset() { SG.live.length = 0; SG.pile.length = 0; SG.hm = new Float32Array(DW); SG.key = ''; }
+function sgLaunch(o, delay) {
+  var n = clamp(Math.round(o.w * o.h / 24), 3, 9), i, j, sx = o.x - camX;
+  for (i = 0; i < n; i++) {
+    var x = sx + rnd(0, o.w), y = o.y + (i + Math.random()) * o.h / n, s = rnd(1.1, 2.0), k = 3 + Math.floor(Math.random() * 3), v = [], a0 = rnd(0, 6.283), my = 0;
+    for (j = 0; j < k; j++) { var a = a0 + j / k * 6.283 + rnd(-0.35, 0.35), r = s * rnd(0.6, 1.25); v.push(Math.cos(a) * r, Math.sin(a) * r); }
+    SG.live.push({ x0: x, y0: y, x: x, y: y, x1: clamp(80 + (x - 80) * 1.5 + rnd(-12, 12), 4, DW - 4), y1: clamp(y - rnd(-4, 16), 10, DH - 26), v: v, rot: rnd(0, 6.28), vr: rnd(-9, 9),
+      age: -delay - rnd(0, 0.14), T: rnd(0.2, 0.32), ph: 0, vy: 0, sc: 1, S: rnd(1.9, 2.7), hold: rnd(0.06, 0.4), wob: rnd(0, 6.28), a: rnd(0.3, 0.42) });
+  }
+}
+function sgBottom(p) { var m = -99, i; for (i = 0; i < p.v.length; i += 2) { var vx = p.v[i] * p.sc, vy = p.v[i + 1] * p.sc, Y = vx * Math.sin(p.rot) + vy * Math.cos(p.rot); if (Y > m) m = Y; } return m; }
+function sgUpdate(dt) {
+  if (!SG.live.length) return;
+  SG.snd -= dt;
+  for (var i = SG.live.length - 1; i >= 0; i--) {
+    var p = SG.live[i]; p.age += dt;
+    if (p.age < 0) continue;
+    if (p.ph === 0) {
+      var u = Math.min(1, p.age / p.T), e = u * u;
+      p.x = p.x0 + (p.x1 - p.x0) * (1 - (1 - u) * (1 - u)); p.y = p.y0 + (p.y1 - p.y0) * (1 - (1 - u) * (1 - u)) - Math.sin(Math.PI * u) * 6;
+      p.sc = 1 + (p.S - 1) * e; p.rot += p.vr * dt;
+      if (u >= 1) {
+        p.ph = 1; p.age = 0;
+        if (AC && SG.snd <= 0) { SG.snd = 0.035; var t0 = AC.currentTime; nz(t0, 0.012, { type: 'highpass', f: 5200, g: 0.1 }); tn(t0, rnd(3200, 5600), 0.06, { g: 0.022 }); }
+      }
+      continue;
+    }
+    if (p.ph === 1) { if (p.age >= p.hold) { p.ph = 2; p.age = 0; } continue; }
+    p.vy = Math.min(70, p.vy + 90 * dt); p.y += p.vy * dt; p.x += Math.sin(p.wob + p.age * 5) * 2.5 * dt; p.rot += Math.sin(p.wob) * 0.4 * dt;
+    var c = clamp(Math.round(p.x), 0, DW - 1), g = DH - SG.hm[c], b = sgBottom(p);
+    if (p.y + b >= g) {
+      p.y = g - b + rnd(0, 1.2); SG.pile.push(p); SG.live.splice(i, 1); sgBake(p);
+      var w = Math.round(p.S * 1.6), h = Math.max(0.6, b * 0.55);
+      for (var q = -w; q <= w; q++) { var cc = c + q; if (cc >= 0 && cc < DW) SG.hm[cc] = Math.min(13, Math.max(SG.hm[cc], (DH - p.y) + h * (1 - Math.abs(q) / (w + 1)) - b)); }
+    }
+  }
+}
+function sgPath(c, p) {
+  var cs = Math.cos(p.rot), sn = Math.sin(p.rot), i, n = p.v.length / 2;
+  c.beginPath();
+  for (i = 0; i < n; i++) { var vx = p.v[i * 2] * p.sc, vy = p.v[i * 2 + 1] * p.sc, X = p.x + vx * cs - vy * sn, Y = p.y + vx * sn + vy * cs; if (i) c.lineTo(X, Y); else c.moveTo(X, Y); }
+  c.closePath();
+}
+function sgPaint(c, p) {
+  sgPath(c, p);
+  c.fillStyle = 'rgba(196,232,248,' + p.a.toFixed(2) + ')'; c.fill();
+  c.lineWidth = 0.28; c.strokeStyle = 'rgba(255,255,255,0.92)'; c.stroke();
+  var cs = Math.cos(p.rot), sn = Math.sin(p.rot), vx = p.v[0] * p.sc * 0.7, vy = p.v[1] * p.sc * 0.7, wx = p.v[2] * p.sc * 0.7, wy = p.v[3] * p.sc * 0.7;
+  c.beginPath(); c.moveTo(p.x + vx * cs - vy * sn, p.y + vx * sn + vy * cs); c.lineTo(p.x + wx * cs - wy * sn, p.y + wx * sn + wy * cs);
+  c.lineWidth = 0.4; c.strokeStyle = 'rgba(255,255,255,0.6)'; c.stroke();
+}
+function sgBake(p) {
+  var W = Math.round(DW * S * dpr), H = Math.round(DH * S * dpr), key = W + 'x' + H;
+  if (!SG.cv) { SG.cv = document.createElement('canvas'); SG.cx = SG.cv.getContext('2d'); }
+  if (SG.key !== key) {
+    SG.key = key; SG.cv.width = W; SG.cv.height = H; SG.cx.setTransform(S * dpr, 0, 0, S * dpr, 0, 0); SG.cx.lineJoin = 'round';
+    for (var i = 0; i < SG.pile.length; i++) sgPaint(SG.cx, SG.pile[i]);
+    return;
+  }
+  if (p) sgPaint(SG.cx, p);
+}
+function drawSG() {
+  if (!SG.live.length && !SG.pile.length) return;
+  var fa = 1;
+  if (G.heldT >= 0) fa = 1 - clamp((G.t - G.heldT - 3.4) / 1.2, 0, 1);
+  if (fa <= 0) return;
+  fo.save(); fo.globalAlpha = fa;
+  if (SG.pile.length) {
+    sgBake(null);
+    fo.setTransform(1, 0, 0, 1, 0, 0); fo.beginPath(); fo.rect(offX * dpr, offY * dpr, DW * S * dpr, DH * S * dpr); fo.clip();
+    fo.drawImage(SG.cv, offX * dpr, offY * dpr);
+  }
+  fo.setTransform(S * dpr, 0, 0, S * dpr, offX * dpr, offY * dpr);
+  fo.beginPath(); fo.rect(0, 0, DW, DH); fo.clip(); fo.lineJoin = 'round';
+  for (var i = 0; i < SG.live.length; i++) { var p = SG.live[i]; if (p.age >= 0) sgPaint(fo, p); }
+  fo.restore();
+}
+function prClearFront() {
+  var out = [];
+  for (var i = objs.length - 1; i >= 0; i--) {
+    var q = objs[i];
+    if (q.dead || q.deco || q.t === 'ln2' || q.t === 'crystal' || q.t === 'wall' || q.falling) continue;
+    if (q.mat !== 'glass' && q.t !== 'pane') continue;
+    if (q.fl > pr.z + 1 && q.x < pr.x + 64 && q.x + (q.w || 0) > pr.x - 64) { objs.splice(i, 1); out.push(q); }
+  }
+  out.sort(function (a, b) { return Math.abs(a.x + a.w / 2 - pr.x) - Math.abs(b.x + b.w / 2 - pr.x); });
+  out.forEach(function (q, k) { sgLaunch(q, k * 0.07); });
+  if (out.length && AC) { sShatter({ t: 'pane' }, pr.x); }
 }
 function prVisible() { return pr.st === 'beg' || pr.st === 'dogeza' || pr.st === 'stand' || pr.st === 'side' || pr.st === 'fall' || pr.st === 'focus' || pr.st === 'sit' || pr.st === 'press' || pr.st === 'startle' || pr.st === 'tremble' || pr.st === 'enter' || pr.st === 'flee' || pr.st === 'wig' || pr.st === 'cry' || pr.st === 'dash' || pr.st === 'trip'; }
 function drawPresNPC() {
@@ -2304,6 +2424,7 @@ function drawPresNPC() {
   if (pr.st === 'fall') {
     var ang = presFallAngle(), fx = Math.round(pr.x), fz = Math.round(pr.z);
     o.shock = true; o.pale = true; o.mark = pr.t > 0.5 && pr.t < 1.6; o.nosh = true;
+    if (pr.t > 1.4) { var cu = clamp((pr.t - 1.4) / 0.7, 0, 1); o.crouch = cu * cu * (3 - 2 * cu); o.hug = true; o.droop = 0.5 * o.crouch; }
     var sw = Math.abs(ang) / 1.5708; R(fx - 5 - Math.round(7 * sw), fz + 1, 11 + Math.round(14 * sw), 1, 'rgba(0,0,0,0.36)');
     ctx.save(); ctx.translate(fx, fz); ctx.rotate(ang); ctx.translate(-fx, -fz);
     drawPres(fx, fz, pr.face, o);
@@ -2313,14 +2434,14 @@ function drawPresNPC() {
   if (pr.scream > 0) { o.scream = true; o.mark = true; }
   if (pr.st === 'enter' || pr.st === 'flee') { o.run = !o.scream; o.jump = (pr.hop > 0 ? Math.sin(Math.PI * (1 - pr.hop / 0.35)) * 6 : 0) + (o.jumpX || 0); }
   else if (pr.st === 'wig') { o.shock = true; o.pale = true; o.mark = pr.t < 0.7; o.droop = clamp((pr.t - 0.5) / 1.3, 0, 1); }
-  else if (pr.st === 'cry') { o.shock = true; o.droop = 1; o.hug = true; o.pale = true; o.thr = Math.round(pr.z + 1 - 34 * clamp(pr.t / 2.0, 0, 1)); }
+  else if (pr.st === 'cry') { o.shock = true; o.droop = 0.5; o.crouch = 1; o.hug = true; o.pale = true; o.thr = Math.round(pr.z + 1 - 34 * clamp(pr.t / 2.0, 0, 1)); }
   var jit = pr.st === 'wig' && pr.t < 0.7 ? (Math.floor(simT / 40) & 1) : 0;
   drawPres(Math.round(pr.x) + jit, Math.round(pr.z), pr.face, o);
 }
 function presMask() {
   var keep = ctx, px = Math.round(pr.x), F = Math.round(pr.z), mc = maskCv.getContext('2d', { willReadFrequently: true });
   mc.setTransform(1, 0, 0, 1, 0, 0); mc.clearRect(0, 0, DW, DH);
-  ctx = mc; drawPres(px, F, pr.face, { shock: true, hug: true, nosh: true }); ctx = keep;
+  ctx = mc; drawPres(px, F, pr.face, { shock: true, hug: true, nosh: true, crouch: 1, droop: 0.5 }); ctx = keep;
   var y0 = F - 40, h = 41, x0 = px - 12, w = 25, d = mc.getImageData(x0, y0, w, h).data, rows = [], ix, iy;
   for (iy = 0; iy < h; iy++) {
     var a = -1, b = -1;
@@ -2338,7 +2459,7 @@ function makeCrystal() {
 function drawCrystalObj(o) {
   if (o.dead) return;
   R(o.cx - 8, o.fl + 1, 17, 1, 'rgba(120,200,255,0.35)');
-  drawPres(o.cx, o.fl, o.face, { shock: true, hug: true, crys: true, nosh: true });
+  drawPres(o.cx, o.fl, o.face, { shock: true, hug: true, crys: true, nosh: true, crouch: 1, droop: 0.5 });
   drawCracks(o, '#ffffff');
 }
 function prDodgeCheck() {
@@ -2427,7 +2548,7 @@ function prUpdate(dt) {
     pr.fear += dt * (d < 60 ? 1 : 0.35);
     if (brokenN >= Math.ceil(brTotal * 0.75) && pr.hop <= 0) {
       /* あらかた割れた：社長が足を滑らせて転倒。起き上がるまで操作不可 */
-      pr.st = 'focus'; pr.t = 0; pr.wigOff = false; ctlOn = false; atkHeld = null; pr.pale = 9;
+      pr.st = 'focus'; pr.t = 0; pr.wigOff = false; ctlOn = false; atkHeld = null; pr.pale = 9; prClearFront();
       if (AC) { tn(AC.currentTime, 220, 0.5, { f2: 90, g: 0.12 }); }
     }
     return;
@@ -2449,7 +2570,7 @@ function prUpdate(dt) {
       sShock();
     }
     if (pr.wigOff === true && pr.t >= 1.35) { pr.wigOff = 2; if (AC) { var tw = AC.currentTime; tn(tw, 160, 0.12, { f2: 90, g: 0.06 }); } }
-    if (pr.t >= 3.1) { pr.st = 'wig'; pr.t = 0; }
+    if (pr.t >= 2.1) { pr.st = 'cry'; pr.t = 0; sCrystallize(); }
     return;
   }
   if (pr.st === 'wig') {
@@ -2560,10 +2681,10 @@ function sCrystalBreak(pan) {
   sTinkle(t + 0.3, 30, 2.2, 3000, 9000, 0.05);
 }
 
-/* ---------- 用心棒（隻眼の浪人）。サラリーマンには当たらない（ギリギリで自動回避）。バットで窓の外へ吹き飛ぶ ---------- */
+/* ---------- 用心棒（浪人）。サラリーマンには当たらない（ギリギリで自動回避）。バットで窓の外へ吹き飛ぶ ---------- */
 var sam = { st: 'hidden', x: 52, z: 106, face: -1, t: 0, ph: 0, sink: 40, vis: false, alt: 0, rot: 0, sc: 1, goneT: 0, brk: false, ping: false, fz0: 106, fx0: 52, fdir: 1 };
-var TRAP = { x: 40, y: 99, w: 24, h: 12 };
-function samReset() { sam.st = 'hidden'; sam.vis = false; sam.sink = 40; sam.t = 0; sam.rot = 0; sam.sc = 1; sam.alt = 0; sam.brk = false; sam.goneT = 0; sam.x = 52; sam.z = 106; sam.face = -1; }
+var TRAP = { x: 94, y: 99, w: 24, h: 12 };
+function samReset() { sam.st = 'hidden'; sam.vis = false; sam.sink = 40; sam.t = 0; sam.rot = 0; sam.sc = 1; sam.alt = 0; sam.brk = false; sam.goneT = 0; sam.x = TRAP.x + TRAP.w / 2; sam.z = TRAP.y + 7; sam.face = -1; }
 function samBat() {
   sam.st = 'fly'; sam.t = 0; sam.fz0 = sam.z; sam.fx0 = sam.x; sam.fdir = pl.face; sam.brk = false; sam.rot = 0; sam.alt = 0;
   if (AC) { sHit('temper', 3, sam.x); tn(AC.currentTime, 120, 0.32, { f2: 45, g: 0.22 }); nz(AC.currentTime, 0.4, { type: 'lowpass', f: 1800, f2: 300, g: 0.25 }); }
@@ -2737,7 +2858,7 @@ var FOE = {
 (function () { for (var k in FOE) { FOE[k].rng = Math.round(FOE[k].rng * SC); FOE[k].ev.forEach(function (e) { e.r = Math.round(e.r * SC); }); } })();
 function elecMv(f) { return f.mv % 3 === 1; }
 var ROOMS = [[36, 180], [186, 300], [306, 420], [426, 592]], SHX = [183, 303, 423], CHN = [];
-var FNAME = { box: 'ボクサー', yoga: 'ヨーガ', sumo: 'ビューティカマオ', blanka: 'ブロンコ' };
+var FNAME = { box: 'ボクサー', yoga: 'ヨーガ', sumo: 'ビューティ', blanka: 'ブランタ' };
 function foeSetup() {
   foes.length = 0; CHN.length = 0;
   G.rm = 0; G.lim = ROOMS[0][1]; G.sh = [0, 0, 0]; G.clr = null; G.opening = false; G.goT = null; G.cold = 0;
@@ -3218,7 +3339,7 @@ function drawFish(p) {
   if (flop > 0.4) { R(x0 + 6, y0 - 4, 1, 1, '#ffffff'); R(x0 + 18, y0 - 2, 1, 1, '#ffffff'); R(x0 + 11, y0 + 1, 1, 1, '#ffffff'); }
   ctx.restore();
 }
-/* ブロンコの電撃: 点滅する太い稲妻(白い芯+水色+青の光)、床を走る放電、頭上から落ちる雷、体を包む光 */
+/* ブランタの電撃: 点滅する太い稲妻(白い芯+水色+青の光)、床を走る放電、頭上から落ちる雷、体を包む光 */
 function blankaElec(px, F, fa, u, mode) {
   var sv = SCL; SCL = 1;
   var q = Math.floor(simT / 45), atk = mode === 'atk', n = atk ? 8 : 3, i, k, seed = 17 + q * 7919 + (atk ? 1 : 0);
@@ -3528,6 +3649,7 @@ function drawFx() {
     if (ba > 0.02) sparkle(fi, Math.round(pr.x) + pr.face + 0.5, Math.round(pr.z) - 27 + 0.5, 1 + 3.6 * ba, ba);
   }
   fi.setTransform(S * dpr, 0, 0, S * dpr, 0, 0); drawHUD(fi);
+  drawSG();
 }
 
 /* ---------- 破壊の流れ ---------- */
@@ -3591,8 +3713,8 @@ function destroy(o, x, y) {
       for (var li = 0; li < 14; li++) addFx({ kind: 'poly', x: o.x + rnd(1, o.w - 1), y: o.y + rnd(1, 8), verts: [-1.6, 0, 0, -0.9, 1.6, 0, 0, 0.9], rot: rnd(0, 6.28), sy: 1, vr: rnd(-8, 8), vx: rnd(-45, 45) + pl.face * 20, vy: -rnd(20, 80), fy: ffy(o), rest: 0.2, life: rnd(2, 3), fade: 0.6, fill: pick(['#2f7a3e', '#3f8a4a', '#58a85a']), stroke: '#1d4a26', lw: 0.2, alpha: 1, seed: 0, glint: false, pop: false, tint: null, hl: false });
       ring(hx, hy, 7, 0.2); hitstop = 38; shake(0.9, 100); break;
     case 'gate':
-      shatter(o, hx, hy, { M: 16, N: 9, R: 16, v: 120, push: 36, up: 80, spin: 10, life: 3.0, pop: 0.2, dust: 90, style: STY.pane });
-      o.rem = makeRem(o, 6); ring(hx, hy, 14, 0.28); hitstop = 120; shake(2.2, 200); flash(0.3, 34); startBlackout(); break;
+      shatter(o, hx, hy, { M: 22, N: 11, R: 20, v: 140, push: 40, up: 90, spin: 11, life: 3.2, pop: 0.2, dust: 160, style: STY.pane });
+      o.rem = makeRem(o, 6); ring(hx, hy, 18, 0.32); ring(hx, hy, 10, 0.22); hitstop = 170; shake(3.0, 260); flash(0.42, 44); startBlackout(); break;
     case 'pot':
       shatter(o, hx, hy, { M: 10, N: 4, R: 8, v: 90, push: 24, up: 85, spin: 10, life: 2.8, pop: 0.1, dust: 16, jit: 0.2, puffs: 5, dustFill: '#e6ecf2', style: STY.pot });
       ring(hx, hy, 9, 0.22); hitstop = 70; shake(1.6, 140); flash(0.2, 34); break;
@@ -3668,7 +3790,7 @@ function frame(nowT) {
   prUpdate(sdt); lnUpdate(sdt); samUpdate(sdt); foeUpdate(sdt); propUpdate(sdt); chainUpdate(); roomUpdate(sdt); coldUpdate(sdt); babyUpdate(sdt); gameUpdate(sdt, rdt);
   for (j = 0; j < objs.length; j++) if (objs[j].dead && objs[j].respawnAt && simT >= objs[j].respawnAt) respawn(objs[j]);
   for (j = objs.length - 1; j >= 0; j--) if (objs[j].gone) objs.splice(j, 1);
-  updFx(sdt); updGlint(rdt); updFW(rdt);
+  updFx(sdt); sgUpdate(rdt); updGlint(rdt); updFW(rdt);
   for (j = CG.length - 1; j >= 0; j--) { CG[j].age += rdt; if (CG[j].age > CG[j].life) CG.splice(j, 1); }
   if (pr.obj && !pr.obj.dead && Math.random() < rdt * 5) {
     var o = pr.obj, r = Math.floor(rnd(0, o.h)), m = o.mask[r];
@@ -3876,7 +3998,14 @@ function drawHUD(c) {
       c.font = 'bold 12px ' + JP; c.lineJoin = 'round'; c.lineWidth = 2.6; c.strokeStyle = '#ffffff'; var etxt = G.secret ? 'シークレットエンド' : 'ハッピーハッピーエンド'; c.strokeText(etxt, 80, by);
       c.fillStyle = G.secret ? '#ffd25a' : '#ff6f9d'; c.fillText(etxt, 80, by);
       c.globalAlpha = 1;
-      if (k > 5.6 && Math.floor(G.t * 1.6) % 2 === 0) { c.font = '5px ' + JP; c.fillStyle = 'rgba(255,240,200,0.95)'; c.fillText('タッチでもう一度', 80, 78); }
+      if (k > 2.2) {
+        c.globalAlpha = clamp((k - 2.2) / 0.6, 0, 1); c.lineJoin = 'round';
+        c.font = 'bold 5px ' + JP; c.lineWidth = 1.6; c.strokeStyle = 'rgba(0,0,0,0.85)'; c.strokeText('総破損額（時価）', 80, 56); c.fillStyle = '#f4f1e8'; c.fillText('総破損額（時価）', 80, 56);
+        var tot = '$' + Math.floor(costT).toLocaleString('en-US');
+        c.font = 'bold 9px ' + JP; c.lineWidth = 2.2; c.strokeText(tot, 80, 65.5); c.fillStyle = '#ffd25a'; c.fillText(tot, 80, 65.5);
+        c.globalAlpha = 1;
+      }
+      if (k > 5.6 && Math.floor(G.t * 1.6) % 2 === 0) { c.font = '5px ' + JP; c.fillStyle = 'rgba(255,240,200,0.95)'; c.fillText('タッチでもう一度', 80, 80); }
     }
   }
   if (G.mode === 'blackout' && G.bt > 1.9 && G.bt < 4.2) {
@@ -3935,7 +4064,7 @@ function setupBoss() {
   build('boss'); G.stage = 'boss';
   pl.x = -20; pl.z = 108; pl.face = 1; pl.st = 'idle'; pl.bk = false; pl.pose = readyPose(); pl.cut = 'carry'; pl.cutU = 0; pl.back = false; pl.moving = false; pl.wallHit = false;
   pr.x = 141; pr.z = 99; pr.face = -1; pr.st = 'sit'; pr.t = 0; pr.fear = 0; pr.wig = true; pr.hop = 0; pr.pale = 0; pr.jt = 0; pr.scream = 0; pr.obj = null; pr.ln2 = false; G.ln = null; G.melt = null; G.cold = 0;
-  baby = null; TR.length = 0; CG.length = 0; FW.q.length = 0; FW.sh.length = 0; FW.sp.length = 0; FW.fl = 0; G.secret = false; G.quiet = 0;
+  baby = null; TR.length = 0; CG.length = 0; sgReset(); FW.q.length = 0; FW.sh.length = 0; FW.sp.length = 0; FW.fl = 0; G.secret = false; G.quiet = 0;
   samReset(); G.zoom = null; G.trap = 0; G.sw = 0; G.plat = 0; G.pressed = false; G.rumb = false; pl.dodgeT = 0; pl.ear = false;
 }
 function startIntro() { G.mode = 'intro'; G.t = 0; G.step = 0; G.st = 0; G.elev = 0; G.pin = false; G.dsnd = false; initAudio(); loadBGM(); ambStart(); }
@@ -4012,14 +4141,14 @@ function gameUpdate(dt, rdt) {
       }
       if (G.pressed && pr.st === 'tremble' && G.st > 2.7) { G.step = 2; G.st = 0; }
     } else if (gs === 2) { /* 床が開く */
-      pl.cut = 'carry'; G.zoom = { x: 52, y: 98, a: 0.42 };
+      pl.cut = 'carry'; G.zoom = { x: TRAP.x + TRAP.w / 2, y: 98, a: 0.42 };
       if (!G.rumb) { G.rumb = true; shake(1.1, 1700); if (AC) { nz(AC.currentTime, 1.8, { type: 'lowpass', f: 260, f2: 90, g: 0.2 }); tn(AC.currentTime, 60, 1.6, { f2: 42, g: 0.12 }); } }
       G.trap = clamp(G.st / 1.3, 0, 1);
-      if (G.st > 1.8) { G.step = 3; G.st = 0; sam.st = 'rise'; sam.t = 0; sam.vis = true; sam.x = 52; sam.z = 106; sam.face = -1; sam.sink = 40; if (AC) { nz(AC.currentTime, 2.0, { type: 'lowpass', f: 400, f2: 700, g: 0.12 }); tn(AC.currentTime, 90, 2.0, { f2: 140, type: 'sawtooth', g: 0.03 }); } }
+      if (G.st > 1.8) { G.step = 3; G.st = 0; sam.st = 'rise'; sam.t = 0; sam.vis = true; sam.x = TRAP.x + TRAP.w / 2; sam.z = TRAP.y + 7; sam.face = -1; sam.sink = 40; if (AC) { nz(AC.currentTime, 2.0, { type: 'lowpass', f: 400, f2: 700, g: 0.12 }); tn(AC.currentTime, 90, 2.0, { f2: 140, type: 'sawtooth', g: 0.03 }); } }
     } else if (gs === 3) { /* 用心棒がせり上がる */
-      pl.cut = 'carry'; G.zoom = { x: 52, y: 92, a: 0.42 };
+      pl.cut = 'carry'; G.zoom = { x: TRAP.x + TRAP.w / 2, y: 92, a: 0.42 };
       if (sam.st === 'idle') { G.step = 4; G.st = 0; if (AC) { tn(AC.currentTime, 196, 0.5, { type: 'sawtooth', g: 0.04 }); tn(AC.currentTime + 0.02, 294, 0.5, { type: 'sawtooth', g: 0.03 }); } }
-    } else if (gs === 4) { /* 隻眼・草をくわえた顔 */
+    } else if (gs === 4) { /* 用心棒の顔に寄る */
       pl.cut = 'carry'; sam.face = pl.x > sam.x ? 1 : -1; G.zoom = { x: sam.x + sam.face * 2, y: sam.z - 31, a: 0.75 };
       if (G.st > 2.2) { G.step = 5; G.st = 0; }
     } else if (gs === 5) { /* イヤホンを挿す（大きく寄る） */
@@ -4108,7 +4237,7 @@ function resetGame() {
   build('corr'); G.stage = 'corr'; G.banner = 'スタート'; G.hintT = 0; G.bt = 0;
   pl.x = -20; pl.z = 108; pl.face = 1; pl.st = 'idle'; pl.bk = false; pl.pose = readyPose(); pl.cut = null; pl.cutU = 0; pl.ear = false; pl.back = false; pl.moving = false; pl.tapFlash = 0;
   pr.x = 141; pr.z = 99; pr.face = -1; pr.st = 'gone'; pr.t = 0; pr.fear = 0; pr.wig = true; pr.hop = 0; pr.pale = 0; pr.jt = 0; pr.scream = 0; pr.obj = null; pr.ln2 = false; G.ln = null; G.melt = null;
-  baby = null; TR.length = 0; CG.length = 0; FW.q.length = 0; FW.sh.length = 0; FW.sp.length = 0; FW.fl = 0;
+  baby = null; TR.length = 0; CG.length = 0; sgReset(); FW.q.length = 0; FW.sh.length = 0; FW.sp.length = 0; FW.fl = 0;
   costT = costD = 0; costPulse = 0;
   G.secret = false; G.quiet = 0; G.base = 0; G.mode = 'title'; G.t = 0; G.step = 0; G.st = 0; G.startT = -1; G.heldT = -1; G.music = false; G.curtain = false; G.fwT = 0; ctlOn = false; atkHeld = null; G.elev = 0; G.pin = false; G.dsnd = false;
   samReset(); G.zoom = null; G.trap = 0; G.sw = 0; G.plat = 0; G.pressed = false; G.rumb = false; pl.dodgeT = 0;
