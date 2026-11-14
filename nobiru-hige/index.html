@@ -282,7 +282,7 @@ function startBGM() {
 // --- ゲーム定数・状態 ---
 const GRAVITY = 0.55;
 const GROUND_Y = 400;
-const MAX_SCALE = 1e9;  // 大きくなる上限（事実上なし）
+const MAX_SCALE = 7;    // 大きくなる上限＝花が出る大きさ（高さが画面の半分＝32px×7=224px）
 const MIN_SCALE = 0.2;  // 小さくなる下限
 const JUMP_VY = -10.4;  // ジャンプの初速（以前は -11.5。高さ約120px→約98px）
 const JUMP_SCALE = 0.9; // 踏んだときの跳ね返りにも同じ低めの倍率をかける
@@ -413,8 +413,10 @@ let tick = 0; // 経過フレーム（波の位相に使う）
 
 // 敵キノコの定数
 const ENEMY_BASE = 24;        // 最初の大きさ
-const ENEMY_SHRINK = 0.96;    // 胞子から育つたびに、ほんの少しだけ小さくなる倍率
+const ENEMY_SHRINK = 0.7;     // 潰れたとき、汁から育つキノコは潰れたキノコの0.7倍の大きさ
 const ENEMY_MIN = 5;          // これ以上は小さくならない
+const LAYER_STEP = 5;         // キノコが上下に重なるときの1段の高さ
+const MAX_LIFT = 48;          // 重なりの最大の高さ
 const MAX_ENEMIES = 450;      // 増殖の上限（超えたら増えずに入れ替わる）
 const SLOW_START = 60;        // これ以上の数で処理落ち風になる
 
@@ -466,48 +468,64 @@ function splatEnemy(e) {
   }
 }
 
-// ---- 菌糸：倒した場所（や時間経過）で地面に糸が伸び、二股に分かれて先端からキノコが生える ----
-let mycs = [];
-const MYC_GROW = 54;   // 糸が伸びきるまでのフレーム
-const MYC_FADE = 150;  // 伸びきってから糸が薄れて消えるまで
-function pendingBranches() { let n = 0; for (const m of mycs) if (!m.done) n += m.br.length; return n; }
-// 潰れたキノコの分だけ（vxsの数）糸を伸ばす。向きはvxsの符号
+// ---- 汁と菌床：潰れると汁が左右に飛び、落ちた所に菌床ができて、糸が二股に伸び、キノコが生える ----
+let mycs = [];          // 菌床
+const MYC_BED = 46;     // 菌床ができてからキノコが生えるまでのフレーム
+const MYC_FADE = 150;   // 生えたあと、菌床が薄れて消えるまで
+// これから生まれる分（飛んでいる汁＋育ち中の菌床）。上限の計算に使う
+function pendingBranches() { let n = spores.length; for (const m of mycs) if (!m.done) n++; return n; }
+let lastJuice = 0;
+function sfxJuice() {
+  const now = performance.now();
+  if (now - lastJuice < 45) return;
+  lastJuice = now;
+  playTone(520 + Math.random() * 260, 'sine', 0.07, 0.05, 220);
+}
+// 潰れたキノコから、汁を vxs の数だけ飛ばす（符号が向き）。1滴ごとに、落ちた所でキノコ1体ぶんの菌床になる
 function emitSpores(e, ox, oy, vxs, shrink) {
   const cs = Math.max(ENEMY_MIN, e.size * (shrink || ENEMY_SHRINK));
   const room = MAX_ENEMIES - enemies.length - pendingBranches();
-  const n = Math.min(room, vxs.length, 2);
-  if (n <= 0 || mycs.length > 220) return;
-  const br = [];
-  for (let k = 0; k < n; k++) {
-    const dir = vxs[k] >= 0 ? 1 : -1;
-    const len = 26 + Math.random() * 22 + k * 8;
-    br.push({ dir, len, fork: (k === 0 ? 1 : -1) });
+  const n = Math.min(room, vxs.length);
+  const col = `hsl(${e.hue},85%,${e.light + 8}%)`;
+  for (let k = 0; k < vxs.length; k++) {      // プチュッ：細かい飛沫（数が多いときは控えめ）
+    if (particles.length >= 160) break;
+    for (let j = 0; j < 3; j++) {
+      particles.push({ x: ox, y: oy, vx: vxs[k] * (0.7 + Math.random() * 1.1), vy: -1.5 - Math.random() * 2.8,
+        life: 16 + Math.random() * 10, color: j === 0 ? '#fff' : col });
+    }
   }
-  mycs.push({
-    x: Math.max(6, Math.min(canvas.width - 6, ox)), t: 0, done: false, fade: 0, br,
-    size: cs, hue: e.hue, light: e.light, seed: Math.random() * 6.28,
-    safe: cs < footSize() ? 0 : 45
-  });
+  if (n > 0) sfxJuice();
+  for (let k = 0; k < n; k++) {
+    spores.push({
+      x: ox, y: oy, vx: vxs[k], vy: -3.2 - Math.random() * 2.6,
+      size: cs,
+      hue: (e.hue + (Math.random() - 0.5) * 40 + 360) % 360,
+      light: Math.max(28, Math.min(62, e.light + (Math.random() - 0.5) * 16)),
+      safe: cs < footSize() ? 0 : 45,
+      age: 0
+    });
+  }
+}
+// 汁が地面に落ちた：菌床を作る
+function landJuice(sp) {
+  if (mycs.length > 260) return;
+  mycs.push({ x: Math.max(6, Math.min(canvas.width - 6, sp.x)), t: 0, done: false, dead: false, fade: 0,
+    size: sp.size, hue: sp.hue, light: sp.light, safe: sp.safe, seed: Math.random() * 6.28 });
 }
 function updateMycs() {
   for (let i = mycs.length - 1; i >= 0; i--) {
     const m = mycs[i];
     if (!m.done) {
       m.t++;
-      if (m.t >= MYC_GROW) {
+      if (m.t >= MYC_BED) {
         m.done = true;
-        for (const b of m.br) {
-          if (enemies.length >= MAX_ENEMIES) break;
+        if (!m.dead && enemies.length < MAX_ENEMIES) {
           const sz = m.size;
-          const tx = Math.max(0, Math.min(canvas.width - sz, m.x + b.dir * b.len - sz / 2));
-          const ne = makeEnemy(tx, GROUND_Y - sz, sz,
-            (m.hue + (Math.random() - 0.5) * 40 + 360) % 360,
-            Math.max(28, Math.min(62, m.light + (Math.random() - 0.5) * 16)),
-            (Math.random() < 0.5 ? -1 : 1) * (0.3 + Math.random() * 0.6), 0, m.safe);
+          const ne = makeEnemy(Math.max(0, Math.min(canvas.width - sz, m.x - sz / 2)), GROUND_Y - sz, sz,
+            m.hue, m.light, (Math.random() < 0.5 ? -1 : 1) * (0.3 + Math.random() * 0.6), 0, m.safe);
           ne.born = 0;
           enemies.push(ne);
         }
-        if (particles.length < 160) addParticles(m.x, GROUND_Y - 2, '#f4ecd8', 3);
       }
     } else if (++m.fade > MYC_FADE) {
       mycs.splice(i, 1);
@@ -516,60 +534,57 @@ function updateMycs() {
 }
 function drawMycs() {
   for (const m of mycs) {
-    const p = m.done ? 1 : m.t / MYC_GROW;
+    const p = m.done ? 1 : m.t / MYC_BED;
     const al = m.done ? Math.max(0, 1 - m.fade / MYC_FADE) : 1;
     ctx.globalAlpha = al;
-    for (const b of m.br) {
-      const reach = b.len * Math.min(1, p * 1.15);
-      const yy = GROUND_Y + 4;
-      // 糸（影＋本体）
-      for (let d = 0; d <= reach; d += 2) {
-        const wob = Math.round(Math.sin(d * 0.35 + m.seed) * 1);
-        const x = Math.round(m.x + b.dir * d);
-        ctx.fillStyle = 'rgba(40,20,10,0.55)'; ctx.fillRect(x, yy + wob + 2, 2, 2);
-        ctx.fillStyle = '#f4ecd8'; ctx.fillRect(x, yy + wob, 2, 2);
+    const bw = Math.round(Math.max(8, m.size * 0.9) * Math.min(1, p * 3)); // 菌床の幅（すぐ広がる）
+    const gy = GROUND_Y + 3;
+    // 菌床：汁の色がしみた白い床
+    ctx.fillStyle = 'rgba(40,20,10,0.5)'; ctx.fillRect(Math.round(m.x - bw / 2) - 1, gy + 3, bw + 2, 3);
+    ctx.fillStyle = `hsl(${m.hue},45%,78%)`; ctx.fillRect(Math.round(m.x - bw / 2), gy, bw, 4);
+    ctx.fillStyle = '#fff6e0'; ctx.fillRect(Math.round(m.x - bw / 2) + 2, gy, Math.max(2, bw - 4), 2);
+    // 糸：床から左右へ伸び、途中で二股に分かれる
+    const reach = (m.size * 0.9 + 12) * Math.min(1, Math.max(0, (p - 0.2) / 0.8));
+    for (let dir = -1; dir <= 1; dir += 2) {
+      for (let d = bw / 2; d <= bw / 2 + reach; d += 2) {
+        const wob = Math.round(Math.sin(d * 0.4 + m.seed + dir) * 1);
+        const x = Math.round(m.x + dir * d);
+        ctx.fillStyle = '#f4ecd8'; ctx.fillRect(x, gy + 1 + wob, 2, 2);
       }
-      // 二股：途中から二本に分かれて先端へ
-      if (p > 0.45) {
-        const fx = 0.5 * b.len, fp = Math.min(1, (p - 0.45) / 0.55);
-        for (let sgn = -1; sgn <= 1; sgn += 2) {
-          const L = (b.len - fx) * fp;
-          for (let d = 0; d <= L; d += 2) {
-            const x = Math.round(m.x + b.dir * (fx + d));
-            const y = Math.round(yy + sgn * (d / (b.len - fx)) * 5);
-            ctx.fillStyle = 'rgba(40,20,10,0.5)'; ctx.fillRect(x, y + 2, 2, 2);
-            ctx.fillStyle = '#fff6e0'; ctx.fillRect(x, y, 2, 2);
+      if (reach > 10) {
+        const fx = bw / 2 + reach * 0.5;
+        for (let sg = -1; sg <= 1; sg += 2) {
+          for (let d = 0; d <= reach * 0.5; d += 2) {
+            ctx.fillStyle = '#fff6e0';
+            ctx.fillRect(Math.round(m.x + dir * (fx + d)), Math.round(gy + 1 + sg * d * 0.35), 2, 2);
           }
         }
       }
-      // 先端の光
-      if (!m.done && p > 0.9) {
-        ctx.fillStyle = `hsl(${m.hue},85%,70%)`;
-        ctx.fillRect(Math.round(m.x + b.dir * b.len) - 2, yy - 2, 4, 4);
-      }
     }
-    // 起点の結び目
-    ctx.fillStyle = '#fff6e0'; ctx.fillRect(Math.round(m.x) - 2, GROUND_Y + 2, 4, 4);
     ctx.globalAlpha = 1;
   }
 }
 
-// 歩き：片足ずつ、足の下のキノコがぶちぶち潰れ、足の脇に胞子が飛ぶ
+// 歩き：足が着くたびに、前回の着地点から今回の着地点までの間のキノコがぶちぶち潰れ、左右に汁が飛ぶ
 function footCrush(side) {
   if (phase === 'fire') return;
   const cx = player.x + player.w / 2 + player.dir * 8 * player.scaleX; // 着地した前足の位置
   const fw = 9 * player.scaleX;
+  const px = (player.lastFootX == null || Math.abs(player.lastFootX - cx) > 90) ? cx : player.lastFootX;
+  player.lastFootX = cx;
+  const x0 = Math.min(px, cx) - fw / 2, x1 = Math.max(px, cx) + fw / 2;
   const fs = footSize();
   let cnt = 0;
-  for (let i = enemies.length - 1; i >= 0 && cnt < 8; i--) {
+  for (let i = enemies.length - 1; i >= 0 && cnt < 14; i--) {
     const e = enemies[i];
     if (e.w >= fs) continue;
-    if (e.x > cx + fw / 2 || e.x + e.w < cx - fw / 2) continue;
-    if (e.y + e.h < GROUND_Y - 8 - 4 * player.scaleY) continue;
+    if (e.x > x1 || e.x + e.w < x0) continue;
+    if (e.y + e.h < GROUND_Y - 70) continue; // 積み重なったキノコも対象
     enemies.splice(i, 1);
     cnt++;
     splatEnemy(e);
-    emitSpores(e, cx, GROUND_Y - 6, [-(0.8 + Math.random() * 1.8), 0.8 + Math.random() * 1.8]);
+    const ex = e.x + e.w / 2;
+    emitSpores(e, ex, e.y + e.h * 0.6, [-(1.0 + Math.random() * 1.8), 1.0 + Math.random() * 1.8]);
   }
   if (cnt > 0) {
     sfxStomp();
@@ -594,7 +609,7 @@ function landingCrush(cx) {
     cnt++;
     splatEnemy(e);
     const away = ex >= cx ? 1 : -1;
-    emitSpores(e, ex, e.y + e.h / 2, [away * (1.5 + Math.random() * 2.5), away * (0.6 + Math.random() * 1.4)]);
+    emitSpores(e, ex, e.y + e.h / 2, [away * (1.8 + Math.random() * 2.4), -away * (0.8 + Math.random() * 1.4)]);
   }
   score += 10 * cnt;
   rings.push({ x: cx, r: 10, max: R, life: 18 });
@@ -620,7 +635,7 @@ function makeEnemy(x, y, size, hue, light, vx, vy, safeTimer) {
     w: size, h: size, size, hue, light,
     capColor: c.cap, darkColor: c.dark,
     safeTimer: safeTimer || 0, frame: Math.random() * 4, burn: 0,
-    born: 1, growT: 420 + Math.random() * 360 // 時間経過で増える（約7〜13秒ごとに分裂）
+    lift: 0, tl: 0, born: 1, growT: 420 + Math.random() * 360 // 時間経過で増える（約7〜13秒ごとに分裂）
   };
 }
 
@@ -832,6 +847,9 @@ function igniteInFlame(nz, f) {
       spores.splice(i, 1);
     }
   }
+  for (const m of mycs) { // 育ち中の菌床も焼ける
+    if (!m.done && m.x > x0 && m.x < x1) m.dead = true;
+  }
 }
 // 燃えているキノコ：慌てて走る→黒焦げ→灰になって消える。近くのキノコに燃え移る（全焼）
 function burnTick(e, i) {
@@ -897,7 +915,7 @@ function updateFire() {
   }
   flameSound(want);
   // 全焼したらクリア
-  if (enemies.length === 0 && spores.length === 0 && mycs.length === 0) {
+  if (enemies.length === 0 && pendingBranches() === 0) {
     if (++clearTimer > 45) startClear();
   } else {
     clearTimer = 0;
@@ -2035,14 +2053,18 @@ let blockTimer = 0;
 const MAX_BLOCKS = 15;
 function addBlockRow() {
   const n = 2 + Math.floor(Math.random() * 3); // 2〜4個
+  // 中央（x 176〜336）は空ける。左側か右側のどちらかに置く
   for (let tries = 0; tries < 12; tries++) {
-    const x0 = 16 + Math.floor(Math.random() * ((canvas.width - 32 - n * BLK) / 8)) * 8;
+    const left = Math.random() < 0.5;
+    const lo = left ? 16 : 336, hi = (left ? 176 : 496) - n * BLK;
+    if (hi < lo) continue;
+    const x0 = lo + Math.floor(Math.random() * ((hi - lo) / 8 + 1)) * 8;
     if (blocks.some(b => b.x < x0 + n * BLK + 24 && b.x + BLK > x0 - 24)) continue;
     for (let i = 0; i < n; i++) blocks.push({ x: x0 + i * BLK, y: BLK_Y, w: BLK, h: BLK });
     return;
   }
 }
-function initBlocks() { blocks.length = 0; for (let i = 0; i < 3; i++) addBlockRow(); }
+function initBlocks() { blocks.length = 0; for (let i = 0; i < 2; i++) addBlockRow(); }
 function breakBlock(b) {
   const i = blocks.indexOf(b); if (i < 0) return;
   blocks.splice(i, 1);
@@ -2114,6 +2136,14 @@ function drawBlocks() {
   }
 }
 
+// キノコの積み重なり：近い位置のキノコは上下に重なる。数が多いと波のようにうねる
+function restack() {
+  const cnt = new Uint16Array(60);
+  for (const e of enemies) {
+    const bk = Math.max(0, Math.min(59, ((e.x + e.w / 2) / 9) | 0));
+    e.tl = Math.min(MAX_LIFT, cnt[bk]++ * LAYER_STEP);
+  }
+}
 function update() {
   tick++;
   phaseT++;
@@ -2189,7 +2219,7 @@ function update() {
     if (player.lastStep != null && st !== player.lastStep) footCrush(); // ふり上げた足が前に着地した瞬間に踏み潰す
     player.lastStep = st;
   } else {
-    player.lastStep = null;
+    player.lastStep = null; player.lastFootX = null;
   }
 
   if (player.invuln > 0) player.invuln--;
@@ -2222,6 +2252,7 @@ function update() {
   }
 
   // 敵更新
+  if (tick % 5 === 0) restack();
   for (let i = enemies.length - 1; i >= 0; i--) {
     const e = enemies[i];
     if (e.safeTimer > 0) e.safeTimer--;
@@ -2232,13 +2263,16 @@ function update() {
     if ((phase === 'play' || phase === 'flower') && e.born >= 1 && --e.growT <= 0) {
       e.growT = 420 + Math.random() * 360;
       const wallDir = e.x + e.w / 2 < canvas.width / 2 ? 1 : -1;
-      emitSpores(e, e.x + e.w / 2, GROUND_Y, [Math.random() < 0.75 ? wallDir : -wallDir], 0.98);
+      emitSpores(e, e.x + e.w / 2, e.y + e.h * 0.4, [(Math.random() < 0.75 ? wallDir : -wallDir) * (1.2 + Math.random() * 1.5)]);
     }
 
+    e.lift += (e.tl - e.lift) * 0.2;
+    const crowd = Math.max(0, Math.min(1, (enemies.length - 40) / 200));
+    const gy = GROUND_Y - e.lift - crowd * (1 + Math.sin(tick * 0.07 + e.x * 0.045)) * 4; // 山のうねり
     e.vy += GRAVITY * 0.8;
     // 波のように：群れ全体が寄せては返し、ぴょこぴょこと跳ねの波が横に伝わる
     const wave = Math.sin(tick * 0.025 + e.x * 0.02) * 0.9;
-    const grounded = e.y + e.h >= GROUND_Y - 0.5;
+    const grounded = e.y + e.h >= gy - 0.5;
     if (grounded && Math.sin(tick * 0.09 - e.x * 0.03) > 0.985) e.vy = -2.6 - Math.random() * 0.8;
     e.x += e.vx + wave;
     e.y += e.vy;
@@ -2247,9 +2281,9 @@ function update() {
     if (e.x <= 0) { e.x = 0; e.vx = Math.abs(e.vx); }
     if (e.x + e.w >= canvas.width) { e.x = canvas.width - e.w; e.vx = -Math.abs(e.vx); }
 
-    // 地面
-    if (e.y + e.h >= GROUND_Y) {
-      e.y = GROUND_Y - e.h;
+    // 地面（または下に重なったキノコの山）
+    if (e.y + e.h >= gy - (e.vy >= 0 ? 3 : 0)) {
+      e.y = gy - e.h;
       e.vy = 0;
     }
 
@@ -2279,7 +2313,7 @@ function update() {
       } else if (!harmless && e.safeTimer <= 0 && player.invuln <= 0) {
         // 足より大きいキノコに横・下から当たると、無限に小さくなっていく！
         const oldH = player.h;
-        const ns = Math.max(MIN_SCALE, player.scaleY * 0.7);
+        const ns = Math.max(MIN_SCALE, player.scaleY * 0.8); // ダメージのたび80%に
         player.scaleY = ns;
         player.scaleX = ns;
         player.y += (oldH - player.h);
@@ -2316,13 +2350,8 @@ function update() {
     sp.x += sp.vx;
     sp.y += sp.vy;
     if (sp.x < 4 || sp.x > canvas.width - 4) { sp.vx *= -1; sp.x = Math.max(4, Math.min(canvas.width - 4, sp.x)); }
-    if ((sp.vy > 0 && sp.y >= GROUND_Y - sp.size * 0.5) || sp.age > 150) {
-      const sz = sp.size;
-      enemies.push(makeEnemy(
-        Math.max(0, Math.min(canvas.width - sz, sp.x - sz / 2)),
-        GROUND_Y - sz, sz, sp.hue, sp.light,
-        (Math.random() < 0.5 ? -1 : 1) * (0.3 + Math.random() * 0.6), -2, sp.safe
-      ));
+    if ((sp.vy > 0 && sp.y >= GROUND_Y - 2) || sp.age > 150) {
+      landJuice(sp); // 落ちた所に菌床ができる
       spores.splice(i, 1);
     }
   }
@@ -2504,12 +2533,13 @@ function drawRings() {
   });
 }
 
-function drawSpores() {
+function drawSpores() { // 飛んでいる汁
   spores.forEach(sp => {
-    ctx.fillStyle = `hsl(${sp.hue}, 85%, ${sp.light + 12}%)`;
-    ctx.fillRect(sp.x - 2, sp.y - 2, 4, 4);
+    ctx.fillStyle = `hsl(${sp.hue}, 85%, ${sp.light + 8}%)`;
+    ctx.fillRect(Math.round(sp.x) - 2, Math.round(sp.y) - 2, 5, 5);
+    ctx.fillRect(Math.round(sp.x - sp.vx * 1.5) - 1, Math.round(sp.y - sp.vy * 1.2) - 1, 3, 3);
     ctx.fillStyle = '#fff';
-    ctx.fillRect(sp.x - 1, sp.y - 1, 2, 2);
+    ctx.fillRect(Math.round(sp.x) - 1, Math.round(sp.y) - 1, 2, 2);
   });
 }
 
