@@ -111,11 +111,28 @@ header{display:flex;flex-direction:column;align-items:center;gap:10px;padding-to
 footer{text-align:center;font-size:12px;font-weight:700;color:var(--ink2);letter-spacing:.08em;display:flex;flex-direction:column;gap:4px}
 footer .keys{opacity:.8}
 /* 癒しの扉: 外部サイトへのリンク。作品が増えても、ページの一番下・左側に小さく置く（画面に固定せず、カードに重ならない）（by iz と同じく目立たせない） */
-.ext{position:relative;z-index:4;display:grid;place-items:center;width:40px;height:40px;margin:6px 0 max(10px,env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px));color:var(--ink2);opacity:.7;text-decoration:none;transition:opacity .3s,color .6s}
+.ext{position:relative;z-index:4;display:grid;place-items:center;width:40px;height:40px;margin:0;color:var(--ink2);opacity:.7;text-decoration:none;transition:opacity .3s,color .6s}
 .ext svg{width:22px;height:22px;filter:drop-shadow(0 0 2px rgba(255,250,252,.8))}
 .ext:hover,.ext:focus-visible{opacity:1;outline:none}
 .ext:focus-visible svg{outline:2px solid var(--lav);outline-offset:2px;border-radius:4px}
 body.abyss .ext{color:#c9a35a;opacity:.55}
+/* 左下の隅: 癒しの扉とアイデアメモを横に並べる */
+.corner{position:relative;z-index:4;display:flex;align-items:center;gap:4px;margin:6px 0 max(10px,env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px));}
+.memo{position:relative;z-index:4;display:grid;place-items:center;width:40px;height:40px;padding:0;border:0;background:none;color:var(--ink2);opacity:.7;cursor:pointer;transition:opacity .3s,color .6s}
+.memo svg{width:22px;height:22px;filter:drop-shadow(0 0 2px rgba(255,250,252,.8))}
+.memo:hover,.memo:focus-visible{opacity:1;outline:none}
+.memo:focus-visible svg{outline:2px solid var(--lav);outline-offset:2px;border-radius:4px}
+body.abyss .memo{color:#c9a35a;opacity:.55}
+/* アイデアメモ: 罫線入りのメモ用紙。外側をタップすると閉じる */
+#memoBg{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(60,30,70,.35)}
+#memoBg.on{display:flex}
+#memoBox{width:min(340px,100%);max-height:80vh;overflow:auto;padding:18px 20px 20px;background:#fffdf3;color:var(--ink);border-radius:6px;
+  background-image:repeating-linear-gradient(transparent 0,transparent 31px,#e8dcc4 31px,#e8dcc4 32px);box-shadow:0 10px 30px rgba(40,10,50,.35)}
+#memoBox h2{margin:0 0 10px;font:800 15px var(--ja);letter-spacing:.1em}
+#memoBox ul{margin:0;padding:0;list-style:none}
+#memoBox li{font:700 15px/32px var(--ja);letter-spacing:.06em}
+#memoBox li::before{content:"・"}
+
 /* 作者の小さな署名（右下） */
 .byiz{position:fixed;z-index:4;right:max(12px,env(safe-area-inset-right,0px));bottom:max(10px,env(safe-area-inset-bottom,0px));
   font:italic 600 12px/1 "Times New Roman","Liberation Serif",serif;letter-spacing:.08em;color:var(--ink2);opacity:.75;pointer-events:none;transition:opacity .6s,color .6s}
@@ -438,7 +455,8 @@ body.abyss .music.on .sw{background:#c41a2a}
   </section>
   <footer><span id="count"></span><span class="keys">↑↓ でえらんで Enter であそぶ</span></footer>
 </div>
-<a class="ext" id="ext" href="https://iz3ico.github.io/app/" target="_blank" rel="noopener noreferrer" aria-label="癒しの扉" title="癒しの扉"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 28V5h20v23"/><path d="M3 28h26"/><path d="M11 9l10-1.5v19.5L11 28z" fill="currentColor" fill-opacity=".2"/><path d="M18.4 18.5h.01" stroke-width="3.2"/></svg></a>
+<div class="corner"><a class="ext" id="ext" href="https://iz3ico.github.io/app/" target="_blank" rel="noopener noreferrer" aria-label="癒しの扉" title="癒しの扉"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 28V5h20v23"/><path d="M3 28h26"/><path d="M11 9l10-1.5v19.5L11 28z" fill="currentColor" fill-opacity=".2"/><path d="M18.4 18.5h.01" stroke-width="3.2"/></svg></a><button type="button" class="memo" id="memo" aria-label="アイデアメモ" title="アイデアメモ"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="4" width="20" height="24" rx="2.5" fill="currentColor" fill-opacity=".2"/><path d="M11 3v4M16 3v4M21 3v4"/><path d="M11 13h10M11 18h10M11 23h6"/></svg></button></div>
+<div id="memoBg" role="dialog" aria-label="アイデアメモ"><div id="memoBox"><h2>アイデアメモ</h2><ul id="memoList"></ul></div></div>
 <div class="byiz" id="byiz">by iz</div>
 <div id="abyss">
   <div class="abg"></div><div class="abg2"></div><div id="flash"></div>
@@ -750,6 +768,15 @@ parts=Array.from({length:reduce?14:Math.min(34,Math.round(W*H/22000))},()=>mk())
 if(reduce){ frame(0); } else requestAnimationFrame(frame);
 // ほかのページから戻ってきたとき（ブラウザの戻る）に、飛び散りを消して状態を戻す
 addEventListener('pageshow',e=>{ if(e.persisted){ sparks=[]; if(abyss) exitAbyss(); } });
+// ===== アイデアメモ: 今後実現したいアイデア。増やすときはここに1行足す =====
+const MEMO=['りそうのかたち','ぼくのかおを','あんざんてんせい','さかな','たこやき','バーチャファイター'];
+(()=>{ const ul=document.getElementById('memoList'), bg=document.getElementById('memoBg');
+  MEMO.forEach(t=>{ const li=document.createElement('li'); li.textContent=t; ul.appendChild(li); });
+  const open=on=>bg.classList.toggle('on',on);
+  document.getElementById('memo').addEventListener('click',()=>open(true));
+  bg.addEventListener('click',e=>{ if(!e.target.closest('#memoBox')) open(false); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape') open(false); });
+})();
 </script>
 </body>
 </html>
