@@ -9,7 +9,7 @@
 <style>
 /* Layout: 4:3 CRT screen between two green neon light bars. Inside, tiled windows (left / center console / right) that never overlap */
 :root{
-  --beat:0; --ncA:57,255,136; --coreA:220,255,233; --brA:1; --ncB:57,255,136; --coreB:220,255,233; --brB:1;
+  --beat:0; --dcA:57,255,136; --dcB:57,255,136; --dgA:.1; --dgB:.1; --ncA:57,255,136; --coreA:220,255,233; --brA:1; --ncB:57,255,136; --coreB:220,255,233; --brB:1;
   --bg:#020604; --win:#030a06; --bar:#0a1a10; --line:#1b3a26; --nc:57,255,136; --core:220,255,233; --neon:rgb(var(--nc));
   --fg:#b8d8c0; --dim:#2f5a3c; --ok:#d8ffe2; --cursor:#7dffa8;
   --err:#ff4d5e; --accent:#22e36a; --gold:#d8f27a; --teal:#3fd0c0; --jp:#22402c;
@@ -58,7 +58,7 @@ body.alert{background:radial-gradient(ellipse at 50% 0%,rgba(255,60,80,.2),trans
   box-shadow:0 0 3px #fff,0 0 9px var(--neon),0 0 22px var(--neon),0 0 46px var(--neon),0 0 90px rgba(var(--nc),.45)}
 .neon.flick{opacity:.35!important}
 .neon{filter:brightness(calc(.8 + var(--beat) * .9))}
-.mqb .mq{filter:brightness(calc(.85 + var(--beat) * .6))}
+.mqb .mq{opacity:calc(.8 + var(--beat) * .2)}   /* 明るさの脈動はfilterでなくopacityで（opacityは描き直しが要らない） */
 .area .win{box-shadow:0 0 0 1px rgba(var(--ncB),calc(.03 + var(--beat) * .22)),0 10px 26px rgba(0,0,0,.65)}
 .area #wWave.focus{box-shadow:0 0 0 1px rgba(141,255,181,.5),0 0 30px rgba(57,255,136,.35)}
 .neon.bot{animation-delay:-3.1s}
@@ -76,7 +76,7 @@ body.alert .neon{animation:alarm .5s steps(1) infinite}
 
 /* screen */
 .desk{position:relative;aspect-ratio:4/3;width:100%;border-radius:18px/14px;overflow:hidden;background:#010402;
-  box-shadow:inset 0 0 30px rgba(0,0,0,.95),0 -8px 16px rgba(var(--ncA),calc(.06 + var(--brA) * .08 + var(--beat) * .3)),0 8px 16px rgba(var(--ncB),calc(.05 + var(--brB) * .08 + var(--beat) * .3))}
+  box-shadow:inset 0 0 30px rgba(0,0,0,.95),0 -8px 16px rgba(var(--dcA),var(--dgA)),0 8px 16px rgba(var(--dcB),var(--dgB))}   /* 画面の外光: 大きな面なので4Hzで更新（JS側 lightFrame） */
 .area{position:absolute;inset:12px}
 .desk::after{content:"";position:absolute;inset:0;z-index:40;pointer-events:none;border-radius:inherit;
   background:repeating-linear-gradient(0deg,rgba(0,0,0,.34) 0 1px,transparent 1px 3px),
@@ -1609,14 +1609,15 @@ const MON_N=120;
 function monReset(){ cpu=Array(MON_N).fill(4); net=Array(MON_N).fill(0); errs=Array(MON_N).fill(0); load=0; netv=0; pkts=0; errN=0; }
 function monOk(){ load=Math.min(100,load+9); netv=Math.min(100,netv+14); pkts++; }
 function monMiss(){ errs[MON_N-1]=1; errN++; load=Math.min(100,load+30); }
-function sizeCanvas(){ const r=cv.getBoundingClientRect(), d=window.devicePixelRatio||1; cv.width=Math.max(1,r.width*d|0); cv.height=Math.max(1,r.height*d|0); }
+const CVD=Math.min(window.devicePixelRatio||1,1.5);   // canvasの解像度は1.5倍まで（高解像度スマホで描画が重くなるのを防ぐ）
+function sizeCanvas(){ const r=cv.getBoundingClientRect(), d=CVD; cv.width=Math.max(1,r.width*d|0); cv.height=Math.max(1,r.height*d|0); }
 function monFrame(ts){
   if(ts-lastTick>80){ lastTick=ts;
     load=Math.max(3,load*0.93); netv=Math.max(0,netv*0.88);
     cpu.push(load+R(4)); cpu.shift(); net.push(netv); net.shift(); errs.push(0); errs.shift();
     $('mCpu').textContent=Math.round(load)+'%'; $('mNet').textContent=Math.round(netv*12.8)+' KB/s';
     $('mPkt').textContent=pkts; $('mErr').textContent=errN;
-    const W=cv.width,H=cv.height,d=window.devicePixelRatio||1;
+    const W=cv.width,H=cv.height,d=CVD;
     cx.clearRect(0,0,W,H); cx.strokeStyle='#0c2414'; cx.lineWidth=1;
     for(let y=1;y<4;y++){ cx.beginPath(); cx.moveTo(0,H*y/4); cx.lineTo(W,H*y/4); cx.stroke(); }
     for(let x=0;x<W;x+=24*d){ cx.beginPath(); cx.moveTo(x,0); cx.lineTo(x,H); cx.stroke(); }
@@ -1634,14 +1635,18 @@ const wv=$('wave'), wx=wv.getContext('2d');
 let aAmp=.05, wRed=0, wPhase=0, wLast=0, ripples=[], fin=null;
 const WAVES=[{f:1,a:1},{f:2.3,a:.62},{f:3.7,a:.46},{f:5.9,a:.32},{f:.5,a:.8}];
 const LIMIT=.85;
-function sizeWave(){ const r=wv.getBoundingClientRect(), d=window.devicePixelRatio||1; wv.width=Math.max(1,r.width*d|0); wv.height=Math.max(1,r.height*d|0); }
+function sizeWave(){ const r=wv.getBoundingClientRect(), d=CVD; wv.width=Math.max(1,r.width*d|0); wv.height=Math.max(1,r.height*d|0); }
 function waveOk(){ aAmp=Math.max(.04,aAmp-.028); ripples.push(performance.now()); }
 function waveMiss(){ wRed=1; aAmp=Math.min(1,aAmp+DIFF[diff].missUp); }
 function waveReset(){ aAmp=.05; wRed=0; ripples=[]; fin=null; }
 // 最後の一撃: 攻撃信号が最大まで膨らんだあと、緑の打ち消し波が左から右へ走って平らにする
 function waveFinale(cb){ fin={t0:performance.now(),cb}; }
 const mixc=(a,b,k)=>a.map((v,i)=>Math.round(v+(b[i]-v)*k));
+const _tc={}; function st(id,t){ if(_tc[id]!==t){ _tc[id]=t; $(id).textContent=t; } }   // 同じ文字なら書かない（毎フレーム書くと再レイアウト・再描画される）
+let wDraw=0;
 function waveFrame(ts){
+  if(ts-wDraw<30){ requestAnimationFrame(waveFrame); return; }   // 波形は約30fpsで十分（60fpsで描くとcanvasが重い）
+  wDraw=ts;
   const dt=Math.min(.05,(ts-(wLast||ts))/1000); wLast=ts;
   let front=-1, finT=0;
   if(fin){ finT=(ts-fin.t0)/1000;
@@ -1654,7 +1659,7 @@ function waveFrame(ts){
   wRed=Math.max(0,wRed-dt*1.6);
   const live=fin&&front>=1?0:aAmp;
   wPhase+=dt*(2.5+live*9);
-  const W=wv.width,H=wv.height,d=window.devicePixelRatio||1, mid=H/2, full=H/2-6*d;
+  const W=wv.width,H=wv.height,d=CVD, mid=H/2, full=H/2-6*d;
   wx.clearRect(0,0,W,H); wx.strokeStyle='rgba(40,110,60,'+(.18+beat*.4).toFixed(2)+')'; wx.lineWidth=1;
   for(let x=0;x<W;x+=32*d){ wx.beginPath(); wx.moveTo(x,0); wx.lineTo(x,H); wx.stroke(); }
   wx.beginPath(); wx.moveTo(0,mid); wx.lineTo(W,mid); wx.stroke();
@@ -1681,8 +1686,8 @@ function waveFrame(ts){
     wx.strokeStyle='#39ff88'; wx.lineWidth=2*d; wx.beginPath(); wx.moveTo(0,mid); wx.lineTo(fx,mid); wx.stroke(); }
   const pct=Math.round(aAmp*100);
   $('wWave').classList.toggle('red',!(fin&&front>=1)&&(wRed>.05||aAmp>=LIMIT));
-  $('wvSig').textContent=(fin&&front>=1?0:pct)+'%'; $('wvHz').textContent=Math.round(180*fq)+' Hz';
-  $('wvSt').textContent=fin?(front>=1?'NEUTRALIZED':front>0?'CANCELLING':'OVERLOAD'):state==='done'?'NEUTRALIZED':aAmp>=LIMIT?'CRITICAL':aAmp>.45?'RISING':'CONTAINED';
+  st('wvSig',(fin&&front>=1?0:pct)+'%'); st('wvHz',Math.round(180*fq)+' Hz');
+  st('wvSt',fin?(front>=1?'NEUTRALIZED':front>0?'CANCELLING':'OVERLOAD'):state==='done'?'NEUTRALIZED':aAmp>=LIMIT?'CRITICAL':aAmp>.45?'RISING':'CONTAINED');
   requestAnimationFrame(waveFrame);
 }
 let trace=0;
@@ -1795,7 +1800,7 @@ function setTension(x){
 }
 const nz=$('noise'), nzx=nz.getContext('2d');
 let nzUntil=0, nzNext=0, nzPow=0, nzLast=0;
-function sizeNoise(){ const r=nz.getBoundingClientRect(), d=window.devicePixelRatio||1; nz.width=Math.max(1,r.width*d|0); nz.height=Math.max(1,r.height*d|0); }
+function sizeNoise(){ const r=nz.getBoundingClientRect(), d=CVD; nz.width=Math.max(1,r.width*d|0); nz.height=Math.max(1,r.height*d|0); }
 function crackle(p){ if(!ok()) return; hiss(0,.06+p*.12,.08+p*.22,6000,800,false);
   for(let i=0;i<2+p*5;i++) voice({type:'square',f0:300+R(3000),t:Math.random()*.15,dur:.03,vol:.02+p*.05,lp0:8000,wet:false,att:.002}); }
 function noiseFrame(now){
@@ -1811,7 +1816,7 @@ function noiseFrame(now){
   }
   if(now>=nzUntil||!active){ if(nzLast){ nzx.clearRect(0,0,nz.width,nz.height); nzLast=0; } return; }
   if(now-nzLast<45) return; nzLast=now;
-  const W=nz.width,H=nz.height,d=window.devicePixelRatio||1;
+  const W=nz.width,H=nz.height,d=CVD;
   nzx.clearRect(0,0,W,H);
   // 問題文のあるメインウィンドウは避けて描く
   const dr=nz.getBoundingClientRect(), mb=$('main').getBoundingClientRect();
@@ -1853,7 +1858,7 @@ const lerp3=(a,b,k)=>a.map((v,i)=>v+(b[i]-v)*k);
 const ramp=(stops,k)=>{ k=Math.max(0,Math.min(.9999,k))*(stops.length-1); const i=k|0; return lerp3(stops[i],stops[i+1],k-i); };
 const A_STOPS=[[120,70,255],[200,60,230],[255,140,40],[255,40,60]];
 const B_STOPS=[[57,255,136],[40,220,255],[200,235,255]];
-let lastLight=0, lightT=0; const lightC={};
+let lastLight=0, lightT=0, deskT=0; const lightC={};
 function lightFrame(now){
   requestAnimationFrame(lightFrame);
   const dt=Math.min(.05,(now-(lastLight||now))/1000); lastLight=now;
@@ -1877,6 +1882,9 @@ function lightFrame(now){
   q('--ncA',j(cA)); q('--coreA',j(lerp3(cA,[255,255,255],.82)));
   q('--ncB',j(cB)); q('--coreB',j(lerp3(cB,[255,255,255],.82)));
   q('--brA',(Math.round(brA*20)/20).toFixed(2)); q('--brB',(Math.round(brB*20)/20).toFixed(2));
+  if(now-deskT>=250){ deskT=now;   // 画面の外光だけは更新を遅く（面が大きく、描き直しが重い）
+    q('--dcA',j(cA)); q('--dcB',j(cB));
+    q('--dgA',Math.min(.5,.06+brA*.08+beat*.3).toFixed(2)); q('--dgB',Math.min(.5,.05+brB*.08+beat*.3).toFixed(2)); }
 }
 requestAnimationFrame(lightFrame);
 
