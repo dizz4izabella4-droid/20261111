@@ -295,8 +295,7 @@ function startGame() {
   document.getElementById('start').style.display = 'none';
   initAudio();
   if (!bgmPlaying) { bgmPlaying = true; startBGM(); } // 音楽はSTARTを押してから
-  spawnDrop();
-  spawnDrop();
+  initEnemies();
 }
 // 詰みボタン：最初の状態に戻す（音楽はそのまま）
 function resetGame() {
@@ -308,11 +307,11 @@ function resetGame() {
   player.x = 240; player.y = GROUND_Y - player.h;
   player.vx = 0; player.vy = 0; player.onGround = false;
   player.chain = 0; player.invuln = 0; player.lastSin = 0; player.walkFrame = 0;
-  shake = 0; pendingLand = null; spawnTimer = 0;
+  shake = 0; pendingLand = null; spawnTimer = 0; powerTimer = 0;
   crushCount = 0; nextPowerAt = Math.round(40 / powerRate); lastPowerTick = -9999;
   for (const k in keys) keys[k] = false;
   resetEnding();
-  spawnDrop(); spawnDrop();
+  initEnemies();
 }
 document.getElementById('endBtn').addEventListener('pointerdown', e => { e.preventDefault(); powerRate = 2; resetGame(); });
 document.getElementById('resetBtn').addEventListener('pointerdown', e => { e.preventDefault(); powerRate = 1.5; resetGame(); });
@@ -440,29 +439,12 @@ let rings = [];   // 着地の衝撃波
 let shake = 0;    // 画面の揺れ
 let pendingLand = null; // 着地の衝撃で潰す位置（x）
 
-// ある程度潰すと、潰れたキノコのひとつがパワーアップキノコに変わる（連発しないよう制限つき）
-let crushCount = 0;
-let nextPowerAt = 40;       // この数だけ潰したら
-let lastPowerTick = -9999;  // 前回の変身フレーム
-const POWER_COOLDOWN = 480; // 前回から最低これだけ（約8秒）あける
-function maybePowerUp(e) {
-  if (phase !== 'play') return;
-  crushCount++;
-  if (crushCount < nextPowerAt || tick - lastPowerTick < POWER_COOLDOWN / powerRate || items.length >= 3) return;
-  const cx = e.x + e.w / 2;
-  items.push({
-    x: Math.max(0, Math.min(canvas.width - 22, cx - 11)), y: e.y + e.h - 24,
-    vx: (Math.random() < 0.5 ? -1 : 1) * 1.2, vy: -5, w: 22, h: 22, onGround: false
-  });
-  crushCount = 0;
-  nextPowerAt = Math.round((30 + Math.floor(Math.random() * 30)) / powerRate);
-  lastPowerTick = tick;
-  addParticles(cx, e.y + e.h / 2, '#ffec27', 10);
-  playTone(880, 'square', 0.08, 0.08, 1320);
-}
+// パワーアップキノコは、左端の壊れないブロックから時間で生える（下の powerTimer）
+let crushCount = 0, nextPowerAt = 40, lastPowerTick = -9999;
+let powerTimer = 0;
+const POWER_COOLDOWN = 480;
 
 function splatEnemy(e) {
-  maybePowerUp(e);
   if (splats.length < 120) {
     splats.push({ x: e.x + e.w / 2, y: e.y + e.h, w: e.size, cap: e.capColor, dark: e.darkColor, life: 28 });
   }
@@ -635,25 +617,17 @@ function makeEnemy(x, y, size, hue, light, vx, vy, safeTimer) {
     w: size, h: size, size, hue, light,
     capColor: c.cap, darkColor: c.dark,
     safeTimer: safeTimer || 0, frame: Math.random() * 4, burn: 0,
-    lift: 0, tl: 0, born: 1, growT: 420 + Math.random() * 360 // 時間経過で増える（約7〜13秒ごとに分裂）
+    lift: 0, tl: 0, born: 1, growT: 600 // 一定時間（約10秒）ごとに、菌糸を放出して菌床ができ、1匹増える
   };
 }
 
-// 初期配置（パワーアップキノコ多め）
-function spawnDrop() {
-  const x = 40 + Math.random() * (canvas.width - 80);
-  if (Math.random() < Math.min(0.9, 0.3 * powerRate)) {
-    // 成長キノコ（出現は控えめ）
-    if (phase === 'play' && items.length < 6) {
-      items.push({
-        x, y: -20, vx: (Math.random() < 0.5 ? -1 : 1) * 1.4, vy: 0,
-        w: 22, h: 22, onGround: false
-      });
-    }
-  } else if (enemies.length < 28) {
-    // 敵キノコ
-    enemies.push(makeEnemy(x, -20, ENEMY_BASE, 18, 41,
-      (Math.random() < 0.5 ? -1 : 1) * 1.3, 0, 0));
+// 初期配置：敵キノコは2匹だけ（上から落ちてくる仕組みはなし）
+function initEnemies() {
+  for (let i = 0; i < 2; i++) {
+    const x = 120 + Math.random() * (canvas.width - 120 - ENEMY_BASE - 20);
+    const e = makeEnemy(x, GROUND_Y - ENEMY_BASE, ENEMY_BASE, 18, 41, (Math.random() < 0.5 ? -1 : 1) * 1.3, 0, 0);
+    e.growT = 300 + Math.random() * 300; // 最初だけ分裂のタイミングをずらす
+    enemies.push(e);
   }
 }
 
@@ -2056,7 +2030,7 @@ function addBlockRow() {
   // 中央（x 176〜336）は空ける。左側か右側のどちらかに置く
   for (let tries = 0; tries < 12; tries++) {
     const left = Math.random() < 0.5;
-    const lo = left ? 16 : 336, hi = (left ? 176 : 496) - n * BLK;
+    const lo = left ? 64 : 336, hi = (left ? 176 : 496) - n * BLK;
     if (hi < lo) continue;
     const x0 = lo + Math.floor(Math.random() * ((hi - lo) / 8 + 1)) * 8;
     if (blocks.some(b => b.x < x0 + n * BLK + 24 && b.x + BLK > x0 - 24)) continue;
@@ -2064,8 +2038,13 @@ function addBlockRow() {
     return;
   }
 }
-function initBlocks() { blocks.length = 0; for (let i = 0; i < 2; i++) addBlockRow(); }
+function initBlocks() {
+  blocks.length = 0;
+  blocks.push({ x: 0, y: BLK_Y, w: BLK, h: BLK, solid: true }); // 左端の壊れないブロック（パワーアップキノコの生える所）
+  for (let i = 0; i < 2; i++) addBlockRow();
+}
 function breakBlock(b) {
+  if (b.solid) return;
   const i = blocks.indexOf(b); if (i < 0) return;
   blocks.splice(i, 1);
   score += 20;
@@ -2084,7 +2063,7 @@ function blockCollide() {
   for (let i = blocks.length - 1; i >= 0; i--) {
     const b = blocks[i];
     if (!rectHit(player, b)) continue;
-    if (player.h > 44) { breakBlock(b); continue; } // 大きいと突き抜けて壊す
+    if (player.h > 44) { breakBlock(b); continue; } // 大きいと突き抜けて壊す（壊れないブロックはすり抜ける）
     if (player.vy >= 0 && prevBot <= b.y + 6) {
       player.y = b.y - player.h; player.vy = 0; player.onGround = true; player.chain = 0; onB = b;
     } else if (player.vy < 0 && prevTop >= b.y + b.h - 6) {
@@ -2125,6 +2104,16 @@ function updatePeer(onB, moving) {
 function drawBlocks() {
   for (const b of blocks) {
     const x = b.x, y = b.y;
+    if (b.solid) { // 壊れない「？」ブロック
+      const soon = items.length < 3 && powerTimer > Math.round(600 / powerRate) - 60;
+      ctx.fillStyle = '#7a3a00'; ctx.fillRect(x, y, b.w, b.h);
+      ctx.fillStyle = soon && Math.floor(tick / 6) % 2 ? '#fff0a0' : '#f8b830'; ctx.fillRect(x + 2, y + 2, b.w - 4, b.h - 4);
+      ctx.fillStyle = '#7a3a00'; ctx.fillRect(x + 4, y + 4, 2, 2); ctx.fillRect(x + b.w - 6, y + 4, 2, 2);
+      ctx.fillRect(x + 4, y + b.h - 6, 2, 2); ctx.fillRect(x + b.w - 6, y + b.h - 6, 2, 2);
+      ctx.fillRect(x + 10, y + 8, 12, 4); ctx.fillRect(x + 10, y + 12, 4, 4); ctx.fillRect(x + 18, y + 12, 4, 4);
+      ctx.fillRect(x + 14, y + 16, 8, 4); ctx.fillRect(x + 14, y + 20, 4, 4); ctx.fillRect(x + 14, y + 26, 4, 3);
+      continue;
+    }
     ctx.fillStyle = '#b8480c'; ctx.fillRect(x, y, b.w, b.h);
     ctx.fillStyle = '#fc9838'; ctx.fillRect(x, y, b.w, 2);
     ctx.fillStyle = '#3a1608';
@@ -2151,10 +2140,14 @@ function update() {
   if (phase === 'clear' || phase === 'bad' || phase === 'space' || phase === 'end' || phase === 'shroom' || phase === 'dream' || phase === 'night') { updateEnding(); return; }
   dusk += ((phase === 'fire' ? 0.3 : 0) - dusk) * 0.03;
   // スポーン処理（ぽつぽつ降ってくる）
-  spawnTimer++;
-  if (spawnTimer > 60) {
-    spawnTimer = 0;
-    if (phase === 'play' || phase === 'flower') spawnDrop();
+  // 左端の壊れないブロックから、時間でパワーアップキノコが生える
+  if (phase === 'play' && ++powerTimer > Math.round(600 / powerRate) && items.length < 3) {
+    powerTimer = 0;
+    const sb = blocks.find(b => b.solid);
+    if (sb) {
+      items.push({ x: sb.x + 5, y: sb.y + 8, vx: 0, vy: 0, w: 22, h: 22, onGround: false, rise: 0, from: sb });
+      playTone(660, 'square', 0.06, 0.05, 990);
+    }
   }
   // 壊せるブロック：減ったらときどき新しい列が出る
   if (phase === 'play' || phase === 'flower') {
@@ -2227,6 +2220,12 @@ function update() {
   // 成長キノコ更新
   for (let i = items.length - 1; i >= 0; i--) {
     const it = items[i];
+    if (it.rise !== undefined && it.rise < 1) { // ブロックからにょきっと生えてくる
+      it.rise = Math.min(1, it.rise + 0.016);
+      it.y = it.from.y + 8 - 30 * it.rise;
+      if (it.rise >= 1) it.vx = 1.3;
+      continue;
+    }
     it.vy += GRAVITY * 0.6;
     it.x += it.vx;
     it.y += it.vy;
@@ -2235,6 +2234,11 @@ function update() {
     if (it.y + it.h >= GROUND_Y) {
       it.y = GROUND_Y - it.h;
       it.vy = 0;
+    }
+    for (const b of blocks) { // ブロックの上も歩ける
+      if (it.vy >= 0 && it.x + it.w > b.x && it.x < b.x + b.w && it.y + it.h >= b.y && it.y + it.h - it.vy <= b.y + 4) {
+        it.y = b.y - it.h; it.vy = 0;
+      }
     }
 
     if (rectHit(player, it)) {
@@ -2261,7 +2265,7 @@ function update() {
     if (e.burn > 0 && burnTick(e, i)) continue;
     // 倒さなくても時間で増える（倍々）。火炎放射中は増えない
     if ((phase === 'play' || phase === 'flower') && e.born >= 1 && --e.growT <= 0) {
-      e.growT = 420 + Math.random() * 360;
+      e.growT = 600;
       const wallDir = e.x + e.w / 2 < canvas.width / 2 ? 1 : -1;
       emitSpores(e, e.x + e.w / 2, e.y + e.h * 0.4, [(Math.random() < 0.75 ? wallDir : -wallDir) * (1.2 + Math.random() * 1.5)]);
     }
@@ -2585,8 +2589,8 @@ function loop() {
   drawBad();
   drawSplats();
   drawMycs();
-  if (phase === 'play' || phase === 'flower' || phase === 'fire') drawBlocks();
   drawItems();
+  if (phase === 'play' || phase === 'flower' || phase === 'fire') drawBlocks();
   drawEnemies();
   drawSpores();
   drawRings();
