@@ -1,0 +1,92 @@
+diff --git a/typing-mobile/index.html b/typing-mobile/index.html
+index 8ea7f0b..b3c6ee1 100644
+--- a/typing-mobile/index.html
++++ b/typing-mobile/index.html
+@@ -1587,7 +1587,7 @@ function noiseFrame(now){
+ try{ new ResizeObserver(sizeNoise).observe(nz); }catch(e){ window.addEventListener('resize',sizeNoise); }
+ 
+ // ---- 低音に連動する演出: 曲の低音の強さを --beat (0〜1) にして、ネオン・画面の光・掲示板・窓の枠・波形を脈打たせる ----
+-let beat=0, beatAvg=.2;
++let beat=0, beatAvg=.2, beatQ=-1;
+ const vizBars=[];
+ function beatFrame(){
+   requestAnimationFrame(beatFrame);
+@@ -1597,7 +1597,7 @@ function beatFrame(){
+   beatAvg+=(lo-beatAvg)*.02;
+   const v=Math.max(0,Math.min(1,(lo-beatAvg*.96)/.16));
+   beat=Math.max(v,beat*.86);
+-  if(!RM) document.documentElement.style.setProperty('--beat',beat.toFixed(3));
++  if(!RM){ const q=Math.round(beat*20)/20; if(q!==beatQ){ beatQ=q; document.documentElement.style.setProperty('--beat',q.toFixed(2)); } }   /* 変わったときだけ書く（毎フレーム書くと画面全体の影を描き直して重くなる） */
+   if(state==='menu'){ if(!vizBars.length) vizBars.push(...document.querySelectorAll('#viz i'));
+     vizBars.forEach((b,i)=>{ const x=fdata[2+i*3]/255; b.style.height=(4+x*16).toFixed(1)+'px'; b.style.opacity=(.3+x*.7).toFixed(2); }); }
+ }
+@@ -1613,7 +1613,7 @@ const lerp3=(a,b,k)=>a.map((v,i)=>v+(b[i]-v)*k);
+ const ramp=(stops,k)=>{ k=Math.max(0,Math.min(.9999,k))*(stops.length-1); const i=k|0; return lerp3(stops[i],stops[i+1],k-i); };
+ const A_STOPS=[[120,70,255],[200,60,230],[255,140,40],[255,40,60]];
+ const B_STOPS=[[57,255,136],[40,220,255],[200,235,255]];
+-let lastLight=0;
++let lastLight=0; const lightC={};
+ function lightFrame(now){
+   requestAnimationFrame(lightFrame);
+   const dt=Math.min(.05,(now-(lastLight||now))/1000); lastLight=now;
+@@ -1630,9 +1630,11 @@ function lightFrame(now){
+   else if(state==='menu'){ cA=[120,70,255]; brA=.6; cB=[57,255,136]; brB=.75; }
+   else { cA=[57,255,136]; brA=.7; cB=[57,255,136]; brB=.7; }
+   const rs=document.documentElement.style, j=c=>c.map(Math.round).join(',');
+-  rs.setProperty('--ncA',j(cA)); rs.setProperty('--coreA',j(lerp3(cA,[255,255,255],.82)));
+-  rs.setProperty('--ncB',j(cB)); rs.setProperty('--coreB',j(lerp3(cB,[255,255,255],.82)));
+-  rs.setProperty('--brA',brA.toFixed(3)); rs.setProperty('--brB',brB.toFixed(3));
++  /* 値を粗く丸め、前回と同じなら書かない（毎フレーム書くと、ぼかし付きの影を全部描き直して重くなる） */
++  const q=(k,v)=>{ if(lightC[k]!==v){ lightC[k]=v; rs.setProperty(k,v); } };
++  q('--ncA',j(cA)); q('--coreA',j(lerp3(cA,[255,255,255],.82)));
++  q('--ncB',j(cB)); q('--coreB',j(lerp3(cB,[255,255,255],.82)));
++  q('--brA',(Math.round(brA*20)/20).toFixed(2)); q('--brB',(Math.round(brB*20)/20).toFixed(2));
+ }
+ requestAnimationFrame(lightFrame);
+ 
+diff --git a/typing-pc/index.html b/typing-pc/index.html
+index 0d68205..afe163b 100644
+--- a/typing-pc/index.html
++++ b/typing-pc/index.html
+@@ -1827,7 +1827,7 @@ function noiseFrame(now){
+ try{ new ResizeObserver(sizeNoise).observe(nz); }catch(e){ window.addEventListener('resize',sizeNoise); }
+ 
+ // ---- 低音に連動する演出: 曲の低音の強さを --beat (0〜1) にして、ネオン・画面の光・掲示板・窓の枠・波形を脈打たせる ----
+-let beat=0, beatAvg=.2;
++let beat=0, beatAvg=.2, beatQ=-1;
+ const vizBars=[];
+ function beatFrame(){
+   requestAnimationFrame(beatFrame);
+@@ -1837,7 +1837,7 @@ function beatFrame(){
+   beatAvg+=(lo-beatAvg)*.02;
+   const v=Math.max(0,Math.min(1,(lo-beatAvg*.96)/.16));
+   beat=Math.max(v,beat*.86);
+-  if(!RM) document.documentElement.style.setProperty('--beat',beat.toFixed(3));
++  if(!RM){ const q=Math.round(beat*20)/20; if(q!==beatQ){ beatQ=q; document.documentElement.style.setProperty('--beat',q.toFixed(2)); } }   /* 変わったときだけ書く（毎フレーム書くと画面全体の影を描き直して重くなる） */
+   if(state==='menu'){ if(!vizBars.length) vizBars.push(...document.querySelectorAll('#viz i'));
+     vizBars.forEach((b,i)=>{ const x=fdata[2+i*3]/255; b.style.height=(4+x*16).toFixed(1)+'px'; b.style.opacity=(.3+x*.7).toFixed(2); }); }
+ }
+@@ -1853,7 +1853,7 @@ const lerp3=(a,b,k)=>a.map((v,i)=>v+(b[i]-v)*k);
+ const ramp=(stops,k)=>{ k=Math.max(0,Math.min(.9999,k))*(stops.length-1); const i=k|0; return lerp3(stops[i],stops[i+1],k-i); };
+ const A_STOPS=[[120,70,255],[200,60,230],[255,140,40],[255,40,60]];
+ const B_STOPS=[[57,255,136],[40,220,255],[200,235,255]];
+-let lastLight=0;
++let lastLight=0; const lightC={};
+ function lightFrame(now){
+   requestAnimationFrame(lightFrame);
+   const dt=Math.min(.05,(now-(lastLight||now))/1000); lastLight=now;
+@@ -1870,9 +1870,11 @@ function lightFrame(now){
+   else if(state==='menu'){ cA=[120,70,255]; brA=.6; cB=[57,255,136]; brB=.75; }
+   else { cA=[57,255,136]; brA=.7; cB=[57,255,136]; brB=.7; }
+   const rs=document.documentElement.style, j=c=>c.map(Math.round).join(',');
+-  rs.setProperty('--ncA',j(cA)); rs.setProperty('--coreA',j(lerp3(cA,[255,255,255],.82)));
+-  rs.setProperty('--ncB',j(cB)); rs.setProperty('--coreB',j(lerp3(cB,[255,255,255],.82)));
+-  rs.setProperty('--brA',brA.toFixed(3)); rs.setProperty('--brB',brB.toFixed(3));
++  /* 値を粗く丸め、前回と同じなら書かない（毎フレーム書くと、ぼかし付きの影を全部描き直して重くなる） */
++  const q=(k,v)=>{ if(lightC[k]!==v){ lightC[k]=v; rs.setProperty(k,v); } };
++  q('--ncA',j(cA)); q('--coreA',j(lerp3(cA,[255,255,255],.82)));
++  q('--ncB',j(cB)); q('--coreB',j(lerp3(cB,[255,255,255],.82)));
++  q('--brA',(Math.round(brA*20)/20).toFixed(2)); q('--brB',(Math.round(brB*20)/20).toFixed(2));
+ }
+ requestAnimationFrame(lightFrame);
+ 
