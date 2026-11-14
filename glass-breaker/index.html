@@ -2709,7 +2709,9 @@ var TE = { fade0: 6.6, txt0: 7.8, cut1: 11.4, cut2: 15.6, cut3: 19.8, lab: 24.2,
 function startTrueEnd() {
   G.mode = 'trueend'; G.st = 0; G.t = 0; G.tod = 0; G.teSnd = {}; ctlOn = false; atkHeld = null; pl.moving = false; pl.st = 'idle'; pl.pose = readyPose(); pl.face = 1;
   kb.l = kb.r = kb.u = kb.d = 0;
-  if (AC) { var t = AC.currentTime; tn(t, 523, 0.4, { g: 0.03 }); tn(t + 0.2, 392, 0.6, { g: 0.03 }); }
+  /* 階段を降りるように、主人公もボクサーも画面から消える(ダッダッダッ…という足音) */
+  G.hide = true; GHOST.length = 0; LINES.length = 0; TR.length = 0;
+  if (AC) { for (var i = 0; i < 7; i++) { var t = AC.currentTime + i * 0.1, g = 0.1 * (1 - i * 0.11); tn(t, 210 - i * 9, 0.075, { g: g, type: 'square', f2: 130 - i * 6 }); nz(t, 0.06, { type: 'lowpass', f: 600, f2: 180, g: g * 0.7 }); } }
 }
 function teOnce(k) { if (G.teSnd[k]) return false; G.teSnd[k] = 1; return true; }
 function trueEndUpdate(dt) {
@@ -4489,12 +4491,12 @@ function render() {
   for (i = 0; i < objs.length; i++) if (objs[i].t === 'lamp' && objs[i].dead) dl++;
   if (dl) R(0, 11, WW, 76, 'rgba(0,0,14,' + (0.07 * dl) + ')');
   for (i = 0; i < objs.length; i++) if (objs[i].t !== 'wall') L.push({ z: objs[i].fl, k: 0, o: objs[i] });
-  L.push({ z: pl.z, k: 1 });
+  if (!G.hide) L.push({ z: pl.z, k: 1 });
   if (prVisible()) L.push({ z: pr.z, k: 2 });
   if (baby && !baby.held) L.push({ z: baby.z, k: 3 });
   if (G.dau) { L.push({ z: G.dau.z, k: 9 }); if (G.dau.st !== 'bound') L.push({ z: G.dau.cz - 0.2, k: 10 }); }
   if (sam.vis) L.push({ z: sam.z, k: 5 });
-  for (i = 0; i < foes.length; i++) L.push({ z: foes[i].z, k: 6, f: foes[i] });
+  if (!G.hide) for (i = 0; i < foes.length; i++) L.push({ z: foes[i].z, k: 6, f: foes[i] });
   if (STAGE === 'corr') for (i = 0; i < 3; i++) L.push({ z: 300, k: 7, i: i });
   for (i = 0; i < props.length; i++) L.push({ z: props[i].z + (props[i].kind === 'plinth' ? -0.1 : 0), k: 8, p: props[i] });
   L.sort(function (a, b) { return (a.z - b.z) || (a.k - b.k); });
@@ -4917,7 +4919,7 @@ function gameUpdate(dt, rdt) {
   }
 }
 function resetGame() {
-  G.dau = null; G.goodEnd = false; G.tod = null; G.leftT = 0;
+  G.dau = null; G.goodEnd = false; G.tod = null; G.leftT = 0; G.hide = false;
   build('corr'); G.stage = 'corr'; G.banner = 'START'; G.hintT = 0; G.bt = 0;
   pl.x = -20; pl.z = 108; pl.face = 1; pl.st = 'idle'; pl.bk = false; pl.pose = readyPose(); pl.cut = null; pl.cutU = 0; pl.ear = false; pl.back = false; pl.moving = false; pl.tapFlash = 0;
   pr.x = 141; pr.z = 99; pr.face = -1; pr.st = 'gone'; pr.t = 0; pr.fear = 0; pr.wig = true; pr.hop = 0; pr.pale = 0; pr.jt = 0; pr.scream = 0; pr.obj = null; pr.ln2 = false; G.ln = null; G.melt = null;

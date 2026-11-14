@@ -91,3 +91,4 @@
   - 暗転→`AND ONE YEAR LATER...`→カット3枚(ディナー/抱擁/社長の葬式で泣く娘)→`TRUE END`→タップでタイトル。時刻は `TE` に定義。
   - カット絵は `cutCanvas(kind)` で一度だけ作る。背景は普通に描き、人物は pup(`CUTPAL`、`pPresBust`/`pGirlBust`を拡大描画→縮小・吸着)。ろうそくの炎・ハート・涙・雨は `drawTrueEnd` で上に重ねる。
   - トゥルーエンド中は敵の更新を止める(`foeUpdate`)。
+- 追記(TRUE END): 発動した瞬間に主人公とボクサー(foes)を画面から消す(`G.hide`、`render()`の描画リストに積まない)。同時に階段を降りる足音(ダッ×7、だんだん小さく低く=`startTrueEnd`内)。`resetGame()`で`G.hide=false`。
