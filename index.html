@@ -58,15 +58,15 @@ header{display:flex;flex-direction:column;align-items:center;gap:10px;padding-to
   padding:7px 12px;border-radius:0;background:var(--white);color:var(--ink);font:800 12px var(--ja);letter-spacing:.08em;
   box-shadow:0 3px 0 #e6d3ea,0 6px 14px rgba(107,74,122,.12)}
 
-/* コンセプト: 名前の下に常に表示する */
-.concept{position:fixed;z-index:4;margin:0;top:calc(max(12px,env(safe-area-inset-top,0px)) + 36px);left:max(12px,env(safe-area-inset-left,0px));
+/* コンセプト: 名前の下（ページ上部。スクロールすると流れる。常に見えるのは名前だけ） */
+.concept{position:absolute;z-index:4;margin:0;top:calc(max(12px,env(safe-area-inset-top,0px)) + 36px);left:max(12px,env(safe-area-inset-left,0px));
   max-width:min(calc(100vw - 24px),300px);padding:5px 10px 6px;border-radius:0;background:rgba(255,250,252,.82);color:var(--ink);
   font:700 11px/1.6 var(--ja);letter-spacing:.06em;box-shadow:0 2px 0 #e6d3ea;pointer-events:none}
 .concept span{display:block}
 .concept .wait{color:var(--ink2);font-weight:600}
 
 /* 音楽ボタン */
-.music{position:fixed;z-index:5;top:max(12px,env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));
+.music{position:absolute;z-index:5;top:max(12px,env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));
   display:flex;align-items:center;gap:8px;padding:8px 14px 8px 12px;border:0;border-radius:999px;background:var(--white);color:var(--ink);
   font:800 13px var(--ja);letter-spacing:.06em;cursor:pointer;box-shadow:0 4px 0 #e6d3ea,0 8px 18px rgba(107,74,122,.15)}
 .music:active{transform:translateY(2px);box-shadow:0 2px 0 #e6d3ea}
@@ -460,7 +460,7 @@ body.abyss .music.on .sw{background:#c41a2a}
 const APPS=[
   {path:'noche-sin-luna/', ja:'テスト', label:'ノーチェ・シン・ルナ test ver.（テスト）', name:'NOCHE SIN LUNA', for:'both', color:'lav', icon:'rosette',
    start:'2026-11-13', upd:'2026-11-14', ver:'3.2'},
-  {path:'fire-hakoniwa/', ja:'伸びるヒゲ2', label:'火の箱庭 test ver.（伸びるヒゲ2）', name:'FIRE HAKONIWA', for:'both', color:'pink', icon:'flame',
+  {path:'fire-hakoniwa/', ja:'燃やす', label:'伸びるヒゲ2 test ver.（燃やす）', name:'NOBIRU HIGE2', for:'both', color:'pink', icon:'flame',
    start:'2026-11-13', upd:'2026-11-14', ver:'0.2'},
   {path:'where-which/', ja:'テスト', label:'ウェア・ウィッチ test ver.（テスト）', name:'WHERE WHICH', for:'both', color:'mint', icon:'star',
    start:'2026-11-13', upd:'2026-11-13', ver:'0.2', stopped:true},
