@@ -898,3 +898,5 @@ PC版の筋立てと仕組み（防御→追跡→反撃、攻撃信号、耐久
 - CSSで画面を無理に回して向きを固定する方式は採らなかった（タッチ座標と `innerWidth` を使う作品が壊れるため）。
 - ボタンの操作はゲーム側へ伝えない（`stopPropagation`）。キーボード操作を奪わないよう `tabindex=-1`。
 - 2026-11-14 に、トップ・全作品（電卓ドリルを含む12作品＋ソース2本）に適用。動作確認はスマホ幅の Chromium で行った（実機の iOS では未確認）。
+
+- **先行読み込み（2026-11-14）**: 遅れの原因は、音声を鳴らす直前まで読み込んでいなかったこと（Audio要素の `preload` は Safari/iPhone では無視され、毎回 約200ms の遅れ。測定: 往復150msで未読み込み210〜250ms／読み込み済み0〜1ms）。対策として、`toIdle()` で出題語を決め（`words=pickWords()`）、すぐ `voicePreload()` で fetch → `decodeAudioData` してメモリに持つ（`VB`）。再生は BufferSource（`speakBuf`）。取り込めない場合（`file://` など）は従来の Audio 要素（`speakElem`）に切り替わる（`VF`）。`respond()` の起動ログの後で `voiceWhenReady()` が読み込み完了を待つ（終わっていれば待たない。最長4秒。待つときは「Loading voice pack ... n/N」を表示）。

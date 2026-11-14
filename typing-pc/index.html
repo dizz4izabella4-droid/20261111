@@ -1995,7 +1995,8 @@ $('trkFile').addEventListener('change',e=>{ const f=e.target.files&&e.target.fil
 
 // 何もない画面 → 突然の警報
 function toIdle(){
-  if(naming) finishNaming(); clearOver(); setTension(0); mqList=''; token++; state='idle'; sirenStop(); bgmStop(); clockStop(); mqClear();
+  if(naming) finishNaming(); clearOver();
+  words=pickWords(); voicePreload(words.map(x=>x[0]));   // 何もない画面・警報の間に、今回の出題語の音声を読み込んでおく setTension(0); mqList=''; token++; state='idle'; sirenStop(); bgmStop(); clockStop(); mqClear();
   WINS.forEach(id=>$(id).hidden=true); $('alert').hidden=true; $('ov').hidden=true; $('power').hidden=true;
   document.body.classList.remove('alert'); $('menu').hidden=true; menuMusicStop(); $('idle').hidden=false; $('idle').textContent='C:\\>';
   later(toAlert,1600+R(1200));
@@ -2009,11 +2010,11 @@ function respond(){
   if(state!=='alert') return;
   token++; state='boot'; sirenStop(); $('alert').hidden=true; document.body.classList.remove('alert'); audio(); mqClear(); bgmStart();
   const m=$('main'); m.hidden=false; m.classList.remove('appear'); void m.offsetWidth; m.classList.add('appear'); playOpen();
-  words=pickWords(); words.forEach(x=>voiceAudio(x[0])); N=words.reduce((a,w)=>a+w[0].length+1,0);   // 各単語の最後に Enter（1打）
+  N=words.reduce((a,w)=>a+w[0].length+1,0);   // 各単語の最後に Enter（1打）。出題語は toIdle() で決めて、音声の先行読み込みも始めてある
   clockStop(); tAcc=0; wi=0;ci=0;ti=0;miss=0;streak=0;maxStreak=0;missHere=false;phase=0; missRun=0; fwLowShown=false; fwSet(100);
   con.textContent=''; $('res').hidden=true; $('banner').hidden=true;
   dummiesReset(); startPhaseStats(); update();
-  typeLines(BOOT,()=>{ startPhase(0); });
+  typeLines(BOOT,()=>voiceWhenReady(()=>startPhase(0)));
 }
 function startPhaseStats(){ phMiss=0; phTyped=0; xfer=0; phLen=words.slice(BOUNDS[phase],BOUNDS[phase+1]).reduce((a,w)=>a+w[0].length+1,0); }
 function startPhase(p){
@@ -2036,13 +2037,57 @@ function startPhase(p){
 let voiceOn=true, hearing=false, hearT=null, vNow=null, voiceWarned=false; const VC={};
 // 再生できなかったとき、理由を画面に1回だけ出す（音が出ない原因をつかむため）
 function voiceWarn(why){ if(voiceWarned) return; voiceWarned=true; try{ addLine('warn','[!] 読み上げ音声を再生できません: '+why); }catch(e){} }
+// 音声はあらかじめ取り込んで、デコード済みの形でメモリに持つ（再生の遅れをなくす）。
+// 取り込めなかった語（file:// で開いたときなど）は、従来どおり Audio 要素で鳴らす
+const VB={}, VPm={}, VF={}; let vTotal=0, vDone=0;
 function voiceAudio(w){ let a=VC[w]; if(!a){ a=new Audio('voice/'+w+'.mp3'); a.preload='auto'; VC[w]=a; } return a; }
+function voiceLoad(w){
+  if(VB[w]||VF[w]) return Promise.resolve();
+  if(VPm[w]) return VPm[w];
+  vTotal++;
+  return VPm[w]=fetch('voice/'+w+'.mp3').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.arrayBuffer(); })
+    .then(buf=>new Promise((ok2,ng)=>{ const c=audio(); if(!c) return ng(new Error('no audio')); c.decodeAudioData(buf,ok2,ng); }))   // 古い Safari 向けにコールバック形式
+    .then(ab=>{ VB[w]=ab; }).catch(()=>{ VF[w]=1; voiceAudio(w); })   // 失敗したら Audio 要素に切り替え（こちらも先に読み込ませておく）
+    .then(()=>{ vDone++; });
+}
+function voicePreload(list){
+  const q=list.filter(w=>!VB[w]&&!VF[w]&&!VPm[w]); let k=0;
+  const run=()=>{ if(k>=q.length) return; voiceLoad(q[k++]).then(run); };
+  for(let i=0;i<4;i++) run();   // 4本ずつ並べて読み込む（先頭の語から順に）
+}
+const voiceReady=()=>words.every(x=>VB[x[0]]||VF[x[0]]);
+// 読み込みが終わるまで待ってから始める（終わっていれば待たない。長くても4秒で打ち切り）
+function voiceWhenReady(cb){
+  if(!voiceOn||voiceReady()) return cb();
+  const t0=performance.now(), tk=token; let ln=null;
+  const tick=()=>{ if(tk!==token) return;
+    const n=words.filter(x=>VB[x[0]]||VF[x[0]]).length;
+    if(!ln){ ln=addLine('',''); }
+    if(ln&&ln.textContent!==undefined) ln.textContent='[*] Loading voice pack ... '+n+'/'+words.length;
+    if(voiceReady()||performance.now()-t0>4000) return cb();
+    setTimeout(tick,120); };
+  tick();
+}
+function speakBuf(w,gate,ab){
+  const c=audio(); if(!c) return false;
+  const src=c.createBufferSource(); src.buffer=ab; const g=c.createGain(); g.gain.value=.9; src.connect(g); g.connect(c.destination);
+  vNow={pause(){ try{ src.onended=null; src.stop(); }catch(e){} }};
+  const me=vNow; src.onended=()=>{ if(vNow===me) hearDone(); };
+  try{ src.start(); }catch(e){ return false; }
+  return true;
+}
 function hearDone(){ clearTimeout(hearT); hearT=null; hearing=false; vNow=null; const l=newWord.line; if(l) l.classList.remove('hearing'); }
 function speakStop(){ if(vNow){ try{ vNow.pause(); }catch(e){} } hearDone(); }
 function speakWord(w,gate){
   speakStop(); if(!voiceOn) return;
-  const a=voiceAudio(w); vNow=a; a.volume=.9;
   if(gate){ hearing=true; if(newWord.line) newWord.line.classList.add('hearing'); hearT=setTimeout(hearDone,3000); }   // 3秒たっても終わらなければ（読み込み失敗など）入力を許す
+  if(VB[w]){ if(speakBuf(w,gate,VB[w])) return; }
+  else if(VPm[w]&&!VF[w]){   // まだ読み込み中: 終わりしだい鳴らす（この間も入力は止まったまま）
+    const tk=token, wl=newWord.line; VPm[w].then(()=>{ if(tk!==token||newWord.line!==wl||!hearing&&gate) return; if(VB[w]) speakBuf(w,gate,VB[w]); else speakElem(w,gate); }); return; }
+  speakElem(w,gate);
+}
+function speakElem(w,gate){
+  const a=voiceAudio(w); vNow=a; a.volume=.9;
   const end=()=>{ if(vNow===a) hearDone(); };
   a.onended=end; a.onerror=()=>{ voiceWarn('voice/'+w+'.mp3 を読み込めません'); end(); };
   try{ a.currentTime=0; }catch(e){}
