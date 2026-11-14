@@ -44,6 +44,7 @@
 | claude.ai アーティファクト（イカロス） | https://claude.ai/artifact/9HeYU5kUoepJMdZ3wUpJ3X | 確認用。リポジトリの icarus/index.html は、その写し（断片版。全面作り直し後の最新を反映） |
 | claude.ai アーティファクト（Noche sin Luna） | https://claude.ai/artifact/19pEEfxhWj1sVAtjrNZD3M | テスト公開用。リポジトリの noche-sin-luna/index.html と同じ内容 |
 | claude.ai アーティファクト（PC98 NOVEL） | https://claude.ai/artifact/SNF4KH2uPebe6rfbagSH26 | 確認用。リポジトリの pc98-novel/index.html と同じ内容。アーティファクト上では、セーブの EXPORT（ファイルの書き出し）だけ働かない（閲覧画面がダウンロードを許可しないため） |
+| claude.ai アーティファクト（やわらか） | https://claude.ai/artifact/Kdh4VQFMh9ZJx5sVnWiuay | 確認用。リポジトリの yawaraka/index.html と同じ内容 |
 | claude.ai アーティファクト（旧スマホ版） | https://claude.ai/artifact/TwbhHpCo6BMetgr6v178bd | 試作（フリック入力と偉人の名言）。新しいスマホ版に置き換えたので使わない |
 
 ### リポジトリの構成
