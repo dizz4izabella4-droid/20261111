@@ -959,6 +959,32 @@ function audio(){
 }
 const ok=()=>seOn&&audio();
 
+// ---- SFXパック（sfx/SFXnn.wav。モノラルに軽量化した10種。合計約0.17MB）----
+// 採用: 01 ホバーティック / 02 決定クリック / 03 キャンセル / 04 メニュー展開 / 05 メニュー収納 / 06 ホロキーボード打鍵 / 08 通知ピン / 09 エラーブザー / 18 グリッチバースト / 20 ハック接続
+// 読み込めない環境（file:// で開いたときなど）では、従来の合成音がそのまま鳴る
+const SFX_DIR='../typing-pc/sfx/';
+const SFX_KEY_REPLACE=false;   // true にすると、通常の打鍵は合成の「カシャ」をやめて SFX06 だけにする（聴き比べ用）
+const SFXG={'01':.5,'02':.7,'03':.45,'04':.45,'05':.4,'06':.9,'08':.45,'09':.55,'18':.5,'20':.5};   // 音ごとの基準の音量
+const SFXB={}; let sfxStarted=false;
+function sfxPreload(){
+  if(sfxStarted) return; sfxStarted=true;
+  Object.keys(SFXG).forEach(id=>{
+    fetch(SFX_DIR+'SFX'+id+'.wav').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.arrayBuffer(); })
+      .then(b=>new Promise((good,bad)=>{ const c=audio(); if(!c) return bad(new Error('no audio')); c.decodeAudioData(b,good,bad); }))   // 古い Safari 向けにコールバック形式
+      .then(ab=>{ SFXB[id]=ab; }).catch(()=>{});
+  });
+}
+// 鳴らせたら true（読み込み前・失敗・SEオフなら false。呼び出し側が合成音に戻す）
+function sfx(id,o){
+  o=o||{}; if(!SFXB[id]||!ok()) return false;
+  const src=ac.createBufferSource(), g=ac.createGain();
+  src.buffer=SFXB[id]; src.playbackRate.value=o.rate||1; g.gain.value=SFXG[id]*(o.vol==null?1:o.vol);
+  src.connect(g); g.connect(bus().in); src.start(ac.currentTime+(o.t||0)); return true;
+}
+const sfxJit=()=>Math.pow(10,(Math.random()*4-2)/20);   // ±2dB の音量ゆらぎ（機械的な繰り返しをなくす）
+function playTick(rate){ if(!sfx('01',{rate:rate||1,vol:.9})) playKey(false); }   // メニューの移動
+function playEnter(){ if(!sfx('02')) playKey(true); }   // Enter・決定
+
 // 効果音の経路（曲の経路 bgmOut() とは別。曲には手を入れない）:
 //   各音 ─(dry)→ まとめ用コンプ ──────────────┐
 //        ─(send)→ 残響（合成した響きを畳み込む。左右で別の響き）─┤→ 超低域カット → リミッター → master
@@ -1037,8 +1063,10 @@ function tock(t,vol,f){
   o.connect(g); g.connect(bus().key); o.start(t); o.stop(t+.1);
 }
 function playKey(heavy){ if(!ok()) return; const t=ac.currentTime, f=heavy?1700:2700+Math.random()*700;
-  clack(t,heavy?KEYV*1.25:KEYV,f,heavy?.9:1.2); tock(t,heavy?.2:.11,heavy?250:330+Math.random()*40);
-  clack(t+.03+Math.random()*.012,(heavy?KEYV*1.25:KEYV)*.45,f*1.45,1.4); }
+  if(!(SFX_KEY_REPLACE&&SFXB['06'])){
+    clack(t,heavy?KEYV*1.25:KEYV,f,heavy?.9:1.2); tock(t,heavy?.2:.11,heavy?250:330+Math.random()*40);
+    clack(t+.03+Math.random()*.012,(heavy?KEYV*1.25:KEYV)*.45,f*1.45,1.4); }
+  sfx('06',{vol:sfxJit()*(heavy?1.1:1),rate:heavy?.88:1+(Math.random()-.5)*.06}); }   // 合成の「カシャ」に SFX06 を重ねる
 const KEYV=3.2;
 // 正しい1打: 語の中で1打ごとに音が上がる（控えめな音量）。Enter の和音で着地する
 const STEP=[57,60,62,65,69,72,74,77,81,84,86,89];
@@ -1055,14 +1083,17 @@ function playChord(k){ if(!ok()||k<1) return; const n=Math.max(2,Math.min(k,CHOR
 // 最初の語が出る合図
 function playReady(){ if(!ok()) return; voice({type:'triangle',f0:midiF(81),dur:.12,vol:.05,lp0:5000,att:.003}); }
 // ウィンドウが開く: 軽いドンと、フィルターが開いていく電子音
-function playOpen(){ if(!ok()) return; boom(0,.3,160,.22);
+function playOpen(){ if(!ok()) return; if(sfx('04',{vol:.85})) return; boom(0,.3,160,.22);
   voice({type:'triangle',f0:147,f1:294,dur:.26,vol:.1,lp0:500,lp1:3500,q:2}); hiss(0,.14,.05,3000,700); }
 // ミス: 半音でぶつかる2つの音の短いブザーと、詰まった衝撃音（残響なしで短く切る）
-function playMiss(){ if(!ok()) return; boom(0,.32,120,.2);
+function playMiss(){ if(!ok()) return;
+  // 連続ミスでファイアウォールが削れ始めたら（3回目以降）グリッチ音、それまではブザー（DRILL は削れないのでブザーのみ）
+  { const gl=missRun>=2&&!DIFF[diff].safe; if(sfx(gl?'18':'09',{vol:sfxJit()})) return; }
+  boom(0,.32,120,.2);
   voice({type:'square',f0:185,f1:170,dur:.22,vol:.17,lp0:1800,lp1:600,wet:false,att:.004}); voice({type:'sawtooth',f0:196,f1:180,dur:.22,vol:.17,lp0:2000,lp1:600,wet:false,att:.004});
   hiss(0,.1,.2,1600,500,false); }
 // 連続正解: 短いスティンガー
-function playStinger(){ if(!ok()) return; voice({type:'triangle',f0:midiF(69),dur:.22,vol:.09,lp0:1500,lp1:5000,q:2}); voice({type:'triangle',f0:midiF(74),t:.09,dur:.45,vol:.09,lp0:1500,lp1:5000,q:2}); }
+function playStinger(i){ if(!ok()) return; if(sfx(i>=3?'20':'08',{vol:.85})) return; voice({type:'triangle',f0:midiF(69),dur:.22,vol:.09,lp0:1500,lp1:5000,q:2}); voice({type:'triangle',f0:midiF(74),t:.09,dur:.45,vol:.09,lp0:1500,lp1:5000,q:2}); }
 // フェーズ移行: せり上がるノイズ → 大きな衝撃 → 和音
 function playBanner(){ if(!ok()) return;
   hiss(0,.7,.16,200,6000); voice({f0:73.4,f1:587,dur:.7,vol:.07,lp0:300,lp1:4500,q:4});
@@ -1203,7 +1234,7 @@ function bgmFadeOut(sec){
 }
 // ハッキング成功（フェーズ突破）: 専用の成功音（効果音。曲は変えない）
 function musicSuccess(){
-  if(!ok()) return; [0,3,7,10,12].forEach((k,i)=>{ voice({type:'triangle',f0:midiF(74+k),t:i*.07,dur:.4,vol:.075,lp0:2600,lp1:6000,att:.004});
+  if(!ok()) return; if(sfx('20',{vol:.9})) return; [0,3,7,10,12].forEach((k,i)=>{ voice({type:'triangle',f0:midiF(74+k),t:i*.07,dur:.4,vol:.075,lp0:2600,lp1:6000,att:.004});
     voice({type:'square',f0:midiF(74+k),t:i*.07,dur:.22,vol:.02,lp0:1800,lp1:5000,q:2,att:.004}); });
   voice({type:'triangle',f0:midiF(86),t:.35,dur:1.2,vol:.06,lp0:4000,lp1:900,q:1.5}); boom(.35,.55,110,.6); hiss(0,.45,.1,300,7000);
 }
@@ -1282,7 +1313,7 @@ const Lb=makeLog($('lgBreach'),function(){
 let hop=0;
 const Lt=makeLog($('lgTrace'),function(){
   hop++;
-  if(hop>12){ hop=0; return [['y','  -> '+ATK+'  [SOURCE CONFIRMED]'],['',''],['wh','Re-tracing '+ATK+' ...']]; }
+  if(hop>12){ hop=0; if(!$('wTrace').hidden) sfx('08',{vol:.8}); return [['y','  -> '+ATK+'  [SOURCE CONFIRMED]'],['',''],['wh','Re-tracing '+ATK+' ...']]; }
   const ms=()=>String(R(hop*9)+3).padStart(4)+' ms';
   return [['',String(hop).padStart(3)+' '+ms()+' '+ms()+'  '+(hop<3?lan():hopIp())]];
 },50);
@@ -1325,7 +1356,7 @@ function drawKey(){
   $('keyCnt').textContent=kLocked+' / '+KLEN; $('keyBar').style.width=(kLocked/KLEN*100)+'%';
 }
 function keyOk(){ kLost=-1; kLocked++;
-  if(kLocked>=KLEN){ $('keyMsg').textContent='KEY '+String(kNo).padStart(2,'0')+' DECRYPTED'; Lb.line('[+] attacker.key #'+kNo+' decrypted','y'); newKey(); }
+  if(kLocked>=KLEN){ $('keyMsg').textContent='KEY '+String(kNo).padStart(2,'0')+' DECRYPTED'; Lb.line('[+] attacker.key #'+kNo+' decrypted','y'); if(!$('wKey').hidden) sfx('20',{vol:.7,rate:1.12}); newKey(); }
   drawKey(); }
 function keyMiss(){ const b=kLocked; kLocked=Math.max(0,kLocked-2); kLost=b; $('keyMsg').textContent='CHECKSUM ERROR - rolling back'; drawKey(); }
 function keyReset(){ kNo=0; newKey(); $('keyMsg').textContent='Waiting for input...'; drawKey(); }
@@ -1449,7 +1480,7 @@ function banner(msg){
 }
 // フェーズが変わったとき、ステータスのフェーズ表示と窓のタイトルを目立たせる
 function phaseFlash(){ ['sPh','mTitle'].forEach(id=>{ const e=$(id); if(!e) return; e.classList.remove('phf'); void e.offsetWidth; e.classList.add('phf'); }); }
-function swapOut(id){ const w=$(id); if(w.hidden) return; w.classList.add('swapout'); if(ok()) boom(0,.25,70,.2);
+function swapOut(id){ const w=$(id); if(w.hidden) return; w.classList.add('swapout'); if(!sfx('05',{vol:.7})&&ok()) boom(0,.25,70,.2);
   later(()=>{ w.hidden=true; w.classList.remove('swapout'); },330); }
 function openWin(id,delay){
   const myTok=token;
@@ -1701,7 +1732,7 @@ function toOff(){
   document.body.classList.remove('alert'); kbShow(false);
 }
 function powerOn(){
-  if(state!=='off') return; audio(); state='pwr'; $('power').hidden=true;
+  if(state!=='off') return; audio(); sfxPreload(); state='pwr'; $('power').hidden=true;
   const f=$('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); playPower();
   later(toMenu,800);
 }
@@ -1710,20 +1741,20 @@ let mRow=4;
 function renderMenu(){
   const og=$('optGenre'); og.textContent='';
   Object.keys(GENRES).forEach(k=>{ const b=document.createElement('button'); b.type='button'; b.textContent=GENRES[k].label; if(k===genre) b.className='on';
-    b.addEventListener('click',()=>{ genre=k; mRow=0; playKey(false); renderMenu(); }); og.appendChild(b); });
+    b.addEventListener('click',()=>{ genre=k; mRow=0; playTick(); renderMenu(); }); og.appendChild(b); });
   $('genreDesc').textContent=GENRES[genre].desc+'（'+WORDSETS[genre].length+'語）';
   const od=$('optDiff'); od.textContent='';
   Object.keys(DIFF).forEach(k=>{ const b=document.createElement('button'); b.type='button'; b.textContent=DIFF[k].label; if(k===diff) b.className='on';
-    b.addEventListener('click',()=>{ diff=k; mRow=1; playKey(false); renderMenu(); }); od.appendChild(b); });
+    b.addEventListener('click',()=>{ diff=k; mRow=1; playTick(); renderMenu(); }); od.appendChild(b); });
   $('diffDesc').textContent=DIFF[diff].desc;
   const oc=$('optCount'); oc.textContent='';
   COUNTS.forEach(n=>{ const b=document.createElement('button'); b.type='button'; b.textContent=n+' WORDS'; if(n===TOTAL) b.className='on';
-    b.addEventListener('click',()=>{ setCount(n); mRow=2; playKey(false); renderMenu(); }); oc.appendChild(b); });
+    b.addEventListener('click',()=>{ setCount(n); mRow=2; playTick(); renderMenu(); }); oc.appendChild(b); });
   const per=[BOUNDS[1],BOUNDS[2]-BOUNDS[1],BOUNDS[3]-BOUNDS[2]];
   $('countDesc').textContent='防御 '+per[0]+'語 → 追跡 '+per[1]+'語 → 反撃 '+per[2]+'語';
   const orr=$('optRead'); orr.textContent='';
   [['表示',false],['隠す',true]].forEach(([t,v])=>{ const b=document.createElement('button'); b.type='button'; b.textContent=t; if(v===readHide) b.className='on';
-    b.addEventListener('click',()=>{ readHide=v; mRow=3; playKey(false); renderMenu(); }); orr.appendChild(b); });
+    b.addEventListener('click',()=>{ readHide=v; mRow=3; playTick(); renderMenu(); }); orr.appendChild(b); });
   $('readDesc').textContent=readHide||DIFF[diff].hide?'読みを「・」で隠す。打てた字とミスした字だけ見える（読みの学習向け）':'読みを表示する';
   document.querySelectorAll('#menu [data-row]').forEach(el=>el.classList.toggle('sel',+el.dataset.row===mRow));
   saveOpt();
@@ -1735,17 +1766,17 @@ function toMenu(){
 }
 function menuKey(e){
   const k=e.key;
-  if(k==='ArrowUp'||k==='ArrowDown'){ e.preventDefault(); mRow=(mRow+(k==='ArrowUp'?4:1))%5; playKey(false); renderMenu(); return; }
+  if(k==='ArrowUp'||k==='ArrowDown'){ e.preventDefault(); mRow=(mRow+(k==='ArrowUp'?4:1))%5; playTick(); renderMenu(); return; }
   if(k==='ArrowLeft'||k==='ArrowRight'){ e.preventDefault(); const d=k==='ArrowLeft'?-1:1;
     if(mRow===0){ const ks=Object.keys(GENRES); genre=ks[(ks.indexOf(genre)+d+ks.length)%ks.length]; }
     else if(mRow===1){ const ks=Object.keys(DIFF); diff=ks[(ks.indexOf(diff)+d+ks.length)%ks.length]; }
     else if(mRow===2){ const i=COUNTS.indexOf(TOTAL); setCount(COUNTS[(i+d+COUNTS.length)%COUNTS.length]); }
     else if(mRow===3){ readHide=!readHide; }
-    playKey(false); renderMenu(); return; }
+    playTick(); renderMenu(); return; }
   if(k==='Enter'){ e.preventDefault(); startMission(); }
 }
 function startMission(){
-  if(state!=='menu') return; audio(); playKey(true); if(ok()){ boom(0,.6,120,.5); voice({f0:220,f1:880,dur:.4,vol:.08,lp0:400,lp1:6000,q:6}); }
+  if(state!=='menu') return; audio(); playEnter(); if(ok()){ boom(0,.6,120,.5); voice({f0:220,f1:880,dur:.4,vol:.08,lp0:400,lp1:6000,q:6}); }
   menuMusicStop(); $('menu').hidden=true; toIdle();
 }
 $('mStart').addEventListener('click',startMission);
@@ -1764,7 +1795,7 @@ function toIdle(quick){
   later(quick?()=>{ state='alert'; respond(); }:toAlert, quick?450:plays?700+R(500):1600+R(1200));
   plays++;
 }
-function retry(){ if(state!=='done'&&state!=='overres'||naming) return; audio(); playKey(true); $('ov').hidden=true; toIdle(true); }
+function retry(){ if(state!=='done'&&state!=='overres'||naming) return; audio(); playEnter(); $('ov').hidden=true; toIdle(true); }
 function toAlert(){
   state='alert'; $('idle').hidden=true; $('alert').hidden=false; document.body.classList.add('alert'); sirenStart();
   for(let i=0;i<4;i++) marquee('警告　外部からの不正アクセスを検知　ファイアウォールが攻撃を受けています','red');
@@ -1881,7 +1912,7 @@ function key(ch){
     if(sub>=el._seq.length){ reveal(el); el.className=(missHere?'w':'d')+ent+' pop'; missHere=false; ci++; sub=0; }
     drawXfer(1); dummiesOk();
     if(ch!=='\n') playStep(wStep++);   // 語の中で1打ごとに音が上がり、Enter の和音で着地する
-    if(streak>0&&streak%15===0){ playStinger(); banner(['FIREWALL HOLDING','SIGNAL LOCKED','PROXY STRIPPED','UPLINK SEIZED','SYSTEM BREACHED'][(streak/15-1)%5]); }
+    if(streak>0&&streak%15===0){ playStinger((streak/15-1)%5); banner(['FIREWALL HOLDING','SIGNAL LOCKED','PROXY STRIPPED','UPLINK SEIZED','SYSTEM BREACHED'][(streak/15-1)%5]); }
     setTension(ti/N*(DIFF[diff].safe?.35:1));
     if(ci>=cur.length){ wantMod(false); wordDone(); }
     else { if(sub) reveal(cur[ci]); cur[ci].className='c'+(sub?' pd':'')+(cur[ci]._ch==='\n'?' ent':''); wantMod(sub>0); hintNext(); }
@@ -1928,7 +1959,7 @@ function impact(){
   // 攻撃者に接続していた窓から順に、間をあけて「切断」して閉じる
   const order=['wDump','wFeed','wKey','wTrace','wMon','wBreach','wCopy'];
   order.forEach((id,i)=>later(()=>{ const w=$(id); if(w.hidden) return; w.classList.add('kill');
-      if(ok()) boom(0,.28,60+i*8,.3);
+      if(!sfx('05',{vol:.8,rate:1-i*.03})&&ok()) boom(0,.28,60+i*8,.3);
       later(()=>{ w.hidden=true; w.classList.remove('kill'); },520); },700+i*280));
   later(quietClose,700+order.length*280+500);
 }
@@ -1999,7 +2030,7 @@ function countUp(el,v,dp,u){
   const f=now=>{ const k=Math.min(1,(now-t0c)/D); el.textContent=(v*k).toFixed(dp)+u; if(k<1) requestAnimationFrame(f); else el.textContent=v.toFixed(dp)+u; };
   requestAnimationFrame(f); if(ok()) voice({type:'triangle',f0:midiF(89),dur:.07,vol:.05,lp0:6000,wet:false,att:.003});
 }
-function finishNaming(){ if(!naming) return; naming.name=nameBuf||'???'; lastRec=naming; naming=null; if(ok()) playChord(3); renderResult(); }
+function finishNaming(){ if(!naming) return; naming.name=nameBuf||'???'; lastRec=naming; naming=null; if(!sfx('02')) playChord(3); renderResult(); }
 function renderResult(){
   const rec=naming||lastRec; if(!rec) return;
   const nm=$('rName'); nm.textContent='';
@@ -2041,7 +2072,7 @@ window.addEventListener('keydown',e=>{
   if(e.key==='Tab'){ e.preventDefault(); if(!e.repeat&&words[wi]) speakWord(words[wi][0],false); return; }
   if(hearing){ e.preventDefault(); return; }   // 読み上げ中は入力を受けない
   if(e.key==='Process'||e.isComposing||e.keyCode===229){ $('ime').hidden=false; return; }
-  if(e.key==='Enter'){ e.preventDefault(); if(!e.repeat){ playKey(true); key('\n'); } return; }
+  if(e.key==='Enter'){ e.preventDefault(); if(!e.repeat){ playEnter(); key('\n'); } return; }
   if(/^[\u3041-\u3096\u30FC]$/.test(e.key)){ e.preventDefault(); if(!e.repeat) playKey(false); key(e.key); }
 });
 $('power').addEventListener('click',powerOn);
@@ -2118,20 +2149,29 @@ function guide(k,d){
 }
 const FLICK=16;
 const dirOf=(dx,dy)=>Math.hypot(dx,dy)<FLICK?0:(Math.abs(dx)>Math.abs(dy)?(dx<0?1:3):(dy<0?2:4));
+
+// ---- フリックの音 ----
+// 押した瞬間にホバー音、フリックで向きが変わるたびに向きごとの高さの音、離して確定したらキー音。
+// フリックで確定したときは、上がっていく2連の音を足してタップと区別する。候補のない方向で離したときや、入力を受けない間のキーは「キャンセル」の小さな音
+const DIRRATE=[1,.84,1.26,1.5,.7];   // 中央・左・上・右・下
+let flickDir=0;
+const kbLive=()=>state==='play'&&!hearing||state==='done'&&!!naming;
+function flickFx(){ sfx('01',{vol:.7,rate:1.25}); sfx('01',{vol:.7,rate:1.65,t:.045}); }
 let act=null;
 function endPress(){ if(!act) return; act.k.classList.remove('on'); fg.hidden=true; act=null; }
 kbEl.addEventListener('pointerdown',e=>{
   const k=e.target.closest('.k'); if(!k) return; e.preventDefault(); audio(); endPress();
   try{ k.setPointerCapture(e.pointerId); }catch(_){}
   act={k,id:e.pointerId,x:e.clientX,y:e.clientY,d:0}; k.classList.add('on');
+  if(kbLive()&&(k.dataset.i!=null||k.dataset.fn==='MOD')) sfx('01',{vol:.6,rate:k.dataset.fn==='MOD'&&k.classList.contains('want')?1.4:1});
   if(k.dataset.i!=null) guide(k,0);
 });
 kbEl.addEventListener('pointermove',e=>{
   if(!act||e.pointerId!==act.id||act.k.dataset.i==null) return;
-  const d=dirOf(e.clientX-act.x,e.clientY-act.y); if(d!==act.d){ act.d=d; guide(act.k,d); }
+  const d=dirOf(e.clientX-act.x,e.clientY-act.y); if(d!==act.d){ act.d=d; guide(act.k,d); if(kbLive()&&FKEYS[+act.k.dataset.i][d]) sfx('01',{vol:.7,rate:DIRRATE[d]}); }
 });
 kbEl.addEventListener('pointerup',e=>{ if(!act||e.pointerId!==act.id) return; const k=act.k, d=act.d; endPress();
-  if(k.dataset.i!=null){ const c=FKEYS[+k.dataset.i][d]; if(c) flashKey(k,fkey(c)); }   // 候補のない方向は入力しない
+  if(k.dataset.i!=null){ const c=FKEYS[+k.dataset.i][d]; if(c){ flickDir=d; flashKey(k,fkey(c)); flickDir=0; } else if(kbLive()) sfx('03',{vol:.45}); }   // 候補のない方向は入力しない（小さなキャンセル音）
   else flashKey(k,fkey(k.dataset.fn)); });
 kbEl.addEventListener('pointercancel',e=>{ if(act&&e.pointerId===act.id) endPress(); });
 kbEl.addEventListener('contextmenu',e=>e.preventDefault());
@@ -2144,12 +2184,12 @@ function fkey(k){
     else if(k==='MOD'){ const nx=CYCMAP[nameBuf.slice(-1)]; playKey(false); if(nx){ nameBuf=nameBuf.slice(0,-1)+nx; renderResult(); } }
     else if(/^[\u3041-\u3096\u30FC]$/.test(k)&&[...nameBuf].length<3){ nameBuf+=k; playKey(false); renderResult(); }
     return null; }
-  if(state==='done'||state==='overres'){ if(k==='Enter'){ playKey(true); toMenu(); } else if(k==='Backspace') retry(); return null; }
-  if(state!=='play'){ if(k!=='Backspace') playKey(k==='Enter'); return null; }
-  if(hearing) return null;   // 読み上げ中は入力を受けない
-  if(k==='Backspace'){ playKey(false); return null; }   // 打ち直しはできない（PC版と同じ）
-  if(k==='Enter'){ playKey(true); return key('\n'); }
-  playKey(false); return key(k);
+  if(state==='done'||state==='overres'){ if(k==='Enter'){ playEnter(); toMenu(); } else if(k==='Backspace') retry(); return null; }
+  if(state!=='play'){ if(k==='Enter') playEnter(); else if(k!=='Backspace') playKey(false); return null; }
+  if(hearing){ sfx('03',{vol:.45}); return null; }   // 読み上げ中は入力を受けない（小さなキャンセル音）
+  if(k==='Backspace'){ if(!sfx('03',{vol:.6})) playKey(false); return null; }   // 打ち直しはできない（PC版と同じ）
+  if(k==='Enter'){ playEnter(); return key('\n'); }
+  playKey(false); const r=key(k); if(r===true&&flickDir) flickFx(); return r;   // フリックで正しく打てたときは上がっていく2連音を足す
 }
 // 入力を待っていない間は、ENTER 以外のキーを暗くする
 // 結果画面（名前の登録後）では ⌫ が RETRY（同じ設定でもう一度）になる

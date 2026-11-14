@@ -1253,6 +1253,32 @@ function audio(){
   return ac;
 }
 const ok=()=>seOn&&audio();
+
+// ---- SFXパック（sfx/SFXnn.wav。モノラルに軽量化した10種。合計約0.17MB）----
+// 採用: 01 ホバーティック / 02 決定クリック / 03 キャンセル / 04 メニュー展開 / 05 メニュー収納 / 06 ホロキーボード打鍵 / 08 通知ピン / 09 エラーブザー / 18 グリッチバースト / 20 ハック接続
+// 読み込めない環境（file:// で開いたときなど）では、従来の合成音がそのまま鳴る
+const SFX_DIR='sfx/';
+const SFX_KEY_REPLACE=false;   // true にすると、通常の打鍵は合成の「カシャ」をやめて SFX06 だけにする（聴き比べ用）
+const SFXG={'01':.5,'02':.7,'03':.45,'04':.45,'05':.4,'06':.9,'08':.45,'09':.55,'18':.5,'20':.5};   // 音ごとの基準の音量
+const SFXB={}; let sfxStarted=false;
+function sfxPreload(){
+  if(sfxStarted) return; sfxStarted=true;
+  Object.keys(SFXG).forEach(id=>{
+    fetch(SFX_DIR+'SFX'+id+'.wav').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.arrayBuffer(); })
+      .then(b=>new Promise((good,bad)=>{ const c=audio(); if(!c) return bad(new Error('no audio')); c.decodeAudioData(b,good,bad); }))   // 古い Safari 向けにコールバック形式
+      .then(ab=>{ SFXB[id]=ab; }).catch(()=>{});
+  });
+}
+// 鳴らせたら true（読み込み前・失敗・SEオフなら false。呼び出し側が合成音に戻す）
+function sfx(id,o){
+  o=o||{}; if(!SFXB[id]||!ok()) return false;
+  const src=ac.createBufferSource(), g=ac.createGain();
+  src.buffer=SFXB[id]; src.playbackRate.value=o.rate||1; g.gain.value=SFXG[id]*(o.vol==null?1:o.vol);
+  src.connect(g); g.connect(bus().in); src.start(ac.currentTime+(o.t||0)); return true;
+}
+const sfxJit=()=>Math.pow(10,(Math.random()*4-2)/20);   // ±2dB の音量ゆらぎ（機械的な繰り返しをなくす）
+function playTick(rate){ if(!sfx('01',{rate:rate||1,vol:.9})) playKey(false); }   // メニューの移動
+function playEnter(){ if(!sfx('02')) playKey(true); }   // Enter・決定
 // 打鍵音（カシャカシャ）はそのまま
 let noiseBuf=null;
 function noise(){ if(!noiseBuf){ noiseBuf=ac.createBuffer(1,ac.sampleRate*.05|0,ac.sampleRate); const d=noiseBuf.getChannelData(0);
@@ -1265,7 +1291,8 @@ function clack(t,vol,freq){
   src.connect(hp); hp.connect(pk); pk.connect(g); g.connect(master); src.start(t); src.stop(t+.05);
 }
 function playKey(heavy){ if(!ok()) return; const t=ac.currentTime, f=heavy?1400:2000+Math.random()*800;
-  clack(t,heavy?.9:.7,f); clack(t+.028+Math.random()*.012,heavy?.45:.35,f*1.3); }
+  if(!(SFX_KEY_REPLACE&&SFXB['06'])){ clack(t,heavy?.9:.7,f); clack(t+.028+Math.random()*.012,heavy?.45:.35,f*1.3); }
+  sfx('06',{vol:sfxJit()*(heavy?1.1:1),rate:heavy?.88:1+(Math.random()-.5)*.06}); }   // 合成の「カシャ」に SFX06 を重ねる
 
 // 効果音: 低音・フィルター付きのこぎり波・ノイズを重ね、コンプレッサーとエコーを通して重く
 let fx=null, longNoise=null;
@@ -1301,14 +1328,17 @@ function playChord(k){ if(!ok()||k<1) return; const n=Math.min(k,8);
     voice({f0:f,dur:.75,vol:.11/Math.sqrt(n)+.025,lp0:500,lp1:2600,q:4});
     voice({f0:f,dur:.75,vol:.07/Math.sqrt(n)+.015,lp0:500,lp1:2600,q:4,detune:12}); } }
 // ウィンドウが開く: 低いドンと、フィルターが開いていく電子音
-function playOpen(){ if(!ok()) return; boom(0,.4,150,.3);
+function playOpen(){ if(!ok()) return; if(sfx('04',{vol:.85})) return; boom(0,.4,150,.3);
   voice({f0:110,f1:220,dur:.32,vol:.12,lp0:250,lp1:3000,q:6}); hiss(0,.18,.08,3000,600); }
 // ミス: 歪んだ低いブザーと衝撃音
-function playMiss(){ if(!ok()) return; boom(0,.6,80,.35);
+function playMiss(){ if(!ok()) return;
+  // 連続ミスでファイアウォールが削れ始めたら（3回目以降）グリッチ音、それまではブザー（DRILL は削れないのでブザーのみ）
+  { const gl=missRun>=2&&!DIFF[diff].safe; if(sfx(gl?'18':'09',{vol:sfxJit()})) return; }
+  boom(0,.6,80,.35);
   voice({type:'square',f0:62,dur:.34,vol:.22,lp0:1200,lp1:300,wet:false}); voice({type:'sawtooth',f0:66,dur:.34,vol:.18,lp0:1400,lp1:300,wet:false});
   hiss(0,.22,.28,1200,200,false); }
 // 連続正解: 短いスティンガー
-function playStinger(){ if(!ok()) return; voice({f0:freqOf(0),dur:.25,vol:.1,lp0:800,lp1:4000,q:5}); voice({f0:freqOf(4),t:.09,dur:.45,vol:.1,lp0:800,lp1:4000,q:5}); }
+function playStinger(i){ if(!ok()) return; if(sfx(i>=3?'20':'08',{vol:.85})) return; voice({f0:freqOf(0),dur:.25,vol:.1,lp0:800,lp1:4000,q:5}); voice({f0:freqOf(4),t:.09,dur:.45,vol:.1,lp0:800,lp1:4000,q:5}); }
 // フェーズ移行: せり上がるノイズ → 大きな衝撃 → 和音
 function playBanner(){ if(!ok()) return;
   hiss(0,.7,.22,200,7000); voice({f0:80,f1:640,dur:.7,vol:.09,lp0:300,lp1:5000,q:8});
@@ -1447,7 +1477,7 @@ function bgmFadeOut(sec){
 }
 // ハッキング成功（フェーズ突破）: 専用の成功音（効果音。曲は変えない）
 function musicSuccess(){
-  if(!ok()) return; [0,4,7,12,16].forEach((s,i)=>voice({type:'square',f0:midiF(74+s),t:i*.07,dur:.35,vol:.07,lp0:2000,lp1:7000,q:4}));
+  if(!ok()) return; if(sfx('20',{vol:.9})) return; [0,4,7,12,16].forEach((s,i)=>voice({type:'square',f0:midiF(74+s),t:i*.07,dur:.35,vol:.07,lp0:2000,lp1:7000,q:4}));
   voice({f0:midiF(86),t:.35,dur:1.2,vol:.06,lp0:4000,lp1:900,q:2});
 }
 // 開始前の画面の曲
@@ -1525,7 +1555,7 @@ const Lb=makeLog($('lgBreach'),function(){
 let hop=0;
 const Lt=makeLog($('lgTrace'),function(){
   hop++;
-  if(hop>12){ hop=0; return [['y','  -> '+ATK+'  [SOURCE CONFIRMED]'],['',''],['wh','Re-tracing '+ATK+' ...']]; }
+  if(hop>12){ hop=0; if(!$('wTrace').hidden) sfx('08',{vol:.8}); return [['y','  -> '+ATK+'  [SOURCE CONFIRMED]'],['',''],['wh','Re-tracing '+ATK+' ...']]; }
   const ms=()=>String(R(hop*9)+3).padStart(4)+' ms';
   return [['',String(hop).padStart(3)+' '+ms()+' '+ms()+'  '+(hop<3?lan():hopIp())]];
 },50);
@@ -1568,7 +1598,7 @@ function drawKey(){
   $('keyCnt').textContent=kLocked+' / '+KLEN; $('keyBar').style.width=(kLocked/KLEN*100)+'%';
 }
 function keyOk(){ kLost=-1; kLocked++;
-  if(kLocked>=KLEN){ $('keyMsg').textContent='KEY '+String(kNo).padStart(2,'0')+' DECRYPTED'; Lb.line('[+] attacker.key #'+kNo+' decrypted','y'); newKey(); }
+  if(kLocked>=KLEN){ $('keyMsg').textContent='KEY '+String(kNo).padStart(2,'0')+' DECRYPTED'; Lb.line('[+] attacker.key #'+kNo+' decrypted','y'); if(!$('wKey').hidden) sfx('20',{vol:.7,rate:1.12}); newKey(); }
   drawKey(); }
 function keyMiss(){ const b=kLocked; kLocked=Math.max(0,kLocked-2); kLost=b; $('keyMsg').textContent='CHECKSUM ERROR - rolling back'; drawKey(); }
 function keyReset(){ kNo=0; newKey(); $('keyMsg').textContent='Waiting for input...'; drawKey(); }
@@ -1943,7 +1973,7 @@ function toOff(){
   document.body.classList.remove('alert');
 }
 function powerOn(){
-  if(state!=='off') return; audio(); state='pwr'; $('power').hidden=true;
+  if(state!=='off') return; audio(); sfxPreload(); state='pwr'; $('power').hidden=true;
   const f=$('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); playPower();
   later(toMenu,800);
 }
@@ -1952,15 +1982,15 @@ let mRow=3;
 function renderMenu(){
   const ol=$('optLv'); ol.textContent='';
   LEVELS.forEach((L,i)=>{ const b=document.createElement('button'); b.type='button'; b.textContent=L.label; if(i===lv) b.className='on';
-    b.addEventListener('click',()=>{ lv=i; mRow=0; playKey(false); renderMenu(); }); ol.appendChild(b); });
+    b.addEventListener('click',()=>{ lv=i; mRow=0; playTick(); renderMenu(); }); ol.appendChild(b); });
   $('lvDesc').textContent=LEVELS[lv].name+'：'+LEVELS[lv].desc+'（'+WB[lv].length+'語から出題）';
   const od=$('optDiff'); od.textContent='';
   Object.keys(DIFF).forEach(k=>{ const b=document.createElement('button'); b.type='button'; b.textContent=DIFF[k].label; if(k===diff) b.className='on';
-    b.addEventListener('click',()=>{ diff=k; mRow=1; playKey(false); renderMenu(); }); od.appendChild(b); });
+    b.addEventListener('click',()=>{ diff=k; mRow=1; playTick(); renderMenu(); }); od.appendChild(b); });
   $('diffDesc').textContent=DIFF[diff].desc;
   const oc=$('optCount'); oc.textContent='';
   COUNTS.forEach(n=>{ const b=document.createElement('button'); b.type='button'; b.textContent=n+' WORDS'; if(n===TOTAL) b.className='on';
-    b.addEventListener('click',()=>{ setCount(n); mRow=2; playKey(false); renderMenu(); }); oc.appendChild(b); });
+    b.addEventListener('click',()=>{ setCount(n); mRow=2; playTick(); renderMenu(); }); oc.appendChild(b); });
   const per=[BOUNDS[1],BOUNDS[2]-BOUNDS[1],BOUNDS[3]-BOUNDS[2]];
   $('countDesc').textContent='防御 '+per[0]+'語 → 追跡 '+per[1]+'語 → 反撃 '+per[2]+'語';
   document.querySelectorAll('#menu [data-row]').forEach(el=>el.classList.toggle('sel',+el.dataset.row===mRow));
@@ -1973,16 +2003,16 @@ function toMenu(){
 }
 function menuKey(e){
   const k=e.key;
-  if(k==='ArrowUp'||k==='ArrowDown'){ e.preventDefault(); mRow=(mRow+(k==='ArrowUp'?3:1))%4; playKey(false); renderMenu(); return; }
+  if(k==='ArrowUp'||k==='ArrowDown'){ e.preventDefault(); mRow=(mRow+(k==='ArrowUp'?3:1))%4; playTick(); renderMenu(); return; }
   if(k==='ArrowLeft'||k==='ArrowRight'){ e.preventDefault(); const d=k==='ArrowLeft'?-1:1;
     if(mRow===0){ lv=(lv+d+LEVELS.length)%LEVELS.length; }
     else if(mRow===1){ const ks=Object.keys(DIFF); diff=ks[(ks.indexOf(diff)+d+ks.length)%ks.length]; }
     else if(mRow===2){ const i=COUNTS.indexOf(TOTAL); setCount(COUNTS[(i+d+COUNTS.length)%COUNTS.length]); }
-    playKey(false); renderMenu(); return; }
+    playTick(); renderMenu(); return; }
   if(k==='Enter'){ e.preventDefault(); startMission(); }
 }
 function startMission(){
-  if(state!=='menu') return; audio(); playKey(true); if(ok()){ boom(0,.6,120,.5); voice({f0:220,f1:880,dur:.4,vol:.08,lp0:400,lp1:6000,q:6}); }
+  if(state!=='menu') return; audio(); playEnter(); if(ok()){ boom(0,.6,120,.5); voice({f0:220,f1:880,dur:.4,vol:.08,lp0:400,lp1:6000,q:6}); }
   menuMusicStop(); $('menu').hidden=true; toIdle();
 }
 $('mStart').addEventListener('click',startMission);
@@ -2132,7 +2162,7 @@ function key(ch){
     cur[ci].className=(missHere?'w':'d')+(exp==='\n'?' ent':''); missHere=false;
     missRun=0; noteKey(); lightKey(); ci++; ti++; phTyped++; streak++; maxStreak=Math.max(maxStreak,streak); xfer=Math.min(phLen,xfer+1);
     drawXfer(1); dummiesOk();
-    if(streak>0&&streak%15===0){ playStinger(); banner(['FIREWALL HOLDING','SIGNAL LOCKED','PROXY STRIPPED','UPLINK SEIZED','SYSTEM BREACHED'][(streak/15-1)%5]); }
+    if(streak>0&&streak%15===0){ playStinger((streak/15-1)%5); banner(['FIREWALL HOLDING','SIGNAL LOCKED','PROXY STRIPPED','UPLINK SEIZED','SYSTEM BREACHED'][(streak/15-1)%5]); }
     setTension(ti/N);
     if(ci>=cur.length) wordDone(); else cur[ci].className='c'+(cur[ci]._ch==='\n'?' ent':'');
   } else {
@@ -2180,7 +2210,7 @@ function impact(){
   // 攻撃者に接続していた窓から順に、間をあけて「切断」して閉じる
   const order=['wDump','wFeed','wKey','wTrace','wMon','wBreach','wCopy'];
   order.forEach((id,i)=>later(()=>{ const w=$(id); if(w.hidden) return; w.classList.add('kill');
-      if(ok()) clack(ac.currentTime,.25,900);
+      if(!sfx('05',{vol:.8,rate:1-i*.03})&&ok()) clack(ac.currentTime,.25,900);
       later(()=>{ w.hidden=true; w.classList.remove('kill'); },520); },700+i*280));
   later(quietClose,700+order.length*280+500);
 }
@@ -2251,7 +2281,7 @@ function countUp(el,v,dp,u){
   const f=now=>{ const k=Math.min(1,(now-t0c)/D); el.textContent=(v*k).toFixed(dp)+u; if(k<1) requestAnimationFrame(f); else el.textContent=v.toFixed(dp)+u; };
   requestAnimationFrame(f); if(ok()) voice({type:'square',f0:1400,dur:.05,vol:.04,lp0:6000,wet:false});
 }
-function finishNaming(){ if(!naming) return; naming.name=nameBuf||'???'; lastRec=naming; naming=null; if(ok()) playChord(3); renderResult(); }
+function finishNaming(){ if(!naming) return; naming.name=nameBuf||'???'; lastRec=naming; naming=null; if(!sfx('02')) playChord(3); renderResult(); }
 function renderResult(){
   const rec=naming||lastRec; if(!rec) return;
   const nm=$('rName'); nm.textContent='';
@@ -2292,7 +2322,7 @@ window.addEventListener('keydown',e=>{
   if(e.key==='Process'||e.isComposing||e.keyCode===229){ $('ime').hidden=false; return; }
   if(e.key==='Tab'){ e.preventDefault(); if(!e.repeat&&words[wi]) speakWord(words[wi][0],false); return; }
   if(hearing){ e.preventDefault(); return; }   // 読み上げ中は入力を受けない
-  if(e.key==='Enter'){ e.preventDefault(); if(!e.repeat){ playKey(true); key('\n'); } return; }
+  if(e.key==='Enter'){ e.preventDefault(); if(!e.repeat){ playEnter(); key('\n'); } return; }
   if(e.key.length===1){ e.preventDefault(); $('ime').hidden=true; if(!e.repeat) playKey(e.key===' '); key(e.key); }
 });
 $('power').addEventListener('click',powerOn);
