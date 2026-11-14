@@ -413,7 +413,7 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:0;border-radiu
         <span class="keyonly"><kbd>J</kbd><i class="dot" style="background:var(--rosa)"></i>左レーン・低音</span>
         <span class="keyonly"><kbd>I</kbd><i class="dot" style="background:var(--turq)"></i>右レーン・高音</span>
         <span class="keyonly" style="color:var(--dim)">ほかに F / K ・ ← / →</span>
-        <span class="touchonly">画面の左半分(低音)/右半分(高音)をタップ。両手で叩いてOKです。</span>
+        <span class="touchonly">光る道の左(低音)/右(高音)をタップ。両手で叩いてOKです。</span>
       </div>
     </div>
     <div class="foot">
@@ -613,6 +613,14 @@ function hitSound(lane){
   const bs=TONEBUF[id]||TONEBUF.palma; if(!bs) return;
   playBuf(bs[lane], TONEGAIN[id]||.9, 1+(Math.random()-.5)*.025);
 }
+/* 道の外をタップ：手拍子（録音の乾いた手拍子＋やわらかい手拍子からランダム）。判定・観客には影響しない */
+let lastPalma=-1;
+function palmas(){
+  if(actx.state!=='running') return;
+  const bs=[...(TONEBUF.palma||[]), ...(TONEBUF.sorda||[])]; if(!bs.length) return;
+  let i; do{ i=(Math.random()*bs.length)|0 }while(bs.length>1 && i===lastPalma); lastPalma=i;
+  playBuf(bs[i], .8+Math.random()*.2, .95+Math.random()*.1);
+}
 function previewTone(lane){ actx.resume().then(()=>{ const t0=actx.currentTime+.02;
   const lanes = (lane===0||lane===1) ? [lane] : [0,1];
   lanes.forEach((l,k)=>{ const id=toneOf(l), bs=TONEBUF[id]; if(id==='off'||!bs) return;
@@ -810,6 +818,13 @@ function layout(){
 }
 function toScreen(lx,ly){ return [L.jx+lx*L.cos-ly*L.sin, L.jy+lx*L.sin+ly*L.cos]; }
 function laneAt(px,py){ const dx=px-L.jx, dy=py-L.jy; return (dx*L.cos+dy*L.sin)<0 ? 0 : 1; }
+/* 左右のタップ範囲：2本の道（奥の穴から手前のギターの打面まで、遠近で細くなる帯）。この外をタップすると手拍子（palmas） */
+function inLane(px,py){
+  const dx=px-L.jx, dy=py-L.jy, lx=dx*L.cos+dy*L.sin, ly=-dx*L.sin+dy*L.cos;
+  if(ly<L.yHole-L.holeR || ly>L.laneW*1.05) return false;
+  const sc = ly<=L.yJ ? Math.max(0,(ly-L.yV)/(L.yJ-L.yV)) : 1;
+  return Math.abs(lx) <= L.laneW*sc*1.1 + 8;
+}
 function proj(z){ const s=1/(1+L.K*Math.max(z,-.45/L.K)); return {s, y:L.yV+(L.yJ-L.yV)*s}; }
 
 const COL = { grave:[228,0,124], agudo:[20,184,176], dos:[246,184,11] };
@@ -1399,6 +1414,7 @@ addEventListener('keyup',e=>{ const c=e.code; held.delete(c); const lane=K0.has(
 const ptrLane=new Map();
 cv.addEventListener('pointerdown',e=>{
   if(state!=='play') return; e.preventDefault();
+  if(!inLane(e.clientX,e.clientY)){ palmas(); return; }
   const lane = laneAt(e.clientX,e.clientY); ptrLane.set(e.pointerId,lane); press(lane,e.timeStamp);
 },{passive:false});
 const endPtr=e=>{ const l=ptrLane.get(e.pointerId); if(l==null) return; ptrLane.delete(e.pointerId); if(![...ptrLane.values()].includes(l)) release(l); };

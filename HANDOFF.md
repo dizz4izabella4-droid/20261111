@@ -857,6 +857,7 @@ PC版の筋立てと仕組み（防御→追跡→反撃、攻撃信号、耐久
 - 打音：選択機能は外した（2026-11-14）。固定で「録音したゴルペ」（左＝`assets/golpe_l.wav`、右＝`golpe_r.wav`）。`TONES` の合成音コードは残してあるが UI からは選べない。
 - 時計：Web Audio の再生位置。iOS Safari 対策として、`getOutputTimestamp` が currentTime と0.3秒以上ずれたら使わない、currentTime が250ms止まったら実時間で進める（Ver.2.1 の後に入れた修正。これが無いと iPhone でガイドが流れてこなかった）。
 - 設定（英語表記）：Handedness、ガイドの速さ、Sync offset（±150ms、クリックに合わせて叩く測定つき）、音楽・打音の音量、Effects（Full/Light）。
+- 道の外をタップ：左右のタップ範囲（`inLane`。奥の穴から手前の打面まで、遠近で細くなる2本の道）の外をタップすると、録音の手拍子（palmas。乾いた手拍子とやわらかい手拍子からランダム、打音の音量）が鳴る。判定・観客には影響しない。説明文は画面に出さない（演出を明かさない方針）。
 - 直すとき：`_src/template.html` を直して `python3 noche-sin-luna/_src/build.py`。
 - 確認のしかた：Playwright（Chrome）で `index.html?auto` を開くと自動演奏（`?auto&go` で読み込み後すぐ開始）。`window.__nsl`（state・taps・crowd・finish()）。
 - 未確認：実機での音の聞こえ方とスマホでの手ざわり。
