@@ -31,6 +31,7 @@ TARGETS = [
     'pc98-novel/_engine/template.html',
     'pc98-novel/index.html',
     'lab/index.html',
+    'yawaraka/index.html',
 ]
 PWA_META = (
     '<meta name="apple-mobile-web-app-capable" content="yes">'
