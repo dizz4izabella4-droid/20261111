@@ -508,20 +508,28 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:0;border-radiu
 <script>
 "use strict";
 /* ================= DATOS ================= */
-const DATA = __CHART__;
+const DATA = __CHART__;                         // 曲1の譜面
+const DATA2 = __CHART2__;                       // 曲2の譜面
 const TL = __TL__;
-const AUDIO_B64 = "__AUDIO__";
+const AUDIO_B64 = "__AUDIO__";                  // 曲1の音源
+const AUDIO2_B64 = "__AUDIO2__";                // 曲2の音源
 const CLAP_B64 = ["__CLAP0__","__CLAP1__"];
 const GOLPE_B64 = ["__GOLPE0__","__GOLPE1__"];   // golpe grabado: izquierda grave / derecha agudo
 const PHOTO = "data:image/jpeg;base64,__IMG__";
 const FONT = getComputedStyle(document.documentElement).getPropertyValue('--font').trim();
 const LEVEL = 'normal';                         // 難易度は NORMAL 固定（選択なし）
-/* 曲リスト。曲を足すときは README の「曲の足しかた」を参照。いまは1曲（譜面・成分マップ・音源は上の DATA / TL / AUDIO_B64） */
-const SONGS = [ {id:'noche', name:'Noche sin Luna', get dur(){ return musicBuf ? musicBuf.duration : 0; }} ];
+/* 曲リスト。曲ごとに 譜面(data)・音源(audio)・区間名(sections) を持つ。曲を足すときは README の「曲の足しかた」を参照。
+   音源は曲選択で選ばれるまで（または裏で順に）デコードする。buf はデコード後の AudioBuffer。dur は音源から自動 */
+const SONGS = [
+  {id:'noche', name:'Noche sin Luna', data:DATA, audio:AUDIO_B64, buf:null, get dur(){ return this.buf ? this.buf.duration : 0; },
+   sections:[[0,'Entrada'],[8,'Llamada'],[56,'Clímax'],[80,'Falseta'],[114,'Subida'],[128,'Fiesta'],[170,'Despedida']]},
+  {id:'llama', name:'Llama pura de amor', data:DATA2, audio:AUDIO2_B64, buf:null, get dur(){ return this.buf ? this.buf.duration : 0; },
+   sections:[[0,'Entrada'],[13.2,'Verso'],[25.7,'Llamada'],[36.8,'Estribillo'],[49.3,'Puente'],[64.8,'Subida'],[72.6,'Verso II'],[86.7,'Fiesta'],[110.7,'Despedida']]}
+];
 let curSong = 0;
 const NEAR = .16;                               // ventana para "tocar" una guía (s)
 const LEAD = 2.4;                               // segundos antes de que empiece la canción
-const SECTIONS = [[0,'Entrada'],[8,'Llamada'],[56,'Clímax'],[80,'Falseta'],[114,'Subida'],[128,'Fiesta'],[170,'Despedida']];
+let SECTIONS = SONGS[0].sections;               // 曲に合わせて applySong() が入れ替える
 const MILESTONES = {10:'¡Órale!',30:'¡Ándale!',60:'¡Qué padre!',100:'¡Ajúa!',150:'¡Viva!',180:'¡Plaza llena!'};
 const $ = s => document.querySelector(s);
 const clamp = (v,a,b) => v<a?a:v>b?b:v;
@@ -661,8 +669,15 @@ async function loadAudio(){
   try{ TONEBUF.grabado = await Promise.all(GOLPE_B64.map(b=>decode(b64ToBuf(b)))); }catch(e){ delete TONEBUF.grabado; }
   if(!TONES.some(t=>t.id===S.tone)) S.tone='palma';
   for(const k of ['toneL','toneR']) if(S[k] && !TONES.some(t=>t.id===S[k])) S[k]=null;
-  musicBuf = await decode(b64ToBuf(AUDIO_B64));
+  musicBuf = await ensureBuf(0);
 }
+/* 曲の音源をデコード（一度だけ）。曲1は起動時、ほかの曲は裏で。デコードが終わったら曲選択の再生時間を更新 */
+function ensureBuf(i){
+  const sg=SONGS[i]; if(sg.buf) return Promise.resolve(sg.buf);
+  return sg.loading || (sg.loading = decode(b64ToBuf(sg.audio)).then(b=>{ sg.buf=b; if(state==='songs') renderSongs(); return b; })
+    .catch(e=>{ sg.loading=null; throw e; }));
+}
+function applySong(i){ const sg=SONGS[i]; beats=sg.data.beats; energy=sg.data.energy; SECTIONS=sg.sections; musicBuf=sg.buf; }
 /* Aplausos del final: muchos aplausos cortos, más densos cuanta más gente haya */
 function applause(people, sec){
   if(!clapBufs.length || actx.state!=='running') return;
@@ -711,12 +726,12 @@ const clock={
 /* ================= ESTADO ================= */
 let state='title';              // title | play | paused | result | calib
 let notes=[], head=0, src=null, lastNoteT=0, resultAt=0, songDur=0, taps=0, songNow=-LEAD;
-const beats = DATA.beats, energy = DATA.energy;
+let beats = DATA.beats, energy = DATA.energy;   // 曲に合わせて applySong() が入れ替える
 const BPM = (()=>{ const d=[]; for(let i=1;i<beats.length;i++) d.push(beats[i]-beats[i-1]); d.sort((a,b)=>a-b); return Math.round(60/d[d.length>>1]); })();
 
 function buildNotes(d){
   const out=[];
-  for(const n of DATA.charts[d]){
+  for(const n of SONGS[curSong].data.charts[d]){
     if(n.l===2){ out.push({t:n.t,l:0,dbl:1,c:n.c},{t:n.t,l:1,dbl:1,c:n.c}); }
     else out.push({t:n.t,l:n.l,c:n.c});
   }
@@ -729,15 +744,18 @@ let lastStart=0;
 async function startGame(){
   if(!musicBuf) return;
   if(performance.now()-lastStart<400) return; lastStart=performance.now();
+  const sg=SONGS[curSong];
+  try{ await ensureBuf(curSong); }catch(e){ toast('音楽を読み込めませんでした'); return; }
+  applySong(curSong);
   countdown.on=false;
   stopMusic();
   closeVeils();
   document.body.classList.remove('finale'); fiesta.stop();
   notes=buildNotes(LEVEL); head=0; taps=0;
-  lastNoteT = notes[notes.length-1].t; songDur = musicBuf.duration;
+  lastNoteT = notes[notes.length-1].t; songDur = sg.buf.duration;
   fx.clear(); crowd.reset();
   try{ await actx.resume(); }catch(e){}
-  src=actx.createBufferSource(); src.buffer=musicBuf; src.connect(musicGain); src.connect(analyser);
+  src=actx.createBufferSource(); src.buffer=sg.buf; src.connect(musicGain); src.connect(analyser);
   musicGain.gain.cancelScheduledValues(actx.currentTime); applyVolumes();
   startAt=actx.currentTime+LEAD; src.start(startAt);
   clock.valid=false; clock.frozen=false;
@@ -1523,9 +1541,9 @@ $('#calApply').onclick=()=>{ S.off=cal.result; saveS(); closeCal(); toast(`Sync 
 /* ================= ARRANQUE ================= */
 layout(); fiesta.resize(); crowd.reset(); requestAnimationFrame(frame);
 const img=new Image(); img.onload=()=>{ document.querySelectorAll('.photo').forEach(p=>p.style.backgroundImage=`url(${PHOTO})`); requestAnimationFrame(()=>$('#title').classList.add('ready')); }; img.src=PHOTO;
-loadAudio().then(()=>{ $('#playBtn').disabled=false; $('#playLabel').textContent='PLAY'; if(AUTO&&qs.has('go')) startGame(); })
+loadAudio().then(()=>{ $('#playBtn').disabled=false; $('#playLabel').textContent='PLAY'; SONGS.forEach((sg,i)=>{ if(i) ensureBuf(i).catch(()=>{}); }); if(AUTO&&qs.has('go')) startGame(); })
   .catch(err=>{ console.error(err); $('#playLabel').textContent='ERROR'; toast('音楽を読み込めませんでした'); });
-window.__nsl={get state(){return state},get taps(){return taps},get crowd(){return crowd.list.length},clock,startGame,finish,S,get notes(){return notes}};
+window.__nsl={SONGS,setSong(i){curSong=i},get state(){return state},get taps(){return taps},get crowd(){return crowd.list.length},clock,startGame,finish,S,get notes(){return notes}};
 </script>
 </body>
 </html>
