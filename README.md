@@ -16,3 +16,7 @@
 | Noche sin Luna（フラメンコの音ゲー。test ver.） | `noche-sin-luna/` | スマホ・PC |
 
 作品を増やすときは、フォルダを作って中に `index.html` を置き、トップの `index.html` にある `APPS` の先頭に1件足します（新しい作品が上に並びます）。詳しくは [HANDOFF.md](HANDOFF.md) を見てください。
+
+## 全作品共通の基本設計
+
+全作品に、①iOSのダブルタップ拡大の無効化、②全画面表示の選択、③縦横表示（自動／縦／横）の選択を入れています。本体は `shared/game-base.js`、各作品への埋め込みは `python3 tools/apply_game_base.py`（新作は `TARGETS` に追加）。詳しくは [HANDOFF.md](HANDOFF.md) の26章。

@@ -865,3 +865,33 @@ PC版の筋立てと仕組み（防御→追跡→反撃、攻撃信号、耐久
 ### 21-g. せってい画面（無駄オプション）
 - ヘッダーに歯車ボタン（talk フェーズのみ表示）。開く時・「きめる」時・「いま みる」でローディング(art)を強制表示（`showArt(true, ms, cb)`、`closeArt` 後に `state.artCb` 実行）。
 - 項目: はなす速さ / 独り言頻度 / へや(自動・ひる・ゆうがた・よる・あめ) / 文字サイズ / んちょの動き / エフェクト / ローディング頻度。`iris_options_v1` に保存。「ぜんぶ さいしょから」は2度押しで iris_* を全消去。
+
+---
+
+## 26. 全作品共通の基本設計（2026-11-14）
+
+**制作する全てのゲームに適用する基本設計。** 新作も既存作品の改修も、これを外さないこと。
+
+1. **iOS のダブルタップ拡大・ピンチ拡大を無効にする。**
+2. **全画面表示を選べるようにする。**
+3. **画面の向き（自動 / 縦 / 横）を選べるようにする。**
+
+### 仕組み
+- 本体は `shared/game-base.js`（1ファイル・外部読み込みなし）。**各作品は1ファイル完結なので、`tools/apply_game_base.py` が全作品の `</head>` の直前に中身を埋め込む**（`<!--IZ-GAME-BASE:START-->`〜`END` の間。何度実行しても同じ結果）。
+- 同じスクリプトが、`<meta name="viewport">` に `maximum-scale=1,user-scalable=no` を足し、iOS のホーム画面用 meta（`apple-mobile-web-app-capable` など）も入れる。
+- 手順：`shared/game-base.js` を直したら `python3 tools/apply_game_base.py` を実行 → 全作品が更新される。`--check` で更新漏れを調べられる。
+- **新作を作ったら、その `index.html`（ビルドで作る作品はテンプレートも）を `apply_game_base.py` の `TARGETS` に足して実行する。** 対象外：説明ページ（`kumiwake-bou/rules.html`）。
+- イカロス（`icarus/_src/src/template.html`）とNoche sin Luna（`noche-sin-luna/_src/template.html`）は、ソース側のテンプレートにも埋め込み済み。ビルドし直しても残る。
+
+### 拡大の無効化
+- iOS Safari は `user-scalable=no` を無視するので、①CSS `touch-action:manipulation`（html）②`gesturestart/change/end` の `preventDefault` ③2本指で scale が動いた `touchmove` の抑止 ④350ms以内の連続 `touchend` の抑止（保険）の4段で止めている。
+- ④はボタン・リンク・入力欄・`label` などでは行わない（`click` を壊さないため。そこは①に任せる）。
+- 入力欄にフォーカスしたときの自動拡大も、`maximum-scale=1` で起きない。
+
+### 全画面・向き
+- 画面の端（初期は右上）に小さな「⛶」ボタンを置く（普段は薄く、タップで設定パネルが開く）。位置は、`window.IZ_BASE={pos:'tr'|'tl'|'br'|'bl'}` をスクリプトより前に書くと変えられる（作品側のUIと重なるとき用）。
+- **全画面**：Fullscreen API。**iPhone のSafariは非対応**なので、その旨と「共有 → ホーム画面に追加」で開く案内を出す（ホーム画面から開くと全画面）。iPad・Android・PCは切り替えられる。
+- **向き**：自動／縦／横。選択は `localStorage`（`izGameBase.orient`）に保存し、同じサイトの全作品で共通。Android は全画面にしたうえで `screen.orientation.lock` で固定する。**iPhone は向きを固定できない**ので、選んだ向きと違うときは「端末を横向きにしてください」と画面上部に案内を出す（6秒で消える）。
+- CSSで画面を無理に回して向きを固定する方式は採らなかった（タッチ座標と `innerWidth` を使う作品が壊れるため）。
+- ボタンの操作はゲーム側へ伝えない（`stopPropagation`）。キーボード操作を奪わないよう `tabindex=-1`。
+- 2026-11-14 に、トップ・全作品（電卓ドリルを含む12作品＋ソース2本）に適用。動作確認はスマホ幅の Chromium で行った（実機の iOS では未確認）。
