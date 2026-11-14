@@ -103,3 +103,7 @@
   - 赤ちゃんは出ない(`spawnBaby`/`startEnding`は呼ばれない)。
 - フォーカス演出(社長への寄り・用心棒登場などのズーム、`prFocus`)の間は、画面の上下に黒帯(`#lbT/#lbB`、最大12.5%ずつ)。
 - `prClearFront` の範囲を社長の左右±22pxに縮小(遠くの調度品まで消えないように)。
+- 追記(音楽と演出の速さ): 場面の音楽を合成で追加(`MUS`/`musStart(kind)`/`musTick()`/`musStop()`、外部ファイルなし)。
+  - 金に変わる場面: `startGold`でBGM(Marrow and Machine)をフェードアウト(`bgmFadeStop`)→1秒後に不気味な曲(`eerie`: 低いうなり+半音ずれのオルゴール)。破片が集まる速さを約2.3倍遅く(集まり始め1.8秒→像の完成9.0秒、担ぐのは11.2秒以降)。
+  - 娘を吹っ飛ばした瞬間にBGMをフェードアウト→`startGoodEnd`で感動的な曲(`emo`: C-G/B-Am-Fの和音+アルペジオ+旋律)。
+  - `resetGame`で`musStop()`。
