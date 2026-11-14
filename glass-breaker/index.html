@@ -2736,7 +2736,7 @@ function updDau(dt) {
   }
 }
 function dauQ(D) {
-  var ms = simT, cry = D.st === 'bound' && (G.mode === 'ending' || G.mode === 'end' || G.mode === 'secret' || G.mode === 'gold');
+  var ms = simT, cry = D.st === 'bound' && (G.mode === 'ending' || G.mode === 'end' || G.mode === 'secret' || (G.mode === 'gold' && G.gold && G.gold.chose));
   if (D.st === 'bound') {
     if (cry) return { m: 'sit', rope: 1, face: 'cry', tp: Math.floor(ms / 110) % 6, bob: (Math.floor(ms / 230) & 1) * 0.5, dn: 1.2, hx: ((Math.floor(ms / 460) & 1) ? 0.5 : 0) };
     var st = (ms % 3400) < 380;
@@ -3066,46 +3066,114 @@ function startGold(o) {
   bgmFadeStop(); musStart('eerie', 1.0);
 }
 function goldUpdate(dt) {
-  var g = G.gold, s = G.st, i, p;
+  var g = G.gold, s = G.st, i, p, D = G.dau;
   if (!g) return;
   if (pl.st === 'atk' && s > 0.6) { pl.st = 'idle'; pl.pose = readyPose(); }
-  if (s > 1.8 && !g.gath) {
-    g.gath = true;
-    for (i = 0; i < FX.length; i++) { p = FX[i]; if (!p.gat || p.pop) continue; p.gfix = 1; p.g0x = p.x; p.g0y = p.y; p.g0r = p.rot; p.life = p.age + 60; p.sy = 1; p.gd = rnd(0, 1.6); }
-  }
-  if (g.gath && !g.show) {
+  /* 1) 破片が溶けて液体になる */
+  if (s > 1.8 && !g.melt) {
+    g.melt = true; g.liq = [];
     for (i = 0; i < FX.length; i++) {
-      p = FX[i]; if (!p.gfix) continue;
-      var u = clamp((s - 1.8 - p.gd) / 5.2, 0, 1), e = u * u * (3 - 2 * u);
-      p.x = p.g0x + (p.ox - p.g0x) * e; p.y = p.g0y + (p.oy - p.g0y) * e - Math.sin(Math.PI * e) * 14; p.rot = p.g0r * (1 - e) + p.orot * e;
-      if (e > 0.45 && !p.gcol) { p.gcol = 1; p.fill = pick(['#ffe070', '#f0c040', '#c8901c', '#fff6c0']); p.stroke = '#fff2a0'; p.alpha = 1; p.tint = null; p.glint = true; }
+      p = FX[i]; if (!p.gat || p.pop) continue;
+      p.gfix = 1; p.v0 = p.verts.slice(); p.life = p.age + 60; p.sy = 1;
+      if (g.liq.length < 70) g.liq.push({ x0: p.x, y0: Math.max(p.y, g.z - 6), x: p.x, y: p.y, r: rnd(0.8, 1.7), d: rnd(0, 1.3), tx: g.x + rnd(-3, 3), ty: g.z + rnd(-1, 1), done: false });
     }
+    if (AC) { var t0 = AC.currentTime; nz(t0, 1.6, { type: 'bandpass', f: 1800, f2: 700, q: 1.5, g: 0.05 }); }
   }
-  if (s > 9.0 && !g.show) {
-    g.show = true;
-    for (i = FX.length - 1; i >= 0; i--) if (FX[i].gfix) FX.splice(i, 1);
+  if (g.melt && s < 3.2) {
+    var k = 1 - clamp((s - 1.8) / 1.2, 0, 1);
+    for (i = 0; i < FX.length; i++) { p = FX[i]; if (!p.gfix) continue; for (var j = 0; j < p.v0.length; j++) p.verts[j] = p.v0[j] * k; p.y += (Math.max(p.y, g.z - 6) - p.y) * Math.min(1, dt * 3); }
+  }
+  if (g.melt && !g.cleared && s >= 3.2) { g.cleared = true; for (i = FX.length - 1; i >= 0; i--) if (FX[i].gfix) FX.splice(i, 1); }
+  /* 2) 液体が床を流れて一か所に集まる */
+  if (g.liq) {
+    var arrived = 0;
+    for (i = 0; i < g.liq.length; i++) {
+      var l = g.liq[i], u = clamp((s - 3.6 - l.d) / 2.0, 0, 1), e = u * u * (3 - 2 * u);
+      if (s < 3.6) { l.x = l.x0; l.y += (l.y0 - l.y) * Math.min(1, dt * 4); continue; }
+      l.x = l.x0 + (l.tx - l.x0) * e; l.y = l.y0 + (l.ty - l.y0) * e; if (u >= 1) { l.done = true; arrived++; }
+    }
+    g.pool = g.liq.length ? arrived / g.liq.length : 1;
+    if (s > 3.6 && s < 6.8 && Math.random() < dt * 5 && AC) tn(AC.currentTime, rnd(90, 160), 0.12, { f2: rnd(50, 80), g: 0.05 });
+  }
+  /* 3) 溜まりから金の社長がせり上がる */
+  g.ru = clamp((s - 7.0) / 2.4, 0, 1);
+  if (s > 7.0 && !g.hum) { g.hum = true; if (AC) { var th = AC.currentTime; tn(th, 110, 2.4, { f2: 220, g: 0.05, type: 'sawtooth' }); } }
+  if (s > 9.4 && !g.show) {
+    g.show = true; g.liq = null;
     flash(0.7, 90); shake(1.4, 140); ring(g.x, g.z - 16, 16, 0.4); ring(g.x, g.z - 16, 9, 0.3);
     for (i = 0; i < 26; i++) addFx({ kind: 'spark', x: g.x + rnd(-8, 8), y: g.z - rnd(4, 34), vx: rnd(-60, 60), vy: rnd(-80, 10), r: rnd(0.3, 0.6), fy: g.z + 2, life: rnd(0.3, 0.7) });
-    if (AC) { var t2 = AC.currentTime; [523, 659, 784, 1047, 1319].forEach(function (f0, k) { tn(t2 + k * 0.05, f0, 1.4, { g: 0.035 }); }); tn(t2, 90, 0.5, { f2: 50, g: 0.14 }); }
+    if (AC) { var t2 = AC.currentTime; [523, 659, 784, 1047, 1319].forEach(function (f0, q) { tn(t2 + q * 0.05, f0, 1.4, { g: 0.035 }); }); tn(t2, 90, 0.5, { f2: 50, g: 0.14 }); }
   }
   if (g.show && !g.held && Math.random() < dt * 6) CG.push({ x: g.x + rnd(-6, 6), y: g.z - rnd(4, 34), age: 0, life: 0.4 });
-  if (s > 11.2 && !g.held) {
+  /* 4) 主人公が金と娘を何度か見比べて、金を選ぶ */
+  var LOOK = [10.2, 11.0, 11.8, 12.4, 12.9, 13.3, 13.65];
+  if (s > 10.0 && !g.chose) {
+    if (!g.look) { g.look = true; G.zoom = { x: (g.x + (D ? D.x : 80)) / 2, y: 80, a: 0.12 }; }
+    var n = 0; for (i = 0; i < LOOK.length; i++) if (s >= LOOK[i]) n = i + 1;
+    if (n > 0) {
+      var toGold = (n % 2) === 1, tgt = toGold ? g.x : (D ? D.x : 40);
+      pl.face = tgt > pl.x ? 1 : -1;
+      if (n !== g.ln) { g.ln = n; if (AC) tn(AC.currentTime, toGold ? 880 : 660, 0.06, { g: 0.03, type: 'square' }); }
+    }
+    if (n >= LOOK.length) {
+      g.chose = true; g.choseT = s;
+      if (AC) { var tc = AC.currentTime; tn(tc, 1568, 0.12, { g: 0.05, type: 'square' }); tn(tc + 0.1, 2093, 0.4, { g: 0.04 }); tn(tc + 0.3, 196, 1.2, { g: 0.06, type: 'triangle' }); }
+    }
+    return;
+  }
+  if (g.chose && !g.sob && s > g.choseT + 0.6) {
+    g.sob = true;
+    if (AC) { var ts = AC.currentTime; for (i = 0; i < 4; i++) tn(ts + i * 0.32, 760 - i * 40, 0.22, { f2: 520 - i * 30, g: 0.03, type: 'triangle' }); }
+  }
+  if (g.chose && !g.held && s > g.choseT + 1.0) {
     G.zoom = null;
     var side = pl.x < g.x ? -1 : 1, tx = clamp(g.x + side * 9, 6, 154);
     if (walkTo(tx, g.z, 34, dt)) {
-      g.held = true; pl.cut = 'carry'; pl.face = -1; G.st = 13;
+      g.held = true; pl.cut = 'carry'; pl.face = -1; g.heldT = s;
       if (AC) { var t3 = AC.currentTime; tn(t3, 140, 0.3, { f2: 90, g: 0.1 }); tn(t3 + 0.1, 1568, 0.3, { g: 0.03 }); }
     }
     return;
   }
-  if (g.held && s > 13.6) {
+  if (g.held && s > g.heldT + 0.6) {
     walkTo(-34, pl.z, 26, dt);
     if (pl.x < -28) { G.hide = true; G.mode = 'end'; G.heldT = G.t; G.goldEnd = true; G.goodEnd = false; }
   }
 }
+function drawGoldLiquid() {
+  var g = G.gold; if (!g || !g.liq || g.show) return;
+  var s = G.st, c = ctx, gold = clamp((s - 2.2) / 1.2, 0, 1), i;
+  var col = mixHex('#bfe6ff', '#f0b830', gold), hi = mixHex('#ffffff', '#fff2a0', gold), grow = clamp((s - 1.8) / 1.0, 0, 1);
+  if (g.pool > 0 || g.ru > 0) {
+    var pr2 = (2 + 9 * (g.pool || 0)) * (1 - g.ru * 0.75);
+    c.fillStyle = '#c8901c'; c.beginPath(); c.ellipse(g.x, g.z + 0.5, pr2 * 1.2, Math.max(0.6, pr2 * 0.32), 0, 0, 6.2832); c.fill();
+    c.fillStyle = '#ffe070'; c.beginPath(); c.ellipse(g.x - pr2 * 0.3, g.z, pr2 * 0.5, Math.max(0.4, pr2 * 0.12), 0, 0, 6.2832); c.fill();
+  }
+  for (i = 0; i < g.liq.length; i++) {
+    var l = g.liq[i]; if (l.done) continue;
+    var r = l.r * grow, wob = Math.sin(simT / 120 + i) * 0.15;
+    c.fillStyle = col; c.beginPath(); c.ellipse(l.x, l.y, Math.max(0.3, r * (1.5 + wob)), Math.max(0.25, r * 0.55), 0, 0, 6.2832); c.fill();
+    c.fillStyle = hi; c.fillRect(Math.round(l.x - r * 0.5), Math.round(l.y - r * 0.3), 1, 1);
+  }
+}
 function drawGoldStatue() {
-  var g = G.gold; if (!g || !g.show || g.held) return;
-  drawPres(Math.round(g.x), Math.round(g.z), g.face, { shock: true, lift: true, gold: true });
+  var g = G.gold; if (!g || g.held || !(g.show || g.ru > 0)) return;
+  var px = Math.round(g.x), F = Math.round(g.z);
+  if (!g.show) {
+    var h = Math.round(46 * g.ru), sy = F + 1 - h;
+    ctx.save(); ctx.beginPath(); ctx.rect(px - 24, sy, 48, h + 2); ctx.clip();
+    drawPres(px, F, g.face, { shock: true, lift: true, gold: true, nosh: true }); ctx.restore();
+    R(px - 7 + Math.round(Math.sin(simT / 90) * 1.5), sy, 14, 1, '#fff6c0'); R(px - 4, sy - 1, 8, 1, 'rgba(255,240,170,0.7)');
+    return;
+  }
+  drawPres(px, F, g.face, { shock: true, lift: true, gold: true });
+}
+function drawGoldMarks(c) {
+  var g = G.gold; if (!g || G.mode !== 'gold' || G.hide) return;
+  var s = G.st, x = pl.x - camX, y = pl.z - 49;
+  c.save(); c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
+  if (g.look && !g.chose) { c.font = 'bold 8px ' + JP; c.lineWidth = 2; c.strokeStyle = '#000000'; c.fillStyle = '#ffffff'; var yy = y + Math.sin(s * 8) * 1; c.strokeText('?', x, yy); c.fillText('?', x, yy); }
+  if (g.chose && s < g.choseT + 1.2) { var pk = Math.min(1, (s - g.choseT) / 0.12); c.font = 'bold ' + Math.round(6 + 5 * pk) + 'px ' + JP; c.lineWidth = 2.4; c.strokeStyle = '#000000'; c.fillStyle = '#ffe14a'; c.strokeText('!', x, y); c.fillText('!', x, y); }
+  c.restore();
 }
 function drawGoldHeld() {
   var g = G.gold; if (!g || !g.held) return;
@@ -4795,6 +4863,7 @@ function render() {
   for (i = 0; i < objs.length; i++) if (objs[i].t === 'wall') drawObj(objs[i]);
   ctx.drawImage(frontCv, 0, 0);
   if (litterN) ctx.drawImage(litterCv, 0, 0);
+  if (G.gold) drawGoldLiquid();
   if (STAGE === 'corr') drawElev(); else drawTrap();
   for (i = 0; i < objs.length; i++) if (objs[i].t === 'lamp' && objs[i].dead) dl++;
   if (dl) R(0, 11, WW, 76, 'rgba(0,0,14,' + (0.07 * dl) + ')');
@@ -4802,7 +4871,7 @@ function render() {
   if (!G.hide) L.push({ z: pl.z, k: 1 });
   if (prVisible()) L.push({ z: pr.z, k: 2 });
   if (baby && !baby.held) L.push({ z: baby.z, k: 3 });
-  if (G.gold && G.gold.show && !G.gold.held) L.push({ z: G.gold.z, k: 11 });
+  if (G.gold && (G.gold.show || G.gold.ru > 0) && !G.gold.held) L.push({ z: G.gold.z, k: 11 });
   if (G.dau) { L.push({ z: G.dau.z, k: 9 }); if (G.dau.st !== 'bound') L.push({ z: G.dau.cz - 0.2, k: 10 }); }
   if (sam.vis) L.push({ z: sam.z, k: 5 });
   if (!G.hide) for (i = 0; i < foes.length; i++) L.push({ z: foes[i].z, k: 6, f: foes[i] });
@@ -4965,7 +5034,7 @@ function drawHUD(c) {
     c.fillText('BEST ON SMARTPHONE', 80, 96);
     c.fillText('PC: WASD TO MOVE / SPACE TO SWING', 80, 101.5);
   }
-  drawRopeHint(c);
+  drawRopeHint(c); drawGoldMarks(c);
   if (G.startT >= 0 && G.startT < 1.8) {
     var u = G.startT / 1.8, v = 0.5 + Math.pow((u - 0.5) * 2, 3) / 2, x = 190 - 300 * v;
     c.font = 'bold 18px ' + JP; c.lineJoin = 'round'; c.lineWidth = 2.4; c.strokeStyle = '#3a1204'; var bn = G.banner || 'START'; c.strokeText(bn, x, 58);
