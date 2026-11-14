@@ -13,7 +13,7 @@
 - **伸びるヒゲ**：キノコを取ると縦に伸び、敵に当たると縮む、レトロ風アクション（PC向け）。18章。
 - **イカロス〜蝋で固めた鳥の羽〜**：高層ビルの谷間を羽ばたいて飛ぶ、一人称視点の鳥人間ゲーム（スマホ・PC両対応）。19章。
 - **WHERE WHICH**（旧名：ことばのおへや）：ひらがなの言葉を教えると、イリスが覚えて話す育成アプリ（スマホ・PC両対応）。21章。
-- **Noche sin Luna — Ritmo**：フラメンコ曲専用の2レーン音ゲー（スマホ・PC両対応。test ver.）。25章。
+- **Noche sin Luna**：フラメンコ曲を叩いて鳴らす、メキシコ風の「気持ちいい」ゲーム（判定・スコアなし、観客が増える。スマホ・PC両対応。test ver.）。25章。
 
 ---
 
@@ -61,7 +61,7 @@ nobiru-hige/index.html              伸びるヒゲ の本体（HTML/CSS/JS す�
 glass-breaker/index.html            GLASS BREAKER の本体（HTML/CSS/JS すべて1ファイル、外部読み込みなし。アーティファクトの写し）
 icarus/index.html                   イカロス の本体（HTML/CSS/JS と three.js r160 をすべて1ファイルに埋め込み、外部読み込みなし）
 icarus/_src/                        イカロス のソース（src/*.js と build.py。README.md を参照）
-noche-sin-luna/index.html           Noche sin Luna の本体（曲・譜面・画像・手拍子をすべて1ファイルに埋め込み、約6.2MB。外部読み込みなし）
+noche-sin-luna/index.html           Noche sin Luna の本体（曲・譜面・画像・打音をすべて1ファイルに埋め込み、約6.3MB。外部読み込みなし）
 noche-sin-luna/_src/                Noche sin Luna のソース（template.html・chart.json・build.py・譜面を作る道具。25章）
 README.md
 HANDOFF.md                         本書
@@ -839,27 +839,22 @@ PC版の筋立てと仕組み（防御→追跡→反撃、攻撃信号、耐久
 
 ---
 
-## 25. Noche sin Luna — Ritmo（noche-sin-luna）
+## 25. Noche sin Luna（noche-sin-luna）
 
-- 制作開始 2026-11-13。同日に、渡されたHTML（UIと打感が悪かったもの）を全面作り直して置いた。Ver.2.0 から始めた（ガラス割りと同じく、作り直しのため）。同日、打音を8種から選べるようにして Ver.2.1。test ver.。
-- 1ファイル（約6.2MB）。曲（mp3、約3分3秒）・譜面・タイトル画像（ギター）・手拍子2つ（CC0）を base64 で埋め込み、外部読み込みなし。claude.ai のアーティファクト版（テスト公開用）もある。
-- 操作：2レーン。左＝I（薬指）、右＝O または 0（中指）。F/J・D/K・←/→ でも可。スマホは画面の左半分・右半分をタップ（同時押し可）。Esc/P で一時停止（3拍のカウントで再開）。
-- 譜面（`_src/chart.json`）：曲を librosa で解析して作った（約120BPM。拍の格子を局所的に合わせ、打楽器成分の立ち上がりを16分の位置に寄せ、強さ順に選ぶ）。SUAVE 175 / COMPÁS 362 / FUEGO 635 ノーツ（同時押しを含む）。作り直す手順：`_src/tools/analyze.py 曲.mp3` → `grid.py` → `chart.py 曲.mp3`（作業ディレクトリに analysis.json・grid.json・chart.json ができる）→ chart.json を `_src/` に置いて `python3 _src/build.py`。
-- 判定：PERFECT ±45ms / GREAT ±90ms / GOOD ±135ms。ノーツのない所を叩いても罰はない。スコアは最大1,000,000（PERFECT 1・GREAT 0.7・GOOD 0.3 の割合）。ランク S+(99%)/S(95)/A(90)/B(80)/C(70)/D。ベストは難易度ごとに localStorage（`nslBest_*`）、設定は `nslSettings`。
-- 時計：Web Audio で曲を鳴らし、`getOutputTimestamp` で「今聞こえている位置」を求め、performance.now と滑らかにつないで、描画と入力（イベントの timeStamp）を同じ時間軸で判定する。一時停止は AudioContext の suspend。
-- 打音：押した瞬間に鳴る。設定の一番上で8種から選べ、選ぶと試し聞きできる（`TONES`。既定はパルマ・セカ。設定は `nslSettings.tone`）。左右のレーンで少し違う音にしてある。
-  - パルマ・セカ（乾いた手拍子。録音から切り出した2つ。`_src/assets/c0.wav`・`c1.wav`、立ち上がり前の余白は1ms）
-  - パルマ・ソルダ（録音の手拍子を低域に絞った、こもった音）
-  - ゴルペ（ギターの表板を叩く合成音）／カスタネット（右が少し高い）／サパテアード（左＝つま先、右＝かかと）／カホン（左＝低音、右＝スラップ）
-  - ラスゲアード（Karplus-Strong のかき鳴らし。左＝E、右＝F のフリギア終止）／なし
-  - 録音以外はすべて Web Audio のバッファに合成（共鳴器の組み合わせ）。音量は `TONEGAIN` で揃えている。実機で耳では未確認。
-- 50コンボごとに「¡Olé!」と手拍子。
-- 設定：ノーツ速度、判定タイミング（±150ms。メトロノームに合わせて叩く自動調整あり）、音楽・打音の音量、演出（フル／控えめ）。
-- `<head>` に `navigator.audioSession.type='ambient'` を入れてあり、iPhoneのマナーモードでは鳴らない。`html{touch-action:manipulation}` でダブルタップのズームを防ぐ。
-- フォントは標準の日本語ゴシックのみ（Google Fonts は使わない）。
-- 直すとき：`_src/template.html` を直して `python3 noche-sin-luna/_src/build.py`（音源は既存の index.html から取り出す。差し替えるときは mp3 のパスを引数に渡す）。
-- 確認のしかた：Playwright（Chrome）で `index.html?auto` を開くと自動演奏になる（`?auto&go` で読み込み後すぐ開始）。`window.__nsl` で状態（state・st・clock）を見られる。
-- 未確認：実機での打音の聞こえ方と、端末ごとの音の遅れ（判定タイミングの自動調整で合わせてもらう）。
+- 制作開始 2026-11-13（Ver.2.0〜2.1 は2レーンの音ゲー）。2026-11-14 に Ver.3.0 として作り直した。コンセプトは「鳴らして気持ちいい」。音ゲーの要素（判定・スコア・コンボ・ミス・ランク・ベスト記録）はすべて撤去。test ver.。
+- 全体をメキシコ文化に寄せた（ロサ・メヒカーノ／ターコイズ／センパスーチルの黄色、タラベラ柄のロゼット、パペル・ピカード、マリーゴールドの花びら）。画面の文字はすべてスペイン語（メキシコ風。`<html lang="es-MX">`）。フォントは標準の日本語ゴシックのみ。
+- 1ファイル（約6.3MB）。曲（mp3、約3分3秒）・譜面・成分マップ・タイトル画像・手拍子2つ（CC0）・録音したゴルペ2つを base64 で埋め込み、外部読み込みなし。claude.ai のアーティファクト版もある。
+- 操作：左＝J（GRAVE・低音、ピンク）、右＝I（AGUDO・高音、ターコイズ）。F・D・← / O・K・→ でも可。スマホは画面の左半分・右半分をタップ（同時押し可。解析・観客の窓の上を叩いても同じ）。Esc/P で一時停止。
+- ガイド：譜面の時刻は以前の chart.json のまま。左右は `_src/tools/bands.py` で曲を3帯域（低音40–220Hz／ギター220–2200Hz／手拍子・高音2.2–9kHz）に分けて決め直した（低音の立ち上がりが強い→左、高音・ギターが強い→右、両方強い→同時押し）。SUAVE 175 / COMPÁS 367 / FUEGO 637（同時押しを2と数える）。ガイドの近く（±160ms）を叩くと花びらが散って消える。外しても何も起きず、ガイドは静かに消える。
+- 解析パネル（左上・スマホは上段左）：AnalyserNode による3帯域のリアルタイムの強さ、BPM、4拍のどこか、曲の区間（`SECTIONS`：Entrada/Llamada/Clímax/Falseta/Subida/Fiesta/Despedida、エネルギーから手で区切った）、曲全体の成分マップ（`_src/timeline.json`、10fps）、次に叩く側（「Golpea AGUDO ▶」など、きっかけの楽器つき）。
+- 観客の小窓（LA PLAZA、右上・スマホは上段右）：160×84 のドット絵を整数倍に拡大。家並み・電球・星（月はない）。2回叩くごとに1人増え、最大180人（6列×30）。前列の中央から埋まる。拍に合わせて揺れる（裏拍の人もいる）、盛り上がる所では頭拍で手を上げる、叩くと数人が跳ねる。ソンブレロ・レボソ・ルチャのマスク・花冠・カトリーナ顔。10/30/60/100/150/180人で「¡Órale!」などの掛け声。
+- 終演：小窓が画面中央に大きく出て全員が拍手。手拍子の録音を人数に応じた密度で約6.5秒鳴らす（`applause`）。画面全体にパペル・ピカードの飾り2本、落ちてくるパペル・ピカード、マリーゴールドの花びら、紙吹雪（`fiesta`）。結果は「Vinieron N personas a escucharte」と人数に応じた一言だけ。
+- 打音：左右のキーで別々に選べる（`nslSettings.toneL`/`toneR`）。既定は「Golpe grabado」（ユーザーが録音したゴルペ。左＝`assets/golpe_l.wav`（元 golpe_alt、暗め）、右＝`golpe_r.wav`（元 golpe、明るめ、音量0.8倍で左右をそろえた）。立ち上がり前の無音を1.5msまで削り0.5秒に整えた）。ほかにパルマ・セカ/ソルダ、合成のゴルペ・カスタネット・サパテアード・カホン・ラスゲアード、なし。
+- 時計：Web Audio の再生位置。iOS Safari 対策として、`getOutputTimestamp` が currentTime と0.3秒以上ずれたら使わない、currentTime が250ms止まったら実時間で進める（Ver.2.1 の後に入れた修正。これが無いと iPhone でガイドが流れてこなかった）。
+- 設定：左右の打音、ガイドの速さ、シンクロ（±150ms、クリックに合わせて叩く測定つき）、音楽・打音の音量、演出（Completo/Ligero）。
+- 直すとき：`_src/template.html` を直して `python3 noche-sin-luna/_src/build.py`。
+- 確認のしかた：Playwright（Chrome）で `index.html?auto` を開くと自動演奏（`?auto&go` で読み込み後すぐ開始）。`window.__nsl`（state・taps・crowd・finish()）。
+- 未確認：実機での音の聞こえ方とスマホでの手ざわり。
 - この作品からトップへ戻る手段は付けない（他の作品と同じ）。
 
 ### 21-g. せってい画面（無駄オプション）
