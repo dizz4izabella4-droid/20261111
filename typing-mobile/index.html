@@ -527,6 +527,15 @@ body.kbres .k[data-fn="Backspace"]{opacity:1;color:var(--gold);border-color:#5a6
 
 @media (prefers-reduced-motion:reduce){body.pwroff .crt{animation:none;opacity:0;transition:opacity .8s}body.pwron .crt,#ov.in{animation:none}#hacked .hk1,body.danger .neon,#sFw[data-lv="2"]{animation:none}.cyber-deck.live .waveform-sim i,#menu .start.sel{animation:none}.desk::before,.desk::after,.neon,body.alert .neon,#alert,#alert .hd,.c,.lg::after,.pb .f::after{animation:none}
   .pb .f{transition:none}.swapout,.pop,.c.miss.shake,.wl.appear,.wl.old{animation:none}#banner.show{animation:none;opacity:1}#ov .g,#ov.in .g{animation:none;width:auto;border:0}#ov .s,#ov.in .s{animation:none;opacity:1}#impact.go,.win.kill,#ov.in .box{animation:none}}
+/* 軽量モード（iPad/スマホ向け）: ぼかし影・フィルタ・全画面アニメを止める。?lite=0 で無効、?lite=1 で強制 */
+body.lite *,body.lite *::before,body.lite *::after{text-shadow:none!important}
+body.lite .desk{box-shadow:inset 0 0 30px rgba(0,0,0,.95)!important}
+body.lite .crt .neon.top,body.lite .crt .neon.bot{box-shadow:0 0 3px #fff,0 0 10px rgb(var(--ncA))!important;filter:none!important}
+body.lite .crt .neon.bot{box-shadow:0 0 3px #fff,0 0 10px rgb(var(--ncB))!important}
+body.lite .neon,body.lite .mqb .mq{filter:none!important}
+body.lite .area .win{box-shadow:0 0 0 1px rgba(var(--ncB),.2)!important}
+body.lite .desk::after{animation:none!important}
+body.lite .desk::before{display:none!important}
 </style>
 <style>html,body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
 <!--IZ-GAME-BASE:START-->
@@ -1367,7 +1376,10 @@ const MON_N=120;
 function monReset(){ cpu=Array(MON_N).fill(4); net=Array(MON_N).fill(0); errs=Array(MON_N).fill(0); load=0; netv=0; pkts=0; errN=0; }
 function monOk(){ load=Math.min(100,load+9); netv=Math.min(100,netv+14); pkts++; }
 function monMiss(){ errs[MON_N-1]=1; errN++; load=Math.min(100,load+30); }
-const CVD=Math.min(window.devicePixelRatio||1,1.5);   // canvasの解像度は1.5倍まで（高解像度スマホで描画が重くなるのを防ぐ）
+const LITE=(()=>{ const q=/[?&]lite=(\d)/.exec(location.search); if(q) return q[1]==='1';
+  return /iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)||(window.matchMedia&&matchMedia('(pointer:coarse)').matches); })();
+if(LITE) document.body.classList.add('lite');
+const CVD=LITE?1:Math.min(window.devicePixelRatio||1,1.5);   // canvasの解像度は1.5倍まで（高解像度スマホで描画が重くなるのを防ぐ）
 function sizeCanvas(){ const r=cv.getBoundingClientRect(), d=CVD; cv.width=Math.max(1,r.width*d|0); cv.height=Math.max(1,r.height*d|0); }
 function monFrame(ts){
   if(ts-lastTick>80){ lastTick=ts;
@@ -1403,7 +1415,7 @@ const mixc=(a,b,k)=>a.map((v,i)=>Math.round(v+(b[i]-v)*k));
 const _tc={}; function st(id,t){ if(_tc[id]!==t){ _tc[id]=t; $(id).textContent=t; } }   // 同じ文字なら書かない（毎フレーム書くと再レイアウト・再描画される）
 let wDraw=0;
 function waveFrame(ts){
-  if(ts-wDraw<30){ requestAnimationFrame(waveFrame); return; }   // 波形は約30fpsで十分（60fpsで描くとcanvasが重い）
+  if(ts-wDraw<(LITE?45:30)){ requestAnimationFrame(waveFrame); return; }   // 波形は約30fpsで十分（60fpsで描くとcanvasが重い）
   wDraw=ts;
   const dt=Math.min(.05,(ts-(wLast||ts))/1000); wLast=ts;
   let front=-1, finT=0;
