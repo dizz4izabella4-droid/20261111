@@ -2628,24 +2628,25 @@ function drawManBody(wf, fireSuit, armed, peer) {
   ctx.fillStyle = '#ffa044';
   ctx.fillRect(-7, -27, 14, 10);
 
-  // 鼻
-  ctx.fillRect(6, -24, 5, 4);
-
-  // 目
+  // ヒゲメガネ：太い黒フチのメガネ＋大きな鼻＋もじゃもじゃのヒゲ（帽子なし）
+  const pd = peer > 0.5 ? 1 : 0;
+  ctx.fillStyle = '#111';
+  ctx.fillRect(-7, -25, 7, 1);          // つる（耳の方へ）
+  ctx.fillRect(-1, -28, 10, 8);         // レンズのフチ
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, -27, 8, 6);           // レンズ
   ctx.fillStyle = '#000';
-  ctx.fillRect(3, -26 + (peer > 0.5 ? 1 : 0), 2, 3);
-
-  // 立派なヒゲ！
-  ctx.fillStyle = '#381800';
-  ctx.fillRect(1, -21, 9, 3);
-  ctx.fillRect(3, -22, 4, 1);
-
-  // 帽子（赤）
-  ctx.fillStyle = fireSuit ? '#ffffff' : '#7a3fb0';
-  ctx.fillRect(-8, -32, 16, 5);
-  ctx.fillRect(-6, -29, 17, 2); // ツバ
+  ctx.fillRect(4, -26 + pd, 3, 3);      // 目（覗き込み中は下を見る）
+  ctx.fillStyle = '#ff8a3a';
+  ctx.fillRect(9, -25, 5, 5);           // 大きな鼻
+  ctx.fillStyle = '#e0601c';
+  ctx.fillRect(9, -21, 5, 1);
+  ctx.fillStyle = '#381800';            // ヒゲ
+  ctx.fillRect(0, -20, 14, 3);
+  ctx.fillRect(2, -21, 9, 1);
+  ctx.fillRect(1, -17, 5, 1);
   ctx.restore();
-  if (peer > 0.9 && Math.floor(tick / 8) % 2 === 0) { ctx.fillStyle = '#7fd0ff'; ctx.fillRect(-9, -33, 2, 3); } // 冷や汗
+  if (peer > 0.9 && Math.floor(tick / 8) % 2 === 0) { ctx.fillStyle = '#7fd0ff'; ctx.fillRect(-9, -30, 2, 3); } // 冷や汗
   drawFeet(wf, '#6b2c00');
   if (armed) drawGun();
 }
