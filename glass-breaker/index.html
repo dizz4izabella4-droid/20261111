@@ -662,7 +662,7 @@ function renderCorr() {
 }
 function build(stage) {
   if (stage) STAGE = stage;
-  WW = STAGE === 'corr' ? 600 : DW; DEFS = STAGE === 'corr' ? defsCorr() : defsBoss(); camX = 0;
+  WW = STAGE === 'corr' ? 600 : DW; DEFS = STAGE === 'corr' ? defsCorr() : defsBoss(); camX = 0; litterReset();
   objs = DEFS.map(function (d) {
     var o = Object.assign({}, d, { max: d.hp, hits: 0, dead: false, cracks: [], rem: null, respawnAt: 0, prof: d.prof || null });
     o.y = o.fl - o.el - o.h;
@@ -3666,6 +3666,19 @@ function blankaElec(px, F, fa, u, mode) {
 
 /* ---------- 高解像度の粉砕(割れた瞬間だけ、ドットより細かい破片で描く) ---------- */
 var FX = [], PB = [];
+/* 床に残る破片: 止まった破片の一部を床の絵に1回だけ焼き込む(動く粒子としては残さないので処理は増えない) */
+var litterCv = null, litterCx = null, litterN = 0, LITTER_MAX = 140, LITTER_RATE = 0.09;
+function litterReset() {
+  litterN = 0; litterCv = document.createElement('canvas'); litterCv.width = Math.max(WW, DW); litterCv.height = DH; litterCx = litterCv.getContext('2d');
+}
+function litterAdd(p) {
+  if (!litterCx || litterN >= LITTER_MAX || p.pop || p.keep || p.vy !== 0 || p.y < p.fy - 0.5 || Math.random() > LITTER_RATE) return;
+  var c = litterCx, x = Math.round(p.x), y = Math.round(p.y), i, rr = 0;
+  for (i = 0; i < p.verts.length; i += 2) rr = Math.max(rr, Math.hypot(p.verts[i], p.verts[i + 1]));
+  c.globalAlpha = 0.92; c.fillStyle = p.fill; c.fillRect(x, y, rr > 2 ? 2 : 1, 1);
+  if (Math.random() < 0.7) { c.globalAlpha = 0.95; c.fillStyle = '#ffffff'; c.fillRect(x + (rr > 2 ? 1 : 0), y - 1, 1, 1); }
+  c.globalAlpha = 1; litterN++;
+}
 function addFx(p) { p.age = 0; FX.push(p); if (FX.length > 1700) { for (var i = 0; i < FX.length && FX.length > 1700; i++) if (!FX[i].keep) { FX.splice(i, 1); i--; } } }
 function polyArea(poly) {
   var a = 0, n = poly.length, i;
@@ -3784,7 +3797,7 @@ function shatter(o, hx, hy, c) {
     sh.vy = uy * sp * 0.55 - rnd(8, c.up * POW);
     sh.vr = rnd(-1, 1) * c.spin; sh.fy = ffy(o); sh.rest = 0.3;
     sh.life = c.life * rnd(0.85, 1.15); sh.fade = 0.8; sh.pop = Math.random() < c.pop;
-    sh.glint = Math.random() < 0.3; sh.seed = Math.random() * 10;
+    sh.glint = Math.random() < 0.3; sh.seed = Math.random() * 10; sh.lit = 1;
     c.style(sh, o);
     if (sh.pop) sh.zoom = rnd(1.0, 1.7);
     else if (Math.random() < 0.3) { /* 画面の下へパラパラ落ちていく破片（拡大しない） */ sh.pop = true; sh.zoom = 0.02; sh.vx *= 0.7; sh.vy = rnd(-30, 35); sh.alpha = Math.max(sh.alpha, 0.85); }
@@ -3846,7 +3859,7 @@ function updFx(dt) {
   var i, p;
   for (i = FX.length - 1; i >= 0; i--) {
     p = FX[i]; p.age += dt;
-    if (p.age >= p.life) { FX.splice(i, 1); continue; }
+    if (p.age >= p.life) { if (p.lit) litterAdd(p); FX.splice(i, 1); continue; }
     if (p.kind === 'ring' || p.kind === 'puddle') continue;
     if (p.kind === 'puff') { p.x += p.vx * dt; p.y += p.vy * dt; continue; }
     p.vy += GRAV * (p.zoom > 0.9 ? 0.2 : 1) * dt; p.x += p.vx * dt; p.y += p.vy * dt;
@@ -4106,6 +4119,7 @@ function render() {
   ctx.drawImage(skyCv, Math.round(camX * 0.85), 0); drawFW(); ctx.drawImage(cityCv, Math.round(camX * 0.6), 0);
   for (i = 0; i < objs.length; i++) if (objs[i].t === 'wall') drawObj(objs[i]);
   ctx.drawImage(frontCv, 0, 0);
+  if (litterN) ctx.drawImage(litterCv, 0, 0);
   if (STAGE === 'corr') drawElev(); else drawTrap();
   for (i = 0; i < objs.length; i++) if (objs[i].t === 'lamp' && objs[i].dead) dl++;
   if (dl) R(0, 11, WW, 76, 'rgba(0,0,14,' + (0.07 * dl) + ')');
