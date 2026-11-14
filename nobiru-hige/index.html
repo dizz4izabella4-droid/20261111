@@ -64,6 +64,8 @@
   .pb.jump { width: 92px; height: 92px; border-color: #f88; background: rgba(220,60,60,0.3); }
   .pb.on { background: rgba(255,255,255,0.42); }
   .pb.jump.on { background: rgba(255,90,90,0.6); }
+  .pb.jump.isfire { border-color: #fb4; background: rgba(255,140,0,0.3); font-size: 20px; }
+  .pb.jump.isfire.on { background: rgba(255,170,40,0.65); }
   @media (pointer: coarse) {
     #pad { display: flex; }
     canvas { max-height: calc(100vh - 175px); }
@@ -491,8 +493,8 @@ const GRAVITY = 0.55;
 const GROUND_Y = 400;
 const MAX_SCALE = 7;    // 大きくなる上限＝花が出る大きさ（高さが画面の半分＝32px×7=224px）
 const MIN_SCALE = 0.2;  // 小さくなる下限
-const JUMP_VY = -10.4;  // ジャンプの初速（以前は -11.5。高さ約120px→約98px）
-const JUMP_SCALE = 0.9; // 踏んだときの跳ね返りにも同じ低めの倍率をかける
+const JUMP_VY = -13.52; // ジャンプの初速（-10.4 の1.3倍）
+const JUMP_SCALE = 1.17; // 踏んだときの跳ね返りの倍率（0.9 の1.3倍）
 
 const keys = {};
 let started = false;
@@ -688,7 +690,7 @@ function emitSpores(e, ox, oy, vxs, shrink, grow) {
     if (particles.length >= 160) break;
     for (let j = 0; j < 3; j++) {
       particles.push({ x: ox, y: oy, vx: vxs[k] * (0.7 + Math.random() * 1.1), vy: -1.5 - Math.random() * 2.8,
-        life: 16 + Math.random() * 10, color: j === 0 ? '#fff' : col });
+        life: 16 + Math.random() * 10, color: j === 0 ? '#fff' : col, s: 1 });
     }
   }
   if (n > 0) sfxJuice();
@@ -889,12 +891,14 @@ let pr = null, clearStage = 0, stageT = 0, goneAt = 0, holdHands = false, hearts
 let shroom = null, shStage = 0, shT = 0, wob = 0, whiteK = 0, dreamBeat = 0;
 const POLE_X = 372, POLE_TOP = 236;
 const MAX_BAD = 340;
-const FIRE_KEYS = ['KeyX', 'KeyF', 'KeyJ', 'ShiftLeft', 'ShiftRight', 'Enter'];
+const FIRE_KEYS = ['KeyX', 'KeyF', 'KeyJ', 'Space', 'ShiftLeft', 'ShiftRight', 'Enter']; // 炎を出せる間は、ジャンプボタン(Space)が炎のボタンになる
 const CRACKS = [34, 118, 205, 262, 331, 402, 478].map(x => ({ x, d: Array.from({ length: 12 }, () => Math.floor(Math.random() * 5) - 2) }));
 
 function setPhase(p) {
   phase = p; phaseT = 0;
-  document.getElementById('pad-fire').classList.toggle('show', p === 'fire');
+  const pj = document.getElementById('pad-jump'); // 炎を出せる間は、ジャンプボタンがFIREに変わる
+  pj.textContent = p === 'fire' ? 'FIRE' : '▲';
+  pj.classList.toggle('isfire', p === 'fire');
 }
 
 function resetEnding() {
@@ -2024,7 +2028,7 @@ function drawBanners() {
     txt('HENSHIN!', W / 2, 90, '#ffec27', '#a0301c');
   } else if (phase === 'fire' && blink && firing === 0 && enemies.length > 0) {
     ctx.font = `bold 16px ${jp}`;
-    txt('Flame: X key / FIRE button', W / 2, 84, '#ffec27', '#a0301c');
+    txt('Flame: Space / X key / FIRE button', W / 2, 84, '#ffec27', '#a0301c');
   } else if (phase === 'clear' && phaseT > 8 && phaseT < 330) {
     ctx.font = 'bold 38px "Courier New", monospace';
     txt('STAGE CLEAR!', W / 2, 130, ['#ffec27', '#ff8c12', '#ff6090', '#60e0ff'][Math.floor(phaseT / 6) % 4], '#000');
@@ -2259,7 +2263,6 @@ function addBlockRow() {
 function initBlocks() {
   blocks.length = 0;
   blocks.push({ x: 0, y: BLK_Y, w: BLK, h: BLK, solid: true }); // 左端の壊れないブロック（パワーアップキノコの生える所）
-  for (let i = 0; i < 2; i++) addBlockRow();
 }
 function breakBlock(b) {
   if (b.solid) return;
@@ -2370,7 +2373,6 @@ function update() {
   // 壊せるブロック：減ったらときどき新しい列が出る
   if (phase === 'play' || phase === 'flower') {
     if (blocks.length === 0 && blockTimer === 0) initBlocks();
-    if (++blockTimer > 420) { blockTimer = 1; if (blocks.length <= MAX_BLOCKS - 4) addBlockRow(); }
   }
 
   // プレイヤー移動
@@ -2390,7 +2392,7 @@ function update() {
 
   if (player.stompWin > 0) player.stompWin--;
   // 地面・ブロックの上のほか、敵を踏んだ直後（猶予9フレーム）にもジャンプできる
-  if ((keys['Space'] || keys['ArrowUp'] || keys['KeyW'] || keys['KeyZ']) && (player.onGround || player.stompWin > 0)) {
+  if (((keys['Space'] && phase !== 'fire') || keys['ArrowUp'] || keys['KeyW'] || keys['KeyZ']) && (player.onGround || player.stompWin > 0)) {
     player.vy = JUMP_VY;
     player.onGround = false;
     player.stompWin = 0;
@@ -2756,15 +2758,10 @@ function drawRings() {
   });
 }
 
-function drawSpores() { // 飛んでいる汁
+function drawSpores() { // 飛んでいる汁：1ドット
   spores.forEach(sp => {
     ctx.fillStyle = `hsl(${sp.hue}, 85%, ${sp.light + 8}%)`;
-    const ds = Math.max(3, Math.min(5, Math.round(sp.size / 5))); // 汁の粒の大きさ：育つキノコが小さいほど小さい
-    const h = ds >> 1;
-    ctx.fillRect(Math.round(sp.x) - h, Math.round(sp.y) - h, ds, ds);
-    ctx.fillRect(Math.round(sp.x - sp.vx * 1.5) - 1, Math.round(sp.y - sp.vy * 1.2) - 1, ds - 2, ds - 2);
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(Math.round(sp.x) - (ds > 3 ? 1 : 0), Math.round(sp.y) - (ds > 3 ? 1 : 0), ds > 3 ? 2 : 1, ds > 3 ? 2 : 1);
+    ctx.fillRect(Math.round(sp.x), Math.round(sp.y), 1, 1);
   });
 }
 
@@ -2826,7 +2823,7 @@ function loop() {
 
   particles.forEach(p => {
     ctx.fillStyle = p.color;
-    ctx.fillRect(p.x, p.y, 4, 4);
+    ctx.fillRect(p.x, p.y, p.s || 4, p.s || 4);
   });
   }
 
