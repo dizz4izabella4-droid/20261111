@@ -2133,7 +2133,7 @@ function tryAttack(kind, scripted) {
   var P = SPEC[kind];
   if (AC) { if (kind === 'full') sWhoosh(AC.currentTime + (pl.pre + P.wind + P.sweep * 0.5) / 1000); else sWhooshS(AC.currentTime + (P.wind + P.sweep * 0.5) / 1000); }
   pl.st = 'atk'; pl.t0 = simT; pl.prevT = pl.pre + P.wind; pl.moving = false; TR.length = 0; lastTr = -1;
-  prDodgeCheck(); dauTryRescue();
+  prDodgeCheck(); pl.dauChk = true;
 }
 function beginCharge() { pl.dn = false; if (pl.st !== 'idle') return; pl.st = 'chg'; pl.chgT = 0; pl.chgSnd = false; pl.chgMax = false; pl.moving = false; pl.reach = 1; }
 function updatePlayer(dt) {
@@ -2177,6 +2177,7 @@ function updatePlayer(dt) {
   }
   var t = simT - pl.t0, tw = pl.pre + P.wind, ts = tw + P.sweep, tf = ts + P.fol, tr = tf + P.rec;
   if (t >= tw && t < ts) {
+    if (pl.dauChk) { pl.dauChk = false; dauTryRescue(); }
     var hf = foeHit(Math.max(pl.prevT, tw), t);
     if (hf) { pl.t0 = simT - hf.t; t = hf.t; pl.prevT = hf.t; foeBat(hf.f); pl.bk = true; pl.bkT = simT; pl.snap = poseAt(t); pl.pose = pl.snap; return; }
     var hp = propHit(Math.max(pl.prevT, tw), t);
@@ -2540,6 +2541,12 @@ function pGirlFacePix(hx, hy, q) {
 }
 function pupGirl(q) {
   var c = pupBegin(GPAL, -12, -37, 12, 3), m = q.m, bob = q.bob || 0, hy, hx = q.hx || 0, SK = [GC.sk0, GC.sk1, GC.sk2], i, s = q.sw || 0;
+  if (m === 'chair') {
+    pPoly(c, [[-6.8, -20], [-5.4, -20], [-5.4, -1], [-6.8, -1]], GC.ch1); pPoly(c, [[5.4, -20], [6.8, -20], [6.8, -1], [5.4, -1]], GC.ch0);
+    pPoly(c, [[-6.8, -20], [6.8, -20], [6.8, -18.6], [-6.8, -18.6]], GC.ch1); pPoly(c, [[-6.8, -8.4], [6.8, -8.4], [6.8, -7], [-6.8, -7]], GC.ch0);
+    pLine(c, -6, -14, -4.4, -12.6, 1.0, GC.rp1); pLine(c, 6, -13.4, 4.6, -11.8, 1.0, GC.rp0); pLine(c, -5, -0.6, -1.5, -0.2, 1.0, GC.rp1); pLine(c, 2.2, -0.4, 4.8, -1.2, 1.0, GC.rp0);
+    pupEnd(); return;
+  }
   if (m === 'sit') {
     hy = -23.5 + bob + (q.dn || 0);
     pPoly(c, [[-6.8, -20], [-5.4, -20], [-5.4, -1], [-6.8, -1]], GC.ch1); pPoly(c, [[5.4, -20], [6.8, -20], [6.8, -1], [5.4, -1]], GC.ch0);
@@ -2584,7 +2591,7 @@ function pupGirl(q) {
   pupEnd();
 }
 /* 娘の状態: bound(縛られている) → freeing(縄が切れる) → stand(立つ) → walk → watch(後ろ姿で花火を見る) */
-function dauSetup() { G.dau = { x: 41, z: 92, st: 'bound', t: 0, freed: false, ph: 0, face: 1 }; G.trueEnd = false; }
+function dauSetup() { G.dau = { x: 41, z: 92, cx: 41, cz: 92, st: 'bound', t: 0, freed: false, ph: 0, face: 1, hy: 0, vx: 0, vy: 0, rot: 0, vr: 0 }; G.goodEnd = false; }
 function dauRopeBits(D) {
   var i, a;
   for (i = 0; i < 14; i++) {
@@ -2597,9 +2604,14 @@ function dauTryRescue() {
   var D = G.dau;
   if (!D || D.st !== 'bound' || G.mode !== 'play' || G.stage !== 'boss') return;
   if (!(pr.st === 'crystal' && pr.obj && !pr.obj.dead)) return;
-  if (Math.abs(pl.x - D.x) > 22 || Math.abs(pl.z - D.z) > 14 || (D.x - pl.x) * pl.face < -6) return;
-  D.st = 'freeing'; D.t = 0; D.freed = true; dauRopeBits(D);
-  if (AC) { var t = AC.currentTime; nz(t, 0.14, { type: 'highpass', f: 1800, f2: 4200, g: 0.07 }); tn(t + 0.12, 1319, 0.3, { g: 0.04 }); tn(t + 0.26, 1760, 0.4, { g: 0.04 }); }
+  var ahead = (D.x - pl.x) * pl.face;
+  if (ahead < -3 || ahead > 30 || Math.abs(pl.z - D.z) > 12) return;
+  /* バットが当たって娘が吹っ飛び、その衝撃でロープがほどける */
+  D.st = 'fly'; D.t = 0; D.freed = true; D.hy = 0; D.vx = pl.face * rnd(68, 80); D.vy = -rnd(78, 90); D.rot = 0; D.vr = pl.face * 10; D.face = pl.face;
+  dauRopeBits(D); ring(D.x, D.z - 12, 10, 0.28);
+  for (var i = 0; i < 10; i++) addFx({ kind: 'spark', x: D.x + rnd(-3, 3), y: D.z - 14 + rnd(-3, 3), vx: rnd(-70, 70), vy: rnd(-70, 30), r: rnd(0.3, 0.6), fy: D.z + 2, life: rnd(0.2, 0.4) });
+  hitstop = 110; shake(2.2, 160); flash(0.25, 40);
+  if (AC) { var t = AC.currentTime; tn(t, 160, 0.16, { f2: 60, g: 0.14 }); nz(t, 0.14, { type: 'lowpass', f: 1200, f2: 300, g: 0.1 }); tn(t + 0.04, 1250, 0.18, { f2: 2100, type: 'square', g: 0.025 }); nz(t + 0.02, 0.12, { type: 'highpass', f: 1800, f2: 4200, g: 0.06 }); }
 }
 function dauMove(tx, tz, sp, dt) {
   var D = G.dau, dx = tx - D.x, dz = tz - D.z, d = Math.hypot(dx, dz * 2);
@@ -2610,6 +2622,18 @@ function updDau(dt) {
   var D = G.dau; if (!D || !dt) return;
   D.t += dt;
   if (D.st === 'freeing') { if (D.t > 1.1) { D.st = 'stand'; D.t = 0; } return; }
+  if (D.st === 'fly') {
+    D.vy += 300 * dt; D.x += D.vx * dt; D.hy += D.vy * dt; D.rot += D.vr * dt;
+    if (D.x < 8) { D.x = 8; D.vx = Math.abs(D.vx) * 0.4; } if (D.x > 152) { D.x = 152; D.vx = -Math.abs(D.vx) * 0.4; }
+    if (D.hy >= 0 && D.vy > 0) {
+      D.hy = 0;
+      if (D.vy > 70) { D.vy = -D.vy * 0.32; D.vx *= 0.5; D.vr *= 0.5; if (AC) tn(AC.currentTime, 120, 0.1, { f2: 70, g: 0.08 }); for (var k = 0; k < 4; k++) addFx({ kind: 'puff', x: D.x + rnd(-4, 4), y: D.z - 1, vx: rnd(-14, 14), vy: -rnd(2, 8), r0: 1.5, r1: rnd(4, 6), col: '205,192,175', alpha: 0.45, life: 0.5 }); }
+      else { D.st = 'down'; D.t = 0; D.vx = 0; D.rot = D.face * 1.5708; }
+    }
+    return;
+  }
+  if (D.st === 'down') { if (D.t > 0.9) { D.st = 'getup'; D.t = 0; } return; }
+  if (D.st === 'getup') { D.rot = D.face * 1.5708 * Math.max(0, 1 - D.t / 0.45); if (D.t > 0.45) { D.rot = 0; D.st = 'freeing'; D.t = 0.5; } return; }
   if (D.freed && (G.mode === 'ending' || G.mode === 'end' || G.mode === 'secret') && (D.st === 'stand' || D.st === 'walk')) {
     var side = pl.x > 80 ? -1 : 1, tx = clamp(pl.x + side * 12, 8, 152), tz = pl.z;
     if (G.mode === 'ending' && baby) { side = (baby.x < pl.x ? 1 : -1); tx = clamp(pl.x + side * 12, 8, 152); }
@@ -2624,17 +2648,225 @@ function dauQ(D) {
     var st = (ms % 3400) < 380;
     return { m: 'sit', rope: 1, face: 'fear', bob: 0, hx: st ? ((Math.floor(ms / 60) & 1) ? 0.5 : -0.5) : 0 };
   }
+  if (D.st === 'fly' || D.st === 'down' || D.st === 'getup') return { m: 'stand', face: D.st === 'getup' ? 'glad' : 'cry', tp: Math.floor(ms / 110) % 6, bob: 0 };
   if (D.st === 'freeing') return D.t < 0.5 ? { m: 'sit', rope: 0, face: 'glad', bob: 0 } : { m: 'stand', face: 'glad', joy: 1, bob: -Math.abs(Math.sin((D.t - 0.5) * 9)) * 1.2 * (1.1 - D.t) };
   if (D.st === 'walk') return { m: 'stand', face: 'glad', ph: D.ph, bob: Math.abs(Math.sin(D.ph)) * -0.5, clasp: 1 };
   if (D.st === 'watch') return { m: 'back', bob: 0, sw: Math.sin(D.t * 1.3) * 0.5 };
   return { m: 'stand', face: 'glad', clasp: 1, joy: ((Math.floor(ms / 700) & 1) ? 1 : 0), bob: 0 };
 }
+function drawDauChair() {
+  var D = G.dau; if (!D || D.st === 'bound') return;
+  R(Math.round(D.cx) - 6, Math.round(D.cz) + 1, 13, 1, 'rgba(0,0,0,0.25)');
+  pupCall('dauch', '', { m: 'chair' }, function () { pupGirl({ m: 'chair' }); });
+  pupBlit(Math.round(D.cx), Math.round(D.cz), 1, 1);
+}
 function drawDau() {
   var D = G.dau; if (!D) return;
   var px = Math.round(D.x), F = Math.round(D.z), q = dauQ(D);
-  R(px - 6, F + 1, 13, 1, 'rgba(0,0,0,0.32)');
+  var sw = 13 - Math.round(Math.max(0, -D.hy) / 8); R(px - (sw >> 1), F + 1, Math.max(5, sw), 1, 'rgba(0,0,0,0.32)');
   pupCall('dau', '', q, function () { pupGirl(q); });
-  pupBlit(px, F, 1, 1);
+  if (D.rot || D.hy) { var piv = 12 - 9 * Math.abs(Math.sin(D.rot)); pupBlitRot(px, Math.round(F + D.hy - piv), 1, D.rot, 0, -piv); }
+  else pupBlit(px, F, 1, 1);
+}
+/* ---------- TRUE END(ステージ1開始後、左へ進むと): 外の景色が夜→朝→昼→夜と移り、暗転→ONE YEAR LATER→カット3枚 ---------- */
+var TOD = [
+  null,
+  { t: '#8fc0ea', b: '#ffd0a8', ct: '#ffd8b8', ca: 0.38, sun: [40, 70, '#fff2c8'] },
+  { t: '#3f8fe0', b: '#c4e4ff', ct: '#eef6ff', ca: 0.5, sun: [96, 22, '#ffffff'] },
+  { t: '#2c2c6a', b: '#ff8c5a', ct: '#ff9a6a', ca: 0.32, sun: [140, 74, '#ffb070'] }
+];
+var TODSEQ = [0, 1, 2, 3, 0, 1, 2, 3, 0], todCity = {};
+function todCityCv(k) {
+  if (todCity[k]) return todCity[k];
+  var p = TOD[k], cv = document.createElement('canvas'); cv.width = cityCv.width; cv.height = cityCv.height;
+  var c = cv.getContext('2d'); c.drawImage(cityCv, 0, 0); c.globalCompositeOperation = 'source-atop'; c.globalAlpha = p.ca; c.fillStyle = p.ct; c.fillRect(0, 0, cv.width, cv.height);
+  return (todCity[k] = cv);
+}
+function todPhase(k, a, cx0) {
+  if (!TOD[k] || a <= 0.001) return;
+  var p = TOD[k], c = ctx, g = c.createLinearGradient(0, 0, 0, 84);
+  g.addColorStop(0, p.t); g.addColorStop(1, p.b);
+  c.globalAlpha = a; c.fillStyle = g; c.fillRect(cx0, 0, DW, DH);
+  c.fillStyle = p.sun[2]; c.beginPath(); c.arc(cx0 + p.sun[0], p.sun[1], 6, 0, 6.2832); c.fill();
+  c.globalAlpha = a * 0.3; c.beginPath(); c.arc(cx0 + p.sun[0], p.sun[1], 10, 0, 6.2832); c.fill();
+  c.globalAlpha = a; c.drawImage(todCityCv(k), Math.round(camX * 0.6), 0); c.globalAlpha = 1;
+}
+function todDraw(cx0) {
+  var v = G.tod; if (v == null || v <= 0) return;
+  var i = Math.min(TODSEQ.length - 2, Math.floor(v)), u = v - i; u = u * u * (3 - 2 * u);
+  var A = TODSEQ[i], B = TODSEQ[i + 1];
+  if (!TOD[B]) todPhase(A, 1 - u, cx0);
+  else if (!TOD[A]) todPhase(B, u, cx0);
+  else { todPhase(A, 1, cx0); todPhase(B, u, cx0); }
+}
+/* 景色の進み: 1周目はゆっくり、2周目は速く */
+function todAt(s) {
+  var t = s - 0.6; if (t <= 0) return 0;
+  if (t < 4) return t;            /* 1周目: 1段 1.0秒 */
+  t -= 4; return Math.min(8, 4 + t * 2.2); /* 2周目: 速く */
+}
+var TE = { fade0: 6.6, txt0: 7.8, cut1: 11.4, cut2: 15.6, cut3: 19.8, lab: 24.2, again: 26.4 };
+function startTrueEnd() {
+  G.mode = 'trueend'; G.st = 0; G.t = 0; G.tod = 0; G.teSnd = {}; ctlOn = false; atkHeld = null; pl.moving = false; pl.st = 'idle'; pl.pose = readyPose(); pl.face = 1;
+  kb.l = kb.r = kb.u = kb.d = 0;
+  if (AC) { var t = AC.currentTime; tn(t, 523, 0.4, { g: 0.03 }); tn(t + 0.2, 392, 0.6, { g: 0.03 }); }
+}
+function teOnce(k) { if (G.teSnd[k]) return false; G.teSnd[k] = 1; return true; }
+function trueEndUpdate(dt) {
+  var s = G.st;
+  G.tod = todAt(s);
+  if (s > 0.6 && s < TE.fade0) { var tk = Math.floor((s - 0.6) * (s > 4.6 ? 6 : 3)); if (teOnce('tk' + tk) && AC) tn(AC.currentTime, 2400, 0.03, { g: 0.012, type: 'square' }); }
+  if (s > TE.fade0 && teOnce('amb')) ambStop();
+  if (!AC) return;
+  var t = AC.currentTime;
+  if (s > TE.txt0 && teOnce('txt')) { tn(t, 659, 0.9, { g: 0.025, type: 'triangle' }); tn(t + 0.45, 523, 1.2, { g: 0.025, type: 'triangle' }); }
+  if (s > TE.cut1 && teOnce('c1')) [784, 988, 1175].forEach(function (f, i) { tn(t + i * 0.18, f, 0.8, { g: 0.025 }); });
+  if (s > TE.cut2 && teOnce('c2')) [880, 1109, 1319, 1760].forEach(function (f, i) { tn(t + i * 0.16, f, 0.9, { g: 0.025 }); });
+  if (s > TE.cut3 && teOnce('c3')) [440, 392, 349, 330].forEach(function (f, i) { tn(t + i * 0.55, f, 1.4, { g: 0.03, type: 'triangle' }); });
+  if (s > TE.lab && teOnce('lab')) [523, 659, 784, 1047].forEach(function (f, i) { tn(t + i * 0.12, f, 1.6, { g: 0.03 }); });
+}
+
+/* カットの絵: 背景は普通に描き、人物は4倍で描いて縮小(pup)して重ねる */
+var CUTPAL = (function () {
+  var o = {}, n = 0, k, a;
+  for (k in PRC) { a = PRC[k]; for (var i = 0; i < a.length; i++) o['c' + (n++)] = a[i]; }
+  for (k in GC) o['c' + (n++)] = GC[k];
+  ['#f2f2ec', '#14161c', '#2a2d36', '#5c6272', '#1a1a20', '#2a2a32', '#3c3c48', '#9a3a30', '#ffb8a0', '#d8d8e0', '#b8b8c4'].forEach(function (h) { o['c' + (n++)] = h; });
+  return mkPal(o);
+})();
+var CUTCV = {};
+function cutPup(x0, y0, x1, y1, fn) {
+  var ko = PUP.out, kc = PUP.oc, cv = document.createElement('canvas'); cv.width = 4; cv.height = 4;
+  if (!PUP.cv) { PUP.cv = document.createElement('canvas'); PUP.c = PUP.cv.getContext('2d', { willReadFrequently: true }); }
+  PUP.out = cv; PUP.oc = cv.getContext('2d');
+  var c = pupBegin(CUTPAL, x0, y0, x1, y1); fn(c); pupEnd();
+  var r = { cv: cv, x: PUP.x0, y: PUP.y0, w: PUP.w, h: PUP.h };
+  PUP.out = ko; PUP.oc = kc; return r;
+}
+function cutPut(dc, r) { dc.drawImage(r.cv, 0, 0, r.w, r.h, r.x, r.y, r.w, r.h); }
+/* 社長の胸から上(右向き)。o: {smile, k(倍率), x, y(首の付け根), f(向き)} */
+function pPresBust(c, o) {
+  var sk = PRC.sk, S = PRC.suit;
+  c.save(); c.translate(o.x, o.y); c.scale(o.k * o.f, o.k);
+  pBlob(c, [[-12, 16], [-11, 4], [-6, 0.4], [6, 0.4], [11, 4], [12, 16]], S[1]);
+  pClip(c, function () { pSmooth(c, [[-12, 16], [-11, 4], [-6, 0.4], [6, 0.4], [11, 4], [12, 16]]); }, function () { pEll(c, -9, 9, 5, 9, S[0]); pEll(c, 7, 3, 4, 2, S[2]); });
+  pPoly(c, [[-2.8, 0.6], [2.8, 0.6], [0, 8]], '#f2f2ec');
+  pPoly(c, [[-0.9, 1.2], [0.9, 1.2], [1.5, 7.4], [0, 9.4], [-1.5, 7.4]], PRC.tie[1]); pPoly(c, [[0.2, 1.4], [0.9, 1.2], [1.5, 7.4], [0.6, 8.4]], PRC.tie[0]);
+  pPath(c, [[-2.8, 0.6], [-1.2, 9], [-4.6, 3.4]], 0.5, S[0]); pPath(c, [[2.8, 0.6], [1.2, 9], [4.6, 3.4]], 0.5, S[3]);
+  pEll(c, 0.6, -1.2, 3.2, 2.6, sk[0]);
+  var hx = 0.8, hy = -7;
+  pEll(c, hx, hy, 5.7, 5.5, sk[1]);
+  pClip(c, function () { c.beginPath(); c.ellipse(hx, hy, 5.7, 5.5, 0, 0, 6.2832); }, function () { pEll(c, hx - 4.6, hy + 2.4, 3.4, 5.0, sk[0]); pEll(c, hx + 1.4, hy - 3.4, 2.6, 1.6, sk[2]); pEll(c, hx + 2.4, hy + 5.6, 4.2, 1.4, sk[0]); });
+  pEll(c, hx + 5.2, hy + 1.6, 1.0, 1.0, sk[1]); pEll(c, hx - 1.6, hy + 0.8, 1.3, 1.7, sk[0]);
+  pBlob(c, [[hx - 2.6, hy - 1.2], [hx - 4.4, hy - 2.6], [hx - 5.8, hy - 0.6], [hx - 5.6, hy + 2.8], [hx - 3.6, hy + 2.4]], PRC.hair[1]);
+  pPoly(c, [[hx - 0.6, hy - 1.6], [hx + 5.9, hy - 1.6], [hx + 5.6, hy + 0.6], [hx + 3.4, hy + 1.0], [hx + 2.4, hy - 0.2], [hx + 1.6, hy + 1.0], [hx - 0.2, hy + 0.6]], '#14161c');
+  pPath(c, [[hx + 3.1, hy - 1.1], [hx + 4.4, hy - 1.1]], 0.35, '#5c6272');
+  pEll(c, hx + 3.6, hy + 2.6, 1.0, 0.7, '#ffb8a0');
+  if (o.closed) { pPath(c, [[hx + 2.2, hy + 3.4], [hx + 3.4, hy + 4.4], [hx + 5.2, hy + 3.6]], 0.5, '#9a3a30'); }
+  else pPath(c, [[hx + 1.8, hy + 3.2], [hx + 3.4, hy + 4.6], [hx + 5.4, hy + 3.4]], 0.55, '#9a3a30');
+  c.restore();
+}
+/* 娘の胸から上(右向き)。o: {k, x, y, f, dress:[暗,基,明], eyes:'open'|'closed'|'cry', hands} */
+function pGirlBust(c, o) {
+  var D = o.dress || [GC.dr0, GC.dr1, GC.dr2], SK = [GC.sk0, GC.sk1, GC.sk2];
+  c.save(); c.translate(o.x, o.y); c.scale(o.k * o.f, o.k);
+  var hx = 0.6, hy = -7.4;
+  pGirlHead(c, hx, hy, false);
+  pBlob(c, [[-8.4, 14], [-7.6, 3.6], [-4, 0.6], [4, 0.6], [7.6, 3.6], [8.4, 14]], D[1]);
+  pClip(c, function () { pSmooth(c, [[-8.4, 14], [-7.6, 3.6], [-4, 0.6], [4, 0.6], [7.6, 3.6], [8.4, 14]]); }, function () { pEll(c, -6.4, 9, 3.6, 8, D[0]); pEll(c, 4.6, 3.2, 3, 1.6, D[2]); });
+  pEll(c, 0.4, 0.8, 2.6, 1.3, o.collar || '#ffffff');
+  pEll(c, 0.4, -1.2, 1.9, 2, SK[0]);
+  pGirlFace(c, hx, hy, {});
+  var ey = hy + 0.6;
+  if (o.eyes === 'closed') { pPath(c, [[hx - 2.6, ey], [hx - 1.6, ey - 0.6], [hx - 0.6, ey]], 0.42, GC.ey); pPath(c, [[hx + 0.9, ey], [hx + 1.9, ey - 0.6], [hx + 2.9, ey]], 0.42, GC.ey); }
+  else if (o.eyes === 'cry') { pPath(c, [[hx - 2.7, ey - 0.3], [hx - 0.6, ey + 0.2]], 0.45, GC.ey); pPath(c, [[hx + 0.9, ey + 0.2], [hx + 3, ey - 0.3]], 0.45, GC.ey); }
+  else { pEll(c, hx - 1.6, ey, 0.6, 0.8, GC.ey); pEll(c, hx + 1.9, ey, 0.6, 0.8, GC.ey); pEll(c, hx - 1.4, ey - 0.4, 0.22, 0.22, '#ffffff'); pEll(c, hx + 2.1, ey - 0.4, 0.22, 0.22, '#ffffff'); }
+  pEll(c, hx - 2.4, ey + 1.8, 0.9, 0.5, GC.ck); pEll(c, hx + 2.8, ey + 1.8, 0.9, 0.5, GC.ck);
+  if (o.eyes === 'cry') { pEll(c, hx + 0.3, hy + 3.9, 1.0, 0.8, GC.mo); }
+  else pPath(c, [[hx - 0.6, hy + 3.4], [hx + 0.4, hy + 4.1], [hx + 1.4, hy + 3.4]], 0.4, GC.lp);
+  if (o.hands) {
+    pTube(c, -6.8, 4, -3.2, ey + 1.6, 1.3, 1.1, SK); pTube(c, 7.2, 4, 4.4, ey + 1.6, 1.3, 1.1, [SK[0], SK[1]]);
+    pEll(c, hx - 1.8, ey + 0.9, 1.6, 1.3, SK[1]); pEll(c, hx + 2.2, ey + 0.9, 1.6, 1.3, SK[1]);
+  }
+  c.restore();
+}
+function cutBg(dc, top, bot) { var g = dc.createLinearGradient(0, 0, 0, DH); g.addColorStop(0, top); g.addColorStop(1, bot); dc.fillStyle = g; dc.fillRect(0, 0, DW, DH); }
+function cutCanvas(kind) {
+  if (CUTCV[kind]) return CUTCV[kind];
+  var cv = document.createElement('canvas'); cv.width = DW; cv.height = DH;
+  var dc = cv.getContext('2d'), i, sd = 7; function rr() { sd = (sd * 16807) % 2147483647; return (sd - 1) / 2147483646; }
+  if (kind === 'dinner') {
+    cutBg(dc, '#1a1226', '#3a2230');
+    dc.fillStyle = '#0c1430'; dc.fillRect(14, 10, 132, 58); dc.fillStyle = '#2a1a22'; dc.fillRect(12, 8, 136, 2); dc.fillRect(12, 68, 136, 2); dc.fillRect(78, 10, 4, 58);
+    for (i = 0; i < 26; i++) { var bx = 14 + rr() * 128, bh = 10 + rr() * 30; dc.fillStyle = '#141c3a'; dc.fillRect(Math.round(bx), Math.round(68 - bh), 8, Math.round(bh)); }
+    for (i = 0; i < 90; i++) { dc.fillStyle = rr() < 0.7 ? '#ffd27a' : '#bfe0ff'; dc.fillRect(Math.round(15 + rr() * 130), Math.round(30 + rr() * 37), 1, 1); }
+    dc.fillStyle = '#fff6d8'; dc.beginPath(); dc.arc(122, 22, 5, 0, 6.2832); dc.fill();
+    cutPut(dc, cutPup(14, 50, 78, 112, function (c) { pGirlBust(c, { k: 2.2, x: 42, y: 84, f: 1, eyes: 'open' }); }));
+    cutPut(dc, cutPup(82, 44, 150, 112, function (c) { pPresBust(c, { k: 2.2, x: 118, y: 82, f: -1 }); }));
+    dc.fillStyle = '#e8e4dc'; dc.fillRect(0, 94, DW, 26); dc.fillStyle = '#ffffff'; dc.fillRect(0, 94, DW, 2); dc.fillStyle = '#c8c0b4'; dc.fillRect(0, 112, DW, 8);
+    for (i = 0; i < 2; i++) { var px = i ? 116 : 44; dc.fillStyle = '#ffffff'; dc.beginPath(); dc.ellipse(px, 101, 14, 3.4, 0, 0, 6.2832); dc.fill(); dc.fillStyle = '#d8d0c8'; dc.beginPath(); dc.ellipse(px, 101, 9, 2, 0, 0, 6.2832); dc.fill(); dc.fillStyle = '#9a4a2a'; dc.fillRect(px - 4, 99, 8, 3); }
+    [[64, '#7a1a2a'], [96, '#7a1a2a']].forEach(function (w) { dc.fillStyle = 'rgba(220,235,255,0.55)'; dc.fillRect(w[0] - 2, 82, 5, 6); dc.fillStyle = w[1]; dc.fillRect(w[0] - 2, 85, 5, 3); dc.fillStyle = 'rgba(220,235,255,0.7)'; dc.fillRect(w[0], 88, 1, 6); dc.fillRect(w[0] - 2, 94, 5, 1); });
+    dc.fillStyle = '#f4ecd8'; dc.fillRect(76, 80, 3, 14); dc.fillRect(82, 82, 3, 12); dc.fillStyle = '#b89a50'; dc.fillRect(74, 93, 13, 2);
+  } else if (kind === 'hug') {
+    cutBg(dc, '#3a2a5a', '#ff9a6a');
+    dc.fillStyle = '#ffdca0'; dc.beginPath(); dc.arc(80, 84, 22, 0, 6.2832); dc.fill(); dc.fillStyle = 'rgba(255,220,160,0.25)'; dc.beginPath(); dc.arc(80, 84, 34, 0, 6.2832); dc.fill();
+    for (i = 0; i < 12; i++) { var hx2 = Math.round(rr() * 160), hh = 6 + rr() * 16; dc.fillStyle = '#4a2a3a'; dc.fillRect(hx2, Math.round(96 - hh), 12, Math.round(hh)); }
+    dc.fillStyle = '#3a1e2c'; dc.fillRect(0, 96, DW, 24);
+    cutPut(dc, cutPup(20, 20, 150, 122, function (c) {
+      pPresBust(c, { k: 2.6, x: 98, y: 72, f: -1, closed: 1 });
+      pTube(c, 108, 78, 62, 82, 4.6, 3.8, [PRC.back[0], PRC.back[1], PRC.back[2]]);
+      pGirlBust(c, { k: 2.4, x: 66, y: 86, f: 1, eyes: 'closed' });
+      pEll(c, 58, 80, 3.6, 3.0, PRC.sk[1]); pEll(c, 59, 79, 1.8, 1.2, PRC.sk[2]); pPath(c, [[55.5, 81], [57, 83.4]], 0.6, PRC.sk[0]);
+      pTube(c, 76, 94, 96, 92, 2.8, 2.4, [GC.sk0, GC.sk1, GC.sk2]); pEll(c, 98, 92, 2.6, 2.2, GC.sk1);
+    }));
+  } else if (kind === 'funeral') {
+    cutBg(dc, '#202430', '#3a3e4a');
+    dc.fillStyle = '#16181f'; dc.fillRect(30, 0, 100, 74);
+    dc.fillStyle = '#b89a50'; dc.fillRect(56, 6, 48, 52); dc.fillStyle = '#1a1a20'; dc.fillRect(58, 8, 44, 48); dc.fillStyle = '#6a7080'; dc.fillRect(60, 10, 40, 44);
+    cutPut(dc, cutPup(58, 8, 102, 56, function (c) { pPresBust(c, { k: 1.55, x: 80, y: 42, f: 1 }); }));
+    dc.fillStyle = '#060608'; dc.beginPath(); dc.moveTo(56, 6); dc.lineTo(68, 6); dc.lineTo(56, 18); dc.fill(); dc.beginPath(); dc.moveTo(104, 6); dc.lineTo(92, 6); dc.lineTo(104, 18); dc.fill();
+    for (i = 0; i < 40; i++) { var side = i & 1, fx = side ? 108 + rr() * 26 : 26 + rr() * 26, fy = 14 + rr() * 56; dc.fillStyle = rr() < 0.8 ? '#eef0f4' : '#f6e8a0'; dc.beginPath(); dc.arc(fx, fy, 2.4 + rr() * 1.6, 0, 6.2832); dc.fill(); dc.fillStyle = '#c8ccd6'; dc.fillRect(Math.round(fx), Math.round(fy), 1, 1); }
+    dc.fillStyle = '#e8e2d0'; dc.fillRect(46, 50, 2, 12); dc.fillRect(112, 50, 2, 12); dc.fillStyle = '#ffd27a'; dc.fillRect(46, 48, 2, 2); dc.fillRect(112, 48, 2, 2);
+    dc.fillStyle = '#2a2a32'; dc.fillRect(24, 64, 112, 10); dc.fillStyle = '#3a3a44'; dc.fillRect(24, 64, 112, 1);
+    cutPut(dc, cutPup(40, 54, 120, 122, function (c) { pGirlBust(c, { k: 2.7, x: 80, y: 98, f: 1, eyes: 'cry', hands: 1, dress: ['#1a1a20', '#2a2a32', '#3c3c48'], collar: '#2a2a32' }); }));
+  }
+  return (CUTCV[kind] = cv);
+}
+function drawTrueEnd(c) {
+  var s = G.st, a, k;
+  if (s < TE.fade0) return;
+  a = clamp((s - TE.fade0) / 1.0, 0, 1);
+  c.save(); c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillStyle = 'rgba(0,0,0,' + a.toFixed(3) + ')'; c.fillRect(0, 0, DW, DH);
+  if (s > TE.txt0 && s < TE.cut1) {
+    var ta = Math.min(clamp((s - TE.txt0) / 0.8, 0, 1), clamp((TE.cut1 - 0.3 - s) / 0.7, 0, 1));
+    c.globalAlpha = ta; c.font = 'bold 7px ' + JP; c.fillStyle = '#f4f1e8'; c.fillText('AND ONE YEAR LATER...', 80, 60); c.globalAlpha = 1;
+  }
+  var cuts = [['dinner', TE.cut1, TE.cut2], ['hug', TE.cut2, TE.cut3], ['funeral', TE.cut3, 1e9]];
+  for (k = 0; k < cuts.length; k++) {
+    var cu = cuts[k]; if (s < cu[1] || s >= cu[2]) continue;
+    var ca = Math.min(clamp((s - cu[1]) / 0.5, 0, 1), clamp((cu[2] - 0.2 - s) / 0.5, 0, 1));
+    c.globalAlpha = ca; c.drawImage(cutCanvas(cu[0]), 0, 0, DW, DH);
+    if (cu[0] === 'dinner') {
+      var fl = (Math.floor(G.t * 9) & 1); c.fillStyle = '#ffb040'; c.fillRect(77, 77 + fl, 1, 3); c.fillRect(83, 79 - fl, 1, 3); c.fillStyle = '#fff4c0'; c.fillRect(77, 78 + fl, 1, 1); c.fillRect(83, 80 - fl, 1, 1);
+      c.globalAlpha = ca * 0.18; c.fillStyle = '#ffc070'; c.beginPath(); c.arc(80, 82, 12, 0, 6.2832); c.fill();
+    } else if (cu[0] === 'hug') {
+      for (var h = 0; h < 5; h++) { var hu = ((s - cu[1]) * 0.35 + h * 0.2) % 1, hx = 40 + h * 20 + Math.sin(hu * 6 + h) * 3, hy = 70 - hu * 60; c.globalAlpha = ca * (1 - hu); c.fillStyle = '#ff6f9d'; c.fillRect(Math.round(hx) - 1, Math.round(hy), 1, 1); c.fillRect(Math.round(hx) + 1, Math.round(hy), 1, 1); c.fillRect(Math.round(hx) - 1, Math.round(hy) + 1, 3, 1); c.fillRect(Math.round(hx), Math.round(hy) + 2, 1, 1); }
+    } else {
+      for (var d = 0; d < 6; d++) { var du = ((s - cu[1]) * 1.3 + d / 6) % 1, dx = d & 1 ? 89 + (d % 3) : 69 - (d % 3), dy = 86 + du * 22; c.globalAlpha = ca * (1 - du) * 0.95; c.fillStyle = d % 3 ? '#9fd8ff' : '#d8f0ff'; c.fillRect(dx, Math.round(dy), 1, 2); }
+      c.globalAlpha = ca * 0.25; c.fillStyle = '#9aa4b8'; for (var r = 0; r < 18; r++) { var rx = (r * 37 + Math.floor(G.t * 60) * 3) % 160, ry = (r * 53 + Math.floor(G.t * 60) * 5) % 120; c.fillRect(rx, ry, 1, 3); }
+    }
+    c.globalAlpha = 1;
+  }
+  if (s > TE.lab) {
+    c.fillStyle = 'rgba(0,0,0,' + (0.45 * clamp((s - TE.lab) / 0.8, 0, 1)).toFixed(3) + ')'; c.fillRect(0, 0, DW, DH);
+    c.globalAlpha = clamp((s - TE.lab) / 0.8, 0, 1);
+    var by = 52 + Math.sin(G.t * 2.2) * 1.2;
+    c.font = 'bold 13px ' + JP; c.lineJoin = 'round'; c.lineWidth = 2.6; c.strokeStyle = '#ffffff'; c.strokeText('TRUE END', 80, by); c.fillStyle = '#7a1a2a'; c.fillText('TRUE END', 80, by);
+    c.globalAlpha = 1;
+    if (s > TE.again && Math.floor(G.t * 1.6) % 2 === 0) { c.font = '5px ' + JP; c.fillStyle = 'rgba(255,240,200,0.95)'; c.fillText('TOUCH TO PLAY AGAIN', 80, 76); }
+  }
+  c.restore();
 }
 function presFallAngle() {
   var t = pr.t, a = t < 0.7 ? (t / 0.7) * (t / 0.7) : t < 1.4 ? 1 : Math.max(0, 1 - (t - 1.4) / 0.7);
@@ -3360,7 +3592,7 @@ function foeStrike(f, e) {
   playerReact(e.k, f);
 }
 function foeUpdate(dt) {
-  if (!dt) return;
+  if (!dt || G.mode === 'trueend') return;
   actTick(dt);
   var i, f, d, dx, dz, t, o, j;
   for (i = foes.length - 1; i >= 0; i--) {
@@ -4249,7 +4481,7 @@ function render() {
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, DW, DH);
   var dl = 0, i, L = [], cx0 = Math.round(camX);
   ctx.setTransform(1, 0, 0, 1, -cx0, 0);
-  ctx.drawImage(skyCv, Math.round(camX * 0.85), 0); drawFW(); ctx.drawImage(cityCv, Math.round(camX * 0.6), 0);
+  ctx.drawImage(skyCv, Math.round(camX * 0.85), 0); drawFW(); ctx.drawImage(cityCv, Math.round(camX * 0.6), 0); if (G.tod) todDraw(cx0);
   for (i = 0; i < objs.length; i++) if (objs[i].t === 'wall') drawObj(objs[i]);
   ctx.drawImage(frontCv, 0, 0);
   if (litterN) ctx.drawImage(litterCv, 0, 0);
@@ -4260,7 +4492,7 @@ function render() {
   L.push({ z: pl.z, k: 1 });
   if (prVisible()) L.push({ z: pr.z, k: 2 });
   if (baby && !baby.held) L.push({ z: baby.z, k: 3 });
-  if (G.dau) L.push({ z: G.dau.z, k: 9 });
+  if (G.dau) { L.push({ z: G.dau.z, k: 9 }); if (G.dau.st !== 'bound') L.push({ z: G.dau.cz - 0.2, k: 10 }); }
   if (sam.vis) L.push({ z: sam.z, k: 5 });
   for (i = 0; i < foes.length; i++) L.push({ z: foes[i].z, k: 6, f: foes[i] });
   if (STAGE === 'corr') for (i = 0; i < 3; i++) L.push({ z: 300, k: 7, i: i });
@@ -4275,6 +4507,7 @@ function render() {
     else if (L[i].k === 7) drawShutter(L[i].i);
     else if (L[i].k === 8) drawProp(L[i].p);
     else if (L[i].k === 9) drawDau();
+    else if (L[i].k === 10) drawDauChair();
     else drawBaby();
   }
   if (G.cold > 0.01) {
@@ -4437,8 +4670,8 @@ function drawHUD(c) {
     if (k > 1.3) {
       c.globalAlpha = clamp((k - 1.3) / 0.6, 0, 1);
       var by = 40 + Math.sin(G.t * 2.2) * 1.2;
-      c.font = 'bold 12px ' + JP; c.lineJoin = 'round'; c.lineWidth = 2.6; c.strokeStyle = '#ffffff'; var etxt = G.secret ? 'ANOTHER WORLD' : (G.trueEnd ? 'TRUE END' : 'THE END'); c.strokeText(etxt, 80, by);
-      c.fillStyle = G.secret ? '#ffd25a' : (G.trueEnd ? '#ff6f9d' : '#cfe3ff'); c.fillText(etxt, 80, by);
+      c.font = 'bold 12px ' + JP; c.lineJoin = 'round'; c.lineWidth = 2.6; c.strokeStyle = '#ffffff'; var etxt = G.secret ? 'ANOTHER WORLD' : (G.goodEnd ? 'GOOD END' : 'THE END'); c.strokeText(etxt, 80, by);
+      c.fillStyle = G.secret ? '#ffd25a' : (G.goodEnd ? '#ff6f9d' : '#cfe3ff'); c.fillText(etxt, 80, by);
       c.globalAlpha = 1;
       if (k > 2.2) {
         c.globalAlpha = clamp((k - 2.2) / 0.6, 0, 1); c.lineJoin = 'round';
@@ -4471,6 +4704,7 @@ function drawHUD(c) {
     c.font = 'bold 4.6px ' + JP; c.lineJoin = 'round'; c.lineWidth = 1.2; c.strokeStyle = 'rgba(0,0,0,0.8)'; c.strokeText('BREAK THE BOTTLE ▼', 114, 80); c.fillStyle = '#9fe4ff'; c.fillText('BREAK THE BOTTLE ▼', 114, 80);
   }
   c.restore();
+  if (G.mode === 'trueend') drawTrueEnd(c);
 }
 /* 幕(赤いビロードとひだ、金の房)。p=0で上、p=1で下まで閉じる */
 function drawCurtain(c, p) {
@@ -4537,7 +4771,7 @@ function ambTick(dt) {
   else { nz(t, 1.1, { type: 'bandpass', f: 900, f2: 600, q: 1.5, g: 0.025 }); ambT = 5 + Math.random() * 4; }
 }
 
-function startEnding() { G.trueEnd = !!(G.dau && G.dau.freed); G.mode = 'ending'; G.t = 0; G.step = 0; ctlOn = false; atkHeld = null; }
+function startEnding() { G.goodEnd = !!(G.dau && G.dau.freed); G.mode = 'ending'; G.t = 0; G.step = 0; ctlOn = false; atkHeld = null; }
 function gameUpdate(dt, rdt) {
   updCost(rdt);
   if (pl.tapFlash > 0) pl.tapFlash -= rdt;
@@ -4612,7 +4846,11 @@ function gameUpdate(dt, rdt) {
     return;
   }
   if (G.mode === 'play') {
-    if (G.stage === 'corr') { G.hintT = (G.hintT || 0) + dt; return; }
+    if (G.stage === 'corr') {
+      G.hintT = (G.hintT || 0) + dt;
+      if (ctlOn && inp.l && pl.st === 'idle' && pl.x <= 36.5) { G.leftT = (G.leftT || 0) + dt; if (G.leftT > 0.45) startTrueEnd(); } else G.leftT = 0;
+      return;
+    }
     /* 何も壊さずにいると、社長のほうから近づいてくる(シークレット) */
     if (brokenN !== G.base) G.quiet = -1e9;
     else if (pr.st === 'flee' && pl.st === 'idle') G.quiet += dt;
@@ -4656,6 +4894,7 @@ function gameUpdate(dt, rdt) {
     }
     return;
   }
+  if (G.mode === 'trueend') { trueEndUpdate(dt); return; }
   if (G.mode === 'ending') {
     if (G.step === 0) { if (G.t > 1.8 && pl.st === 'idle' && baby && baby.t > BFORM + 0.2) { baby.stop = true; G.step = 1; } return; }
     if (G.step === 1) {
@@ -4678,7 +4917,7 @@ function gameUpdate(dt, rdt) {
   }
 }
 function resetGame() {
-  G.dau = null; G.trueEnd = false;
+  G.dau = null; G.goodEnd = false; G.tod = null; G.leftT = 0;
   build('corr'); G.stage = 'corr'; G.banner = 'START'; G.hintT = 0; G.bt = 0;
   pl.x = -20; pl.z = 108; pl.face = 1; pl.st = 'idle'; pl.bk = false; pl.pose = readyPose(); pl.cut = null; pl.cutU = 0; pl.ear = false; pl.back = false; pl.moving = false; pl.tapFlash = 0;
   pr.x = 141; pr.z = 99; pr.face = -1; pr.st = 'gone'; pr.t = 0; pr.fear = 0; pr.wig = true; pr.hop = 0; pr.pale = 0; pr.jt = 0; pr.scream = 0; pr.obj = null; pr.ln2 = false; G.ln = null; G.melt = null;
@@ -4691,10 +4930,11 @@ function resetGame() {
 function onAnyStart(e) {
   if (G.mode === 'title') { return; }
   else if (G.mode === 'end' && G.t - G.heldT > 5.6) resetGame();
+  else if (G.mode === 'trueend' && G.st > TE.again) resetGame();
 }
 document.addEventListener('pointerdown', onAnyStart, true);
 (function () { var b = document.getElementById('titleStartBtn'); if (b) b.addEventListener('click', function (e) { e.preventDefault(); if (G.mode === 'title') startIntro(); }); })();
-window.addEventListener('keydown', function (e) { if (G.mode === 'title' || G.mode === 'end') onAnyStart(e); }, true);
+window.addEventListener('keydown', function (e) { if (G.mode === 'title' || G.mode === 'end' || G.mode === 'trueend') onAnyStart(e); }, true);
 var rz = 0;
 window.addEventListener('resize', function () { clearTimeout(rz); rz = setTimeout(layout, 120); });
 layout(); resetGame();

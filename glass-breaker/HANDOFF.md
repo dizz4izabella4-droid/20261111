@@ -82,3 +82,12 @@
   - 救出せずにクリスタルを割る → `THE END`(娘は縛られたまま泣くモーション=`face:'cry'`)。
   - 社長が土下座して生存(旧 SECRET END) → `ANOTHER WORLD`(娘は縛られたまま泣く)。
 - 開発用: index.html をコピーし `layout(); resetGame();` の前に `window.__e=function(x){return eval(x)};` を足すと、`setupBoss(); G.mode='play'; ...` でボス部屋へ直接入って検証できる。
+
+## 37. 救出の変更・GOOD END・新TRUE END(2026-11-14)
+- 救出: クリスタル化中に娘へ向かってバットを振ると(スイングの振り始め=`pl.dauChk`→`dauTryRescue()`、娘が前方-3〜30px・奥行±12)、娘が吹っ飛び(`fly`→`down`→`getup`→`freeing`→`stand`)、衝撃で縄がほどける。椅子は元の位置に残る(`pupGirl({m:'chair'})`/`drawDauChair`)。
+- 救出してからクリスタルを割る → `GOOD END`(`G.goodEnd`)。旧「TRUE END」はこれに改名。
+- 新 TRUE END: ステージ1(廊下)で左端(x≤36.5)で左を0.45秒押し続けると `startTrueEnd()`(`G.mode='trueend'`)。
+  - 外の景色が夜→朝→昼→夕→夜を2周(2周目は速い)。`G.tod`=TODSEQの位置、`todDraw()`が空のグラデーション+太陽+色付きの街(`todCityCv`)を夜の空に重ねる。
+  - 暗転→`AND ONE YEAR LATER...`→カット3枚(ディナー/抱擁/社長の葬式で泣く娘)→`TRUE END`→タップでタイトル。時刻は `TE` に定義。
+  - カット絵は `cutCanvas(kind)` で一度だけ作る。背景は普通に描き、人物は pup(`CUTPAL`、`pPresBust`/`pGirlBust`を拡大描画→縮小・吸着)。ろうそくの炎・ハート・涙・雨は `drawTrueEnd` で上に重ねる。
+  - トゥルーエンド中は敵の更新を止める(`foeUpdate`)。
