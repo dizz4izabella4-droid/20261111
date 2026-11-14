@@ -161,7 +161,7 @@ function buildWorld(){
     }
   };
   place(trees,11,()=>0.3,1.5);
-  place(rocks,14,()=>rs()<0.4?0.46:0.3,1.4);
+  place(rocks,7,()=>rs()<0.4?0.46:0.3,1.4);
   for(const t of trees){t.kind='tree';t.heat=0;t.burn=0;t.burnt=false;t.d=t.x+t.y;}
   for(const o of rocks){o.kind='rock';o.d=o.x+o.y;o.big=o.r>0.4;}
   // 長い草（よく燃える）：群生をいくつか
@@ -964,19 +964,29 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){input.keys
 
 /* ====== ループ（固定60Hz） ====== */
 buildBG();resetGame();fit();
-let last=performance.now(),acc=0;
+let last=performance.now(),acc=0,ts=1,skip=0;
+// 見た目の密度が高いほど、処理落ちしたようにスローになる（表示なし）
+function visualLoad(){
+  let b=0;for(const m of mush)if(m.burn>0)b++;
+  return mush.length+b*0.8+parts.length/10;
+}
 function frame(now){
-  acc+=Math.min(100,now-last);last=now;
+  const dt=Math.min(100,now-last);last=now;
+  const load=visualLoad();
+  const target=clamp(1-(load-90)/170*0.62,0.38,1);
+  ts+=(target-ts)*0.06;
+  acc+=dt*ts;
   let n=0;
   while(acc>=1000/60&&n<5){update();acc-=1000/60;n++;}
   if(n===5)acc=0;
-  render();
+  skip^=1;
+  if(ts>0.85||skip)render();      // 重いときは描画もカクつかせる
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 
 /* 動作確認用フック */
-window.__g={makeMyc,makeMush,get grass(){return grass},get mycs(){return mycs},get mush(){return mush},get trees(){return trees},get player(){return player},get parts(){return parts},
+window.__g={get ts(){return ts},visualLoad,makeMyc,makeMush,get grass(){return grass},get mycs(){return mycs},get mush(){return mush},get trees(){return trees},get player(){return player},get parts(){return parts},
   get wave(){return wave},get score(){return score},get phase(){return phase},update,input,resetGame,ignite,
   get started(){return started}};
 })();
