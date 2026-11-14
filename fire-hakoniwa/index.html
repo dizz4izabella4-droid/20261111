@@ -269,7 +269,7 @@ body.touch .pc-only{display:none}body.touch .touch-only{display:block}
       <div class="sub">Quarter-view prototype</div>
       <p class="pc-only">WASD / Arrow keys: move　Mouse: aim<br>Hold left click (or Space / X): fire</p>
       <p class="touch-only">Left thumb: move<br>Right thumb: aim and fire</p>
-      <p>Mushrooms sprout from the ground and keep multiplying.<br>Grass and trees burn fast. Rocks do not.<br>Burnt mushrooms may leave mycelium that spawns more.</p>
+      <p>Mushrooms sprout from the ground and keep multiplying.<br>Grass and trees burn fast. Rocks do not.<br>Only golden mushrooms leave mycelium when burnt, and it spawns more.</p>
       <button id="bStart" type="button">START</button>
     </div>
   </div>
@@ -284,7 +284,8 @@ body.touch .pc-only{display:none}body.touch .touch-only{display:block}
 'use strict';
 /* ====== 定数 ====== */
 const W=416,H=288,TW=32,TH=16,N=12,OX=208,OY=44,CAP=180,T_SIDE=18;
-const BMAX=[50,66,88,115];            // サイズ別の燃焼フレーム数
+const BMAX=[50,66,88,115];
+const GOLD_P=0.1;                     // 金色キノコの出現率（菌糸を残すのはこの種だけ）            // サイズ別の燃焼フレーム数
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 cv.width=W;cv.height=H;
 const rnd=(a,b)=>a+Math.random()*(b-a), irnd=(a,b)=>Math.floor(rnd(a,b+1));
@@ -413,8 +414,9 @@ function scorchAt(x,y,a){
 
 /* ====== キノコ ====== */
 function makeMush(x,y,sz,delay){
-  return {id:idSeq++,x,y,z:0,vz:0,sz,hue:irnd(0,359),spot:irnd(0,3),burn:0,sp:0,hd:rnd(0,6.28),wt:irnd(10,80),
-    age:irnd(0,300),grow:irnd(250,700),dsg:irnd(0,3),delay:delay||0,pop:0};
+  let hue=irnd(0,359);if(hue>=30&&hue<=70)hue+=60;   // 金色と紛らわしい黄色系は避ける
+  return {id:idSeq++,x,y,z:0,vz:0,sz,hue,spot:irnd(0,3),burn:0,sp:0,hd:rnd(0,6.28),wt:irnd(10,80),
+    age:irnd(0,300),grow:irnd(250,700),dsg:irnd(0,3),delay:delay||0,pop:0,gold:Math.random()<GOLD_P};
 }
 function freeSpot(minPlayer){
   for(let t=0;t<60;t++){
@@ -431,6 +433,7 @@ function spawnWave(n){
     const p=freeSpot(2.2);if(!p)continue;
     mush.push(makeMush(p[0],p[1],i%5===0?2:(i%4===0?0:1),i*5+irnd(0,6)));
   }
+  if(mush.length&&!mush.some(m=>m.gold))mush[irnd(0,mush.length-1)].gold=true;   // 波ごとに最低1本は金色
 }
 function rollSize(){const r=Math.random();return r<0.35?0:r<0.7?1:r<0.92?2:3;}
 function spawnBaby(m){
@@ -454,7 +457,7 @@ function purgeOverflow(){
       m.vanish=8+Math.round(Math.hypot(m.x-player.x,m.y-player.y)*4)+irnd(0,6);
     }
   }
-  const cand=mush.filter(m=>m.burn===0&&m.delay===0&&m.sz>=1);
+  const cand=mush.filter(m=>m.burn===0&&m.delay===0&&m.sz>=1&&m.gold);
   for(let k=0;k<(mycs.length<3?1:0)&&cand.length;k++){
     const m=cand.splice(irnd(0,cand.length-1),1)[0];
     if(mycs.length<6&&!mycs.some(c=>Math.hypot(c.x-m.x,c.y-m.y)<0.9))mycs.push(makeMyc(m.x,m.y));
@@ -495,7 +498,7 @@ function burnTick(m,burningCount){
     for(let k=0;k<5;k++)parts.push({k:'a',x:m.x+rnd(-.15,.15),y:m.y+rnd(-.15,.15),z:rnd(hh*.4,hh),vx:rnd(-.01,.01),vy:rnd(-.01,.01),vz:rnd(0.02,0.3),life:0,max:irnd(50,90),sz:1});
     for(let k=0;k<2;k++)smoke(m.x,m.y,hh);
     scorchAt(m.x,m.y,0.35);
-    if(Math.random()<[0.03,0.1,0.2,0.3][m.sz]&&mycs.length<6&&!mycs.some(c=>Math.hypot(c.x-m.x,c.y-m.y)<0.9))mycs.push(makeMyc(m.x,m.y));
+    if(m.gold&&mycs.length<6&&!mycs.some(c=>Math.hypot(c.x-m.x,c.y-m.y)<0.9))mycs.push(makeMyc(m.x,m.y));
     scorchAt(m.x+.7,m.y,0.1);scorchAt(m.x-.7,m.y,0.1);scorchAt(m.x,m.y+.7,0.1);scorchAt(m.x,m.y-.7,0.1);
     return true;
   }
@@ -895,6 +898,10 @@ function drawMush(m){
   const sw=Math.max(4,cap[cap.length-1]);ctx.fillRect(x-sw/2,y-1,sw,2);
   const z=Math.round(m.z);
   let capC=hsl2rgb(m.hue,.62,.5),stemC=[239,228,204],capHi=hsl2rgb(m.hue,.62,.64);
+  if(m.gold){   // 金色：傘が金に輝き、ゆっくり明滅する
+    const k=0.5+0.5*Math.sin(tickN*0.12+m.id);
+    capC=[lerp(255,255,k),lerp(190,232,k),lerp(30,120,k)];capHi=[255,244,170];
+  }
   let alpha=1;
   if(m.burn>0){
     const bm=BMAX[m.sz],f=m.burn/bm;
@@ -939,6 +946,14 @@ function drawMush(m){
       const lw=cap[cap.length-1];
       ctx.fillStyle='#f1e6c8';ctx.fillRect(Math.round(x-lw/2),top+cap.length-1,lw,1);
       ctx.fillStyle='rgba(255,255,255,.9)';ctx.fillRect(x-2+(m.spot&1),top+1,1,1);if(m.sz>0)ctx.fillRect(x+2,top+2,1,1);
+    }
+  }
+  if(m.gold&&m.burn===0){   // きらり
+    const tw=(tickN+m.id*7)%48;
+    if(tw<6){
+      const sx=x+((m.id*5)%7)-3,sy=top+((m.id*3)%Math.max(1,cap.length));
+      ctx.fillStyle='#ffffff';ctx.fillRect(sx,sy,1,1);
+      if(tw>=2&&tw<4){ctx.fillRect(sx-1,sy,3,1);ctx.fillRect(sx,sy-1,1,3);}
     }
   }
   ctx.restore();
@@ -1109,6 +1124,13 @@ function drawGlows(){
   for(const t of trees){if(t.burn>0&&n<20){n++;glow(Math.round(SX(t.x,t.y)),Math.round(SY(t.x,t.y,18)),38,0.38,'255,120,40');}}
   for(const g of grass){if(g.burn>0&&g.burn<60&&n<34){n++;glow(Math.round(SX(g.x,g.y)),Math.round(SY(g.x,g.y,6)),12,0.2,'255,120,30');}}
   for(const m of mush){if(m.burn>0&&n<34&&m.burn<BMAX[m.sz]*.8){n++;glow(Math.round(SX(m.x,m.y)),Math.round(SY(m.x,m.y,10)),16,0.28,'255,110,30');}}
+  let ng=0;   // 金色キノコの輝き
+  for(const m of mush){
+    if(m.gold&&m.burn===0&&m.delay===0&&m.pop===0&&ng<16){
+      ng++;
+      glow(Math.round(SX(m.x,m.y)),Math.round(SY(m.x,m.y,10)),[12,16,20,24][m.sz],0.2+0.1*Math.sin(tickN*0.12+m.id),'255,200,60');
+    }
+  }
   ctx.globalCompositeOperation='source-over';
 }
 function render(){
