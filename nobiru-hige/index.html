@@ -2331,10 +2331,6 @@ function drawUI() {
     : `1/${(1 / player.scaleY).toFixed(1)}`;
   ctx.fillText(`HEIGHT: ${heightRatio}`, 200, 28);
   ctx.fillText(`ENEMIES: ${enemies.length}`, 375, 28);
-  if (slowFactor < 1 && Math.floor(performance.now() / 300) % 2 === 0) {
-    ctx.fillStyle = '#ffec27';
-    ctx.fillText('SLOWDOWN', 200, 46);
-  }
   drawBanners();
 }
 
