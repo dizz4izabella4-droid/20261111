@@ -102,10 +102,6 @@ header{display:flex;flex-direction:column;align-items:center;gap:10px;padding-to
 .txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;padding:6px 11px;border-radius:13px;background:rgba(255,250,252,.93)}
 .en{font-size:10px;font-weight:700;color:#5a3a68;letter-spacing:.08em;line-height:1.3}
 .ds{font-size:15px;font-weight:700;color:#3e2448;letter-spacing:.04em}
-/* 開発凍結の項目: 全体を灰色にして取り消し線 */
-li.frozen{filter:grayscale(1);opacity:.55}
-li.frozen .rec{display:none}
-li.frozen .en,li.frozen .ds,li.frozen .dt{text-decoration:line-through;text-decoration-thickness:2px}
 .nt{display:block;margin-top:3px;font-size:11.5px;font-weight:700;line-height:1.5;color:#5b4466;letter-spacing:.02em}
 .dt{width:fit-content;margin:4px auto 0 10px;padding:0;background:none;font-size:7px;font-weight:400;line-height:1.4;color:rgba(255,255,255,.62);text-shadow:0 0 3px rgba(0,0,0,.75),0 0 1px rgba(0,0,0,.6);letter-spacing:.03em}
 .tag{flex:none;font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:var(--cL);color:var(--cD);letter-spacing:.06em}
@@ -259,8 +255,8 @@ const APPS=[
    start:'2026-11-13', upd:'2026-11-14', ver:'3.2'},
   {path:'fire-hakoniwa/', ja:'テスト', label:'火の箱庭 test ver.（テスト）', name:'FIRE HAKONIWA', for:'both', color:'pink', icon:'flame',
    start:'2026-11-13', upd:'2026-11-14', ver:'0.2'},
-  {path:'where-which/', ja:'開発凍結', label:'ウェア・ウィッチ test ver.（開発凍結）', name:'WHERE WHICH', for:'both', color:'mint', icon:'star', frozen:true,
-   start:'2026-11-13', upd:'2026-11-13', ver:'0.2'},
+  {path:'where-which/', ja:'テスト', label:'ウェア・ウィッチ test ver.（テスト）', name:'WHERE WHICH', for:'both', color:'mint', icon:'star',
+   start:'2026-11-13', upd:'2026-11-13', ver:'0.2', stopped:true},
   {path:'icarus/', ja:'テスト', label:'イカロス〜蝋で固めた鳥の羽〜 test ver.（テスト）', name:'ICARUS', for:'both', color:'lav', icon:'wing',
    start:'2026-11-12', upd:'2026-11-13', ver:'1.0'},
   {path:'nobiru-hige/', ja:'難しいのは最初だけ', label:'伸びるヒゲ test ver.（難しいのは最初だけ）', name:'NOBIRU HIGE', for:'both', color:'lemon', icon:'hige',
@@ -302,7 +298,7 @@ const list=$('list');
 let sel=0;
 const items=APPS.map((a,i)=>{
   const li=document.createElement('li'), el=document.createElement('a');
-  el.className='app '+(a.color||'pink')+(a.frozen?' frozen':''); el.href=a.path;
+  el.className='app '+(a.color||'pink'); el.href=a.path;
   const ic=document.createElement('span'); ic.className='icon'; ic.innerHTML=ICONS[a.icon]||ICONS.star;
   const en=document.createElement('span'); en.className='en'; en.textContent=a.name;
   const ds=document.createElement('span'); ds.className='ds'; ds.textContent=a.ja;
@@ -314,8 +310,8 @@ const items=APPS.map((a,i)=>{
   const go=document.createElement('span'); go.className='go'; go.innerHTML=GO; el.appendChild(go);
   el.addEventListener('mouseenter',()=>{ sel=i; mark(); pop(560+i*80); });
   el.addEventListener('click',e=>{ e.preventDefault(); launch(i); });
-  li.appendChild(el); if(a.frozen) li.classList.add('frozen');
-  { const f=d=>d.replace(/-/g,'.'), t=[]; if(a.start) t.push('開始 '+f(a.start)); if(a.upd) t.push('更新 '+f(a.upd)); if(a.ver) t.push('Ver.'+a.ver);
+  li.appendChild(el);
+  { const f=d=>d.replace(/-/g,'.'), t=[]; if(a.start) t.push('開始 '+f(a.start)); if(a.upd) t.push('更新 '+f(a.upd)); if(a.ver) t.push('Ver.'+a.ver); if(a.stopped) t.push('開発中止');
     if(t.length){ const dt=document.createElement('div'); dt.className='dt'; dt.textContent=t.join(' ／ '); li.appendChild(dt); } }
   list.appendChild(li); return el;
 });
