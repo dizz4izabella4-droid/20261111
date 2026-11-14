@@ -27,6 +27,19 @@ canvas#fiesta{position:fixed;inset:0;width:100%;height:100%;display:block;pointe
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 
+/* ---------- 曲選択 ---------- */
+#songs{background:var(--ink);overflow:hidden}
+#songs .photo{position:absolute;inset:0;background-size:cover;background-position:72% 30%;opacity:.5;filter:blur(3px)}
+#songs .shade{position:absolute;inset:0;background:linear-gradient(0deg,rgba(11,7,18,.96),rgba(11,7,18,.7))}
+.swrap{position:relative;height:100%;max-width:560px;margin:0 auto;padding:calc(90px + env(safe-area-inset-top)) 24px calc(28px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:18px}
+.slist{display:flex;flex-direction:column;gap:12px;margin:6px 0 10px}
+.song{display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:20px 22px;border-radius:14px;border:1px solid var(--line);background:rgba(16,10,24,.6);color:var(--cream);text-align:left;transition:transform .12s,border-color .2s}
+.song:active{transform:scale(.98)}
+.song.sel{border-color:var(--rosa2);background:linear-gradient(180deg,rgba(228,0,124,.2),rgba(16,10,24,.6))}
+.song .sn{font-size:20px;font-weight:700;letter-spacing:.06em}
+.song .sd{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums;letter-spacing:.08em}
+#songBack{align-self:flex-start}
+
 /* ---------- Portada ---------- */
 #title{background:var(--ink);overflow:hidden}
 #title .photo{position:absolute;inset:0;background-size:cover;background-position:72% 30%;opacity:0;transform:scale(1.06);
@@ -391,9 +404,19 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:0;border-radiu
 <canvas id="game"></canvas>
 
 <div id="hud">
-  <div class="hud-t">NOCHE SIN LUNA<i id="hudDiff">NORMAL</i></div>
+  <div class="hud-t">NOCHE SIN LUNA<i id="hudDiff"></i></div>
   <div class="hud-r"><button class="iconbtn" id="pauseBtn" aria-label="Pause"><svg viewBox="0 0 14 14"><rect x="2.5" y="1.5" width="3" height="11" rx="1" fill="currentColor"/><rect x="8.5" y="1.5" width="3" height="11" rx="1" fill="currentColor"/></svg></button></div>
 </div>
+
+<section id="songs" class="layer">
+  <div class="photo"></div>
+  <div class="shade"></div>
+  <div class="swrap">
+    <div class="eyebrow">SELECT SONG</div>
+    <div class="slist" id="songList"></div>
+    <button class="ghost" id="songBack">Back <kbd>Esc</kbd></button>
+  </div>
+</section>
 
 <section id="title" class="layer on">
   <div class="photo" id="photo"></div>
@@ -403,7 +426,6 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:0;border-radiu
     <div class="hero">
       <h1>Noche<br>sin <em>Luna</em></h1>
       <p>バーは気にせず、本能のまま叩こう。</p>
-      <div class="diffs" id="diffs"></div>
       <div class="actions">
         <button class="play" id="playBtn" disabled><svg viewBox="0 0 14 14"><path d="M3 1.8v10.4c0 .5.6.8 1 .5l8-5.2c.4-.3.4-.8 0-1.1l-8-5.2c-.4-.2-1 .1-1 .6z" fill="currentColor"/></svg><span id="playLabel">LOADING</span><small class="keyonly">SPACE</small></button>
         <button class="ghost" id="setBtn">Settings</button>
@@ -412,8 +434,8 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:0;border-radiu
       <div class="keys">
         <span class="keyonly"><kbd>J</kbd><i class="dot" style="background:var(--rosa)"></i>左レーン・低音</span>
         <span class="keyonly"><kbd>I</kbd><i class="dot" style="background:var(--turq)"></i>右レーン・高音</span>
-        <span class="keyonly" style="color:var(--dim)">ほかに F / K ・ ← / →</span>
-        <span class="touchonly">光る道の左(低音)/右(高音)をタップ。両手で叩いてOKです。</span>
+        <span class="keyonly" style="color:var(--dim)">ほかに F / K ・ ← / → ・ 開いている場所をクリックするとPalmas(手拍子)</span>
+        <span class="touchonly">光る道の左(低音)/右(高音)をタップ。開いている場所をタップするとPalmas(手拍子)。</span>
       </div>
     </div>
     <div class="foot">
@@ -493,11 +515,10 @@ const CLAP_B64 = ["__CLAP0__","__CLAP1__"];
 const GOLPE_B64 = ["__GOLPE0__","__GOLPE1__"];   // golpe grabado: izquierda grave / derecha agudo
 const PHOTO = "data:image/jpeg;base64,__IMG__";
 const FONT = getComputedStyle(document.documentElement).getPropertyValue('--font').trim();
-const DIFFS = {
-  easy:  {name:'EASY',   es:'ゆったり', lv:2},
-  normal:{name:'NORMAL', es:'標準',     lv:5},
-  hard:  {name:'HARD',   es:'激しめ',   lv:8},
-};
+const LEVEL = 'normal';                         // 難易度は NORMAL 固定（選択なし）
+/* 曲リスト。曲を足すときは README の「曲の足しかた」を参照。いまは1曲（譜面・成分マップ・音源は上の DATA / TL / AUDIO_B64） */
+const SONGS = [ {id:'noche', name:'Noche sin Luna', get dur(){ return musicBuf ? musicBuf.duration : 0; }} ];
+let curSong = 0;
 const NEAR = .16;                               // ventana para "tocar" una guía (s)
 const LEAD = 2.4;                               // segundos antes de que empiece la canción
 const SECTIONS = [[0,'Entrada'],[8,'Llamada'],[56,'Clímax'],[80,'Falseta'],[114,'Subida'],[128,'Fiesta'],[170,'Despedida']];
@@ -712,7 +733,7 @@ async function startGame(){
   stopMusic();
   closeVeils();
   document.body.classList.remove('finale'); fiesta.stop();
-  notes=buildNotes(S.diff); head=0; taps=0;
+  notes=buildNotes(LEVEL); head=0; taps=0;
   lastNoteT = notes[notes.length-1].t; songDur = musicBuf.duration;
   fx.clear(); crowd.reset();
   try{ await actx.resume(); }catch(e){}
@@ -721,8 +742,8 @@ async function startGame(){
   startAt=actx.currentTime+LEAD; src.start(startAt);
   clock.valid=false; clock.frozen=false;
   resultAt = Math.min(songDur-.05, lastNoteT+3.2);
-  show('title',false); show('result',false); $('#hud').classList.add('on');
-  $('#hudDiff').textContent=DIFFS[S.diff].name;
+  show('title',false); show('songs',false); show('result',false); $('#hud').classList.add('on');
+  $('#hudDiff').textContent=SONGS[curSong].name;
   layout();
   intro.t0=performance.now();
   state='play';
@@ -743,7 +764,7 @@ function quitToTitle(){
   countdown.on=false; stopMusic(); state='title'; clock.frozen=false;
   actx.resume().catch(()=>{});
   document.body.classList.remove('finale');
-  closeVeils(); $('#hud').classList.remove('on'); show('result',false); show('title',true); renderDiffs(); fiesta.title();
+  closeVeils(); $('#hud').classList.remove('on'); show('result',false); show('songs',false); show('title',true); fiesta.title();
 }
 
 /* ================= GOLPES (sin errores, sin puntos) ================= */
@@ -1133,7 +1154,7 @@ function draw(song,now,dt){
     const it=(now-intro.t0)/1000; const a=clamp(it/.4,0,1)*clamp((0.6-song)/0.8,0,1);
     g.globalAlpha=a;
     g.font=`200 ${L.mobile?30:40}px ${FONT}`; g.fillStyle='#fbf1e2'; g.fillText('Noche sin Luna',mx,my);
-    g.font=`600 11px ${FONT}`; g.fillStyle='#ff5fae'; spaced('GUÍA '+DIFFS[S.diff].name+'  ·  ¡A TOCAR!',mx,my+26,5);
+    g.font=`600 11px ${FONT}`; g.fillStyle='#ff5fae'; spaced('¡A TOCAR!',mx,my+26,5);
     g.globalAlpha=1;
   }
   if(countdown.on){
@@ -1398,9 +1419,11 @@ addEventListener('keydown',e=>{
   if(lane>=0 && state==='play'){ e.preventDefault(); if(e.repeat||held.has(c)) return; held.add(c); press(lane,e.timeStamp); return; }
   if(anyVeilOpen() && state!=='paused'){ if(c==='Escape') closeVeils(); return; }
   if(state==='title'){
-    if(c==='Space'||c==='Enter'){ e.preventDefault(); startGame(); }
-    else if(c==='ArrowLeft'||c==='ArrowRight'){ const ks=Object.keys(DIFFS); let i=ks.indexOf(S.diff)+(c==='ArrowRight'?1:-1); S.diff=ks[(i+3)%3]; saveS(); renderDiffs(); }
-    else if(c==='Digit1'||c==='Digit2'||c==='Digit3'){ S.diff=Object.keys(DIFFS)[+c.slice(-1)-1]; saveS(); renderDiffs(); }
+    if(c==='Space'||c==='Enter'){ e.preventDefault(); openSongs(); }
+  } else if(state==='songs'){
+    if(c==='Escape'){ e.preventDefault(); closeSongs(); }
+    else if(c==='ArrowUp'||c==='ArrowDown'){ e.preventDefault(); curSong=(curSong+(c==='ArrowDown'?1:SONGS.length-1))%SONGS.length; renderSongs(); }
+    else if(c==='Enter'||c==='Space'){ e.preventDefault(); startGame(); }
   } else if(state==='play'){
     if(c==='Escape'||c==='KeyP'){ e.preventDefault(); pauseGame(); }
   } else if(state==='paused'){
@@ -1429,21 +1452,22 @@ function show(id,on){ $('#'+id).classList.toggle('on',on); }
 function openVeil(sel){ $(sel).classList.add('on'); }
 function closeVeils(){ document.querySelectorAll('.veil').forEach(v=>v.classList.remove('on')); }
 function anyVeilOpen(){ return !!document.querySelector('.veil.on'); }
-function renderDiffs(){
-  const box=$('#diffs'); box.innerHTML='';
-  for(const [k,d] of Object.entries(DIFFS)){
-    const b=document.createElement('button'); b.className='diff'+(S.diff===k?' sel':'');
-    const n=DATA.charts[k].reduce((a,x)=>a+(x.l===2?2:1),0);
-    b.innerHTML=`<div class="dn">${d.name}</div><div class="dj">${d.es}</div>
-      <div class="pips">${Array.from({length:10},(_,i)=>`<i class="${i<d.lv?'f':''}"></i>`).join('')}</div>
-      <div class="meta"><b>${n}</b> ガイド</div>`;
-    b.onclick=()=>{ S.diff=k; saveS(); renderDiffs(); if(actx.state!=='running') actx.resume().catch(()=>{}); playBuf(tickBuf,.25,1.2); };
+const fmtT = t => { const m=Math.floor(t/60), r=Math.round(t%60); return m+':'+String(r===60?59:r).padStart(2,'0'); };
+function renderSongs(){
+  const box=$('#songList'); box.innerHTML='';
+  SONGS.forEach((sg,i)=>{
+    const b=document.createElement('button'); b.className='song'+(i===curSong?' sel':'');
+    b.innerHTML=`<span class="sn">${sg.name}</span><span class="sd">${sg.dur?fmtT(sg.dur):'--:--'}</span>`;
+    b.onclick=()=>{ curSong=i; renderSongs(); if(actx.state!=='running') actx.resume().catch(()=>{}); startGame(); };
     box.appendChild(b);
-  }
+  });
 }
+function openSongs(){ if(!musicBuf) return; state='songs'; renderSongs(); show('songs',true); show('title',false); }
+function closeSongs(){ state='title'; show('songs',false); show('title',true); }
 let toastT; function toast(s){const t=$('#toast');t.textContent=s;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),2200)}
 
-$('#playBtn').onclick=()=>startGame();
+$('#playBtn').onclick=()=>openSongs();
+$('#songBack').onclick=closeSongs;
 $('#setBtn').onclick=()=>{ syncSettingsUI(); openVeil('#setVeil'); };
 $('#calBtn').onclick=openCal; $('#calBtn2').onclick=()=>{ closeVeils(); openCal(); };
 $('#pauseBtn').onclick=e=>{ e.stopPropagation(); pauseGame(); };
@@ -1497,8 +1521,8 @@ function calDone(){
 $('#calApply').onclick=()=>{ S.off=cal.result; saveS(); closeCal(); toast(`Sync offset set to ${S.off>=0?'+':''}${S.off} ms`); };
 
 /* ================= ARRANQUE ================= */
-layout(); fiesta.resize(); renderDiffs(); crowd.reset(); requestAnimationFrame(frame);
-const img=new Image(); img.onload=()=>{ $('#photo').style.backgroundImage=`url(${PHOTO})`; requestAnimationFrame(()=>$('#title').classList.add('ready')); }; img.src=PHOTO;
+layout(); fiesta.resize(); crowd.reset(); requestAnimationFrame(frame);
+const img=new Image(); img.onload=()=>{ document.querySelectorAll('.photo').forEach(p=>p.style.backgroundImage=`url(${PHOTO})`); requestAnimationFrame(()=>$('#title').classList.add('ready')); }; img.src=PHOTO;
 loadAudio().then(()=>{ $('#playBtn').disabled=false; $('#playLabel').textContent='PLAY'; if(AUTO&&qs.has('go')) startGame(); })
   .catch(err=>{ console.error(err); $('#playLabel').textContent='ERROR'; toast('音楽を読み込めませんでした'); });
 window.__nsl={get state(){return state},get taps(){return taps},get crowd(){return crowd.list.length},clock,startGame,finish,S,get notes(){return notes}};
