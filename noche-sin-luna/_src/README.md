@@ -7,7 +7,7 @@
 - `assets/` … 手拍子2つ（Santiago Sánchez Cifuentes「Palmas redoble」CC0 1.0 から切り出し）とタイトル画像
 - `tools/` … 譜面を作る道具（`analyze.py` → `grid.py` → `chart.py`。librosa が必要。左右の振り分けは `bands.py`、numpy/scipy）
 - ビルド：`python3 build.py`（2曲の音源は既存の ../index.html から取り出す）または `python3 build.py 曲1.mp3 曲2.mp3`（`-` と書いた曲は既存から取り出す）
-- `chart2.json` … 2曲目（Llama pura de amor）の譜面。`songs/llama/` に元資料（拍・小節・ノーツのCSVと仕様書）、`tools/llama_chart.py` で作る
+- `chart2.json` … 2曲目（Llama pura de amor）の譜面（ゴルペ2音のみ。手拍子の時刻は `palmas` に残してあるが未使用）。`songs/llama/` に元資料（拍・小節・ノーツのCSVと仕様書）、`tools/llama_chart.py` で作る
 
 ## 曲の足しかた（曲選択画面あり・難易度選択なし）
 - 難易度は NORMAL 固定（`LEVEL`）。`chart.json` の easy / hard は使っていない。
