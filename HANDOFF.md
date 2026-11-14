@@ -15,6 +15,7 @@
 - **WHERE WHICH**（旧名：ことばのおへや）：ひらがなの言葉を教えると、イリスが覚えて話す育成アプリ（スマホ・PC両対応）。21章。
 - **PC98 NOVEL**：PC-98ふうのノベルゲームエンジンの土台（サンプル「零時の記録」つき。スマホ・PC両対応。test ver.）。27章。
 - **やわらか**（YAWARAKA PUNIRU）：粘土をこねて顔を付け、部位ごとの柔らかさを決めて振り回して揺らす（スマホむけ・PC不可。実験室に置く。test ver.）。28章。
+- **暗算転生 〜Rebuild〜**：学校の廊下を進み、暗算で悪魔と戦うレトロRPG（実験室。スマホ・PC両対応。test ver.）。28章。
 - **Noche sin Luna**：フラメンコ曲を叩いて鳴らす、メキシコ風の「気持ちいい」ゲーム（判定・スコアなし、観客が増える。スマホ・PC両対応。test ver.）。25章。
 
 ---
@@ -37,6 +38,7 @@
 | 　WHERE WHICH | https://dizz4izabella4-droid.github.io/20261111/where-which/ | 旧名：ことばのおへや（フォルダ kotoba-oheya） |
 | 　Noche sin Luna | https://dizz4izabella4-droid.github.io/20261111/noche-sin-luna/ | |
 | 　PC98 NOVEL | https://dizz4izabella4-droid.github.io/20261111/pc98-novel/ | |
+| 　暗算転生 | https://dizz4izabella4-droid.github.io/20261111/anzan-tensei/ | 実験室 |
 | 　やわらか | https://dizz4izabella4-droid.github.io/20261111/yawaraka/ | 実験室に掲載 |
 | claude.ai アーティファクト（PC版） | https://claude.ai/artifact/NctPezS87FshtyQGQ1YaDf | 開発中の確認用。曲2つも同梱して公開済み |
 | claude.ai アーティファクト（コウモリ） | https://claude.ai/artifact/RtGte1cpPBFfU2wHBe8bEi | 開発の正本はこちら。リポジトリの tori-to-kemono/index.html は、その写し |
@@ -45,6 +47,7 @@
 | claude.ai アーティファクト（Noche sin Luna） | https://claude.ai/artifact/19pEEfxhWj1sVAtjrNZD3M | テスト公開用。リポジトリの noche-sin-luna/index.html と同じ内容 |
 | claude.ai アーティファクト（PC98 NOVEL） | https://claude.ai/artifact/SNF4KH2uPebe6rfbagSH26 | 確認用。リポジトリの pc98-novel/index.html と同じ内容。アーティファクト上では、セーブの EXPORT（ファイルの書き出し）だけ働かない（閲覧画面がダウンロードを許可しないため） |
 | claude.ai アーティファクト（やわらか） | https://claude.ai/artifact/Kdh4VQFMh9ZJx5sVnWiuay | 確認用。リポジトリの yawaraka/index.html と同じ内容 |
+| claude.ai アーティファクト（暗算転生） | https://claude.ai/artifact/4udv85XyfcgbJL511ZPRgR | 確認用。リポジトリの anzan-tensei/index.html と同じ内容 |
 | claude.ai アーティファクト（旧スマホ版） | https://claude.ai/artifact/TwbhHpCo6BMetgr6v178bd | 試作（フリック入力と偉人の名言）。新しいスマホ版に置き換えたので使わない |
 
 ### リポジトリの構成
@@ -965,3 +968,12 @@ PC-98ふうのノベルゲームエンジンの**土台**。ゲームの中身�
 - 変えた点：文字のフォントを標準の日本語ゴシックに。全作品共通の基本設計（`tools/apply_game_base.py` の `TARGETS` に追加）を埋め込み、右上の ⛶ ボタンと「質感」ボタンが重ならないよう、⛶ があるときだけ上の帯の右を空けた。
 - 確認：Playwright（Chromium、390×780 のタッチ端末）で、成形 → パーツ配置 → 柔らかさ → 揺らす（背景）まで、エラーなし。実機は未確認。
 - この作品からトップへ戻る手段は付けない（他の作品と同じ）。
+
+---
+
+## 28. 暗算転生 〜Rebuild〜（anzan-tensei）（2026-11-14）
+
+- 渡されたHTML（1ファイル、外部読み込みなし）をそのまま置き、実験室（`lab/index.html` の `LAB` の先頭）に載せた。一覧は「ANZAN TENSEI／暗算で戦う（未完）」、Ver.0.1、アイコンは電卓（`calc`）。メモの「あんざんてんせい」にあたる作品。
+- 内容：旧校舎1Fの1×10マスの廊下を進む（W/S・↑↓・ボタン）。28%で敵と遭遇 → 仲魔を召喚（戦闘には参加しない飾り。身代わりで被弾する）→ 暗算の答えをテンキーで入力。桁数がそろった瞬間に自動判定。速いほど2〜3回攻撃。飛行の敵は銃、地上は剣。レベルが上がると項数が増える（最大6項）。廊下の突き当たりで全回復して入口へ戻る。月齢は飾り。
+- 元のコードから変えた点：`audioSession.type='ambient'`（マナーモードで鳴らさない）、全作品共通の基本設計（`apply_game_base.py` の `TARGETS` に登録）、ヘッダーの右に40pxの余白（右上の ⛶ ボタンと重ならないように）。
+- 確認：Chromium（1280×800、390×780）でタイトル → 探索 → 遭遇 → 召喚 → 戦闘まで、エラーなし。実機は未確認。

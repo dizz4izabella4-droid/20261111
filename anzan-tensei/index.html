@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<script>try{if(navigator.audioSession)navigator.audioSession.type='ambient';}catch(e){}</script>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1,user-scalable=no">
+<title>暗算転生 〜Rebuild〜</title>
+<style>
+  :root {
+    --bg: #050805;
+    --main: #33ff66;
+    --dim: #115522;
+    --glow: rgba(51, 255, 102, 0.35);
+    --alert: #ff4444;
+    --font: 'Courier New', Consolas, Monaco, monospace;
+  }
+  body.theme-amber {
+    --bg: #0a0602;
+    --main: #ffaa22;
+    --dim: #663d08;
+    --glow: rgba(255, 170, 34, 0.35);
+    --alert: #ff4422;
+  }
+  * {
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg);
+    color: var(--main);
+    font-family: var(--font);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+  /* CRTスキャンライン演出 */
+  body::after {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.28) 50%);
+    background-size: 100% 4px;
+    pointer-events: none;
+    z-index: 999;
+  }
+  #app {
+    width: 100%;
+    max-width: 900px;
+    height: 100vh;
+    max-height: 760px;
+    border: 2px solid var(--main);
+    box-shadow: 0 0 18px var(--glow), inset 0 0 12px var(--glow);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    background: var(--bg);
+  }
+  .shake {
+    animation: shakeAnim 0.22s ease-in-out;
+  }
+  @keyframes shakeAnim {
+    0%, 100% { transform: translate(0, 0); }
+    20% { transform: translate(-6px, 4px); }
+    40% { transform: translate(6px, -4px); }
+    60% { transform: translate(-4px, -2px); }
+    80% { transform: translate(4px, 3px); }
+  }
+
+  /* ヘッダー */
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--main);
+    font-size: 0.9rem;
+    font-weight: bold;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-right: 40px; /* 右上の全画面ボタン(⛶)と重ならないように */
+  }
+  .header-controls button {
+    background: transparent;
+    color: var(--main);
+    border: 1px solid var(--main);
+    padding: 2px 8px;
+    font-family: var(--font);
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+  .header-controls button:hover, .header-controls button:active {
+    background: var(--main);
+    color: var(--bg);
+  }
+  .moon-full {
+    text-shadow: 0 0 8px var(--main);
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+
+  /* メインエリア */
+  main {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  }
+  #viewport-wrap {
+    flex: 1.2;
+    border-right: 1px solid var(--main);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  canvas#view {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  #enemy-hud {
+    position: absolute;
+    top: 8px; left: 8px; right: 8px;
+    display: none;
+    justify-content: space-between;
+    background: rgba(0, 0, 0, 0.75);
+    border: 1px solid var(--main);
+    padding: 4px 8px;
+    font-size: 0.85rem;
+  }
+
+  /* 右側パネル（マップ＆操作・テンキー） */
+  #side-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    gap: 8px;
+    min-width: 270px;
+  }
+  .box {
+    border: 1px solid var(--main);
+    padding: 6px;
+  }
+  .box-title {
+    font-size: 0.75rem;
+    margin-bottom: 4px;
+    opacity: 0.85;
+  }
+
+  /* ミニマップ */
+  #minimap {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 3px;
+  }
+  .map-cell {
+    aspect-ratio: 1;
+    border: 1px solid var(--dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: bold;
+  }
+  .map-cell.visited {
+    border-color: var(--main);
+    background: rgba(255, 255, 255, 0.05);
+  }
+  .map-cell.current {
+    background: var(--main);
+    color: var(--bg);
+  }
+
+  /* 探索コントローラ */
+  #explore-pad {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+  }
+  .move-btn {
+    width: 80%;
+    padding: 14px;
+    background: transparent;
+    color: var(--main);
+    border: 1px solid var(--main);
+    font-family: var(--font);
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .move-btn:active, .move-btn:hover {
+    background: var(--main);
+    color: var(--bg);
+  }
+
+  /* 戦闘計算パネル */
+  #battle-pad {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  #problem-display {
+    text-align: center;
+    font-size: 1.45rem;
+    font-weight: bold;
+    padding: 6px 0;
+    letter-spacing: 2px;
+    border-bottom: 1px dashed var(--dim);
+  }
+  #input-val {
+    display: inline-block;
+    min-width: 44px;
+    border-bottom: 2px solid var(--main);
+    text-align: center;
+  }
+  #timer-bar-bg {
+    width: 100%;
+    height: 10px;
+    border: 1px solid var(--main);
+    background: var(--bg);
+  }
+  #timer-bar {
+    height: 100%;
+    width: 100%;
+    background: var(--main);
+    transition: width 0.05s linear;
+  }
+  #numpad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    flex: 1;
+  }
+  .num-btn {
+    background: transparent;
+    color: var(--main);
+    border: 1px solid var(--main);
+    font-family: var(--font);
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    min-height: 38px;
+  }
+  .num-btn:active, .num-btn:hover {
+    background: var(--main);
+    color: var(--bg);
+  }
+
+  /* パーティステータス */
+  #party-panel {
+    border-top: 1px solid var(--main);
+    padding: 6px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.82rem;
+  }
+  .party-row {
+    display: grid;
+    grid-template-columns: 64px repeat(3, 1fr);
+    gap: 6px;
+    align-items: center;
+  }
+  .row-label {
+    font-weight: bold;
+    opacity: 0.8;
+  }
+  .member-card {
+    border: 1px solid var(--dim);
+    padding: 3px 6px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .member-card.active {
+    border-color: var(--main);
+  }
+  .member-card.dead {
+    opacity: 0.4;
+    border-style: dashed;
+  }
+
+  /* メッセージログ */
+  #log-box {
+    border-top: 1px solid var(--main);
+    padding: 8px 12px;
+    height: 64px;
+    font-size: 0.88rem;
+    line-height: 1.35;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.4);
+  }
+
+  /* オーバーレイ（タイトル・召喚・ゲームオーバー） */
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: var(--bg);
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    text-align: center;
+  }
+  .title-logo {
+    font-size: 2rem;
+    font-weight: bold;
+    letter-spacing: 3px;
+    margin-bottom: 6px;
+    text-shadow: 0 0 12px var(--glow);
+  }
+  .title-sub {
+    font-size: 0.95rem;
+    margin-bottom: 24px;
+    opacity: 0.85;
+  }
+  #boot-log {
+    width: 100%;
+    max-width: 480px;
+    text-align: left;
+    font-size: 0.82rem;
+    min-height: 110px;
+    margin-bottom: 16px;
+    line-height: 1.4;
+  }
+  .menu-btn {
+    background: transparent;
+    color: var(--main);
+    border: 1px solid var(--main);
+    padding: 10px 24px;
+    font-family: var(--font);
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    margin: 6px;
+  }
+  .menu-btn:hover, .menu-btn:active {
+    background: var(--main);
+    color: var(--bg);
+  }
+
+  /* 召喚モーダル */
+  #summon-modal {
+    display: none;
+    background: rgba(5, 8, 5, 0.94);
+  }
+  body.theme-amber #summon-modal {
+    background: rgba(10, 6, 2, 0.94);
+  }
+  .summon-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    width: 100%;
+    max-width: 620px;
+    margin: 12px 0;
+    text-align: left;
+  }
+  .slot-btn, .demon-btn {
+    width: 100%;
+    background: transparent;
+    color: var(--main);
+    border: 1px solid var(--main);
+    padding: 6px 8px;
+    margin-bottom: 5px;
+    font-family: var(--font);
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    justify-content: space-between;
+  }
+  .slot-btn.selected {
+    background: var(--main);
+    color: var(--bg);
+    font-weight: bold;
+  }
+  .demon-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 650px) {
+    main { flex-direction: column; }
+    #viewport-wrap { flex: 1; border-right: none; border-bottom: 1px solid var(--main); min-height: 180px; }
+    #side-panel { flex: 1.2; min-width: 0; }
+    .party-row { grid-template-columns: 48px repeat(3, 1fr); font-size: 0.72rem; }
+  }
+</style>
+<!--IZ-GAME-BASE:START-->
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black">
+<script>
+/* iz-game-base v1 — 全ゲーム共通の基本設計
+ *  1. iOS の「ダブルタップで拡大」「ピンチ拡大」を無効にする
+ *  2. 全画面表示の切り替え（Fullscreen API。iPhone は非対応のため「ホーム画面に追加」を案内）
+ *  3. 画面の向き（自動 / 縦 / 横）の選択（Androidは全画面時に固定、非対応端末は回転の案内を出す）
+ * 各作品の <head> へ tools/apply_game_base.py が埋め込む（作品は1ファイル完結のため、外部読み込みはしない）。
+ * 位置を変えたいときは、この前に window.IZ_BASE={pos:'tr'|'tl'|'br'|'bl'} を書く。
+ */
+(function () {
+  'use strict';
+  if (window.__izGameBase) return;
+  window.__izGameBase = 1;
+  var D = document, W = window, DE = D.documentElement;
+  var KEY = 'izGameBase.orient';
+  var cfg = W.IZ_BASE || {};
+  /* 表示文言。作品側で window.IZ_BASE={lang:'en'} を書くと英語になる（既定は日本語） */
+  var T = cfg.lang === 'en'
+    ? { set: 'Display settings', scr: 'SCREEN', fs: 'Go full screen', fsOff: 'Exit full screen', ori: 'ORIENTATION', auto: 'Auto', port: 'Portrait', land: 'Landscape', close: 'Close', nAuto: 'Follows your device orientation.', nFix: 'Locks the orientation in full screen. If it cannot be locked, please rotate your device.', rot: function (m) { return '\u21bb Please turn your device to ' + (m === 'land' ? 'landscape' : 'portrait'); } }
+    : { set: '表示設定', scr: '画面', fs: '全画面にする', fsOff: '全画面をやめる', ori: '向き', auto: '自動', port: '縦', land: '横', close: '閉じる', nAuto: '端末の向きに合わせます。', nFix: '全画面のときに向きを固定します。固定できない場合は、端末を回してください。', rot: function (m) { return '\u21bb 端末を' + (m === 'land' ? '横' : '縦') + '向きにしてください'; } };
+
+  /* ---------- 1. 拡大の無効化 ---------- */
+  function fixViewport() {
+    var m = D.querySelector('meta[name="viewport"]');
+    if (!m) {
+      m = D.createElement('meta');
+      m.name = 'viewport';
+      (D.head || DE).appendChild(m);
+      m.content = 'width=device-width,initial-scale=1,viewport-fit=cover';
+    }
+    var c = m.getAttribute('content') || '';
+    c = c.replace(/(^|,)\s*(maximum-scale|minimum-scale|user-scalable)\s*=\s*[^,]*/gi, '').replace(/^,/, '');
+    m.setAttribute('content', c + ',maximum-scale=1,user-scalable=no');
+  }
+  fixViewport();
+
+  var st = D.createElement('style');
+  st.textContent = 'html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}';
+  (D.head || DE).appendChild(st);
+
+  // iOS Safari はピンチを gesture イベントで受ける
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (t) {
+    D.addEventListener(t, function (e) { e.preventDefault(); }, { passive: false });
+  });
+  // 2本指の拡大（scale が 1 から動いたとき）だけを止める。マルチタッチ操作そのものは妨げない
+  D.addEventListener('touchmove', function (e) {
+    if (e.touches && e.touches.length > 1 && e.scale && e.scale !== 1) e.preventDefault();
+  }, { passive: false });
+  // ダブルタップ拡大の保険。ボタン・入力欄などは click を壊さないよう除外し、CSS の touch-action に任せる
+  var lastEnd = 0;
+  var SKIP = 'input,textarea,select,button,a,label,summary,video,audio,[contenteditable],[role="button"],[data-iz-base-ui]';
+  D.addEventListener('touchend', function (e) {
+    var now = Date.now();
+    var t = e.target;
+    var skip = t && t.closest && t.closest(SKIP);
+    if (!skip && now - lastEnd < 350 && e.cancelable) e.preventDefault();
+    lastEnd = now;
+  }, { passive: false });
+
+  /* ---------- 2・3. 全画面と向き ---------- */
+  var fsEl = DE;
+  var fsReq = fsEl.requestFullscreen || fsEl.webkitRequestFullscreen || fsEl.msRequestFullscreen;
+  var fsOk = !!fsReq && (D.fullscreenEnabled !== false) && (D.webkitFullscreenEnabled !== false);
+  function isFs() { return !!(D.fullscreenElement || D.webkitFullscreenElement); }
+  function standalone() {
+    return !!(navigator.standalone || (W.matchMedia && W.matchMedia('(display-mode: standalone)').matches));
+  }
+  function enterFs() {
+    try {
+      var p = fsReq.call(fsEl, { navigationUI: 'hide' });
+      if (p && p.catch) p.catch(function () {});
+      return p;
+    } catch (e) { return null; }
+  }
+  function exitFs() {
+    var f = D.exitFullscreen || D.webkitExitFullscreen || D.msExitFullscreen;
+    try { var p = f && f.call(D); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+  }
+  function lockApi() { return W.screen && screen.orientation && screen.orientation.lock; }
+  // 変更できない機能は表示しない（iPhone は両方とも不可なので、ボタン自体を出さない）
+  var orOk = !!lockApi() && (navigator.maxTouchPoints > 0);
+  var uiOk = fsOk || orOk;
+  function applyOrient(mode, wantFs) {
+    // 戻り値は使わず、結果は banner() が画面の向きで判定する
+    if (mode === 'auto') {
+      try { if (W.screen && screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (e) {}
+      return;
+    }
+    var tgt = mode === 'land' ? 'landscape' : 'portrait';
+    function lock() {
+      if (!lockApi()) return;
+      try { var p = screen.orientation.lock(tgt); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+    }
+    if (isFs() || standalone()) lock();
+    else if (wantFs && fsOk) {
+      var p = enterFs();
+      if (p && p.then) p.then(lock, function () {}); else lock();
+    }
+  }
+  var mode = 'auto';
+  try { mode = localStorage.getItem(KEY) || 'auto'; } catch (e) {}
+  if ((mode !== 'land' && mode !== 'port') || !orOk) mode = 'auto';
+
+  /* ---------- UI ---------- */
+  var ui, btn, panel, banner, bT;
+  var pos = cfg.pos || 'tr';
+  function build() {
+    if (ui || !D.body || !uiOk) return;
+    var css = D.createElement('style');
+    css.textContent =
+      '#izb{position:fixed;z-index:2147483646;font:12px/1.4 "Hiragino Sans","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;color:#fff;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}' +
+      '#izb *{box-sizing:border-box}' +
+      '#izb.tr{top:calc(6px + env(safe-area-inset-top,0px));right:calc(6px + env(safe-area-inset-right,0px))}' +
+      '#izb.tl{top:calc(6px + env(safe-area-inset-top,0px));left:calc(6px + env(safe-area-inset-left,0px))}' +
+      '#izb.br{bottom:calc(6px + env(safe-area-inset-bottom,0px));right:calc(6px + env(safe-area-inset-right,0px))}' +
+      '#izb.bl{bottom:calc(6px + env(safe-area-inset-bottom,0px));left:calc(6px + env(safe-area-inset-left,0px))}' +
+      '#izb button{font:inherit;color:inherit;border:0;margin:0;cursor:pointer;-webkit-appearance:none;appearance:none}' +
+      '#izb .iz-b{width:30px;height:30px;border-radius:8px;background:rgba(20,20,24,.45);border:1px solid rgba(255,255,255,.25);font-size:16px;line-height:28px;text-align:center;padding:0;opacity:.45;transition:opacity .2s}' +
+      '#izb .iz-b:active,#izb.open .iz-b{opacity:1}' +
+      '#izb .iz-p{display:none;position:absolute;width:210px;padding:10px;border-radius:10px;background:rgba(18,18,22,.94);border:1px solid rgba(255,255,255,.22);box-shadow:0 4px 18px rgba(0,0,0,.5)}' +
+      '#izb.open .iz-p{display:block}' +
+      '#izb.tr .iz-p,#izb.tl .iz-p{top:36px}#izb.br .iz-p,#izb.bl .iz-p{bottom:36px}' +
+      '#izb.tr .iz-p,#izb.br .iz-p{right:0}#izb.tl .iz-p,#izb.bl .iz-p{left:0}' +
+      '#izb .iz-h{font-size:11px;color:#aab;margin:0 0 5px}' +
+      '#izb .iz-r{display:flex;gap:4px;margin-bottom:9px}' +
+      '#izb .iz-r button{flex:1;padding:8px 0;border-radius:7px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);font-size:13px}' +
+      '#izb .iz-r button.on{background:#e8c13a;color:#111;border-color:#e8c13a;font-weight:700}' +
+      '#izb .iz-r button[disabled]{opacity:.4}' +
+      '#izb .iz-n{font-size:10.5px;color:#9a9aa8;margin:-3px 0 6px}' +
+      '#izb .iz-x{display:block;width:100%;padding:6px 0;border-radius:7px;background:transparent;border:1px solid rgba(255,255,255,.18);font-size:12px;color:#ccd}' +
+      '#izbn{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:2147483645;padding:7px 14px;border-radius:18px;background:rgba(18,18,22,.88);border:1px solid rgba(255,255,255,.25);color:#fff;font:13px/1.3 "Hiragino Sans","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;pointer-events:none;display:none;white-space:nowrap}';
+    (D.head || DE).appendChild(css);
+
+    ui = D.createElement('div');
+    ui.id = 'izb';
+    ui.className = pos;
+    ui.setAttribute('data-iz-base-ui', '');
+    ui.innerHTML =
+      '<button type="button" class="iz-b" tabindex="-1" aria-label="' + T.set + '">⛶</button>' +
+      '<div class="iz-p">' +
+      (fsOk ? '<div class="iz-h">' + T.scr + '</div><div class="iz-r"><button type="button" tabindex="-1" data-fs="1">' + T.fs + '</button></div>' : '') +
+      (orOk ? '<div class="iz-h">' + T.ori + '</div><div class="iz-r" id="izor"><button type="button" tabindex="-1" data-o="auto">' + T.auto + '</button><button type="button" tabindex="-1" data-o="port">' + T.port + '</button><button type="button" tabindex="-1" data-o="land">' + T.land + '</button></div><div class="iz-n" id="izon"></div>' : '') +
+      '<button type="button" class="iz-x" tabindex="-1" data-close="1">' + T.close + '</button>' +
+      '</div>';
+    D.body.appendChild(ui);
+    btn = ui.querySelector('.iz-b');
+    panel = ui.querySelector('.iz-p');
+
+    banner = D.createElement('div');
+    banner.id = 'izbn';
+    D.body.appendChild(banner);
+
+    // UI 上の操作はゲーム側へ伝えない
+    ['touchstart', 'touchend', 'pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'dblclick', 'keydown', 'keyup'].forEach(function (t) {
+      ui.addEventListener(t, function (e) { e.stopPropagation(); });
+    });
+    ui.addEventListener('click', function (e) {
+      var t = e.target.closest('button');
+      if (!t) return;
+      if (t === btn) { ui.classList.toggle('open'); refresh(); }
+      else if (t.getAttribute('data-close')) ui.classList.remove('open');
+      else if (t.getAttribute('data-fs')) { isFs() ? exitFs() : enterFs(); setTimeout(refresh, 250); }
+      else if (t.getAttribute('data-o')) setMode(t.getAttribute('data-o'), true);
+      if (t.blur) t.blur();
+    });
+    refresh();
+  }
+  function setMode(m, fromUser) {
+    mode = m;
+    try { localStorage.setItem(KEY, m); } catch (e) {}
+    applyOrient(m, fromUser);
+    refresh();
+    setTimeout(banner_, 400);
+  }
+  function refresh() {
+    if (!ui) return;
+    var fb = ui.querySelector('[data-fs]');
+    if (fb) fb.textContent = isFs() ? T.fsOff : T.fs;
+    var bs = ui.querySelectorAll('[data-o]');
+    for (var i = 0; i < bs.length; i++) bs[i].classList.toggle('on', bs[i].getAttribute('data-o') === mode);
+    var on = ui.querySelector('#izon');
+    if (on) on.textContent = mode === 'auto' ? T.nAuto : T.nFix;
+  }
+  function banner_() {
+    if (!banner) return;
+    var land = W.innerWidth > W.innerHeight;
+    var bad = (mode === 'land' && !land) || (mode === 'port' && land);
+    if (bad) {
+      banner.textContent = T.rot(mode);
+      banner.style.display = 'block';
+      clearTimeout(bT);
+      bT = setTimeout(function () { banner.style.display = 'none'; }, 6000);
+    } else banner.style.display = 'none';
+  }
+  function onChange() { refresh(); setTimeout(banner_, 300); }
+  D.addEventListener('fullscreenchange', onChange);
+  D.addEventListener('webkitfullscreenchange', onChange);
+  W.addEventListener('orientationchange', onChange);
+  W.addEventListener('resize', function () { setTimeout(banner_, 300); });
+
+  function init() {
+    build();
+    if (mode !== 'auto') { applyOrient(mode, false); setTimeout(banner_, 600); }
+  }
+  if (D.body) init(); else D.addEventListener('DOMContentLoaded', init);
+
+  W.IZBase = { fullscreen: function (on) { on === false ? exitFs() : enterFs(); }, orientation: setMode, get mode() { return mode; } };
+})();
+</script>
+<!--IZ-GAME-BASE:END-->
+</head>
+<body>
+
+<div id="app">
+  <header>
+    <div>[旧校舎 1F 廊下]</div>
+    <div id="moon-display">MOON: NEW MOON (0/8)</div>
+    <div id="status-display">LV: 1 | EXP: 0/15</div>
+    <div class="header-controls">
+      <button id="btn-theme">COLOR: GRN</button>
+      <button id="btn-sound">SOUND: ON</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="viewport-wrap">
+      <div id="enemy-hud">
+        <span id="enemy-name">ENEMY</span>
+        <span id="enemy-type">[地上]</span>
+        <span id="enemy-hp">HP: 10/10</span>
+      </div>
+      <canvas id="view" width="480" height="320"></canvas>
+    </div>
+
+    <div id="side-panel">
+      <div class="box">
+        <div class="box-title">AUTO MAPPING (1x10 CORRIDOR)</div>
+        <div id="minimap"></div>
+      </div>
+
+      <!-- 探索モード用UI -->
+      <div id="explore-pad" class="box">
+        <div style="font-size:0.8rem; opacity:0.8;">[W / ↑] 前進 [S / ↓] 後退</div>
+        <button class="move-btn" id="btn-forward">▲ 前へ進む (FORWARD)</button>
+        <button class="move-btn" id="btn-back">▼ 後ろへ戻る (BACK)</button>
+      </div>
+
+      <!-- 戦闘モード用UI -->
+      <div id="battle-pad" class="box">
+        <div id="problem-display"><span id="eq-text">3 + 4</span> = <span id="input-val">?</span></div>
+        <div id="timer-bar-bg"><div id="timer-bar"></div></div>
+        <div id="numpad">
+          <button class="num-btn" data-key="7">7</button>
+          <button class="num-btn" data-key="8">8</button>
+          <button class="num-btn" data-key="9">9</button>
+          <button class="num-btn" data-key="4">4</button>
+          <button class="num-btn" data-key="5">5</button>
+          <button class="num-btn" data-key="6">6</button>
+          <button class="num-btn" data-key="1">1</button>
+          <button class="num-btn" data-key="2">2</button>
+          <button class="num-btn" data-key="3">3</button>
+          <button class="num-btn" data-key="C">C</button>
+          <button class="num-btn" data-key="0">0</button>
+          <button class="num-btn" data-key="BS">←</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="party-panel">
+    <div class="party-row" id="front-row">
+      <div class="row-label">[前衛]</div>
+      <div class="member-card" id="slot-0"></div>
+      <div class="member-card" id="slot-1"></div>
+      <div class="member-card" id="slot-2"></div>
+    </div>
+    <div class="party-row" id="back-row">
+      <div class="row-label">[後衛]</div>
+      <div class="member-card" id="slot-3"></div>
+      <div class="member-card" id="slot-4"></div>
+      <div style="font-size:0.72rem; opacity:0.6; text-align:right;">※陣形効果なし</div>
+    </div>
+  </div>
+
+  <div id="log-box"></div>
+
+  <!-- タイトル画面 -->
+  <div id="title-screen" class="overlay">
+    <div id="boot-log"></div>
+    <div id="title-main" style="display:none;">
+      <div class="title-logo">暗算転生 〜Rebuild〜</div>
+      <div class="title-sub">SCHOOL DUNGEON MENTAL ARITHMETIC RPG</div>
+      <button class="menu-btn" id="btn-start">[ SYSTEM START ]</button>
+    </div>
+  </div>
+
+  <!-- 召喚モーダル -->
+  <div id="summon-modal" class="overlay">
+    <div style="font-size:1.2rem; font-weight:bold; margin-bottom:4px;">悪魔召喚プログラム (SUMMON)</div>
+    <div style="font-size:0.8rem; opacity:0.85;">配置スロットを選択し、召喚する仲魔を指定せよ（戦闘は何もしない）</div>
+    <div class="summon-grid">
+      <div>
+        <div class="box-title">パーティ隊列（主人公は固定）</div>
+        <div id="slot-list"></div>
+      </div>
+      <div>
+        <div class="box-title">ストック悪魔（クリックで配置/解除）</div>
+        <div id="demon-list"></div>
+      </div>
+    </div>
+    <div>
+      <button class="menu-btn" id="btn-auto-summon">[ 前回と同じ編成 ]</button>
+      <button class="menu-btn" id="btn-battle-go">[ 戦闘開始 (ENGAGE) ]</button>
+    </div>
+  </div>
+
+  <!-- ゲームオーバー画面 -->
+  <div id="gameover-screen" class="overlay" style="display:none;">
+    <div class="title-logo" style="color:var(--alert);">YOU ARE DEAD</div>
+    <div class="title-sub" id="gameover-stats">計算の遅れが死を招いた…</div>
+    <button class="menu-btn" id="btn-retry">[ REBUILD (最初から) ]</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  // === 音源エンジン (Web Audio API) ===
+  let audioCtx = null;
+  let soundEnabled = true;
+
+  function initAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function playTone(freq, type, duration, vol = 0.12, slideTo = null) {
+    if (!soundEnabled) return;
+    initAudio();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    if (slideTo) {
+      osc.frequency.exponentialRampToValueAtTime(slideTo, audioCtx.currentTime + duration);
+    }
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  }
+
+  function playNoise(duration, vol = 0.15) {
+    if (!soundEnabled) return;
+    initAudio();
+    const bufferSize = audioCtx.sampleRate * duration;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+    noise.connect(gain);
+    gain.connect(audioCtx.destination);
+    noise.start();
+  }
+
+  const SFX = {
+    step: () => playTone(110, 'triangle', 0.08, 0.1, 60),
+    beep: () => playTone(880, 'square', 0.05, 0.06),
+    encounter: () => {
+      playTone(320, 'sawtooth', 0.12, 0.15, 140);
+      setTimeout(() => playTone(240, 'sawtooth', 0.25, 0.15, 90), 110);
+    },
+    sword: (combo = 1) => {
+      playNoise(0.12, 0.18);
+      playTone(600 + combo * 220, 'sawtooth', 0.14, 0.12, 180);
+    },
+    gun: (combo = 1) => {
+      playNoise(0.16, 0.24);
+      playTone(260 + combo * 120, 'square', 0.1, 0.14, 55);
+    },
+    hit: () => {
+      playNoise(0.22, 0.25);
+      playTone(130, 'sawtooth', 0.25, 0.18, 45);
+    },
+    levelup: () => {
+      [440, 554, 659, 880].forEach((f, i) => {
+        setTimeout(() => playTone(f, 'square', 0.15, 0.1), i * 90);
+      });
+    }
+  };
+
+  // === マスターデータ ===
+  const DEMON_POOL = [
+    { id: 'pixie',  name: 'ピクシー',   maxHp: 18, comments: ['「あたしは見てるだけだからね！」', '「計算早っ！ちょっと見直したかも」', '「前衛でも後衛でもやる気は同じだよ」'] },
+    { id: 'goblin', name: 'ゴブリン',   maxHp: 28, comments: ['「グギャ！ 早く計算しろ！」', '「オレは壁になるだけだ！」', '「満月？ 知らんなそんなもん」'] },
+    { id: 'crow',   name: 'カラス天狗', maxHp: 22, comments: ['「ほう、なかなか筋が良いな」', '「飛ぶ敵には銃を使えよ」', '「我は高みの見物と洒落込もう」'] },
+    { id: 'angel',  name: 'エンジェル', maxHp: 20, comments: ['「主よ、彼に暗算の加護を…」', '「私は祈る以外何もできません」', '「お守り代わりにお使いください」'] },
+    { id: 'imp',    name: 'インプ',     maxHp: 16, comments: ['「ケケケ、間違えたら食われるぞ」', '「召喚されたけどヒマだな〜」', '「数字ばっかりで頭が痛くなるぜ」'] }
+  ];
+
+  const ENEMY_POOL = [
+    { name: '腐敗スライム',   baseHp: 14, baseAtk: 4, exp: 6,  isFlying: false, shape: 'slime' },
+    { name: '音響コウモリ',   baseHp: 12, baseAtk: 4, exp: 6,  isFlying: true,  shape: 'bat' },
+    { name: '旧校舎の亡霊',   baseHp: 18, baseAtk: 6, exp: 9,  isFlying: true,  shape: 'ghost' },
+    { name: '徘徊する猟犬',   baseHp: 22, baseAtk: 7, exp: 10, isFlying: false, shape: 'hound' },
+    { name: '狂気の計算機霊', baseHp: 26, baseAtk: 8, exp: 14, isFlying: true,  shape: 'core' }
+  ];
+
+  const MOON_NAMES = [
+    'NEW MOON (0/8)', 'CRESCENT (1/8)', 'QUARTER (2/8)', 'GIBBOUS (3/8)',
+    'FULL MOON (4/8)', 'GIBBOUS (5/8)', 'QUARTER (6/8)', 'CRESCENT (7/8)'
+  ];
+
+  // === ゲーム状態 ===
+  let state = {
+    mode: 'TITLE', // TITLE, EXPLORE, SUMMON, BATTLE, GAMEOVER
+    pos: 0,
+    visited: Array(10).fill(false),
+    steps: 0,
+    moonPhase: 0,
+    hero: { name: '主人公', lv: 1, hp: 35, maxHp: 35, atk: 6, exp: 0, nextExp: 15 },
+    // 5スロット: 0,1,2=前衛 / 3,4=後衛。初期は0に主人公のみ
+    party: [null, null, null, null, null],
+    lastFormation: [null, null, null, null, null],
+    selectedSlot: 1,
+    enemy: null,
+    problem: { text: '', answer: 0, input: '', maxTime: 5000, remainTime: 5000 },
+    walkAnim: 0,
+    effects: [] // { type: 'sword'|'gun', progress: 0..1 }
+  };
+
+  // === DOM参照 ===
+  const canvas = document.getElementById('view');
+  const ctx = canvas.getContext('2d');
+  const logBox = document.getElementById('log-box');
+
+  function addLog(msg) {
+    const p = document.createElement('div');
+    p.textContent = '> ' + msg;
+    logBox.appendChild(p);
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+
+  function getThemeColor() {
+    return document.body.classList.contains('theme-amber') ? '#ffaa22' : '#33ff66';
+  }
+  function getThemeDim() {
+    return document.body.classList.contains('theme-amber') ? '#663d08' : '#115522';
+  }
+
+  // === 初期化・リスタート ===
+  function resetGame() {
+    state.mode = 'EXPLORE';
+    state.pos = 0;
+    state.visited = Array(10).fill(false);
+    state.visited[0] = true;
+    state.steps = 0;
+    state.moonPhase = 0;
+    state.hero = { name: '主人公', lv: 1, hp: 35, maxHp: 35, atk: 6, exp: 0, nextExp: 15 };
+    state.party = [
+      { isHero: true, ref: state.hero },
+      null, null, null, null
+    ];
+    state.lastFormation = [
+      { isHero: true },
+      { demonId: 'pixie' },
+      { demonId: 'goblin' },
+      { demonId: 'crow' },
+      { demonId: 'angel' }
+    ];
+    state.enemy = null;
+    state.effects = [];
+
+    document.getElementById('gameover-screen').style.display = 'none';
+    document.getElementById('summon-modal').style.display = 'none';
+    switchPad('EXPLORE');
+    logBox.innerHTML = '';
+    addLog('旧校舎 1F 廊下に侵入した。暗算の力で悪魔を打ち倒せ。');
+    updateUI();
+  }
+
+  function switchPad(mode) {
+    document.getElementById('explore-pad').style.display = mode === 'EXPLORE' ? 'flex' : 'none';
+    document.getElementById('battle-pad').style.display = mode === 'BATTLE' ? 'flex' : 'none';
+    document.getElementById('enemy-hud').style.display = mode === 'BATTLE' ? 'flex' : 'none';
+  }
+
+  // === UI更新 ===
+  function updateUI() {
+    // ヘッダー
+    const moonEl = document.getElementById('moon-display');
+    moonEl.textContent = 'MOON: ' + MOON_NAMES[state.moonPhase];
+    if (state.moonPhase === 4) moonEl.classList.add('moon-full');
+    else moonEl.classList.remove('moon-full');
+
+    document.getElementById('status-display').textContent =
+      `LV: ${state.hero.lv} | EXP: ${state.hero.exp}/${state.hero.nextExp}`;
+
+    // ミニマップ
+    const mapEl = document.getElementById('minimap');
+    mapEl.innerHTML = '';
+    for (let i = 0; i < 10; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'map-cell';
+      if (state.visited[i]) cell.classList.add('visited');
+      if (i === state.pos) {
+        cell.classList.add('current');
+        cell.textContent = 'P';
+      } else if (i === 9 && state.visited[i]) {
+        cell.textContent = '★';
+      }
+      mapEl.appendChild(cell);
+    }
+
+    // パーティ欄
+    for (let i = 0; i < 5; i++) {
+      const card = document.getElementById(`slot-${i}`);
+      const member = state.party[i];
+      card.className = 'member-card';
+      if (!member) {
+        card.innerHTML = `<span style="opacity:0.4;">[EMPTY]</span><span>--/--</span>`;
+      } else if (member.isHero) {
+        card.classList.add('active');
+        card.innerHTML = `<span>${state.hero.name}</span><span>${state.hero.hp}/${state.hero.maxHp}</span>`;
+      } else {
+        if (member.hp <= 0) {
+          card.classList.add('dead');
+          card.innerHTML = `<span>${member.name}</span><span>DEAD</span>`;
+        } else {
+          card.classList.add('active');
+          card.innerHTML = `<span>${member.name}</span><span>${member.hp}/${member.maxHp}</span>`;
+        }
+      }
+    }
+
+    // 敵HUD
+    if (state.enemy) {
+      document.getElementById('enemy-name').textContent = state.enemy.name;
+      document.getElementById('enemy-type').textContent = state.enemy.isFlying ? '[飛行:銃有効]' : '[地上:剣有効]';
+      document.getElementById('enemy-hp').textContent = `HP: ${Math.max(0, state.enemy.hp)}/${state.enemy.maxHp}`;
+    }
+  }
+
+  // === ダンジョン移動 ===
+  function move(dir) {
+    if (state.mode !== 'EXPLORE') return;
+    const nextPos = state.pos + dir;
+    if (nextPos < 0) {
+      addLog('入口のシャッターは固く閉ざされている。');
+      return;
+    }
+    if (nextPos >= 10) {
+      // 突き当たり到達：全回復ループ
+      SFX.levelup();
+      state.pos = 0;
+      state.hero.hp = state.hero.maxHp;
+      state.party.forEach(m => { if (m && !m.isHero) m.hp = m.maxHp; });
+      addLog('廊下の突き当たりの霊水で全回復！ 入口へと転移した。');
+      updateUI();
+      return;
+    }
+
+    SFX.step();
+    state.pos = nextPos;
+    state.visited[state.pos] = true;
+    state.steps++;
+    state.walkAnim = 1.0;
+
+    if (state.steps % 2 === 0) {
+      state.moonPhase = (state.moonPhase + 1) % 8;
+      if (state.moonPhase === 4) {
+        addLog('満月になった。……特に何も起こらない。');
+      }
+    }
+
+    updateUI();
+
+    // ランダムエンカウント（28%）
+    if (Math.random() < 0.28) {
+      triggerEncounter();
+    }
+  }
+
+  // === エンカウント＆召喚フェーズ ===
+  function triggerEncounter() {
+    SFX.encounter();
+    const base = ENEMY_POOL[Math.floor(Math.random() * ENEMY_POOL.length)];
+    const scale = 1 + (state.hero.lv - 1) * 0.35;
+    state.enemy = {
+      name: base.name,
+      hp: Math.round(base.baseHp * scale),
+      maxHp: Math.round(base.baseHp * scale),
+      atk: Math.round(base.baseAtk * scale),
+      exp: Math.round(base.exp * scale),
+      isFlying: base.isFlying,
+      shape: base.shape
+    };
+
+    state.mode = 'SUMMON';
+    addLog(`${state.enemy.name} が現れた！ 召喚する仲魔を選択せよ。`);
+    openSummonModal();
+  }
+
+  function openSummonModal() {
+    const modal = document.getElementById('summon-modal');
+    modal.style.display = 'flex';
+    // 最初の空きスロットを選択状態にする
+    const emptyIdx = state.party.findIndex(m => m === null);
+    state.selectedSlot = emptyIdx !== -1 ? emptyIdx : 1;
+    renderSummonLists();
+  }
+
+  function renderSummonLists() {
+    const slotList = document.getElementById('slot-list');
+    const demonList = document.getElementById('demon-list');
+    slotList.innerHTML = '';
+    demonList.innerHTML = '';
+
+    for (let i = 0; i < 5; i++) {
+      const posLabel = i < 3 ? '前衛' : '後衛';
+      const m = state.party[i];
+      const btn = document.createElement('button');
+      btn.className = 'slot-btn' + (state.selectedSlot === i ? ' selected' : '');
+      if (m && m.isHero) {
+        btn.innerHTML = `<span>[${posLabel}] ${state.hero.name}</span><span>(固定)</span>`;
+        btn.disabled = true;
+      } else if (m) {
+        btn.innerHTML = `<span>[${posLabel}] ${m.name}</span><span>HP:${m.hp}/${m.maxHp}</span>`;
+        btn.onclick = () => {
+          SFX.beep();
+          if (state.selectedSlot === i) {
+            state.party[i] = null; // 同じスロット再クリックで解除
+          } else {
+            state.selectedSlot = i;
+          }
+          renderSummonLists();
+        };
+      } else {
+        btn.innerHTML = `<span>[${posLabel}] --- EMPTY ---</span><span>選択中</span>`;
+        btn.onclick = () => {
+          SFX.beep();
+          state.selectedSlot = i;
+          renderSummonLists();
+        };
+      }
+      slotList.appendChild(btn);
+    }
+
+    DEMON_POOL.forEach(d => {
+      const alreadyIn = state.party.some(m => m && !m.isHero && m.id === d.id);
+      const btn = document.createElement('button');
+      btn.className = 'demon-btn';
+      btn.disabled = alreadyIn;
+      btn.innerHTML = `<span>${d.name}</span><span>HP: ${d.maxHp}</span>`;
+      btn.onclick = () => {
+        SFX.beep();
+        if (state.party[state.selectedSlot] && state.party[state.selectedSlot].isHero) return;
+        state.party[state.selectedSlot] = {
+          isHero: false,
+          id: d.id,
+          name: d.name,
+          hp: d.maxHp,
+          maxHp: d.maxHp,
+          comments: d.comments
+        };
+        // 次の空きスロットへ自動移動
+        const nextEmpty = state.party.findIndex(m => m === null);
+        if (nextEmpty !== -1) state.selectedSlot = nextEmpty;
+        renderSummonLists();
+      };
+      demonList.appendChild(btn);
+    });
+  }
+
+  function applyLastFormation() {
+    SFX.beep();
+    // 主人公の現在位置を維持しつつ、前回編成を復元
+    const heroSlot = state.party.findIndex(m => m && m.isHero);
+    const newParty = [null, null, null, null, null];
+    newParty[heroSlot !== -1 ? heroSlot : 0] = { isHero: true, ref: state.hero };
+
+    let slotCursor = 0;
+    state.lastFormation.forEach(item => {
+      if (!item || item.isHero) return;
+      while (slotCursor < 5 && newParty[slotCursor] !== null) slotCursor++;
+      if (slotCursor < 5) {
+        const d = DEMON_POOL.find(x => x.id === item.demonId);
+        if (d) {
+          newParty[slotCursor] = {
+            isHero: false, id: d.id, name: d.name, hp: d.maxHp, maxHp: d.maxHp, comments: d.comments
+          };
+        }
+      }
+    });
+    state.party = newParty;
+    renderSummonLists();
+  }
+
+  function startBattle() {
+    SFX.beep();
+    // 現在の編成を記憶
+    state.lastFormation = state.party.map(m => {
+      if (!m) return null;
+      return m.isHero ? { isHero: true } : { demonId: m.id };
+    });
+
+    document.getElementById('summon-modal').style.display = 'none';
+    state.mode = 'BATTLE';
+    switchPad('BATTLE');
+    updateUI();
+    generateProblem();
+  }
+
+  // === 暗算問題生成＆戦闘ロジック ===
+  function generateProblem() {
+    // レベルごとに項数を増やす (Lv1: 2項, Lv2: 3項, Lv3: 4項...)
+    const termsCount = Math.min(6, state.hero.lv + 1);
+    let currentVal = Math.floor(Math.random() * 9) + 1;
+    let eq = `${currentVal}`;
+
+    for (let i = 1; i < termsCount; i++) {
+      const n = Math.floor(Math.random() * 9) + 1;
+      // 途中結果がマイナスにならないように演算子を決定
+      if (currentVal - n >= 0 && Math.random() < 0.5) {
+        currentVal -= n;
+        eq += ` - ${n}`;
+      } else {
+        currentVal += n;
+        eq += ` + ${n}`;
+      }
+    }
+
+    const maxTime = 2600 + termsCount * 1150;
+    state.problem = {
+      text: eq,
+      answer: currentVal,
+      input: '',
+      maxTime: maxTime,
+      remainTime: maxTime
+    };
+
+    document.getElementById('eq-text').textContent = eq;
+    document.getElementById('input-val').textContent = '?';
+  }
+
+  function handleNumInput(key) {
+    if (state.mode !== 'BATTLE') return;
+    SFX.beep();
+
+    if (key === 'C') {
+      state.problem.input = '';
+    } else if (key === 'BS') {
+      state.problem.input = state.problem.input.slice(0, -1);
+    } else {
+      if (state.problem.input.length < 3) {
+        state.problem.input += key;
+      }
+    }
+
+    document.getElementById('input-val').textContent = state.problem.input || '?';
+
+    // 答えの桁数と一致した瞬間にオート判定
+    const ansStr = String(state.problem.answer);
+    if (state.problem.input.length === ansStr.length) {
+      if (state.problem.input === ansStr) {
+        resolvePlayerSuccess();
+      } else {
+        resolvePlayerFail('計算ミス！');
+      }
+    }
+  }
+
+  function resolvePlayerSuccess() {
+    const ratio = state.problem.remainTime / state.problem.maxTime;
+    let hits = 1;
+    let speedLabel = '通常';
+    if (ratio >= 0.68) {
+      hits = 3;
+      speedLabel = '神速';
+    } else if (ratio >= 0.38) {
+      hits = 2;
+      speedLabel = '迅速';
+    }
+
+    const weaponType = state.enemy.isFlying ? '銃撃' : '剣撃';
+    const dmgPerHit = state.hero.atk + Math.floor(Math.random() * 3);
+    const totalDmg = dmgPerHit * hits;
+    state.enemy.hp -= totalDmg;
+
+    // 連続エフェクト＆SE
+    for (let i = 0; i < hits; i++) {
+      setTimeout(() => {
+        if (state.enemy && state.enemy.isFlying) SFX.gun(i + 1);
+        else SFX.sword(i + 1);
+        state.effects.push({ type: state.enemy && state.enemy.isFlying ? 'gun' : 'sword', progress: 0 });
+        if (hits === 3) triggerShake();
+      }, i * 130);
+    }
+
+    addLog(`【${speedLabel}】${weaponType}${hits}回攻撃！ ${state.enemy.name}に ${totalDmg} ダメージ！敵の反撃を回避！`);
+
+    // 仲魔の無責任なヤジ（40%の確率）
+    const aliveDemons = state.party.filter(m => m && !m.isHero && m.hp > 0);
+    if (aliveDemons.length > 0 && Math.random() < 0.4) {
+      const talker = aliveDemons[Math.floor(Math.random() * aliveDemons.length)];
+      const msg = talker.comments[Math.floor(Math.random() * talker.comments.length)];
+      addLog(`${talker.name}${msg}`);
+    }
+
+    updateUI();
+
+    if (state.enemy.hp <= 0) {
+      winBattle();
+    } else {
+      generateProblem();
+    }
+  }
+
+  function resolvePlayerFail(reason) {
+    SFX.hit();
+    triggerShake();
+    addLog(`${reason} 敵の攻撃を許した！`);
+
+    // 生存しているパーティメンバーからランダム1体が被弾
+    const targets = state.party.filter(m => m && (m.isHero || m.hp > 0));
+    const target = targets[Math.floor(Math.random() * targets.length)];
+    const dmg = Math.max(1, state.enemy.atk + Math.floor(Math.random() * 3) - 1);
+
+    if (target.isHero) {
+      state.hero.hp -= dmg;
+      addLog(`${state.enemy.name}の攻撃！ 主人公に ${dmg} のダメージ！`);
+    } else {
+      target.hp -= dmg;
+      addLog(`${state.enemy.name}の攻撃！ 仲魔 ${target.name} が身代わりになり ${dmg} のダメージ！`);
+      if (target.hp <= 0) {
+        addLog(`${target.name} は力尽きて魔界へ帰還した！`);
+      }
+    }
+
+    updateUI();
+
+    if (state.hero.hp <= 0) {
+      state.mode = 'GAMEOVER';
+      document.getElementById('gameover-stats').textContent =
+        `到達LV: ${state.hero.lv} / 歩数: ${state.steps}歩`;
+      document.getElementById('gameover-screen').style.display = 'flex';
+    } else {
+      generateProblem();
+    }
+  }
+
+  function winBattle() {
+    const gainedExp = state.enemy.exp;
+    addLog(`${state.enemy.name} を撃破！ EXP ${gainedExp} を獲得。`);
+    state.hero.exp += gainedExp;
+
+    if (state.hero.exp >= state.hero.nextExp) {
+      SFX.levelup();
+      state.hero.lv++;
+      state.hero.exp -= state.hero.nextExp;
+      state.hero.nextExp = Math.round(state.hero.nextExp * 1.45);
+      state.hero.maxHp += 8;
+      state.hero.hp = state.hero.maxHp;
+      state.hero.atk += 2;
+      addLog(`LEVEL UP！ Lv.${state.hero.lv} になった！ 計算の項数が増加する！`);
+    }
+
+    state.enemy = null;
+    state.mode = 'EXPLORE';
+    switchPad('EXPLORE');
+    updateUI();
+  }
+
+  function triggerShake() {
+    const app = document.getElementById('app');
+    app.classList.remove('shake');
+    void app.offsetWidth;
+    app.classList.add('shake');
+  }
+
+  // === Canvas 描画ループ (3D廊下・敵・エフェクト) ===
+  let lastFrameTime = performance.now();
+
+  function renderLoop(now) {
+    const dt = now - lastFrameTime;
+    lastFrameTime = now;
+
+    // 戦闘タイマー更新
+    if (state.mode === 'BATTLE' && state.enemy) {
+      state.problem.remainTime -= dt;
+      const pct = Math.max(0, (state.problem.remainTime / state.problem.maxTime) * 100);
+      document.getElementById('timer-bar').style.width = pct + '%';
+      if (state.problem.remainTime <= 0) {
+        resolvePlayerFail('時間切れ！');
+      }
+    }
+
+    // 歩行ズーム減衰
+    if (state.walkAnim > 0) {
+      state.walkAnim = Math.max(0, state.walkAnim - dt * 0.005);
+    }
+
+    drawViewport(dt);
+    requestAnimationFrame(renderLoop);
+  }
+
+  function drawViewport(dt) {
+    const w = canvas.width;
+    const h = canvas.height;
+    const mainCol = getThemeColor();
+    const dimCol = getThemeDim();
+
+    ctx.clearRect(0, 0, w, h);
+
+    // 1. 擬似3D 校舎廊下ワイヤーフレーム
+    ctx.strokeStyle = state.mode === 'BATTLE' ? dimCol : mainCol;
+    ctx.lineWidth = 1.5;
+
+    const zoomOffset = state.walkAnim * 18;
+    const depths = [0, 60 + zoomOffset, 125 + zoomOffset * 0.6, 175 + zoomOffset * 0.3, 210];
+
+    // 奥行き矩形（廊下のフレーム）
+    depths.forEach((d, idx) => {
+      const rx = d;
+      const ry = d * 0.65;
+      const rw = w - d * 2;
+      const rh = h - d * 1.3;
+      if (rw > 10 && rh > 10) {
+        ctx.strokeRect(rx, ry, rw, rh);
+        // 学校の廊下らしい窓枠の示唆（左側壁）
+        if (idx < depths.length - 1) {
+          const nd = depths[idx + 1];
+          const nry = nd * 0.65;
+          ctx.beginPath();
+          ctx.moveTo(rx + 10, ry + (h - ry * 2) * 0.25);
+          ctx.lineTo(nd - 6, nry + (h - nry * 2) * 0.25);
+          ctx.lineTo(nd - 6, nry + (h - nry * 2) * 0.65);
+          ctx.lineTo(rx + 10, ry + (h - ry * 2) * 0.65);
+          ctx.closePath();
+          ctx.stroke();
+        }
+      }
+    });
+
+    // 四隅から奥へのパース線
+    const endD = depths[depths.length - 1];
+    const endX = endD;
+    const endY = endD * 0.65;
+    const endW = w - endD * 2;
+    const endH = h - endD * 1.3;
+
+    ctx.beginPath();
+    ctx.moveTo(0, 0); ctx.lineTo(endX, endY);
+    ctx.moveTo(w, 0); ctx.lineTo(endX + endW, endY);
+    ctx.moveTo(0, h); ctx.lineTo(endX, endY + endH);
+    ctx.moveTo(w, h); ctx.lineTo(endX + endW, endY + endH);
+    ctx.stroke();
+
+    // 2. 敵グラフィック描画（サイバー・オカルト幾何学ベクター）
+    if ((state.mode === 'BATTLE' || state.mode === 'SUMMON') && state.enemy) {
+      drawEnemy(w / 2, h / 2 + 12, state.enemy.shape, mainCol);
+    }
+
+    // 3. 攻撃エフェクト（剣撃／銃撃）
+    for (let i = state.effects.length - 1; i >= 0; i--) {
+      const eff = state.effects[i];
+      eff.progress += dt * 0.0045;
+      if (eff.progress >= 1) {
+        state.effects.splice(i, 1);
+        continue;
+      }
+      drawAttackEffect(w / 2, h / 2 + 10, eff.type, eff.progress, mainCol);
+    }
+  }
+
+  function drawEnemy(cx, cy, shape, col) {
+    ctx.save();
+    ctx.strokeStyle = col;
+    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+    ctx.lineWidth = 2;
+    const floatY = Math.sin(performance.now() * 0.005) * 6;
+    cy += floatY;
+
+    ctx.beginPath();
+    if (shape === 'bat') {
+      // 翼を持つ飛行悪魔
+      ctx.moveTo(cx, cy - 20);
+      ctx.lineTo(cx - 75, cy - 45);
+      ctx.lineTo(cx - 45, cy + 15);
+      ctx.lineTo(cx, cy + 25);
+      ctx.lineTo(cx + 45, cy + 15);
+      ctx.lineTo(cx + 75, cy - 45);
+      ctx.closePath();
+    } else if (shape === 'ghost') {
+      // 浮遊する亡霊
+      ctx.arc(cx, cy - 20, 36, Math.PI, 0);
+      ctx.lineTo(cx + 36, cy + 45);
+      ctx.lineTo(cx + 15, cy + 30);
+      ctx.lineTo(cx, cy + 48);
+      ctx.lineTo(cx - 15, cy + 30);
+      ctx.lineTo(cx - 36, cy + 45);
+      ctx.closePath();
+    } else if (shape === 'core') {
+      // 幾何学多面体
+      for (let i = 0; i < 6; i++) {
+        const ang = (Math.PI * 2 / 6) * i + performance.now() * 0.002;
+        const px = cx + Math.cos(ang) * 52;
+        const py = cy + Math.sin(ang) * 52;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+    } else if (shape === 'hound') {
+      // 獣型シルエット
+      ctx.moveTo(cx - 45, cy + 40);
+      ctx.lineTo(cx - 35, cy - 25);
+      ctx.lineTo(cx - 18, cy - 50);
+      ctx.lineTo(cx, cy - 25);
+      ctx.lineTo(cx + 18, cy - 50);
+      ctx.lineTo(cx + 35, cy - 25);
+      ctx.lineTo(cx + 45, cy + 40);
+      ctx.closePath();
+    } else {
+      // スライム
+      ctx.moveTo(cx - 55, cy + 40);
+      ctx.quadraticCurveTo(cx - 45, cy - 45, cx, cy - 45);
+      ctx.quadraticCurveTo(cx + 45, cy - 45, cx + 55, cy + 40);
+      ctx.closePath();
+    }
+    ctx.fill();
+    ctx.stroke();
+
+    // 不気味な単眼・双眸
+    ctx.beginPath();
+    ctx.arc(cx - 14, cy - 8, 5, 0, Math.PI * 2);
+    ctx.arc(cx + 14, cy - 8, 5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawAttackEffect(cx, cy, type, p, col) {
+    ctx.save();
+    ctx.strokeStyle = '#ffffff';
+    ctx.shadowColor = col;
+    ctx.shadowBlur = 12;
+    ctx.lineWidth = 4 * (1 - p * 0.5);
+
+    if (type === 'sword') {
+      // 斜め斬撃閃光
+      const len = 95;
+      const sx = cx - len + p * 30;
+      const sy = cy - len + p * 30;
+      const ex = cx + len;
+      const ey = cy + len;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+    } else {
+      // 銃撃レティクル＋着弾バースト
+      const r = 45 * (1 - p);
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.stroke();
+      for (let i = 0; i < 8; i++) {
+        const ang = (Math.PI * 2 / 8) * i;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(ang) * 10, cy + Math.sin(ang) * 10);
+        ctx.lineTo(cx + Math.cos(ang) * (15 + p * 55), cy + Math.sin(ang) * (15 + p * 55));
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  // === タイトル起動シーケンス ===
+  function runBootSequence() {
+    const lines = [
+      'BOOTING DIGITAL DEVIL ARITHMETIC OS v2.06...',
+      'CHECKING MEMORY... 640KB OK.',
+      'LOADING SCHOOL_CORRIDOR_01.MAP... OK.',
+      'SUMMONING DAEMON COMPILER... READY.'
+    ];
+    const logEl = document.getElementById('boot-log');
+    let idx = 0;
+    const timer = setInterval(() => {
+      if (idx < lines.length) {
+        const div = document.createElement('div');
+        div.textContent = '> ' + lines[idx];
+        logEl.appendChild(div);
+        idx++;
+      } else {
+        clearInterval(timer);
+        document.getElementById('title-main').style.display = 'block';
+      }
+    }, 260);
+  }
+
+  // === イベントリスナー登録（キーボード＆タップ両対応） ===
+  document.getElementById('btn-start').onclick = () => {
+    initAudio();
+    SFX.beep();
+    document.getElementById('title-screen').style.display = 'none';
+    resetGame();
+  };
+
+  document.getElementById('btn-retry').onclick = () => {
+    SFX.beep();
+    resetGame();
+  };
+
+  document.getElementById('btn-forward').onclick = () => move(1);
+  document.getElementById('btn-back').onclick = () => move(-1);
+
+  document.getElementById('btn-auto-summon').onclick = applyLastFormation;
+  document.getElementById('btn-battle-go').onclick = startBattle;
+
+  document.querySelectorAll('.num-btn').forEach(btn => {
+    btn.onclick = () => handleNumInput(btn.dataset.key);
+  });
+
+  document.getElementById('btn-theme').onclick = (e) => {
+    document.body.classList.toggle('theme-amber');
+    const isAmber = document.body.classList.contains('theme-amber');
+    e.target.textContent = isAmber ? 'COLOR: AMB' : 'COLOR: GRN';
+    SFX.beep();
+  };
+
+  document.getElementById('btn-sound').onclick = (e) => {
+    soundEnabled = !soundEnabled;
+    e.target.textContent = soundEnabled ? 'SOUND: ON' : 'SOUND: OFF';
+    if (soundEnabled) SFX.beep();
+  };
+
+  window.addEventListener('keydown', (e) => {
+    if (state.mode === 'EXPLORE') {
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+        e.preventDefault();
+        move(1);
+      } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        move(-1);
+      }
+    } else if (state.mode === 'BATTLE') {
+      if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
+        handleNumInput(e.key);
+      } else if (e.key === 'Backspace') {
+        e.preventDefault();
+        handleNumInput('BS');
+      } else if (e.key === 'Escape' || e.key === 'c' || e.key === 'C') {
+        e.preventDefault();
+        handleNumInput('C');
+      }
+    } else if (state.mode === 'SUMMON') {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        startBattle();
+      }
+    }
+  });
+
+  // 起動
+  runBootSequence();
+  requestAnimationFrame(renderLoop);
+})();
+</script>
+</body>
+</html>

@@ -32,6 +32,7 @@ TARGETS = [
     'pc98-novel/index.html',
     'lab/index.html',
     'yawaraka/index.html',
+    'anzan-tensei/index.html',
 ]
 PWA_META = (
     '<meta name="apple-mobile-web-app-capable" content="yes">'
