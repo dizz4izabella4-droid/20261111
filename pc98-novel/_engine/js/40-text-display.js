@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   var PUNCT = '、。，．,.！？!?…‥―─」』）';
-  var GARBLE = '縺薙ｓ繧ｫ荳也阜譁ｭ邨ｶ蟄怜喧縺ｱ繝ｻ讖溯・ｽ�ｿｽ#%&$@*+=<>';
+  var GARBLE = '縺薙ｓ繧ｫ荳也阜譁ｭ邨ｶ蟄怜喧縺ｱ繝ｻ讖溯ｽｿ#%&$@*+=<>';
 
   function TD(el) { this.el = el; this.timer = 0; this.busy = false; this.spans = []; this.onDone = null; this.gTimer = 0; }
   /* 走っているフェードを確実に止める（行き先の値が同じだと、クラスを外しても transition は走り続けるため） */
