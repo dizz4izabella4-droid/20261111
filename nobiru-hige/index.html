@@ -619,7 +619,9 @@ let tick = 0; // 経過フレーム（波の位相に使う）
 
 // 敵キノコの定数
 const ENEMY_BASE = 24;        // 最初の大きさ
-const ENEMY_SHRINK = 0.7;     // 潰れたとき、汁から育つキノコは潰れたキノコの0.7倍の大きさ
+const ENEMY_SHRINK = 0.6;     // 潰れたとき、汁から育つキノコは潰れたキノコの0.6倍の大きさ（以前は0.7倍）
+const GEN_BOOST = 4;          // これだけ小さくなった（世代）キノコは、増殖が4倍になる
+const POWER_INTERVAL = 300;   // パワーアップキノコが生える間隔（フレーム。以前は600＝約10秒、今は約5秒）
 const ENEMY_MIN = 5;          // これ以上は小さくならない
 const LAYER_STEP = 5;         // キノコが上下に重なるときの1段の高さ
 const MAX_LIFT = 48;          // 重なりの最大の高さ
@@ -671,7 +673,13 @@ function sfxJuice() {
   playTone(520 + Math.random() * 260, 'sine', 0.07, 0.05, 220);
 }
 // 潰れたキノコから、汁を vxs の数だけ飛ばす（符号が向き）。1滴ごとに、落ちた所でキノコ1体ぶんの菌床になる
-function emitSpores(e, ox, oy, vxs, shrink) {
+function emitSpores(e, ox, oy, vxs, shrink, grow) {
+  // GEN_BOOST 回ぶん小さくなったキノコは4倍に増える（潰れたら4滴、時間で増えるときは3滴＋本体）
+  if ((e.gen || 0) >= GEN_BOOST) {
+    const want = grow ? 3 : 4;
+    vxs = vxs.slice();
+    while (vxs.length < want) vxs.push((Math.random() < 0.5 ? -1 : 1) * (0.8 + Math.random() * 1.8));
+  }
   const cs = Math.max(ENEMY_MIN, e.size * (shrink || ENEMY_SHRINK));
   const room = MAX_ENEMIES - enemies.length - pendingBranches();
   const n = Math.min(room, vxs.length);
@@ -691,6 +699,7 @@ function emitSpores(e, ox, oy, vxs, shrink) {
       hue: (e.hue + (Math.random() - 0.5) * 40 + 360) % 360,
       light: Math.max(28, Math.min(62, e.light + (Math.random() - 0.5) * 16)),
       safe: cs < footSize() ? 0 : 45,
+      gen: (e.gen || 0) + 1,
       age: 0
     });
   }
@@ -699,7 +708,7 @@ function emitSpores(e, ox, oy, vxs, shrink) {
 function landJuice(sp) {
   if (mycs.length > 260) return;
   mycs.push({ x: Math.max(6, Math.min(canvas.width - 6, sp.x)), t: 0, done: false, dead: false, fade: 0,
-    size: sp.size, hue: sp.hue, light: sp.light, safe: sp.safe, seed: Math.random() * 6.28 });
+    size: sp.size, hue: sp.hue, light: sp.light, safe: sp.safe, gen: sp.gen || 0, seed: Math.random() * 6.28 });
 }
 function updateMycs() {
   for (let i = mycs.length - 1; i >= 0; i--) {
@@ -713,6 +722,7 @@ function updateMycs() {
           const ne = makeEnemy(Math.max(0, Math.min(canvas.width - sz, m.x - sz / 2)), GROUND_Y - sz, sz,
             m.hue, m.light, (Math.random() < 0.5 ? -1 : 1) * (0.3 + Math.random() * 0.6), 0, m.safe);
           ne.born = 0;
+          ne.gen = m.gen || 0;
           enemies.push(ne);
         }
       }
@@ -824,6 +834,7 @@ function makeEnemy(x, y, size, hue, light, vx, vy, safeTimer) {
     w: size, h: size, size, hue, light,
     capColor: c.cap, darkColor: c.dark,
     safeTimer: safeTimer || 0, frame: Math.random() * 4, burn: 0,
+    gen: 0, // 何回小さくなったか（汁から育つたびに+1）
     lift: 0, tl: 0, born: 1, growT: 600 // 一定時間（約10秒）ごとに、菌糸を放出して菌床ができ、1匹増える
   };
 }
@@ -2312,7 +2323,7 @@ function drawBlocks() {
   for (const b of blocks) {
     const x = b.x, y = b.y;
     if (b.solid) { // 壊れない「？」ブロック
-      const soon = items.length < 3 && powerTimer > Math.round(600 / powerRate) - 60;
+      const soon = items.length < 3 && powerTimer > Math.round(POWER_INTERVAL / powerRate) - 60;
       ctx.fillStyle = '#7a3a00'; ctx.fillRect(x, y, b.w, b.h);
       ctx.fillStyle = soon && Math.floor(tick / 6) % 2 ? '#fff0a0' : '#f8b830'; ctx.fillRect(x + 2, y + 2, b.w - 4, b.h - 4);
       ctx.fillStyle = '#7a3a00'; ctx.fillRect(x + 4, y + 4, 2, 2); ctx.fillRect(x + b.w - 6, y + 4, 2, 2);
@@ -2348,7 +2359,7 @@ function update() {
   dusk += ((phase === 'fire' ? 0.3 : 0) - dusk) * 0.03;
   // スポーン処理（ぽつぽつ降ってくる）
   // 左端の壊れないブロックから、時間でパワーアップキノコが生える
-  if (phase === 'play' && ++powerTimer > Math.round(600 / powerRate) && items.length < 3) {
+  if (phase === 'play' && ++powerTimer > Math.round(POWER_INTERVAL / powerRate) && items.length < 3) {
     powerTimer = 0;
     const sb = blocks.find(b => b.solid);
     if (sb) {
@@ -2474,7 +2485,7 @@ function update() {
     if ((phase === 'play' || phase === 'flower') && e.born >= 1 && --e.growT <= 0) {
       e.growT = 600;
       const wallDir = e.x + e.w / 2 < canvas.width / 2 ? 1 : -1;
-      emitSpores(e, e.x + e.w / 2, e.y + e.h * 0.4, [(Math.random() < 0.75 ? wallDir : -wallDir) * (1.2 + Math.random() * 1.5)]);
+      emitSpores(e, e.x + e.w / 2, e.y + e.h * 0.4, [(Math.random() < 0.75 ? wallDir : -wallDir) * (1.2 + Math.random() * 1.5)], undefined, true);
     }
 
     e.lift += (e.tl - e.lift) * 0.2;
@@ -2748,10 +2759,12 @@ function drawRings() {
 function drawSpores() { // 飛んでいる汁
   spores.forEach(sp => {
     ctx.fillStyle = `hsl(${sp.hue}, 85%, ${sp.light + 8}%)`;
-    ctx.fillRect(Math.round(sp.x) - 2, Math.round(sp.y) - 2, 5, 5);
-    ctx.fillRect(Math.round(sp.x - sp.vx * 1.5) - 1, Math.round(sp.y - sp.vy * 1.2) - 1, 3, 3);
+    const ds = Math.max(3, Math.min(5, Math.round(sp.size / 5))); // 汁の粒の大きさ：育つキノコが小さいほど小さい
+    const h = ds >> 1;
+    ctx.fillRect(Math.round(sp.x) - h, Math.round(sp.y) - h, ds, ds);
+    ctx.fillRect(Math.round(sp.x - sp.vx * 1.5) - 1, Math.round(sp.y - sp.vy * 1.2) - 1, ds - 2, ds - 2);
     ctx.fillStyle = '#fff';
-    ctx.fillRect(Math.round(sp.x) - 1, Math.round(sp.y) - 1, 2, 2);
+    ctx.fillRect(Math.round(sp.x) - (ds > 3 ? 1 : 0), Math.round(sp.y) - (ds > 3 ? 1 : 0), ds > 3 ? 2 : 1, ds > 3 ? 2 : 1);
   });
 }
 
