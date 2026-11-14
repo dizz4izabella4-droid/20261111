@@ -1,0 +1,48 @@
+/* dialogue.css — 名前欄・本文欄・選択肢・操作ボタン列 */
+#pn-msg{position:absolute;left:6px;right:6px;bottom:4px;height:104px;z-index:10;
+  background:rgba(8,12,52,.9);border:2px solid var(--white);outline:1px solid var(--k);box-shadow:inset 0 0 0 1px var(--k),inset 0 0 0 2px var(--teal)}
+#pn-name{position:absolute;left:14px;bottom:108px;z-index:11;height:20px;min-width:72px;padding:0 10px;font-size:13px;line-height:18px;font-weight:700;text-align:center;
+  color:var(--k);background:var(--teal2);border:1px solid var(--white);border-bottom:0}
+#pn-name:empty{display:none}
+#pn-text{position:absolute;left:12px;right:12px;top:7px;bottom:22px;overflow:hidden;font-size:16px;line-height:23px;font-weight:500;letter-spacing:.02em;
+  color:var(--white);text-shadow:1px 0 0 rgba(240,244,248,.35);white-space:pre-wrap;word-break:break-all;line-break:strict}
+#pn-text .c{visibility:hidden}
+#pn-text .c.on{visibility:visible}
+#pn-text.fade .c{visibility:visible;opacity:0;transition:opacity var(--cf,200ms) linear}
+#pn-text.fade .c.on{opacity:1}
+#pn-text.whole{transition:opacity var(--wf,600ms) linear}
+#pn-text.nofx,#pn-text.nofx .c{transition:none!important}
+#pn-next{position:absolute;right:10px;bottom:22px;font-size:11px;color:var(--teal2);display:none;animation:pn-blink .9s steps(2) infinite}
+#pn-next.on{display:block}
+@keyframes pn-blink{50%{opacity:0}}
+/* 操作ボタン列（PC-98 のファンクションキー欄ふう） */
+#pn-fkeys{position:absolute;left:4px;right:4px;bottom:3px;height:16px;display:flex;gap:3px}
+#pn-fkeys button{flex:1;height:16px;font-size:10px;line-height:14px;letter-spacing:.06em;color:var(--k);background:var(--lgray);border:1px solid var(--k);white-space:nowrap;overflow:hidden}
+#pn-fkeys button.on{background:var(--yel)}
+#pn-fkeys button:active{background:var(--teal2)}
+#pn-fkeys button.dev{background:var(--red);color:#fff}
+/* 選択肢 */
+#pn-choices{position:absolute;left:0;right:0;top:22px;height:252px;z-index:12;display:none;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:4px 0;overflow:auto}
+#pn-choices.on{display:flex}
+#pn-choices .prompt{font-size:13px;color:var(--teal2);background:rgba(0,0,0,.7);padding:1px 10px}
+#pn-choices button{flex:none;width:440px;max-width:92%;min-height:30px;padding:4px 12px;font-size:15px;line-height:20px;text-align:left;color:var(--white);
+  background:rgba(8,12,52,.92);border:2px solid var(--white);box-shadow:inset 0 0 0 1px var(--k),inset 0 0 0 2px var(--teal)}
+#pn-choices button::before{content:"　"}
+#pn-choices button.sel{color:var(--k);background:var(--teal2);box-shadow:inset 0 0 0 1px var(--k)}
+#pn-choices button.sel::before{content:"▶"}
+#pn-choices button.forced{border-style:dashed;color:var(--yel)}
+/* お知らせ（情報入手など） */
+#pn-notice{position:absolute;right:8px;top:24px;z-index:40;display:flex;flex-direction:column;gap:3px;align-items:flex-end;pointer-events:none}
+#pn-notice div{font-size:12px;line-height:18px;padding:0 8px;color:var(--k);background:var(--yel);border:1px solid var(--k);animation:pn-notice 2.6s linear forwards}
+#pn-notice div.err{background:var(--red);color:#fff}
+@keyframes pn-notice{0%{opacity:0;transform:translateX(12px)}8%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}
+/* 縦持ち：絵は上、本文欄は下に広く */
+.port #pn-name{left:0;bottom:auto;top:278px;height:24px;line-height:22px;font-size:15px;min-width:96px;border-left:0}
+.port #pn-msg{left:0;right:0;top:302px;bottom:0;height:auto;border-left:0;border-right:0;border-bottom:0}
+.port #pn-text{left:14px;right:14px;top:12px;bottom:52px;font-size:19px;line-height:32px}
+.port #pn-next{right:14px;bottom:50px;font-size:14px}
+.port #pn-fkeys{left:4px;right:4px;bottom:5px;height:38px;gap:4px}
+.port #pn-fkeys button{height:38px;font-size:11px;line-height:36px;letter-spacing:0}
+.port #pn-choices{top:24px;height:250px}
+.port #pn-choices button{width:372px;min-height:36px;font-size:16px;line-height:22px}
+.port #pn-notice{top:30px}

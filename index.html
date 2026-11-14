@@ -474,6 +474,8 @@ body.abyss .music.on .sw{background:#c41a2a}
 //   for  … 'pc'（PC専用。カードに「PC向け」と出る）/ 'mobile' / 'both'（この2つは何も出ない）   color … 'pink' / 'mint' / 'lav' / 'lemon'   icon … 下の ICONS の名前
 //   //   start … 制作開始日（YYYY-MM-DD。分からないときは書かない）   upd … 最終更新日（YYYY-MM-DD。作品の中身を変えたら書き換える）   ver … バージョン（例 '1.0'）。大幅に改修したら上げる（上げ幅の目安は HANDOFF.md）。どちらもカードの下に極小で出る
 const APPS=[
+  {path:'pc98-novel/', ja:'土台（未完）', label:'PC98ノベル test ver.（土台・未完）', name:'PC98 NOVEL', for:'both', color:'mint', icon:'novel',
+   start:'2026-11-14', upd:'2026-11-14', ver:'0.1'},
   {path:'noche-sin-luna/', ja:'情熱のタップ', label:'ノーチェ・シン・ルナ test ver.（情熱のタップ）', name:'NOCHE SIN LUNA', for:'both', color:'lav', icon:'rosette',
    start:'2026-11-13', upd:'2026-11-14', ver:'3.4'},
   {path:'fire-hakoniwa/', ja:'燃やし尽くす（未完）', label:'伸びるヒゲ2 test ver.（燃やし尽くす・未完）', name:'NOBIRU HIGE2', for:'both', color:'pink', icon:'flame',
@@ -499,6 +501,7 @@ const APPS=[
 ];
 // アイコン（白で描く）
 const ICONS={
+  novel:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="7" width="38" height="28" rx="3" fill="rgba(255,255,255,.25)"/><path d="M11 22h26v8H11zM15 26h12M18 41h12M24 35v6"/></svg>',
   keyboard:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="13" width="38" height="24" rx="6"/><path d="M12 21h.01M18 21h.01M24 21h.01M30 21h.01M36 21h.01M12 27h.01M36 27h.01M17 30h14" stroke-width="4"/></svg>',
   phone:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><rect x="13" y="4" width="22" height="40" rx="6"/><path d="M21 38h6"/><text x="24" y="27" text-anchor="middle" fill="#fff" stroke="none" font-size="14" font-weight="800" font-family="sans-serif">あ</text></svg>',
   bird:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 28c0-9 7-15 16-15 6 0 10 3 12 7l6 1-5 4c0 9-7 14-16 14-7 0-13-4-13-11z" fill="rgba(255,255,255,.25)"/><path d="M14 25c4 4 10 4 14 0"/><circle cx="31" cy="20" r="1.6" fill="#fff"/></svg>',

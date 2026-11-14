@@ -1,0 +1,860 @@
+{
+ "_note": "このファイルは scenario.txt から build.js が作ります。直すときは scenario.txt を直してください。",
+ "start": "opening",
+ "scenes": {
+  "opening": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "1994年3月14日 23:10",
+     "place": "旧校舎前",
+     "chapter": "序章"
+    },
+    {
+     "type": "EFFECT",
+     "name": "blackout",
+     "on": true
+    },
+    {
+     "type": "BG",
+     "id": "school_night"
+    },
+    {
+     "type": "BGM",
+     "id": "wind",
+     "channel": "env"
+    },
+    {
+     "type": "BGM",
+     "id": "mystery"
+    },
+    {
+     "type": "EFFECT",
+     "name": "fadein",
+     "ms": 800
+    },
+    {
+     "type": "TEXT",
+     "text": "三月の夜風は、まだ冬の匂いがした。"
+    },
+    {
+     "type": "TEXT",
+     "text": "取り壊しが決まった旧校舎は、十年前と同じ場所に、同じ形で立っている。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「……変わってないな」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "卒業してから、一度も来なかった。来られなかった、と言うほうが正しい。"
+    },
+    {
+     "type": "CHOICE",
+     "options": [
+      {
+       "text": "校舎の中へ入る",
+       "next": "classroom"
+      },
+      {
+       "text": "周囲を調べる",
+       "next": "around"
+      },
+      {
+       "text": "音楽室の灯りを見上げる",
+       "next": "secret_start",
+       "if": "ending:end_true"
+      }
+     ],
+     "id": "first",
+     "prompt": "どうする？"
+    }
+   ]
+  },
+  "around": {
+   "commands": [
+    {
+     "type": "BG",
+     "id": "school_back",
+     "fade": 500
+    },
+    {
+     "type": "TEXT",
+     "text": "裏手に回ると、通用口の脇に古い牛乳箱が残っていた。"
+    },
+    {
+     "type": "SE",
+     "id": "click"
+    },
+    {
+     "type": "TEXT",
+     "text": "箱の底で、錆びた鍵が鈍く光った。"
+    },
+    {
+     "type": "INFO",
+     "id": "key"
+    },
+    {
+     "type": "FLAG",
+     "set": {
+      "found_key": true
+     }
+    },
+    {
+     "type": "TEXT",
+     "text": "「宿直室の鍵……まだ、こんな所に隠してたのか」",
+     "speaker": "me"
+    },
+    {
+     "type": "JUMP",
+     "to": "classroom"
+    }
+   ]
+  },
+  "classroom": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "1994年3月14日 23:20",
+     "place": "二年B組",
+     "chapter": "第一章"
+    },
+    {
+     "type": "BG",
+     "id": "classroom",
+     "fade": 600
+    },
+    {
+     "type": "SE",
+     "id": "door"
+    },
+    {
+     "type": "TEXT",
+     "text": "二年B組。月明かりが、並んだ机の天板を青く塗っている。"
+    },
+    {
+     "type": "TEXT",
+     "text": "窓際の、後ろから二番目。そこだけ、机の中に何かが残っていた。"
+    },
+    {
+     "type": "INFO",
+     "id": "diary"
+    },
+    {
+     "type": "TEXT",
+     "text": "一冊の日記。布張りの表紙は、角がすり切れている。"
+    },
+    {
+     "type": "TEXT",
+     "text": "最後のページを開く。日付は、明日——三月十五日。"
+    },
+    {
+     "type": "TEXT_STYLE",
+     "mode": "FADE",
+     "fadeMs": 1500
+    },
+    {
+     "type": "TEXT",
+     "text": "「明日の午前零時、私はここで死ぬ。」",
+     "fx": "glitch"
+    },
+    {
+     "type": "TEXT_STYLE",
+     "mode": "RESET"
+    },
+    {
+     "type": "EFFECT",
+     "name": "shake",
+     "ms": 300
+    },
+    {
+     "type": "TEXT",
+     "text": "「……なんだ、これ」",
+     "speaker": "me"
+    },
+    {
+     "type": "CHOICE",
+     "options": [
+      {
+       "text": "日記を最初から読む",
+       "next": "read_diary"
+      },
+      {
+       "text": "すぐに校舎を調べる",
+       "next": "corridor"
+      },
+      {
+       "text": "見なかったことにして帰る",
+       "next": "leave"
+      }
+     ],
+     "id": "diary"
+    }
+   ]
+  },
+  "read_diary": {
+   "commands": [
+    {
+     "type": "TEXT",
+     "text": "ページをさかのぼる。丸い、几帳面な字。"
+    },
+    {
+     "type": "TEXT_STYLE",
+     "mode": "LINE",
+     "lineModeMs": 700
+    },
+    {
+     "type": "TEXT",
+     "text": "三月一日。屋上のフェンスが、また錆びている。先生に言ったけれど、直らない。\n三月十日。約束をした。十四日の夜、零時に屋上で。"
+    },
+    {
+     "type": "TEXT_STYLE",
+     "mode": "RESET"
+    },
+    {
+     "type": "TEXT",
+     "text": "裏表紙に名前があった。——三崎ユキ。"
+    },
+    {
+     "type": "INFO",
+     "id": "name"
+    },
+    {
+     "type": "FLAG",
+     "set": {
+      "read_diary": true
+     }
+    },
+    {
+     "type": "TEXT",
+     "text": "「三崎……」",
+     "speaker": "me"
+    },
+    {
+     "type": "EFFECT",
+     "name": "noise",
+     "ms": 400
+    },
+    {
+     "type": "TEXT",
+     "text": "その名前を、私は知っている。"
+    },
+    {
+     "type": "JUMP",
+     "to": "corridor"
+    }
+   ]
+  },
+  "leave": {
+   "commands": [
+    {
+     "type": "BG",
+     "id": "school_night",
+     "fade": 600
+    },
+    {
+     "type": "TEXT",
+     "text": "私は日記を机に戻し、校舎を出た。"
+    },
+    {
+     "type": "SE",
+     "id": "bell"
+    },
+    {
+     "type": "TEXT",
+     "text": "遠くで、零時の鐘が鳴った気がした。振り返る理由は、もう無かった。"
+    },
+    {
+     "type": "ENDING",
+     "id": "end_normal"
+    }
+   ]
+  },
+  "corridor": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "1994年3月14日 23:35",
+     "place": "二階廊下",
+     "chapter": "第二章"
+    },
+    {
+     "type": "BG",
+     "id": "corridor",
+     "fade": 600
+    },
+    {
+     "type": "BGM",
+     "id": "tension"
+    },
+    {
+     "type": "SE",
+     "id": "step"
+    },
+    {
+     "type": "TEXT",
+     "text": "廊下の突き当たりに、誰かが立っていた。"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "yuki",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "EFFECT",
+     "name": "flash",
+     "ms": 200
+    },
+    {
+     "type": "TEXT",
+     "text": "セーラー服の少女。足音は、しなかった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「……あなた、だれ？」",
+     "speaker": "girl"
+    },
+    {
+     "type": "LABEL",
+     "name": "ask"
+    },
+    {
+     "type": "CHOICE",
+     "options": [
+      {
+       "text": "「日記を返しに来た」",
+       "next": "#returned",
+       "id": "return",
+       "addFlag": {
+        "trust": 1
+       }
+      },
+      {
+       "text": "「君こそ、誰だ」",
+       "next": "#who",
+       "id": "who",
+       "once": true,
+       "correct": false
+      },
+      {
+       "text": "「三崎ユキ、だろう」",
+       "next": "#named",
+       "id": "named",
+       "if": "read_diary",
+       "addFlag": {
+        "trust": 2
+       },
+       "correct": true
+      }
+     ],
+     "id": "who",
+     "prompt": "何と答える？"
+    },
+    {
+     "type": "LABEL",
+     "name": "who"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "yuki",
+     "expr": "angry",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「……質問に、質問で返さないで」",
+     "speaker": "girl"
+    },
+    {
+     "type": "TEXT",
+     "text": "少女は、答えを待っている。"
+    },
+    {
+     "type": "JUMP",
+     "to": "#ask"
+    },
+    {
+     "type": "LABEL",
+     "name": "returned"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "yuki",
+     "expr": "surprise",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「日記……読んだの？」",
+     "speaker": "girl"
+    },
+    {
+     "type": "JUMP",
+     "to": "#after"
+    },
+    {
+     "type": "LABEL",
+     "name": "named"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "yuki",
+     "expr": "surprise",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「どうして、名前……」",
+     "speaker": "girl"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "yuki",
+     "expr": "smile",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「……そっか。読んでくれたんだ」",
+     "speaker": "yuki"
+    },
+    {
+     "type": "LABEL",
+     "name": "after"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "yuki",
+     "expr": "sad",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「零時になる前に、宿直室を見て。そこに、十年前がある」",
+     "speaker": "girl"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "yuki"
+    },
+    {
+     "type": "TEXT",
+     "text": "瞬きの間に、少女は消えていた。"
+    },
+    {
+     "type": "JUMP",
+     "to": "staffroom"
+    }
+   ]
+  },
+  "staffroom": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "1994年3月14日 23:45",
+     "place": "宿直室",
+     "chapter": "第二章"
+    },
+    {
+     "type": "BG",
+     "id": "staffroom",
+     "fade": 600
+    },
+    {
+     "type": "IF",
+     "cond": "found_key",
+     "else": "#__if1_else"
+    },
+    {
+     "type": "SE",
+     "id": "door"
+    },
+    {
+     "type": "TEXT",
+     "text": "錆びた鍵は、あっけなく回った。"
+    },
+    {
+     "type": "TEXT",
+     "text": "壁に、黄ばんだ新聞の切り抜きが貼られている。"
+    },
+    {
+     "type": "INFO",
+     "id": "clipping"
+    },
+    {
+     "type": "TEXT",
+     "text": "「昭和五十九年三月十五日 午前零時ごろ、旧校舎屋上のフェンスが外れ、女子生徒が転落——」"
+    },
+    {
+     "type": "JUMP",
+     "to": "#__if1_end"
+    },
+    {
+     "type": "LABEL",
+     "name": "__if1_else"
+    },
+    {
+     "type": "TEXT",
+     "text": "宿直室には鍵がかかっていた。扉は、びくともしない。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「……駄目か」",
+     "speaker": "me"
+    },
+    {
+     "type": "LABEL",
+     "name": "__if1_end"
+    },
+    {
+     "type": "JUMP",
+     "to": "rooftop_gate"
+    }
+   ]
+  },
+  "rooftop_gate": {
+   "commands": [
+    {
+     "type": "REQUIRE",
+     "need": "info:clipping",
+     "call": "hosoku",
+     "grant": [
+      "rumor"
+     ]
+    },
+    {
+     "type": "JUMP",
+     "to": "rooftop"
+    }
+   ]
+  },
+  "hosoku": {
+   "commands": [
+    {
+     "type": "CHARACTER",
+     "id": "yuki",
+     "expr": "sad",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "背後で、声がした。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「開かなかったのね。……じゃあ、私が話す」",
+     "speaker": "girl"
+    },
+    {
+     "type": "TEXT",
+     "text": "「十年前の今夜、屋上のフェンスが外れたの。誰かを待っていた子が、落ちた」",
+     "speaker": "girl"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "yuki"
+    },
+    {
+     "type": "EFFECT",
+     "name": "noise",
+     "ms": 300
+    },
+    {
+     "type": "RETURN"
+    }
+   ]
+  },
+  "rooftop": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "1994年3月14日 23:57",
+     "place": "屋上",
+     "chapter": "終章"
+    },
+    {
+     "type": "BG",
+     "id": "rooftop",
+     "fade": 800
+    },
+    {
+     "type": "CHARACTER",
+     "id": "yuki",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "屋上。錆びたフェンスの前に、少女が立っていた。"
+    },
+    {
+     "type": "IF",
+     "cond": {
+      "all": [
+       "read_diary",
+       "info:clipping"
+      ]
+     },
+     "else": "#__if2_else"
+    },
+    {
+     "type": "TEXT",
+     "text": "「——十年前、ここで待っていたのは、君だ。約束を破ったのは、俺だ」",
+     "speaker": "me"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "yuki",
+     "expr": "surprise",
+     "pos": "center"
+    },
+    {
+     "type": "JUMP",
+     "to": "#__if2_end"
+    },
+    {
+     "type": "LABEL",
+     "name": "__if2_else"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は、まだ何かを取りこぼしている気がした。"
+    },
+    {
+     "type": "LABEL",
+     "name": "__if2_end"
+    },
+    {
+     "type": "SE",
+     "id": "bell"
+    },
+    {
+     "type": "EFFECT",
+     "name": "invert",
+     "ms": 150
+    },
+    {
+     "type": "TEXT",
+     "text": "零時の鐘が、鳴りはじめる。"
+    },
+    {
+     "type": "CHOICE",
+     "options": [
+      {
+       "text": "「遅くなって、ごめん」",
+       "next": "#judge",
+       "id": "sorry",
+       "if": "read_diary",
+       "setFlag": {
+        "apologized": true
+       }
+      },
+      {
+       "text": "「そこから離れろ！」",
+       "next": "#judge",
+       "id": "stop",
+       "setFlag": {
+        "shouted": true
+       }
+      },
+      {
+       "text": "黙って手を伸ばす",
+       "next": "#judge",
+       "id": "reach",
+       "setFlag": {
+        "reached_out": true
+       }
+      }
+     ],
+     "id": "last",
+     "prompt": "零時——"
+    },
+    {
+     "type": "LABEL",
+     "name": "judge"
+    },
+    {
+     "type": "ENDING"
+    }
+   ]
+  },
+  "ep_true": {
+   "commands": [
+    {
+     "type": "BGM",
+     "id": "ending"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "yuki",
+     "expr": "smile",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「……十年、待ったよ」",
+     "speaker": "yuki"
+    },
+    {
+     "type": "EFFECT",
+     "name": "flash",
+     "ms": 400
+    },
+    {
+     "type": "TEXT",
+     "text": "フェンスが音もなく外れ、夜の底へ落ちていった。彼女は、もうそこに立っていなかった。"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "yuki"
+    },
+    {
+     "type": "TEXT_STYLE",
+     "mode": "CUSTOM",
+     "charMs": 60,
+     "fadeMs": 400,
+     "lineMs": 600
+    },
+    {
+     "type": "TEXT",
+     "text": "日記の最後のページは、書き換わっていた。\n「零時、私はここで待っていた。来てくれて、ありがとう。」"
+    },
+    {
+     "type": "TEXT_STYLE",
+     "mode": "RESET"
+    },
+    {
+     "type": "ENDING"
+    }
+   ]
+  },
+  "ep_good": {
+   "commands": [
+    {
+     "type": "BGM",
+     "id": "calm"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "yuki",
+     "expr": "sad",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "少女は一歩、フェンスから離れた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「……あなたは、あの人じゃないのね。でも、ありがとう」",
+     "speaker": "girl"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "yuki"
+    },
+    {
+     "type": "TEXT",
+     "text": "鐘が鳴り終わったとき、屋上には私ひとりだった。彼女が誰を待っていたのか、私はまだ知らない。"
+    },
+    {
+     "type": "ENDING"
+    }
+   ]
+  },
+  "ep_bad": {
+   "commands": [
+    {
+     "type": "BGM",
+     "id": "stop"
+    },
+    {
+     "type": "EFFECT",
+     "name": "shake",
+     "ms": 600
+    },
+    {
+     "type": "TEXT",
+     "text": "伸ばした手は、彼女をすり抜けて、錆びたフェンスを掴んだ。"
+    },
+    {
+     "type": "SE",
+     "id": "shock"
+    },
+    {
+     "type": "EFFECT",
+     "name": "flash",
+     "ms": 200
+    },
+    {
+     "type": "TEXT",
+     "text": "金属の悲鳴。足元から、夜が抜けた。",
+     "fx": "garble"
+    },
+    {
+     "type": "EFFECT",
+     "name": "fadeout",
+     "ms": 1200
+    },
+    {
+     "type": "ENDING"
+    }
+   ]
+  },
+  "secret_start": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "1994年3月14日 23:15",
+     "place": "音楽室",
+     "chapter": "外伝"
+    },
+    {
+     "type": "BG",
+     "id": "music_room",
+     "fade": 600
+    },
+    {
+     "type": "BGM",
+     "id": "calm"
+    },
+    {
+     "type": "SE",
+     "id": "piano"
+    },
+    {
+     "type": "TEXT",
+     "text": "三階の音楽室に、灯りがついていた。"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "yuki",
+     "expr": "smile",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「今夜は、早く来たんだね」",
+     "speaker": "yuki"
+    },
+    {
+     "type": "TEXT",
+     "text": "「十年ぶんの、利子だ」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "ふたりで並んで、鍵盤に指を置く。零時までは、まだ少しある。"
+    },
+    {
+     "type": "ENDING",
+     "id": "end_secret"
+    }
+   ],
+   "require": "ending:end_true",
+   "fallback": "classroom"
+  }
+ }
+}

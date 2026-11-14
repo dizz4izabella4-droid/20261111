@@ -1,0 +1,19 @@
+/* effects.css — 画面演出 */
+#fx-fade,#fx-flash,#fx-noise{position:absolute;left:0;top:0;width:640px;height:400px;pointer-events:none;opacity:0}
+#fx-fade{background:#000;z-index:8}
+#fx-flash{background:#fff;z-index:9}
+#fx-noise{z-index:7;image-rendering:pixelated;mix-blend-mode:screen}
+#pn-view.invert{filter:invert(1)}
+#pn-stage.shake #pn-view,#pn-stage.shake #pn-msg,#pn-stage.shake #pn-name{animation:pn-shake .09s steps(2) infinite}
+@keyframes pn-shake{0%{translate:-5px 3px}50%{translate:4px -4px}100%{translate:-3px -2px}}
+#pn-text.glitch{animation:pn-glitch .22s steps(3) infinite}
+@keyframes pn-glitch{
+  0%{text-shadow:2px 0 0 var(--teal),-2px 0 0 var(--red);translate:1px 0;clip-path:inset(0 0 0 0)}
+  33%{text-shadow:-3px 0 0 var(--teal),3px 0 0 var(--red);translate:-2px 1px;clip-path:inset(8% 0 30% 0)}
+  66%{text-shadow:3px 1px 0 var(--blue),-1px 0 0 var(--yel);translate:2px -1px;clip-path:inset(40% 0 5% 0)}
+  100%{text-shadow:1px 0 0 var(--teal),-1px 0 0 var(--red);translate:0 0;clip-path:inset(0 0 0 0)}
+}
+#pn-text.garble{color:var(--teal2)}
+@media (prefers-reduced-motion:reduce){
+  #pn-stage.shake #pn-view,#pn-stage.shake #pn-msg,#pn-stage.shake #pn-name,#pn-text.glitch{animation:none}
+}

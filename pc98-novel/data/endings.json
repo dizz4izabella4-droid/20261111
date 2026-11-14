@@ -1,0 +1,29 @@
+[
+  {
+    "id": "end_true", "type": "TRUE", "name": "零時の約束",
+    "cond": { "all": ["apologized", "info:clipping", { "flag": "trust", "op": ">=", "value": 2 }] },
+    "scene": "ep_true",
+    "text": "十年遅れの約束は、零時ちょうどに果たされた。"
+  },
+  {
+    "id": "end_good", "type": "GOOD", "name": "鐘のあと",
+    "cond": { "any": ["apologized", { "all": ["shouted", { "flag": "trust", "op": ">=", "value": 1 }] }] },
+    "scene": "ep_good",
+    "text": "彼女は消えた。けれど、誰を待っていたのかは分からないままだ。"
+  },
+  {
+    "id": "end_bad", "type": "BAD", "name": "錆びたフェンス",
+    "cond": "reached_out",
+    "scene": "ep_bad",
+    "text": "十年前と同じ時刻に、同じ場所で。"
+  },
+  {
+    "id": "end_normal", "type": "NORMAL", "name": "何も知らない夜",
+    "text": "あなたは何も知らないまま、朝を迎えた。"
+  },
+  {
+    "id": "end_secret", "type": "SECRET", "name": "零時前の連弾", "auto": false,
+    "hint": "真実を知ったあとで",
+    "text": "零時までは、まだ少しある。"
+  }
+]

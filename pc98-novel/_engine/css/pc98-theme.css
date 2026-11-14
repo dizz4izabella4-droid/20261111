@@ -1,0 +1,31 @@
+/* pc98-theme.css — 配色・枠・表示エリア（黒／濃紺／灰／青緑の限定色） */
+:root{
+  --k:#000;--navy:#0a1040;--navy2:#141c68;--blue:#2848b0;--teal:#30b0a8;--teal2:#78e8d8;
+  --gray:#808898;--lgray:#c8ccd8;--white:#f0f4f8;--yel:#e8d860;--red:#e86070;
+}
+/* 上部の情報欄 */
+#pn-status{position:absolute;left:0;top:0;right:0;height:18px;z-index:5;display:flex;gap:14px;align-items:center;
+  padding:0 8px;font-size:12px;line-height:18px;color:var(--teal2);background:rgba(0,0,0,.72);border-bottom:1px solid var(--teal);white-space:nowrap;overflow:hidden}
+#pn-status #st-place{color:var(--white)}
+#pn-status #st-chapter{margin-left:auto;color:var(--lgray)}
+#pn-status:empty,#pn-status.off{display:none}
+/* 背景・キャラクター表示エリア（常に 640×400 で描き、縦持ちでは縮小して上に置く） */
+#pn-view{position:absolute;left:0;top:0;width:640px;height:400px;overflow:hidden;background:#000;transform-origin:0 0}
+#pn-bg,#pn-bgimg{position:absolute;left:0;top:0;width:640px;height:400px;image-rendering:pixelated}
+#pn-bgimg{object-fit:cover}
+#pn-chars{position:absolute;inset:0}
+.pn-char{position:absolute;bottom:0;width:200px;height:300px;margin-left:-100px;image-rendering:pixelated;transition:opacity .25s,left .25s;opacity:0}
+.pn-char.on{opacity:1}
+.pn-char canvas,.pn-char img{position:absolute;left:0;bottom:0;width:100%;height:100%;image-rendering:pixelated}
+.pn-char img{object-fit:contain;object-position:bottom}
+.land .pn-char{bottom:96px}
+#pn-devlabel{position:absolute;left:4px;top:22px;font-size:10px;line-height:14px;color:var(--yel);background:rgba(0,0,0,.6);padding:0 4px;white-space:pre;pointer-events:none}
+#pn-devlabel:empty{display:none}
+/* 走査線 */
+#pn-scan{position:absolute;inset:0;z-index:90;pointer-events:none;background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0,rgba(0,0,0,0) 1px,rgba(0,0,0,.16) 1px,rgba(0,0,0,.16) 2px)}
+/* 縦持ち */
+.port #pn-status{height:24px;font-size:13px;line-height:24px;padding-right:52px;background:#000}
+.port #pn-view{top:24px;transform:scale(.625)}
+.port #pn-devlabel{top:4px}
+/* 共通の枠（二重線のウィンドウ） */
+.pn-frame{background:rgba(8,12,52,.9);border:2px solid var(--white);outline:1px solid var(--k);box-shadow:inset 0 0 0 1px var(--k),inset 0 0 0 2px var(--teal)}

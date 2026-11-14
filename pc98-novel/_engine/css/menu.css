@@ -1,0 +1,89 @@
+/* menu.css — タイトル・メニュー・セーブ／ロード・設定・バックログ・情報・エンディング・開発者 */
+#pn-screens{position:absolute;inset:0;z-index:50;pointer-events:none}
+.pn-screen{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);pointer-events:auto}
+.pn-screen.opaque{background:#000}
+.pn-win{display:flex;flex-direction:column;max-width:calc(100% - 16px);max-height:calc(100% - 12px);min-width:220px;
+  background:#080c34;border:2px solid var(--white);outline:1px solid var(--k);box-shadow:inset 0 0 0 1px var(--k),inset 0 0 0 2px var(--teal),4px 4px 0 rgba(0,0,0,.6)}
+.pn-win.full{width:calc(100% - 16px);height:calc(100% - 12px)}
+.pn-win-title{flex:none;margin:3px 3px 0;padding:0 8px;height:20px;font-size:12px;line-height:20px;letter-spacing:.12em;font-weight:700;color:var(--k);
+  background:var(--teal2);display:flex;justify-content:space-between}
+.pn-win-title .x{padding:0 6px;color:var(--k);font-weight:700}
+.pn-win-body{flex:1;min-height:0;overflow-y:auto;padding:8px 10px;display:flex;flex-direction:column;gap:4px;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--teal) var(--navy)}
+.pn-win-foot{flex:none;display:flex;gap:6px;flex-wrap:wrap;padding:4px 10px 8px;font-size:11px;color:var(--gray);align-items:center}
+.pn-item{flex:none;display:block;width:100%;min-height:26px;padding:3px 10px;font-size:14px;line-height:20px;text-align:left;color:var(--white);border:1px solid transparent}
+.pn-item:focus{outline:none}
+.pn-item.sel,.pn-item:focus-visible{color:var(--k);background:var(--teal2);border-color:var(--k)}
+.pn-item[disabled]{color:var(--gray);cursor:default}
+.pn-item.center{text-align:center;letter-spacing:.2em}
+.pn-btn{flex:none;width:auto;min-height:24px;padding:1px 10px;font-size:12px;border:1px solid var(--lgray);text-align:center}
+.pn-note{font-size:12px;line-height:18px;color:var(--lgray);white-space:pre-wrap}
+.pn-note.warn{color:var(--yel)}
+.pn-note.err{color:var(--red)}
+/* タイトル */
+.pn-title{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:rgba(0,0,8,.5)}
+.pn-title h1{font-size:44px;line-height:1.2;font-weight:700;letter-spacing:.3em;margin-right:-.3em;color:var(--white);text-shadow:2px 0 0 var(--teal),0 2px 0 var(--blue),3px 3px 0 #000}
+.pn-title .sub{font-size:12px;letter-spacing:.4em;color:var(--teal2);margin-bottom:18px}
+.pn-title .menu{display:flex;flex-direction:column;gap:2px;width:220px;padding:6px;background:rgba(8,12,52,.9);border:2px solid var(--white);box-shadow:inset 0 0 0 1px var(--k),inset 0 0 0 2px var(--teal)}
+.pn-title .ver{position:absolute;right:8px;bottom:6px;font-size:10px;color:var(--gray)}
+.pn-title .copy{position:absolute;left:8px;bottom:6px;font-size:10px;color:var(--gray)}
+.port .pn-title h1{font-size:40px}
+/* セーブ・ロード */
+.pn-slot{display:grid;grid-template-columns:44px 1fr auto;column-gap:8px;align-items:center;min-height:42px;border:1px solid var(--blue)}
+.pn-slot .no{font-size:13px;color:var(--teal2);text-align:center;font-weight:700}
+.pn-slot .main{min-width:0}
+.pn-slot .l1{font-size:12px;color:var(--lgray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pn-slot .l2{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pn-slot .meta{font-size:10px;line-height:14px;color:var(--gray);text-align:right;white-space:nowrap}
+.pn-slot.sel .no,.pn-slot.sel .l1,.pn-slot.sel .meta,.pn-slot:focus-visible .no,.pn-slot:focus-visible .l1,.pn-slot:focus-visible .meta{color:var(--k)}
+.pn-slot.empty .l2{color:var(--gray)}
+/* 設定 */
+.pn-cfg{display:grid;grid-template-columns:1fr 26px 108px 26px;align-items:center;column-gap:4px;min-height:26px;padding:1px 6px;font-size:13px;border:1px solid transparent}
+.pn-cfg.sel{border-color:var(--teal2);background:rgba(48,176,168,.22)}
+.pn-cfg.na{color:var(--gray)}
+.pn-cfg .v{text-align:center;color:var(--yel);font-size:13px;white-space:nowrap}
+.pn-cfg.na .v{color:var(--gray)}
+.pn-cfg button{height:22px;font-size:12px;color:var(--k);background:var(--lgray);border:1px solid var(--k)}
+.pn-cfg button:active{background:var(--teal2)}
+.pn-preview{flex:none;height:58px;padding:5px 8px;font-size:14px;line-height:22px;border:1px solid var(--teal);background:#000;white-space:pre-wrap;overflow:hidden}
+.pn-preview .c{visibility:hidden}.pn-preview .c.on{visibility:visible}
+.pn-preview.fade .c{visibility:visible;opacity:0;transition:opacity var(--cf,200ms) linear}.pn-preview.fade .c.on{opacity:1}
+.pn-preview.whole{transition:opacity var(--wf,600ms) linear}
+.pn-preview.nofx,.pn-preview.nofx .c{transition:none!important}
+/* バックログ */
+.pn-log{font-size:14px;line-height:21px;padding:3px 4px;border-bottom:1px dotted var(--blue);white-space:pre-wrap;word-break:break-all;flex:none}
+.pn-log .who{color:var(--teal2);font-size:12px;font-weight:700}
+.pn-log.choice{color:var(--yel)}
+/* 情報 */
+.pn-two{display:flex;gap:8px;flex:1;min-height:0}
+.pn-two .list{flex:0 0 42%;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+.pn-two .detail{flex:1;overflow-y:auto;padding:6px 8px;border:1px solid var(--teal);background:#000;font-size:14px;line-height:22px;white-space:pre-wrap}
+.pn-two .detail h3{font-size:14px;color:var(--teal2);margin-bottom:4px}
+.port .pn-two{flex-direction:column}
+.port .pn-two .list{flex:0 0 40%}
+/* エンディング */
+.pn-end{display:grid;grid-template-columns:86px 1fr auto;column-gap:8px;align-items:center;min-height:30px;padding:2px 8px;font-size:13px;border:1px solid var(--blue);flex:none}
+.pn-end .ty{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--k);background:var(--teal2);text-align:center;padding:0 2px}
+.pn-end.t-BAD .ty{background:var(--red);color:#fff}.pn-end.t-TRUE .ty{background:var(--yel)}.pn-end.t-SECRET .ty{background:var(--white)}.pn-end.t-NORMAL .ty{background:var(--lgray)}
+.pn-end.lock{color:var(--gray)}.pn-end.lock .ty{background:var(--gray);color:var(--k)}
+.pn-end .at{font-size:10px;color:var(--gray);text-align:right;white-space:nowrap}
+.pn-ending{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:#000;padding:20px;text-align:center}
+.pn-ending .ty{font-size:14px;letter-spacing:.5em;margin-right:-.5em;color:var(--teal2)}
+.pn-ending .nm{font-size:30px;font-weight:700;letter-spacing:.2em;margin-right:-.2em;text-shadow:2px 0 0 var(--teal),0 2px 0 var(--blue)}
+.pn-ending .tx{font-size:14px;line-height:24px;color:var(--lgray);white-space:pre-wrap;max-width:440px}
+.pn-ending .cnt{font-size:11px;color:var(--gray)}
+.pn-ending .pn-item{width:200px;border-color:var(--lgray);margin-top:10px}
+/* 開発者モード */
+.pn-tabs{display:flex;gap:3px;flex:none}
+.pn-tabs button{flex:1;height:22px;font-size:11px;color:var(--k);background:var(--lgray);border:1px solid var(--k)}
+.pn-tabs button.on{background:var(--yel)}
+.pn-dev-row{display:flex;gap:6px;align-items:center;font-size:12px;line-height:18px;flex:none;border-bottom:1px dotted var(--blue);padding:2px 2px}
+.pn-dev-row .k{flex:1;min-width:0;word-break:break-all;white-space:pre-wrap}
+.pn-dev-row .v{color:var(--yel)}
+.pn-dev-row button{flex:none;min-width:24px;height:20px;padding:0 6px;font-size:11px;color:var(--k);background:var(--lgray);border:1px solid var(--k)}
+.pn-dev-row input{flex:1;min-width:0;height:22px;font:inherit;font-size:12px;color:var(--white);background:#000;border:1px solid var(--teal);padding:0 4px;-webkit-user-select:text;user-select:text}
+.pn-dev-row.err .k{color:var(--red)}.pn-dev-row.warn .k{color:var(--yel)}
+/* 起動エラー */
+.pn-fatal{position:absolute;inset:0;z-index:99;background:#000040;color:#fff;padding:14px;font-size:13px;line-height:20px;overflow:auto;white-space:pre-wrap;-webkit-user-select:text;user-select:text}
+.pn-fatal h2{font-size:15px;color:var(--yel);margin-bottom:8px}
+/* 縦持ちでは、右上に共通の表示設定ボタン（⛶）が重なるので、×を左へ寄せる */
+.port .pn-win.full .pn-win-title{padding-right:50px}

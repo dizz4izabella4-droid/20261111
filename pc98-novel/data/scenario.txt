@@ -1,0 +1,205 @@
+# 零時の記録 — PC98 NOVEL ENGINE の動作確認用サンプル
+# 書き方は README.md の「シナリオの書き方」を参照。このファイルから build.js が scenario.json を作る。
+
+*opening
+@status 1994年3月14日 23:10 | 旧校舎前 | 序章
+@effect blackout on
+@bg school_night
+@env wind
+@bgm mystery
+@effect fadein 800
+三月の夜風は、まだ冬の匂いがした。
+取り壊しが決まった旧校舎は、十年前と同じ場所に、同じ形で立っている。
+私「……変わってないな」
+卒業してから、一度も来なかった。来られなかった、と言うほうが正しい。
+@choice first | どうする？
+- 校舎の中へ入る -> classroom
+- 周囲を調べる -> around
+- 音楽室の灯りを見上げる -> secret_start | if ending:end_true
+
+*around
+@bg school_back fade=500
+裏手に回ると、通用口の脇に古い牛乳箱が残っていた。
+@se click
+箱の底で、錆びた鍵が鈍く光った。
+@info key
+@flag found_key
+私「宿直室の鍵……まだ、こんな所に隠してたのか」
+@jump classroom
+
+*classroom
+@status 1994年3月14日 23:20 | 二年B組 | 第一章
+@bg classroom fade=600
+@se door
+二年B組。月明かりが、並んだ机の天板を青く塗っている。
+窓際の、後ろから二番目。そこだけ、机の中に何かが残っていた。
+@info diary
+一冊の日記。布張りの表紙は、角がすり切れている。
+最後のページを開く。日付は、明日——三月十五日。
+@style fade fade=1500
+@fx glitch
+「明日の午前零時、私はここで死ぬ。」
+@style reset
+@effect shake 300
+私「……なんだ、これ」
+@choice diary
+- 日記を最初から読む -> read_diary
+- すぐに校舎を調べる -> corridor
+- 見なかったことにして帰る -> leave
+
+*read_diary
+ページをさかのぼる。丸い、几帳面な字。
+@style line linems=700
+三月一日。屋上のフェンスが、また錆びている。先生に言ったけれど、直らない。\n三月十日。約束をした。十四日の夜、零時に屋上で。
+@style reset
+裏表紙に名前があった。——三崎ユキ。
+@info name
+@flag read_diary
+私「三崎……」
+@effect noise 400
+その名前を、私は知っている。
+@jump corridor
+
+*leave
+@bg school_night fade=600
+私は日記を机に戻し、校舎を出た。
+@se bell
+遠くで、零時の鐘が鳴った気がした。振り返る理由は、もう無かった。
+@ending end_normal
+
+*corridor
+@status 1994年3月14日 23:35 | 二階廊下 | 第二章
+@bg corridor fade=600
+@bgm tension
+@se step
+廊下の突き当たりに、誰かが立っていた。
+@char yuki normal center
+@effect flash 200
+セーラー服の少女。足音は、しなかった。
+少女「……あなた、だれ？」
+@label ask
+@choice who | 何と答える？
+- 「日記を返しに来た」 -> #returned | id return | add trust=1
+- 「君こそ、誰だ」 -> #who | id who | once | wrong
+- 「三崎ユキ、だろう」 -> #named | id named | if read_diary | add trust=2 | correct
+
+# 誤答のあとの追加会話。選択肢へ戻る（選んだ項目は once で消える）
+@label who
+@char yuki angry center
+少女「……質問に、質問で返さないで」
+少女は、答えを待っている。
+@jump #ask
+
+@label returned
+@char yuki surprise center
+少女「日記……読んだの？」
+@jump #after
+
+@label named
+@char yuki surprise center
+少女「どうして、名前……」
+@char yuki smile center
+ユキ「……そっか。読んでくれたんだ」
+
+@label after
+@char yuki sad center
+少女「零時になる前に、宿直室を見て。そこに、十年前がある」
+@hide yuki
+瞬きの間に、少女は消えていた。
+@jump staffroom
+
+*staffroom
+@status 1994年3月14日 23:45 | 宿直室 | 第二章
+@bg staffroom fade=600
+@if found_key
+  @se door
+  錆びた鍵は、あっけなく回った。
+  壁に、黄ばんだ新聞の切り抜きが貼られている。
+  @info clipping
+  「昭和五十九年三月十五日 午前零時ごろ、旧校舎屋上のフェンスが外れ、女子生徒が転落——」
+@else
+  宿直室には鍵がかかっていた。扉は、びくともしない。
+  私「……駄目か」
+@endif
+@jump rooftop_gate
+
+*rooftop_gate
+# STORY難易度の補完: 切り抜きを見ていなくても、必要な話を補ってから先へ進む
+@require info:clipping -> hosoku | grant rumor
+@jump rooftop
+
+*hosoku
+@char yuki sad center
+背後で、声がした。
+少女「開かなかったのね。……じゃあ、私が話す」
+少女「十年前の今夜、屋上のフェンスが外れたの。誰かを待っていた子が、落ちた」
+@hide yuki
+@effect noise 300
+@return
+
+*rooftop
+@status 1994年3月14日 23:57 | 屋上 | 終章
+@bg rooftop fade=800
+@char yuki normal center
+屋上。錆びたフェンスの前に、少女が立っていた。
+@if read_diary && info:clipping
+  私「——十年前、ここで待っていたのは、君だ。約束を破ったのは、俺だ」
+  @char yuki surprise center
+@else
+  私は、まだ何かを取りこぼしている気がした。
+@endif
+@se bell
+@effect invert 150
+零時の鐘が、鳴りはじめる。
+@choice last | 零時——
+- 「遅くなって、ごめん」 -> #judge | id sorry | if read_diary | set apologized
+- 「そこから離れろ！」 -> #judge | id stop | set shouted
+- 黙って手を伸ばす -> #judge | id reach | set reached_out
+@label judge
+# 条件（endings.json）を上から調べて、結末を自動で決める
+@ending
+
+*ep_true
+@bgm ending
+@char yuki smile center
+ユキ「……十年、待ったよ」
+@effect flash 400
+フェンスが音もなく外れ、夜の底へ落ちていった。彼女は、もうそこに立っていなかった。
+@hide yuki
+@style custom speed=60 fade=400 line=600
+日記の最後のページは、書き換わっていた。\n「零時、私はここで待っていた。来てくれて、ありがとう。」
+@style reset
+@ending
+
+*ep_good
+@bgm calm
+@char yuki sad center
+少女は一歩、フェンスから離れた。
+少女「……あなたは、あの人じゃないのね。でも、ありがとう」
+@hide yuki
+鐘が鳴り終わったとき、屋上には私ひとりだった。彼女が誰を待っていたのか、私はまだ知らない。
+@ending
+
+*ep_bad
+@bgm stop
+@effect shake 600
+伸ばした手は、彼女をすり抜けて、錆びたフェンスを掴んだ。
+@se shock
+@effect flash 200
+@fx garble
+金属の悲鳴。足元から、夜が抜けた。
+@effect fadeout 1200
+@ending
+
+# SECRET: TRUE END を見たあとだけ入れる。条件を満たさずに来たら教室へ回す（到達条件の例）
+*secret_start | require ending:end_true | fallback classroom
+@status 1994年3月14日 23:15 | 音楽室 | 外伝
+@bg music_room fade=600
+@bgm calm
+@se piano
+三階の音楽室に、灯りがついていた。
+@char yuki smile center
+ユキ「今夜は、早く来たんだね」
+私「十年ぶんの、利子だ」
+ふたりで並んで、鍵盤に指を置く。零時までは、まだ少しある。
+@ending end_secret

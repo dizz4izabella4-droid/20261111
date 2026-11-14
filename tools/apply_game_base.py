@@ -28,6 +28,8 @@ TARGETS = [
     'where-which/index.html',
     'noche-sin-luna/index.html',
     'noche-sin-luna/_src/template.html',
+    'pc98-novel/_engine/template.html',
+    'pc98-novel/index.html',
 ]
 PWA_META = (
     '<meta name="apple-mobile-web-app-capable" content="yes">'
