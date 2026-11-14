@@ -1656,7 +1656,7 @@ function pFist(c, H, sk, r) { r = r || 1.9; pEll(c, H[0], H[1], r, r * 0.9, sk[1
 
 /* ---------- 主人公 ---------- */
 var PLP = mkPal({
-  sk: '#e1aa80', skL: '#f6cea6', skD: '#b77752', skDD: '#80492f',
+  sk: '#f5a371', skL: '#f8c89a', skD: '#d06b3e', skDD: '#933622',
   s0: '#11131c', s1: '#1f2331', s2: '#30364b', s3: '#4b5574', sp: '#2a3042',
   t0: '#16244f', t1: '#27408a', t2: '#a9badc',
   w0: '#f3f3ee', w1: '#b5bccb',
@@ -1665,67 +1665,41 @@ var PLP = mkPal({
   wd0: '#8f5a2a', wd1: '#c48a48', wd2: '#e8bb78', gr: '#26262c', silv: '#cfd6e2', red: '#c03a32',
   b0: '#0c0e15', b1: '#171a26', b2: '#262b3d', l0: '#161924', l1: '#232838', l2: '#3a4260', shb: '#262b38'
 });
-var PLC = { suit: ['#11131c', '#1f2331', '#30364b', '#4b5574'], suitB: ['#0c0e15', '#171a26', '#262b3d'], sk: ['#b77752', '#e1aa80', '#f6cea6'], shoe: ['#0a0b0f', '#3c4354'] };
+var PLC = { suit: ['#11131c', '#1f2331', '#30364b', '#4b5574'], suitB: ['#0c0e15', '#171a26', '#262b3d'], sk: ['#d06b3e', '#f5a371', '#f8c89a'], shoe: ['#0a0b0f', '#3c4354'] };
 /* pose: {hipY, ux, legs:[back,front], A:手前の手, B:奥の手, bat:{g,t,k}, ear, phone, head} 座標は右向き・足元(0,0) */
+/* 主人公(2026-11-14 交代): 体は48×48のドット絵そのもの(右向き=east、後ろ姿=north)を足元基準で置き、
+   手前の腕とバット・小物だけを従来のパーツ描画(pup)で上から重ねる。 */
+var PLSPR = {}, PLCB = null;
+(function () {
+  var d = { e: 'iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAEs0lEQVR42tWaW0xcVRSGvxmGcpsLJKTcOmU65VLawdAaQOVSAwXEmjZ9qm3qQxujJtUHQ9NECA/G0AfflNRoG4XEphgxJZYqYlsTLirtAFahkEKhDENnoAy3gRkoM53jw5QBRF/MOXrYyXlZ++Ss9a+911r/XvvAJh8Kib8vSK1TSgBCikZDrDqc+GgdAN0jdgbm50XVq5DS+CMZiRRkJ+GYdtJoHgPA5pij1T4hmm6VVMbvM8RRkJ0EQKN5jNqLZwCYufkjcRXfiKZMKWUA1DT34Zh2YnPM4e7qCMjvnM7/p/iQF4AV748vuBntu8+TwX6iCotF/b5KKsO/6hkA4NX0FN7bG49WF0Hp2csA1J7cJ+8tNDA/T7FOzXB5Kd0jdmzTbgBOJkfy9a9mPqnrln8MfHo6b52hYRERHPuwDPVvFznxcqq8AaRoNBjPNQUMnXEtM9hvwd3VwbLtIWcvdVOTn4pSGSzItg6sBbPPEEe6sMjB/TtoH/Vvp7cbO0XRr5LK+OosIwDV/ZN0j9jBEEd8zwToNPxye1jeW6gmP5WDB1JRhwavUAcAmmf8C+PbGi2ariCxvV+Tn8rhozmEajWEK5fRL/qoH5ukz+HksXsJD1vINWj5fsAG8L6cmK1QpIoSnm4hoTrLKEyfPyVUmfRClUkfkK95ZEfmhCJVFAA7I4IDwiGXh8/OPgdA3dVeKnqtsmSj64xXKxVkx67mh1vjXsrO5AGsEDl5ArjundkwUZ+WEAABMLzo5crSlGi6FWKnzrzMbex67YSf+19twHiuKQACoO7BkqgARE2j6lD/3vfarbi7OnDOuTa8YwxT8ZZuq2h0WrRCVmXSc9c6S2ioCq2uk5b21WJ1YdDNG8nhAGTHqrhp88iTTh/K2U7bnXHoHOWlknS/sPUegN/o53ehvnWPR4+fyK8Sa8OD0erCOHUsm4St4UQVFhMSqQXAEublJ98iQzd6+H1+Wb4xAKDZnQbAk8F+2prMACQuqkhclObsJAkXerYkl67mdg5f62FtfVhb4GQHwOn20GYe45G5k6DkNLZtX0/Yhlwehlwe2QJQVPRacbpXDYxJ2wXAde8MGpVSEu+LnoW04cE451zEDPbz2DkXkF9ZmoIlaTiY6DGg1UUAMPvQDsCe0uNkHn0TgIhog7yD+J3bw4yNOtbJHCMWRv/oJSYth92FJfIGoFQGMzTqZLCji8iEuA3zXfVfyD+NnnxaeUO0OlxfvstE/8/sLSog2pAo+zqg8Pk2psmFhkp++PgDyY6BSqkvTO7faAHgbtNlPs81yjuNrozvWh6gNY/hdHswGSLZbGPDAf7F18tEP8xLCiAmLUfY8cIrwp7S48KWEH+noiY/VRIAQRIYD4AuNob0jGdwLsOsdYBvLVOStDIl607rk3cyPjmJpaM50GaUYgUUUl+rVpn0mAyRJCb6aXXG+VbZ31IK1VlGnG4PFb1Wqkz6dZN5GbHkXzL/F3fU/x5A64lMYbi89O/aiaIHslIK72t1YcQfOsJSx4W/rrZCbM+LHsTRkWFYLDPYrjbgtVtZaKhkuLwUqWqAZEG80qVLOrCfjyprAajsG8fn82yefyX+h59LNt/4E0kMwWDyxLwcAAAAAElFTkSuQmCC', n: 'iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAFaklEQVR42u2aW0zTdxTHP/9CRWgLNnJRHLeqkEp188LF4CDRSLI5ddk1Jrz4ZrL4ZvYw9srLwl5mTIxZshcTs7iYzGnMxmYmjAyEiY4qq45rVShC/kAvFlr720PpX0pbpLWtNdl5+v9/Pf/zO5fvOed/fv/Ca05SguSKZO2XCANE/cYC9m7JUxZGZxa4NTLOfbs97ntKiVD+kz1FWGfc7K/ZAsADy0MAvvndEncjVPFUvlynozA3JyLDrtKNlOt0K0EsakpPRAL8MTLHvtJsxfOBtUSQKt4Cb42MhygcuA78Fk+KawTu2+0BiET0+mIOpGYEbn9WD8DjqdmIkRn64p3UjUBfvy1I4Q3arBCe7t6xlO0DAqBcp1MUn3C4AILul0BISjUISQAnjXlMOFyK8gHFJxwuThrz4u64hJTRJYq+lu9C4kJjJTV7ioMW+/9+yNEr/Sn7KqF01vamKkx7t4dlGrv3L2+daY/r/unxUPxETj4HCtV0T3ipP9/D7ZxMirdtCWLsuNbD0Sv9nMjJp1yfxuNZH62yTQCoVGp8Po+UzAiIU/oCajaEt797wkurbAtaO6UvwOETHChUr8QvJcWAFlORaDZbuWjc5Me3/RnbdWlRyeie8CoO+HjgEaerDZy8OSQlA0LiUEMZhxrKOHv+H/J1KibtPojSAIdP0D3hDerg3BwS0To1phzo6HmIdq2as7OTfDC/HkNmeDG/PfYAhIWNViUx9NTLJfc0JT2a5Day0SdO7lpnaDEVcck9HfPml9zTtJiKmHN5mHN5klKFxHf1FRz9tE4pi81mK0NPvdQsE9Vvf4ZWJSlQWZ7wDp+/8h5qKFMqVuH3nRxvt0QFo6gh1LDPQNbuWlx/dSlr+RlpCly0Kv/ed+wL6NJV5Gekcce+oCgcibJ219LwaBzaLYmFUKZGE6R8uOR0+ASbNWrFoMD1SuQdtyY8B8SP7/k77PzMHB3Xerh6YxiAQWd4/OZnpIX1/KDTozxz9cYw5j/7sd8bYN2mjbQ3VUU1M0cVgeq9FTx1OgHQr1tLs9nvtTavzEWXrCgWyaDJ+WcMOj3ckhy0eWUARUbAMVuNJYlL4q+/7eBIXTEwtbwZil1Cqyzo0lf2yy6hpQ1ZeVaecfNgYBSAy51jiTOg6d0KvvrBTGXeynXb7vVh9/pWLdc8MgPA3SdOPv/IROsZW0JeJUSLqUi5WQy99IKjxNXuv5Ls5Aw0BcY6cktD8Ts1MhqyPjUyim2gM+kTmdRstgZ5SqkEqudlsmjrZuXa7XIxNTIatAbgmo18yBWN919qJj5dbQiBzlLFrA8Gg/gD926XC5csR4Rm0ob6nyyTihF5FdXklpbgkmUsvX1M2yYBGOjsQh66h6W3DwBLbx8DnV3klpZQYKxTlL9h9RuUnaVOzkQW2HD5C9jOg/vpa7vOmCwHYXy062fS1Vr0hm3sPLg/JDoBmYcr8pMTgYYiPV8eNgY1oaVGAKzJ0Cu54/N50Bu2YayrDcmTZrOV4zUlMSkfSwSkZrPVj/vnySYcTx5RvMMUxLgwL682GaVjv9wVsU6Jqhhrt7R0o6r3P0Sj0zJtm6Sv7XrEBwc6u5T8CEQqksxkHquIxYRUaBH/Uox8r+Zo0VhXGwKjcFS8w6TkQsodr2t0WngNP7Ou9pNqQj69quKl/OlqQ6CxRVJKCvAt67ziVR0tilNlBRypK2ZwbI6GfQau/rq6efbYERPZWWreLF/P5c4xWodtItZIvNTbqF6zhuycTHZuzyRTo0G7Vr3qufrtqjcAKMnTwDCvjAQg2puqhLvrnLjQWCleAAlxobFSuLvOifamqgCvSKnj9RfIFUn6r8b/lDT6DycCP2g2no7kAAAAAElFTkSuQmCC' }, k;
+  for (k in d) { var im = new Image(); im.src = 'data:image/png;base64,' + d[k]; PLSPR[k] = im; }
+})();
+/* 体のスプライトと、直前に描いたパーツ(PUP.out)を1枚にまとめて PUP.out に差し替える(以後の pupBlit/pupBlitRot/残像がそのまま使える) */
+function plCompose(spr, dx, dy, overlay) {
+  if (!spr || !spr.complete || !spr.naturalWidth) return;
+  var bx = -24 + dx, by = -47 + dy;
+  var ux0 = overlay ? Math.min(bx, PUP.x0) : bx, uy0 = overlay ? Math.min(by, PUP.y0) : by;
+  var ux1 = overlay ? Math.max(bx + 48, PUP.x0 + PUP.w) : bx + 48, uy1 = overlay ? Math.max(by + 48, PUP.y0 + PUP.h) : by + 48;
+  var w = ux1 - ux0, h = uy1 - uy0, g;
+  if (!PLCB) { PLCB = document.createElement('canvas'); PLCB.cx = PLCB.getContext('2d'); }
+  if (PLCB.width < w || PLCB.height < h) { PLCB.width = Math.max(PLCB.width, w); PLCB.height = Math.max(PLCB.height, h); }
+  g = PLCB.cx; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, PLCB.width, PLCB.height); g.imageSmoothingEnabled = false;
+  g.drawImage(spr, bx - ux0, by - uy0);
+  if (overlay) g.drawImage(PUP.out, 0, 0, PUP.w, PUP.h, PUP.x0 - ux0, PUP.y0 - uy0, PUP.w, PUP.h);
+  PUP.out = PLCB; PUP.x0 = ux0; PUP.y0 = uy0; PUP.w = w; PUP.h = h;
+}
 function pupPlayer(q) {
-  var hipY = q.hipY, T = hipY - 17, ux = q.ux || 0, i, x0 = -14, y0 = T - 15, x1 = 14, y1 = 2;
+  var bx = q.bx || 0, x0 = -14, y0 = -52, x1 = 14, y1 = 4;
   function ext(p) { if (!p) return; x0 = Math.min(x0, p[0] - 4); x1 = Math.max(x1, p[0] + 4); y0 = Math.min(y0, p[1] - 4); y1 = Math.max(y1, p[1] + 4); }
-  ext(q.A); ext(q.B); if (q.bat) { ext(q.bat.g); ext(q.bat.t); }
+  ext(q.A); if (q.bat) { ext(q.bat.g); ext(q.bat.t); }
   var c = pupBegin(PLP, x0, y0, x1, y1);
-  var Sb = [ux - 1.1, T + 1.8], Sf = [ux + 1.3, T + 2.0];
-  /* 奥の腕 */
-  if (q.B) pArm(c, Sb, q.B, PLC.suitB, 8.4, 7.6, 1, { r0: 1.85, r1: 1.65, r2: 1.5, cuff: '#b5bccb', hand: function (H) { pFist(c, H, ['#80492f', '#b77752', '#e1aa80'], 1.7); } });
-  /* 奥の脚・手前の脚 */
-  pLeg(c, q.legs[0], PLC.suitB, ['#06070a', '#262b38'], { r0: 2.15, r1: 1.85, r2: 1.65 });
-  pLeg(c, q.legs[1], ['#161924', '#232838', '#3a4260'], PLC.shoe, { crease: true, r0: 2.15, r1: 1.85, r2: 1.65 });
-  /* 胴 */
-  if (q.back) {
-    pSuitTorso(c, hipY, T, ux, ['#11131c', '#1f2331', '#2a3044', '#3a4360'], { shirt: false, w: 0.84 });
-    pPath(c, [[0, T + 1], [0.3, hipY + 1.4]], 0.6, '#11131c');
-    pTube(c, -5.2, T + 2.2, -6.2, T + 9.5, 2.0, 1.8, PLC.suitB); pTube(c, 5.2, T + 2.2, 6.2, T + 9.5, 2.0, 1.8, PLC.suitB);
-    var bhx = 0, bhy = T - 6.3;
-    pTube(c, 0, T + 0.6, 0, bhy + 3.5, 1.7, 1.6, ['#80492f', '#b77752']);
-    pEll(c, bhx, bhy, 4.8, 5.3, '#0d0d13'); pEll(c, -4.6, bhy + 0.8, 0.9, 1.4, '#b77752'); pEll(c, 4.6, bhy + 0.8, 0.9, 1.4, '#b77752');
-    pClip(c, function () { c.beginPath(); c.ellipse(bhx, bhy, 4.8, 5.3, 0, 0, 6.2832); }, function () { pEll(c, -2.6, bhy + 1.5, 3, 4.5, '#050508'); pEll(c, 1.4, bhy - 3.6, 2.2, 1.3, '#2e303e'); });
-    pPath(c, [[-2.6, bhy - 4.4], [0, bhy - 3.2], [2.6, bhy - 4.4]], 0.6, '#2e303e');
-    if (!q.secret) { pEll(c, 4.8, T - 0.6, 2.5, 2.4, '#f6cfb0'); pEll(c, 4.0, T - 1.6, 1.0, 0.7, '#fff3e6'); }
-    pupEnd(function (d, w, h) { if (!q.secret) { } });
-    if (!q.secret) { /* イヤホンのコード */ }
-    return;
-  }
-  pSuitTorso(c, hipY, T, ux, PLC.suit, { tie: ['#16244f', '#27408a', '#a9badc'], pocket: '#f3f3ee', w: 0.84 });
-  /* 首と頭 */
-  var hx = ux * 1.05 + 0.7, hy = T - 6.3;
-  pTube(c, ux + 0.4, T + 0.6, hx + 0.2, hy + 3.5, 1.7, 1.6, ['#80492f', '#b77752']);
-  pEll(c, hx, hy, 4.7, 5.2, '#e1aa80');
-  pPoly(c, [[hx - 2.2, hy + 1], [hx + 4.6, hy + 0.4], [hx + 4.3, hy + 3.6], [hx + 2.3, hy + 5.5], [hx - 0.8, hy + 5.2]], '#e1aa80');
-  pClip(c, function () { c.beginPath(); c.ellipse(hx, hy, 4.7, 5.2, 0, 0, 6.2832); c.moveTo(hx - 2.2, hy + 1); c.lineTo(hx + 4.6, hy + 0.4); c.lineTo(hx + 4.3, hy + 3.6); c.lineTo(hx + 2.3, hy + 5.5); c.lineTo(hx - 0.8, hy + 5.2); c.closePath(); }, function () {
-    pEll(c, hx - 3.5, hy + 2.5, 3.4, 4.4, '#b77752');
-    pEll(c, hx + 2.2, hy - 2.2, 2.0, 1.6, '#f6cea6');
-    pEll(c, hx + 1.4, hy + 5.4, 3.2, 1.2, '#b77752');
-  });
-  pPoly(c, [[hx + 4.0, hy - 1.0], [hx + 5.7, hy + 1.6], [hx + 4.2, hy + 2.0]], '#e1aa80');
-  pEll(c, hx - 1.3, hy + 0.6, 1.1, 1.5, '#b77752');
-  /* 髪(オールバック) */
-  pBlob(c, [[hx + 4.3, hy - 2.4], [hx + 4.9, hy - 4.6], [hx + 2.6, hy - 6.6], [hx - 1.6, hy - 6.8], [hx - 4.8, hy - 4.8], [hx - 5.4, hy - 1.2], [hx - 4.6, hy + 2.8], [hx - 2.8, hy + 1.4], [hx - 2.3, hy - 1.8], [hx + 1.4, hy - 3.1]], '#0d0d13');
-  pPath(c, [[hx + 3.4, hy - 5.3], [hx + 0.5, hy - 5.9], [hx - 3.4, hy - 4.4]], 0.75, '#2e303e');
-  pPath(c, [[hx + 2.6, hy - 3.6], [hx - 0.4, hy - 4.3], [hx - 3.8, hy - 2.4]], 0.6, '#2e303e');
-  pPath(c, [[hx - 4.6, hy - 1.4], [hx - 3.6, hy + 2.2]], 0.8, '#050508');
+  var Sf = [2.5 + bx, -30.5];
   if (q.bat) pupBat(c, q.bat);
-  /* 手前の腕 */
-  if (q.A) pArm(c, Sf, q.A, PLC.suit, 8.4, 7.6, 1, { r0: 1.85, r1: 1.65, r2: 1.5, cuff: '#f3f3ee', watch: '#cfd6e2', hand: function (H) { pFist(c, H, ['#b77752', '#e1aa80', '#f6cea6'], 1.9); } });
-  /* 顔の点(目・口) */
-  var ex = Math.round(hx + 0.6), ey = Math.round(hy - 0.4);
-  pPixW(ex + 1, ey - 1, 3, '#050508');
-  pPix(ex + 2, ey, '#f4f4ee'); pPix(ex + 3, ey, '#10101a');
-  pPix(Math.round(hx + 3.2), Math.round(hy + 3.4), '#8a4434'); pPix(Math.round(hx + 4.2), Math.round(hy + 3.4), '#b06050');
-  if (q.ear) { pPix(Math.round(hx - 1.4), Math.round(hy + 0.6), '#ffffff'); pPix(Math.round(hx - 1.4), Math.round(hy + 1.6), '#e8e8e8'); }
+  if (q.A) pArm(c, Sf, q.A, PLC.sk, 9, 8.4, 1, { r0: 2.1, r1: 1.9, r2: 1.7, hand: function (H) { pFist(c, H, PLC.sk, 1.9); } });
+  if (q.ear) { pPix(-1 + bx, -40, '#ffffff'); pPix(-1 + bx, -39, '#e8e8e8'); }
   if (q.earPod) { pPix(Math.round(q.earPod[0]), Math.round(q.earPod[1]), '#ffffff'); pPix(Math.round(q.earPod[0]) + 1, Math.round(q.earPod[1]), (Math.floor(simT / 120) & 1) ? '#9fd8ff' : '#ffffff'); }
-  if (q.phone) { var phx = Math.round(q.phone[0]), phy = Math.round(q.phone[1]); pPixW(phx, phy, 3, '#14161c'); pPixW(phx, phy + 1, 3, '#14161c'); pPix(phx + 1, phy + 1, q.phone[2] ? '#ffffff' : '#6fd0ff'); pPixW(phx, phy + 2, 3, '#14161c'); pPix(phx + 1, phy + 2, q.phone[2] ? '#ffffff' : '#6fd0ff'); pPixW(phx, phy + 3, 3, '#14161c'); }
-  pupEnd(function (d, w, h, P, idx) {
-    var b1 = P.idx.s1, b2 = P.idx.s2, sp = P.rgb[P.idx.sp], s3 = P.rgb[P.idx.s2];
-    for (var i2 = 0; i2 < w * h; i2++) { var k2 = idx[i2]; if ((k2 === b1 || k2 === b2) && ((i2 % w) + PUP.x0) % 3 === 0) { var o2 = i2 * 4, qq = k2 === b1 ? sp : P.rgb[P.idx.s3]; d[o2] = qq[0]; d[o2 + 1] = qq[1]; d[o2 + 2] = qq[2]; } }
-  });
+  if (q.phone) { var phx = Math.round(q.phone[0]), phy = Math.round(q.phone[1]); pPixW(phx, phy, 3, '#14161c'); pPixW(phx, phy + 1, 3, '#14161c'); pPix(phx + 1, phy + 1, q.phone[2] ? '#ffffff' : '#6fd0ff'); pPixW(phx, phy + 2, 3, '#14161c'); }
+  pupEnd();
 }
 function pupBat(c, b) {
   var gx = b.g[0], gy = b.g[1], tx = b.t[0], ty = b.t[1], dx = tx - gx, dy = ty - gy, d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d, k = b.k || 1;
@@ -2309,13 +2283,14 @@ function drawFigure() {
   if (sw > 0.02 && !pl.cut) { f1 = 3 + 4.5 * sw; f2 = -(3 + 5.5 * sw); if (sw < 0.95 && sw > 0.62) y2 = -1.5; }
   else if (moving) { var st = Math.sin(pl.ph), cs = Math.cos(pl.ph); f1 = st * 5.2; f2 = -st * 5.2; y1 = -Math.max(0, cs * 2.6); y2 = -Math.max(0, -cs * 2.6); }
   if (ad && pl.act.k === 'dodge') { f1 = 2.6 + ad.crouch * 1.3; f2 = -f1; y1 = y2 = 0; }
-  var q = { hipY: hipY, ux: lean, legs: [plLeg(-1.2, hipY, f2, y2), plLeg(1.4, hipY, f1, y1)], glint: glintA(GL.g) > 0.5, ear: pl.ear };
+  var q = { bx: Math.round(lean * 0.5), hipY: hipY, ux: lean, legs: [plLeg(-1.2, hipY, f2, y2), plLeg(1.4, hipY, f1, y1)], glint: glintA(GL.g) > 0.5, ear: pl.ear };
   var lx = function (x) { return (x - px) * f; }, ly = function (y) { return y - F; };
   if (!pl.cut) {
     var H = hands(P); q.A = [lx(H.x), ly(H.y)]; q.B = [q.A[0] - 1, q.A[1] + 1];
     q.bat = { g: q.A, t: [q.A[0] + P.tx, q.A[1] + P.ty], k: 1 + 0.45 * Math.max(0, P.sp || 0) };
   } else plCutPose(q, bob);
   pupCall('pl', (q.ear ? 1 : 0) + ':' + (q.phone ? Math.floor(simT / 120) & 1 : 0) + ':' + (q.earPod ? Math.floor(simT / 120) & 1 : 0), q, function () { pupPlayer(q); });
+  plCompose(PLSPR.e, q.bx, -bob + (ad ? Math.round(ad.crouch * 0.5) : 0), true);
   if (ad && (ad.rot || ad.dx)) {
     if (pl.act.k === 'dodge' && simT - lastGhostT > 38) { lastGhostT = simT; pushGhost(px + ad.dx, F, f, ad.rot); }
     drawGhosts(); pupBlitRot(px + ad.dx, F - 14, f, ad.rot, 0, -14);
@@ -2349,7 +2324,7 @@ function plCutPose(q, bob) {
 }
 /* 後ろ姿(赤ちゃんを抱いて花火を見る) */
 function drawPlayerBack(px, F) {
-  var qb = { hipY: -17, ux: 0, back: true, secret: G.secret, legs: [plLeg(-1.6, -17, -2.2, 0), plLeg(1.6, -17, 2.2, 0)] }; pupCall('pl', 'b', qb, function () { pupPlayer(qb); });
+  var qb = { hipY: -17, ux: 0, back: true, secret: G.secret, legs: [plLeg(-1.6, -17, -2.2, 0), plLeg(1.6, -17, 2.2, 0)] }; plCompose(PLSPR.n, 0, 0, false);
   pupBlit(px, F, 1);
   pl.gp = null;
 }
