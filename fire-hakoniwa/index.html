@@ -982,42 +982,74 @@ function drawRock(o){
   ctx.fillStyle='#8c92a4';ctx.fillRect(x-1,y-7,4,1);ctx.fillRect(x-3,y-6,6,1);
   ctx.fillStyle='#4d5160';ctx.fillRect(x+3,y-4,2,3);
 }
+/* ====== プレイヤー（「伸びるヒゲ」の主人公：ヒゲメガネ・帽子なし・火炎放射器スーツ） ====== */
 function drawPlayer(){
   const p=player;
   const x=Math.round(SX(p.x,p.y)),y=Math.round(SY(p.x,p.y));
   ctx.fillStyle='rgba(0,0,0,.35)';ctx.fillRect(x-5,y-1,10,2);ctx.fillRect(x-3,y-2,6,1);
   const c=Math.cos(p.aim),s=Math.sin(p.aim),toward=s>=0;
+  const dir=c>0.35?1:c<-0.35?-1:0;          // 画面の左右どちらを向いているか（0＝ほぼ正面／真後ろ）
   const step=p.moving?(Math.floor(p.walk/5)%2):0;
-  // 脚
-  ctx.fillStyle='#b8431e';
-  ctx.fillRect(x-3,y-4-(step?1:0),2,4+(step?1:0)-0);
-  ctx.fillRect(x+1,y-4-(step?0:1),2,4+(step?0:1)-0);
-  ctx.fillStyle='#3a2a22';ctx.fillRect(x-3,y-1,2,1);ctx.fillRect(x+1,y-1,2,1);
+  // 脚（オレンジのオーバーオール＋茶色のブーツ）
+  ctx.fillStyle='#e0481a';
+  ctx.fillRect(x-3,y-4-(step?1:0),2,4+(step?1:0));
+  ctx.fillRect(x+1,y-4-(step?0:1),2,4+(step?0:1));
+  ctx.fillStyle='#6b2c00';ctx.fillRect(x-3,y-2,2,2);ctx.fillRect(x+1,y-2,2,2);
+  // 火炎放射器のタンク（赤いボンベ＋銀のフタ＋黄色いバルブ）
   const drawTank=()=>{
     const tx=Math.round(x-c*4),ty=Math.round(y-9-s*2);
-    ctx.fillStyle='#c8382a';ctx.fillRect(tx-2,ty-4,4,8);
-    ctx.fillStyle='#ee6a50';ctx.fillRect(tx-2,ty-4,1,8);
-    ctx.fillStyle='#7a2018';ctx.fillRect(tx-2,ty+3,4,1);
+    ctx.fillStyle='#8c1c10';ctx.fillRect(tx-2,ty-4,4,8);
+    ctx.fillStyle='#d4402a';ctx.fillRect(tx-2,ty-4,1,8);
+    ctx.fillStyle='#4a0c06';ctx.fillRect(tx+1,ty-4,1,8);
+    ctx.fillStyle='#c2c3c7';ctx.fillRect(tx-2,ty-4,4,1);ctx.fillRect(tx-2,ty+3,4,1);
+    ctx.fillStyle='#ffd21f';ctx.fillRect(tx-1,ty-5,1,1);
+    ctx.fillStyle='#ffffff';ctx.fillRect(tx-1,ty-1,2,1);
   };
   if(toward)drawTank();
-  // 胴
-  ctx.fillStyle='#f4f1e8';ctx.fillRect(x-3,y-10,6,3);
-  ctx.fillStyle='#e0561f';ctx.fillRect(x-3,y-7,6,4);
-  ctx.fillStyle='#f4f1e8';ctx.fillRect(x-2,y-8,1,1);ctx.fillRect(x+1,y-8,1,1);
-  // 頭
-  ctx.fillStyle='#f0c9a0';ctx.fillRect(x-3,y-16,6,6);
-  ctx.fillStyle='#e0561f';ctx.fillRect(x-3,y-17,6,2);ctx.fillRect(x-4,y-15,1,1);ctx.fillRect(x+3,y-15,1,1);
-  if(toward){
-    const ex=Math.round(c*1.5);
-    ctx.fillStyle='#2a1c14';ctx.fillRect(x-2+ex,y-13,1,2);ctx.fillRect(x+1+ex,y-13,1,2);
+  // 胴（白いシャツ＋オレンジのオーバーオール＋ボタン）
+  ctx.fillStyle='#ffffff';ctx.fillRect(x-4,y-10,8,3);
+  ctx.fillStyle='#e0481a';ctx.fillRect(x-3,y-7,6,4);
+  ctx.fillStyle='#f0e8d0';ctx.fillRect(x-2,y-7,1,1);ctx.fillRect(x+1,y-7,1,1);
+  // 頭（肌色・髪なし）＋ヒゲメガネ
+  const SK='#ffa044',BLK='#111111',MU='#381800',NO='#ff8a3a',NOD='#e0601c';
+  ctx.fillStyle=SK;ctx.fillRect(x-4,y-18,8,8);
+  if(toward&&dir===0){
+    // 正面：太いフチのメガネ、大きな鼻、もじゃもじゃのヒゲ
+    const e=c>0.12?1:c<-0.12?-1:0;
+    ctx.fillStyle=BLK;
+    ctx.fillRect(x-4,y-16,8,1);                         // フレーム上
+    ctx.fillRect(x-4,y-15,1,3);ctx.fillRect(x+3,y-15,1,3);   // フレーム左右
+    ctx.fillRect(x-1,y-15,2,1);                         // ブリッジ
+    ctx.fillRect(x-4,y-13,3,1);ctx.fillRect(x+1,y-13,3,1);   // フレーム下
+    ctx.fillStyle='#ffffff';ctx.fillRect(x-3,y-15,2,2);ctx.fillRect(x+1,y-15,2,2);  // レンズ
+    ctx.fillStyle=BLK;
+    if(e===0){ctx.fillRect(x-2,y-14,1,1);ctx.fillRect(x+1,y-14,1,1);}   // 目（正面）
+    else{const o=e>0?1:0;ctx.fillRect(x-3+o,y-14,1,1);ctx.fillRect(x+1+o,y-14,1,1);}
+    ctx.fillStyle=NO;ctx.fillRect(x-1,y-14,2,2);        // 鼻
+    ctx.fillStyle=NOD;ctx.fillRect(x-1,y-13,2,1);
+    ctx.fillStyle=MU;ctx.fillRect(x-3,y-12,6,1);ctx.fillRect(x-2,y-11,4,1);  // ヒゲ
   }else{
-    ctx.fillStyle='#e0561f';ctx.fillRect(x-3,y-17,6,5);
+    // 横向き（右向きで描いて、左向きは反転）
+    const d=dir>=0?1:-1;
+    const R=(rx,ry,w,h,col)=>{ctx.fillStyle=col;ctx.fillRect(d>0?x+rx:x-rx-w,y+ry,w,h);};
+    if(toward){
+      R(-4,-15,5,1,BLK);                // メガネのつる
+      R(0,-16,4,4,BLK);                 // レンズのフチ
+      R(1,-15,2,2,'#ffffff');           // レンズ
+      R(2,-15,1,2,BLK);                 // 目
+      R(4,-15,2,3,NO);R(4,-13,2,1,NOD); // 大きな鼻
+      R(0,-12,7,1,MU);R(1,-11,4,1,MU);  // ヒゲ（鼻より前へ突き出す）
+    }else{
+      // 後ろ姿：後頭部とメガネのつる。ななめ後ろなら鼻とヒゲの先がのぞく
+      ctx.fillStyle=BLK;ctx.fillRect(x-4,y-15,8,1);
+      if(dir!==0){R(4,-15,1,2,NO);R(4,-12,2,1,MU);}
+    }
   }
   if(!toward)drawTank();
   // ノズル
   const sxh=x,syh=y-9;
   for(let t=2;t<=9;t++){
-    ctx.fillStyle=t>=7?'#9a9aa6':'#4a4a54';
+    ctx.fillStyle=t>=7?'#c2c3c7':'#3a3f4a';
     ctx.fillRect(Math.round(sxh+c*t),Math.round(syh+s*t),2,2);
   }
   ctx.fillStyle=p.firing?'#ffffff':((tickN>>2)&1?'#ffe9a0':'#ffc060');
