@@ -107,3 +107,12 @@
   - 金に変わる場面: `startGold`でBGM(Marrow and Machine)をフェードアウト(`bgmFadeStop`)→1秒後に不気味な曲(`eerie`: 低いうなり+半音ずれのオルゴール)。破片が集まる速さを約2.3倍遅く(集まり始め1.8秒→像の完成9.0秒、担ぐのは11.2秒以降)。
   - 娘を吹っ飛ばした瞬間にBGMをフェードアウト→`startGoodEnd`で感動的な曲(`emo`: C-G/B-Am-Fの和音+アルペジオ+旋律)。
   - `resetGame`で`musStop()`。
+
+## 39. タイトルでモード選択(アーケード / エンドレス)(2026-11-14)
+- タイトルのボタンを `ARCADE`(従来の通常モード、id は `titleStartBtn` のまま) と `ENDLESS` に。ENDLESS を押すと `OFFICE` / `PRESIDENT'S ROOM` / `BACK` を表示(`#tpMain`/`#tpStage`、`setTitleUI`で毎回メインに戻す)。
+- `startEndless(stage)`: `resetGame()`→`G.endless=true`。
+  - OFFICE: 敵なし(`foes.length=0`)、シャッターは全開・奥まで歩ける(`G.lim=ROOMS[3][1]`)、娘を x92 に。入口の演出なし、BGM あり。トゥルーエンドの左端判定は無効。奥の特大ガラス(gate)を割っても社長室へは行かない。
+  - PRESIDENT'S ROOM: `setupBoss()` 後に社長を `pr.st='off'`(出てこない・用心棒も出ない)。
+  - 壊した物は 3.2〜5.2 秒後に復活(`destroy`末尾で `respawnAt`、既存の `respawn()`)。破損額は加算され続ける。
+  - 娘はいつでもバットで吹っ飛ばして解放できる(エンディングには進まない)。
+- エンドレス中は画面左上に `TITLE` ボタン(`#exitBtn`)→`resetGame()` でタイトルへ。
