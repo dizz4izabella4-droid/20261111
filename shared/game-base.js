@@ -12,6 +12,10 @@
   var D = document, W = window, DE = D.documentElement;
   var KEY = 'izGameBase.orient';
   var cfg = W.IZ_BASE || {};
+  /* 表示文言。作品側で window.IZ_BASE={lang:'en'} を書くと英語になる（既定は日本語） */
+  var T = cfg.lang === 'en'
+    ? { set: 'Display settings', scr: 'SCREEN', fs: 'Go full screen', fsOff: 'Exit full screen', ori: 'ORIENTATION', auto: 'Auto', port: 'Portrait', land: 'Landscape', close: 'Close', nAuto: 'Follows your device orientation.', nFix: 'Locks the orientation in full screen. If it cannot be locked, please rotate your device.', rot: function (m) { return '\u21bb Please turn your device to ' + (m === 'land' ? 'landscape' : 'portrait'); } }
+    : { set: '表示設定', scr: '画面', fs: '全画面にする', fsOff: '全画面をやめる', ori: '向き', auto: '自動', port: '縦', land: '横', close: '閉じる', nAuto: '端末の向きに合わせます。', nFix: '全画面のときに向きを固定します。固定できない場合は、端末を回してください。', rot: function (m) { return '\u21bb 端末を' + (m === 'land' ? '横' : '縦') + '向きにしてください'; } };
 
   /* ---------- 1. 拡大の無効化 ---------- */
   function fixViewport() {
@@ -130,11 +134,11 @@
     ui.className = pos;
     ui.setAttribute('data-iz-base-ui', '');
     ui.innerHTML =
-      '<button type="button" class="iz-b" tabindex="-1" aria-label="表示設定">⛶</button>' +
+      '<button type="button" class="iz-b" tabindex="-1" aria-label="' + T.set + '">⛶</button>' +
       '<div class="iz-p">' +
-      (fsOk ? '<div class="iz-h">画面</div><div class="iz-r"><button type="button" tabindex="-1" data-fs="1">全画面にする</button></div>' : '') +
-      (orOk ? '<div class="iz-h">向き</div><div class="iz-r" id="izor"><button type="button" tabindex="-1" data-o="auto">自動</button><button type="button" tabindex="-1" data-o="port">縦</button><button type="button" tabindex="-1" data-o="land">横</button></div><div class="iz-n" id="izon"></div>' : '') +
-      '<button type="button" class="iz-x" tabindex="-1" data-close="1">閉じる</button>' +
+      (fsOk ? '<div class="iz-h">' + T.scr + '</div><div class="iz-r"><button type="button" tabindex="-1" data-fs="1">' + T.fs + '</button></div>' : '') +
+      (orOk ? '<div class="iz-h">' + T.ori + '</div><div class="iz-r" id="izor"><button type="button" tabindex="-1" data-o="auto">' + T.auto + '</button><button type="button" tabindex="-1" data-o="port">' + T.port + '</button><button type="button" tabindex="-1" data-o="land">' + T.land + '</button></div><div class="iz-n" id="izon"></div>' : '') +
+      '<button type="button" class="iz-x" tabindex="-1" data-close="1">' + T.close + '</button>' +
       '</div>';
     D.body.appendChild(ui);
     btn = ui.querySelector('.iz-b');
@@ -169,18 +173,18 @@
   function refresh() {
     if (!ui) return;
     var fb = ui.querySelector('[data-fs]');
-    if (fb) fb.textContent = isFs() ? '全画面をやめる' : '全画面にする';
+    if (fb) fb.textContent = isFs() ? T.fsOff : T.fs;
     var bs = ui.querySelectorAll('[data-o]');
     for (var i = 0; i < bs.length; i++) bs[i].classList.toggle('on', bs[i].getAttribute('data-o') === mode);
     var on = ui.querySelector('#izon');
-    if (on) on.textContent = mode === 'auto' ? '端末の向きに合わせます。' : '全画面のときに向きを固定します。固定できない場合は、端末を回してください。';
+    if (on) on.textContent = mode === 'auto' ? T.nAuto : T.nFix;
   }
   function banner_() {
     if (!banner) return;
     var land = W.innerWidth > W.innerHeight;
     var bad = (mode === 'land' && !land) || (mode === 'port' && land);
     if (bad) {
-      banner.textContent = '↻ 端末を' + (mode === 'land' ? '横' : '縦') + '向きにしてください';
+      banner.textContent = T.rot(mode);
       banner.style.display = 'block';
       clearTimeout(bT);
       bT = setTimeout(function () { banner.style.display = 'none'; }, 6000);
