@@ -105,6 +105,16 @@ main{max-width:1180px;margin:0 auto;padding:30px 18px 40px}
 
 /* リーダー（横長） */
 .card.lead{grid-column:1/-1;max-width:880px;margin:0 auto;width:100%}
+.card.boss .ph{background:linear-gradient(160deg,#3b66b0,#27457d)}
+.card.boss .ph svg{display:block;width:100%;height:100%}
+.card.boss .plate h3{padding-bottom:4px}
+@media (min-width:820px){
+  .card.lead.boss{display:block;max-width:320px;padding:16px 16px 20px}
+  .card.lead.boss .ph{margin:8px 8px 0}
+  .card.lead.boss .plate{margin:-30px -4px 0}
+  .card.lead.boss .bar{margin:12px 0 0}
+  .card.lead.boss .badge{top:20px;left:20px}
+}
 @media (min-width:820px){
   .card.lead{display:grid;grid-template-columns:320px 1fr;column-gap:26px;align-items:start;padding:22px}
   .card.lead .ph{grid-row:1/4;margin:8px 0 0}
@@ -162,6 +172,7 @@ const AI={
   codex:{name:'ChatGPT Codex',c:'#b9c2d6'}
 };
 const GROUPS=[
+  {id:'boss',en:'Planning & Direction',ja:'企画・総指揮'},
   {id:'lead',en:'Production Lead',ja:'制作リーダー'},
   {id:'impl',en:'Implementation & Documentation',ja:'実装・文書作成'},
   {id:'music',en:'Music & Sound Effects',ja:'音楽・効果音'},
@@ -169,6 +180,7 @@ const GROUPS=[
   {id:'ext',en:'External Implementation Contractor',ja:'実装（外注）'}
 ];
 const STAFF=[
+ {g:'boss',ai:null,sil:true,name:'iz',kana:'',role:'企画・総指揮'},
  {g:'lead',ai:'claude',img:'nora',name:'Nora',kana:'ノラ',code:'なし',country:'ノルウェー',age:'34',role:'制作リーダー',
   work:'企画を仕様にする。作業担当への指示。納品物の受け入れ検査と main への統合。HANDOFF.md とマスターの管理。バージョン（upd・ver）管理。',
   trait:'静かで落ち着いている。自然や静けさが好きで、大げさに盛り上がらない。'},
@@ -212,7 +224,9 @@ const esc=t=>String(t).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 const main=$('#main');
 let delay=0;
 
+const SIL='<svg viewBox="0 0 100 110" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><defs><radialGradient id="bk" cx="50%" cy="30%" r="75%"><stop offset="0" stop-color="#1a1d26"/><stop offset="1" stop-color="#000"/></radialGradient></defs><path d="M50 22c-9 0-16 8-16 18 0 7 3 13 8 16v5C26 63 14 72 12 110h76C86 72 74 63 58 61v-5c5-3 8-9 8-16 0-10-7-18-16-18z" fill="url(#bk)" stroke="rgba(230,197,106,.35)" stroke-width=".7"/></svg>';
 function card(p){
+  if(p.sil) return bossCard(p);
   const a=AI[p.ai];
   const unset=v=>v==='未設定'?' class="unset"':'';
   const ps=[];
@@ -240,6 +254,18 @@ function card(p){
   return el;
 }
 
+function bossCard(p){
+  const el=document.createElement('article');
+  el.className='card js-wait lead boss';
+  el.dataset.ai='none';
+  el.style.setProperty('--ac','#000');
+  el.innerHTML=`
+    <div class="ph">${SIL}</div>
+    <div class="plate"><h3>${esc(p.name)}</h3></div>
+    <dl class="bar"><div class="wide"><dt>Role</dt><dd>${esc(p.role)}</dd></div></dl>`;
+  return el;
+}
+
 GROUPS.forEach(g=>{
   const members=STAFF.filter(s=>s.g===g.id); if(!members.length) return;
   const sec=document.createElement('section'); sec.className='grp'; sec.dataset.g=g.id;
@@ -251,8 +277,8 @@ GROUPS.forEach(g=>{
 main.insertAdjacentHTML('beforeend','<p class="empty" id="empty">該当するスタッフはいません。</p>');
 
 // 人数
-const cnt={}; STAFF.forEach(s=>cnt[s.ai]=(cnt[s.ai]||0)+1);
-$('#counts').innerHTML=`<li><b>${STAFF.length}</b>STAFF</li>`+Object.keys(AI).map(k=>`<li><b>${cnt[k]||0}</b>${esc(AI[k].name)}</li>`).join('');
+const crew=STAFF.filter(s=>s.ai); const cnt={}; crew.forEach(s=>cnt[s.ai]=(cnt[s.ai]||0)+1);
+$('#counts').innerHTML=`<li><b>${crew.length}</b>STAFF</li>`+Object.keys(AI).map(k=>`<li><b>${cnt[k]||0}</b>${esc(AI[k].name)}</li>`).join('');
 
 // 絞り込み
 const fl=$('#filter');
