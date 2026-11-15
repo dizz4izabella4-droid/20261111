@@ -1840,6 +1840,37 @@
       }
       enemyApproach += (target - enemyApproach) * Math.min(1, dt * 0.012);
       const ecx = w / 2, ecy = h / 2 + 12;
+      // 床と敵の影：影の位置・大きさ・色で、敵が奥〜手前のどのあたりにいるか分かる
+      if (state.mode === 'BATTLE') {
+        const farY = endY + endH;                       // 廊下の奥の床の高さ
+        const edge = (y) => {                           // その高さでの床の左右端（廊下の遠近線に沿う）
+          const k = (y - farY) / (h - farY);
+          return { l: endX - endX * k, r: endX + endW + (w - (endX + endW)) * k };
+        };
+        ctx.save();
+        ctx.fillStyle = mainCol; ctx.globalAlpha = 0.08;         // うっすら床の色
+        ctx.beginPath(); ctx.moveTo(endX, farY); ctx.lineTo(endX + endW, farY); ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath(); ctx.fill();
+        ctx.globalAlpha = 0.3; ctx.strokeStyle = mainCol; ctx.lineWidth = 1;   // 距離の目安になる床の横線
+        for (let i = 1; i <= 7; i++) {
+          const y = farY + (h - farY) * Math.pow(i / 7, 1.9);
+          const e = edge(y);
+          ctx.beginPath(); ctx.moveTo(e.l, y); ctx.lineTo(e.r, y); ctx.stroke();
+        }
+        ctx.restore();
+        const near = Math.max(0, Math.min(1, (enemyApproach - 1) / 2.4));   // 0=遠い … 1=目の前
+        const sy = ecy + 50 * enemyApproach;                                 // 足もとの高さ
+        const rx = 58 * enemyApproach, ry = Math.max(5, rx * 0.2);
+        const ring = `rgba(${Math.round(51 + 204 * near)},${Math.round(255 - 205 * near)},${Math.round(102 - 60 * near)},0.95)`;
+        const eg = edge(Math.min(sy, h));
+        ctx.save();
+        ctx.strokeStyle = ring; ctx.globalAlpha = 0.45; ctx.lineWidth = 1.5;  // 影のいる位置の線
+        ctx.beginPath(); ctx.moveTo(eg.l, Math.min(sy, h)); ctx.lineTo(eg.r, Math.min(sy, h)); ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = 'rgba(0,0,0,0.88)';
+        ctx.beginPath(); ctx.ellipse(ecx, sy, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = ring; ctx.lineWidth = 2; ctx.stroke();
+        ctx.restore();
+      }
       ctx.save();
       ctx.translate(ecx, ecy);
       ctx.scale(enemyApproach, enemyApproach);
