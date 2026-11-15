@@ -37,10 +37,6 @@ h1{margin:10px 0 0;font:800 clamp(40px,10vw,84px)/1.1 var(--ja);letter-spacing:.
 .orn{display:flex;align-items:center;justify-content:center;gap:14px;margin:22px auto 16px;max-width:560px;color:var(--gold)}
 .orn i{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold2),transparent)}
 .orn b{width:9px;height:9px;transform:rotate(45deg);background:var(--gold);box-shadow:0 0 12px rgba(230,197,106,.7)}
-.lead-text{margin:0 auto;max-width:620px;text-wrap:balance;color:var(--mute);font-size:14px}
-.counts{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 22px;margin:26px 0 0;padding:0;list-style:none}
-.counts li{font:700 12px var(--lat);letter-spacing:.14em;color:var(--mute)}
-.counts li b{display:block;font:700 30px/1.1 var(--lat);color:var(--cream);letter-spacing:.02em}
 
 /* ===== 絞り込み ===== */
 .filter{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;justify-content:center;gap:8px;padding:12px 14px;
@@ -157,8 +153,6 @@ footer{padding:30px 20px calc(36px + env(safe-area-inset-bottom,0px));text-align
   </svg>
   <h1>スタッフ</h1>
   <div class="orn"><i></i><b></b><i></i></div>
-  <p class="lead-text">企画兼監督のもとに集まった、工房のスタッフ全11名。うち2名は、依頼ごとに仕事を出す外注です。</p>
-  <ul class="counts" id="counts"></ul>
 </header>
 
 <nav class="filter" id="filter" aria-label="AIで絞り込む"></nav>
@@ -186,41 +180,30 @@ const GROUPS=[
 const STAFF=[
  {g:'boss',ai:null,sil:true,name:'iz',kana:'',role:'企画・総指揮'},
  {g:'lead',ai:'claude',img:'nora',name:'Nora',kana:'ノラ',code:'なし',country:'ノルウェー',age:'34',role:'制作リーダー',
-  work:'企画を仕様にする。作業担当への指示。納品物の受け入れ検査と main への統合。HANDOFF.md とマスターの管理。バージョン（upd・ver）管理。',
-  trait:'静かで落ち着いている。自然や静けさが好きで、大げさに盛り上がらない。'},
+  work:'企画を仕様にする。作業担当への指示。納品物の受け入れ検査と main への統合。HANDOFF.md とマスターの管理。バージョン（upd・ver）管理。',},
  {g:'impl',ai:'claude',img:'tessa',name:'Tessa',kana:'テッサ',code:'iz3',country:'イタリア',age:'29',role:'実装・文書作成',
-  work:'担当作品の改修（実装）。仕様書・説明文などの文章。',
-  trait:'作家肌のコーダー。言葉選びと文体、書式の作法にこだわり、コードの書き方にも同じ几帳面さを持ち込む。伝統的な言い回しを重んじる。'},
+  work:'担当作品の改修（実装）。仕様書・説明文などの文章。',},
  {g:'impl',ai:'claude',img:'sofia',name:'Sofia',kana:'ソフィア',code:'ap',country:'スウェーデン',age:'28',role:'実装・文書作成',
-  work:'担当作品の改修（実装）。文書作成。',
-  trait:'協力的で実用的。無駄な装飾を好まず、「ちょうどいい」を大事にする。文章も実用本位で、要点から短く書く。'},
+  work:'担当作品の改修（実装）。文書作成。',},
  {g:'music',ai:'gemini',img:'elena',name:'Elena',kana:'エレーナ',code:'iz3',country:'スペイン',age:'27',role:'音楽・効果音',
-  work:'音楽・効果音の制作。',
-  trait:'ラテンの陽気さを持つ芸術肌で、感情が豊か。感情を揺さぶる曲づくりが得意。'},
+  work:'音楽・効果音の制作。',},
  {g:'music',ai:'gemini',img:'olivia',name:'Olivia',kana:'オリヴィア',code:'iz4',country:'イギリス',age:'29',role:'音楽・効果音',
-  work:'音楽・効果音の制作。',
-  trait:'礼儀正しく控えめ。皮肉まじりのユーモアがあり、紅茶が好き。好きな音楽は激しく重いロック。'},
+  work:'音楽・効果音の制作。',},
  {g:'design',ai:'chatgpt',img:'giulia',name:'Giulia',kana:'ジュリア',code:'iz4',country:'アルゼンチン',age:'28',role:'設計・イラスト',
-  work:'設計の相談、イラスト制作。',
-  trait:'情熱的で行動派。思い立ったらすぐ描き始めたい。'},
+  work:'設計の相談、イラスト制作。',},
  {g:'design',ai:'chatgpt',img:'chiara',name:'Chiara',kana:'キアラ',code:'iz3',country:'フランス',age:'24',role:'設計・イラスト',
-  work:'設計の相談、イラスト制作。',
-  trait:'社交的でおしゃべり。色やファッションに敏感で、雰囲気を大事にする。'},
+  work:'設計の相談、イラスト制作。',},
  {g:'design',ai:'chatgpt',img:'astrid',name:'Astrid',kana:'アストリッド',code:'ap',country:'スウェーデン',age:'26',role:'設計・イラスト',
   work:'設計の相談、イラスト制作。',
-  look:'髪型はポニーテール。',
-  trait:'論理的で整理好き。北欧デザインのような簡潔さを好む。'},
+  look:'髪型はポニーテール。',},
  {g:'design',ai:'chatgpt',img:'priya',name:'Priya',kana:'プリヤ',code:'di',country:'インド',age:'22',role:'設計・イラスト',
-  work:'設計の相談、イラスト制作。',
-  trait:'温かく、仲間を大事にする。祭りや物語の話が好き。'},
+  work:'設計の相談、イラスト制作。',},
  {g:'ext',ai:'codex',img:'dizz',name:'dizz',kana:'ディズ',code:'未設定',country:'未設定',age:'未設定',role:'実装（外注）',
   stand:'外注。工房の正規スタッフとは別枠で、依頼ごとに仕事を出す。',
-  work:'依頼された仕様の実装。納品はリーダーが検査してから main に入れる（動作確認・差分確認）。',
-  trait:null},
+  work:'依頼された仕様の実装。納品はリーダーが検査してから main に入れる（動作確認・差分確認）。',},
  {g:'ext',ai:'codex',img:'elizabeth',name:'Elizabeth',kana:'エリザベス',code:'未設定',country:'未設定',age:'未設定',role:'実装（外注）',
   stand:'外注。工房の正規スタッフとは別枠で、依頼ごとに仕事を出す。',
-  work:'依頼された仕様の実装。納品はリーダーが検査してから main に入れる（動作確認・差分確認）。',
-  trait:null}
+  work:'依頼された仕様の実装。納品はリーダーが検査してから main に入れる（動作確認・差分確認）。',}
 ];
 
 const $=s=>document.querySelector(s);
@@ -237,7 +220,6 @@ function card(p){
   if(p.stand) ps.push(`<p><b>立場</b>${esc(p.stand)}</p>`);
   ps.push(`<p><b>業務</b>${esc(p.work)}</p>`);
   if(p.look) ps.push(`<p><b>見た目</b>${esc(p.look)}</p>`);
-  ps.push(p.trait?`<p><b>性格</b>${esc(p.trait)}</p>`:`<p><b>性格</b><span class="unset">未設定</span></p>`);
   const el=document.createElement('article');
   el.className='card js-wait'+(p.g==='lead'?' lead':'');
   el.dataset.ai=p.ai;
@@ -279,10 +261,6 @@ GROUPS.forEach(g=>{
   sec.appendChild(grid); main.appendChild(sec);
 });
 main.insertAdjacentHTML('beforeend','<p class="empty" id="empty">該当するスタッフはいません。</p>');
-
-// 人数
-const crew=STAFF.filter(s=>s.ai); const cnt={}; crew.forEach(s=>cnt[s.ai]=(cnt[s.ai]||0)+1);
-$('#counts').innerHTML=`<li><b>${crew.length}</b>STAFF</li>`+Object.keys(AI).map(k=>`<li><b>${cnt[k]||0}</b>${esc(AI[k].name)}</li>`).join('');
 
 // 絞り込み
 const fl=$('#filter');
