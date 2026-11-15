@@ -551,6 +551,11 @@
 
     <!-- フェーズ1パネル：成形ツール -->
     <div id="panel-1" class="bottom-panel">
+        <div class="soft-row">
+            <label style="color:#fbbf24;">成形の硬さ</label>
+            <input type="range" id="hardness-range" min="0" max="100" value="10" oninput="setHardness(this.value)">
+            <span id="hardness-val">10%</span>
+        </div>
         <div class="row">
             <div class="btn-group" id="brush-sizes">
                 <button onclick="setBrushSize('small', this)">小</button>
@@ -641,7 +646,7 @@ function resize() {
 function positionBakeAnchor() {
     const anchor = document.getElementById('p1-bake-anchor');
     if (anchor) {
-        anchor.style.top = Math.min(height - 135, centerY + baseRadius + 24) + 'px';
+        anchor.style.top = Math.min(height - 170, centerY + baseRadius + 24) + 'px';
     }
 }
 window.addEventListener('resize', resize);
@@ -657,6 +662,7 @@ let state = {
     brushSize: 'medium',
     textureIndex: 0,
     baseColor: '#e07a5f',
+    hardness: 0.10, // 成形時の硬さ 0.0(やわらかい)〜1.0(硬い)。初期10%
     softness: [0.8, 0.5, 0.2], // [上部, 中部, 下部] 0.0〜1.0
     bg: 'space',
     currentPartTab: 'eyes'
@@ -699,6 +705,11 @@ function showToast(msg) {
     t.classList.add('show');
     clearTimeout(t._timer);
     t._timer = setTimeout(() => t.classList.remove('show'), 1400);
+}
+
+function setHardness(val) {
+    state.hardness = parseInt(val, 10) / 100;
+    document.getElementById('hardness-val').innerText = val + '%';
 }
 
 function setBrushSize(size, el) {
@@ -1049,7 +1060,9 @@ window.addEventListener('touchend', onCanvasUp);
 // 物理＆成形シミュレーション更新
 // ==========================================
 function update() {
-    const pullRate = FIXED_RETURN_SPEED * 0.0012; // 5%固定の緩やかな復元
+    // 成形の硬さ（0〜1）。硬いほど基準形へ戻る力が強く、指で押しても変形しにくい。10%で従来の感触
+    const pullRate = state.hardness * 0.06;
+    const resist = Math.max(0.04, (1 - state.hardness) / 0.9);
 
     if (state.phase === 1) {
         const r = getBrushRadius();
@@ -1070,11 +1083,11 @@ function update() {
                         const toCenterX = c.x - v.x;
                         const toCenterY = c.y - v.y;
                         const len = Math.hypot(toCenterX, toCenterY) || 1;
-                        v.x += (toCenterX / len) * factor * pressPower * 0.9;
-                        v.y += (toCenterY / len) * factor * pressPower * 0.9;
+                        v.x += (toCenterX / len) * factor * pressPower * 0.9 * resist;
+                        v.y += (toCenterY / len) * factor * pressPower * 0.9 * resist;
                     } else {
-                        v.x += dx * factor * 0.28;
-                        v.y += dy * factor * 0.28;
+                        v.x += dx * factor * 0.28 * resist;
+                        v.y += dy * factor * 0.28 * resist;
                     }
                 }
             }
