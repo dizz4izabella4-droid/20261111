@@ -36,6 +36,7 @@
     justify-content: center;
     align-items: center;
     min-height: 100vh;
+    min-height: 100dvh;
     overflow: hidden;
   }
   /* CRTスキャンライン演出 */
@@ -52,6 +53,7 @@
     width: 100%;
     max-width: 900px;
     height: 100vh;
+    height: 100dvh;
     max-height: 760px;
     border: 2px solid var(--main);
     box-shadow: 0 0 18px var(--glow), inset 0 0 12px var(--glow);
@@ -143,6 +145,7 @@
     padding: 8px;
     gap: 8px;
     min-width: 270px;
+    min-height: 0;
   }
   .box {
     border: 1px solid var(--main);
@@ -304,6 +307,7 @@
 
   /* オーバーレイ（タイトル・召喚・ゲームオーバー） */
   .overlay {
+    overflow-y: auto;
     position: absolute;
     inset: 0;
     background: var(--bg);
@@ -369,7 +373,7 @@
     margin: 12px 0;
     text-align: left;
   }
-  .slot-btn, .demon-btn {
+  .slot-btn, .goddess-btn {
     width: 100%;
     background: transparent;
     color: var(--main);
@@ -388,16 +392,41 @@
     color: var(--bg);
     font-weight: bold;
   }
-  .demon-btn:disabled {
+  .goddess-btn:disabled {
     opacity: 0.35;
     cursor: not-allowed;
   }
 
   @media (max-width: 650px) {
+    /* 縦画面：上＝廊下、中＝操作（テンキーを必ず全部見せる）、下＝パーティ・ログ */
+    header { font-size: 0.72rem; padding: 4px 8px; padding-right: 40px; gap: 2px 8px; }
+    .header-controls button { font-size: 0.7rem; padding: 1px 6px; }
     main { flex-direction: column; }
-    #viewport-wrap { flex: 1; border-right: none; border-bottom: 1px solid var(--main); min-height: 180px; }
-    #side-panel { flex: 1.2; min-width: 0; }
-    .party-row { grid-template-columns: 48px repeat(3, 1fr); font-size: 0.72rem; }
+    #viewport-wrap { flex: 0 0 auto; height: clamp(96px, 20dvh, 170px); border-right: none; border-bottom: 1px solid var(--main); min-height: 0; }
+    #enemy-hud { top: 4px; left: 4px; right: 4px; padding: 2px 6px; font-size: 0.72rem; }
+    #side-panel { flex: 1; min-width: 0; min-height: 0; padding: 6px; gap: 6px; }
+    .box { padding: 4px; }
+    .box-title { font-size: 0.65rem; margin-bottom: 2px; }
+    #minimap { gap: 2px; }
+    .map-cell { aspect-ratio: auto; height: 20px; font-size: 0.65rem; }
+    #explore-pad { min-height: 0; gap: 6px; }
+    .move-btn { padding: 10px; width: 90%; font-size: 0.9rem; }
+    #battle-pad { min-height: 0; gap: 4px; }
+    #problem-display { font-size: 1.3rem; padding: 2px 0; letter-spacing: 1px; }
+    #timer-bar-bg { height: 8px; flex: 0 0 auto; }
+    #numpad { min-height: 0; grid-auto-rows: minmax(0, 1fr); gap: 4px; }
+    .num-btn { min-height: 0; font-size: 1.15rem; padding: 0; }
+    #party-panel { padding: 4px 6px; gap: 3px; font-size: 0.7rem; flex: 0 0 auto; }
+    .party-row { grid-template-columns: 42px repeat(3, minmax(0, 1fr)); gap: 3px; }
+    .row-label { font-size: 0.68rem; white-space: nowrap; }
+    .member-card { flex-direction: column; padding: 1px 4px; line-height: 1.25; min-width: 0; }
+    .member-card span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #log-box { height: 46px; padding: 4px 8px; font-size: 0.78rem; line-height: 1.3; flex: 0 0 auto; }
+    .summon-grid { gap: 8px; margin: 8px 0; }
+    .slot-btn, .goddess-btn { font-size: 0.72rem; padding: 5px 6px; gap: 0; flex-direction: column; }
+    #summon-modal { background: rgba(5, 8, 5, 0.99); }
+    body.theme-amber #summon-modal { background: rgba(10, 6, 2, 0.99); }
+    .overlay { justify-content: flex-start; padding: 12px 10px; }
   }
 </style>
 <!--IZ-GAME-BASE:START-->
@@ -699,16 +728,16 @@
 
   <!-- 召喚モーダル -->
   <div id="summon-modal" class="overlay">
-    <div style="font-size:1.2rem; font-weight:bold; margin-bottom:4px;">悪魔召喚プログラム (SUMMON)</div>
-    <div style="font-size:0.8rem; opacity:0.85;">配置スロットを選択し、召喚する仲魔を指定せよ（戦闘は何もしない）</div>
+    <div style="font-size:1.2rem; font-weight:bold; margin-bottom:4px;">女神召喚プログラム (SUMMON)</div>
+    <div style="font-size:0.8rem; opacity:0.85;">配置スロットを選択し、召喚する女神を指定せよ（戦闘は何もしない）</div>
     <div class="summon-grid">
       <div>
         <div class="box-title">パーティ隊列（主人公は固定）</div>
         <div id="slot-list"></div>
       </div>
       <div>
-        <div class="box-title">ストック悪魔（クリックで配置/解除）</div>
-        <div id="demon-list"></div>
+        <div class="box-title">ストック女神（クリックで配置/解除）</div>
+        <div id="goddess-list"></div>
       </div>
     </div>
     <div>
@@ -800,12 +829,12 @@
   };
 
   // === マスターデータ ===
-  const DEMON_POOL = [
-    { id: 'pixie',  name: 'ピクシー',   maxHp: 18, comments: ['「あたしは見てるだけだからね！」', '「計算早っ！ちょっと見直したかも」', '「前衛でも後衛でもやる気は同じだよ」'] },
-    { id: 'goblin', name: 'ゴブリン',   maxHp: 28, comments: ['「グギャ！ 早く計算しろ！」', '「オレは壁になるだけだ！」', '「満月？ 知らんなそんなもん」'] },
-    { id: 'crow',   name: 'カラス天狗', maxHp: 22, comments: ['「ほう、なかなか筋が良いな」', '「飛ぶ敵には銃を使えよ」', '「我は高みの見物と洒落込もう」'] },
-    { id: 'angel',  name: 'エンジェル', maxHp: 20, comments: ['「主よ、彼に暗算の加護を…」', '「私は祈る以外何もできません」', '「お守り代わりにお使いください」'] },
-    { id: 'imp',    name: 'インプ',     maxHp: 16, comments: ['「ケケケ、間違えたら食われるぞ」', '「召喚されたけどヒマだな〜」', '「数字ばっかりで頭が痛くなるぜ」'] }
+  const GODDESS_POOL = [
+    { id: 'lumi', name: 'ルミナーゼ',   maxHp: 18, comments: ['「わたくしは見守るだけですからね！」', '「計算がお早いのですね。少し見直しました」', '「前衛でも後衛でも、想いは同じです」'] },
+    { id: 'garu', name: 'ガルヴェーナ', maxHp: 28, comments: ['「さあ、早く計算なさい！」', '「わたくしが盾となりましょう」', '「満月？ 些事ですわ」'] },
+    { id: 'vern', name: 'ヴェルナシア', maxHp: 22, comments: ['「あら、なかなか筋がよろしいこと」', '「飛ぶ敵には銃をお使いなさい」', '「わたくしは高みから見守りましょう」'] },
+    { id: 'miri', name: 'ミリアーナ',   maxHp: 20, comments: ['「天よ、この者に暗算の加護を…」', '「わたくしは祈ることしかできません」', '「お守り代わりにお使いください」'] },
+    { id: 'nokt', name: 'ノクテリア',   maxHp: 16, comments: ['「ふふ、間違えたら叱ってあげるわ」', '「呼ばれたけれど、暇ねぇ」', '「数字ばかりで頭が痛くなるわ」'] }
   ];
 
   const ENEMY_POOL = [
@@ -873,10 +902,10 @@
     ];
     state.lastFormation = [
       { isHero: true },
-      { demonId: 'pixie' },
-      { demonId: 'goblin' },
-      { demonId: 'crow' },
-      { demonId: 'angel' }
+      { goddessId: 'lumi' },
+      { goddessId: 'garu' },
+      { goddessId: 'vern' },
+      { goddessId: 'miri' }
     ];
     state.enemy = null;
     state.effects = [];
@@ -885,7 +914,7 @@
     document.getElementById('summon-modal').style.display = 'none';
     switchPad('EXPLORE');
     logBox.innerHTML = '';
-    addLog('旧校舎 1F 廊下に侵入した。暗算の力で悪魔を打ち倒せ。');
+    addLog('旧校舎 1F 廊下に侵入した。暗算の力で魔を打ち倒せ。');
     updateUI();
   }
 
@@ -1007,7 +1036,7 @@
     };
 
     state.mode = 'SUMMON';
-    addLog(`${state.enemy.name} が現れた！ 召喚する仲魔を選択せよ。`);
+    addLog(`${state.enemy.name} が現れた！ 召喚する女神を選択せよ。`);
     openSummonModal();
   }
 
@@ -1022,9 +1051,9 @@
 
   function renderSummonLists() {
     const slotList = document.getElementById('slot-list');
-    const demonList = document.getElementById('demon-list');
+    const goddessList = document.getElementById('goddess-list');
     slotList.innerHTML = '';
-    demonList.innerHTML = '';
+    goddessList.innerHTML = '';
 
     for (let i = 0; i < 5; i++) {
       const posLabel = i < 3 ? '前衛' : '後衛';
@@ -1056,10 +1085,10 @@
       slotList.appendChild(btn);
     }
 
-    DEMON_POOL.forEach(d => {
+    GODDESS_POOL.forEach(d => {
       const alreadyIn = state.party.some(m => m && !m.isHero && m.id === d.id);
       const btn = document.createElement('button');
-      btn.className = 'demon-btn';
+      btn.className = 'goddess-btn';
       btn.disabled = alreadyIn;
       btn.innerHTML = `<span>${d.name}</span><span>HP: ${d.maxHp}</span>`;
       btn.onclick = () => {
@@ -1078,7 +1107,7 @@
         if (nextEmpty !== -1) state.selectedSlot = nextEmpty;
         renderSummonLists();
       };
-      demonList.appendChild(btn);
+      goddessList.appendChild(btn);
     });
   }
 
@@ -1094,7 +1123,7 @@
       if (!item || item.isHero) return;
       while (slotCursor < 5 && newParty[slotCursor] !== null) slotCursor++;
       if (slotCursor < 5) {
-        const d = DEMON_POOL.find(x => x.id === item.demonId);
+        const d = GODDESS_POOL.find(x => x.id === item.goddessId);
         if (d) {
           newParty[slotCursor] = {
             isHero: false, id: d.id, name: d.name, hp: d.maxHp, maxHp: d.maxHp, comments: d.comments
@@ -1111,7 +1140,7 @@
     // 現在の編成を記憶
     state.lastFormation = state.party.map(m => {
       if (!m) return null;
-      return m.isHero ? { isHero: true } : { demonId: m.id };
+      return m.isHero ? { isHero: true } : { goddessId: m.id };
     });
 
     document.getElementById('summon-modal').style.display = 'none';
@@ -1209,10 +1238,10 @@
 
     addLog(`【${speedLabel}】${weaponType}${hits}回攻撃！ ${state.enemy.name}に ${totalDmg} ダメージ！敵の反撃を回避！`);
 
-    // 仲魔の無責任なヤジ（40%の確率）
-    const aliveDemons = state.party.filter(m => m && !m.isHero && m.hp > 0);
-    if (aliveDemons.length > 0 && Math.random() < 0.4) {
-      const talker = aliveDemons[Math.floor(Math.random() * aliveDemons.length)];
+    // 女神の無責任なヤジ（40%の確率）
+    const aliveGoddesses = state.party.filter(m => m && !m.isHero && m.hp > 0);
+    if (aliveGoddesses.length > 0 && Math.random() < 0.4) {
+      const talker = aliveGoddesses[Math.floor(Math.random() * aliveGoddesses.length)];
       const msg = talker.comments[Math.floor(Math.random() * talker.comments.length)];
       addLog(`${talker.name}${msg}`);
     }
@@ -1241,9 +1270,9 @@
       addLog(`${state.enemy.name}の攻撃！ 主人公に ${dmg} のダメージ！`);
     } else {
       target.hp -= dmg;
-      addLog(`${state.enemy.name}の攻撃！ 仲魔 ${target.name} が身代わりになり ${dmg} のダメージ！`);
+      addLog(`${state.enemy.name}の攻撃！ 女神 ${target.name} が身代わりになり ${dmg} のダメージ！`);
       if (target.hp <= 0) {
-        addLog(`${target.name} は力尽きて魔界へ帰還した！`);
+        addLog(`${target.name} は力尽きて天界へ帰還した！`);
       }
     }
 
@@ -1393,7 +1422,7 @@
 
     ctx.beginPath();
     if (shape === 'bat') {
-      // 翼を持つ飛行悪魔
+      // 翼を持つ飛行の魔物
       ctx.moveTo(cx, cy - 20);
       ctx.lineTo(cx - 75, cy - 45);
       ctx.lineTo(cx - 45, cy + 15);
@@ -1486,10 +1515,10 @@
   // === タイトル起動シーケンス ===
   function runBootSequence() {
     const lines = [
-      'BOOTING DIGITAL DEVIL ARITHMETIC OS v2.06...',
+      'BOOTING DIGITAL GODDESS ARITHMETIC OS v2.06...',
       'CHECKING MEMORY... 640KB OK.',
       'LOADING SCHOOL_CORRIDOR_01.MAP... OK.',
-      'SUMMONING DAEMON COMPILER... READY.'
+      'SUMMONING GODDESS COMPILER... READY.'
     ];
     const logEl = document.getElementById('boot-log');
     let idx = 0;
