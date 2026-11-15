@@ -949,12 +949,13 @@
   // 基本のパーティ編成（主人公は0番に固定）
   const SAMPLE_PARTY = ['lumi', 'fers', 'roza', 'miri'];
 
+  const ASSUMED_HITS = 1.5; // 敵HPの計算に使う、1回の正解あたりの想定ヒット数（1〜3回）
   const ENEMY_POOL = [
-    { name: '腐敗スライム',   baseHp: 14, baseAtk: 4, exp: 6,  isFlying: false, shape: 'slime' },
-    { name: '音響コウモリ',   baseHp: 12, baseAtk: 4, exp: 6,  isFlying: true,  shape: 'bat' },
-    { name: '旧校舎の亡霊',   baseHp: 18, baseAtk: 6, exp: 9,  isFlying: true,  shape: 'ghost' },
-    { name: '徘徊する猟犬',   baseHp: 22, baseAtk: 7, exp: 10, isFlying: false, shape: 'hound' },
-    { name: '狂気の計算機霊', baseHp: 26, baseAtk: 8, exp: 14, isFlying: true,  shape: 'core' }
+    { name: '腐敗スライム',   calcs: 2, baseAtk: 4, exp: 6,  isFlying: false, shape: 'slime' },
+    { name: '音響コウモリ',   calcs: 2, baseAtk: 4, exp: 6,  isFlying: true,  shape: 'bat' },
+    { name: '旧校舎の亡霊',   calcs: 3, baseAtk: 6, exp: 9,  isFlying: true,  shape: 'ghost' },
+    { name: '徘徊する猟犬',   calcs: 3, baseAtk: 7, exp: 10, isFlying: false, shape: 'hound' },
+    { name: '狂気の計算機霊', calcs: 3, baseAtk: 8, exp: 14, isFlying: true,  shape: 'core' }
   ];
 
   const MOON_NAMES = [
@@ -1153,10 +1154,14 @@
     SFX.encounter();
     const base = ENEMY_POOL[Math.floor(Math.random() * ENEMY_POOL.length)];
     const scale = 1 + (state.hero.lv - 1) * 0.35;
+    // 敵HP＝「倒すのに必要な計算数」が一定になるよう、主人公の攻撃力から逆算する
+    // （1回の計算で平均 ASSUMED_HITS 回ヒットする想定。calcs は敵ごとの目標計算数）
+    const avgHit = state.hero.atk + 1;           // 1ヒットの平均ダメージ（atk + 0〜2）
+    const enemyHp = Math.max(1, Math.round(avgHit * ASSUMED_HITS * base.calcs));
     state.enemy = {
       name: base.name,
-      hp: Math.round(base.baseHp * scale),
-      maxHp: Math.round(base.baseHp * scale),
+      hp: enemyHp,
+      maxHp: enemyHp,
       atk: Math.round(base.baseAtk * scale),
       exp: Math.round(base.exp * scale),
       isFlying: base.isFlying,
