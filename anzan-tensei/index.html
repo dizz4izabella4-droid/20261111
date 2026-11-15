@@ -1406,7 +1406,9 @@
 
     const weaponType = state.enemy.isFlying ? '銃撃' : '剣撃';
     const dmgPerHit = state.hero.atk + Math.floor(Math.random() * 3);
-    const totalDmg = dmgPerHit * hits;
+    // 神速（最速の正解）はクリティカル扱い：残りHPにかかわらず一撃で倒す
+    const isCritical = (hits === 3);
+    const totalDmg = isCritical ? Math.max(dmgPerHit * hits, state.enemy.hp) : dmgPerHit * hits;
     state.enemy.hp -= totalDmg;
 
     // 連続エフェクト＆SE
@@ -1419,7 +1421,11 @@
       }, i * 130);
     }
 
-    addLog(`【${speedLabel}】${weaponType}${hits}回攻撃！ ${state.enemy.name}に ${totalDmg} ダメージ！敵の反撃を回避！`);
+    if (isCritical) {
+      addLog(`【神速】CRITICAL！ ${weaponType}${hits}回攻撃！ ${state.enemy.name}に ${totalDmg} ダメージ！一撃で仕留めた！`);
+    } else {
+      addLog(`【${speedLabel}】${weaponType}${hits}回攻撃！ ${state.enemy.name}に ${totalDmg} ダメージ！敵の反撃を回避！`);
+    }
 
     // 女神の無責任なヤジ（40%の確率）
     const aliveGoddesses = state.party.filter(m => m && !m.isHero && m.hp > 0);
