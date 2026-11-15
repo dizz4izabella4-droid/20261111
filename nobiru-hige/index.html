@@ -95,7 +95,8 @@
   @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
   html, body { touch-action: manipulation; -webkit-touch-callout: none; }
   #endov.good { justify-content: flex-end; padding-bottom: 7%; }
-  #endov.good .t, #endov.good .s { display: none; }
+  #endov.good .s { display: none; }
+  #endov.good .t { color: #ffd24a; text-shadow: 4px 4px 0 #000, 0 0 18px rgba(255,210,74,0.6); }
   #stage { position: relative; display: flex; max-width: 100%; }
   #start {
     position: absolute; inset: 4px;
@@ -346,7 +347,7 @@
       <div class="h">← → : Walk　Space: Jump<br>On mobile, use the stick and buttons at the bottom</div>
     </div>
     <div id="endov">
-      <div class="t">BAD END</div>
+      <div class="t" id="endTitle">BAD END</div>
       <div class="s">Even after the fire, the fungus in the soil never died…<br>The Earth became a planet of fungus.</div>
       <button id="endBtn" type="button">Play again</button>
     </div>
@@ -916,6 +917,7 @@ function resetEnding() {
   player.fire = false; player.dir = 1;
   document.getElementById('endov').style.display = 'none';
   document.getElementById('endov').classList.remove('good');
+  document.getElementById('endTitle').textContent = 'BAD END';
   flameSound(false);
   bgmPlaying = true;
 }
@@ -1678,6 +1680,7 @@ function updateNight() {
   if (phaseT === 230) {
     goodRoute = false;
     const ov = document.getElementById('endov');
+    document.getElementById('endTitle').textContent = 'GOOD END';
     ov.classList.add('good'); ov.style.display = 'flex';
   }
 }
@@ -2156,6 +2159,7 @@ function updateSpace() {
   if (t >= 760) {
     setPhase('end');
     goodRoute = true; // 次にもう一度遊ぶと、白い花のかわりに紫と赤のキノコが出る
+    document.getElementById('endTitle').textContent = 'BAD END';
     document.getElementById('endov').style.display = 'flex';
   }
 }
