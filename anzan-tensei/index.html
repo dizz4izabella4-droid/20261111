@@ -438,6 +438,83 @@
     body.theme-amber #summon-modal { background: rgba(10, 6, 2, 0.99); }
     .overlay { justify-content: flex-start; padding: 12px 10px; }
   }
+
+  /* モダンUI：線をやめて、面・余白・やわらかい影で区切る。寸法と配置は変えない */
+  :root {
+    --surface: color-mix(in srgb, var(--main) 7%, var(--bg));
+    --surface-2: color-mix(in srgb, var(--main) 13%, var(--bg));
+    --soft: color-mix(in srgb, var(--main) 70%, transparent);
+    --font: system-ui, -apple-system, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Noto Sans JP', sans-serif;
+  }
+  body::after { display: none; }
+  #app {
+    border: 0;
+    border-radius: 22px;
+    background: var(--bg);
+    box-shadow: 0 16px 60px rgba(0, 0, 0, 0.65), 0 0 40px var(--glow);
+    overflow: hidden;
+  }
+  header, #viewport-wrap, #party-panel, #log-box, #side-panel { border-color: transparent; }
+  header { background: var(--surface); }
+  #viewport-wrap { background: #000; }
+  #party-panel { background: var(--surface); }
+  #log-box { background: var(--surface-2); color: var(--main); }
+  .box, .member-card, .map-cell, #timer-bar-bg, #enemy-hud {
+    border-color: transparent;
+    border-radius: 12px;
+    background: var(--surface);
+  }
+  .box { padding: 8px; }
+  .box-title { opacity: 0.7; letter-spacing: 0.04em; }
+  #enemy-hud { background: rgba(0, 0, 0, 0.5); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+  .map-cell { border-radius: 8px; background: var(--surface-2); }
+  .map-cell.visited { border-color: transparent; background: color-mix(in srgb, var(--main) 28%, var(--bg)); }
+  .map-cell.current { background: var(--main); box-shadow: 0 0 12px var(--glow); }
+  .member-card { background: var(--surface-2); }
+  .member-card.active { border-color: transparent; background: color-mix(in srgb, var(--main) 30%, var(--bg)); box-shadow: 0 0 14px var(--glow); }
+  .member-card.dead { border-style: solid; opacity: 0.35; }
+  #timer-bar-bg { border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+  #timer-bar { border-radius: 999px; }
+  #problem-display { border-bottom: 0; background: var(--surface); border-radius: 14px; }
+  #input-val { border-bottom: 0; background: var(--surface-2); border-radius: 8px; padding: 0 8px; }
+  .header-controls button, .move-btn, .num-btn, .menu-btn, .slot-btn, .goddess-btn {
+    border: 0;
+    border-radius: 14px;
+    background: var(--surface-2);
+    color: var(--main);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+    transition: background 0.15s, box-shadow 0.15s, transform 0.08s, color 0.15s;
+  }
+  .header-controls button { border-radius: 999px; padding: 3px 12px; }
+  .menu-btn { border-radius: 999px; }
+  .header-controls button:hover, .header-controls button:active,
+  .move-btn:hover, .move-btn:active, .num-btn:hover, .num-btn:active,
+  .menu-btn:hover, .menu-btn:active {
+    background: var(--main);
+    color: var(--bg);
+    box-shadow: 0 0 18px var(--glow);
+  }
+  .move-btn:active, .num-btn:active, .menu-btn:active { transform: scale(0.96); }
+  .slot-btn.selected { background: var(--main); color: var(--bg); }
+  .goddess-btn:disabled { box-shadow: none; }
+  .overlay { background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--main) 12%, var(--bg)) 0%, var(--bg) 70%); }
+  @media (max-width: 650px) {
+    #app { border-radius: 0; box-shadow: none; }
+    #viewport-wrap { border-bottom: 0; }
+    .map-cell { border-radius: 6px; }
+  }
+  /* ステータス画面 */
+  #status-modal { z-index: 60; }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 680px; margin-bottom: 8px; text-align: left; }
+  .stat-card { background: var(--surface); border-radius: 14px; padding: 10px 12px; }
+  .stat-head { display: flex; justify-content: space-between; align-items: baseline; font-weight: bold; margin-bottom: 8px; }
+  .stat-head small { font-weight: normal; opacity: 0.75; font-size: 0.75rem; }
+  .stat-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; text-align: center; }
+  .stat-row .l { font-size: 0.62rem; opacity: 0.65; letter-spacing: 0.04em; }
+  .stat-row .v { font-size: 0.95rem; font-weight: bold; }
+  .stat-row .b { height: 4px; border-radius: 4px; background: var(--surface-2); margin-top: 3px; overflow: hidden; }
+  .stat-row .b i { display: block; height: 100%; background: var(--main); border-radius: 4px; }
+  @media (max-width: 650px) { .stat-grid { grid-template-columns: 1fr; gap: 6px; } .stat-card { padding: 7px 10px; } .stat-head { margin-bottom: 5px; } }
 </style>
 <!--IZ-GAME-BASE:START-->
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -659,6 +736,7 @@
     <div id="moon-display">MOON: NEW MOON (0/8)</div>
     <div id="status-display">LV: 1 | EXP: 0/15</div>
     <div class="header-controls">
+      <button id="btn-status">STATUS</button>
       <button id="btn-theme">COLOR: GRN</button>
       <button id="btn-sound">SOUND: ON</button>
     </div>
@@ -682,7 +760,7 @@
 
       <!-- 探索モード用UI -->
       <div id="explore-pad" class="box">
-        <div style="font-size:0.8rem; opacity:0.8;">[W / ↑] 前進 [S / ↓] 後退</div>
+        <div style="font-size:0.8rem; opacity:0.8;">[W / ↑] 前進 [S / ↓] 後退　※自動で歩行します</div>
         <button class="move-btn" id="btn-forward">▲ 前へ進む (FORWARD)</button>
         <button class="move-btn" id="btn-back">▼ 後ろへ戻る (BACK)</button>
       </div>
@@ -738,7 +816,7 @@
 
   <!-- 召喚モーダル -->
   <div id="summon-modal" class="overlay">
-    <div style="font-size:1.2rem; font-weight:bold; margin-bottom:4px;">女神召喚プログラム (SUMMON)</div>
+    <div style="font-size:1.2rem; font-weight:bold; margin-bottom:4px;">女神召喚</div>
     <div style="font-size:0.8rem; opacity:0.85;">配置スロットを選択し、召喚する女神を指定せよ（戦闘は何もしない）</div>
     <div class="summon-grid">
       <div>
@@ -754,6 +832,13 @@
       <button class="menu-btn" id="btn-auto-summon">[ 前回と同じ編成 ]</button>
       <button class="menu-btn" id="btn-battle-go">[ 戦闘開始 (ENGAGE) ]</button>
     </div>
+  </div>
+
+  <!-- ステータス画面（表示のみ・意味なし） -->
+  <div id="status-modal" class="overlay" style="display:none;">
+    <div style="font-size:1.2rem; font-weight:bold; margin-bottom:10px;">STATUS</div>
+    <div class="stat-grid" id="stat-grid"></div>
+    <button class="menu-btn" id="btn-status-close">[ CLOSE ]</button>
   </div>
 
   <!-- ゲームオーバー画面 -->
@@ -841,11 +926,28 @@
   // === マスターデータ ===
   const GODDESS_POOL = [
     { id: 'lumi', name: 'ルミナーゼ',   maxHp: 18, comments: ['「遅いですわね。見ているだけで退屈ですわ」', '「正解？ 当然ですわ。褒めませんけれど」', '「わたくしを呼びつけておいて、何もさせないなんて」'] },
-    { id: 'garu', name: 'ガルヴェーナ', maxHp: 28, comments: ['「さっさと解きな、ぐず！」', '「盾になってやるだけだ。勘違いするな」', '「満月？ どうでもいいわ」'] },
-    { id: 'vern', name: 'ヴェルナシア', maxHp: 22, comments: ['「その程度の計算に手間取るなんて、呆れますわ」', '「飛ぶ敵には銃。それも教わらないとわからないの？」', '「高みから見下ろすのが性に合っていますの」'] },
+    { id: 'fers', name: 'フェルシア',     maxHp: 28, comments: ['「さっさと解きな、ぐず！」', '「盾になってやるだけだ。勘違いするな」', '「満月？ どうでもいいわ」'] },
+    { id: 'roza', name: 'ロザリエンヌ', maxHp: 22, comments: ['「その程度の計算に手間取るなんて、呆れますわ」', '「飛ぶ敵には銃。それも教わらないとわからないの？」', '「高みから見下ろすのが性に合っていますの」'] },
     { id: 'miri', name: 'ミリアーナ',   maxHp: 20, comments: ['「祈る価値があるのか、疑わしいところね」', '「加護？ 自力で何とかなさい」', '「お守り代わりに使うなんて、不敬よ」'] },
-    { id: 'nokt', name: 'ノクテリア',   maxHp: 16, comments: ['「間違えたら笑ってあげる。せいぜい頑張って」', '「呼ばれたけど暇ね。あなたの顔も見飽きたわ」', '「数字ばかり…頭が悪くなりそう」'] }
+    { id: 'lyum', name: 'リュミエーナ', maxHp: 16, comments: ['「間違えたら笑ってあげる。せいぜい頑張って」', '「呼ばれたけど暇ね。あなたの顔も見飽きたわ」', '「数字ばかり…頭が悪くなりそう」'] },
+    { id: 'ilum', name: 'イルミネーア', maxHp: 24, comments: ['「照らしてあげているのだから、感謝くらいなさい」', '「別に心配などしていません。見ているだけよ」', '「遅い。灯りがもったいないわ」'] }
   ];
+
+  // 表示用ステータス（ゲーム内の計算には使わない・意味なし）
+  const STAT_KEYS = ['STR', 'VIT', 'AGI', 'INT', 'LUK'];
+  const HERO_STATS = [12, 10, 11, 14, 9];
+  const GODDESS_STATS = {
+    lumi: [6, 7, 13, 17, 15],
+    fers: [18, 16, 12, 5, 8],
+    roza: [7, 9, 12, 16, 14],
+    miri: [8, 10, 9, 15, 18],
+    lyum: [9, 6, 17, 13, 16],
+    ilum: [11, 12, 10, 18, 13]
+  };
+  // 常時エンカウント（歩くたびに必ず戦闘）
+  const ENCOUNTER_RATE = 1.0;
+  // 基本のパーティ編成（主人公は0番に固定）
+  const SAMPLE_PARTY = ['lumi', 'fers', 'roza', 'miri'];
 
   const ENEMY_POOL = [
     { name: '腐敗スライム',   baseHp: 14, baseAtk: 4, exp: 6,  isFlying: false, shape: 'slime' },
@@ -872,6 +974,7 @@
     party: [null, null, null, null, null],
     lastFormation: [null, null, null, null, null],
     selectedSlot: 1,
+    paused: false,
     enemy: null,
     problem: { text: '', answer: 0, input: '', maxTime: 5000, remainTime: 5000 },
     walkAnim: 0,
@@ -897,6 +1000,22 @@
     return document.body.classList.contains('theme-amber') ? '#663d08' : '#115522';
   }
 
+  // === 自動歩行・パーティ生成 ===
+  let walkTimer = null;
+  function scheduleAutoWalk(delay) {
+    clearTimeout(walkTimer);
+    walkTimer = setTimeout(autoWalk, delay === undefined ? 700 : delay);
+  }
+  function autoWalk() {
+    if (state.mode !== 'EXPLORE') return;
+    if (state.paused) { scheduleAutoWalk(300); return; }
+    move(1);
+  }
+  function makeGoddess(id) {
+    const d = GODDESS_POOL.find(x => x.id === id);
+    return { isHero: false, id: d.id, name: d.name, hp: d.maxHp, maxHp: d.maxHp, comments: d.comments };
+  }
+
   // === 初期化・リスタート ===
   function resetGame() {
     state.mode = 'EXPLORE';
@@ -906,17 +1025,10 @@
     state.steps = 0;
     state.moonPhase = 0;
     state.hero = { name: '主人公', lv: 1, hp: 35, maxHp: 35, atk: 6, exp: 0, nextExp: 15 };
-    state.party = [
-      { isHero: true, ref: state.hero },
-      null, null, null, null
-    ];
-    state.lastFormation = [
-      { isHero: true },
-      { goddessId: 'lumi' },
-      { goddessId: 'garu' },
-      { goddessId: 'vern' },
-      { goddessId: 'miri' }
-    ];
+    state.party = [{ isHero: true, ref: state.hero }].concat(SAMPLE_PARTY.map(makeGoddess));
+    state.lastFormation = [{ isHero: true }].concat(SAMPLE_PARTY.map(id => ({ goddessId: id })));
+    state.paused = false;
+    clearTimeout(walkTimer);
     state.enemy = null;
     state.effects = [];
 
@@ -926,6 +1038,7 @@
     logBox.innerHTML = '';
     addLog('旧校舎 1F 廊下に侵入した。暗算の力で魔を打ち倒せ。');
     updateUI();
+    scheduleAutoWalk(1200);
   }
 
   function switchPad(mode) {
@@ -992,10 +1105,12 @@
 
   // === ダンジョン移動 ===
   function move(dir) {
-    if (state.mode !== 'EXPLORE') return;
+    if (state.mode !== 'EXPLORE' || state.paused) return;
+    clearTimeout(walkTimer);
     const nextPos = state.pos + dir;
     if (nextPos < 0) {
       addLog('入口のシャッターは固く閉ざされている。');
+      scheduleAutoWalk();
       return;
     }
     if (nextPos >= 10) {
@@ -1006,6 +1121,7 @@
       state.party.forEach(m => { if (m && !m.isHero) m.hp = m.maxHp; });
       addLog('廊下の突き当たりの霊水で全回復！ 入口へと転移した。');
       updateUI();
+      scheduleAutoWalk();
       return;
     }
 
@@ -1024,9 +1140,11 @@
 
     updateUI();
 
-    // ランダムエンカウント（28%）
-    if (Math.random() < 0.28) {
+    // エンカウント（常時）
+    if (Math.random() < ENCOUNTER_RATE) {
       triggerEncounter();
+    } else {
+      scheduleAutoWalk();
     }
   }
 
@@ -1045,9 +1163,16 @@
       shape: base.shape
     };
 
-    state.mode = 'SUMMON';
-    addLog(`${state.enemy.name} が現れた！ 召喚する女神を選択せよ。`);
-    openSummonModal();
+    addLog(`${state.enemy.name} が現れた！`);
+    beginBattle();
+  }
+
+  // 召喚画面を出さず、現在のパーティのまま戦闘へ
+  function beginBattle() {
+    state.mode = 'BATTLE';
+    switchPad('BATTLE');
+    updateUI();
+    generateProblem();
   }
 
   function openSummonModal() {
@@ -1193,7 +1318,7 @@
   }
 
   function handleNumInput(key) {
-    if (state.mode !== 'BATTLE') return;
+    if (state.mode !== 'BATTLE' || state.paused) return;
     SFX.beep();
 
     if (key === 'C') {
@@ -1318,6 +1443,7 @@
     state.mode = 'EXPLORE';
     switchPad('EXPLORE');
     updateUI();
+    scheduleAutoWalk(800);
   }
 
   function triggerShake() {
@@ -1335,7 +1461,7 @@
     lastFrameTime = now;
 
     // 戦闘タイマー更新
-    if (state.mode === 'BATTLE' && state.enemy) {
+    if (state.mode === 'BATTLE' && state.enemy && !state.paused) {
       state.problem.remainTime -= dt;
       const pct = Math.max(0, (state.problem.remainTime / state.problem.maxTime) * 100);
       document.getElementById('timer-bar').style.width = pct + '%';
@@ -1568,6 +1694,43 @@
     btn.onclick = () => handleNumInput(btn.dataset.key);
   });
 
+  function heroStats() {
+    const up = state.hero.lv - 1;
+    return HERO_STATS.map(v => v + up);
+  }
+  function renderStatus() {
+    const grid = document.getElementById('stat-grid');
+    grid.innerHTML = '';
+    state.party.forEach(m => {
+      if (!m) return;
+      const vals = m.isHero ? heroStats() : GODDESS_STATS[m.id];
+      const name = m.isHero ? state.hero.name : m.name;
+      const sub = m.isHero ? `Lv.${state.hero.lv}　HP ${state.hero.hp}/${state.hero.maxHp}` : `HP ${m.hp}/${m.maxHp}`;
+      const rows = STAT_KEYS.map((k, i) =>
+        `<div><div class="l">${k}</div><div class="v">${vals[i]}</div><div class="b"><i style="width:${Math.min(100, vals[i] * 4)}%"></i></div></div>`
+      ).join('');
+      const card = document.createElement('div');
+      card.className = 'stat-card';
+      card.innerHTML = `<div class="stat-head"><span>${name}</span><small>${sub}</small></div><div class="stat-row">${rows}</div>`;
+      grid.appendChild(card);
+    });
+  }
+  function openStatus() {
+    if (state.mode === 'TITLE' || state.mode === 'GAMEOVER') return;
+    SFX.beep();
+    state.paused = true;
+    renderStatus();
+    document.getElementById('status-modal').style.display = 'flex';
+  }
+  function closeStatus() {
+    SFX.beep();
+    state.paused = false;
+    document.getElementById('status-modal').style.display = 'none';
+    if (state.mode === 'EXPLORE') scheduleAutoWalk(500);
+  }
+  document.getElementById('btn-status').onclick = openStatus;
+  document.getElementById('btn-status-close').onclick = closeStatus;
+
   document.getElementById('btn-theme').onclick = (e) => {
     document.body.classList.toggle('theme-amber');
     const isAmber = document.body.classList.contains('theme-amber');
@@ -1582,6 +1745,10 @@
   };
 
   window.addEventListener('keydown', (e) => {
+    if (state.paused) {
+      if (e.key === 'Escape') { e.preventDefault(); closeStatus(); }
+      return;
+    }
     if (state.mode === 'EXPLORE') {
       if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
         e.preventDefault();
