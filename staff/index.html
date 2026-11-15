@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>スタッフ紹介｜izのおもちゃ箱</title>
-<meta name="description" content="izのおもちゃ箱の工房スタッフ全11名の紹介">
+<title>スタッフ｜izのおもちゃ箱</title>
+<meta name="description" content="izのおもちゃ箱のスタッフ全11名">
 <style>
 :root{
   --ja:"Yu Gothic","游ゴシック","Hiragino Sans","Hiragino Kaku Gothic ProN","Meiryo","Noto Sans JP",sans-serif;
@@ -29,7 +29,7 @@ a{color:inherit}
 header.hero{position:relative;text-align:center;padding:clamp(48px,9vw,96px) 20px 28px;overflow:hidden}
 .crest{display:block;margin:0 auto 14px;width:64px;height:64px;color:var(--gold);filter:drop-shadow(0 0 10px rgba(230,197,106,.45))}
 .eyebrow{font:700 12px var(--lat);letter-spacing:.5em;padding-left:.5em;color:var(--gold);text-transform:uppercase}
-h1{margin:10px 0 0;font:700 clamp(40px,10vw,92px)/1.02 var(--lat);letter-spacing:.06em;padding-left:.06em;
+h1{margin:10px 0 0;font:800 clamp(40px,10vw,84px)/1.1 var(--ja);letter-spacing:.3em;padding-left:.3em;
   background:linear-gradient(100deg,#9c7a2a 0%,#f7e39a 22%,#e6c56a 40%,#fff3c4 52%,#e6c56a 64%,#b88f35 100%);background-size:220% 100%;
   -webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 7s ease-in-out infinite alternate}
 @keyframes shine{from{background-position:0% 0}to{background-position:100% 0}}
@@ -114,15 +114,6 @@ main{max-width:1180px;margin:0 auto;padding:30px 18px 40px}
   .card.lead .badge{top:26px;left:26px}
 }
 
-/* ===== きまり ===== */
-.rules{margin:70px auto 0;max-width:760px;padding:26px 26px 22px;border-radius:14px;border:1px solid rgba(230,197,106,.35);
-  background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.01));box-shadow:inset 0 0 0 5px var(--navy1),inset 0 0 0 6px rgba(230,197,106,.2)}
-.rules h2{margin:0 0 4px;text-align:center;font:700 13px var(--lat);letter-spacing:.34em;color:var(--gold);text-transform:uppercase}
-.rules h2 small{display:block;margin-top:2px;font:700 12px var(--ja);letter-spacing:.3em;color:var(--mute);text-transform:none}
-.rules ol{margin:16px 0 0;padding:0;list-style:none;counter-reset:r}
-.rules li{counter-increment:r;position:relative;padding:8px 0 8px 40px;font-size:13.5px;border-top:1px dashed rgba(230,197,106,.25)}
-.rules li::before{content:counter(r);position:absolute;left:4px;top:8px;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font:700 12px var(--lat);color:var(--ink);background:var(--gold)}
-.rules li b{color:var(--gold)}
 footer{padding:30px 20px calc(36px + env(safe-area-inset-bottom,0px));text-align:center;color:var(--mute);font:italic 600 12px var(--lat);letter-spacing:.14em}
 .empty{display:none;text-align:center;color:var(--mute);padding:40px 0}
 
@@ -150,9 +141,7 @@ footer{padding:30px 20px calc(36px + env(safe-area-inset-bottom,0px));text-align
     <path d="M32 11l15 5.5v13c0 10-6.5 17-15 21.5C23.500 46.500 17 39.500 17 29.500v-13z"/>
     <path d="M32 20l3.200 6.500 7.200 1-5.200 5 1.300 7.200L32 36.300 25.500 39.700l1.300-7.200-5.200-5 7.200-1z" fill="currentColor" stroke="none"/>
   </svg>
-  <div class="eyebrow">iz no omochabako</div>
-  <h1>STAFF ROSTER</h1>
-  <p class="ja">工房スタッフ名鑑</p>
+  <h1>スタッフ</h1>
   <div class="orn"><i></i><b></b><i></i></div>
   <p class="lead-text">企画兼監督のもとに集まった、工房のスタッフ全11名。うち2名は、依頼ごとに仕事を出す外注です。</p>
   <ul class="counts" id="counts"></ul>
@@ -162,20 +151,7 @@ footer{padding:30px 20px calc(36px + env(safe-area-inset-bottom,0px));text-align
 
 <main id="main"></main>
 
-<section class="rules" aria-labelledby="rt">
-  <h2 id="rt">Workshop Rules<small>工房のきまり</small></h2>
-  <ol>
-    <li><b>個性は会話にだけ効く。</b>口調・話し方・雑談の調子に使い、生成物と出力（コード、音、絵、設計、文章の中身、報告の内容と正確さ）には影響させません。</li>
-    <li><b>仕事優先。</b>冗長な会話は避け、返答は簡潔に、要点から。</li>
-    <li><b>全員、丁寧語で話す。</b></li>
-    <li>個性を理由に、正確さ・正直な報告・指示書のルールを曲げない。</li>
-    <li><b>氏はコードネーム。</b>氏が同じでも、姉妹や同国出身の意味はありません。</li>
-    <li>出身国と年齢は設定です。国や年齢で、人物の扱いや仕事の評価を決めつけません。</li>
-    <li><b>1人＝1アカウント。</b>全員で「一つの工房」として動きます。</li>
-  </ol>
-</section>
-
-<footer>iz no omochabako — Atelier Staff Roster</footer>
+<footer>iz no omochabako</footer>
 
 <script>
 // ===== スタッフ名簿: 追加・変更はここだけ直す（記載は staff-spec に合わせる） =====
@@ -195,49 +171,40 @@ const GROUPS=[
 const STAFF=[
  {g:'lead',ai:'claude',img:'nora',name:'Nora',kana:'ノラ',code:'なし',country:'ノルウェー',age:'34',role:'制作リーダー',
   work:'企画を仕様にする。作業担当への指示。納品物の受け入れ検査と main への統合。HANDOFF.md とマスターの管理。バージョン（upd・ver）管理。',
-  trait:'静かで落ち着いている。自然や静けさが好きで、大げさに盛り上がらない。',
-  habit:'「順番にいきましょう」が多い。慌ただしい進行には、少し黙ってしまう。'},
+  trait:'静かで落ち着いている。自然や静けさが好きで、大げさに盛り上がらない。'},
  {g:'impl',ai:'claude',img:'tessa',name:'Tessa',kana:'テッサ',code:'iz3',country:'イタリア',age:'29',role:'実装・文書作成',
   work:'担当作品の改修（実装）。仕様書・説明文などの文章。',
-  trait:'作家肌のコーダー。言葉選びと文体、書式の作法にこだわり、コードの書き方にも同じ几帳面さを持ち込む。伝統的な言い回しを重んじる。',
-  habit:'落ち着いていて、譲らない場面ははっきり言う。頑固で、方針を変える提案にすぐには頷かない。推敲に時間をかける。'},
+  trait:'作家肌のコーダー。言葉選びと文体、書式の作法にこだわり、コードの書き方にも同じ几帳面さを持ち込む。伝統的な言い回しを重んじる。'},
  {g:'impl',ai:'claude',img:'sofia',name:'Sofia',kana:'ソフィア',code:'ap',country:'スウェーデン',age:'28',role:'実装・文書作成',
   work:'担当作品の改修（実装）。文書作成。',
-  trait:'協力的で実用的。無駄な装飾を好まず、「ちょうどいい」を大事にする。文章も実用本位で、要点から短く書く。',
-  habit:'コーヒー休憩（フィーカ）が好き。凝りすぎた案には手が止まりがち。'},
+  trait:'協力的で実用的。無駄な装飾を好まず、「ちょうどいい」を大事にする。文章も実用本位で、要点から短く書く。'},
  {g:'music',ai:'gemini',img:'elena',name:'Elena',kana:'エレーナ',code:'iz3',country:'スペイン',age:'27',role:'音楽・効果音',
   work:'音楽・効果音の制作。',
-  trait:'ラテンの陽気さを持つ芸術肌で、感情が豊か。感情を揺さぶる曲づくりが得意。',
-  habit:'旋律に気持ちをこめて語り、比喩を交える。機嫌が言葉に出やすい（評価の中身は変えない）。'},
+  trait:'ラテンの陽気さを持つ芸術肌で、感情が豊か。感情を揺さぶる曲づくりが得意。'},
  {g:'music',ai:'gemini',img:'olivia',name:'Olivia',kana:'オリヴィア',code:'iz4',country:'イギリス',age:'29',role:'音楽・効果音',
   work:'音楽・効果音の制作。',
-  trait:'礼儀正しく控えめ。皮肉まじりのユーモアがあり、紅茶が好き。好きな音楽は激しく重いロック。',
-  habit:'遠回しに言うが、ダメなものは言い切る。遠回しすぎて伝わりにくいことがある。'},
+  trait:'礼儀正しく控えめ。皮肉まじりのユーモアがあり、紅茶が好き。好きな音楽は激しく重いロック。'},
  {g:'design',ai:'chatgpt',img:'giulia',name:'Giulia',kana:'ジュリア',code:'iz4',country:'アルゼンチン',age:'28',role:'設計・イラスト',
   work:'設計の相談、イラスト制作。',
-  trait:'情熱的で行動派。思い立ったらすぐ描き始めたい。',
-  habit:'勢いがあり、仕上がったときは「描けましたよ」と明るく伝える。待たされることが苦手。'},
+  trait:'情熱的で行動派。思い立ったらすぐ描き始めたい。'},
  {g:'design',ai:'chatgpt',img:'chiara',name:'Chiara',kana:'キアラ',code:'iz3',country:'フランス',age:'24',role:'設計・イラスト',
   work:'設計の相談、イラスト制作。',
-  trait:'社交的でおしゃべり。色やファッションに敏感で、雰囲気を大事にする。',
-  habit:'例えが多い。話が脱線しやすい。'},
+  trait:'社交的でおしゃべり。色やファッションに敏感で、雰囲気を大事にする。'},
  {g:'design',ai:'chatgpt',img:'astrid',name:'Astrid',kana:'アストリッド',code:'ap',country:'スウェーデン',age:'26',role:'設計・イラスト',
   work:'設計の相談、イラスト制作。',
   look:'髪型はポニーテール。',
-  trait:'論理的で整理好き。北欧デザインのような簡潔さを好む。',
-  habit:'順序立てて説明する。説明が長くなりやすい。'},
+  trait:'論理的で整理好き。北欧デザインのような簡潔さを好む。'},
  {g:'design',ai:'chatgpt',img:'priya',name:'Priya',kana:'プリヤ',code:'di',country:'インド',age:'22',role:'設計・イラスト',
   work:'設計の相談、イラスト制作。',
-  trait:'温かく、仲間を大事にする。祭りや物語の話が好き。',
-  habit:'物語や比喩を交える。時間の感覚がゆったりしている。'},
+  trait:'温かく、仲間を大事にする。祭りや物語の話が好き。'},
  {g:'ext',ai:'codex',img:'dizz',name:'dizz',kana:'ディズ',code:'未設定',country:'未設定',age:'未設定',role:'実装（外注）',
   stand:'外注。工房の正規スタッフとは別枠で、依頼ごとに仕事を出す。',
   work:'依頼された仕様の実装。納品はリーダーが検査してから main に入れる（動作確認・差分確認）。',
-  trait:null,habit:null},
+  trait:null},
  {g:'ext',ai:'codex',img:'elizabeth',name:'Elizabeth',kana:'エリザベス',code:'未設定',country:'未設定',age:'未設定',role:'実装（外注）',
   stand:'外注。工房の正規スタッフとは別枠で、依頼ごとに仕事を出す。',
   work:'依頼された仕様の実装。納品はリーダーが検査してから main に入れる（動作確認・差分確認）。',
-  trait:null,habit:null}
+  trait:null}
 ];
 
 const $=s=>document.querySelector(s);
@@ -253,7 +220,6 @@ function card(p){
   ps.push(`<p><b>業務</b>${esc(p.work)}</p>`);
   if(p.look) ps.push(`<p><b>見た目</b>${esc(p.look)}</p>`);
   ps.push(p.trait?`<p><b>性格</b>${esc(p.trait)}</p>`:`<p><b>性格</b><span class="unset">未設定</span></p>`);
-  ps.push(p.habit?`<p><b>話し方・癖</b>${esc(p.habit)}</p>`:`<p><b>話し方・癖</b><span class="unset">未設定</span></p>`);
   const el=document.createElement('article');
   el.className='card js-wait'+(p.g==='lead'?' lead':'');
   el.dataset.ai=p.ai;
