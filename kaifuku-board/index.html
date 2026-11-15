@@ -70,7 +70,7 @@ h1{font-size:1.15rem;margin:0;letter-spacing:.02em;text-wrap:balance}
 .body{min-width:0;display:flex;flex-direction:column;gap:1px}
 .name{font-weight:700;font-size:.98rem;line-height:1.25}
 .kana{color:var(--mute);font-size:.72rem;margin-left:5px;font-weight:400}
-.uji{white-space:nowrap;color:var(--mute);font-size:.72rem;margin-left:6px;border:1px solid var(--line);border-radius:4px;padding:0 4px;font-weight:400}
+.uji{white-space:nowrap;color:var(--mute);font-size:.72rem;margin-right:6px;border:1px solid var(--line);border-radius:4px;padding:0 4px;font-weight:400}
 .ai{display:inline-block;color:var(--cc);border:1px solid var(--cc);border-radius:4px;padding:0 5px;font-size:.7rem;font-weight:700;line-height:1.35;align-self:flex-start}
 .role{color:var(--mute);font-size:.78rem;line-height:1.3}
 .st{display:flex;align-items:center;flex-wrap:wrap;gap:2px 8px;margin-top:2px}
@@ -200,8 +200,8 @@ function card(s,now){
   }
   return '<article class="card'+(w?' wait':'')+'" style="--cc:var(--c-'+key+')">'+
     '<div class="av'+(w?' tired':'')+'"><label title="クリックしてイラストを取り込む">'+av+'<input type="file" accept="image/*" data-act="file" data-id="'+s.id+'" aria-label="'+esc(s.n)+'のイラストを選ぶ"></label>'+sweat+rm+'</div>'+
-    '<div class="body"><div><span class="name">'+esc(s.n)+'</span><span class="kana">'+esc(s.k)+'</span><span class="uji">氏 '+esc(s.u)+'</span></div>'+
-    '<span class="ai">'+esc(s.ai)+'</span><div class="role">'+esc(s.role)+'</div><div class="st">'+st+'</div></div>'+
+    '<div class="body"><div><span class="name">'+esc(s.n)+'</span><span class="kana">'+esc(s.k)+'</span></div>'+
+    '<span class="ai">'+esc(s.ai)+'</span><div class="role"><span class="uji">'+esc(s.u)+'</span>'+esc(s.role)+'</div><div class="st">'+st+'</div></div>'+
     '<div class="ctl">'+ctl+'</div>'+panel+
   '</article>';
 }
