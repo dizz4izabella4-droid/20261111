@@ -78,11 +78,13 @@ h1{font-size:1.15rem;margin:0;letter-spacing:.02em;text-wrap:balance}
 .pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
 .pill.ready{background:var(--ok-bg);color:var(--ok)}
 .pill.wait{background:var(--wait-bg);color:var(--wait)}
+.rest{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;flex-basis:100%}
 .cd{font-size:.98rem;font-weight:700;font-variant-numeric:tabular-nums;color:var(--wait);line-height:1.2}
 .at{color:var(--mute);font-size:.74rem}
 .ctl{grid-column:1/-1;display:flex;gap:4px;align-items:center;flex-wrap:wrap}
 .t,.note{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:3px 5px;font-size:.8rem;min-width:0}
-.t{width:4.8em;font-variant-numeric:tabular-nums}
+.lb{font-size:.72rem;color:var(--mute)}
+.t{width:4.4em;font-variant-numeric:tabular-nums}
 .note{width:6.3em}
 .ctl .btn.sm{padding:3px 6px}
 .panel{grid-column:1/-1;background:var(--panel2);border-radius:6px;padding:6px;display:flex;gap:4px;flex-wrap:wrap}
@@ -154,10 +156,12 @@ async function pushShared(){
 }
 
 function fmtRemain(ms){
-  var s=Math.max(0,Math.ceil(ms/1000)), h=Math.floor(s/3600), m=Math.floor(s%3600/60), ss=s%60;
+  /* 1分単位で切り上げる（0342と入れたら 3時間42分 のまま表示され、1秒後に41分へ飛ばない） */
+  var s=Math.max(0,Math.ceil(ms/1000));
+  if(s<=60) return s+'秒';
+  var tm=Math.ceil(s/60), h=Math.floor(tm/60), m=tm%60;
   if(h>0) return h+'時間'+pad(m)+'分';
-  if(m>0) return m+'分'+pad(ss)+'秒';
-  return ss+'秒';
+  return m+'分';
 }
 function fmtClock(ts){
   var d=new Date(ts), n=new Date(), t=pad(d.getHours())+':'+pad(d.getMinutes());
@@ -192,11 +196,10 @@ function card(s,now){
   var sweat=w?'<svg class="sweat" viewBox="0 0 40 40" aria-hidden="true"><path d="M26 3C26 3 17 13 17 19a9 9 0 0 0 18 0C35 13 26 3 26 3z" fill="#8fd3f4" stroke="#2a7fb0" stroke-width="1.6"/><path d="M10 17C10 17 5 23 5 26.5a5 5 0 0 0 10 0C15 23 10 17 10 17z" fill="#8fd3f4" stroke="#2a7fb0" stroke-width="1.4"/></svg>':'';
   var rm=m.img?'<button class="x" data-act="rmimg" data-id="'+s.id+'" aria-label="'+esc(s.n)+'のイラストを元に戻す" title="取り込んだ画像を外す">×</button>':'';
   var st=w
-    ? '<span class="pill wait">疲れてるようです</span><span class="cd" data-cd="'+m.reset+'">'+fmtRemain(m.reset-now)+'</span><span class="at">'+fmtClock(m.reset)+'</span>'
+    ? '<span class="pill wait">疲れてるようです</span><span class="rest"><span class="at">残り</span><span class="cd" data-cd="'+m.reset+'">'+fmtRemain(m.reset-now)+'</span><span class="at">'+fmtClock(m.reset)+'</span></span>'
     : '<span class="pill ready">使える</span>';
-  var ctl='<input class="t" type="text" inputmode="numeric" id="w-'+s.id+'" data-act="when" data-id="'+s.id+'" autocomplete="off" maxlength="12" placeholder="0342" title="回復までの時間を数字4桁で入力（0342＝3時間42分）。Enterで「3h42m」「午後3:42」なども使えます" aria-label="'+esc(s.n)+'の回復までの時間（数字4桁、時分）">'+
-    (w?'<button class="btn sm" data-act="rec" data-id="'+s.id+'">回復した</button>':'')+
-    '<button class="btn sm" data-act="open" data-id="'+s.id+'" aria-expanded="'+(OPEN===s.id)+'" title="よく使う時間">目安</button>'+
+  var ctl='<label class="lb" for="w-'+s.id+'">回復</label><input class="t" type="text" inputmode="numeric" id="w-'+s.id+'" data-act="when" data-id="'+s.id+'" autocomplete="off" maxlength="12" title="回復までの時間を数字4桁で入力（0342＝3時間42分）。Enterで「3h42m」「午後3:42」なども使えます" aria-label="'+esc(s.n)+'の回復までの時間（数字4桁、時分）">'+
+    (w?'<button class="btn sm" data-act="rec" data-id="'+s.id+'">回復した</button>':'<button class="btn sm" data-act="open" data-id="'+s.id+'" aria-expanded="'+(OPEN===s.id)+'" title="よく使う時間">目安</button>')+
     '<input class="note" type="text" id="n-'+s.id+'" data-act="note" data-id="'+s.id+'" value="'+esc(m.note)+'" title="'+esc(m.note)+'" placeholder="依頼内容" aria-label="'+esc(s.n)+'の依頼中の内容">';
   var panel='';
   if(OPEN===s.id){
@@ -244,7 +247,7 @@ function summary(now){
   });
   var waitN=STAFF.length-ready.length;
   var rdy=ready.length?'<div class="chips">'+ready.map(function(s){return '<span class="nm">'+esc(s.n)+'</span>';}).join('')+'</div>':'<div class="none">いま頼める人はいません</div>';
-  var nx=next?'<div class="big" data-next="'+next.r+'">'+fmtRemain(next.r-now)+'</div><div class="at">'+esc(next.s.n)+'（'+esc(next.s.ai)+'）／'+fmtClock(next.r)+' ごろ</div>':'<div class="none">回復待ちの人はいません</div>';
+  var nx=next?'<div class="big"><span class="at">残り </span><span data-next="'+next.r+'">'+fmtRemain(next.r-now)+'</span></div><div class="at">'+esc(next.s.n)+'（'+esc(next.s.ai)+'）／'+fmtClock(next.r)+' ごろ</div>':'<div class="none">回復待ちの人はいません</div>';
   return '<div class="summary"><section class="tile"><h2>いま頼める（'+ready.length+'人／回復待ち '+waitN+'人）</h2>'+rdy+'</section>'+
     '<section class="tile"><h2>次に回復する人</h2>'+nx+'</section></div>';
 }
