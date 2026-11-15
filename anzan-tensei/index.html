@@ -249,10 +249,19 @@
   }
   #timer-bar-bg {
     width: 100%;
-    height: 10px;
+    height: 14px;
     border: 1px solid var(--main);
     background: var(--bg);
   }
+  #timer-bar-bg { position: relative; }
+  /* 神速(68%)・迅速(38%)の境目の目盛り */
+  #timer-bar-bg .tick {
+    position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px;
+    background: #000; opacity: 0.85; pointer-events: none; z-index: 2;
+  }
+  #timer-bar.t-fast { background: #ffd84d; }   /* 神速：3回攻撃（クリティカル） */
+  #timer-bar.t-mid  { background: var(--main); } /* 迅速：2回攻撃 */
+  #timer-bar.t-slow { background: var(--alert); } /* 通常：1回攻撃 */
   #timer-bar {
     height: 100%;
     width: 100%;
@@ -442,7 +451,7 @@
     .move-btn { padding: 10px; width: 90%; font-size: 0.9rem; }
     #battle-pad { min-height: 0; gap: 4px; }
     #problem-display { font-size: 1.3rem; padding: 2px 0; letter-spacing: 1px; }
-    #timer-bar-bg { height: 8px; flex: 0 0 auto; }
+    #timer-bar-bg { height: 12px; flex: 0 0 auto; }
     #numpad { min-height: 0; grid-auto-rows: minmax(0, 1fr); gap: 4px; }
     .num-btn { min-height: 0; font-size: 1.15rem; padding: 0; }
     #party-panel { padding: 4px 6px; gap: 3px; font-size: 0.7rem; flex: 0 0 auto; }
@@ -788,7 +797,7 @@
       <!-- 戦闘モード用UI -->
       <div id="battle-pad" class="box">
         <div id="problem-display"><span id="eq-text">3 + 4</span> = <span id="input-val">?</span></div>
-        <div id="timer-bar-bg"><div id="timer-bar"></div></div>
+        <div id="timer-bar-bg"><div id="timer-bar"></div><i class="tick" style="left:68%"></i><i class="tick" style="left:38%"></i></div>
         <div id="numpad">
           <button class="num-btn" data-key="7">7</button>
           <button class="num-btn" data-key="8">8</button>
@@ -975,6 +984,7 @@
   const SFX = {
     step: () => playTone(110, 'triangle', 0.08, 0.1, 60),
     beep: () => playTone(880, 'square', 0.05, 0.06),
+    tick: (urgent) => playTone(urgent ? 1320 : 990, 'square', 0.03, 0.035),
     encounter: () => {
       playTone(320, 'sawtooth', 0.12, 0.15, 140);
       setTimeout(() => playTone(240, 'sawtooth', 0.25, 0.15, 90), 110);
@@ -1563,6 +1573,8 @@
   // === Canvas 描画ループ (3D廊下・敵・エフェクト) ===
   let lastFrameTime = performance.now();
 
+  let lastTickAt = 0;
+  let enemyApproach = 1; // 敵の拡大率（時間が減るほど手前に迫る）
   function renderLoop(now) {
     const dt = now - lastFrameTime;
     lastFrameTime = now;
@@ -1571,7 +1583,19 @@
     if (state.mode === 'BATTLE' && state.enemy && !state.paused) {
       state.problem.remainTime -= dt;
       const pct = Math.max(0, (state.problem.remainTime / state.problem.maxTime) * 100);
-      document.getElementById('timer-bar').style.width = pct + '%';
+      const tbar = document.getElementById('timer-bar');
+      tbar.style.width = pct + '%';
+      const ratio = pct / 100;
+      const cls = ratio >= 0.68 ? 't-fast' : ratio >= 0.38 ? 't-mid' : 't-slow';
+      if (tbar.dataset.zone !== cls) { tbar.dataset.zone = cls; tbar.className = cls; }
+      // 7. 残りが少ないほど速くなるカウント音
+      if (ratio < 0.6) {
+        const interval = 180 + (ratio / 0.6) * 520;
+        if (now - lastTickAt >= interval) {
+          lastTickAt = now;
+          SFX.tick(ratio < 0.25);
+        }
+      }
       if (state.problem.remainTime <= 0) {
         resolvePlayerFail('時間切れ！');
       }
@@ -1640,8 +1664,23 @@
 
     // 2. 敵グラフィック描画（サイバー・オカルト幾何学ベクター）
     if ((state.mode === 'BATTLE' || state.mode === 'SUMMON') && state.enemy) {
-      drawEnemy(w / 2, h / 2 + 12, state.enemy.shape, mainCol);
-      drawEnemySprite(w / 2, h / 2 + 12, state.enemy.shape);
+      // 3. 残り時間が減るほど敵が手前に迫る（拡大）。新しい問題で時間が戻ると、なめらかに離れる
+      let target = 1;
+      if (state.mode === 'BATTLE' && state.problem && state.problem.maxTime > 0) {
+        const r = Math.max(0, Math.min(1, state.problem.remainTime / state.problem.maxTime));
+        target = 1 + 0.5 * (1 - r);
+      }
+      enemyApproach += (target - enemyApproach) * Math.min(1, dt * 0.012);
+      const ecx = w / 2, ecy = h / 2 + 12;
+      ctx.save();
+      ctx.translate(ecx, ecy);
+      ctx.scale(enemyApproach, enemyApproach);
+      ctx.translate(-ecx, -ecy);
+      drawEnemy(ecx, ecy, state.enemy.shape, mainCol);
+      drawEnemySprite(ecx, ecy, state.enemy.shape);
+      ctx.restore();
+    } else {
+      enemyApproach = 1;
     }
 
     // 3. 攻撃エフェクト（剣撃／銃撃）
