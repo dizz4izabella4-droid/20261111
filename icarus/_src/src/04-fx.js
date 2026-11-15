@@ -1,15 +1,15 @@
-/* ================= 演出：光の粒・風の筋・航跡・羽・輪・上昇気流 ================= */
-const FXU={uPxScale:{value:600},uVel:{value:new T.Vector3()},uSpeedAmt:{value:0},uBright:{value:1}};
+/* ================= 演出：光の粒・花びら・光の梯子・渡り鳥 ================= */
+const FXU={uPxScale:{value:600}};
 function randAttr(n,k){const a=new Float32Array(n*k);for(let i=0;i<a.length;i++)a[i]=rnd();return a;}
 
 /* --- 光の粒（空間の手がかり） --- */
 const motes=(function(){
-  const N=620;
+  const N=520;
   const g=new T.BufferGeometry();
   g.setAttribute('position',new T.BufferAttribute(new Float32Array(N*3),3));
   g.setAttribute('aSeed',new T.BufferAttribute(randAttr(N,4),4));
   const m=new T.ShaderMaterial({
-    uniforms:Object.assign({uBox:{value:150}},U,FXU),transparent:true,depthWrite:false,blending:T.AdditiveBlending,
+    uniforms:Object.assign({uBox:{value:150},uMote:{value:1}},U,FXU),transparent:true,depthWrite:false,blending:T.AdditiveBlending,
     vertexShader:`attribute vec4 aSeed;uniform float uBox,uPxScale,uTime;varying float vA;varying float vT;
     void main(){
       vec3 p=aSeed.xyz*uBox;
@@ -19,14 +19,14 @@ const motes=(function(){
       float d=length(rel);
       vA=smoothstep(uBox*0.5,uBox*0.30,d)*smoothstep(0.8,4.0,d);
       vT=0.6+0.4*sin(uTime*(1.5+aSeed.w*3.0)+aSeed.w*40.0);
-      gl_PointSize=clamp(uPxScale*(0.05+0.11*aSeed.w)/max(-mv.z,0.3),1.0,26.0);
+      gl_PointSize=clamp(uPxScale*(0.05+0.11*aSeed.w)/max(-mv.z,0.3),1.0,22.0);
       gl_Position=projectionMatrix*mv;
     }`,
-    fragmentShader:FS_PRE+SKY_GLSL+`varying float vA;varying float vT;
+    fragmentShader:FS_PRE+SKY_GLSL+`uniform float uMote;varying float vA;varying float vT;
     void main(){
       vec2 c=gl_PointCoord-0.5;float r=length(c)*2.0;
       float a=smoothstep(1.0,0.0,r);a*=a;
-      vec3 col=mix(vec3(1.0,0.86,0.62),vec3(1.0,0.97,0.9),0.5)*(0.55+0.7*uAlt);
+      vec3 col=mix(vec3(1.0,0.86,0.62),vec3(1.0,0.97,0.9),0.5)*(0.45+0.7*uAlt)*uMote;
       gl_FragColor=vec4(col*a*vA*vT,a*vA*vT);
     }`
   });
@@ -34,235 +34,136 @@ const motes=(function(){
   return o;
 })();
 
-/* --- 風の筋（スピード感） --- */
-const streaks=(function(){
-  const N=170;
+/* --- 舞う花びら --- */
+const petals=(function(){
+  const N=260;
+  const g=new T.BufferGeometry();
+  g.setAttribute('position',new T.BufferAttribute(new Float32Array(N*3),3));
+  g.setAttribute('aSeed',new T.BufferAttribute(randAttr(N,4),4));
+  const m=new T.ShaderMaterial({
+    uniforms:Object.assign({uBox:{value:170},uAmt:{value:0}},U,FXU),transparent:true,depthWrite:false,blending:T.AdditiveBlending,
+    vertexShader:`attribute vec4 aSeed;uniform float uBox,uPxScale,uTime,uAmt;varying float vA;varying vec3 vC;varying float vR;
+    void main(){
+      vec3 p=aSeed.xyz*uBox;
+      p.y-=uTime*(0.9+aSeed.w*1.4);
+      p.x+=sin(uTime*0.55+aSeed.w*25.0)*4.0;p.z+=cos(uTime*0.47+aSeed.w*19.0)*4.0;
+      vec3 rel=mod(p-cameraPosition+uBox*0.5,uBox)-uBox*0.5;
+      vec4 mv=viewMatrix*vec4(cameraPosition+rel,1.0);
+      float d=length(rel);
+      vA=uAmt*smoothstep(uBox*0.5,uBox*0.28,d)*smoothstep(1.5,7.0,d);
+      float k=fract(aSeed.w*5.7);
+      vC=k<0.45?vec3(1.0,0.72,0.80):(k<0.8?vec3(1.0,0.88,0.62):vec3(1.0,0.97,0.92));
+      vR=uTime*(0.6+aSeed.w)+aSeed.w*40.0;
+      gl_PointSize=clamp(uPxScale*(0.20+0.34*aSeed.x)/max(-mv.z,0.3),1.0,40.0);
+      gl_Position=projectionMatrix*mv;
+    }`,
+    fragmentShader:FS_PRE+`varying float vA;varying vec3 vC;varying float vR;
+    void main(){
+      vec2 c=gl_PointCoord-0.5;
+      float cs=cos(vR),sn=sin(vR);c=vec2(cs*c.x-sn*c.y,sn*c.x+cs*c.y);
+      float e=dot(c*vec2(1.0,2.4),c*vec2(1.0,2.4))*4.0;
+      float a=smoothstep(1.0,0.2,e);
+      a*=0.55+0.45*sin(vR*3.0);
+      gl_FragColor=vec4(vC*a*vA*1.3,a*vA);
+    }`
+  });
+  const o=new T.Points(g,m);o.frustumCulled=false;o.renderOrder=24;scene.add(o);
+  return o;
+})();
+
+/* --- 光の梯子（雲の切れ間から差す、斜めの光の帯） --- */
+const shafts=(function(){
+  const N=30;
   const g=new T.InstancedBufferGeometry();
-  g.setAttribute('position',new T.BufferAttribute(new Float32Array(12),3));
-  g.setAttribute('uv',new T.BufferAttribute(new Float32Array([0,0,1,0,0,1,1,1]),2));
+  g.setAttribute('position',new T.BufferAttribute(new Float32Array([-0.5,0,0, 0.5,0,0, -0.5,1,0, 0.5,1,0]),3));
   g.setIndex([0,1,2,2,1,3]);
   g.setAttribute('aSeed',new T.InstancedBufferAttribute(randAttr(N,4),4));
   g.instanceCount=N;
   const m=new T.ShaderMaterial({
-    uniforms:Object.assign({uBox:{value:120},uLen:{value:0.05},uW:{value:0.05}},U,FXU),transparent:true,depthWrite:false,blending:T.AdditiveBlending,side:T.DoubleSide,
-    vertexShader:`attribute vec4 aSeed;uniform float uBox,uLen,uW,uSpeedAmt;uniform vec3 uVel;varying float vA;varying float vU;
+    uniforms:Object.assign({uBox:{value:2600},uAmt:{value:0},uTop:{value:800}},U),transparent:true,depthWrite:false,blending:T.AdditiveBlending,side:T.DoubleSide,
+    vertexShader:FS_PRE+SKY_GLSL+`attribute vec4 aSeed;uniform float uBox,uAmt,uTop;varying float vA;varying vec2 vQ;
     void main(){
-      vec3 p=aSeed.xyz*uBox;
-      vec3 rel=mod(p-cameraPosition+uBox*0.5,uBox)-uBox*0.5;
-      vec3 head=cameraPosition+rel;
-      vec3 tail=head+uVel*uLen*(0.6+aSeed.w);
-      vec4 a=viewMatrix*vec4(head,1.0),b=viewMatrix*vec4(tail,1.0);
-      vec3 sd=cross(b.xyz-a.xyz,a.xyz);
-      sd=sd/max(length(sd),1e-5);
-      vec3 pv=mix(b.xyz,a.xyz,uv.y)+sd*(uv.x-0.5)*uW*(0.5+aSeed.w);
-      float d=length(rel);
-      vA=uSpeedAmt*smoothstep(uBox*0.5,uBox*0.3,d)*smoothstep(1.2,6.0,d)*(0.3+0.7*aSeed.w);
-      vU=uv.y;
-      gl_Position=projectionMatrix*vec4(pv,1.0);
+      vec2 rel=mod(aSeed.xy*uBox-cameraPosition.xz+uBox*0.5,uBox)-uBox*0.5;
+      float dist=length(rel);
+      float topY=uTop+260.0*aSeed.z;
+      float L=min(560.0+700.0*aSeed.w,topY-6.0);
+      vec3 P0=vec3(cameraPosition.x+rel.x,topY,cameraPosition.z+rel.y);
+      vec3 ax=normalize(vec3(-uSunDir.x*0.55,-1.0,-uSunDir.z*0.55));
+      vec3 P=P0+ax*L*position.y;
+      vec3 w=normalize(cross(ax,P0-cameraPosition));
+      float W=16.0+54.0*fract(aSeed.x*7.7+aSeed.w*3.1);
+      P+=w*position.x*W*(0.6+0.9*position.y);
+      vA=uAmt*smoothstep(140.0,420.0,dist)*(1.0-smoothstep(uBox*0.30,uBox*0.5,dist))*(0.35+0.65*fract(aSeed.z*13.0));
+      vQ=vec2(position.x+0.5,position.y);
+      gl_Position=projectionMatrix*viewMatrix*vec4(P,1.0);
     }`,
-    fragmentShader:FS_PRE+`varying float vA;varying float vU;
-    void main(){float a=vA*vU*vU;gl_FragColor=vec4(vec3(1.0,0.92,0.78)*a,a);}`
-  });
-  const o=new T.Mesh(g,m);o.frustumCulled=false;o.renderOrder=21;scene.add(o);
-  return o;
-})();
-
-/* --- 翼端の航跡 --- */
-function makeTrail(){
-  const N=44;
-  const pos=new Float32Array(N*2*3),al=new Float32Array(N*2);
-  const idx=[];for(let i=0;i<N-1;i++){const a=i*2;idx.push(a,a+1,a+2,a+2,a+1,a+3);}
-  const g=new T.BufferGeometry();
-  g.setAttribute('position',new T.BufferAttribute(pos,3).setUsage(T.DynamicDrawUsage));
-  g.setAttribute('aA',new T.BufferAttribute(al,1).setUsage(T.DynamicDrawUsage));
-  g.setIndex(idx);
-  const m=new T.ShaderMaterial({uniforms:Object.assign({},U),transparent:true,depthWrite:false,blending:T.AdditiveBlending,side:T.DoubleSide,
-    vertexShader:`attribute float aA;varying float vA;void main(){vA=aA;gl_Position=projectionMatrix*viewMatrix*vec4(position,1.0);}`,
-    fragmentShader:FS_PRE+SKY_GLSL+`varying float vA;void main(){vec3 c=mix(vec3(1.0,0.78,0.5),vec3(1.0,0.95,0.85),vA)*(0.7+0.8*uAlt);gl_FragColor=vec4(c*vA,vA);}`});
-  const o=new T.Mesh(g,m);o.frustumCulled=false;o.renderOrder=22;scene.add(o);
-  const ts={N:N,pts:[],mesh:o,pos:pos,al:al,g:g};
-  for(let i=0;i<N;i++)ts.pts.push({x:0,y:0,z:0,t:-9});
-  return ts;
-}
-const trails=[makeTrail(),makeTrail()];
-let trailAcc=0;
-function updateTrails(dt,tipsL,tipsR,amt,now){
-  trailAcc+=dt;
-  const step=1/36;
-  const tips=[tipsL,tipsR];
-  if(trailAcc>=step){
-    trailAcc=0;
-    for(let k=0;k<2;k++){
-      const tr=trails[k];const p=tr.pts.pop();
-      p.x=tips[k].x;p.y=tips[k].y;p.z=tips[k].z;p.t=now;tr.pts.unshift(p);
-    }
-  }
-  const cp=cam.position;
-  for(let k=0;k<2;k++){
-    const tr=trails[k];
-    for(let i=0;i<tr.N;i++){
-      const p=tr.pts[i];
-      const prev=tr.pts[Math.min(i+1,tr.N-1)],nxt=tr.pts[Math.max(i-1,0)];
-      // 先頭は現在の翼端に追従
-      let px=p.x,py=p.y,pz=p.z;
-      if(i===0){px=tips[k].x;py=tips[k].y;pz=tips[k].z;}
-      let tx=nxt.x-prev.x,ty=nxt.y-prev.y,tz=nxt.z-prev.z;
-      const tl=Math.hypot(tx,ty,tz)||1;tx/=tl;ty/=tl;tz/=tl;
-      const vx=cp.x-px,vy=cp.y-py,vz=cp.z-pz;
-      let sx=ty*vz-tz*vy,sy=tz*vx-tx*vz,sz=tx*vy-ty*vx;
-      const sl=Math.hypot(sx,sy,sz)||1;
-      const age=i/(tr.N-1);
-      const w=0.16*(1-age)*(0.35+amt*0.65);
-      sx=sx/sl*w;sy=sy/sl*w;sz=sz/sl*w;
-      const o=i*6;
-      tr.pos[o]=px+sx;tr.pos[o+1]=py+sy;tr.pos[o+2]=pz+sz;
-      tr.pos[o+3]=px-sx;tr.pos[o+4]=py-sy;tr.pos[o+5]=pz-sz;
-      const a=Math.pow(1-age,1.6)*amt*(p.t<0?0:1);
-      tr.al[i*2]=a;tr.al[i*2+1]=a;
-    }
-    tr.g.attributes.position.needsUpdate=true;tr.g.attributes.aA.needsUpdate=true;
-  }
-}
-
-/* --- 汎用パーティクル（火花・粉・蝋のしずく） --- */
-const parts=(function(){
-  const N=700;
-  const pos=new Float32Array(N*3),col=new Float32Array(N*4),sz=new Float32Array(N);
-  const vel=new Float32Array(N*3),life=new Float32Array(N),life0=new Float32Array(N),grav=new Float32Array(N),drag=new Float32Array(N),size0=new Float32Array(N);
-  const g=new T.BufferGeometry();
-  g.setAttribute('position',new T.BufferAttribute(pos,3).setUsage(T.DynamicDrawUsage));
-  g.setAttribute('aCol',new T.BufferAttribute(col,4).setUsage(T.DynamicDrawUsage));
-  g.setAttribute('aSize',new T.BufferAttribute(sz,1).setUsage(T.DynamicDrawUsage));
-  const m=new T.ShaderMaterial({uniforms:Object.assign({},U,FXU),transparent:true,depthWrite:false,blending:T.AdditiveBlending,
-    vertexShader:`attribute vec4 aCol;attribute float aSize;uniform float uPxScale;varying vec4 vC;
-    void main(){vC=aCol;vec4 mv=viewMatrix*vec4(position,1.0);gl_PointSize=clamp(uPxScale*aSize/max(-mv.z,0.2),0.0,90.0);gl_Position=projectionMatrix*mv;}`,
-    fragmentShader:FS_PRE+`varying vec4 vC;void main(){vec2 c=gl_PointCoord-0.5;float r=length(c)*2.0;float a=smoothstep(1.0,0.0,r);a*=a;gl_FragColor=vec4(vC.rgb*a*vC.a,a*vC.a);}`});
-  const o=new T.Points(g,m);o.frustumCulled=false;o.renderOrder=23;scene.add(o);
-  let head=0;
-  function spawn(x,y,z,vx,vy,vz,r,gc,b,size,lf,gr,dg){
-    const i=head;head=(head+1)%N;
-    pos[i*3]=x;pos[i*3+1]=y;pos[i*3+2]=z;vel[i*3]=vx;vel[i*3+1]=vy;vel[i*3+2]=vz;
-    col[i*4]=r;col[i*4+1]=gc;col[i*4+2]=b;col[i*4+3]=1;
-    life[i]=life0[i]=lf;size0[i]=size;grav[i]=gr||0;drag[i]=dg||0;sz[i]=size;
-  }
-  function update(dt,wvx,wvy,wvz){
-    for(let i=0;i<N;i++){
-      if(life[i]<=0){sz[i]=0;continue;}
-      life[i]-=dt;
-      const k=Math.exp(-drag[i]*dt);
-      vel[i*3]*=k;vel[i*3+1]=vel[i*3+1]*k-grav[i]*dt;vel[i*3+2]*=k;
-      pos[i*3]+=vel[i*3]*dt;pos[i*3+1]+=vel[i*3+1]*dt;pos[i*3+2]+=vel[i*3+2]*dt;
-      const f=Math.max(0,life[i]/life0[i]);
-      col[i*4+3]=f*f*(3-2*f);
-      sz[i]=size0[i]*(0.4+0.6*f);
-    }
-    g.attributes.position.needsUpdate=true;g.attributes.aCol.needsUpdate=true;g.attributes.aSize.needsUpdate=true;
-  }
-  function burst(x,y,z,n,spd,r,gc,b,size,lf,gr,dg,ux,uy,uz,spread){
-    for(let i=0;i<n;i++){
-      let dx=rnd()*2-1,dy=rnd()*2-1,dz=rnd()*2-1;
-      const dl=Math.hypot(dx,dy,dz)||1;dx/=dl;dy/=dl;dz/=dl;
-      if(ux!==undefined){dx=ux+dx*spread;dy=uy+dy*spread;dz=uz+dz*spread;const l=Math.hypot(dx,dy,dz)||1;dx/=l;dy/=l;dz/=l;}
-      const s=spd*(0.35+0.65*rnd());
-      spawn(x,y,z,dx*s,dy*s,dz*s,r,gc,b,size*(0.5+rnd()),lf*(0.6+0.7*rnd()),gr,dg);
-    }
-  }
-  return {spawn:spawn,update:update,burst:burst,obj:o};
-})();
-
-/* --- 舞い落ちる羽 --- */
-const fallFeathers=(function(){
-  const N=70;
-  const geo=FEATHER_GEO.clone();
-  const sa=new Float32Array(N);for(let i=0;i<N;i++)sa[i]=rnd();
-  geo.setAttribute('aSeed',new T.InstancedBufferAttribute(sa,1));
-  const fs=FEATHER_FS.replace('uniform float uSeed,uLoose,uScorch,uWaxHeat;','varying float vSeedI;uniform float uLoose,uScorch,uWaxHeat;').replace(/uSeed/g,'vSeedI');
-  const m=new T.ShaderMaterial({uniforms:Object.assign({uLoose:{value:0.12}},U,VMU,{uScorch:{value:0.08},uWaxHeat:{value:0}}),side:T.DoubleSide,
-    vertexShader:`attribute float aSeed;varying vec2 vUv;varying vec3 vN;varying vec3 vVP;varying float vSeedI;
-    void main(){vUv=uv;vSeedI=aSeed;vN=normalMatrix*mat3(instanceMatrix)*normal;vec4 mv=modelViewMatrix*instanceMatrix*vec4(position,1.0);vVP=mv.xyz;gl_Position=projectionMatrix*mv;}`,
-    fragmentShader:fs});
-  const mesh=new T.InstancedMesh(geo,m,N);mesh.frustumCulled=false;mesh.count=N;
-  const st=[];
-  const mat=new T.Matrix4(),q=new T.Quaternion(),e=new T.Euler(),pv=new T.Vector3(),sv=new T.Vector3(),zero=new T.Matrix4().makeScale(0,0,0);
-  for(let i=0;i<N;i++){st.push({life:0,x:0,y:0,z:0,vx:0,vy:0,vz:0,a:0,b:0,c:0,wa:0,wb:0,wc:0,ph:0,len:0.6});mesh.setMatrixAt(i,zero);}
-  mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);
-  scene.add(mesh);
-  let head=0;
-  function spawn(x,y,z,vx,vy,vz,len,life){
-    const s=st[head];head=(head+1)%N;
-    s.life=s.life0=life||9;s.x=x;s.y=y;s.z=z;s.vx=vx;s.vy=vy;s.vz=vz;s.len=len||0.7;
-    s.a=rnd()*TAU;s.b=rnd()*TAU;s.c=rnd()*TAU;s.wa=(rnd()-0.5)*3;s.wb=(rnd()-0.5)*3;s.wc=(rnd()-0.5)*3;s.ph=rnd()*TAU;
-  }
-  function update(dt,t,wvx,wvy,wvz){
-    for(let i=0;i<N;i++){
-      const s=st[i];
-      if(s.life<=0)continue;
-      s.life-=dt;
-      if(s.life<=0){mesh.setMatrixAt(i,zero);continue;}
-      // ゆらゆら落ちる
-      const tvy=-1.6;
-      s.vy+=(tvy-s.vy)*Math.min(1,dt*1.3);
-      s.vx+=(Math.sin(t*1.9+s.ph)*1.6-s.vx)*Math.min(1,dt*0.8);
-      s.vz+=(Math.cos(t*1.5+s.ph)*1.6-s.vz)*Math.min(1,dt*0.8);
-      s.x+=(s.vx)*dt;s.y+=s.vy*dt;s.z+=s.vz*dt;
-      s.a+=s.wa*dt;s.b+=s.wb*dt*0.6;s.c+=s.wc*dt;
-      e.set(s.a,s.b,s.c);q.setFromEuler(e);
-      const k=Math.min(1,s.life/1.2)*s.len;
-      pv.set(s.x,s.y,s.z);sv.set(k,k,k);
-      mat.compose(pv,q,sv);mesh.setMatrixAt(i,mat);
-    }
-    mesh.instanceMatrix.needsUpdate=true;
-  }
-  function clear(){for(let i=0;i<N;i++){st[i].life=0;mesh.setMatrixAt(i,zero);}mesh.instanceMatrix.needsUpdate=true;}
-  return {spawn:spawn,update:update,clear:clear};
-})();
-
-/* --- 上昇気流 --- */
-const THN=8;
-const thermalMeshes=[];
-const thermalGeo=new T.CylinderGeometry(1,1,1,28,1,true);thermalGeo.translate(0,0.5,0);
-for(let i=0;i<THN;i++){
-  const m=new T.Mesh(thermalGeo,new T.ShaderMaterial({uniforms:Object.assign({uOn:{value:0}},U),transparent:true,depthWrite:false,blending:T.AdditiveBlending,side:T.DoubleSide,
-    vertexShader:`varying vec2 vUv;varying vec3 vWP;varying vec3 vNw;
-    void main(){vUv=uv;vec4 wp=modelMatrix*vec4(position,1.0);vWP=wp.xyz;vNw=normalize(mat3(modelMatrix)*normal);gl_Position=projectionMatrix*viewMatrix*wp;}`,
-    fragmentShader:FS_PRE+SKY_GLSL+`uniform float uOn;varying vec2 vUv;varying vec3 vWP;varying vec3 vNw;
+    fragmentShader:FS_PRE+SKY_GLSL+`varying float vA;varying vec2 vQ;
     void main(){
-      vec3 V=normalize(cameraPosition-vWP);
-      float fr=pow(1.0-abs(dot(normalize(vNw),V)),1.2);
-      float rise=vWP.y*0.03-uTime*0.9;
-      float n=h21(vec2(floor(vUv.x*36.0),floor(rise*1.3)));
-      float s=0.5+0.5*sin(vUv.x*6.2831*4.0+vWP.y*0.04-uTime*0.8);
-      float a=(0.10+0.42*n*s)*(0.35+fr)*smoothstep(0.0,0.06,vUv.y)*smoothstep(1.0,0.55,vUv.y);
-      float dist=length(cameraPosition-vWP);
-      a*=smoothstep(4200.0,300.0,dist)*uOn;
-      vec3 c=mix(vec3(1.0,0.74,0.38),vec3(1.0,0.95,0.8),0.35)*(1.4+0.8*uAlt);
+      float x=abs(vQ.x*2.0-1.0);
+      float edge=pow(max(1.0-x,0.0),2.0);
+      float streak=0.62+0.38*sin(vQ.x*44.0+h21(vec2(floor(vQ.x*12.0),vQ.y*0.0))*6.3);
+      float along=smoothstep(0.0,0.10,vQ.y)*(1.0-smoothstep(0.50,1.0,vQ.y));
+      float a=vA*edge*streak*along*0.20;
+      vec3 c=mix(uSunCol,vec3(1.0,0.95,0.86),0.55)*1.2;
       gl_FragColor=vec4(c*a,a);
-    }`}));
-  m.frustumCulled=false;m.visible=false;m.renderOrder=19;scene.add(m);thermalMeshes.push(m);
-}
-const thermalPts=(function(){
-  const PER=44,N=PER*THN;
-  const g=new T.BufferGeometry();
-  const sd=randAttr(N,4);for(let i=0;i<N;i++)sd[i*4+3]=Math.floor(i/PER);
-  g.setAttribute('position',new T.BufferAttribute(new Float32Array(N*3),3));
-  g.setAttribute('aSeed',new T.BufferAttribute(sd,4));
-  const uTh=[];for(let i=0;i<THN;i++)uTh.push(new T.Vector4(0,0,0,0));
-  const m=new T.ShaderMaterial({uniforms:Object.assign({uTh:{value:uTh},uTop:{value:uTh.map(()=>600)}},U,FXU),transparent:true,depthWrite:false,blending:T.AdditiveBlending,
-    vertexShader:`attribute vec4 aSeed;uniform vec4 uTh[${THN}];uniform float uTop[${THN}];uniform float uTime,uPxScale;varying float vA;
-    void main(){
-      vec4 th=uTh[int(aSeed.w+0.5)];
-      float top=uTop[int(aSeed.w+0.5)];
-      float H=top-th.y;
-      float ang=aSeed.x*6.2831+uTime*(0.5+aSeed.y*0.5);
-      float r=th.w*(0.15+0.8*aSeed.y);
-      float y=mod(aSeed.z*H+uTime*(10.0+aSeed.y*8.0),H);
-      vec3 wp=vec3(th.x+cos(ang+y*0.01)*r,th.y+y,th.z+sin(ang+y*0.01)*r);
-      vec4 mv=viewMatrix*vec4(wp,1.0);
-      vA=step(1.0,th.w)*smoothstep(0.0,40.0,y)*smoothstep(H,H-150.0,y)*smoothstep(2200.0,300.0,length(mv.xyz));
-      gl_PointSize=clamp(uPxScale*(0.45+0.8*aSeed.x)/max(-mv.z,0.5),1.0,22.0);
-      gl_Position=projectionMatrix*mv;
-    }`,
-    fragmentShader:FS_PRE+`varying float vA;void main(){vec2 c=gl_PointCoord-0.5;float a=smoothstep(1.0,0.0,length(c)*2.0);a*=a;gl_FragColor=vec4(vec3(1.0,0.8,0.5)*a*vA*1.6,a*vA);}`});
-  const o=new T.Points(g,m);o.frustumCulled=false;o.renderOrder=25;scene.add(o);
+    }`
+  });
+  const o=new T.Mesh(g,m);o.frustumCulled=false;o.renderOrder=19;scene.add(o);
   return o;
+})();
+
+/* --- 渡り鳥（V字の群れ） --- */
+const birds=(function(){
+  const NF=14,FB=13,N=NF*FB;
+  const pos=[-0.0,0,-0.45, -0.1,0,0.3, 0.1,0,0.3,   0,0,-0.2, 0,0,0.28, -1.05,0,0.2,   0,0,-0.2, 0,0,0.28, 1.05,0,0.2];
+  const wv=[0,0,0, 0,0,1, 0,0,1];
+  const g=new T.InstancedBufferGeometry();
+  g.setAttribute('position',new T.BufferAttribute(new Float32Array(pos),3));
+  g.setAttribute('aW',new T.BufferAttribute(new Float32Array(wv),1));
+  g.setAttribute('aPh',new T.InstancedBufferAttribute((()=>{const a=new Float32Array(N);for(let i=0;i<N;i++)a[i]=rnd()*TAU;return a;})(),1));
+  g.instanceCount=N;
+  const mat=new T.ShaderMaterial({uniforms:Object.assign({},U),side:T.DoubleSide,
+    vertexShader:`attribute float aW;attribute float aPh;attribute vec4 aM0;attribute vec4 aM1;attribute vec4 aM2;attribute vec4 aM3;uniform float uTime;varying vec3 vWP;varying float vW;
+    void main(){
+      mat4 im=mat4(aM0,aM1,aM2,aM3);
+      vec3 p=position*2.2;
+      float f=sin(uTime*4.2+aPh);
+      p.y+=aW*f*abs(position.x)*1.5;
+      vec4 wp=im*vec4(p,1.0);vWP=wp.xyz;vW=aW;
+      gl_Position=projectionMatrix*viewMatrix*wp;
+    }`,
+    fragmentShader:FS_PRE+SKY_GLSL+`varying vec3 vWP;varying float vW;
+    void main(){
+      vec3 col=vec3(0.90,0.88,0.84)*(uZen*0.45+uHor*0.30+vec3(0.20)+uSunCol*0.40)*(0.78+0.22*vW);
+      col=applyFog(col,vWP);
+      gl_FragColor=vec4(col,1.0);
+    }`});
+  const aM=[0,1,2,3].map(()=>{const a=new T.InstancedBufferAttribute(new Float32Array(N*4),4);a.setUsage(T.DynamicDrawUsage);return a;});
+  aM.forEach((a,i)=>g.setAttribute('aM'+i,a));
+  const o=new T.Mesh(g,mat);o.frustumCulled=false;scene.add(o);
+  const mm=new T.Matrix4(),qq=new T.Quaternion(),ee=new T.Euler(),pp=new T.Vector3(),ss=new T.Vector3(1,1,1);
+  const flocks=[];for(let f=0;f<NF;f++){const h=rnd()*TAU,sp=11+8*rnd();flocks.push({bx:rnd()*3000,bz:rnd()*3000,by:30+rnd()*900,yaw:h,sp:sp,sc:3.4+3.0*rnd(),ph:rnd()*6});}
+  const SX=2400,SY=1100;
+  function wrapTo(v,c,S){return ((v-c+S*0.5)%S+S)%S-S*0.5+c;}
+  function update(t,px,py,pz){
+    for(let f=0;f<NF;f++){
+      const F=flocks[f];
+      const dx=-Math.sin(F.yaw),dz=-Math.cos(F.yaw);
+      const cx=wrapTo(F.bx+dx*F.sp*t,px,SX),cz=wrapTo(F.bz+dz*F.sp*t,pz,SX);
+      let cy=wrapTo(F.by+Math.sin(t*0.05+F.ph)*30,py,SY);if(cy<60)cy+=SY*0.4;
+      for(let k=0;k<FB;k++){
+        const idx=f*FB+k;
+        const rank=Math.ceil(k/2),side=(k%2?1:-1)*(k?1:0);
+        const lx=side*rank*5.5*F.sc,lz=rank*5.5*F.sc;
+        const cyw=Math.cos(F.yaw),syw=Math.sin(F.yaw);
+        const wx=cx+lx*cyw+lz*syw,wz=cz-lx*syw+lz*cyw;
+        const wy=cy+Math.sin(t*1.0+k*0.9+F.ph)*0.7+rank*0.4;
+        ee.set(0,F.yaw,0.08*Math.sin(t*0.7+k),'YXZ');qq.setFromEuler(ee);pp.set(wx,wy,wz);ss.set(F.sc,F.sc,F.sc);mm.compose(pp,qq,ss);
+        const e=mm.elements;
+        aM[0].setXYZW(idx,e[0],e[1],e[2],e[3]);aM[1].setXYZW(idx,e[4],e[5],e[6],e[7]);aM[2].setXYZW(idx,e[8],e[9],e[10],e[11]);aM[3].setXYZW(idx,e[12],e[13],e[14],e[15]);
+      }
+    }
+    aM.forEach(a=>a.needsUpdate=true);
+  }
+  return {update:update};
 })();

@@ -6,9 +6,10 @@ const clamp=(x,a,b)=>x<a?a:x>b?b:x;
 const lerp=(a,b,t)=>a+(b-a)*t;
 const sstep=(a,b,x)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t)};
 const TAU=Math.PI*2;
-let _seed=20261112;
+let _seed=20261115;
 function rnd(){_seed=(Math.imul(_seed,1664525)+1013904223)>>>0;return _seed/4294967296}
 function hash3(i,j,k){let n=(Math.imul(i,374761393)+Math.imul(j,668265263)+Math.imul(k,1442695041))|0;n=Math.imul(n^(n>>>13),1274126177);n^=n>>>16;return (n>>>0)/4294967296}
+function wrapAng(a){return Math.atan2(Math.sin(a),Math.cos(a))}
 
 const canvas=$('c');
 let renderer;
@@ -30,15 +31,17 @@ const U={
   uMid:{value:new T.Color(0x8aa6e0)},
   uSunCol:{value:new T.Color(0xffb060)},
   uSunR:{value:0.035},
-  uAlt:{value:0},
+  uAlt:{value:0.3},
   uHeat:{value:0},
   uFogDen:{value:0.0011},
   uMist:{value:0},
-  uMistCol:{value:new T.Color(0xdfe3ea)}
+  uMistCol:{value:new T.Color(0xf4efe6)},
+  uLamp:{value:0},
+  uStar:{value:0}
 };
 
 const scene=new T.Scene();
-const cam=new T.PerspectiveCamera(78,1,0.15,12000);
+const cam=new T.PerspectiveCamera(78,1,0.15,14000);
 cam.rotation.order='YXZ';
 const vmScene=new T.Scene();
 const vmCam=new T.PerspectiveCamera(70,1,0.03,40);
@@ -49,7 +52,6 @@ triGeo.setAttribute('position',new T.BufferAttribute(new Float32Array([-1,-1,0,3
 const camDummy=new T.Camera();
 
 /* ---------- ポストプロセス ---------- */
-const GLSL_FS_HEAD='precision highp float;\n';
 const VS_QUAD='varying vec2 vUv;void main(){vUv=position.xy*0.5+0.5;gl_Position=vec4(position.xy,0.0,1.0);}';
 function quadMat(fs,uniforms,extra){
   return new T.ShaderMaterial(Object.assign({uniforms:uniforms,vertexShader:VS_QUAD,fragmentShader:fs,depthTest:false,depthWrite:false,blending:T.NoBlending},extra||{}));
@@ -89,7 +91,7 @@ void main(){
   gl_FragColor=vec4(r*(1.0/16.0)*uW,1.0);
 }`,{tSrc:{value:null},uTexel:{value:new T.Vector2()},uW:{value:1}},{blending:T.CustomBlending,blendEquation:T.AddEquation,blendSrc:T.OneFactor,blendDst:T.OneFactor});
 
-const P={ // 毎フレーム game から更新される
+const P={
   sunUV:new T.Vector2(.5,.5),sunVis:0,bloom:0.55,ray:0.5,blur:0,ca:0.0,vig:0.35,expo:1.0,
   veil:0,veilCol:new T.Color(1,0.9,0.7),desat:0,flash:0,grain:0.03,mist:0,dazzle:0,fade:0,fadeCol:new T.Color(0,0,0)
 };
@@ -174,13 +176,11 @@ function buildTargets(w,h){
   matComp.uniforms.uAspect.value=w/h;
 }
 function renderFrame(){
-  // 本編
   renderer.setRenderTarget(R.sceneRT);
   renderer.clear(true,true,false);
   renderer.render(scene,cam);
   renderer.clearDepth();
   renderer.render(vmScene,vmCam);
-  // ブルーム
   matPre.uniforms.tScene.value=R.sceneRT.texture;
   pass(matPre,R.bright);
   let src=R.bright;

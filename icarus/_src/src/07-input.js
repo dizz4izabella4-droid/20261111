@@ -1,8 +1,9 @@
-/* ================= 入力（タッチ・マウス・キーボード） ================= */
-const inp={sx:0,sy:0,flapReq:false,hold:false,touch:false,seenMove:false,keys:{},mx:0,my:0,mouseActive:false,gesture:0,steerUsed:false,flapUsed:false,wantStart:false};
+/* ================= 入力（タッチ・マウス・キーボード） =================
+   操作：ドラッグ／マウス位置／矢印キー＝舵　　押し続ける／スペース＝ぐっと上昇　　タップ＝ひと押し上昇 */
+const inp={sx:0,sy:0,flapReq:false,hold:false,touch:false,keys:{},mx:0,my:0,mouseActive:false,gesture:0};
 (function(){
   const cv=canvas;
-  let prim=-1,ax=0,ay=0,t0=0,moved=0,holdT=0;
+  let prim=-1,sec=-1,ax=0,ay=0,t0=0,moved=0,holdT=0;
   const radius=()=>Math.max(70,Math.min(130,Math.min(view.cw,view.ch)*0.16));
   cv.addEventListener('pointerdown',e=>{
     e.preventDefault();
@@ -12,25 +13,25 @@ const inp={sx:0,sy:0,flapReq:false,hold:false,touch:false,seenMove:false,keys:{}
     if(e.pointerType==='mouse'){inp.hold=true;inp.flapReq=true;inp.mouseActive=true;inp.mx=e.clientX;inp.my=e.clientY;return;}
     inp.touch=true;
     if(prim<0){prim=e.pointerId;ax=e.clientX;ay=e.clientY;t0=performance.now();moved=0;holdT=0;inp.sx=0;inp.sy=0;}
-    else{inp.flapReq=true;}
+    else if(sec<0){sec=e.pointerId;inp.hold=true;inp.flapReq=true;}
   },{passive:false});
   cv.addEventListener('pointermove',e=>{
     if(e.pointerType==='mouse'){inp.mouseActive=true;inp.mx=e.clientX;inp.my=e.clientY;return;}
     if(e.pointerId!==prim)return;
-    const R=radius();
+    const Rr=radius();
     const dx=e.clientX-ax,dy=e.clientY-ay;
     moved=Math.max(moved,Math.hypot(dx,dy));
-    // 起点がドラッグに追従する（遠くまで引っ張られても操作しやすい）
     const d=Math.hypot(dx,dy);
-    if(d>R*1.4){const k=(d-R*1.4)/d;ax+=dx*k;ay+=dy*k;}
-    inp.sx=clamp((e.clientX-ax)/R,-1,1);inp.sy=clamp(-(e.clientY-ay)/R,-1,1);
+    if(d>Rr*1.4){const k=(d-Rr*1.4)/d;ax+=dx*k;ay+=dy*k;}
+    inp.sx=clamp((e.clientX-ax)/Rr,-1,1);inp.sy=clamp(-(e.clientY-ay)/Rr,-1,1);
   });
   function up(e){
     if(e.pointerType==='mouse'){inp.hold=false;return;}
+    if(e.pointerId===sec){sec=-1;inp.hold=false;return;}
     if(e.pointerId!==prim)return;
     const dt=performance.now()-t0;
     if(dt<260&&moved<14)inp.flapReq=true;
-    prim=-1;inp.sx=0;inp.sy=0;inp.hold=false;
+    prim=-1;inp.sx=0;inp.sy=0;inp.hold=sec>=0;
   }
   cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
   cv.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse')inp.mouseActive=false;});
@@ -42,11 +43,9 @@ const inp={sx:0,sy:0,flapReq:false,hold:false,touch:false,seenMove:false,keys:{}
     if(k.indexOf('Arrow')===0)e.preventDefault();
   });
   window.addEventListener('keyup',e=>{inp.keys[e.code]=false;if(e.code==='Space'||e.code==='Enter')inp.hold=false;});
-  // 指を置きっぱなしで羽ばたきを続ける
+  // 指を置きっぱなし（動かさない）でも上昇を続ける
   inp.poll=function(dt){
-    if(prim>=0){
-      if(moved<14){holdT+=dt;if(holdT>0.42){inp.hold=true;}}
-    }
+    if(prim>=0&&moved<14){holdT+=dt;if(holdT>0.42)inp.hold=true;}
     let sx=inp.sx,sy=inp.sy;
     if(!inp.touch||prim<0){
       if(inp.mouseActive&&!inp.touch){

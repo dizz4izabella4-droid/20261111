@@ -1,5 +1,5 @@
-/* ================= 解像度・ループ ================= */
-const view={cw:1,ch:1,dpr:1,scale:1,fovBase:78};
+/* ================= 解像度 ================= */
+const view={cw:1,ch:1,dpr:1,scale:1};
 function resize(){
   const cw=window.innerWidth,ch=window.innerHeight;
   view.cw=cw;view.ch=ch;

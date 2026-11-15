@@ -36,7 +36,7 @@ void main(){
   float barb=0.5+0.5*sin(k*6.2831+uSeed*17.0);
   float fine=0.5+0.5*sin((u*190.0-sd*40.0)*6.2831);
   float rach=1.0-smoothstep(0.0,0.06,sd);
-  float rachLine=smoothstep(0.0,0.012,abs(sd-0.075))*0.0+smoothstep(0.045,0.06,sd)*(1.0-smoothstep(0.07,0.11,sd));
+  float rachLine=smoothstep(0.045,0.06,sd)*(1.0-smoothstep(0.07,0.11,sd));
   vec3 alb=vec3(0.96,0.91,0.82)*(0.78+0.14*barb+0.08*fine)*(0.88+0.12*fract(uSeed*7.3));
   alb*=1.0-0.30*smoothstep(0.78,1.0,sd);
   alb=mix(alb,vec3(0.74,0.64,0.50),rach*0.75);
@@ -53,15 +53,14 @@ void main(){
   alb*=0.52+0.48*smoothstep(0.0,0.30,u);
   float sk=dot(n,uUpV)*0.5+0.5;
   vec3 amb=mix(vec3(0.46,0.32,0.24),vec3(0.52,0.52,0.60),sk)*0.95;
-  vec3 sun=uSunCol*(1.55+0.6*uAlt);
-  vec3 col=alb*(amb*0.85+sun*diff*0.95);
-  col+=alb*vec3(1.0,0.72,0.42)*sun*trans*0.85*(0.7+0.3*barb);
+  vec3 sun=uSunCol*(1.0+0.35*uAlt);
+  vec3 col=alb*0.9*(amb*0.8+sun*diff*0.85);
+  col+=alb*vec3(1.0,0.72,0.42)*sun*trans*0.45*(0.7+0.3*barb);
   float rim=pow(1.0-abs(dot(n,V)),2.5);
   float back=max(dot(L,-V),0.0);
-  col+=uSunCol*rim*(0.12+0.9*pow(back,2.5));
+  col+=uSunCol*rim*(0.08+0.45*pow(back,2.5));
   float spec=pow(max(dot(reflect(-L,n),V),0.0),24.0)*rach;
   col+=sun*spec*0.35;
-  col+=vec3(1.0,0.45,0.12)*uWaxHeat*smoothstep(0.3,0.0,u)*0.9;
   gl_FragColor=vec4(col,1.0);
 }`;
 function makeFeatherMat(seed){
@@ -83,13 +82,11 @@ void main(){
   float spec=pow(max(dot(reflect(-L,n),V),0.0),48.0);
   col+=vec3(1.0,0.93,0.78)*spec*(1.0+uAlt*1.0);
   col+=vec3(1.0,0.62,0.25)*fres*0.5;
-  col+=vec3(1.0,0.4,0.08)*uWaxHeat*(0.9+0.5*sin(vUv.x*40.0+uTime*3.0));
   gl_FragColor=vec4(col,1.0);
 }`;
 const WAX_VS=`varying vec3 vN;varying vec3 vVP;varying vec2 vUv;uniform float uWaxHeat;
 void main(){vUv=uv;vN=normalMatrix*normal;vec3 p=position;
-  p+=normal*(0.004*sin(uv.x*60.0)+0.006*uWaxHeat*sin(uv.x*17.0+3.0));
-  p.y-=uWaxHeat*0.02*sin(uv.x*3.14159);
+  p+=normal*(0.004*sin(uv.x*60.0));
   vec4 mv=modelViewMatrix*vec4(p,1.0);vVP=mv.xyz;gl_Position=projectionMatrix*mv;}`;
 const waxMat=new T.ShaderMaterial({uniforms:Object.assign({},U,VMU),vertexShader:WAX_VS,fragmentShader:WAX_FS});
 
@@ -101,7 +98,7 @@ const wings=(function(){
     const m=new T.Mesh(FEATHER_GEO,makeFeatherMat(seed));
     m.rotation.order='YZX';
     m.position.set(x,kind==='cov'?0.018+all.length*0.00035:(kind==='sec'?-0.004-all.length*0.0003:all.length*0.0002),z);
-    m.userData={beta:beta,len:len,wf:wf,seed:seed,kind:kind,lift:lift||0,x:x,alive:true,idx:0};
+    m.userData={beta:beta,len:len,wf:wf,seed:seed,kind:kind,lift:lift||0,x:x};
     m.scale.set(len,len,len*wf);
     m.rotation.y=beta-Math.PI/2;
     m.frustumCulled=false;
@@ -123,29 +120,20 @@ const wings=(function(){
     S.root.add(S.arm);S.arm.add(S.fore);S.fore.add(S.hand);
     const wrap=new T.Group();wrap.add(S.root);wrap.scale.x=sg;S.wrap=wrap;
     group.add(wrap);
-    // 三列風切（上腕）
     for(let i=0;i<6;i++){const t=(i+0.5)/6;const f=addFeather(S.arm,t*L1,0.02,0.05+0.02*i,0.50-0.015*i,0.62,hash3(i,sg,3),'sec',0.02);S.feathers.push(f);S.sec.push(f);}
-    // 次列風切（前腕）
     for(let i=0;i<13;i++){const t=(i+0.5)/13;const f=addFeather(S.fore,t*L2,0.02,-0.05+0.07*t,0.56-0.02*t,0.62,hash3(i,sg,5),'sec',0.02);S.feathers.push(f);S.sec.push(f);}
-    // 初列風切（手）
     for(let i=0;i<11;i++){const t=i/10;const f=addFeather(S.hand,Math.min(L3,0.04+t*0.36),0.015,0.12+t*0.95,0.60+0.16*Math.sin(Math.min(1,t*1.3)*Math.PI*0.55)-0.04*t,0.66-0.10*t,hash3(i,sg,7),'pri',0.03);S.feathers.push(f);S.prim.push(f);}
-    // 雨覆い（2列）
     for(let row=0;row<2;row++){
-      for(let i=0;i<7;i++){const t=(i+0.5)/7;const f=addFeather(S.fore,t*L2,0.02-row*0.0,0.08+0.04*t+row*0.05,0.24+0.06*row,1.15,hash3(i,row*9+sg,11),'cov',0.015);S.feathers.push(f);S.cov.push(f);}
+      for(let i=0;i<7;i++){const t=(i+0.5)/7;const f=addFeather(S.fore,t*L2,0.02,0.08+0.04*t+row*0.05,0.24+0.06*row,1.15,hash3(i,row*9+sg,11),'cov',0.015);S.feathers.push(f);S.cov.push(f);}
       for(let i=0;i<5;i++){const t=(i+0.5)/5;const f=addFeather(S.hand,t*L3,0.02,0.22+0.7*t+row*0.05,0.22+0.05*row,1.15,hash3(i,row*9+sg,13),'cov',0.02);S.feathers.push(f);S.cov.push(f);}
       for(let i=0;i<5;i++){const t=(i+0.5)/5;const f=addFeather(S.arm,t*L1,0.02,0.06+0.03*t+row*0.05,0.22+0.05*row,1.2,hash3(i,row*9+sg,17),'cov',0.01);S.feathers.push(f);S.cov.push(f);}
     }
-    // 蝋の帯
     S.wax=[waxStrip(S.arm,0.0,L1+0.02,0.013),waxStrip(S.fore,-0.02,L2+0.02,0.012),waxStrip(S.hand,-0.02,L3,0.010)];
-    // 腕の骨（革）
-    const bone=new T.MeshBasicMaterial({color:0x2a1c14});
     return S;
   }
   const R_=buildSide(1),L_=buildSide(-1);sides.push(R_,L_);
-  // 各 feather の index
-  all.forEach((m,i)=>m.userData.idx=i);
 
-  const st={flap:-1,flapDur:0.64,t:0,layout:{lat:0.30,sweep:0.35,y:-0.30,z:-0.62},load:0,tuck:0,heat:0,roll:0,pitch:0,lag:new T.Vector3(),spread:1,shed:0,open:0,calm:0};
+  const st={flap:-1,flapDur:0.9,t:0,layout:{lat:0.30,sweep:0.35,y:-0.30,z:-0.62},load:0,tuck:0,roll:0,pitch:0,power:1};
   function flap(power){st.flap=0;st.power=power||1;}
   function setLayout(asp){
     const pf=clamp((1.30-asp)/0.85,0,1);
@@ -159,81 +147,57 @@ const wings=(function(){
   function update(dt,p){
     st.t+=dt;
     const t=st.t;
-    // 羽ばたき位相
     let fa=0,fold=0,open=0;
     if(st.flap>=0){
       st.flap+=dt/st.flapDur;
       const f=st.flap;
       if(f>=1){st.flap=-1;}
       else{
+        // ゆったりした一打ち：持ち上げ→大きく下ろす→たたみ戻す
         const up=0.75,dn=-0.62;
-        if(f<0.18){fa=lerp(0,up,ease(f/0.18));fold=0.2*ease(f/0.18);}
-        else if(f<0.42){const k=ease((f-0.18)/0.24);fa=lerp(up,dn,k);fold=lerp(0.2,0,k);open=0;}
-        else if(f<0.80){const k=ease((f-0.42)/0.38);fa=lerp(dn,0.25,k);fold=Math.sin(k*Math.PI)*1.0;open=Math.sin(k*Math.PI);}
-        else{const k=ease((f-0.80)/0.2);fa=lerp(0.25,0,k);fold=0;}
+        if(f<0.20){fa=lerp(0,up,ease(f/0.20));fold=0.2*ease(f/0.20);}
+        else if(f<0.46){const k=ease((f-0.20)/0.26);fa=lerp(up,dn,k);fold=lerp(0.2,0,k);open=0;}
+        else if(f<0.82){const k=ease((f-0.46)/0.36);fa=lerp(dn,0.25,k);fold=Math.sin(k*Math.PI)*1.0;open=Math.sin(k*Math.PI);}
+        else{const k=ease((f-0.82)/0.18);fa=lerp(0.25,0,k);fold=0;}
         fa*=st.power;
       }
     }
     const lay=st.layout;
-    const tuck=p.tuck,load=p.load,heat=p.heat,melt=p.melt||0;
+    const tuck=p.tuck,load=p.load;
     const flut=(a)=>Math.sin(t*a+p.seed);
     for(let si=0;si<2;si++){
       const S=sides[si];
       const sg=S.sg;
-      const rollD=-p.roll*0.22*sg; // 傾いた側の翼は下がる
-      const dih=0.22+load*0.10+fa+rollD+0.025*flut(2.3+si)+0.05*(1-tuck)*p.calm-heat*0.25-melt*0.5;
+      const rollD=-p.roll*0.22*sg;
+      const dih=0.22+load*0.10+fa+rollD+0.025*flut(1.3+si*0.4)+0.05*(1-tuck)*p.calm;
       S.root.rotation.z=dih;
-      S.root.rotation.y=lay.sweep*(1-tuck*0.82)+(p.sweepAdd||0)+0.05*flut(1.7)-fold*0.12;
-      S.root.rotation.x=p.pitch*0.12+0.03*flut(3.1)+load*0.05;
-      S.fore.rotation.y=-(0.30+tuck*0.75+fold*0.75+heat*0.15);
-      S.fore.rotation.z=0.05+load*0.12-heat*0.2*S.sg*0-melt*0.4;
-      S.hand.rotation.y=0.18+fold*0.55-tuck*0.35+0.05*flut(2.9+si);
-      S.hand.rotation.z=0.06+load*0.18-heat*0.16-melt*0.5;
+      S.root.rotation.y=lay.sweep*(1-tuck*0.82)+0.05*flut(0.9)-fold*0.12;
+      S.root.rotation.x=p.pitch*0.12+0.03*flut(1.7)+load*0.05;
+      S.fore.rotation.y=-(0.30+tuck*0.75+fold*0.75);
+      S.fore.rotation.z=0.05+load*0.12;
+      S.hand.rotation.y=0.18+fold*0.55-tuck*0.35+0.05*flut(1.5+si*0.3);
+      S.hand.rotation.z=0.06+load*0.18;
       S.wrap.position.set(sg*lay.lat,lay.y,lay.z);
-      const shr=p.shrink||0;S.wrap.scale.set(sg*lay.sc*(1-0.52*shr),lay.sc*(1-0.34*shr),lay.sc*(1-0.34*shr));
-      // 羽の開き
-      const spread=0.05+open*0.18+tuck*(-0.05)+load*0.05+heat*0.04;
+      S.wrap.scale.set(sg*lay.sc,lay.sc,lay.sc);
+      const spread=0.05+open*0.18+tuck*(-0.05)+load*0.05;
       for(const f of S.feathers){
         const d=f.userData;
-        if(!d.alive){continue;}
         let b=d.beta;
-        if(d.kind==='pri'){b=0.12+(d.beta-0.12)*(1+spread*2.4+0.06*flut(2+d.seed*5));}
+        if(d.kind==='pri'){b=0.12+(d.beta-0.12)*(1+spread*2.4+0.06*flut(1.2+d.seed*4));}
         else if(d.kind==='sec'){b=d.beta+open*0.12*(d.x*2)-tuck*0.1;}
         f.rotation.y=b-Math.PI/2;
-        f.rotation.z=d.lift+load*(d.kind==='pri'?0.22:0.12)-tuck*0.04+0.02*flut(3+d.seed*9)+heat*(d.kind==='cov'?0.0:0.06)*(d.seed-0.5)+melt*(d.seed-0.5)*0.5;
+        f.rotation.z=d.lift+load*(d.kind==='pri'?0.22:0.12)-tuck*0.04+0.02*flut(1.8+d.seed*6);
         f.rotation.x=(d.seed-0.5)*0.10+open*(d.kind==='pri'?0.4*(d.seed-0.5):0)*2;
       }
-      for(const w of S.wax)w.scale.y=w.scale.z=1+heat*0.45+melt*0.5;
     }
-    // 慣性・ヘッドボブ
     group.position.set(p.sx||0,p.sy||0,0);
     group.rotation.set(0,0,p.sr||0);
-    // 光
-    VMU.uWaxHeat.value=heat;VMU.uScorch.value=Math.max(heat*0.8,melt);
   }
-  function setLoose(v){for(const m of all)m.material.uniforms.uLoose.value=v;}
-  // 羽を一枚抜く（返り値: 現在の vm 空間での位置と姿勢）
-  function shed(n){
-    const out=[];
-    for(let i=0;i<n;i++){
-      let alive=all.filter(m=>m.userData.alive&&m.userData.kind!=='cov');
-      if(!alive.length||rnd()<0.35)alive=all.filter(m=>m.userData.alive);
-      if(!alive.length)break;
-      const k=Math.floor(rnd()*alive.length);const m=alive[k];
-      m.userData.alive=false;m.visible=false;
-      m.updateWorldMatrix(true,false);
-      out.push(m.matrixWorld.clone());
-    }
-    return out;
-  }
-  function restore(){for(const m of all){m.userData.alive=true;m.visible=true;}setLoose(0);}
-  function aliveTotal(){let c=0;for(const m of all)if(m.userData.alive)c++;return c;}
-  function aliveCount(){let c=0;for(const m of all)if(m.userData.alive&&m.userData.kind!=='cov')c++;return c;}
-  function sunView(sunDir,q){ // q: camera quaternion
+  function sunView(sunDir,q){
     const inv=q.clone().invert();
     VMU.uSunV.value.copy(sunDir).applyQuaternion(inv);
     VMU.uUpV.value.set(0,1,0).applyQuaternion(inv);
   }
   setLayout(1.7);
-  return {group:group,flap:flap,update:update,setLayout:setLayout,setLoose:setLoose,shed:shed,restore:restore,aliveCount:aliveCount,aliveTotal:aliveTotal,total:all.length,sunView:sunView,st:st,all:all,sides:sides};
+  return {group:group,flap:flap,update:update,setLayout:setLayout,sunView:sunView,st:st,all:all,sides:sides};
 })();

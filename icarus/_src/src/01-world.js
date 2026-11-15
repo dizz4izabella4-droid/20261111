@@ -27,7 +27,7 @@ float h31(vec3 p){p=fract(p*vec3(443.897,441.423,437.195));p+=dot(p,p.yzx+19.19)
 `;
 const FS_PRE='precision highp float;\n';
 
-/* ---------- 空 ---------- */
+/* ---------- 空（星つき） ---------- */
 const skyMat=new T.ShaderMaterial({
   uniforms:U,depthTest:false,depthWrite:false,
   vertexShader:`varying vec3 vDir;
@@ -38,17 +38,31 @@ const skyMat=new T.ShaderMaterial({
     gl_Position=p;
   }`,
   fragmentShader:FS_PRE+SKY_GLSL+`
+  uniform float uStar;
   varying vec3 vDir;
   void main(){
     vec3 d=normalize(vDir);
     vec3 c=skyBase(d);
     float ang=acos(clamp(dot(d,uSunDir),-1.0,1.0));
     float disc=1.0-smoothstep(uSunR*0.82,uSunR,ang);
-    c+=mix(vec3(1.0,0.86,0.62),vec3(1.0,0.97,0.9),0.6)*disc*(18.0+22.0*uHeat);
+    float below=smoothstep(-0.02,0.02,uSunDir.y+0.02);
+    c+=mix(vec3(1.0,0.86,0.62),vec3(1.0,0.97,0.9),0.6)*disc*(18.0+22.0*uHeat)*below;
     float ray=pow(max(dot(d,uSunDir),0.0),14.0);
-    // うっすらした光芒（空に筋）
     vec3 q=cross(d,uSunDir);float a=atan(q.y*1.7+q.x,dot(d,uSunDir));
     c+=uSunCol*ray*0.10*(0.5+0.5*sin(a*23.0+uTime*0.05)*sin(a*7.0-uTime*0.03));
+    if(uStar>0.001){
+      float st=uStar*smoothstep(0.02,0.30,d.y);
+      vec3 sd=d*210.0;vec3 id=floor(sd);float h=h31(id);
+      vec3 f=fract(sd)-0.5;
+      float tw=0.6+0.4*sin(uTime*(0.8+h*3.0)+h*50.0);
+      float s1=step(0.9962,h)*smoothstep(0.38,0.0,length(f))*tw;
+      vec3 sd2=d*90.0;vec3 id2=floor(sd2);float h2=h31(id2+7.0);vec3 f2=fract(sd2)-0.5;
+      float s2=step(0.9985,h2)*smoothstep(0.42,0.0,length(f2))*(0.7+0.3*sin(uTime+h2*30.0));
+      vec3 tint=mix(vec3(0.85,0.9,1.0),vec3(1.0,0.92,0.8),h);
+      c+=tint*(s1*1.8+s2*3.0)*st;
+      float mb=exp(-pow(dot(d,normalize(vec3(0.35,0.55,-0.45))),2.0)*16.0);
+      c+=vec3(0.28,0.25,0.42)*mb*st*0.40*(0.55+0.45*h21(d.xz*55.0+d.y*35.0));
+    }
     gl_FragColor=vec4(c,1.0);
   }`
 });
@@ -56,9 +70,9 @@ const skyMesh=new T.Mesh(triGeo,skyMat);skyMesh.frustumCulled=false;skyMesh.rend
 scene.add(skyMesh);
 
 /* ================= 荒廃した街データ ================= */
-const BP=100;                // ブロックピッチ
+const BP=100;
 const BOXMAX=4;
-const bbuf=new Float32Array(BOXMAX*8);   // x0,y0,z0,x1,y1,z1,傾きx,傾きz（頂部のずれ）
+const bbuf=new Float32Array(BOXMAX*8);   // x0,y0,z0,x1,y1,z1,傾きx,傾きz
 const sbuf=new Float32Array(BOXMAX*4);   // seed,type,tint,flag（0通常 1塔 2半壊 3瓦礫）
 function blockInfo(i,j){
   const cx=i*BP,cz=j*BP;
@@ -74,12 +88,8 @@ function blockInfo(i,j){
     put(cx-15,150,cz-15,cx+15,186,cz+15,1,0.12,0,0,0);
     return n;
   }
-  if(i===1&&j===-2){ // ロケットの屋上
-    put(cx-16,0,cz-20,cx+24,170,cz+20,0,0.3,0,0,0);
-    return n;
-  }
-  if(r0<0.15&&dist>1.5)return 0;                 // 水没した区画
-  if(rL<0.05&&dist>3){                            // 雲を突き抜ける塔（かすかに傾く）
+  if(r0<0.15&&dist>1.5)return 0;
+  if(rL<0.05&&dist>3){
     const w=15+8*r2,h=335+150*r1;
     put(cx-w/2,0,cz-w/2,cx+w/2,h,cz+w/2,2,r3,1,(r4-0.5)*0.12*h,(r5-0.5)*0.12*h);
     return n;
@@ -90,20 +100,20 @@ function blockInfo(i,j){
   const ox=(r4-0.5)*(60-w),oz=(r5-0.5)*(60-d);
   const type=r6<0.5?0:(r6<0.8?1:2);
   const kind=r7;
-  if(kind<0.16){                                  // 無傷に近い
+  if(kind<0.16){
     put(cx+ox-w/2,0,cz+oz-d/2,cx+ox+w/2,h,cz+oz+d/2,type,r8,0,0,0);
     if(r8<0.4){
       const w2=w*(0.5+0.25*r9),d2=d*(0.5+0.25*r2),h2=h*(0.2+0.4*r4);
       put(cx+ox-w2/2,h,cz+oz-d2/2,cx+ox+w2/2,h+h2,cz+oz+d2/2,(type+1)%3,r8,0,0,0);
     }
-  }else if(kind<0.46){                            // 傾いたビル
+  }else if(kind<0.46){
     const lim=Math.min(0.42*h,34);
     const sg=r8<0.5?-1:1;
     const shx=(r9<0.5?sg:0.35*sg)*lim*(0.5+0.5*r3),shz=(r9<0.5?0.3:1)*lim*(r2-0.5)*1.3;
     put(cx+ox-w/2,0,cz+oz-d/2,cx+ox+w/2,h,cz+oz+d/2,type,r8,0,shx,shz);
-  }else if(kind<0.84){                            // 半壊のビル（上が欠け、壁に穴）
+  }else if(kind<0.84){
     put(cx+ox-w/2,0,cz+oz-d/2,cx+ox+w/2,h*(0.75+0.35*r9),cz+oz+d/2,type,r8,2,(r3-0.5)*0.2*h,(r2-0.5)*0.2*h);
-  }else{                                          // 崩れた瓦礫
+  }else{
     const hh=5+16*r1;
     put(cx+ox-w/2-4,0,cz+oz-d/2-4,cx+ox+w/2+4,hh,cz+oz+d/2+4,type,r8,3,(r3-0.5)*14,(r2-0.5)*14);
   }
@@ -111,7 +121,7 @@ function blockInfo(i,j){
 }
 
 /* ================= 街インスタンス ================= */
-const RAD=19;               // 半径(ブロック)
+const RAD=19;
 const MAXI=7200;
 const boxGeo=new T.BoxGeometry(1,1,1);boxGeo.translate(0,0.5,0);
 const styleAttr=new T.InstancedBufferAttribute(new Float32Array(MAXI*4),4);
@@ -131,6 +141,7 @@ const cityMat=new T.ShaderMaterial({
     gl_Position=projectionMatrix*viewMatrix*wp;
   }`,
   fragmentShader:FS_PRE+SKY_GLSL+`
+  uniform float uLamp;
   varying vec3 vWP;varying vec3 vN;varying vec4 vS;varying vec3 vSc;varying vec3 vBase;varying vec2 vSh;
   vec3 pal(float k,float tint){
     vec3 a=vec3(0.78,0.72,0.62),b=vec3(0.64,0.44,0.34),c=vec3(0.52,0.58,0.64),d=vec3(0.70,0.58,0.38),e=vec3(0.80,0.78,0.74);
@@ -170,6 +181,10 @@ const cityMat=new T.ShaderMaterial({
     if(abs(n.y)>0.5){
       vec2 g=vWP.xz;
       vec3 rc=mix(base*0.9,vec3(0.34,0.36,0.30),step(0.78,h21(floor(g/9.0)+seed*13.0))*0.7);
+      float gm=h21(floor(g/6.5)+seed*11.0);
+      float gAmt=smoothstep(0.26,0.48,gm+(flag>2.5?0.3:0.0))*step(0.0,n.y);
+      vec3 gcol=mix(vec3(0.15,0.29,0.09),vec3(0.30,0.42,0.13),h21(floor(g/1.7)+seed));
+      rc=mix(rc,gcol,gAmt*0.9);
       float dd=length(vWP-cameraPosition);
       rc*=1.0-0.10*h21(floor(g/3.0))*(1.0-smoothstep(30.0,120.0,dd));
       float eR=min(min(lc.x,1.0-lc.x)*vSc.x,min(lc.z,1.0-lc.z)*vSc.z);
@@ -190,6 +205,18 @@ const cityMat=new T.ShaderMaterial({
       wall*=0.62+0.38*h21(vec2(floor(u/2.6),floor(vWP.y/15.0)+seed*3.0));
       wall*=1.0-0.45*smoothstep(0.35,1.0,h21(vec2(floor(u*0.7),seed)))*(0.3+0.7*(1.0-lc.y));
       wall=mix(wall,wall*vec3(0.55,0.5,0.48),smoothstep(0.55,1.0,h21(vec2(floor(u*0.35),floor(vWP.y/22.0)+seed*5.0))));
+      // 蔦と苔：壁をつたって緑が戻ってくる
+      float depthTop=vBase.y+vSc.y-vWP.y;
+      float cellU=floor(u/1.9);
+      float vineSel=step(0.66,h21(vec2(cellU,seed*5.0)));
+      float vineLen=5.0+40.0*h21(vec2(cellU+0.5,seed*3.0));
+      float vine=vineSel*step(depthTop,vineLen)*(0.55+0.45*h21(vec2(cellU,floor(vWP.y/2.2))));
+      float mossP=smoothstep(0.66,0.92,h21(floor(vec2(u,vWP.y)/10.0)+seed*7.0))*0.55;
+      float tone=h21(vec2(cellU,floor(vWP.y/3.0)));
+      vec3 gw=mix(vec3(0.12,0.25,0.08),vec3(0.27,0.39,0.12),tone);
+      float gcov=clamp(vine*0.92+mossP,0.0,0.94);
+      wall=mix(wall,gw,gcov);
+      win*=1.0-gcov*0.85;
       vec3 shade=amb*0.85+sunC*ndl*sunShade;
       vec3 wc=wall*shade;
       vec3 R=reflect(-V,n);
@@ -197,7 +224,7 @@ const cityMat=new T.ShaderMaterial({
       float spec=pow(max(dot(R,uSunDir),0.0),70.0);
       glass+=uSunCol*spec*(st<0.5?1.0:6.0);
       glass=mix(glass,vec3(0.012,0.010,0.010),step(st,0.58)*(1.0-farF));
-      glass+=vec3(1.0,0.66,0.30)*step(0.997,st)*0.5*(1.0-uAlt*0.8);
+      glass+=vec3(1.0,0.66,0.30)*step(0.996-0.03*uLamp,st)*(0.5+uLamp*1.6)*(1.0-uAlt*0.8*(1.0-uLamp));
       col=mix(wc,glass,win*0.9);
       col*=ao;
       float u01=abs(n.x)>0.5?lc.z:lc.x;float ext=abs(n.x)>0.5?vSc.z:vSc.x;
@@ -205,7 +232,6 @@ const cityMat=new T.ShaderMaterial({
       col*=0.72+0.28*smoothstep(0.0,2.4,eD);
       col*=mix(0.88+0.12*smoothstep(0.0,0.35,f.y),1.0,farF);
     }
-    // 水際：濡れた壁と白い泡
     float wet=1.0-smoothstep(0.0,7.0,h);
     col*=1.0-0.5*wet;
     float foam=exp(-max(h,0.0)*1.3)*(0.45+0.55*h21(floor(vec2(vWP.x+vWP.z,seed*9.0)*1.6)));
@@ -222,6 +248,7 @@ function rebuildCity(pi,pj){
   cityI=pi;cityJ=pj;
   let c=0;
   const arr=city.instanceMatrix.array,sa=styleAttr.array;
+  cityTrees.begin();
   for(let di=-RAD;di<=RAD;di++)for(let dj=-RAD;dj<=RAD;dj++){
     if(di*di+dj*dj>RAD*RAD)continue;
     const n=blockInfo(pi+di,pj+dj);
@@ -237,12 +264,14 @@ function rebuildCity(pi,pj){
       arr[e+12]=x0;arr[e+13]=yb;arr[e+14]=z0;arr[e+15]=1;
       const q=c*4;sa[q]=sbuf[s];sa[q+1]=sbuf[s+1];sa[q+2]=sbuf[s+2];sa[q+3]=sbuf[s+3];
       c++;
+      const fl=sbuf[s+3];
+      if(fl===0||fl===3)cityTrees.roof(pi+di,pj+dj,k,x0,y1,z0,x1,z1,shx,shz,fl);
     }
   }
   city.count=c;
   city.instanceMatrix.needsUpdate=true;styleAttr.needsUpdate=true;
+  cityTrees.end();
 }
-
 
 /* ================= 雲 ================= */
 function makeNoiseTex(){
@@ -252,7 +281,7 @@ function makeNoiseTex(){
     for(let i=0;i<g.length;i++){s=(Math.imul(s,1664525)+1013904223)>>>0;g[i]=s/4294967296;}
     return g;
   }
-  function vn(g,gs,x,y){ // 周期 gs の value noise
+  function vn(g,gs,x,y){
     const xi=Math.floor(x),yi=Math.floor(y);const fx=x-xi,fy=y-yi;
     const sx=fx*fx*(3-2*fx),sy=fy*fy*(3-2*fy);
     const x0=((xi%gs)+gs)%gs,y0=((yi%gs)+gs)%gs,x1=(x0+1)%gs,y1=(y0+1)%gs;
@@ -310,19 +339,16 @@ function makeCloudMat(k){
         col=mix(shadowC,sunC*0.95+vec3(0.28),lit);
         col*=mix(0.50,1.0,uK);
         col+=uSunCol*sg*0.35*(1.0-d*0.6);
-        col=mix(col,col*0.8+uHor*0.2,smoothstep(0.0,0.3,0.35-n)*0.0);
       }else{
-        // 下から見た雲：暗く、縁だけ陽に透ける
         col=shadowC*0.62+uHor*0.10;
         col+=sunC*pow(lit,2.0)*0.55*(1.0-d)*(0.35+sg*2.5);
         col+=uSunCol*sg*0.6*(1.0-d*0.8);
       }
       float a=d;
-      a*=1.0-smoothstep(1800.0,5200.0,dist);
+      a*=1.0-smoothstep(1800.0,5600.0,dist);
       float dy=abs(cameraPosition.y-uLY);
       a*=smoothstep(1.5,26.0,dy);
-      // 遠景はスカイに溶ける
-      col=mix(col,skyBase(vdir),smoothstep(500.0,4200.0,dist)*0.8);
+      col=mix(col,skyBase(vdir),smoothstep(500.0,4600.0,dist)*0.8);
       gl_FragColor=vec4(col,a);
     }`
   });
@@ -330,8 +356,8 @@ function makeCloudMat(k){
 const cloudGeo=new T.PlaneGeometry(1,1).rotateX(-Math.PI/2);
 for(let k=0;k<CLOUD_N;k++){
   const m=new T.Mesh(cloudGeo,makeCloudMat(k));
-  m.scale.set(11000,1,11000);m.position.y=CLOUD_Y+k*12;m.frustumCulled=false;m.renderOrder=2+k;
-  m.visible=false;scene.add(m);cloudLayers.push(m);
+  m.scale.set(12000,1,12000);m.position.y=CLOUD_Y+k*12;m.frustumCulled=false;m.renderOrder=2+k;
+  scene.add(m);cloudLayers.push(m);
 }
 
 /* ================= 海（地面） ================= */
@@ -368,4 +394,4 @@ const groundMat=new T.ShaderMaterial({
   }`
 });
 const ground=new T.Mesh(new T.PlaneGeometry(1,1).rotateX(-Math.PI/2),groundMat);
-ground.scale.set(9000,1,9000);ground.frustumCulled=false;scene.add(ground);
+ground.scale.set(10000,1,10000);ground.frustumCulled=false;scene.add(ground);
