@@ -347,6 +347,26 @@
     padding: 20px;
     text-align: center;
   }
+  /* 後ろを振り返る → 死神に斬られる（Death）*/
+  #death-screen { position: absolute; inset: 0; z-index: 45; display: none; pointer-events: none; overflow: hidden; }
+  #death-flash { position: absolute; inset: 0; background: #fff; opacity: 0; }
+  #death-screen.go #death-flash { animation: deathFlash 0.9s ease-out; }
+  @keyframes deathFlash { 0% { opacity: 0.95; background: #fff; } 25% { opacity: 0.8; background: #b00000; } 100% { opacity: 0; background: #600000; } }
+  #death-tint { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 40%, rgba(120,0,0,0) 20%, rgba(90,0,0,0.55) 100%); opacity: 0; }
+  #death-screen.go #death-tint { animation: deathTint 2s ease-out 0.2s both; }
+  @keyframes deathTint { to { opacity: 1; } }
+  #death-blood { position: absolute; inset: 0; }
+  #death-blood .band { position: absolute; left: 0; right: 0; top: 0; height: 0; background: linear-gradient(#5a0000, #9c0000); border-radius: 0 0 40% 40% / 0 0 18px 18px; animation: bloodBand 1.6s ease-out forwards; }
+  @keyframes bloodBand { to { height: 26px; } }
+  #death-blood .drip { position: absolute; top: 0; height: 0; background: linear-gradient(90deg, #5a0000, #b00000 45%, #7a0000); border-radius: 0 0 999px 999px; animation-name: bloodDrip; animation-timing-function: cubic-bezier(.45,.05,.8,.6); animation-fill-mode: forwards; box-shadow: 0 0 6px rgba(120,0,0,0.6); }
+  #death-blood .drip::after { content: ''; position: absolute; left: 50%; bottom: -5px; width: 175%; aspect-ratio: 1; transform: translateX(-50%); background: radial-gradient(circle at 35% 30%, #d02020, #8a0000 60%, #5a0000); border-radius: 50%; }
+  @keyframes bloodDrip { from { height: 0; } to { height: var(--len); } }
+  #death-text { position: absolute; left: 0; right: 0; top: 38%; transform: translateY(-50%); text-align: center; font-family: var(--font); font-weight: bold; font-size: clamp(3.4rem, 17vw, 7.5rem); letter-spacing: 0.08em; color: #c40000; text-shadow: 0 0 18px rgba(255,0,0,0.65), 0 3px 0 #300000; opacity: 0; }
+  #death-screen.go #death-text { animation: deathText 1.6s ease-out 0.5s both; }
+  @keyframes deathText { from { opacity: 0; transform: translateY(-50%) scale(1.25); filter: blur(6px); } to { opacity: 1; transform: translateY(-50%) scale(1); filter: none; } }
+  #gameover-screen.death-over { background: rgba(8, 0, 0, 0.72); z-index: 55; }
+  #gameover-screen.death-over #gameover-stats, #gameover-screen.death-over .title-logo { position: relative; top: 34%; }
+  #gameover-screen.death-over .menu-btn { position: relative; top: 34%; }
   .title-logo {
     font-size: 2rem;
     font-weight: bold;
@@ -843,7 +863,7 @@
       <div class="row-label">[後衛]</div>
       <div class="member-card" id="slot-3"></div>
       <div class="member-card" id="slot-4"></div>
-      <div style="font-size:0.72rem; opacity:0.6; text-align:right;">※陣形効果なし</div>
+      <div class="member-card" id="slot-5"></div>
     </div>
   </div>
 
@@ -887,6 +907,14 @@
   </div>
 
   <!-- ゲームオーバー画面 -->
+  <!-- 死神に斬られる演出（後ろへ戻るとゲームオーバー）-->
+  <div id="death-screen">
+    <div id="death-tint"></div>
+    <div id="death-blood"></div>
+    <div id="death-flash"></div>
+    <div id="death-text">Death</div>
+  </div>
+
   <div id="gameover-screen" class="overlay" style="display:none;">
     <div class="title-logo" style="color:var(--alert);">YOU ARE DEAD</div>
     <div class="title-sub" id="gameover-stats">計算の遅れが死を招いた…</div>
@@ -1084,7 +1112,14 @@
   // 常時エンカウント（歩くたびに必ず戦闘）
   const ENCOUNTER_RATE = 1.0;
   // 基本のパーティ編成（主人公は0番に固定）
-  const SAMPLE_PARTY = ['lumi', 'fers', 'roza', 'miri'];
+  // 初期パーティ：前衛は [女神・主人公・女神]（主人公は前列の真ん中）、後衛は女神3人
+  const SAMPLE_FRONT = ['lumi', 'fers'];           // 前衛の左・右
+  const SAMPLE_BACK = ['roza', 'miri', 'lyum'];    // 後衛の左・中・右
+  const SAMPLE_PARTY = SAMPLE_FRONT.concat(SAMPLE_BACK);
+  function initialParty() {
+    return [makeGoddess(SAMPLE_FRONT[0]), { isHero: true, ref: state.hero }, makeGoddess(SAMPLE_FRONT[1])]
+      .concat(SAMPLE_BACK.map(makeGoddess));
+  }
 
   const ASSUMED_HITS = 1.5; // 敵HPの計算に使う、1回の正解あたりの想定ヒット数（1〜3回）
   const ENEMY_POOL = [
@@ -1109,8 +1144,8 @@
     moonPhase: 0,
     hero: { name: '主人公', lv: 1, hp: 35, maxHp: 35, atk: 6, exp: 0, nextExp: 15 },
     // 5スロット: 0,1,2=前衛 / 3,4=後衛。初期は0に主人公のみ
-    party: [null, null, null, null, null],
-    lastFormation: [null, null, null, null, null],
+    party: [null, null, null, null, null, null],
+    lastFormation: [null, null, null, null, null, null],
     selectedSlot: 1,
     paused: false,
     enemy: null,
@@ -1159,6 +1194,7 @@
 
   // === 初期化・リスタート ===
   function resetGame() {
+    clearDeath();
     holdWalk = false;
     forceEncounter = false;
     state.mode = 'EXPLORE';
@@ -1168,8 +1204,8 @@
     state.steps = 0;
     state.moonPhase = 0;
     state.hero = { name: '主人公', lv: 1, hp: 35, maxHp: 35, atk: 6, exp: 0, nextExp: 15 };
-    state.party = [{ isHero: true, ref: state.hero }].concat(SAMPLE_PARTY.map(makeGoddess));
-    state.lastFormation = [{ isHero: true }].concat(SAMPLE_PARTY.map(id => ({ goddessId: id })));
+    state.party = initialParty();
+    state.lastFormation = state.party.map(m => m.isHero ? { isHero: true } : { goddessId: m.id });
     state.paused = false;
     clearTimeout(walkTimer);
     state.enemy = null;
@@ -1218,7 +1254,7 @@
     }
 
     // パーティ欄
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 6; i++) {
       const card = document.getElementById(`slot-${i}`);
       const member = state.party[i];
       card.className = 'member-card';
@@ -1255,12 +1291,9 @@
     if (performance.now() < moveLockUntil) return;
     clearTimeout(walkTimer);
     holdWalk = false;
+    // 後ろを振り返ると、死神がいる
+    if (dir < 0) { startDeath(); return; }
     const nextPos = state.pos + dir;
-    if (nextPos < 0) {
-      addLog('入口のシャッターは固く閉ざされている。');
-      scheduleAutoWalk();
-      return;
-    }
     if (nextPos >= 10) {
       // 突き当たり到達：全回復ループ
       SFX.levelup();
@@ -1343,7 +1376,7 @@
     slotList.innerHTML = '';
     goddessList.innerHTML = '';
 
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 6; i++) {
       const posLabel = i < 3 ? '前衛' : '後衛';
       const m = state.party[i];
       const btn = document.createElement('button');
@@ -1403,14 +1436,14 @@
     SFX.beep();
     // 主人公の現在位置を維持しつつ、前回編成を復元
     const heroSlot = state.party.findIndex(m => m && m.isHero);
-    const newParty = [null, null, null, null, null];
+    const newParty = [null, null, null, null, null, null];
     newParty[heroSlot !== -1 ? heroSlot : 0] = { isHero: true, ref: state.hero };
 
     let slotCursor = 0;
     state.lastFormation.forEach(item => {
       if (!item || item.isHero) return;
-      while (slotCursor < 5 && newParty[slotCursor] !== null) slotCursor++;
-      if (slotCursor < 5) {
+      while (slotCursor < 6 && newParty[slotCursor] !== null) slotCursor++;
+      if (slotCursor < 6) {
         const d = GODDESS_POOL.find(x => x.id === item.goddessId);
         if (d) {
           newParty[slotCursor] = {
@@ -1582,6 +1615,62 @@
     }
   }
 
+  // === 後ろへ戻る → 死神に斬られてゲームオーバー ===
+  let deathTimers = [];
+  function startDeath() {
+    state.mode = 'DEATH';
+    state.deathAt = performance.now();
+    clearTimeout(walkTimer);
+    switchPad('NONE');
+    updateUI();
+    addLog('後ろを振り返った。——そこに、死神がいた。');
+    SFX.encounter();
+    const T = (fn, ms) => deathTimers.push(setTimeout(fn, ms));
+    // 0.8秒：斬撃
+    T(() => {
+      SFX.hit(); SFX.sword(1); SFX.sword(2);
+      triggerShake();
+      addLog('死神の鎌が、あなたを切り裂いた。');
+    }, 800);
+    // 1.0秒：Death の文字と、画面上から滴る血
+    T(() => {
+      const ds = document.getElementById('death-screen');
+      const blood = document.getElementById('death-blood');
+      blood.innerHTML = '<div class="band"></div>';
+      const n = 22;
+      for (let i = 0; i < n; i++) {
+        const d = document.createElement('div');
+        d.className = 'drip';
+        const w = 5 + Math.random() * 11;
+        d.style.left = ((i + 0.15 + Math.random() * 0.7) / n * 100) + '%';
+        d.style.width = w + 'px';
+        d.style.setProperty('--len', (18 + Math.random() * 72) + '%');
+        d.style.animationDuration = (1.8 + Math.random() * 2.6) + 's';
+        d.style.animationDelay = (Math.random() * 1.1) + 's';
+        blood.appendChild(d);
+      }
+      ds.style.display = 'block';
+      void ds.offsetWidth;
+      ds.classList.add('go');
+    }, 1000);
+    // 4.6秒：ゲームオーバー画面（血はその後ろに残す）
+    T(() => {
+      state.mode = 'GAMEOVER';
+      const go = document.getElementById('gameover-screen');
+      go.classList.add('death-over');
+      document.getElementById('gameover-stats').textContent =
+        `到達LV: ${state.hero.lv} / 歩数: ${state.steps}歩 ／ 背後には、死神がいた…`;
+      go.style.display = 'flex';
+    }, 4600);
+  }
+  function clearDeath() {
+    deathTimers.forEach(clearTimeout); deathTimers = [];
+    const ds = document.getElementById('death-screen');
+    ds.classList.remove('go'); ds.style.display = 'none';
+    document.getElementById('gameover-screen').classList.remove('death-over');
+    state.deathAt = 0;
+  }
+
   function winBattle() {
     const gainedExp = state.enemy.exp;
     addLog(`${state.enemy.name} を撃破！ EXP ${gainedExp} を獲得。`);
@@ -1728,6 +1817,9 @@
       drawEnemy(ecx, ecy, state.enemy.shape, mainCol);
       drawEnemySprite(ecx, ecy, state.enemy.shape);
       ctx.restore();
+    } else if (state.mode === 'DEATH' || (state.mode === 'GAMEOVER' && state.deathAt)) {
+      enemyApproach = 1;
+      drawReaper(w / 2, h / 2 + 8, performance.now() - state.deathAt);
     } else {
       enemyApproach = 1;
     }
@@ -1758,6 +1850,70 @@
     const hh = 230;
     const ww = hh * img.naturalWidth / img.naturalHeight;
     ctx.drawImage(img, cx - ww / 2, cy + floatY + 100 - hh, ww, hh);
+  }
+
+  // 死神（振り返ると、そこにいる）。0〜0.7秒で迫り、0.8秒に斬撃
+  function drawReaper(cx, cy, t) {
+    const appear = Math.min(1, t / 700);
+    const k = 0.55 + 0.75 * (1 - Math.pow(1 - appear, 3)); // ぐっと近づく
+    const alert = '#ff3030';
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(k, k);
+    ctx.globalAlpha = Math.min(1, t / 250);
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 2.2;
+    ctx.strokeStyle = getThemeColor();
+    ctx.fillStyle = '#020302';
+    // 外套（ぼろぼろの裾）
+    ctx.beginPath();
+    ctx.moveTo(0, -112);
+    ctx.quadraticCurveTo(-46, -100, -60, -40);
+    ctx.lineTo(-74, 70);
+    const hem = [-74, -58, -44, -30, -14, 0, 14, 30, 44, 58, 74];
+    hem.forEach((x, i) => ctx.lineTo(x, 80 + (i % 2 ? 22 : 0)));
+    ctx.lineTo(74, 70);
+    ctx.lineTo(60, -40);
+    ctx.quadraticCurveTo(46, -100, 0, -112);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // フードの闇と赤い双眸
+    ctx.beginPath();
+    ctx.ellipse(0, -66, 22, 30, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#000'; ctx.fill(); ctx.stroke();
+    ctx.fillStyle = alert; ctx.shadowColor = alert; ctx.shadowBlur = 14;
+    ctx.fillRect(-12, -72, 8, 3); ctx.fillRect(4, -72, 8, 3);
+    ctx.shadowBlur = 0;
+    // 骨の手と鎌
+    ctx.strokeStyle = getThemeColor();
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(86, 120); ctx.lineTo(50, -128); ctx.stroke();   // 柄
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();                                                              // 刃
+    ctx.moveTo(50, -128);
+    ctx.quadraticCurveTo(-30, -150, -84, -92);
+    ctx.quadraticCurveTo(-26, -118, 44, -108);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(200,255,210,0.18)'; ctx.fill(); ctx.stroke();
+    ctx.restore();
+    // 斬撃（0.8秒〜）
+    if (t >= 800) {
+      const p = Math.min(1, (t - 800) / 220);
+      ctx.save();
+      ctx.strokeStyle = '#ffffff';
+      ctx.shadowColor = alert; ctx.shadowBlur = 18;
+      ctx.lineWidth = 6 * (1 - p * 0.6);
+      ctx.beginPath();
+      ctx.moveTo(40, 8);
+      ctx.lineTo(40 + 400 * p, 8 + 300 * p);
+      ctx.stroke();
+      ctx.strokeStyle = alert; ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(40, 8);
+      ctx.lineTo(40 + 400 * p, 8 + 300 * p);
+      ctx.stroke();
+      ctx.restore();
+    }
   }
 
   function drawEnemy(cx, cy, shape, col) {
@@ -1939,7 +2095,7 @@
     });
   }
   function openStatus() {
-    if (state.mode === 'TITLE' || state.mode === 'GAMEOVER') return;
+    if (state.mode === 'TITLE' || state.mode === 'GAMEOVER' || state.mode === 'DEATH') return;
     SFX.beep();
     state.paused = true;
     renderStatus();
