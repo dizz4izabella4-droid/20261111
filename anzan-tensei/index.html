@@ -126,6 +126,24 @@
     height: 100%;
     display: block;
   }
+  /* 敵HPバー（数値は出さない） */
+  #enemy-hp {
+    flex: 0 0 38%;
+    align-self: center;
+    height: 10px;
+    border: 1px solid var(--main);
+    border-radius: 999px;
+    background: var(--bg);
+    overflow: hidden;
+  }
+  #enemy-hp-fill {
+    display: block;
+    height: 100%;
+    width: 100%;
+    background: var(--main);
+    transition: width 0.25s ease-out, background-color 0.25s;
+  }
+  #enemy-hp-fill.low { background: var(--alert); }
   #enemy-hud {
     position: absolute;
     top: 8px; left: 8px; right: 8px;
@@ -747,7 +765,7 @@
       <div id="enemy-hud">
         <span id="enemy-name">ENEMY</span>
         <span id="enemy-type">[地上]</span>
-        <span id="enemy-hp">HP: 10/10</span>
+        <span id="enemy-hp" title="HP"><i id="enemy-hp-fill"></i></span>
       </div>
       <canvas id="view" width="480" height="320"></canvas>
     </div>
@@ -1104,7 +1122,10 @@
     if (state.enemy) {
       document.getElementById('enemy-name').textContent = state.enemy.name;
       document.getElementById('enemy-type').textContent = state.enemy.isFlying ? '[飛行:銃有効]' : '[地上:剣有効]';
-      document.getElementById('enemy-hp').textContent = `HP: ${Math.max(0, state.enemy.hp)}/${state.enemy.maxHp}`;
+      const hpRatio = Math.max(0, Math.min(1, state.enemy.hp / state.enemy.maxHp));
+      const hpFill = document.getElementById('enemy-hp-fill');
+      hpFill.style.width = (hpRatio * 100) + '%';
+      hpFill.classList.toggle('low', hpRatio <= 0.25);
     }
   }
 
