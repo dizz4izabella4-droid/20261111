@@ -219,6 +219,7 @@
     font-weight: bold;
     cursor: pointer;
   }
+  #explore-pad.locked .move-btn { opacity: 0.35; pointer-events: none; }
   .move-btn:active, .move-btn:hover {
     background: var(--main);
     color: var(--bg);
@@ -873,6 +874,18 @@
   // === 音源エンジン (Web Audio API) ===
   let audioCtx = null;
   let soundEnabled = true;
+  // BGM（Tectonic Grip）。SYSTEM START のタップで再生開始し、SOUND: OFF で止める
+  const bgm = new Audio('bgm.mp3');
+  bgm.loop = true;
+  bgm.preload = 'auto';
+  bgm.volume = 0.4;
+  let bgmStarted = false;
+  function bgmSync() {
+    if (!bgmStarted) return;
+    if (soundEnabled && !document.hidden) { const r = bgm.play(); if (r && r.catch) r.catch(() => {}); }
+    else bgm.pause();
+  }
+  document.addEventListener('visibilitychange', bgmSync);
 
   function initAudio() {
     if (!audioCtx) {
@@ -1022,6 +1035,7 @@
 
   // === 自動歩行・パーティ生成 ===
   let walkTimer = null;
+  let moveLockUntil = 0; // 戦闘直後は、数字キーの連打が「前へ進む」に当たらないよう、少しの間だけ移動を受け付けない
   let forceEncounter = false; // 戦闘後に止まったあと、次に進んだ一歩で必ず戦闘にする
   let holdWalk = false; // 戦闘終了後は自動歩行を止め、「前へ進む」で再開する
   function scheduleAutoWalk(delay) {
@@ -1133,6 +1147,7 @@
   // === ダンジョン移動 ===
   function move(dir) {
     if (state.mode !== 'EXPLORE' || state.paused) return;
+    if (performance.now() < moveLockUntil) return;
     clearTimeout(walkTimer);
     holdWalk = false;
     const nextPos = state.pos + dir;
@@ -1479,6 +1494,10 @@
     // 休む間をつくる：戦闘後は自動歩行しない（前へ進む／W／↑ で再開）
     holdWalk = true;
     forceEncounter = true;
+    moveLockUntil = performance.now() + 1200;
+    const padEl = document.getElementById('explore-pad');
+    padEl.classList.add('locked');
+    setTimeout(() => padEl.classList.remove('locked'), 1200);
     clearTimeout(walkTimer);
   }
 
@@ -1727,6 +1746,8 @@
   // === イベントリスナー登録（キーボード＆タップ両対応） ===
   document.getElementById('btn-start').onclick = () => {
     initAudio();
+    bgmStarted = true;
+    bgmSync();
     SFX.beep();
     document.getElementById('title-screen').style.display = 'none';
     resetGame();
@@ -1795,6 +1816,7 @@
   document.getElementById('btn-sound').onclick = (e) => {
     soundEnabled = !soundEnabled;
     e.target.textContent = soundEnabled ? 'SOUND: ON' : 'SOUND: OFF';
+    bgmSync();
     if (soundEnabled) SFX.beep();
   };
 
