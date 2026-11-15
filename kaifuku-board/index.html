@@ -204,7 +204,7 @@ function card(s,now){
   var st=w
     ? '<span class="pill wait">疲れてるようです</span><span class="rest"><span class="at">残り</span><span class="cd" data-cd="'+m.reset+'">'+fmtRemain(m.reset-now)+'</span><span class="at">'+fmtClock(m.reset)+'</span></span>'
     : '<span class="pill ready">使える</span>';
-  var ctl='<label class="lb" for="w-'+s.id+'">回復</label><input class="t" type="text" inputmode="numeric" id="w-'+s.id+'" data-act="when" data-id="'+s.id+'" autocomplete="off" maxlength="12" title="回復までの時間を数字4桁で入力（0342＝3時間42分）。Enterで「3h42m」「午後3:42」なども使えます" aria-label="'+esc(s.n)+'の回復までの時間（数字4桁、時分）">'+
+  var ctl='<label class="lb" for="w-'+s.id+'">回復</label><input class="t" type="text" inputmode="numeric" id="w-'+s.id+'" data-act="when" data-id="'+s.id+'" autocomplete="off" maxlength="12" title="回復する時刻を日本時間の数字4桁で入力（1937＝19:37）。Enterで「3h42m」（3時間42分）なども使えます" aria-label="'+esc(s.n)+'の回復する時刻（数字4桁、日本時間）">'+
     (w?'<button class="btn sm" data-act="rec" data-id="'+s.id+'">回復した</button>':'<button class="btn sm" data-act="open" data-id="'+s.id+'" aria-expanded="'+(OPEN===s.id)+'" title="よく使う時間">目安</button>')+
     '<input class="note" type="text" id="n-'+s.id+'" data-act="note" data-id="'+s.id+'" value="'+esc(m.note)+'" title="'+esc(m.note)+'" placeholder="依頼内容" aria-label="'+esc(s.n)+'の依頼中の内容">';
   var panel='';
@@ -239,7 +239,13 @@ function parseWhen(text,now){
   x=t.match(/(\d+(?:\.\d+)?)\s*(?:日|days?|d(?![a-z]))/); if(x){ ms+=Number(x[1])*86400000; found=true; }
   x=t.match(/(\d+(?:\.\d+)?)\s*(?:時間|hours?|hrs?|h(?![a-z]))/); if(x){ ms+=Number(x[1])*3600000; found=true; }
   x=t.match(/(\d+(?:\.\d+)?)\s*(?:分|minutes?|mins?|m(?![a-z]))/); if(x){ ms+=Number(x[1])*60000; found=true; }
-  if(!found&&/^\d{4}$/.test(t)){ ms=(Number(t.slice(0,2))*60+Number(t.slice(2)))*60000; found=true; }
+  if(!found&&/^\d{4}$/.test(t)){
+    var h4=Number(t.slice(0,2)), m4=Number(t.slice(2));
+    if(h4>23||m4>59) return null;
+    var np4=jstParts(now), ts4=jstTs(np4.y,np4.mo,np4.d,h4,m4);
+    if(ts4<=now) ts4+=86400000;
+    return {ts:ts4,kind:'clock'};
+  }
   if(!found&&/^\d+$/.test(t)){ ms=Number(t)*60000; found=true; }
   if(!found||ms<=0) return null;
   return {ts:now+ms,kind:'duration'};
@@ -268,7 +274,7 @@ function render(){
    summary(now)+
    '<div class="filters" role="group" aria-label="AIで絞り込む">'+filters+'</div>'+
    '<div class="grid">'+list().map(function(s){return card(s,now);}).join('')+'</div>'+
-   '<p class="foot">回復までの時間は、数字4桁（時分）を打てば反映されます（0342＝3時間42分）。Enterで「3h42m」「午後3:42」なども使えます（時刻は日本時間）。イラストは、ファイル名に英語の名前（例：tessa.png）かカタカナの名前が入っていれば、まとめて取り込めます。入力した内容はこのページに保存されます。</p>';
+   '<p class="foot">回復する時刻を、日本時間の数字4桁で打てば反映されます（1937＝19:37。過ぎていれば明日）。Enterで「3h42m」（3時間42分後）なども使えます。イラストは、ファイル名に英語の名前（例：tessa.png）かカタカナの名前が入っていれば、まとめて取り込めます。入力した内容はこのページに保存されます。</p>';
 }
 
 function toast(t){
