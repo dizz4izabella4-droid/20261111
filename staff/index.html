@@ -61,7 +61,7 @@ main{max-width:1180px;margin:0 auto;padding:30px 18px 40px}
 .grp>h2::after{transform:scaleX(-1)}
 .grp>h2 span{white-space:nowrap}
 .grp>h2 small{display:block;margin-top:2px;font:700 12px var(--ja);letter-spacing:.3em;color:var(--mute);text-transform:none;text-align:center}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,320px));justify-content:center;gap:26px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,320px));justify-content:center;gap:26px}
 
 /* ===== カード ===== */
 .card{--ac:var(--gold);position:relative;padding:16px 16px 20px;border-radius:16px;
@@ -126,6 +126,9 @@ main{max-width:1180px;margin:0 auto;padding:30px 18px 40px}
 footer{padding:30px 20px calc(36px + env(safe-area-inset-bottom,0px));text-align:center;color:var(--mute);font:italic 600 12px var(--lat);letter-spacing:.14em}
 .empty{display:none;text-align:center;color:var(--mute);padding:40px 0}
 
+@media (max-width:700px){
+  .grid{grid-template-columns:minmax(0,340px)}
+}
 @media (max-width:480px){
   .filter{position:static}
   main{padding:20px 12px 30px}
