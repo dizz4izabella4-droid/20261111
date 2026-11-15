@@ -20,6 +20,7 @@ TARGETS = [
     'tori-to-kemono/index.html',
     'kumiwake-bou/index.html',
     'glass-breaker/index.html',
+    'glass-breaker-fps/index.html',
     'dentaku-drill/index.html',
     'nobiru-hige/index.html',
     'fire-hakoniwa/index.html',
