@@ -781,6 +781,7 @@
         <div style="font-size:0.8rem; opacity:0.8;">[W / ↑] 前進 [S / ↓] 後退　※自動で歩行します</div>
         <button class="move-btn" id="btn-forward">▲ 前へ進む (FORWARD)</button>
         <button class="move-btn" id="btn-back">▼ 後ろへ戻る (BACK)</button>
+        <button class="move-btn" id="btn-status-pad">STATUS（ステータス）</button>
       </div>
 
       <!-- 戦闘モード用UI -->
@@ -1781,6 +1782,7 @@
     if (state.mode === 'EXPLORE' && !holdWalk) scheduleAutoWalk(500);
   }
   document.getElementById('btn-status').onclick = openStatus;
+  document.getElementById('btn-status-pad').onclick = openStatus; // 戦闘後などの停止中に、大きいボタンから開ける
   document.getElementById('btn-status-close').onclick = closeStatus;
 
   document.getElementById('btn-theme').onclick = (e) => {
