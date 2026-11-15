@@ -541,6 +541,11 @@
   .stat-row .l { font-size: 0.62rem; opacity: 0.65; letter-spacing: 0.04em; }
   .stat-row .v { font-size: 0.95rem; font-weight: bold; }
   .stat-row .b { height: 4px; border-radius: 4px; background: var(--surface-2); margin-top: 3px; overflow: hidden; }
+  .skills { list-style: none; margin: 8px 0 0; padding: 6px 0 0; border-top: 1px solid var(--dim); display: grid; gap: 5px; }
+  .skills li { display: flex; flex-direction: column; line-height: 1.25; }
+  .skills .sk-name { font-size: 0.82rem; font-weight: bold; }
+  .skills .sk-name rt { font-size: 0.5rem; font-weight: normal; opacity: 0.75; letter-spacing: 0.02em; }
+  .skills .sk-desc { font-size: 0.66rem; opacity: 0.65; }
   .stat-row .b i { display: block; height: 100%; background: var(--main); border-radius: 4px; }
   @media (max-width: 650px) { .stat-grid { grid-template-columns: 1fr; gap: 6px; } .stat-card { padding: 7px 10px; } .stat-head { margin-bottom: 5px; } }
 </style>
@@ -1031,6 +1036,39 @@
     miri: [8, 10, 9, 15, 18],
     lyum: [9, 6, 17, 13, 16],
     ilum: [11, 12, 10, 18, 13]
+  };
+  // 女神の習得スキル（完全な飾り。戦闘には一切影響しない）[名前, ルビ, 説明]
+  const GODDESS_SKILLS = {
+    lumi: [
+      ['終焉ノ光輪', 'ラスト・ハロー', '見下ろしただけで世界が白く終わる'],
+      ['虚空ヲ穿ツ蔑視', 'ヴォイド・ディスダイン', '視線の通り道に、何も残らない'],
+      ['暁天封印式・零番', 'アーク・ゼロ', '開けてはならない箱を、毎朝開ける']
+    ],
+    fers: [
+      ['絶対不落ノ盾壁', 'アブソリュート・ランパート', '落ちたことは一度もない（試したこともない）'],
+      ['逆鱗ノ咆哮', 'ドラゴン・ロア', '本人は小声のつもり'],
+      ['血盟ニ刻ム不屈', 'ブラッド・オース', '誓った相手の名前は忘れた']
+    ],
+    roza: [
+      ['紅蓮薔薇ノ茨獄', 'クリムゾン・ソーン・プリズン', '棘に刺されたものは、なぜか褒められる'],
+      ['棘ノ円舞曲', 'ソーンズ・ワルツ', '三拍子で痛い'],
+      ['黒薔薇ノ誓約', 'ブラック・ローズ・コヴナント', '契約書は薔薇の香りで読めない']
+    ],
+    miri: [
+      ['虚ろなる祈祷', 'ヴァニティ・プレイヤー', '祈った先は、留守'],
+      ['加護ノ残響', 'エコー・オブ・グレイス', '加護は三日前に切れている'],
+      ['星辰ヲ嗤ウ預言', 'スターゲイズ・オラクル', '当たる前に、外れる']
+    ],
+    lyum: [
+      ['嘲笑ノ月光', 'ミラージュ・ルナ', '月が三つ見える日にだけ笑う'],
+      ['白銀ノ断罪曲', 'シルバー・ジャッジメント', '判決は拍手で決まる'],
+      ['刹那ニ咲ク嘲弄', 'フラッシュ・モッカリー', '咲いた瞬間に、もう飽きている']
+    ],
+    ilum: [
+      ['天蓋ヲ灼ク照覧', 'スカイ・バーン・ルミネ', '天井が焦げるので屋内では禁止'],
+      ['聖痕ノ灯火', 'スティグマ・ランタン', '灯りの下では、隠し事ができない'],
+      ['永劫回帰ノ燭台', 'エターナル・キャンドラブラ', '蝋が減らない。誰も理由を知らない']
+    ]
   };
   // 常時エンカウント（歩くたびに必ず戦闘）
   const ENCOUNTER_RATE = 1.0;
@@ -1876,7 +1914,10 @@
       ).join('');
       const card = document.createElement('div');
       card.className = 'stat-card';
-      card.innerHTML = `<div class="stat-head"><span>${name}</span><small>${sub}</small></div><div class="stat-row">${rows}</div>`;
+      const skills = (!m.isHero && GODDESS_SKILLS[m.id]) ? '<ul class="skills">' + GODDESS_SKILLS[m.id].map(k =>
+        `<li><span class="sk-name"><ruby>${k[0]}<rt>${k[1]}</rt></ruby></span><span class="sk-desc">${k[2]}</span></li>`
+      ).join('') + '</ul>' : '';
+      card.innerHTML = `<div class="stat-head"><span>${name}</span><small>${sub}</small></div><div class="stat-row">${rows}</div>${skills}`;
       grid.appendChild(card);
     });
   }
