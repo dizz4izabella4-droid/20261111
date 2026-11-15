@@ -1003,6 +1003,7 @@
 
   // === 自動歩行・パーティ生成 ===
   let walkTimer = null;
+  let forceEncounter = false; // 戦闘後に止まったあと、次に進んだ一歩で必ず戦闘にする
   let holdWalk = false; // 戦闘終了後は自動歩行を止め、「前へ進む」で再開する
   function scheduleAutoWalk(delay) {
     clearTimeout(walkTimer);
@@ -1021,6 +1022,7 @@
   // === 初期化・リスタート ===
   function resetGame() {
     holdWalk = false;
+    forceEncounter = false;
     state.mode = 'EXPLORE';
     state.pos = 0;
     state.visited = Array(10).fill(false);
@@ -1144,8 +1146,9 @@
 
     updateUI();
 
-    // エンカウント（常時）
-    if (Math.random() < ENCOUNTER_RATE) {
+    // エンカウント（戦闘後の最初の一歩は必ず戦闘。それ以外は確率）
+    if (forceEncounter || Math.random() < ENCOUNTER_RATE) {
+      forceEncounter = false;
       triggerEncounter();
     } else {
       scheduleAutoWalk();
@@ -1453,6 +1456,7 @@
     updateUI();
     // 休む間をつくる：戦闘後は自動歩行しない（前へ進む／W／↑ で再開）
     holdWalk = true;
+    forceEncounter = true;
     clearTimeout(walkTimer);
   }
 
