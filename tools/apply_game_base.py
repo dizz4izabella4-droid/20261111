@@ -31,6 +31,7 @@ TARGETS = [
     'noche-sin-luna/_src/template.html',
     'pc98-novel/_engine/template.html',
     'pc98-novel/index.html',
+    'pc98-novel/works/reiji-no-kiroku/index.html',
     'lab/index.html',
     'yawaraka/index.html',
     'anzan-tensei/index.html',

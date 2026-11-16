@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<title>SAMPLE DISK</title>
+<script>try{ if(navigator.audioSession) navigator.audioSession.type="ambient"; }catch(e){}</script>
+<style>
+/* 見本: ビューポートいっぱいに表示し、外へはみ出さない。トップへ戻るリンクは付けない */
+html,body{height:100%;margin:0;overflow:hidden;background:#101820;color:#e8f0ff;font:16px/1.5 "Yu Gothic UI","Hiragino Sans",Meiryo,"Noto Sans JP","Noto Sans CJK JP",sans-serif;-webkit-user-select:none;user-select:none}
+main{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:16px}
+h1{margin:0;font:800 26px/1.2 "Arial Black",Arial,sans-serif;letter-spacing:.08em;color:#7df}
+#n{font:800 64px/1 "Arial Black",Arial,sans-serif}
+button{min-height:48px;padding:0 28px;border:0;border-radius:10px;background:#7df;color:#012;font:800 18px/1 sans-serif;cursor:pointer}
+button:active{transform:translateY(2px)}
+small{color:#89a}
+</style>
+<!--IZ-GAME-BASE:START-->
+<!--IZ-GAME-BASE:END-->
+</head>
+<body>
+<main>
+  <h1>SAMPLE DISK</h1>
+  <div id="n">0</div>
+  <button id="b" type="button">TAP</button>
+  <small id="info"></small>
+</main>
+<script>
+/* ↓ izdisk-client.js をそのまま貼る */
+(function () {
+  'use strict';
+  var P = window.parent, hosted = !!P && P !== window;
+  var O = (location.protocol === 'file:' || location.origin === 'null') ? '*' : location.origin;
+  var beforeEject = null;
+  function send(t) { if (!hosted) return; try { P.postMessage({ izdisk: 1, type: t }, O); } catch (e) {} }
+  window.IZDISK = {
+    hosted: hosted,
+    ready: function () { send('ready'); },
+    access: function () { send('access'); },
+    eject: function () { send('eject'); },
+    onBeforeEject: function (fn) { beforeEject = fn; }
+  };
+  addEventListener('message', function (e) {
+    if (!hosted || e.source !== P) return;
+    var m = e.data; if (!m || m.izdisk !== 1) return;
+    if (m.type === 'before-eject') { try { if (beforeEject) beforeEject(); } catch (x) {} send('saved'); }
+  });
+})();
+/* ↑ ここまで */
+
+/* セーブは localStorage。キーは「izdisk.<ディスクのid>.」で始める（idは DISKS の id）。try/catch で囲む（使えない環境でも止まらない） */
+var KEY = 'izdisk.sample.count', n = 0;
+try { n = +localStorage.getItem(KEY) || 0; } catch (e) {}
+var el = document.getElementById('n');
+function show() { el.textContent = n; }
+function save() { try { localStorage.setItem(KEY, String(n)); } catch (e) {} IZDISK.access(); }   // セーブしたらアクセスランプ
+document.getElementById('b').addEventListener('click', function () { n++; show(); if (n % 5 === 0) save(); });
+IZDISK.onBeforeEject(save);                                                                         // 排出の前にも保存
+function size() { document.getElementById('info').textContent = innerWidth + ' x ' + innerHeight + (IZDISK.hosted ? '  (in drive A:)' : '  (standalone)'); }
+addEventListener('resize', size); size(); show();
+IZDISK.ready();                                                                                     // 最初の画面が出せた
+</script>
+</body>
+</html>

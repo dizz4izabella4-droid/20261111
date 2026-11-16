@@ -15,6 +15,7 @@ const S = require('./js/10-scenario.js');
 const { parse } = require('./tools/scn-parse.js');
 
 const args = process.argv.slice(2), checkOnly = args.includes('--check');
+const outArg = (args.find(a => a.startsWith('--out=')) || '').slice(6);
 const gameDir = path.resolve(args.find(a => !a.startsWith('--')) || path.join(here, '..'));
 const dataDir = path.join(gameDir, 'data');
 const fail = msg => { console.error('\n✖ ' + msg); process.exit(1); };
@@ -94,6 +95,9 @@ const out = read('template.html')
   .replace('/*@@CSS@@*/', () => css)
   .replace('/*@@DATA@@*/', () => embed.replace(/</g, '\\u003c'))
   .replace('/*@@JS@@*/', () => js.replace(/<\/script>/g, '<\\/script>'));
-const dst = path.join(gameDir, 'index.html');
+/* 既定の出力先: サンプル（pc98-novel/）は起動画面と衝突しないよう works/reiji-no-kiroku/ へ。--out=<パス> で上書き可 */
+const isSample = gameDir === path.resolve(here, '..');
+const dst = outArg ? path.resolve(outArg) : isSample ? path.join(gameDir, 'works', 'reiji-no-kiroku', 'index.html') : path.join(gameDir, 'index.html');
+fs.mkdirSync(path.dirname(dst), { recursive: true });
 fs.writeFileSync(dst, out);
 console.log('✔ ' + path.relative(process.cwd(), dst) + '  ' + Math.round(out.length / 1024) + ' KB');
