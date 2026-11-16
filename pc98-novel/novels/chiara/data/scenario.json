@@ -1,0 +1,985 @@
+{
+ "_note": "このファイルは scenario.txt から build.js が作ります。直すときは scenario.txt を直してください。",
+ "start": "opening",
+ "scenes": {
+  "opening": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "1994年3月14日 23:10",
+     "place": "月影音楽堂・正面玄関",
+     "chapter": "序章"
+    },
+    {
+     "type": "BG",
+     "id": "school_night",
+     "fade": 800
+    },
+    {
+     "type": "BGM",
+     "id": "mystery"
+    },
+    {
+     "type": "BGM",
+     "id": "wind",
+     "channel": "env"
+    },
+    {
+     "type": "TEXT",
+     "text": "雨が降っていた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "山奥に建つ月影音楽堂は、十年前の火災以来、閉鎖されている。"
+    },
+    {
+     "type": "TEXT",
+     "text": "今夜、私は一通の手紙に導かれてここへ来た。"
+    },
+    {
+     "type": "TEXT",
+     "text": "差出人は、十年前に亡くなった音楽家、神崎蓮。"
+    },
+    {
+     "type": "TEXT",
+     "text": "『三月十四日、午後十一時四十分。第七楽章を完成させる』"
+    },
+    {
+     "type": "TEXT",
+     "text": "手紙には、それだけが記されていた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は懐中時計を取り出した。"
+    },
+    {
+     "type": "TEXT",
+     "text": "針は十一時十分を指している。"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は時計をポケットにしまった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "そのとき、玄関の扉がひとりでに開いた。"
+    },
+    {
+     "type": "SE",
+     "id": "door"
+    },
+    {
+     "type": "TEXT",
+     "text": "私はホールへ足を踏み入れた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「……まだ、ここにあったのか」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "ホールの奥からピアノの音が聞こえた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "一音。"
+    },
+    {
+     "type": "TEXT",
+     "text": "二音。"
+    },
+    {
+     "type": "TEXT",
+     "text": "三音。"
+    },
+    {
+     "type": "TEXT",
+     "text": "十年前に完成しなかった曲だった。"
+    },
+    {
+     "type": "JUMP",
+     "to": "hall"
+    }
+   ]
+  },
+  "hall": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "1994年3月14日 23:14",
+     "place": "大ホール",
+     "chapter": "第一幕・三人の証言"
+    },
+    {
+     "type": "BG",
+     "id": "hall"
+    },
+    {
+     "type": "BGM",
+     "id": "tension"
+    },
+    {
+     "type": "TEXT",
+     "text": "大ホールには三人がいた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "館長代理の黒田。"
+    },
+    {
+     "type": "TEXT",
+     "text": "元ピアニストの美緒。"
+    },
+    {
+     "type": "TEXT",
+     "text": "そして、神崎蓮の弟、修司。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「お待ちしておりました」",
+     "speaker": "kuroda"
+    },
+    {
+     "type": "TEXT",
+     "text": "「本当に来たのね」",
+     "speaker": "mio"
+    },
+    {
+     "type": "TEXT",
+     "text": "「兄の手紙を受け取ったんですか」",
+     "speaker": "shuji"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は頷いた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「十年前の事件については、すでに決着しています。蓮は事故で亡くなった。それだけです」",
+     "speaker": "kuroda"
+    },
+    {
+     "type": "TEXT",
+     "text": "「兄は殺されたんだ」",
+     "speaker": "shuji"
+    },
+    {
+     "type": "TEXT",
+     "text": "「証拠もないのに、何度同じ話をするつもりです？」",
+     "speaker": "kuroda"
+    },
+    {
+     "type": "TEXT",
+     "text": "美緒は黙って壁の時計を見上げた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "時計は十一時十分を指している。"
+    },
+    {
+     "type": "TEXT",
+     "text": "振り子は動いていなかった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「兄が亡くなった時刻も、十一時十分だった」",
+     "speaker": "shuji"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は時計を見た。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「……そうだったな」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「何かおっしゃいましたか？」",
+     "speaker": "kuroda"
+    },
+    {
+     "type": "TEXT",
+     "text": "「いいえ」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "ホール中央には譜面台が置かれていた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "そこには七楽章からなる楽譜がある。"
+    },
+    {
+     "type": "TEXT",
+     "text": "最後のページだけが破り取られていた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「蓮は最後の楽章を書き上げる前に死んだ」",
+     "speaker": "mio"
+    },
+    {
+     "type": "TEXT",
+     "text": "「兄は、誰かに曲を奪われそうになっていた」",
+     "speaker": "shuji"
+    },
+    {
+     "type": "TEXT",
+     "text": "「根拠のない話です」",
+     "speaker": "kuroda"
+    },
+    {
+     "type": "TEXT",
+     "text": "その言葉のあと、ホールに沈黙が落ちた。"
+    },
+    {
+     "type": "JUMP",
+     "to": "office"
+    }
+   ]
+  },
+  "office": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "1994年3月14日 23:22",
+     "place": "管理人室",
+     "chapter": "第二幕・十年前の日記"
+    },
+    {
+     "type": "BG",
+     "id": "office"
+    },
+    {
+     "type": "BGM",
+     "id": "mystery"
+    },
+    {
+     "type": "TEXT",
+     "text": "管理人室には古い机があった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "引き出しには蓮の日記が残されている。"
+    },
+    {
+     "type": "TEXT",
+     "text": "修司がページをめくる。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「これは兄の字だ」",
+     "speaker": "shuji"
+    },
+    {
+     "type": "TEXT",
+     "text": "『三月十日。黒田が時計を直したと言っていた。しかし振り子は一度も動いていない』"
+    },
+    {
+     "type": "TEXT",
+     "text": "『三月十一日。美緒は左手の薬指を失った。もう七楽章は弾けない』"
+    },
+    {
+     "type": "TEXT",
+     "text": "『三月十二日。修司は雨の日になると玄関の鍵を二度確かめる』"
+    },
+    {
+     "type": "TEXT",
+     "text": "『三月十三日。誰かが僕の曲を盗もうとしている』"
+    },
+    {
+     "type": "TEXT",
+     "text": "最後のページには短い一文があった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "『音を信じるな。聞こえたものと、そこにあったものは違う』"
+    },
+    {
+     "type": "TEXT",
+     "text": "「そんな日記に意味はありません」",
+     "speaker": "kuroda"
+    },
+    {
+     "type": "TEXT",
+     "text": "「あなたは、十年前から何も変わらないのね」",
+     "speaker": "mio"
+    },
+    {
+     "type": "TEXT",
+     "text": "「何の話です？」",
+     "speaker": "kuroda"
+    },
+    {
+     "type": "TEXT",
+     "text": "「蓮が死んだ夜、あなたは時計を直したと言っていた。でも、時計は一度も動かなかった」",
+     "speaker": "mio"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は窓の外を見た。"
+    },
+    {
+     "type": "TEXT",
+     "text": "雨は強くなっていた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「兄は殺された。俺はそう信じている」",
+     "speaker": "shuji"
+    },
+    {
+     "type": "TEXT",
+     "text": "「ならば、犯人を見つけてみればいい」",
+     "speaker": "kuroda"
+    },
+    {
+     "type": "TEXT",
+     "text": "黒田は部屋を出ていった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「十年前の夜、私はピアノを弾いていた」",
+     "speaker": "mio"
+    },
+    {
+     "type": "TEXT",
+     "text": "「突然、鐘が鳴ったの。六回……いえ、七回だったと思う」",
+     "speaker": "mio"
+    },
+    {
+     "type": "TEXT",
+     "text": "「六回だ。俺は確かに数えた」",
+     "speaker": "shuji"
+    },
+    {
+     "type": "TEXT",
+     "text": "「でも、私は七回聞いた」",
+     "speaker": "mio"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は静かに答えた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「それが、すべての始まりだったんだ」",
+     "speaker": "me"
+    },
+    {
+     "type": "JUMP",
+     "to": "record"
+    }
+   ]
+  },
+  "record": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "1994年3月14日 23:28",
+     "place": "大ホール",
+     "chapter": "第三幕・七度目の音"
+    },
+    {
+     "type": "BG",
+     "id": "hall"
+    },
+    {
+     "type": "BGM",
+     "id": "tension"
+    },
+    {
+     "type": "TEXT",
+     "text": "美緒はホールの隅にある古い録音機を指差した。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「これが十年前の演奏記録よ」",
+     "speaker": "mio"
+    },
+    {
+     "type": "TEXT",
+     "text": "「兄が亡くなった夜の録音だ」",
+     "speaker": "shuji"
+    },
+    {
+     "type": "TEXT",
+     "text": "録音機が動き始める。"
+    },
+    {
+     "type": "SE",
+     "id": "piano"
+    },
+    {
+     "type": "TEXT",
+     "text": "ピアノの旋律。"
+    },
+    {
+     "type": "TEXT",
+     "text": "三つの音。"
+    },
+    {
+     "type": "TEXT",
+     "text": "短い沈黙。"
+    },
+    {
+     "type": "TEXT",
+     "text": "再び旋律。"
+    },
+    {
+     "type": "TEXT",
+     "text": "そして、鐘の音が響いた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "一度。"
+    },
+    {
+     "type": "TEXT",
+     "text": "二度。"
+    },
+    {
+     "type": "TEXT",
+     "text": "三度。"
+    },
+    {
+     "type": "TEXT",
+     "text": "四度。"
+    },
+    {
+     "type": "TEXT",
+     "text": "五度。"
+    },
+    {
+     "type": "TEXT",
+     "text": "六度。"
+    },
+    {
+     "type": "TEXT",
+     "text": "最後に、かすかな金属音。"
+    },
+    {
+     "type": "TEXT",
+     "text": "録音はそこで終わった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「六回だ」",
+     "speaker": "shuji"
+    },
+    {
+     "type": "TEXT",
+     "text": "「でも、あの夜は七回聞こえた」",
+     "speaker": "mio"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は録音機を見た。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「七回目だけは、録音されていない」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「何を言っている？」",
+     "speaker": "kuroda"
+    },
+    {
+     "type": "TEXT",
+     "text": "いつの間にか黒田が戻っていた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「録音を再生しながら、本物の鐘を鳴らしたんです。六回の録音に、本物の鐘を一度重ねれば、七回聞こえる」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「だから、私たちは七回目を聞いたのね」",
+     "speaker": "mio"
+    },
+    {
+     "type": "TEXT",
+     "text": "「犯人は鐘の仕組みを知っていた人間……」",
+     "speaker": "shuji"
+    },
+    {
+     "type": "TEXT",
+     "text": "「そうです」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「馬鹿げている」",
+     "speaker": "kuroda"
+    },
+    {
+     "type": "TEXT",
+     "text": "「最後の金属音は、鐘の機械を操作した音です」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "黒田は顔をこわばらせた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「十年前、あなたは時計塔の管理を任されていた」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「それが何だ」",
+     "speaker": "kuroda"
+    },
+    {
+     "type": "TEXT",
+     "text": "「鐘の機械も、密室の扉も、あなたなら扱えた」",
+     "speaker": "me"
+    },
+    {
+     "type": "JUMP",
+     "to": "clockroom"
+    }
+   ]
+  },
+  "clockroom": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "1994年3月14日 23:35",
+     "place": "時計塔",
+     "chapter": "第四幕・密室"
+    },
+    {
+     "type": "BG",
+     "id": "clockroom"
+    },
+    {
+     "type": "BGM",
+     "id": "tension"
+    },
+    {
+     "type": "TEXT",
+     "text": "時計塔へ続く階段を上がる。"
+    },
+    {
+     "type": "TEXT",
+     "text": "その先には小さな部屋があった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "十年前、蓮が発見された場所だ。"
+    },
+    {
+     "type": "TEXT",
+     "text": "扉は内側から施錠されていた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "窓は閉じられ、外から入った形跡もない。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「見てください。誰も入れない密室です」",
+     "speaker": "kuroda"
+    },
+    {
+     "type": "TEXT",
+     "text": "「兄はここで死んだ」",
+     "speaker": "shuji"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は扉の隙間を見た。"
+    },
+    {
+     "type": "TEXT",
+     "text": "床には細い針金が一本落ちていた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "先端には赤い塗料が付着している。"
+    },
+    {
+     "type": "TEXT",
+     "text": "鍵穴の周囲には黒い粉が残っていた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「この扉は外から施錠できます」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「馬鹿な」",
+     "speaker": "kuroda"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は針金を扉の隙間に通した。"
+    },
+    {
+     "type": "TEXT",
+     "text": "錠前が小さく動いた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「針金で内側の鍵を操作したんです。赤い塗料は扉の内側を削った跡。黒い粉は鍵穴に残った金属粉です」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「つまり密室は作られたものだった」",
+     "speaker": "shuji"
+    },
+    {
+     "type": "TEXT",
+     "text": "「そうです。犯人は外から扉を施錠し、密室に見せかけた」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「証拠もない推測だ」",
+     "speaker": "kuroda"
+    },
+    {
+     "type": "TEXT",
+     "text": "「あなたは蓮の曲を盗もうとした。蓮はそれを知っていた。だから殺した」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「黒田さん……」",
+     "speaker": "mio"
+    },
+    {
+     "type": "TEXT",
+     "text": "「違う」",
+     "speaker": "kuroda"
+    },
+    {
+     "type": "TEXT",
+     "text": "「兄を殺したのか」",
+     "speaker": "shuji"
+    },
+    {
+     "type": "TEXT",
+     "text": "「私は……あいつが悪いと思ったんだ」",
+     "speaker": "kuroda"
+    },
+    {
+     "type": "TEXT",
+     "text": "黒田の声が震えた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「曲を世に出せば、私の名声は終わる。あいつは何も分かっていなかった」",
+     "speaker": "kuroda"
+    },
+    {
+     "type": "TEXT",
+     "text": "「兄を殺したんだな」",
+     "speaker": "shuji"
+    },
+    {
+     "type": "TEXT",
+     "text": "黒田は俯いた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「……そうだ」",
+     "speaker": "kuroda"
+    },
+    {
+     "type": "TEXT",
+     "text": "十年越しの告白だった。"
+    },
+    {
+     "type": "JUMP",
+     "to": "reveal"
+    }
+   ]
+  },
+  "reveal": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "1994年3月14日 23:40",
+     "place": "時計塔",
+     "chapter": "最終幕・第七楽章"
+    },
+    {
+     "type": "BG",
+     "id": "clockroom"
+    },
+    {
+     "type": "BGM",
+     "id": "calm"
+    },
+    {
+     "type": "TEXT",
+     "text": "時計塔の鐘が鳴った。"
+    },
+    {
+     "type": "TEXT",
+     "text": "一度。"
+    },
+    {
+     "type": "TEXT",
+     "text": "二度。"
+    },
+    {
+     "type": "TEXT",
+     "text": "三度。"
+    },
+    {
+     "type": "TEXT",
+     "text": "四度。"
+    },
+    {
+     "type": "TEXT",
+     "text": "五度。"
+    },
+    {
+     "type": "TEXT",
+     "text": "六度。"
+    },
+    {
+     "type": "TEXT",
+     "text": "そして七度目。"
+    },
+    {
+     "type": "SE",
+     "id": "bell"
+    },
+    {
+     "type": "TEXT",
+     "text": "「……七回」",
+     "speaker": "mio"
+    },
+    {
+     "type": "TEXT",
+     "text": "修司は涙を流した。"
+    },
+    {
+     "type": "TEXT",
+     "text": "黒田は床に座り込んだ。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「なぜだ……なぜ今になって現れた」",
+     "speaker": "kuroda"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は答えた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「約束したからだ」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「誰と？」",
+     "speaker": "kuroda"
+    },
+    {
+     "type": "TEXT",
+     "text": "「あなたたちと」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "黒田は私を見つめた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「待て……お前は誰だ」",
+     "speaker": "kuroda"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は懐中時計を取り出した。"
+    },
+    {
+     "type": "TEXT",
+     "text": "針は十一時十分。"
+    },
+    {
+     "type": "TEXT",
+     "text": "十年前から止まったままだ。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「私は神崎蓮だ」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「兄さん……？」",
+     "speaker": "shuji"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は頷いた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "十年前、この時計塔で殺された音楽家。"
+    },
+    {
+     "type": "TEXT",
+     "text": "それが私だった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "今夜、私は死者としてここに戻ってきた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "手紙を書いたのも、七度目の鐘を鳴らしたのも私だった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "あの夜の真実を、もう一度ここに再現するために。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「そんな……」",
+     "speaker": "kuroda"
+    },
+    {
+     "type": "TEXT",
+     "text": "「蓮……ずっとここにいたのね」",
+     "speaker": "mio"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は譜面台から破られた最後のページを取り出した。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「第七楽章を完成させたい」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「でも、私はもう左手が動かない」",
+     "speaker": "mio"
+    },
+    {
+     "type": "TEXT",
+     "text": "「右手だけでいい」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "美緒はピアノの前に座った。"
+    },
+    {
+     "type": "TEXT",
+     "text": "右手で鍵盤を押す。"
+    },
+    {
+     "type": "TEXT",
+     "text": "一音。"
+    },
+    {
+     "type": "TEXT",
+     "text": "二音。"
+    },
+    {
+     "type": "TEXT",
+     "text": "三音。"
+    },
+    {
+     "type": "TEXT",
+     "text": "未完成だった旋律が、ようやく終わった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「兄さん……」",
+     "speaker": "shuji"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は懐中時計を握った。"
+    },
+    {
+     "type": "TEXT",
+     "text": "そして、序章からずっと止まっていた針を見つめた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「ようやく、時間が動く」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "秒針が一度だけ進んだ。"
+    },
+    {
+     "type": "TEXT",
+     "text": "あの夜、私が死んだ時刻。"
+    },
+    {
+     "type": "TEXT",
+     "text": "十一時十分。"
+    },
+    {
+     "type": "TEXT",
+     "text": "それが私にとって、最後の時間だった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「さようなら、蓮」",
+     "speaker": "mio"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は微笑んだ。"
+    },
+    {
+     "type": "TEXT",
+     "text": "雨の音が遠ざかっていく。"
+    },
+    {
+     "type": "TEXT",
+     "text": "十年間止まっていた時計が、再び動き始めた。"
+    },
+    {
+     "type": "EFFECT",
+     "name": "fadein",
+     "ms": 800
+    },
+    {
+     "type": "BGM",
+     "id": "ending"
+    },
+    {
+     "type": "TEXT",
+     "text": "第七楽章の最後の一音が、静かに消えた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "そして、時計塔には誰もいなくなった。"
+    },
+    {
+     "type": "ENDING",
+     "id": "end_true"
+    },
+    {
+     "type": "END"
+    }
+   ]
+  }
+ }
+}

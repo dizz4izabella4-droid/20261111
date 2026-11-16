@@ -1,0 +1,170 @@
+{
+ "_note": "このファイルは scenario.txt から build.js が作ります。直すときは scenario.txt を直してください。",
+ "start": "opening",
+ "scenes": {
+  "opening": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "1994年11月14日 23:50",
+     "place": "旧校舎・時計塔前",
+     "chapter": "序章"
+    },
+    {
+     "type": "BG",
+     "id": "school_night",
+     "fade": 600
+    },
+    {
+     "type": "BGM",
+     "id": "mystery"
+    },
+    {
+     "type": "TEXT",
+     "text": "冷たい夜風が、旧校舎の屋根をかすめて通り過ぎていく。\n私はコートの襟を立て、目の前にそびえる古びた時計塔の扉を見上げた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「……まさか、本当にここで事件が起きるなんてな」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「先輩、急ぎましょう。中から物音がしました」",
+     "speaker": "kanata"
+    },
+    {
+     "type": "TEXT",
+     "text": "後輩の彼方は青ざめた顔で、懐中電灯の光を扉の足元へと向けている。"
+    },
+    {
+     "type": "SE",
+     "id": "step"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "kanata",
+     "expr": "serious",
+     "pos": "right"
+    },
+    {
+     "type": "TEXT",
+     "text": "彼方は緊張した面持ちで、固く閉ざされた真鍮のノブに手を掛けた。\nしかし、扉は内側から頑丈に施錠されているらしく、びくともしない。"
+    },
+    {
+     "type": "TEXT",
+     "text": "彼方が植え込みの陰から拾い上げた古い真鍮の鍵をシリンダーに差し込むと、カチリと乾いた音が響いた。"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "BG",
+     "id": "tower_inside",
+     "fade": 800
+    },
+    {
+     "type": "BGM",
+     "id": "wind",
+     "channel": "env"
+    },
+    {
+     "type": "JUMP",
+     "to": "scene_2"
+    }
+   ]
+  },
+  "scene_2": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "1994年11月14日 23:55",
+     "place": "時計塔内部",
+     "chapter": "調査"
+    },
+    {
+     "type": "EFFECT",
+     "name": "flash"
+    },
+    {
+     "type": "TEXT",
+     "text": "そこには、床に倒れ伏す男性の姿があった。\n頭部から血を流し、すでに脈はない。被害者はこの校舎の管理人だった。"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "shiki",
+     "expr": "cold",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「……奇妙ですね。外からの侵入跡はありません」",
+     "speaker": "shiki"
+    },
+    {
+     "type": "TEXT",
+     "text": "現場に駆けつけた学校医の式部は、冷静な声音でそう呟いた。\n彼の足元には、砕け散った眼鏡のレンズ片が無数に転がっている。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「おい、この被害者の懐中時計を見てくれ。ガラス風防はまったく割れていないのに、中の歯車が完全に歪んで深夜0時で止まっている」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「それが何か不思議ですか？」",
+     "speaker": "shiki"
+    },
+    {
+     "type": "TEXT",
+     "text": "「ああ。衝撃を受けずに針が止まるのは、人間が無理やり手で逆回しにしたときだけだ。つまり、この時刻は狂言だ」",
+     "speaker": "me"
+    },
+    {
+     "type": "JUMP",
+     "to": "ep_end"
+    }
+   ]
+  },
+  "ep_end": {
+   "commands": [
+    {
+     "type": "EFFECT",
+     "name": "flash"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "shiki",
+     "expr": "surprised",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「っ……！」",
+     "speaker": "shiki"
+    },
+    {
+     "type": "TEXT",
+     "text": "「そして、昨日の夜9時に君が睡眠導入剤を買った薬局のレシートがポケットに入っている。被害者はあらかじめ眠らされていたんだよ」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "どんでん返しの真実は残酷なほど鮮やかだった。\n被害者を殺害したのは侵入者ではなく、最初からこの部屋にいた式部自身だったのだ。"
+    },
+    {
+     "type": "BGM",
+     "id": "ending"
+    },
+    {
+     "type": "ENDING",
+     "id": "end_true"
+    },
+    {
+     "type": "END"
+    }
+   ]
+  }
+ }
+}

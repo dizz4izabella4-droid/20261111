@@ -1,0 +1,1088 @@
+{
+ "_note": "このファイルは scenario.txt から build.js が作ります。直すときは scenario.txt を直してください。",
+ "start": "opening",
+ "scenes": {
+  "opening": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "1994年3月14日 23:10",
+     "place": "旧校舎前",
+     "chapter": "序章・招待状"
+    },
+    {
+     "type": "BG",
+     "id": "school_night",
+     "fade": 800
+    },
+    {
+     "type": "BGM",
+     "id": "mystery"
+    },
+    {
+     "type": "BGM",
+     "id": "wind",
+     "channel": "env"
+    },
+    {
+     "type": "TEXT",
+     "text": "十年前、この学校の放送室で教師が一人、忽然と姿を消した。"
+    },
+    {
+     "type": "TEXT",
+     "text": "教師の名は如月透。"
+    },
+    {
+     "type": "TEXT",
+     "text": "事件当夜、放送室の扉は内側から施錠されていた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "窓には鉄格子。壁には穴ひとつない。"
+    },
+    {
+     "type": "TEXT",
+     "text": "それにもかかわらず、午前零時になると、放送設備から彼の声が流れた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「七人目を、忘れるな」"
+    },
+    {
+     "type": "TEXT",
+     "text": "それが最後の放送だった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は十年ぶりに母校へ戻ってきた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "差出人のない封筒が届いたからだ。"
+    },
+    {
+     "type": "TEXT",
+     "text": "中には一枚の紙。"
+    },
+    {
+     "type": "TEXT",
+     "text": "『三月十四日、午後十一時十分。旧校舎へ来い。答えを聞かせよう』"
+    },
+    {
+     "type": "TEXT",
+     "text": "指定された時刻は、十年前の事件の日付と同じだった。"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "me",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「……変わっていないな」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "校門の錆びた蝶番が風に鳴った。"
+    },
+    {
+     "type": "SE",
+     "id": "door"
+    },
+    {
+     "type": "TEXT",
+     "text": "門の向こうに、一人の老人が立っていた。"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "manager",
+     "expr": "normal",
+     "pos": "right"
+    },
+    {
+     "type": "TEXT",
+     "text": "「お待ちしていました」",
+     "speaker": "manager"
+    },
+    {
+     "type": "TEXT",
+     "text": "「あなたが手紙を？」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「さあ。手紙には差出人が書いてありましたか」",
+     "speaker": "manager"
+    },
+    {
+     "type": "TEXT",
+     "text": "「ありませんでした」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「では、私から一つ忠告を。今夜、放送室から声が聞こえても、決して返事をしないでください」",
+     "speaker": "manager"
+    },
+    {
+     "type": "TEXT",
+     "text": "「どうしてです？」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「返事を待っている人間がいるからです」",
+     "speaker": "manager"
+    },
+    {
+     "type": "TEXT",
+     "text": "老人は懐中電灯を点けた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "管理人の左手には、古い火傷の跡があった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「その傷は？」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「昔のことです」",
+     "speaker": "manager"
+    },
+    {
+     "type": "TEXT",
+     "text": "老人はそれ以上話さなかった。"
+    },
+    {
+     "type": "JUMP",
+     "to": "corridor"
+    }
+   ]
+  },
+  "corridor": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "1994年3月14日 23:18",
+     "place": "旧校舎一階",
+     "chapter": "第一章・六人の写真"
+    },
+    {
+     "type": "BG",
+     "id": "corridor"
+    },
+    {
+     "type": "BGM",
+     "id": "mystery"
+    },
+    {
+     "type": "TEXT",
+     "text": "廊下には十年前の卒業写真が飾られていた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "六人の生徒と、中央に立つ如月透。"
+    },
+    {
+     "type": "TEXT",
+     "text": "写真の右端だけ、妙に白くなっている。"
+    },
+    {
+     "type": "TEXT",
+     "text": "誰かを切り取ったようにも見えた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「七人目がいた、という噂を聞きました」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「子供の作り話ですよ。ここに写っているのは六人だけです」",
+     "speaker": "manager"
+    },
+    {
+     "type": "TEXT",
+     "text": "「如月先生は、どんな人だったんです？」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「左手で字を書く人でした。いつも同じ言葉を口にしていましたよ」",
+     "speaker": "manager"
+    },
+    {
+     "type": "TEXT",
+     "text": "「どんな言葉ですか」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「声は消えても、存在したことまでは消せない」",
+     "speaker": "manager"
+    },
+    {
+     "type": "TEXT",
+     "text": "その言葉を聞いた瞬間、胸の奥が痛んだ。"
+    },
+    {
+     "type": "TEXT",
+     "text": "知っている。"
+    },
+    {
+     "type": "TEXT",
+     "text": "私はその言葉を、どこかで聞いたことがある。"
+    },
+    {
+     "type": "TEXT",
+     "text": "写真の下には古い時計があった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "針は十一時十分を指したまま止まっている。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「この時計も、事件の日から？」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「ええ。誰も触っていません」",
+     "speaker": "manager"
+    },
+    {
+     "type": "TEXT",
+     "text": "老人は時計を見ずに答えた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "その視線は、私の顔に向けられていた。"
+    },
+    {
+     "type": "SE",
+     "id": "bell"
+    },
+    {
+     "type": "TEXT",
+     "text": "廊下の奥で鐘が鳴った。"
+    },
+    {
+     "type": "TEXT",
+     "text": "時計は動いていない。"
+    },
+    {
+     "type": "TEXT",
+     "text": "それなのに、鐘だけは正確に三回鳴った。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「今の音は？」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「昔から、この校舎に残っている音です」",
+     "speaker": "manager"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は答えず、職員室へ向かった。"
+    },
+    {
+     "type": "JUMP",
+     "to": "staffroom"
+    }
+   ]
+  },
+  "staffroom": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "1994年3月14日 23:27",
+     "place": "職員室",
+     "chapter": "第二章・残された記録"
+    },
+    {
+     "type": "BG",
+     "id": "staffroom"
+    },
+    {
+     "type": "BGM",
+     "id": "calm"
+    },
+    {
+     "type": "TEXT",
+     "text": "職員室には古い机が並んでいた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "窓際の机だけ、埃が払われている。"
+    },
+    {
+     "type": "TEXT",
+     "text": "引き出しには、如月の日記が残されていた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は最後のページを開いた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「三月十四日。"
+    },
+    {
+     "type": "TEXT",
+     "text": "あの子は、自分の名前を忘れてしまった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "六人は、あの子を最初からいなかったことにするつもりだ。"
+    },
+    {
+     "type": "TEXT",
+     "text": "しかし、私は忘れない。"
+    },
+    {
+     "type": "TEXT",
+     "text": "今夜、放送室で最後の声を残す」"
+    },
+    {
+     "type": "TEXT",
+     "text": "その下には、別の筆跡で一行だけ書かれていた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「時計を信じるな。音を信じろ」"
+    },
+    {
+     "type": "TEXT",
+     "text": "「時計を信じるな……」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "机の上には、録音機の修理記録も置かれていた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "事件当日の午後九時四十分。"
+    },
+    {
+     "type": "TEXT",
+     "text": "如月本人が録音機を修理した記録だ。"
+    },
+    {
+     "type": "TEXT",
+     "text": "備考には、予約再生機能の点検とある。"
+    },
+    {
+     "type": "TEXT",
+     "text": "つまり、午前零時の放送は生放送でなくてもよかった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は日記を閉じた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「先生は、あの日のうちに何かを準備していた」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "窓ガラスに、自分の顔が映った。"
+    },
+    {
+     "type": "TEXT",
+     "text": "その背後に、もう一人立っているように見えた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "振り返る。"
+    },
+    {
+     "type": "TEXT",
+     "text": "誰もいない。"
+    },
+    {
+     "type": "SE",
+     "id": "step"
+    },
+    {
+     "type": "TEXT",
+     "text": "廊下から足音が近づいてきた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「お探しのものは見つかりましたか」",
+     "speaker": "manager"
+    },
+    {
+     "type": "TEXT",
+     "text": "「あなたは、如月先生を知っているんですね」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「知りませんよ」",
+     "speaker": "manager"
+    },
+    {
+     "type": "TEXT",
+     "text": "「では、なぜ先生の言葉を知っていたんです？」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "管理人は答えなかった。"
+    },
+    {
+     "type": "JUMP",
+     "to": "broadcast"
+    }
+   ]
+  },
+  "broadcast": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "1994年3月14日 23:40",
+     "place": "放送室",
+     "chapter": "第三章・密室"
+    },
+    {
+     "type": "BG",
+     "id": "broadcast_door"
+    },
+    {
+     "type": "BGM",
+     "id": "tension"
+    },
+    {
+     "type": "TEXT",
+     "text": "放送室の扉には、古い鍵が掛かっていた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "管理人が鍵を差し込む。"
+    },
+    {
+     "type": "SE",
+     "id": "door"
+    },
+    {
+     "type": "TEXT",
+     "text": "扉が開いた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "中にはマイク、カセットデッキ、録音用の機材。"
+    },
+    {
+     "type": "TEXT",
+     "text": "そして、壁には十一時十分で止まった時計がある。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「ここから如月先生が消えたんですね」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「そうです。警察も調べました。しかし出口はありませんでした」",
+     "speaker": "manager"
+    },
+    {
+     "type": "TEXT",
+     "text": "「窓も、天井裏も？」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「全部です」",
+     "speaker": "manager"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は机の上のカセットデッキを見た。"
+    },
+    {
+     "type": "TEXT",
+     "text": "電源は切れている。"
+    },
+    {
+     "type": "TEXT",
+     "text": "だが、機械のランプはわずかに赤く光っていた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「電気が通っていますね」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「古い設備ですから」",
+     "speaker": "manager"
+    },
+    {
+     "type": "TEXT",
+     "text": "「録音テープは？」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「残っていません」",
+     "speaker": "manager"
+    },
+    {
+     "type": "TEXT",
+     "text": "老人は答えるのが早すぎた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "壁の時計に近づく。"
+    },
+    {
+     "type": "TEXT",
+     "text": "ガラスには内側から拭いた跡がある。"
+    },
+    {
+     "type": "TEXT",
+     "text": "止まっているはずの時計なのに、針の根元だけが新しい。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「誰かが最近触ったんですね」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「あなたは昔から、そういうところをよく見ていました」",
+     "speaker": "manager"
+    },
+    {
+     "type": "TEXT",
+     "text": "「昔から？」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「……失礼。あなたのような人は、という意味です」",
+     "speaker": "manager"
+    },
+    {
+     "type": "TEXT",
+     "text": "そのとき、スピーカーからノイズが流れた。"
+    },
+    {
+     "type": "SE",
+     "id": "shock"
+    },
+    {
+     "type": "EFFECT",
+     "name": "flash"
+    },
+    {
+     "type": "TEXT",
+     "text": "「聞こえていますか」",
+     "speaker": "如月の声"
+    },
+    {
+     "type": "TEXT",
+     "text": "「先生！」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「七人目を、忘れるな」",
+     "speaker": "如月の声"
+    },
+    {
+     "type": "TEXT",
+     "text": "声はそこで途切れた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「今のは録音ですか？」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「そう聞こえましたか」",
+     "speaker": "manager"
+    },
+    {
+     "type": "TEXT",
+     "text": "「違うんですか」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「あなたには、どう聞こえました？」",
+     "speaker": "manager"
+    },
+    {
+     "type": "TEXT",
+     "text": "老人はマイクを見つめていた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "その手が、わずかに震えていた。"
+    },
+    {
+     "type": "JUMP",
+     "to": "memory"
+    }
+   ]
+  },
+  "memory": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "1994年3月14日 23:49",
+     "place": "放送室",
+     "chapter": "第四章・記憶"
+    },
+    {
+     "type": "BG",
+     "id": "broadcast_room"
+    },
+    {
+     "type": "BGM",
+     "id": "mystery"
+    },
+    {
+     "type": "TEXT",
+     "text": "頭の奥で、古い映像が蘇る。"
+    },
+    {
+     "type": "TEXT",
+     "text": "雨の降る夜。"
+    },
+    {
+     "type": "TEXT",
+     "text": "六人の生徒。"
+    },
+    {
+     "type": "TEXT",
+     "text": "如月先生。"
+    },
+    {
+     "type": "TEXT",
+     "text": "そして、もう一人。"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は壁に手をついた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「……七人目」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「思い出しましたか」",
+     "speaker": "manager"
+    },
+    {
+     "type": "TEXT",
+     "text": "「先生は、どうして消えたんです」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「あなたは、本当に何も覚えていないのですね」",
+     "speaker": "manager"
+    },
+    {
+     "type": "TEXT",
+     "text": "「何を？」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「十年前、この放送室で最後に扉を閉めたのは、あなたです」",
+     "speaker": "manager"
+    },
+    {
+     "type": "EFFECT",
+     "name": "shake"
+    },
+    {
+     "type": "TEXT",
+     "text": "「違う。私は事件のあと、ここを離れたんです」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「そうでしょうね。あの日のことを忘れたまま」",
+     "speaker": "manager"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は老人を見た。"
+    },
+    {
+     "type": "TEXT",
+     "text": "その声の調子。"
+    },
+    {
+     "type": "TEXT",
+     "text": "指先の形。"
+    },
+    {
+     "type": "TEXT",
+     "text": "すべて、記憶の中にある。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「あなた……」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "管理人はゆっくり懐中電灯を机に置いた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「十年前、私はここから出ていった。あなたが扉を閉めるより前に」",
+     "speaker": "manager"
+    },
+    {
+     "type": "TEXT",
+     "text": "「じゃあ、密室は……」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「最初から、誰も閉じ込められていなかったんです」",
+     "speaker": "manager"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は息を呑んだ。"
+    },
+    {
+     "type": "TEXT",
+     "text": "事件の夜、如月は放送室にいたのではない。"
+    },
+    {
+     "type": "TEXT",
+     "text": "彼は予約再生を設定し、放送室を出ていた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "その後、私が扉を閉めた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "午前零時、誰もいない部屋から声が流れた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "それだけのことだった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「あなたが、如月先生なんですね」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「ようやく、名前を呼んでくれましたね」",
+     "speaker": "manager"
+    },
+    {
+     "type": "SE",
+     "id": "piano"
+    },
+    {
+     "type": "TEXT",
+     "text": "「私は逃げたんじゃありません。あの子を守るために、消えたんです」",
+     "speaker": "tsukasa"
+    },
+    {
+     "type": "TEXT",
+     "text": "「七人目は……」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「あなたです」",
+     "speaker": "tsukasa"
+    },
+    {
+     "type": "EFFECT",
+     "name": "flash"
+    },
+    {
+     "type": "JUMP",
+     "to": "truth"
+    }
+   ]
+  },
+  "truth": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "1994年3月14日 23:56",
+     "place": "放送室",
+     "chapter": "最終章・七人目"
+    },
+    {
+     "type": "BG",
+     "id": "broadcast_room"
+    },
+    {
+     "type": "BGM",
+     "id": "tension"
+    },
+    {
+     "type": "TEXT",
+     "text": "記憶が戻った。"
+    },
+    {
+     "type": "TEXT",
+     "text": "十年前、私はこの学校の生徒だった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "六人の生徒たちと如月先生。"
+    },
+    {
+     "type": "TEXT",
+     "text": "そして私。"
+    },
+    {
+     "type": "TEXT",
+     "text": "七人で放送室に集まった夜、私は事故で倒れた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "目を覚ましたとき、すべてが終わっていた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "六人は私の死を隠した。"
+    },
+    {
+     "type": "TEXT",
+     "text": "学校も、事件を公にしなかった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "如月先生だけが、私の名前を残そうとした。"
+    },
+    {
+     "type": "TEXT",
+     "text": "彼は放送室に私の声を録音した。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「七人目を、忘れるな」"
+    },
+    {
+     "type": "TEXT",
+     "text": "あの放送は、犯人を脅すための言葉ではなかった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "私の存在を、誰かの記憶に残すための言葉だった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「先生は、ずっとここにいたんですか」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「ええ。名前を変えて、管理人としてね」",
+     "speaker": "tsukasa"
+    },
+    {
+     "type": "TEXT",
+     "text": "「なぜ、私を呼んだんです」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「あなたが、何度もここへ戻ってきたからです」",
+     "speaker": "tsukasa"
+    },
+    {
+     "type": "TEXT",
+     "text": "「何度も？」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「あなたは毎年三月十四日になると、ここへ来た。けれど、いつも何も思い出せずに帰っていった」",
+     "speaker": "tsukasa"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は、十年前の夜を思い出した。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「先生は、忘れなかった」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「忘れられるはずがありません」",
+     "speaker": "tsukasa"
+    },
+    {
+     "type": "TEXT",
+     "text": "私はマイクの前に立った。"
+    },
+    {
+     "type": "TEXT",
+     "text": "スピーカーのランプが点灯する。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「先生。もう一度だけ、放送してください」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「何を？」",
+     "speaker": "tsukasa"
+    },
+    {
+     "type": "TEXT",
+     "text": "「七人目の名前を」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "長い沈黙のあと、スピーカーから声が流れた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「……君の名前を、ここに残そう」",
+     "speaker": "tsukasa"
+    },
+    {
+     "type": "TEXT",
+     "text": "私の名前を呼ぶ声。"
+    },
+    {
+     "type": "TEXT",
+     "text": "十年間、聞きたかった声。"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は目を閉じた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "時計の針が、十一時十分から動き始めた。"
+    },
+    {
+     "type": "SE",
+     "id": "bell"
+    },
+    {
+     "type": "TEXT",
+     "text": "一度。"
+    },
+    {
+     "type": "TEXT",
+     "text": "二度。"
+    },
+    {
+     "type": "TEXT",
+     "text": "三度。"
+    },
+    {
+     "type": "TEXT",
+     "text": "止まっていた鐘が、再び鳴った。"
+    },
+    {
+     "type": "EFFECT",
+     "name": "fadein",
+     "ms": 1200
+    },
+    {
+     "type": "JUMP",
+     "to": "ep_end"
+    }
+   ]
+  },
+  "ep_end": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "1994年3月15日 00:05",
+     "place": "旧校舎前",
+     "chapter": "終章・声の行方"
+    },
+    {
+     "type": "BG",
+     "id": "school_night"
+    },
+    {
+     "type": "BGM",
+     "id": "ending"
+    },
+    {
+     "type": "TEXT",
+     "text": "夜明け前の空に、わずかな光が差していた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "校舎を出ると、管理人の姿はなかった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "放送室の扉も、時計も、あの夜のまま残っている。"
+    },
+    {
+     "type": "TEXT",
+     "text": "ただ、スピーカーから声が聞こえることは、もうなかった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は校門の前で立ち止まった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "振り返る。"
+    },
+    {
+     "type": "TEXT",
+     "text": "窓の向こうに、誰かが立っている気がした。"
+    },
+    {
+     "type": "TEXT",
+     "text": "しかし、そこには誰もいなかった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "声は消えても、存在したことまでは消せない。"
+    },
+    {
+     "type": "TEXT",
+     "text": "私は初めて、自分の名前を忘れずに帰ることができた。"
+    },
+    {
+     "type": "ENDING",
+     "id": "end_true"
+    },
+    {
+     "type": "END"
+    }
+   ]
+  }
+ }
+}

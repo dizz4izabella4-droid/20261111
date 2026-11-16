@@ -1,0 +1,97 @@
+{
+ "_note": "このファイルは scenario.txt から build.js が作ります。直すときは scenario.txt を直してください。",
+ "start": "opening",
+ "scenes": {
+  "opening": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "1994年11月12日 01:15",
+     "place": "旧時計塔・3階貴賓室",
+     "chapter": "序章"
+    },
+    {
+     "type": "BG",
+     "id": "room_night",
+     "fade": 600
+    },
+    {
+     "type": "BGM",
+     "id": "mystery"
+    },
+    {
+     "type": "TEXT",
+     "text": "「……鍵は内側からかかったままだった。だが、窓の様子がおかしい」",
+     "speaker": "me"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "inspector",
+     "expr": "真剣",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「被害者の懐中時計が消えている。ダイアルは止まったままだな」",
+     "speaker": "inspector"
+    },
+    {
+     "type": "TEXT",
+     "text": "「待て、おかしな点がある。この部屋の窓は完全に閉ざされ、外から鍵のかかる構造ではないはずだ」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「外部犯の仕業か、あるいは完全な密室犯罪というわけだな」",
+     "speaker": "inspector"
+    },
+    {
+     "type": "TEXT",
+     "text": "「いや、違う。あんたは今、『ダイアルは止まったままだな』と言った。しかし、この部屋に入る前、この暗闇の中で時計が止まっていることなど、誰も確認できるはずがない。懐中時計を見たのは、被害者が倒れた現場に真っ先に踏み込んだあんただけだ」",
+     "speaker": "me"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "inspector",
+     "expr": "驚き",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「っ……それは、推測で……！」",
+     "speaker": "inspector"
+    },
+    {
+     "type": "TEXT",
+     "text": "「いや、推測じゃない。あんたは自ら持ち出した懐中時計を回収する際、暗闇の中で時間を確かめようとガラス面を見てしまった。この密室トリックを作ったのは、他の誰でもない――部屋の構造を完全に把握しているあんた自身だ」",
+     "speaker": "me"
+    },
+    {
+     "type": "EFFECT",
+     "name": "flash"
+    },
+    {
+     "type": "SE",
+     "id": "shock"
+    },
+    {
+     "type": "TEXT",
+     "text": "「くっ……！」",
+     "speaker": "inspector"
+    },
+    {
+     "type": "TEXT",
+     "text": "「すべては、あの夜に時計塔で起きた真実を隠すための偽りの密室劇だったのさ」",
+     "speaker": "me"
+    },
+    {
+     "type": "ENDING",
+     "id": "end_true"
+    },
+    {
+     "type": "END"
+    }
+   ]
+  }
+ }
+}
