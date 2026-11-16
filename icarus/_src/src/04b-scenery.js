@@ -1,4 +1,4 @@
-/* ================= 景観：屋上の樹々・浮遊島・滝・崩れた環・漂う岩 ================= */
+/* ================= 景観：浮遊島・滝・崩れた環・漂う岩 ================= */
 function mergeG(list){
   let n=0;const gs=list.map(it=>{const g=it.g.index?it.g.toNonIndexed():it.g;n+=g.attributes.position.count;return {g:g,kind:it.kind};});
   const pos=new Float32Array(n*3),nor=new Float32Array(n*3),kd=new Float32Array(n);
@@ -18,87 +18,6 @@ function mergeG(list){
   return g;
 }
 function lcg(seed){let s=seed>>>0;return function(){s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};}
-
-/* ---------- 樹 ---------- */
-function treeGeo(){
-  const L=[];
-  L.push({g:new T.CylinderGeometry(0.26,0.5,5.4,6,1).translate(0,2.7,0),kind:0});
-  const blobs=[[0,6.4,0,3.3],[-2.1,5.3,0.7,2.4],[2.0,5.5,-0.6,2.5],[0.3,8.3,0.2,2.2],[0.5,4.9,-2.1,2.0],[-0.6,5.0,2.2,2.1]];
-  for(const b of blobs)L.push({g:new T.IcosahedronGeometry(b[3],1).translate(b[0],b[1],b[2]),kind:1});
-  return mergeG(L);
-}
-const treeMat=new T.ShaderMaterial({
-  uniforms:U,
-  vertexShader:`attribute float aKind;attribute float aT;
-  varying vec3 vWP;varying vec3 vN;varying vec3 vLP;varying float vK;varying float vT;
-  uniform float uTime;
-  void main(){
-    vec3 p=position;
-    float ph=instanceMatrix[3].x*0.07+instanceMatrix[3].z*0.05;
-    p.xz+=vec2(sin(uTime*1.1+ph),cos(uTime*0.9+ph*1.3))*0.07*aKind*max(p.y-3.0,0.0);
-    vec4 wp=modelMatrix*instanceMatrix*vec4(p,1.0);
-    vWP=wp.xyz;vLP=position;vK=aKind;vT=aT;
-    vN=normalize(mat3(modelMatrix)*mat3(instanceMatrix)*normal);
-    gl_Position=projectionMatrix*viewMatrix*wp;
-  }`,
-  fragmentShader:FS_PRE+SKY_GLSL+`
-  uniform float uLamp;
-  varying vec3 vWP;varying vec3 vN;varying vec3 vLP;varying float vK;varying float vT;
-  void main(){
-    vec3 n=normalize(vN);
-    bool sacred=vT>1.5;
-    vec3 base;
-    float cl=h21(floor(vLP.xy*2.2)+floor(vLP.z*2.2)*7.0);
-    if(vK<0.5){base=vec3(0.26,0.19,0.14);}
-    else{
-      base=mix(vec3(0.09,0.26,0.07),vec3(0.24,0.40,0.10),clamp(vT*0.8+cl*0.6,0.0,1.0));
-      if(sacred)base=mix(mix(vec3(0.70,0.52,0.26),vec3(0.80,0.40,0.50),cl),vec3(0.80,0.66,0.40),0.2);
-    }
-    vec3 V=normalize(cameraPosition-vWP);
-    float ndl=dot(n,uSunDir);
-    float wrap=clamp(ndl*0.5+0.5,0.0,1.0);
-    vec3 amb=mix(vec3(0.25,0.20,0.18),uZen*0.5+uMid*0.35+uHor*0.25+vec3(0.04),n.y*0.5+0.5);
-    vec3 sunC=uSunCol*(1.25+0.5*uAlt);
-    float back=pow(max(dot(-V,uSunDir),0.0),3.0);
-    vec3 col=base*(amb*0.85+sunC*wrap*wrap*0.9)+base*sunC*back*0.35*vK;
-    col*=(vK>0.5)?(0.68+0.32*smoothstep(-3.0,3.5,vLP.y)):1.0;
-    if(sacred)col+=vec3(1.0,0.78,0.52)*vK*(0.10+0.34*uLamp)*(0.6+0.4*sin(uTime*0.6+vLP.y*1.3+cl*6.0));
-    col=applyFog(col,vWP);
-    gl_FragColor=vec4(col,1.0);
-  }`
-});
-function makeTreeSet(max){
-  const g=treeGeo();
-  const aT=new T.InstancedBufferAttribute(new Float32Array(max),1);aT.setUsage(T.DynamicDrawUsage);
-  g.setAttribute('aT',aT);
-  const mesh=new T.InstancedMesh(g,treeMat,max);
-  mesh.frustumCulled=false;mesh.count=0;mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);
-  scene.add(mesh);
-  const m4=new T.Matrix4(),q=new T.Quaternion(),pv=new T.Vector3(),sv=new T.Vector3(),ya=new T.Vector3(0,1,0);
-  const S={mesh:mesh,aT:aT,n:0,max:max,
-    add(x,y,z,s,rot,hue){
-      if(S.n>=max)return;
-      q.setFromAxisAngle(ya,rot);pv.set(x,y,z);sv.set(s,s*(0.9+0.2*(hue%1)),s);m4.compose(pv,q,sv);
-      mesh.setMatrixAt(S.n,m4);aT.array[S.n]=hue;S.n++;
-    },
-    flush(){mesh.count=S.n;mesh.instanceMatrix.needsUpdate=true;aT.needsUpdate=true;}
-  };
-  return S;
-}
-const cityTrees=(function(){
-  const S=makeTreeSet(2600);
-  function roof(i,j,k,x0,y1,z0,x1,z1,shx,shz,fl){
-    if(fl===0&&y1<14)return;
-    const r=hash3(i,j,100+k);
-    const cnt=fl===3?(r<0.7?2:1):(r<0.35?0:(r<0.7?1:(r<0.92?2:3)));
-    const w=x1-x0,d=z1-z0;
-    for(let c=0;c<cnt;c++){
-      const a=hash3(i,j,110+k*4+c),b=hash3(i,j,120+k*4+c),h2=hash3(i,j,130+k*4+c);
-      S.add(x0+shx+w*(0.18+0.64*a),y1-0.2,z0+shz+d*(0.18+0.64*b),1.5+2.0*h2*h2+(fl===3?0.6:0),h2*TAU,hash3(i,j,140+k+c));
-    }
-  }
-  return {begin(){S.n=0;},end(){S.flush();},roof:roof};
-})();
 
 /* ---------- 岩・遺構の共通マテリアル ---------- */
 function makeStoneMat(){
@@ -125,26 +44,37 @@ function makeStoneMat(){
       float nz=h21(floor(vWP.xz/6.0)+floor(vWP.y/6.0)*13.0);
       float nz2=h21(floor(vWP.xz/1.4)+floor(vWP.y/1.4)*7.0);
       float up=n.y;
+      vec3 an=pow(abs(n),vec3(4.0));an/=(an.x+an.y+an.z);
+      vec3 stx=texture2D(uStone,vWP.zy*0.045).rgb*an.x+texture2D(uStone,vWP.xy*0.045).rgb*an.z+texture2D(uStone,vWP.xz*0.045).rgb*an.y;
+      vec3 sox=texture2D(uSoil,vWP.zy*0.06).rgb*an.x+texture2D(uSoil,vWP.xy*0.06).rgb*an.z+texture2D(uSoil,vWP.xz*0.06).rgb*an.y;
+      vec3 sox2=texture2D(uSoil2,vWP.zy*0.05).rgb*an.x+texture2D(uSoil2,vWP.xy*0.05).rgb*an.z+texture2D(uSoil2,vWP.xz*0.05).rgb*an.y;
       vec3 base;
       if(vK<0.5){
         vec3 rock=mix(vec3(0.42,0.36,0.31),vec3(0.56,0.50,0.44),nz*0.7+nz2*0.3);
         rock*=0.82+0.18*(0.5+0.5*sin(vWP.y*0.32+nz*3.0));
         vec3 grass=mix(vec3(0.19,0.35,0.10),vec3(0.38,0.48,0.16),nz2);
+        grass*=mix(1.0,0.55+1.1*dot(sox,vec3(0.3,0.5,0.2)),uTexK*0.55);
         float gA=smoothstep(0.50,0.78,up+0.16*(nz-0.5));
+        float sAmt=clamp(smoothstep(0.38,0.62,vn(vec2(vWP.x+vWP.z,vWP.y)*0.045))*0.55+smoothstep(-0.1,0.45,up)*0.45,0.0,1.0);
+        vec3 earth=mix(sox2*1.7,sox*1.55,smoothstep(-0.2,0.5,up));
+        rock=mix(rock,mix(stx*1.3,earth,sAmt),uTexK*0.82);
         base=mix(rock,grass,gA);
       }else{
         vec3 st=vec3(0.62,0.60,0.55)*(0.78+0.22*nz2);
         st*=0.85+0.15*h21(floor(vec2(vWP.x+vWP.z,vWP.y)/3.0));
-        vec3 grass=mix(vec3(0.15,0.29,0.09),vec3(0.30,0.42,0.13),nz2);
+        st=mix(st,stx*1.6,uTexK*0.75);
+        vec3 grass=mix(vec3(0.12,0.31,0.08),vec3(0.28,0.45,0.12),nz2);
         float gA=smoothstep(0.30,0.70,up+0.3*(nz-0.5));
         float cell=floor((vWP.x+vWP.z)/2.0);
-        float vine=step(0.68,h21(vec2(cell,1.0)))*h21(vec2(cell,floor(vWP.y/3.0)))*0.8;
+        float vc=(vWP.x+vWP.z)*0.5;float vine=smoothstep(0.48,0.68,vn(vec2(vc*0.45,1.0)))*smoothstep(0.30,0.60,fbm2(vec2(vc*1.1,vWP.y*0.2)))*1.1;
         base=mix(st,grass,clamp(gA*0.9+vine*0.6+smoothstep(0.72,0.95,nz)*0.4,0.0,0.95));
       }
       vec3 amb=mix(vec3(0.26,0.20,0.17),uZen*0.5+uMid*0.35+uHor*0.30+vec3(0.04),n.y*0.5+0.5);
       vec3 sunC=uSunCol*(1.25+0.5*uAlt);
       float ndl=max(dot(n,uSunDir),0.0);
       vec3 col=base*(amb*0.95+sunC*ndl*0.95);
+      {vec3 Vv=normalize(cameraPosition-vWP);float ev=1.0-smoothstep(0.08,0.40,uSunDir.y);
+       col+=uSunCol*vec3(1.0,0.72,0.40)*pow(1.0-max(dot(n,Vv),0.0),3.0)*ev*(0.35+0.9*pow(max(dot(-Vv,uSunDir),0.0),2.0))*0.7;}
       col=applyFog(col,vWP);
       gl_FragColor=vec4(col,1.0);
     }`
@@ -154,22 +84,21 @@ const stoneMat=makeStoneMat();
 const stoneMatInst=makeStoneMat();
 
 /* ---------- 浮遊島 ---------- */
+const COLS=[];   // 球の当たり判定（根の輪・環の遺構）：{x,y,z,r}
 const ISL=[
-  {x:360,y:610,z:-2900,R:80,H:120,fall:2.2,seed:1,ruin:3,trees:8},
-  {x:-60,y:560,z:-3100,R:130,H:190,fall:0.6,seed:2,ruin:5,trees:14},
-  {x:-330,y:650,z:-3420,R:240,H:330,fall:5.6,seed:3,ruin:10,trees:34,sacred:true},
-  {x:260,y:720,z:-3500,R:70,H:100,fall:null,seed:4,ruin:2,trees:6},
-  {x:-300,y:560,z:-4300,R:100,H:150,fall:1.2,seed:5,ruin:4,trees:10},
-  {x:160,y:640,z:-4500,R:90,H:130,fall:null,seed:6,ruin:3,trees:9},
-  {x:-520,y:650,z:-4900,R:140,H:200,fall:3.0,seed:7,ruin:5,trees:14},
-  {x:100,y:500,z:-4950,R:60,H:90,fall:5.2,seed:8,ruin:2,trees:5}
+  {x:360,y:610,z:-2900,R:80,H:120,fall:2.2,seed:1,ruin:3},
+  {x:-60,y:560,z:-3100,R:130,H:190,fall:0.6,seed:2,ruin:5,hoop:true},
+  {x:-330,y:650,z:-3420,R:240,H:330,fall:5.6,seed:3,ruin:10,hoop:true,sacred:true},
+  {x:260,y:720,z:-3500,R:70,H:100,fall:null,seed:4,ruin:2},
+  {x:-300,y:560,z:-4300,R:100,H:150,fall:1.2,seed:5,ruin:4,hoop:true},
+  {x:160,y:640,z:-4500,R:90,H:130,fall:null,seed:6,ruin:3},
+  {x:-520,y:650,z:-4900,R:140,H:200,fall:3.0,seed:7,ruin:5,hoop:true},
+  {x:100,y:500,z:-4950,R:60,H:90,fall:5.2,seed:8,ruin:2}
 ];
 function topAt(I,dx,dz){const r=Math.hypot(dx,dz)/I.R;return 0.07*I.R*Math.sqrt(Math.max(0,1-r*r));}
-const islTrees=makeTreeSet(500);
-const SACRED={x:0,y:0,z:0,top:0,s:26};
 function buildIsland(I){
   const rr=lcg(I.seed*977+13);
-  const base=new T.IcosahedronGeometry(1,3);
+  const base=new T.IcosahedronGeometry(1,5);
   const p=base.attributes.position;
   const nzf=(x,y,z)=>Math.sin(x*5.1+z*3.7+I.seed)*Math.cos(y*4.3+x*2.9)*0.5+Math.sin(z*7.7-y*3.1+I.seed*2)*0.5;
   for(let i=0;i<p.count;i++){
@@ -202,20 +131,21 @@ function buildIsland(I){
       L.push({g:lg,kind:1});
     }
   }
+  if(I.hoop){ // 根の輪：島の底から垂れた根に、岩の輪が下がっている（くぐり抜ける）
+    const Rh=Math.min(62,Math.max(38,I.R*0.3)),tb=Rh*0.2,cy=-I.H*0.98-Rh-14;
+    const tg=new T.TorusGeometry(Rh,tb,8,24);
+    const tp=tg.attributes.position;
+    for(let i=0;i<tp.count;i++){const x=tp.getX(i),y=tp.getY(i),z=tp.getZ(i);const f=1+0.22*nzf(x*0.07,y*0.07,z*0.1);tp.setXYZ(i,x*f,y*f,z*(1+0.3*nzf(x*0.1,z*0.1,y*0.1)));}
+    const tn=tg.toNonIndexed();tn.computeVertexNormals();tn.translate(0,cy,0);
+    L.push({g:tn,kind:0});
+    const top=cy+Rh,bot=-I.H*0.80,len=bot-top;
+    const sg=new T.CylinderGeometry(7,12,len,7,3,false).toNonIndexed();sg.computeVertexNormals();sg.translate(0,top+len/2,0);
+    L.push({g:sg,kind:0});
+    for(let k=0;k<20;k++){const a=k/20*TAU;COLS.push({x:I.x+Math.cos(a)*Rh,y:I.y+cy+Math.sin(a)*Rh,z:I.z,r:tb*1.25+3});}
+    for(let yy=top;yy<bot;yy+=12)COLS.push({x:I.x,y:I.y+yy,z:I.z,r:12});
+  }
   const mesh=new T.Mesh(mergeG(L),stoneMat);
   mesh.position.set(I.x,I.y,I.z);mesh.frustumCulled=false;scene.add(mesh);
-  // 木々
-  for(let k=0;k<I.trees;k++){
-    const a=rr()*TAU,r=I.R*(0.08+0.78*Math.sqrt(rr()));
-    const dx=Math.cos(a)*r,dz=Math.sin(a)*r;
-    const s=(2.0+2.2*rr())*(0.65+I.R/250);
-    const hue=I.sacred?(rr()<0.65?2.0:rr()):rr();
-    islTrees.add(I.x+dx,I.y+topAt(I,dx,dz)-0.6,I.z+dz,s,rr()*TAU,hue);
-  }
-  if(I.sacred){
-    SACRED.x=I.x;SACRED.z=I.z;SACRED.top=I.y+topAt(I,0,0)-1;SACRED.y=SACRED.top;
-    islTrees.add(I.x,SACRED.top,I.z,SACRED.s,0.6,2.0);
-  }
   // 滝
   if(I.fall!==null){
     const a=I.fall,er=I.R*0.93;
@@ -228,8 +158,23 @@ function buildIsland(I){
       wm.rotation.y=Math.PI/2-a+c*Math.PI/2;wm.frustumCulled=false;wm.renderOrder=10;
       scene.add(wm);
     }
+    const sp=new T.Mesh(sprayGeo,sprayMat);sp.scale.set(wF*5,wF*3,1);sp.position.set(I.x+ex,9,I.z+ez);sp.frustumCulled=false;sp.renderOrder=11;scene.add(sp);
   }
+  U.uIsl.value[ISL.indexOf(I)].set(I.x,I.y,I.z,I.R);
 }
+const sprayGeo=new T.PlaneGeometry(1,1);
+const sprayMat=new T.ShaderMaterial({uniforms:U,transparent:true,depthWrite:false,
+  vertexShader:`varying vec2 vUv;varying vec3 vWP;void main(){vUv=uv;vec4 c=modelMatrix*vec4(0.0,0.0,0.0,1.0);
+    vec3 r=vec3(viewMatrix[0][0],viewMatrix[1][0],viewMatrix[2][0]);vec3 u=vec3(0.0,1.0,0.0);
+    vec3 s=vec3(length(modelMatrix[0].xyz),length(modelMatrix[1].xyz),1.0);
+    vec3 wp=c.xyz+r*position.x*s.x+u*(position.y+0.35)*s.y;vWP=wp;gl_Position=projectionMatrix*viewMatrix*vec4(wp,1.0);}`,
+  fragmentShader:FS_PRE+SKY_GLSL+`varying vec2 vUv;varying vec3 vWP;
+  void main(){vec2 p=vUv*2.0-1.0;float r=length(p*vec2(0.9,1.1));
+    float n=fbm2(vec2(p.x*2.2+uTime*0.2,p.y*2.6-uTime*0.9));
+    float a=smoothstep(1.0,0.1,r)*(0.30+0.9*n)*0.55;
+    vec3 col=mix(vec3(0.80,0.90,0.97),uSunCol,0.25)*(0.6+0.4*uAlt+0.2);
+    a*=1.0-smoothstep(1200.0,4000.0,length(cameraPosition-vWP));
+    gl_FragColor=vec4(applyFog(col,vWP),a);}`});
 const waterGeo=new T.PlaneGeometry(1,1,8,40);waterGeo.translate(0,-0.5,0);
 const waterMat=new T.ShaderMaterial({
   uniforms:U,transparent:true,depthWrite:false,side:T.DoubleSide,
@@ -255,7 +200,6 @@ const waterMat=new T.ShaderMaterial({
   }`
 });
 ISL.forEach(buildIsland);
-islTrees.flush();
 
 /* ---------- 崩れかけた巨大な環（くぐり抜ける門） ---------- */
 const RING={x:100,y:732,z:-3790,R:230,tube:15};
@@ -304,16 +248,28 @@ const RING={x:100,y:732,z:-3790,R:230,tube:15};
   mesh.count=c;mesh.instanceMatrix.needsUpdate=true;mesh.frustumCulled=false;scene.add(mesh);
 })();
 
-/* ---------- 聖なる樹のまわりの光 ---------- */
-const sacredGlow=(function(){
-  const m=new T.Mesh(new T.PlaneGeometry(1,1),new T.ShaderMaterial({uniforms:U,transparent:true,depthWrite:false,blending:T.AdditiveBlending,
-    vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
-    fragmentShader:FS_PRE+SKY_GLSL+`varying vec2 vUv;uniform float uLamp;
-    void main(){vec2 c=vUv-0.5;float r=length(c)*2.0;
-      float a=exp(-r*r*3.4)*(0.30+0.45*uLamp)+exp(-r*r*14.0)*0.16;
-      gl_FragColor=vec4(vec3(1.0,0.84,0.58)*a,a);}`}));
-  m.position.set(SACRED.x,SACRED.top+SACRED.s*6.6,SACRED.z);m.scale.set(SACRED.s*17,SACRED.s*17,1);
-  m.frustumCulled=false;m.renderOrder=17;scene.add(m);
-  return m;
+/* ---------- 環の遺構：環の下側に、崩れた柱とまぐさが垂れ下がる ---------- */
+(function(){
+  const rr=lcg(4141),L=[];
+  const angs=[3.05,3.35,3.65,3.95,4.25],rad=RING.R+RING.tube;
+  const pos=[];
+  angs.forEach(function(a,k){
+    const len=46+30*rr(),w=7+3*rr();
+    const g=new T.BoxGeometry(w,len,w*(0.7+0.5*rr())).toNonIndexed();
+    g.rotateZ(a-Math.PI/2+(rr()-0.5)*0.12);
+    const cr=rad+len*0.45,cxp=Math.cos(a)*cr,cyp=Math.sin(a)*cr,cz=(rr()-0.5)*8;
+    g.translate(cxp,cyp,cz);L.push({g:g,kind:1});
+    for(let s=0;s<3;s++){const rs=rad+len*(0.2+0.3*s);COLS.push({x:RING.x+Math.cos(a)*rs,y:RING.y+Math.sin(a)*rs,z:RING.z+cz,r:w*0.9+3});}
+    pos.push([a,rad+len*0.85]);
+  });
+  for(let k=0;k<pos.length-1;k+=2){ // まぐさ：隣り合う柱の先をつなぐ
+    const A=pos[k],B=pos[k+1],ax=Math.cos(A[0])*A[1],ay=Math.sin(A[0])*A[1],bx=Math.cos(B[0])*B[1],by=Math.sin(B[0])*B[1];
+    const ln=Math.hypot(bx-ax,by-ay);
+    const g=new T.BoxGeometry(ln*0.96,6,9).toNonIndexed();g.rotateZ(Math.atan2(by-ay,bx-ax));g.translate((ax+bx)/2,(ay+by)/2,0);
+    L.push({g:g,kind:1});
+    for(let s=0;s<=ln;s+=14)COLS.push({x:RING.x+ax+(bx-ax)*s/ln,y:RING.y+ay+(by-ay)*s/ln,z:RING.z,r:7});
+  }
+  const m=new T.Mesh(mergeG(L),stoneMat);m.position.set(RING.x,RING.y,RING.z);m.frustumCulled=false;scene.add(m);
 })();
-function sceneryUpdate(){sacredGlow.quaternion.copy(cam.quaternion);}
+
+function sceneryUpdate(){}

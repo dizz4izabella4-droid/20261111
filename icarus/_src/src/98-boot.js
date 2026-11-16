@@ -45,6 +45,7 @@ window.__icarus={G:G,b:b,KF:KF,U:U,P:P,ISL:ISL,RING:RING,pathAt:pathAt,DY:DY,PS:
       if(y<yb-m||y>top+m)continue;const ly=clamp((y-yb)/(by1-yb),0,1);const px=x-bbuf[o+6]*ly,pz=z-bbuf[o+7]*ly;
       if(px>bbuf[o]-m&&px<bbuf[o+3]+m&&pz>bbuf[o+2]-m&&pz<bbuf[o+5]+m)hit=1;}}
     for(const I of ISL){const ry=(I.H+0.07*I.R)/2,cy=I.y+0.07*I.R-ry;const dx=x-I.x,dz=z-I.z,dy=y-cy;const rx=I.R+m,ry2=ry+m;if((dx*dx+dz*dz)/(rx*rx)+dy*dy/(ry2*ry2)<1)hit=2;}
+    for(const c of COLS){const r=c.r+m;const dx=x-c.x,dy=y-c.y,dz=z-c.z;if(dx*dx+dy*dy+dz*dz<r*r)hit=3;}
     return hit;}
 };
 requestAnimationFrame(frame);

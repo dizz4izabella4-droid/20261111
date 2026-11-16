@@ -1,7 +1,7 @@
 /* ================= 音（すべて合成。素材ファイルなし）：風・水・遠い合唱・5分の楽曲 ================= */
 const audio=(function(){
   let ctx=null,master=null,fadeG=null,comp=null,rev=null,revSend=null,on=true;
-  let windG,windF,airG,choirG,noiseBuf,chordIdx=-99,arpT=0,lastLevel=1,level=1;
+  let windG,windF,airG,choirG,wfG,wfPan,noiseBuf,chordIdx=-99,arpT=0,lastLevel=1,level=1;
   // 和音（15秒ごと）。[根音を含む構成音(Hz)]
   const CH=[
     [146.83,220,329.63],[123.47,185,293.66],[146.83,220,293.66,369.99],[98,146.83,246.94,293.66],
@@ -47,6 +47,16 @@ const audio=(function(){
       const g=ctx.createGain();g.gain.value=0.5/(1+i*0.35);o.connect(g);g.connect(cf);o.start();
     });
     cf.connect(choirG);choirG.connect(master);choirG.connect(revSend);
+    // 滝の音（素材：30秒ループ）
+    wfG=ctx.createGain();wfG.gain.value=0;
+    wfPan=ctx.createStereoPanner?ctx.createStereoPanner():null;
+    if(wfPan){wfPan.connect(wfG);}
+    wfG.connect(master);
+    try{
+      const bin=atob(ASSET.waterfall),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
+      const ok=function(buf){const s=ctx.createBufferSource();s.buffer=buf;s.loop=true;s.connect(wfPan||wfG);s.start();};
+      const pr=ctx.decodeAudioData(u8.buffer,ok,function(){});if(pr&&pr.catch)pr.catch(function(){});
+    }catch(e){}
     setOn(on);
     fadeG.gain.setTargetAtTime(level,ctx.currentTime,0.3);
   }
@@ -124,6 +134,7 @@ const audio=(function(){
     windF.frequency.setTargetAtTime(240+p.speed*8+p.cloud*200,t,0.3);
     airG.gain.setTargetAtTime(0.004+0.012*p.alt01,t,0.6);
     choirG.gain.setTargetAtTime(p.choir*0.06,t,1.2);
+    if(wfG){wfG.gain.setTargetAtTime(0.6*(p.wf||0),t,0.5);if(wfPan)wfPan.pan.setTargetAtTime(p.wpan||0,t,0.4);}
     if(p.level!==undefined&&Math.abs(p.level-lastLevel)>0.004){lastLevel=p.level;fadeG.gain.setTargetAtTime(p.level,t,0.25);}
     score(dt,p.ft,p.live);
   }

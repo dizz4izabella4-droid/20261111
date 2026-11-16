@@ -12,11 +12,11 @@ const FADE_WARM=[0.97,0.92,0.82],FADE_DARK=[0.015,0.022,0.065];
    t, 天頂, 地平, 中間, 太陽色, 太陽高度, 太陽方位, 霧, 明るさ, 星, 窓の灯, 露出, ブルーム, 光芒, 光の梯子, 花びら, 画角, 光の粒 */
 const KFR=[
   [0,  0x0a1640,0xd88a78,0x55689f,0xff9a68, 0.015,-0.25,0.0013,0.10,0.30,0.00, 0.95,0.50,0.35, 0.00,0.00,72,0.5],
-  [30, 0x26468f,0xffb07a,0x8c9cd2,0xffb474, 0.100,-0.22,0.0011,0.22,0.00,0.30, 1.00,0.52,0.40, 0.00,0.00,74,0.8],
-  [60, 0x2e62bf,0xffd9a2,0x8fb6ea,0xffdcb0, 0.260,-0.15,0.0009,0.40,0.00,0.15, 1.00,0.50,0.40, 0.10,0.00,76,1.0],
-  [100,0x2f6fd0,0xfff0d8,0xa6c6f0,0xffeccc, 0.400,-0.10,0.0008,0.60,0.00,0.00, 0.98,0.50,0.45, 0.20,0.00,78,1.0],
-  [130,0x2260c8,0xffe8c6,0x9cc4f2,0xfff2dc, 0.340,-0.20,0.0005,0.70,0.00,0.00, 0.98,0.55,0.55, 0.55,0.10,76,1.0],
-  [180,0x3a5db0,0xffcf88,0xc2c6ea,0xffd89c, 0.180,-0.20,0.0005,0.55,0.00,0.00, 0.96,0.62,0.75, 0.90,0.85,72,1.2],
+  [30, 0x2854a0,0xb9d9f5,0x87aee2,0xffd6aa, 0.100,-0.22,0.0010,0.22,0.00,0.30, 1.00,0.52,0.40, 0.00,0.00,74,0.8],
+  [60, 0x1a68dc,0xa8d8fb,0x6eaef2,0xffe6c9, 0.260,-0.15,0.00060,0.40,0.00,0.15, 0.98,0.46,0.40, 0.10,0.00,76,1.0],
+  [100,0x0a5cdc,0xa6d6fa,0x62a8f0,0xfff0dc, 0.400,-0.10,0.00038,0.60,0.00,0.00, 0.92,0.40,0.34, 0.20,0.00,78,1.0],
+  [130,0x1260d8,0xaadcfb,0x72b2f2,0xfff5e7, 0.340,-0.20,0.00034,0.70,0.00,0.00, 0.94,0.44,0.45, 0.55,0.10,76,1.0],
+  [180,0x4969b5,0xe1ccaa,0xb1caeb,0xffdcae, 0.180,-0.20,0.0005,0.55,0.00,0.00, 0.98,0.62,0.75, 0.90,0.85,72,1.2],
   [215,0x2a3a88,0xff9a5a,0xd88aa8,0xff9050, 0.075,-0.10,0.0005,0.35,0.00,0.40, 0.95,0.68,0.70, 0.60,0.65,70,1.0],
   [245,0x161e5a,0xff6a62,0x8a5a9a,0xff7a52, 0.012, 0.10,0.0005,0.22,0.35,0.80, 0.95,0.60,0.50, 0.25,0.75,72,0.8],
   [275,0x0a1038,0x7a4a8a,0x35306c,0xff6a58,-0.080, 0.20,0.0005,0.12,0.90,1.00, 1.00,0.50,0.25, 0.00,0.90,74,0.6],
@@ -184,6 +184,10 @@ function collide(dt){
     const e=(dx*dx+dz*dz)/(rx*rx)+dy*dy/(ry*ry);
     if(e<1){const l=Math.sqrt(e)||0.01;b.x=I.x+dx/l;b.z=I.z+dz/l;b.y=cy+dy/l;impact=Math.max(impact,b.speed*0.5);}
   }
+  for(let i=0;i<COLS.length;i++){
+    const c=COLS[i],dx=b.x-c.x,dy=b.y-c.y,dz=b.z-c.z,r=c.r+2,d2=dx*dx+dy*dy+dz*dz;
+    if(d2<r*r){const d=Math.sqrt(d2)||0.01;b.x=c.x+dx/d*r;b.y=c.y+dy/d*r;b.z=c.z+dz/d*r;impact=Math.max(impact,b.speed*0.5);}
+  }
   if(impact>3){b.speed*=0.55;G.shake=Math.min(0.7,G.shake+impact/60);}
 }
 function manualStep(dt,ctl){
@@ -286,6 +290,7 @@ function update(dt){
   if(ci!==cityI||cj!==cityJ)rebuildCity(ci,cj);
   for(const m of cloudLayers){m.position.x=b.x;m.position.z=b.z;}
   ground.position.x=Math.floor(b.x/10)*10;ground.position.z=Math.floor(b.z/10)*10;
+  deepPlane.position.x=ground.position.x;deepPlane.position.z=ground.position.z;
   if(mode==='auto')el.prog.style.width=(G.ft/FILM_LEN*100).toFixed(2)+'%';
 }
 
@@ -298,6 +303,10 @@ function applyAtmosphere(){
   U.uSunR.value=lerp(0.058,0.032,clamp(KS.elev/0.35,0,1));
   U.uFogDen.value=KS.fog;U.uAlt.value=KS.lit;U.uHeat.value=0;
   U.uLamp.value=KS.lamp;U.uStar.value=KS.star;
+  U.uMistLow.value=0.0007+0.0016*(1-clamp(KS.lit,0,1))*(1-sstep(0.05,-0.1,KS.elev)*0.5);
+  {const day=clamp(KS.elev/0.3,0,1);const cu=P.gradeS,ch=P.gradeH;
+   cu.set(lerp(0.10,-0.02,day)+0.0,lerp(0.05,0.0,day),lerp(0.14,0.10,day)); // 影：青〜紫
+   ch.set(0.012*KS.sun.r,0.010*KS.sun.g,0.006*KS.sun.b);}
 }
 let cloudPuffed=false;
 function updateView(dt){
@@ -315,7 +324,7 @@ function updateView(dt){
   cam.position.set(b.x+nx*shk*0.4,b.y+ny*shk*0.3,b.z);
   _e.set(b.pitch*0.95+ny*shk*0.06,b.yaw+nx*shk*0.06,-b.roll*0.95,'YXZ');
   cam.quaternion.setFromEuler(_e);
-  const fov=(G.mode==='manual'?77+3*b.boost:KS.fov)+(G.mode==='title'?-2:0);
+  const fov=(G.mode==='manual'?77+3*b.boost:KS.fov)+(G.mode==='title'?-2:0)+3.5*(G.enc||0)+4*Math.min(G.exitB||0,0.5);
   if(Math.abs(cam.fov-fov)>0.02){cam.fov+=(fov-cam.fov)*Math.min(1,dt*2.5);cam.updateProjectionMatrix();}
   cam.updateMatrixWorld(true);
   // 一人称の翼
@@ -334,22 +343,35 @@ function updateView(dt){
   P.ray=KS.ray*(0.4+0.6*P.sunVis);
   P.bloom=KS.bloom;
   P.dazzle=sunFace*0.10;
-  P.expo=KS.expo-0.12*sunFace;
+  // 門・トンネルをくぐるとき：入口で少し暗く、抜けた瞬間にぱっと明るく戻る
+  {let enc=0;for(const S of STRUCT_LIST){const dx=b.x-S.cx,dz=b.z-S.cz;const dd=Math.hypot(dx,dz);if(dd<90)enc=Math.max(enc,1-sstep(18,90,dd));}
+   G.exitB=G.exitB||0;G.enc=G.enc||0;
+   const ne=G.enc+(enc-G.enc)*Math.min(1,dt*4);
+   if(ne<G.enc)G.exitB+=(G.enc-ne)*1.4;
+   G.enc=ne;G.exitB*=Math.exp(-dt*1.6);G.exitB=Math.min(G.exitB,0.5);}
+  P.expo=KS.expo-0.12*sunFace-0.16*G.enc+0.22*G.exitB;
+  P.streak=clamp((G.mode==='manual'?sstep(34,54,b.speed)*0.9:0)+G.exitB*1.4,0,1);
   P.blur=0;P.ca=0.0012+G.shake*0.004;
   P.vig=0.28;
-  P.veil=G.mist*0.5;P.veilCol.setRGB(1.0,0.97,0.92);
+  P.veil=G.mist*0.38;P.veilCol.setRGB(1.0,0.97,0.92);
   P.desat=0;P.flash=0;P.fade=G.fade;P.grain=0.028;
   // 光の粒・花びら・光の梯子
   FXU.uPxScale.value=R.h/(2*Math.tan(cam.fov*Math.PI/360));
   motes.material.uniforms.uMote.value=KS.mote;
   petals.material.uniforms.uAmt.value=KS.petal;
-  shafts.material.uniforms.uAmt.value=KS.shaft;
+  shafts.material.uniforms.uAmt.value=KS.shaft*(1+1.2*G.exitB);
   shafts.material.uniforms.uTop.value=clamp(b.y+250,520,1200);
   birds.update(G.t,b.x,b.y,b.z);
   sceneryUpdate();
   // 音
   const live=G.mode==='auto'||G.mode==='manual';
-  audio.update(dt,{speed:sp,cloud:G.mist,alt01:clamp(b.y/900,0,1),choir:sstep(150,175,G.ft)*(1-sstep(205,225,G.ft)),ft:G.ft,live:live,level:1-G.fade*0.98});
+  let wfv=0,wpan=0;
+  for(let i=0;i<ISL.length;i++){const I=ISL[i];if(I.fall===null)continue;
+    const dx=I.x-b.x,dz=I.z-b.z,d=Math.hypot(dx,(I.y-b.y)*0.5,dz)-I.R;
+    const w=Math.pow(clamp(1-(d-80)/700,0,1),1.8);
+    if(w>wfv){wfv=w;_v.set(dx,0,dz).normalize();_w.set(1,0,0).applyQuaternion(cam.quaternion);wpan=clamp(_v.dot(_w),-1,1)*0.8;}
+  }
+  audio.update(dt,{wf:wfv,wpan:wpan,speed:sp,cloud:G.mist,alt01:clamp(b.y/900,0,1),choir:sstep(150,175,G.ft)*(1-sstep(205,225,G.ft)),ft:G.ft,live:live,level:1-G.fade*0.98});
 }
 
 /* ---------- ループ ---------- */

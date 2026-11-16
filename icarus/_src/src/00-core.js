@@ -35,14 +35,18 @@ const U={
   uHeat:{value:0},
   uFogDen:{value:0.0011},
   uMist:{value:0},
+  uMistLow:{value:0.0012},
+  uRefl:{value:0},
+  uIsl:{value:Array.from({length:8},()=>new T.Vector4(0,-1e5,0,1))},
   uMistCol:{value:new T.Color(0xf4efe6)},
   uLamp:{value:0},
   uStar:{value:0}
 };
 
 const scene=new T.Scene();
-const cam=new T.PerspectiveCamera(78,1,0.15,14000);
+const cam=new T.PerspectiveCamera(78,1,0.4,14000);
 cam.rotation.order='YXZ';
+const reflectCam=cam.clone();
 const vmScene=new T.Scene();
 const vmCam=new T.PerspectiveCamera(70,1,0.03,40);
 
@@ -93,12 +97,12 @@ void main(){
 
 const P={
   sunUV:new T.Vector2(.5,.5),sunVis:0,bloom:0.55,ray:0.5,blur:0,ca:0.0,vig:0.35,expo:1.0,
-  veil:0,veilCol:new T.Color(1,0.9,0.7),desat:0,flash:0,grain:0.03,mist:0,dazzle:0,fade:0,fadeCol:new T.Color(0,0,0)
+  veil:0,veilCol:new T.Color(1,0.9,0.7),desat:0,flash:0,grain:0.03,mist:0,dazzle:0,fade:0,fadeCol:new T.Color(0,0,0),gradeS:new T.Vector3(),gradeH:new T.Vector3()
 };
 const matComp=quadMat(`
 uniform sampler2D tScene;uniform sampler2D tBloom;uniform sampler2D tBright;
 uniform vec2 uSunUV;uniform float uSunVis,uBloom,uRay,uBlur,uCA,uVig,uExpo,uVeil,uDesat,uFlash,uGrain,uTime,uDazzle,uFade,uAspect;
-uniform vec3 uVeilCol,uFadeCol;
+uniform vec3 uVeilCol,uFadeCol,uGradeS,uGradeH;uniform float uStreak;
 varying vec2 vUv;
 float h21(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
 vec3 aces(vec3 x){return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14),0.0,1.0);}
@@ -137,6 +141,10 @@ void main(){
     float onS=smoothstep(0.9,0.2,length((uSunUV-0.5)*1.6));
     col+=gh*0.07*uSunVis*onS*(1.0+uDazzle*4.0);
   }
+  if(uStreak>0.0){float ang=atan(c.y,c.x*uAspect);float rr=length(c*vec2(uAspect,1.0));
+    float sl=h21(vec2(floor(ang*70.0),floor(uTime*16.0)));
+    float st2=smoothstep(0.30,0.85,rr)*smoothstep(0.80,0.97,sl)*uStreak;
+    col+=vec3(0.9,0.95,1.0)*st2*0.22;}
   col*=uExpo;
   col+=vec3(1.0,0.88,0.62)*uDazzle*(0.15+0.85*exp(-length((uv-uSunUV)*vec2(uAspect,1.0))*2.2));
   float lum=dot(col,vec3(0.2126,0.7152,0.0722));
@@ -145,18 +153,22 @@ void main(){
   col+=vec3(1.0,0.95,0.85)*uFlash;
   col=aces(col*1.02);
   col=pow(col,vec3(1.0/2.2));
+  {float l0=dot(col,vec3(0.299,0.587,0.114));
+   col=mix(col,col*(vec3(1.0)+uGradeS*(1.0-smoothstep(0.0,0.55,l0))),1.0);
+   col+=uGradeH*smoothstep(0.55,1.0,l0);
+   col=mix(col,col*col*(3.0-2.0*col),0.22);}
   float lm2=dot(col,vec3(0.299,0.587,0.114));col=mix(vec3(lm2),col,1.14);
   col*=mix(vec3(1.0),vec3(0.60,0.44,0.40),uVig*smoothstep(0.18,0.95,r2*1.9));
   col+=(h21(uv*vec2(1731.0,977.0)+uTime*61.0)-0.5)*uGrain;
   col=mix(col,uFadeCol,uFade);
   gl_FragColor=vec4(col,1.0);
-}`,{tScene:{value:null},tBloom:{value:null},tBright:{value:null},uSunUV:{value:P.sunUV},uSunVis:{value:0},uBloom:{value:0},uRay:{value:0},uBlur:{value:0},uCA:{value:0},uVig:{value:0},uExpo:{value:1},uVeil:{value:0},uDesat:{value:0},uFlash:{value:0},uGrain:{value:0},uTime:{value:0},uDazzle:{value:0},uFade:{value:0},uAspect:{value:1},uVeilCol:{value:P.veilCol},uFadeCol:{value:P.fadeCol}});
+}`,{tScene:{value:null},tBloom:{value:null},tBright:{value:null},uSunUV:{value:P.sunUV},uSunVis:{value:0},uBloom:{value:0},uRay:{value:0},uBlur:{value:0},uCA:{value:0},uVig:{value:0},uExpo:{value:1},uVeil:{value:0},uDesat:{value:0},uFlash:{value:0},uGrain:{value:0},uTime:{value:0},uDazzle:{value:0},uFade:{value:0},uAspect:{value:1},uVeilCol:{value:P.veilCol},uStreak:{value:0},uGradeS:{value:P.gradeS},uGradeH:{value:P.gradeH},uFadeCol:{value:P.fadeCol}});
 
 const quadMesh=new T.Mesh(triGeo,matPre);quadMesh.frustumCulled=false;
 const quadScene=new T.Scene();quadScene.add(quadMesh);
 function pass(mat,target){quadMesh.material=mat;renderer.setRenderTarget(target);renderer.render(quadScene,camDummy);}
 
-const R={w:2,h:2,sceneRT:null,bright:null,chain:[]};
+const R={w:2,h:2,sceneRT:null,reflectRT:null,bright:null,chain:[]};
 function mkRT(w,h,depth,samples){
   const rt=new T.WebGLRenderTarget(w,h,{type:HALF?T.HalfFloatType:T.UnsignedByteType,format:T.RGBAFormat,minFilter:T.LinearFilter,magFilter:T.LinearFilter,depthBuffer:!!depth,stencilBuffer:false,generateMipmaps:false});
   rt.texture.generateMipmaps=false;
@@ -165,8 +177,9 @@ function mkRT(w,h,depth,samples){
 }
 function buildTargets(w,h){
   R.w=w;R.h=h;
-  if(R.sceneRT){R.sceneRT.dispose();R.bright.dispose();R.chain.forEach(r=>r.dispose());}
+  if(R.sceneRT){R.sceneRT.dispose();R.reflectRT.dispose();R.bright.dispose();R.chain.forEach(r=>r.dispose());}
   R.sceneRT=mkRT(w,h,true,MSAA);
+  R.reflectRT=mkRT(Math.max(2,Math.ceil(w/3)),Math.max(2,Math.ceil(h/3)),true,0);
   const hw=Math.max(2,w>>1),hh=Math.max(2,h>>1);
   R.bright=mkRT(hw,hh,false,0);
   R.chain=[];
@@ -176,6 +189,21 @@ function buildTargets(w,h){
   matComp.uniforms.uAspect.value=w/h;
 }
 function renderFrame(){
+  const cp=cam.position,dir=new T.Vector3(),up=new T.Vector3(0,1,0).applyQuaternion(cam.quaternion);
+  cam.getWorldDirection(dir);
+  reflectCam.position.set(cp.x,-cp.y,cp.z);
+  reflectCam.up.set(up.x,-up.y,up.z);
+  reflectCam.lookAt(cp.x+dir.x,-cp.y-dir.y,cp.z+dir.z);
+  reflectCam.near=cam.near;reflectCam.far=cam.far;reflectCam.fov=cam.fov;reflectCam.aspect=R.reflectRT.width/R.reflectRT.height;
+  reflectCam.updateProjectionMatrix();reflectCam.updateMatrixWorld(true);
+  groundMat.uniforms.uReflection.value=R.reflectRT.texture;
+  groundMat.uniforms.uReflectVP.value.multiplyMatrices(reflectCam.projectionMatrix,reflectCam.matrixWorldInverse);
+  ground.visible=false;deepPlane.visible=false;U.uRefl.value=1;
+  renderer.setRenderTarget(R.reflectRT);
+  renderer.clear(true,true,false);
+  renderer.render(scene,reflectCam);
+  ground.visible=true;deepPlane.visible=true;U.uRefl.value=0;
+  renderer.setRenderTarget(null);
   renderer.setRenderTarget(R.sceneRT);
   renderer.clear(true,true,false);
   renderer.render(scene,cam);
@@ -199,7 +227,7 @@ function renderFrame(){
   const cu=matComp.uniforms;
   cu.tScene.value=R.sceneRT.texture;cu.tBloom.value=R.chain[0].texture;cu.tBright.value=R.bright.texture;
   cu.uSunVis.value=P.sunVis;cu.uBloom.value=P.bloom;cu.uRay.value=P.ray;cu.uBlur.value=P.blur;cu.uCA.value=P.ca;cu.uVig.value=P.vig;
-  cu.uExpo.value=P.expo;cu.uVeil.value=P.veil;cu.uDesat.value=P.desat;cu.uFlash.value=P.flash;cu.uGrain.value=P.grain;
+  cu.uStreak.value=P.streak||0;cu.uExpo.value=P.expo;cu.uVeil.value=P.veil;cu.uDesat.value=P.desat;cu.uFlash.value=P.flash;cu.uGrain.value=P.grain;
   cu.uTime.value=U.uTime.value%100;cu.uDazzle.value=P.dazzle;cu.uFade.value=P.fade;
   pass(matComp,null);
 }
