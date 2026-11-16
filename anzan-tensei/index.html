@@ -598,6 +598,30 @@
   .skills-wrap { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--dim); }
   .skills-wrap .skills { margin-top: 0; padding-top: 0; border-top: 0; }
   #result-screen { z-index: 58; }
+  #diff-screen { z-index: 59; }
+  .diff-btn { display: block; width: min(86vw, 320px); margin: 5px 0; text-align: center; }
+  .diff-btn small { display: block; font-size: 0.68rem; font-weight: normal; opacity: 0.8; margin-top: 2px; letter-spacing: 0; }
+  .diff-btn.death { color: var(--alert); border-color: var(--alert); }
+  /* エンディング（スタッフロール） */
+  #ending-screen { position: absolute; inset: 0; z-index: 80; display: none; overflow: hidden; background: #000; color: #e9e3d2; }
+  #ending-screen::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 120%, rgba(255,120,60,0.18), transparent 60%), radial-gradient(ellipse at 50% -10%, rgba(120,140,255,0.12), transparent 55%); }
+  #end-roll { position: absolute; left: 0; right: 0; top: 0; text-align: center; will-change: transform; transition: opacity 2s; }
+  #end-roll .big { margin-top: 12px; }
+  #end-roll .bigsub { margin: 10px 0 120px; opacity: 0.6; }
+  #end-roll .blk { margin: 0 0 96px; }
+  #end-roll .role { margin-bottom: 14px; opacity: 0.55; color: #c9a35a; }
+  #end-roll .name { margin: 8px 0; }
+  .gw { display: inline-block; margin: 0 7px; white-space: nowrap; }
+  .gl { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; margin: 0 1.5px; vertical-align: middle; }
+  .role .gl { width: 9px; height: 13px; }
+  .name .gl { width: 15px; height: 21px; }
+  .big .gl { width: 34px; height: 48px; stroke-width: 2; margin: 0 4px; }
+  .bigsub .gl { width: 14px; height: 20px; }
+  #end-fin { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 3rem; letter-spacing: 6px; font-style: italic; opacity: 0; transition: opacity 2.4s; pointer-events: none; }
+  #end-fin.on { opacity: 1; }
+  #end-hint { position: absolute; left: 0; right: 0; bottom: 14%; text-align: center; font-size: 0.8rem; opacity: 0; transition: opacity 1.4s; }
+  #end-hint.on { opacity: 0.6; }
+  #end-skip { position: absolute; top: 8px; right: 8px; font-family: var(--font); font-size: 0.7rem; color: #e9e3d2; background: rgba(255,255,255,0.08); border: 0; border-radius: 999px; padding: 5px 12px; opacity: 0.55; cursor: pointer; }
   .proto-note { margin: 4px 16px 14px; padding: 8px 12px; max-width: 360px; font-size: 0.74rem; line-height: 1.6; text-align: center; border: 1px dashed var(--main); border-radius: 8px; opacity: 0.85; }
   #result-stats { line-height: 1.9; }
   .stat-card { background: var(--surface); border-radius: 14px; padding: 10px 12px; }
@@ -856,7 +880,7 @@
 
     <div id="side-panel">
       <div class="box">
-        <div class="box-title">AUTO MAPPING (1x10 CORRIDOR)</div>
+        <div class="box-title" id="map-title">AUTO MAPPING (1x10 CORRIDOR)</div>
         <div id="minimap"></div>
       </div>
 
@@ -952,6 +976,14 @@
     <button class="menu-btn" id="btn-result-back">[ 通路に戻る ]</button>
   </div>
 
+  <!-- エンディング：読めない文字のスタッフロール。曲が終わるまで流れ、終わったら fin. -->
+  <div id="ending-screen">
+    <div id="end-roll"></div>
+    <div id="end-fin">fin.</div>
+    <div id="end-hint">— タップして戻る —</div>
+    <button id="end-skip" type="button">SKIP ▶</button>
+  </div>
+
   <!-- ゲームオーバー画面 -->
   <!-- 死神に斬られる演出（後ろへ戻るとゲームオーバー）-->
   <div id="death-screen">
@@ -966,6 +998,16 @@
     <div class="title-sub" id="gameover-stats">計算の遅れが死を招いた…</div>
     <div class="proto-note">現在システム面の製作中であり、セリフはAI任せです。</div>
     <button class="menu-btn" id="btn-retry">[ REBUILD (最初から) ]</button>
+  </div>
+
+  <!-- 難易度選択（開始時・REBUILD 時） -->
+  <div id="diff-screen" class="overlay" style="display:none;">
+    <div class="title-logo" style="font-size:1.5rem;">難易度を選んでください</div>
+    <div class="title-sub" style="margin-bottom:10px;">廊下の長さ と 制限時間 が変わります</div>
+    <button class="menu-btn diff-btn" data-d="0">甘口<small></small></button>
+    <button class="menu-btn diff-btn" data-d="1">中辛<small></small></button>
+    <button class="menu-btn diff-btn" data-d="2">辛口<small></small></button>
+    <button class="menu-btn diff-btn death" data-d="3">デス<small></small></button>
   </div>
 </div>
 
@@ -1372,11 +1414,20 @@
     'FULL MOON (4/8)', 'GIBBOUS (5/8)', 'QUARTER (6/8)', 'CRESCENT (7/8)'
   ];
 
+  // === 難易度（開始時に選ぶ）：廊下の長さ（クリアまでの歩数）と制限時間の倍率 ===
+  const DIFFS = [
+    { name: '甘口', len: 6,  time: 1.5, desc: '廊下 6マス ／ 制限時間 ×1.5' },
+    { name: '中辛', len: 10, time: 1.0, desc: '廊下 10マス ／ 制限時間 ×1.0' },
+    { name: '辛口', len: 14, time: 0.8, desc: '廊下 14マス ／ 制限時間 ×0.8' },
+    { name: 'デス', len: 20, time: 0.6, desc: '廊下 20マス ／ 制限時間 ×0.6' }
+  ];
+  let corridorLen = 10, timeScale = 1, diffName = '中辛';
+
   // === ゲーム状態 ===
   let state = {
     mode: 'TITLE', // TITLE, EXPLORE, SUMMON, BATTLE, GAMEOVER
     pos: 0,
-    visited: Array(10).fill(false),
+    visited: Array(corridorLen).fill(false),
     steps: 0,
     moonPhase: 0,
     hero: { name: '主人公', lv: 1, hp: 35, maxHp: 35, atk: 6, exp: 0, nextExp: 15 },
@@ -1438,7 +1489,7 @@
     forceEncounter = false;
     state.mode = 'EXPLORE';
     state.pos = 0;
-    state.visited = Array(10).fill(false);
+    state.visited = Array(corridorLen).fill(false);
     state.visited[0] = true;
     state.steps = 0;
     state.kills = 0;
@@ -1483,14 +1534,17 @@
     // ミニマップ
     const mapEl = document.getElementById('minimap');
     mapEl.innerHTML = '';
-    for (let i = 0; i < 10; i++) {
+    mapEl.style.gridTemplateColumns = `repeat(${corridorLen}, 1fr)`;
+    const mt = document.getElementById('map-title');
+    if (mt) mt.textContent = `AUTO MAPPING (1x${corridorLen} CORRIDOR)`;
+    for (let i = 0; i < corridorLen; i++) {
       const cell = document.createElement('div');
       cell.className = 'map-cell';
       if (state.visited[i]) cell.classList.add('visited');
       if (i === state.pos) {
         cell.classList.add('current');
         cell.textContent = 'P';
-      } else if (i === 9 && state.visited[i]) {
+      } else if (i === corridorLen - 1 && state.visited[i]) {
         cell.textContent = '★';
       }
       mapEl.appendChild(cell);
@@ -1537,7 +1591,7 @@
     // 後ろを振り返ると、死神がいる
     if (dir < 0) { startDeath(); return; }
     const nextPos = state.pos + dir;
-    if (nextPos >= 10) {
+    if (nextPos >= corridorLen) {
       // 突き当たり到達：クリア表示（リザルト）。閉じると入口の通路に戻る
       showResult();
       return;
@@ -1580,15 +1634,100 @@
     resultOpen = true;
     state.paused = true;
     document.getElementById('result-stats').innerHTML =
-      `踏破 ${state.clears} 回目<br>到達LV: ${state.hero.lv}<br>歩数: ${state.steps}歩<br>撃破: ${state.kills || 0}体<br>HP 全回復`;
-    document.getElementById('result-screen').style.display = 'flex';
+      `難易度: ${diffName}<br>踏破 ${state.clears} 回目<br>到達LV: ${state.hero.lv}<br>歩数: ${state.steps}歩<br>撃破: ${state.kills || 0}体<br>HP 全回復`;
+    // 先にエンディング（スタッフロール → fin.）。終わったらリザルトを出す
+    setTimeout(() => startEnding(() => { document.getElementById('result-screen').style.display = 'flex'; }), 900);
   }
+
+  // === エンディング：読めない文字のスタッフロール（曲が終わるまで流れ、最後に fin.） ===
+  // 文字はすべて、文字コードから作る架空の記号（読めない）。同じ文字は同じ記号になる
+  function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  const glyphCache = {};
+  function glyph(ch) {
+    const code = ch.charCodeAt(0);
+    if (glyphCache[code]) return glyphCache[code];
+    const r = mulberry32(code * 7919 + 13), xs = [3, 8, 13], ys = [3, 8, 13, 19];
+    let d = '';
+    const n = 2 + Math.floor(r() * 3);
+    for (let k = 0; k < n; k++) {
+      const t = r(), x1 = xs[r() * 3 | 0], y1 = ys[r() * 4 | 0], x2 = xs[r() * 3 | 0], y2 = ys[r() * 4 | 0];
+      if (t < 0.5) d += `M${x1} ${y1}L${x2} ${y2}`;
+      else if (t < 0.85) d += `M${x1} ${y1}Q${xs[r() * 3 | 0]} ${ys[r() * 4 | 0]} ${x2} ${y2}`;
+      else d += `M${x1} ${y1}h.01`;
+    }
+    if (r() < 0.4) d += 'M2 1.5H14';
+    if (r() < 0.25) d += 'M8 1V8';
+    return (glyphCache[code] = `<svg class="gl" viewBox="0 0 16 22" aria-hidden="true"><path d="${d}"/></svg>`);
+  }
+  function glyphs(text) {
+    return text.split(' ').map(w => `<span class="gw">${[...w].map(glyph).join('')}</span>`).join(' ');
+  }
+  const STAFF = [
+    ['企画・監督', ['iz']],
+    ['制作リーダー', ['Claude']],
+    ['プログラム', ['Claude']],
+    ['作業支援', ['Claude', 'Gemini', 'ChatGPT']],
+    ['脚本・セリフ', ['AI']],
+    ['敵デザイン', ['ぷにスライム', 'ちびコウモリ', 'ふわふわ小鳥', '迷い子犬', 'ちびドラゴン']],
+    ['女神', ['ルミナーゼ', 'フェルシア', 'ロザリエンヌ', 'ミリアーナ', 'リュミエーナ']],
+    ['死神', ['Death']],
+    ['効果音', ['WebAudio']],
+    ['BGM', ['Tectonic Grip']],
+    ['主題歌', ['ABYSS CODE']],
+    ['Special Thanks', ['遊んでくれたあなた']]
+  ];
+  let endingOn = false, endAudio = null, endRaf = 0, endCb = null, endReady = false;
+  function startEnding(done) {
+    endingOn = true; endCb = done; endReady = false;
+    bgm.pause();
+    const sc = document.getElementById('ending-screen'), roll = document.getElementById('end-roll');
+    const fin = document.getElementById('end-fin'), hint = document.getElementById('end-hint');
+    fin.classList.remove('on'); hint.classList.remove('on');
+    roll.style.transition = 'none'; roll.style.opacity = 1;
+    roll.innerHTML = `<div class="big">${glyphs('暗算転生')}</div><div class="bigsub">${glyphs('Rebuild')}</div>` +
+      STAFF.map(([role, names]) => `<div class="blk"><div class="role">${glyphs(role)}</div>` + names.map(n => `<div class="name">${glyphs(n)}</div>`).join('') + '</div>').join('');
+    sc.style.display = 'block';
+    endAudio = new Audio('ending.mp3');
+    endAudio.volume = 0.85;
+    let usingAudio = false, t0 = performance.now(), finished = false;
+    endAudio.addEventListener('playing', () => { usingAudio = true; });
+    if (soundEnabled) { const pr = endAudio.play(); if (pr && pr.catch) pr.catch(() => {}); }
+    const finish = () => {
+      if (finished) return; finished = true;
+      roll.style.transition = 'opacity 2s'; roll.style.opacity = 0;
+      setTimeout(() => { fin.classList.add('on'); }, 2200);
+      setTimeout(() => { hint.classList.add('on'); endReady = true; }, 4600);
+    };
+    const frame = () => {
+      if (!endingOn) return;
+      const dur = (endAudio.duration && isFinite(endAudio.duration)) ? endAudio.duration : 181;
+      const cur = (usingAudio && !endAudio.paused) ? endAudio.currentTime : (usingAudio ? dur : (performance.now() - t0) / 1000);
+      const p = Math.min(1, cur / dur);
+      const H = sc.clientHeight;
+      if (!finished) roll.style.transform = `translateY(${H - p * (roll.scrollHeight + H * 0.4)}px)`;
+      if ((p >= 1 || endAudio.ended) && !finished) finish();
+      endRaf = requestAnimationFrame(frame);
+    };
+    endRaf = requestAnimationFrame(frame);
+  }
+  function endEnding() {
+    if (!endingOn) return;
+    endingOn = false; cancelAnimationFrame(endRaf);
+    try { endAudio.pause(); } catch (e) {}
+    document.getElementById('ending-screen').style.display = 'none';
+    bgmSync();
+    const cb = endCb; endCb = null;
+    if (cb) cb();
+  }
+  document.getElementById('ending-screen').addEventListener('click', (e) => { if (endReady && e.target.id !== 'end-skip') endEnding(); });
+  document.getElementById('end-skip').onclick = (e) => { e.stopPropagation(); endEnding(); };
+
   function closeResult() {
     SFX.beep();
     resultOpen = false;
     document.getElementById('result-screen').style.display = 'none';
     state.pos = 0;
-    state.visited = Array(10).fill(false);
+    state.visited = Array(corridorLen).fill(false);
     state.visited[0] = true;
     state.paused = false;
     holdWalk = true;                     // 通路に戻って一息。前へ進む／W／↑ で再開
@@ -1761,7 +1900,7 @@
       }
     }
 
-    const maxTime = 2600 + termsCount * 1150;
+    const maxTime = Math.round((2600 + termsCount * 1150) * timeScale);
     state.problem = {
       text: eq,
       answer: currentVal,
@@ -2478,13 +2617,28 @@
     bgmSync();
     SFX.start();
     document.getElementById('title-screen').style.display = 'none';
-    resetGame();
+    openDiff();
   };
 
   document.getElementById('btn-retry').onclick = () => {
     SFX.start();
-    resetGame();
+    openDiff();
   };
+  // 難易度の選択
+  function openDiff() {
+    document.querySelectorAll('.diff-btn').forEach((b, i) => { b.querySelector('small').textContent = DIFFS[i].desc; });
+    document.getElementById('diff-screen').style.display = 'flex';
+  }
+  document.querySelectorAll('.diff-btn').forEach(b => {
+    b.onclick = () => {
+      const d = DIFFS[+b.dataset.d];
+      corridorLen = d.len; timeScale = d.time; diffName = d.name;
+      SFX.start();
+      document.getElementById('diff-screen').style.display = 'none';
+      resetGame();
+      addLog(`難易度【${d.name}】廊下${d.len}マス／制限時間×${d.time}`);
+    };
+  });
 
   // 敵をタッチ（クリック）でガード。PCは Space / Enter でも可
   document.getElementById('viewport-wrap').addEventListener('pointerdown', (e) => {

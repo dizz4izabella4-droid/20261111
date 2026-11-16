@@ -624,12 +624,10 @@ PC版の筋立てと仕組み（防御→追跡→反撃、攻撃信号、耐久
 
 ---
 
-## 17. トップの主題歌モード「ABYSS CODE」
+## 17. トップの主題歌モード「ABYSS CODE」（廃止）
 
-- トップ右上のスイッチを入れると、かわいい画面が崩れ落ち、ダークファンタジーのカラオケ画面になる（index.html の中に全部ある。曲は launcher-bgm.mp3）。
-- 歌詞は漢字かな交じりで書く（2026-11-12 に、ひらがなだけの表記から直した）。歌詞は index.html の `SONG` にある。
-- 巻物の紙と木の軸は、計算で作った質感の画像：launcher-scroll.jpg（羊皮紙）、launcher-rod.jpg（木の軸）。作り直すときは `python3 tools/make_scroll_textures.py`（numpy・scipy・Pillow が要る。乱数の種を固定してあるので同じ絵になる）。紙は不透明で、背景の絵は透けない。
-- 紙の上の文字は墨の色（濃い茶）。文字の書体は他の画面と同じ標準の日本語フォントだけを使う。
+- 2026-11-16 に、トップの主題歌スイッチ・崩壊演出・歌詞の巻物を削除した（launcher-scroll.jpg / launcher-rod.jpg / tools/make_scroll_textures.py も削除）。
+- 主題歌（旧 launcher-bgm.mp3）は `anzan-tensei/ending.mp3` に移し、暗算転生のクリア時のエンディング（読めない文字のスタッフロール → fin.）で流す。
 
 ---
 
