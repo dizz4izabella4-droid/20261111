@@ -569,7 +569,6 @@
   .stat-tab { font-family: var(--font); font-size: 0.78rem; padding: 5px 10px; border: 0; border-radius: 999px; cursor: pointer; background: var(--surface-2); color: var(--main); }
   .stat-tab.sel { background: var(--main); color: var(--bg); box-shadow: 0 0 14px var(--glow); }
   .stat-body { display: flex; gap: 12px; align-items: flex-start; }
-  .stat-body canvas { flex: none; width: 150px; height: 217px; border-radius: 12px; background: color-mix(in srgb, var(--main) 4%, var(--bg)); }
   .stat-info { flex: 1; min-width: 0; }
   .sec-label { font-size: 0.64rem; letter-spacing: 0.08em; opacity: 0.7; margin: 0 0 4px; font-weight: bold; }
   .stat-info .sec-label:not(:first-child) { margin-top: 10px; }
@@ -592,7 +591,7 @@
   .skills .sk-name rt { font-size: 0.5rem; font-weight: normal; opacity: 0.75; letter-spacing: 0.02em; }
   .skills .sk-desc { font-size: 0.66rem; opacity: 0.65; }
   .stat-row .b i { display: block; height: 100%; background: var(--main); border-radius: 4px; }
-  @media (max-width: 650px) { .stat-grid { gap: 6px; } .stat-card { padding: 8px 10px; } .stat-head { margin-bottom: 6px; } .stat-body canvas { width: 118px; height: 170px; } .stat-body { gap: 8px; } }
+  @media (max-width: 650px) { .stat-grid { gap: 6px; } .stat-card { padding: 8px 10px; } .stat-head { margin-bottom: 6px; } }
 </style>
 <!--IZ-GAME-BASE:START-->
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -917,6 +916,7 @@
   <div id="status-modal" class="overlay" style="display:none;">
     <div style="font-size:1.2rem; font-weight:bold; margin-bottom:10px;">STATUS</div>
     <div class="stat-tabs" id="stat-tabs"></div>
+    <div style="font-size:0.62rem;opacity:0.55;margin-bottom:6px;">◀ 左右にスワイプ／←→キーで切替 ▶</div>
     <div class="stat-grid" id="stat-grid"></div>
     <button class="menu-btn" id="btn-status-close">[ CLOSE ]</button>
   </div>
@@ -2282,140 +2282,9 @@
     ilum: '長い髪の先が炎のように揺れる。頭上の蝋燭と、片手の燭台が灯りを放つ。'
   };
 
-  // ワイヤーフレームの全身像（線画・輪郭＋断面線）
-  function drawPortrait(cv, id) {
-    const ctx = cv.getContext('2d'), W = cv.width, H = cv.height;
-    const col = (getComputedStyle(document.body).getPropertyValue('--main') || '#33ff66').trim();
-    ctx.clearRect(0, 0, W, H);
-    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    ctx.strokeStyle = col; ctx.fillStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 5; ctx.lineWidth = 1.6;
-    const PI2 = Math.PI * 2;
-    const L = (pts, close, fa) => {
-      ctx.beginPath(); pts.forEach((q, k) => k ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]));
-      if (close) ctx.closePath();
-      if (fa) { ctx.save(); ctx.globalAlpha = fa; ctx.fill(); ctx.restore(); }
-      ctx.stroke();
-    };
-    const Q = (x0, y0, cx, cy, x1, y1) => { ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(cx, cy, x1, y1); ctx.stroke(); };
-    const C = (x, y, r, fa) => { ctx.beginPath(); ctx.arc(x, y, r, 0, PI2); if (fa) { ctx.save(); ctx.globalAlpha = fa; ctx.fill(); ctx.restore(); } ctx.stroke(); };
-    const EL = (x, y, rx, ry, a0, a1, al) => { ctx.save(); ctx.globalAlpha = al == null ? 1 : al; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, a0 || 0, a1 == null ? PI2 : a1); ctx.stroke(); ctx.restore(); };
-    const FLAME = (x, y, s) => { ctx.beginPath(); ctx.moveTo(x, y - 9 * s); ctx.quadraticCurveTo(x + 5 * s, y - 2 * s, x, y + 3 * s); ctx.quadraticCurveTo(x - 5 * s, y - 2 * s, x, y - 9 * s); ctx.stroke(); };
-    const cx = 90;
-    // 足もとの床（ワイヤー）
-    EL(cx, 250, 52, 7, 0, PI2, 0.5); EL(cx, 250, 30, 4, 0, PI2, 0.3);
-
-    const o = {
-      hero: { sh: 26, hemY: 236, hemW: 0, legs: true, eye: 'dot' },
-      lumi: { sh: 24, hemY: 240, hemW: 52, eye: 'tsun' },
-      fers: { sh: 28, hemY: 176, hemW: 34, legs: true, eye: 'tsun' },
-      roza: { sh: 24, hemY: 240, hemW: 46, eye: 'calm' },
-      miri: { sh: 24, hemY: 242, hemW: 40, eye: 'closed' },
-      lyum: { sh: 23, hemY: 178, hemW: 34, legs: true, eye: 'smirk' },
-      ilum: { sh: 24, hemY: 240, hemW: 44, eye: 'calm' }
-    }[id] || { sh: 25, hemY: 236, hemW: 0, legs: true, eye: 'dot' };
-
-    // --- 髪（後ろ側）---
-    if (id === 'lumi') { Q(70, 40, 44, 70, 50, 128, ); Q(110, 40, 136, 70, 130, 128); Q(50, 128, 56, 142, 62, 126); Q(130, 128, 124, 142, 118, 126); }
-    if (id === 'roza') { Q(68, 40, 52, 90, 60, 150); Q(112, 40, 128, 90, 120, 150); C(60, 154, 6); C(120, 154, 6); }
-    if (id === 'miri') { Q(66, 62, 56, 30, 90, 14); Q(114, 62, 124, 30, 90, 14); Q(66, 62, 52, 90, 56, 106); Q(114, 62, 128, 90, 124, 106); }
-    if (id === 'ilum') { Q(68, 42, 50, 100, 62, 168); Q(112, 42, 130, 100, 118, 168); L([[62, 168], [58, 180], [66, 172], [64, 188], [72, 174]], false); L([[118, 168], [122, 180], [114, 172], [116, 188], [108, 174]], false); }
-
-    // --- 胴・腕・スカート／脚 ---
-    const sh = o.sh;
-    L([[cx - 5, 72], [cx - 5, 84]]); L([[cx + 5, 72], [cx + 5, 84]]);                       // 首
-    L([[cx - sh, 90], [cx - 16, 140], [cx + 16, 140], [cx + sh, 90]], false, 0.05);        // 胴
-    L([[cx - sh, 90], [cx - 5, 84]]); L([[cx + sh, 90], [cx + 5, 84]]);                    // 肩
-    EL(cx, 108, 20, 4, 0, Math.PI, 0.35); EL(cx, 124, 17, 3.5, 0, Math.PI, 0.35);          // 胴の断面線
-    if (!o.legs) {                                                                          // 長いスカート
-      L([[cx - 16, 140], [cx - o.hemW, o.hemY]]); L([[cx + 16, 140], [cx + o.hemW, o.hemY]]);
-      EL(cx, o.hemY, o.hemW, 7, 0, Math.PI);
-      [0.3, 0.55, 0.8].forEach(t => { const y = 140 + (o.hemY - 140) * t, w = 16 + (o.hemW - 16) * t; EL(cx, y, w, w * 0.14, 0, Math.PI, 0.35); });
-      L([[cx, 146], [cx, o.hemY + 5]], false);
-      ctx.save(); ctx.globalAlpha = 0.25; ctx.beginPath(); ctx.moveTo(cx, 146); ctx.lineTo(cx, o.hemY + 5); ctx.stroke(); ctx.restore();
-    } else {
-      // 短いスカート or ズボン
-      if (id === 'hero') {
-        L([[cx - 16, 140], [cx - 15, o.hemY]]); L([[cx + 16, 140], [cx + 15, o.hemY]]); L([[cx, 146], [cx, o.hemY]]);
-        EL(cx - 8, o.hemY, 7, 3, 0, PI2); EL(cx + 8, o.hemY, 7, 3, 0, PI2);
-        EL(cx, 176, 16, 3, 0, Math.PI, 0.3); EL(cx, 206, 15, 3, 0, Math.PI, 0.3);
-      } else {
-        L([[cx - 16, 140], [cx - o.hemW, o.hemY]]); L([[cx + 16, 140], [cx + o.hemW, o.hemY]]); EL(cx, o.hemY, o.hemW, 6, 0, Math.PI);
-        EL(cx, 158, 25, 4, 0, Math.PI, 0.35);
-        const lx = 12;                                                                      // 脚
-        L([[cx - lx - 7, o.hemY + 3], [cx - lx - 5, 238]]); L([[cx - lx + 7, o.hemY + 3], [cx - lx + 6, 238]]);
-        L([[cx + lx - 7, o.hemY + 3], [cx + lx - 6, 238]]); L([[cx + lx + 7, o.hemY + 3], [cx + lx + 5, 238]]);
-        L([[cx - lx - 8, 238], [cx - lx - 12, 246], [cx - lx + 9, 246], [cx - lx + 6, 238]]);
-        L([[cx + lx + 8, 238], [cx + lx + 12, 246], [cx + lx - 9, 246], [cx + lx - 6, 238]]);
-        EL(cx - lx, 214, 6.5, 2, 0, Math.PI, 0.3); EL(cx + lx, 214, 6.5, 2, 0, Math.PI, 0.3);
-      }
-    }
-    // 腕（既定は体の横に下ろす。キャラごとに上書き）
-    const armL = (pts) => L(pts), armR = (pts) => L(pts);
-    if (id === 'miri') { armL([[cx - sh, 92], [76, 128], [cx - 1, 138]]); armR([[cx + sh, 92], [104, 128], [cx + 1, 138]]); }
-    else if (id === 'lyum') { armL([[cx - sh, 92], [56, 150], [60, 172]]); armR([[cx + sh, 92], [134, 122], [108, 142]]); }
-    else if (id === 'roza') { armL([[cx - sh, 92], [58, 150], [64, 172]]); armR([[cx + sh, 92], [124, 130], [128, 118]]); }
-    else { armL([[cx - sh, 92], [54, 150], [58, 178]]); armR([[cx + sh, 92], [126, 150], [122, 178]]); }
-
-    // --- 顔 ---
-    C(cx, 52, 22, 0.05);
-    EL(cx, 52, 9, 22, 0, PI2, 0.3); EL(cx, 52, 22, 5, 0, PI2, 0.3);
-    const ey = 54;
-    if (o.eye === 'dot') { C(82, ey, 2, 1); C(98, ey, 2, 1); Q(84, 64, 90, 67, 96, 64); }
-    if (o.eye === 'tsun') { L([[76, ey - 4], [86, ey]]); L([[104, ey - 4], [94, ey]]); C(83, ey + 1, 1.6, 1); C(97, ey + 1, 1.6, 1); L([[85, 65], [95, 65]]); }
-    if (o.eye === 'calm') { Q(76, ey, 82, ey - 4, 88, ey); Q(92, ey, 98, ey - 4, 104, ey); Q(85, 64, 90, 66, 95, 64); }
-    if (o.eye === 'closed') { Q(76, ey - 1, 82, ey + 3, 88, ey - 1); Q(92, ey - 1, 98, ey + 3, 104, ey - 1); L([[87, 65], [93, 65]]); }
-    if (o.eye === 'smirk') { C(82, ey, 2, 1); Q(92, ey, 98, ey - 4, 104, ey); Q(84, 65, 92, 66, 98, 61); }
-
-    // --- 髪（前側）・小物 ---
-    if (id === 'hero') {
-      L([[68, 46], [70, 30], [76, 35], [80, 21], [87, 31], [93, 19], [99, 31], [106, 24], [110, 36], [114, 31], [112, 46]]);
-      L([[cx - 12, 90], [cx, 108], [cx + 12, 90]]); C(cx, 120, 1.8, 1); C(cx, 131, 1.8, 1);
-      L([[36, 166], [58, 166], [58, 192], [36, 192]], true, 0.06); [174, 180, 186].forEach(y => L([[40, y], [54, y]]));   // 計算メモ
-    }
-    if (id === 'lumi') {
-      Q(68, 44, 90, 22, 112, 44); Q(76, 40, 84, 34, 90, 40); Q(90, 40, 100, 34, 106, 40);
-      EL(cx, 18, 26, 6); EL(cx, 18, 20, 4.2, 0, PI2, 0.6);                                   // 光輪
-      L([[cx, 88], [cx - 12, 82], [cx - 12, 94]], true, 0.15); L([[cx, 88], [cx + 12, 82], [cx + 12, 94]], true, 0.15);   // リボン
-      for (let k = 0; k < 5; k++) { const a = Math.PI * (1.12 + k * 0.19); L([[122, 178], [122 + 30 * Math.cos(a + 0.35), 178 + 30 * Math.sin(a + 0.35)]]); }   // 扇
-      Q(122, 148, 138, 146, 152, 160);
-    }
-    if (id === 'fers') {
-      Q(68, 46, 70, 22, 90, 24); Q(90, 24, 110, 22, 112, 46); L([[72, 40], [80, 32], [86, 42]]); L([[108, 40], [100, 32], [94, 42]]);
-      Q(74, 32, 62, 22, 66, 12); Q(106, 32, 118, 22, 114, 12);                               // 二本角
-      EL(62, 92, 13, 8, 0, PI2, 1); EL(118, 92, 13, 8, 0, PI2, 1);                           // 肩当て
-      L([[cx - 12, 96], [cx, 112], [cx + 12, 96]]);
-      C(40, 166, 30, 0.05); C(40, 166, 20); C(40, 166, 7); L([[40, 136], [40, 196]]); L([[10, 166], [70, 166]]);   // 大盾
-    }
-    if (id === 'roza') {
-      Q(68, 46, 90, 18, 112, 46); Q(70, 42, 84, 36, 92, 44); Q(90, 44, 100, 36, 110, 42);
-      C(cx, 108, 8, 0.1); Q(cx - 5, 108, cx, 102, cx + 5, 108); Q(cx + 4, 110, cx, 114, cx - 4, 110);   // 胸の薔薇
-      L([[cx + 8, 112], [cx + 14, 126], [cx + 6, 126]]);
-      L([[66, 160], [72, 172], [64, 178], [74, 190], [66, 198], [76, 210], [70, 220], [78, 232]]);    // 茨
-      L([[132, 112], [124, 238]]); L([[133, 122], [147, 150], [145, 154], [130, 130]], true, 0.08); L([[129, 100], [135, 100], [134, 112], [130, 112]], true, 0.08);   // 銃
-    }
-    if (id === 'miri') {
-      Q(64, 64, 62, 28, 90, 14); Q(116, 64, 118, 28, 90, 14); Q(72, 48, 90, 36, 108, 48);
-      for (let k = 0; k < 6; k++) C(cx + 1, 144 + k * 11, 2.6);                              // 数珠
-      L([[cx - 5, 206], [cx + 5, 206], [cx, 216]], true, 0.2);
-      // 迷い星
-      const sx = 140, sy = 40; L([0, 1, 2, 3, 4].map(k => { const a = -Math.PI / 2 + k * Math.PI * 4 / 5; return [sx + 11 * Math.cos(a), sy + 11 * Math.sin(a)]; }).concat([[sx, sy - 11]]), false);
-    }
-    if (id === 'lyum') {
-      Q(66, 50, 68, 20, 90, 22); Q(90, 22, 112, 20, 114, 50); L([[66, 50], [64, 66], [76, 66]]); L([[114, 50], [116, 66], [104, 66]]); Q(70, 40, 90, 34, 110, 40);
-      Q(108, 30, 120, 36, 108, 46); Q(108, 30, 112, 36, 108, 46);                            // 三日月の髪飾り
-      Q(138, 40, 152, 56, 136, 70); Q(138, 40, 144, 56, 136, 70);                            // 浮かぶ月
-    }
-    if (id === 'ilum') {
-      Q(68, 46, 90, 18, 112, 46); Q(70, 42, 84, 36, 92, 44); Q(90, 44, 100, 36, 110, 42);
-      [[76, 24], [90, 18], [104, 24]].forEach(q => { L([[q[0] - 3, q[1] + 8], [q[0] + 3, q[1] + 8], [q[0] + 3, q[1]], [q[0] - 3, q[1]]], true, 0.12); FLAME(q[0], q[1] - 2, 0.8); });   // 頭上の蝋燭
-      L([[136, 152], [136, 232]]); EL(136, 234, 12, 4); L([[124, 150], [124, 142]]); L([[148, 150], [148, 142]]); L([[136, 146], [136, 140]]);
-      Q(124, 150, 136, 158, 148, 150); [124, 136, 148].forEach(x => FLAME(x, 134, 0.9));   // 燭台
-    }
-  }
-
   let statIdx = 0;
   function renderStatus() {
-    const list = state.party.filter(Boolean);
+    const list = state.party.filter(Boolean).sort((a, b) => (b.isHero ? 1 : 0) - (a.isHero ? 1 : 0));   // 主人公を先頭
     if (statIdx >= list.length) statIdx = 0;
     const tabs = document.getElementById('stat-tabs');
     tabs.innerHTML = '';
@@ -2443,16 +2312,16 @@
     const card = document.createElement('div');
     card.className = 'stat-card';
     card.innerHTML = `<div class="stat-head"><span>${name}</span><small>${sub}</small></div>` +
-      `<div class="stat-body"><canvas width="180" height="260"></canvas><div class="stat-info">` +
+      `<div class="stat-body"><div class="stat-info">` +
       `<div class="sec-label">APPEARANCE（容姿）</div><p class="appearance">${APPEARANCE[m.isHero ? 'hero' : m.id] || ''}</p>` +
       `<div class="sec-label">STATUS（ステータス）</div><div class="stat-row">${rows}</div></div></div>${skills}`;
     grid.appendChild(card);
-    drawPortrait(card.querySelector('canvas'), m.isHero ? 'hero' : m.id);
   }
   function openStatus() {
     if (state.mode === 'TITLE' || state.mode === 'GAMEOVER' || state.mode === 'DEATH' || resultOpen) return;
     SFX.beep();
     state.paused = true;
+    statIdx = 0;   // 開くたびに主人公から
     renderStatus();
     document.getElementById('status-modal').style.display = 'flex';
   }
@@ -2465,6 +2334,21 @@
   document.getElementById('btn-status').onclick = openStatus;
   document.getElementById('btn-status-pad').onclick = openStatus; // 戦闘後などの停止中に、大きいボタンから開ける
   document.getElementById('btn-status-close').onclick = closeStatus;
+  // スマホ：左右スワイプで次／前のキャラへ（PCは←→キー）
+  function statStep(d) {
+    const n = state.party.filter(Boolean).length;
+    statIdx = (statIdx + d + n) % n;
+    SFX.beep(); renderStatus();
+  }
+  (() => {
+    const el = document.getElementById('status-modal');
+    let sx = 0, sy = 0;
+    el.addEventListener('touchstart', (e) => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+    el.addEventListener('touchend', (e) => {
+      const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) statStep(dx < 0 ? 1 : -1);
+    }, { passive: true });
+  })();
 
   document.getElementById('btn-theme').onclick = (e) => {
     document.body.classList.toggle('theme-amber');
@@ -2501,6 +2385,10 @@
     else if (e.code === 'NumpadEnter') key = 'Enter';
     if (state.paused) {
       if (key === 'Escape') { e.preventDefault(); closeStatus(); }
+      else if (document.getElementById('status-modal').style.display !== 'none') {
+        if (key === 'ArrowRight') { e.preventDefault(); statStep(1); }
+        else if (key === 'ArrowLeft') { e.preventDefault(); statStep(-1); }
+      }
       return;
     }
     if (state.mode === 'EXPLORE') {
