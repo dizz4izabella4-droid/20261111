@@ -1017,6 +1017,7 @@
     <button class="menu-btn diff-btn" data-d="1">中辛<small></small></button>
     <button class="menu-btn diff-btn" data-d="2">辛口<small></small></button>
     <button class="menu-btn diff-btn death" data-d="3">デス<small></small></button>
+    <button class="menu-btn diff-btn" data-d="4">電卓<small></small></button>
   </div>
 </div>
 
@@ -1428,9 +1429,10 @@
     { name: '甘口', len: 6,  time: 1.5, desc: '廊下 6マス ／ 制限時間 ×1.5' },
     { name: '中辛', len: 10, time: 1.0, desc: '廊下 10マス ／ 制限時間 ×1.0' },
     { name: '辛口', len: 14, time: 0.8, desc: '廊下 14マス ／ 制限時間 ×0.8' },
-    { name: 'デス', len: 20, time: 0.6, desc: '廊下 20マス ／ 制限時間 ×0.6' }
+    { name: 'デス', len: 20, time: 0.6, desc: '廊下 20マス ／ 制限時間 ×0.6' },
+    { name: '電卓', len: 10, time: 0.8, calc: true, desc: '廊下 10マス ／ 4〜5桁の四則演算 ／ 制限時間 ×0.8' }
   ];
-  let corridorLen = 10, timeScale = 1, diffName = '中辛';
+  let corridorLen = 10, timeScale = 1, diffName = '中辛', calcMode = false;
 
   // === ゲーム状態 ===
   let state = {
@@ -1939,7 +1941,23 @@
       }
     }
 
-    const maxTime = Math.round((2600 + termsCount * 1150) * timeScale);
+    if (calcMode) {
+      // 電卓：4〜5桁同士の四則演算（答えは常に0以上の整数）
+      const R = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
+      const op = ['+', '-', '×', '÷'][R(0, 3)];
+      let a, b;
+      if (op === '÷') {
+        b = R(1000, 9999);
+        const q = R(2, Math.floor(99999 / b));
+        a = b * q; currentVal = q;
+      } else {
+        a = R(1000, 99999); b = R(1000, 99999);
+        if (op === '-' && a < b) { const t = a; a = b; b = t; }
+        currentVal = op === '+' ? a + b : op === '-' ? a - b : a * b;
+      }
+      eq = `${a} ${op} ${b}`;
+    }
+    const maxTime = Math.round((2600 + (calcMode ? 2 : termsCount) * 1150) * timeScale);
     state.problem = {
       text: eq,
       answer: currentVal,
@@ -1961,7 +1979,7 @@
     } else if (key === 'BS') {
       state.problem.input = state.problem.input.slice(0, -1);
     } else {
-      if (state.problem.input.length < 3) {
+      if (state.problem.input.length < (calcMode ? 10 : 3)) {
         state.problem.input += key;
       }
     }
@@ -2697,7 +2715,7 @@
   document.querySelectorAll('.diff-btn').forEach(b => {
     b.onclick = () => {
       const d = DIFFS[+b.dataset.d];
-      corridorLen = d.len; timeScale = d.time; diffName = d.name;
+      corridorLen = d.len; timeScale = d.time; diffName = d.name; calcMode = !!d.calc;
       SFX.start();
       document.getElementById('diff-screen').style.display = 'none';
       resetGame();
