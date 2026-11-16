@@ -333,17 +333,23 @@
     background: rgba(0, 0, 0, 0.4);
   }
 
-  /* メッセージは敵の右側（廊下画面の右下）に重ねて表示。タップは素通し（ガードを邪魔しない） */
+  /* 廊下画面（左・約3）とメッセージウィンドウ（右いっぱい・約2）の左右分割 */
+  #viewport-wrap { flex-direction: row; }
+  #dungeon { position: relative; flex: 3 1 0; min-width: 0; display: flex; flex-direction: column; }
+  #dungeon canvas#view { flex: 1; min-height: 0; height: auto; }
   #viewport-wrap #log-box {
-    position: absolute; right: 6px; bottom: 8px; top: auto; left: auto;
-    width: 38%; min-width: 120px; max-width: 220px; height: auto; max-height: 52%;
+    flex: 2 1 0; min-width: 0; height: auto; max-height: none; width: auto;
     display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden;
-    padding: 6px 8px; border: 0; border-radius: 10px;
-    font-size: 0.7rem; line-height: 1.35; background: rgba(0, 0, 0, 0.62);
-    pointer-events: none; z-index: 6; text-align: left;
+    padding: 8px 10px; border: 0; border-left: 1px solid var(--dim); border-radius: 0;
+    font-size: 0.8rem; line-height: 1.4; background: rgba(0, 0, 0, 0.45);
+    text-align: left;
   }
   #viewport-wrap #log-box div { flex: none; opacity: 0.55; }
   #viewport-wrap #log-box div:last-child { opacity: 1; }
+  #dungeon #enemy-hud { gap: 4px; align-items: center; font-size: 0.7rem; padding: 3px 6px; }
+  #dungeon #enemy-hud span { white-space: nowrap; }
+  #dungeon #enemy-hud #enemy-hp { flex: 1 1 0; min-width: 24px; }
+  @media (max-width: 650px) { #viewport-wrap #log-box { font-size: 0.68rem; padding: 4px 6px; line-height: 1.3; } }
   /* スマホで引っ張って更新（リロード＝タイトルに戻る）されないようにする */
   html, body { overscroll-behavior: none; }
   .overlay { overscroll-behavior: contain; }
@@ -836,12 +842,14 @@
 
   <main>
     <div id="viewport-wrap">
+      <div id="dungeon">
       <div id="enemy-hud">
         <span id="enemy-name">ENEMY</span>
         <span id="enemy-type">[地上]</span>
         <span id="enemy-hp" title="HP"><i id="enemy-hp-fill"></i></span>
       </div>
       <canvas id="view" width="480" height="320"></canvas>
+      </div>
       <div id="log-box"></div>
     </div>
 
