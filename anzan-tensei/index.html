@@ -1102,11 +1102,12 @@
   <div id="diff-screen" class="overlay" style="display:none;">
     <div class="title-logo" style="font-size:1.5rem;">難易度を選んでください</div>
     <div class="title-sub" style="margin-bottom:10px;">廊下の長さ と 制限時間 が変わります</div>
-    <button class="menu-btn diff-btn" data-d="0">甘口<small></small></button>
-    <button class="menu-btn diff-btn" data-d="1">中辛<small></small></button>
-    <button class="menu-btn diff-btn" data-d="2">辛口<small></small></button>
-    <button class="menu-btn diff-btn death" data-d="3">デス<small></small></button>
-    <button class="menu-btn diff-btn" data-d="4">電卓<small></small></button>
+    <button class="menu-btn diff-btn" data-d="0">激甘<small></small></button>
+    <button class="menu-btn diff-btn" data-d="1">甘口<small></small></button>
+    <button class="menu-btn diff-btn" data-d="2">中辛<small></small></button>
+    <button class="menu-btn diff-btn" data-d="3">辛口<small></small></button>
+    <button class="menu-btn diff-btn death" data-d="4">デス<small></small></button>
+    <button class="menu-btn diff-btn" data-d="5">電卓<small></small></button>
   </div>
 </div>
 
@@ -1578,13 +1579,14 @@
   // === 難易度（開始時に選ぶ）：廊下の長さ（クリアまでの歩数）と制限時間の倍率 ===
   const ALL_IDS = ['lumi', 'fers', 'roza', 'miri', 'lyum', 'sylph', 'nerei', 'volta'];
   const DIFFS = [
+    { name: '激甘', len: 4,  time: 2.0, easy: true, roster: ['lumi', 'fers'], desc: '廊下 4マス ／ 一桁＋一桁・計算は1回だけ ／ 制限時間 ×2.0 ／ 仲間の女神 2人' },
     { name: '甘口', len: 6,  time: 1.5, roster: ['lumi', 'fers'], desc: '廊下 6マス ／ 制限時間 ×1.5 ／ 仲間の女神 2人' },
     { name: '中辛', len: 10, time: 1.0, roster: ALL_IDS.slice(0, 5), desc: '廊下 10マス ／ 制限時間 ×1.0 ／ 仲間の女神 5人' },
     { name: '辛口', len: 14, time: 0.8, roster: ALL_IDS.slice(), desc: '廊下 14マス ／ 制限時間 ×0.8 ／ 仲間の女神 8人' },
     { name: 'デス', len: 14, time: 0.8, roster: [], solo: true, desc: '廊下 14マス ／ 制限時間 ×0.8 ／ 女神なしのソロ ／ HP1・復活3回' },
     { name: '電卓', len: 10, time: 0.8, calc: true, roster: ALL_IDS.slice(0, 5), desc: '廊下 10マス ／ 4〜5桁の四則演算 ／ 制限時間 ×0.8 ／ 仲間の女神 5人' }
   ];
-  let roster = ALL_IDS.slice(0, 5), soloMode = false;   // 仲間になっている女神（召喚できる顔ぶれ）／デス（ソロ）
+  let roster = ALL_IDS.slice(0, 5), soloMode = false, easyMode = false;   // 仲間になっている女神（召喚できる顔ぶれ）／デス（ソロ）
   let corridorLen = 10, timeScale = 1, diffName = '中辛', calcMode = false;
 
   // === ゲーム状態 ===
@@ -1865,6 +1867,19 @@
     else { loadRec().inv.potions++; state.potions++; gain = 'ポーションを手に入れた'; }
     saveRec();
     addLog(gain + '。');
+    // クリアごとに、新しい女神がひとり仲間に加わる（持ち越し）
+    const inv2 = loadRec().inv;
+    const newG = ALL_IDS.find(id => !inv2.joined.includes(id) && (soloMode || !roster.includes(id)));
+    let joinTxt = '仲間の女神は、全員そろっている';
+    if (newG) {
+      inv2.joined.push(newG);
+      const gd = GODDESS_POOL.find(x => x.id === newG);
+      if (!soloMode) roster.push(newG);
+      joinTxt = `新たな女神「${gd.name}」が仲間に加わった！` + (soloMode ? '（デスでは同行しない）' : '（召喚画面から呼べる）');
+      addLog(joinTxt);
+      addLog(`${gd.name}「${pickLine(SUMMON_LINES[newG])}」`);
+    }
+    saveRec();
     const totalNo = recordClear();
     state.hero.hp = state.hero.maxHp;
     state.party.forEach(m => { if (m && !m.isHero) { m.hp = m.maxHp; m.hit1 = false; } });
@@ -1875,7 +1890,7 @@
     resultOpen = true;
     state.paused = true;
     document.getElementById('result-stats').innerHTML =
-      `難易度: ${diffName}<br>踏破 ${state.clears} 回目<br>到達LV: ${state.hero.lv}<br>歩数: ${state.steps}歩<br>撃破: ${state.kills || 0}体<br>HP 全回復<br>周回: 今回 ${state.clears} 周目 ／ 通算 ${totalNo} 周<br>称号: ${titleOf(totalNo)}<br>入手: ${gain}`;
+      `難易度: ${diffName}<br>踏破 ${state.clears} 回目<br>到達LV: ${state.hero.lv}<br>歩数: ${state.steps}歩<br>撃破: ${state.kills || 0}体<br>HP 全回復<br>周回: 今回 ${state.clears} 周目 ／ 通算 ${totalNo} 周<br>称号: ${titleOf(totalNo)}<br>入手: ${gain}<br>仲間: ${joinTxt}`;
     // 先にエンディング（スタッフロール → fin.）。終わったらリザルトを出す
     setTimeout(() => startEnding(() => { document.getElementById('result-screen').style.display = 'flex'; }), 900);
   }
@@ -2162,7 +2177,7 @@
   function generateProblem() {
     state.guard = null;
     // レベルごとに項数を増やす (Lv1: 2項, Lv2: 3項, Lv3: 4項...)
-    const termsCount = Math.min(6, state.hero.lv + 1);
+    const termsCount = easyMode ? 2 : Math.min(6, state.hero.lv + 1);   // 激甘：一桁と一桁、計算は1回だけ
     let currentVal = Math.floor(Math.random() * 9) + 1;
     let eq = `${currentVal}`;
 
@@ -2524,7 +2539,7 @@
       state.hero.exp -= state.hero.nextExp;
       state.hero.nextExp = Math.round(state.hero.nextExp * 1.45);
       state.hero.atk += 2;
-      addLog(`LEVEL UP！ Lv.${state.hero.lv} になった！ 計算の項数が増加する！`);
+      addLog(`LEVEL UP！ Lv.${state.hero.lv} になった！${easyMode ? '' : ' 計算の項数が増加する！'}`);
       spoke = true;
       setTimeout(() => say('lvup', 1), 1100);   // 勝利後のセリフだけ、静けさの中でゆっくり
     }
@@ -3164,7 +3179,8 @@
     b.onclick = () => {
       const d = DIFFS[+b.dataset.d];
       corridorLen = d.len; timeScale = d.time; diffName = d.name; calcMode = !!d.calc;
-      roster = d.roster.slice(); soloMode = !!d.solo;
+      soloMode = !!d.solo; easyMode = !!d.easy;
+      roster = soloMode ? [] : ALL_IDS.filter(id => d.roster.includes(id) || loadRec().inv.joined.includes(id));   // 難易度の初期メンバー＋クリアで仲間入りした女神
       SFX.start();
       document.getElementById('diff-screen').style.display = 'none';
       resetGame();
@@ -3352,8 +3368,8 @@
   let memRec = null;
   function loadRec() {
     if (memRec) return memRec;
-    try { const r = JSON.parse(localStorage.getItem(REC_KEY)); if (r && r.laps && r.tot) { r.inv = r.inv || { equip: [], broken: {}, potions: 0 }; memRec = r; return r; } } catch (e) {}
-    memRec = { laps: [], tot: { clears: 0, kills: 0, steps: 0, bestLv: 0, byDiff: {} }, inv: { equip: [], broken: {}, potions: 0 } };
+    try { const r = JSON.parse(localStorage.getItem(REC_KEY)); if (r && r.laps && r.tot) { r.inv = r.inv || { equip: [], broken: {}, potions: 0 }; r.inv.joined = r.inv.joined || []; memRec = r; return r; } } catch (e) {}
+    memRec = { laps: [], tot: { clears: 0, kills: 0, steps: 0, bestLv: 0, byDiff: {} }, inv: { equip: [], broken: {}, potions: 0, joined: [] } };
     return memRec;
   }
   function saveRec() { try { localStorage.setItem(REC_KEY, JSON.stringify(memRec)); } catch (e) {} }
