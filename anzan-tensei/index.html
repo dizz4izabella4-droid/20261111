@@ -1487,7 +1487,7 @@
   }
   setInterval(() => {
     if (document.hidden || state.paused || state.resultOpen) return;
-    if (state.mode !== 'EXPLORE' && state.mode !== 'BATTLE') return;
+    if (state.mode !== 'BATTLE') return;   // 流れるのは戦闘中だけ。勝利後は静まる
     const burst = 1 + (Math.random() < 0.5 ? 1 : 0);
     for (let i = 0; i < burst; i++) {
       const p = document.createElement('div'); p.textContent = chatLine(); pushLog(p);
@@ -2210,9 +2210,10 @@
       state.hero.hp = state.hero.maxHp;
       state.hero.atk += 2;
       addLog(`LEVEL UP！ Lv.${state.hero.lv} になった！ 計算の項数が増加する！`);
-      spoke = say('lvup', 0.95);
+      spoke = true;
+      setTimeout(() => say('lvup', 1), 1100);   // 勝利後のセリフだけ、静けさの中でゆっくり
     }
-    if (!spoke) say('win', 0.8);
+    if (!spoke) setTimeout(() => say('win', 1), 1100);
 
     state.guard = null;
     state.enemy = null;
