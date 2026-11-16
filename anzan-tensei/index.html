@@ -1694,9 +1694,11 @@
     state.moonPhase = 0;
     state.hero = soloMode ? { name: '主人公', lv: 1, hp: 1, maxHp: 1, atk: 6, exp: 0, nextExp: 15 }   // デス：死神の祝福で最大HPも1
       : { name: '主人公', lv: 1, hp: 2, maxHp: 6, atk: 6, exp: 0, nextExp: 15 };   // 最大HP6・開始時2。女神を召喚しないと一撃で死ぬ
-    state.potions = soloMode ? 1 : 0;
+    const inv = loadRec().inv;   // 装備とポーションは、やり直しても持ち越す（ブラウザに保存）
+    state.soloPot = soloMode ? 1 : 0;
+    state.potions = inv.potions + state.soloPot;
     state.revives = soloMode ? 3 : 0;
-    state.equip = []; state.broken = {};
+    state.equip = inv.equip; state.broken = inv.broken;
     state.saved = {};    // 外した女神の残りHPの記録（外して呼び直しての全回復を防ぐ）
     state.party = initialParty();
     state.lastFormation = state.party.map(m => !m ? null : m.isHero ? { isHero: true } : { goddessId: m.id });
@@ -1857,10 +1859,11 @@
   function showResult() {
     SFX.clear();
     state.clears = (state.clears || 0) + 1;
-    state.broken = {};   // 霊水で装備も修復
     let gain;
-    if (state.clears <= EQUIP.length) { const e = EQUIP[state.clears - 1]; state.equip.push(e.id); gain = `装備「${e.name}」を手に入れた`; }
-    else { state.potions = (state.potions || 0) + 1; gain = 'ポーションを手に入れた'; }
+    const nextEq = EQUIP.find(e => !state.equip.includes(e.id));
+    if (nextEq) { state.equip.push(nextEq.id); gain = `装備「${nextEq.name}」を手に入れた`; }
+    else { loadRec().inv.potions++; state.potions++; gain = 'ポーションを手に入れた'; }
+    saveRec();
     addLog(gain + '。');
     const totalNo = recordClear();
     state.hero.hp = state.hero.maxHp;
@@ -1872,7 +1875,7 @@
     resultOpen = true;
     state.paused = true;
     document.getElementById('result-stats').innerHTML =
-      `難易度: ${diffName}<br>踏破 ${state.clears} 回目<br>到達LV: ${state.hero.lv}<br>歩数: ${state.steps}歩<br>撃破: ${state.kills || 0}体<br>HP 全回復<br>周回: 今回 ${state.clears} 周目 ／ 通算 ${totalNo} 周<br>入手: ${gain}`;
+      `難易度: ${diffName}<br>踏破 ${state.clears} 回目<br>到達LV: ${state.hero.lv}<br>歩数: ${state.steps}歩<br>撃破: ${state.kills || 0}体<br>HP 全回復<br>周回: 今回 ${state.clears} 周目 ／ 通算 ${totalNo} 周<br>称号: ${titleOf(totalNo)}<br>入手: ${gain}`;
     // 先にエンディング（スタッフロール → fin.）。終わったらリザルトを出す
     setTimeout(() => startEnding(() => { document.getElementById('result-screen').style.display = 'flex'; }), 900);
   }
@@ -2327,7 +2330,7 @@
 
     const guard = target.isHero ? (state.equip || []).find(id => !state.broken[id]) : null;
     if (guard) {
-      state.broken[guard] = true;
+      state.broken[guard] = true; saveRec();
       const nm = EQUIP.find(e => e.id === guard).name;
       addLog(`${state.enemy.name}の攻撃！ ……装備（${nm}）が砕け、ダメージを防いだ！`);
     } else if (target.isHero) {
@@ -3349,8 +3352,8 @@
   let memRec = null;
   function loadRec() {
     if (memRec) return memRec;
-    try { const r = JSON.parse(localStorage.getItem(REC_KEY)); if (r && r.laps && r.tot) { memRec = r; return r; } } catch (e) {}
-    memRec = { laps: [], tot: { clears: 0, kills: 0, steps: 0, bestLv: 0, byDiff: {} } };
+    try { const r = JSON.parse(localStorage.getItem(REC_KEY)); if (r && r.laps && r.tot) { r.inv = r.inv || { equip: [], broken: {}, potions: 0 }; memRec = r; return r; } } catch (e) {}
+    memRec = { laps: [], tot: { clears: 0, kills: 0, steps: 0, bestLv: 0, byDiff: {} }, inv: { equip: [], broken: {}, potions: 0 } };
     return memRec;
   }
   function saveRec() { try { localStorage.setItem(REC_KEY, JSON.stringify(memRec)); } catch (e) {} }
@@ -3365,6 +3368,8 @@
     return r.tot.clears;
   }
   function fmtT(t) { const d = new Date(t); const z = n => String(n).padStart(2, '0'); return `${d.getMonth() + 1}/${d.getDate()} ${z(d.getHours())}:${z(d.getMinutes())}`; }
+  const TITLES = [[0, '迷い込んだ少年'], [1, '旧校舎の生還者'], [3, '廊下の常連'], [5, '見習い暗算魔術師'], [10, '電卓いらずの男'], [20, '旧校舎の主'], [30, '女神たちの保護者'], [50, '暗算転生者']];
+  function titleOf(n) { let t = TITLES[0][1]; TITLES.forEach(x => { if (n >= x[0]) t = x[1]; }); return t; }
   let recTab = 0;
   function renderRecord() {
     const r = loadRec();
@@ -3382,7 +3387,7 @@
       const now = new Date(); const wk = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7)).getTime();
       const dayS = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
       const wkN = r.laps.filter(l => l.t >= wk).length, dayN = r.laps.filter(l => l.t >= dayS).length;
-      const rows = [['通算クリア（周回）', r.tot.clears + ' 周'], ['今週のクリア', wkN + ' 周'], ['今日のクリア', dayN + ' 周'],
+      const rows = [['称号', titleOf(r.tot.clears)], ['通算クリア（周回）', r.tot.clears + ' 周'], ['今週のクリア', wkN + ' 周'], ['今日のクリア', dayN + ' 周'],
         ['総撃破数', r.tot.kills + ' 体'], ['総歩数', r.tot.steps + ' 歩'], ['最高Lv', 'Lv.' + r.tot.bestLv]]
         .concat(Object.keys(r.tot.byDiff).map(k => ['難易度【' + k + '】', r.tot.byDiff[k] + ' 周']));
       body.innerHTML = '<div class="tot">' + rows.map(x => `<span>${x[0]}</span><b>${x[1]}</b>`).join('') + '</div>';
@@ -3398,7 +3403,7 @@
     document.getElementById('equip-fig').innerHTML = svg;
     const broken = got.filter(id => (state.broken || {})[id]).length;
     document.getElementById('equip-note').textContent = got.length
-      ? `装備 ${got.length} / ${EQUIP.length}　　防げる回数 ${got.length - broken}${broken ? '（破損 ' + broken + '：霊水で修復）' : ''}`
+      ? `装備 ${got.length} / ${EQUIP.length}　　防げる回数 ${got.length - broken}${broken ? '（破損 ' + broken + '：直せない）' : ''}`
       : 'まだ何も身につけていない。クリアするたびに、ひとつ増える。';
   }
   function EQUIP_SVG(got) {
@@ -3448,7 +3453,8 @@
   }
   function usePotion() {
     if ((state.potions || 0) <= 0) return;
-    state.potions--;
+    if (state.soloPot > 0) state.soloPot--; else loadRec().inv.potions--;
+    state.potions--; saveRec();
     SFX.summon();
     state.hero.hp = state.hero.maxHp;
     addLog(`ポーションを使った。HPが全回復した！（${state.hero.hp}/${state.hero.maxHp}）`);
