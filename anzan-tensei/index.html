@@ -1359,7 +1359,7 @@
 
   // 表示用ステータス（ゲーム内の計算には使わない・意味なし）
   const STAT_KEYS = ['STR', 'VIT', 'AGI', 'INT', 'LUK'];
-  const HERO_STATS = [12, 7, 11, Infinity, 39];   // INTは無限大
+  const HERO_STATS = [12, 1, 11, Infinity, 130];   // INTは無限大
   const GODDESS_STATS = {
     lumi: [6, 7, 13, 17, 15],
     fers: [18, 16, 12, 5, 8],
@@ -2784,7 +2784,9 @@
       ? '<div class="skills-wrap"><div class="sec-label">SKILL（スキル）</div><ul class="skills">' + GODDESS_SKILLS[m.id].map(k =>
           `<li><span class="sk-name"><ruby>${k[0]}<rt>${k[1]}</rt></ruby></span><span class="sk-desc">${k[2]}</span></li>`
         ).join('') + '</ul></div>'
-      : '<div class="skills-wrap"><div class="sec-label">SKILL（スキル）</div><div class="sk-desc" style="font-size:0.7rem;opacity:0.65;">なし</div></div>';
+      : (m.isHero
+        ? '<div class="skills-wrap"><div class="sec-label">SKILL（スキル）</div><ul class="skills"><li><span class="sk-name">あきらめない</span></li></ul></div>'
+        : '<div class="skills-wrap"><div class="sec-label">SKILL（スキル）</div><div class="sk-desc" style="font-size:0.7rem;opacity:0.65;">なし</div></div>');
     const card = document.createElement('div');
     card.className = 'stat-card';
     card.innerHTML = `<div class="stat-head"><span>${name}</span><small>${sub}</small></div>` +
