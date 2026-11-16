@@ -553,6 +553,15 @@
   .member-card { background: var(--surface-2); }
   .member-card.active { border-color: transparent; background: color-mix(in srgb, var(--main) 30%, var(--bg)); box-shadow: 0 0 14px var(--glow); }
   .member-card.dead { border-style: solid; opacity: 0.35; }
+  /* 死神の加護（呪われた枠）：演出だけで意味はない */
+  .member-card.active.cursed { position: relative; border-color: #b01040; color: #ffd0e6; overflow: visible; animation: curseAura 2.2s ease-in-out infinite, curseFlick 3.1s steps(1) infinite; }
+  .member-card.cursed::before { content: ''; position: absolute; left: -3px; right: -3px; top: -3px; bottom: -3px; border-radius: inherit; pointer-events: none; background: repeating-linear-gradient(100deg, rgba(160,0,60,0) 0 6px, rgba(160,0,60,0.35) 7px 9px); mix-blend-mode: screen; animation: curseWave 1.6s linear infinite; }
+  .member-card.cursed::after { content: ''; position: absolute; left: 12%; right: 12%; bottom: -9px; height: 9px; pointer-events: none; background: radial-gradient(ellipse at 20% 0, #6a0030 0 3px, transparent 4px), radial-gradient(ellipse at 55% 0, #6a0030 0 4px, transparent 5px), radial-gradient(ellipse at 85% 0, #6a0030 0 3px, transparent 4px); animation: curseDrip 1.9s ease-in infinite; }
+  @keyframes curseAura { 0%, 100% { box-shadow: 0 0 6px rgba(150,0,70,0.7), 0 0 14px rgba(90,0,150,0.5); } 50% { box-shadow: 0 0 14px rgba(220,0,90,0.9), 0 0 28px rgba(110,0,190,0.75), inset 0 0 10px rgba(120,0,60,0.6); } }
+  @keyframes curseFlick { 0%, 100% { filter: none; } 92% { filter: brightness(0.5) hue-rotate(-20deg); } 94% { filter: brightness(1.4); } 96% { filter: none; } }
+  @keyframes curseWave { from { background-position: 0 0; } to { background-position: 30px 0; } }
+  @keyframes curseDrip { 0% { transform: translateY(-4px) scaleY(0.4); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(14px) scaleY(1.6); opacity: 0; } }
+  #death-text.bless { font-size: clamp(1.5rem, 8vw, 3rem); letter-spacing: 0.15em; color: #d9b3ff; text-shadow: 0 0 18px rgba(170,60,255,0.7), 0 2px 0 #20003a; }
   #timer-bar-bg { border-radius: 999px; background: var(--surface-2); overflow: hidden; }
   #timer-bar { border-radius: 999px; }
   #problem-display { border-bottom: 0; background: var(--surface); border-radius: 14px; }
@@ -1559,6 +1568,7 @@
         card.innerHTML = `<span style="opacity:0.4;">[EMPTY]</span><span>--/--</span>`;
       } else if (member.isHero) {
         card.classList.add('active');
+        if (state.cursed) card.classList.add('cursed');
         card.innerHTML = `<span>${state.hero.name}</span><span>${state.hero.hp}/${state.hero.maxHp}</span>`;
       } else {
         if (member.hp <= 0) {
@@ -2054,21 +2064,21 @@
 
   // === 後ろへ戻る → 死神に斬られてゲームオーバー ===
   let deathTimers = [];
-  function startDeath() {
+  function startDeath(blessing) {
     state.mode = 'DEATH';
     state.deathAt = performance.now();
     clearTimeout(walkTimer);
     switchPad('NONE');
     updateUI();
-    addLog('後ろを振り返った。——そこに、死神がいた。');
-    say('back', 0.9);
+    if (blessing) addLog('背後に、死神が立っていた……。');
+    else { addLog('後ろを振り返った。——そこに、死神がいた。'); say('back', 0.9); }
     SFX.encounter();
     const T = (fn, ms) => deathTimers.push(setTimeout(fn, ms));
     // 0.8秒：斬撃
     T(() => {
       SFX.hit(); SFX.sword(1); SFX.sword(2);
       triggerShake();
-      addLog('死神の鎌が、あなたを切り裂いた。');
+      addLog(blessing ? '死神の鎌が、あなたを切り裂いた——だが、血は流れなかった。' : '死神の鎌が、あなたを切り裂いた。');
     }, 800);
     // 1.0秒：Death の文字と、画面上から滴る血
     T(() => {
@@ -2091,6 +2101,29 @@
       void ds.offsetWidth;
       ds.classList.add('go');
     }, 1000);
+    if (blessing) {
+      // デス：死なずにスタート。「死神の加護を得た」→ 画面が静まり、主人公の枠が呪われる（演出のみ・意味はない）
+      T(() => {
+        const dt = document.getElementById('death-text');
+        dt.textContent = '死神の加護を得た'; dt.classList.add('bless');
+        dt.style.animation = 'none'; void dt.offsetWidth; dt.style.animation = 'deathText 1.4s ease-out both';
+        SFX.summon();
+      }, 3300);
+      T(() => {
+        const ds = document.getElementById('death-screen');
+        ds.style.transition = 'opacity 1.2s'; ds.style.opacity = 0;
+      }, 5400);
+      T(() => {
+        clearDeath();
+        state.cursed = true;
+        state.mode = 'EXPLORE';
+        switchPad('EXPLORE');
+        addLog('死神の加護を得た。主人公の背後に、呪われた気配がまとわりつく。（演出のみ・効果なし）');
+        updateUI();
+        scheduleAutoWalk(1200);
+      }, 6700);
+      return;
+    }
     // 4.6秒：ゲームオーバー画面（血はその後ろに残す）
     T(() => {
       state.mode = 'GAMEOVER';
@@ -2106,6 +2139,9 @@
     deathTimers.forEach(clearTimeout); deathTimers = [];
     const ds = document.getElementById('death-screen');
     ds.classList.remove('go'); ds.style.display = 'none';
+    ds.style.transition = ''; ds.style.opacity = '';
+    const dt = document.getElementById('death-text');
+    dt.textContent = 'Death'; dt.classList.remove('bless'); dt.style.animation = '';
     document.getElementById('gameover-screen').classList.remove('death-over');
     state.deathAt = 0;
   }
@@ -2636,7 +2672,9 @@
       SFX.start();
       document.getElementById('diff-screen').style.display = 'none';
       resetGame();
+      state.cursed = false;
       addLog(`難易度【${d.name}】廊下${d.len}マス／制限時間×${d.time}`);
+      if (d.name === 'デス') { clearTimeout(walkTimer); startDeath(true); }   // 死神に切られる演出だけ起きて、死なずにスタート
     };
   });
 
