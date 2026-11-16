@@ -1692,7 +1692,7 @@
     resultOpen = false;
     document.getElementById('result-screen').style.display = 'none';
     state.moonPhase = 0;
-    state.hero = soloMode ? { name: '主人公', lv: 1, hp: 1, maxHp: 1, atk: 6, exp: 0, nextExp: 15 }   // デス：死神の呪いで最大HPも1
+    state.hero = soloMode ? { name: '主人公', lv: 1, hp: 1, maxHp: 1, atk: 6, exp: 0, nextExp: 15 }   // デス：死神の祝福で最大HPも1
       : { name: '主人公', lv: 1, hp: 2, maxHp: 6, atk: 6, exp: 0, nextExp: 15 };   // 最大HP6・開始時2。女神を召喚しないと一撃で死ぬ
     state.potions = soloMode ? 1 : 0;
     state.revives = soloMode ? 3 : 0;
@@ -2463,7 +2463,7 @@
       // デス：死なずにスタート。「死神の加護を得た」→ 画面が静まり、主人公の枠が呪われる（演出のみ・意味はない）
       T(() => {
         const dt = document.getElementById('death-text');
-        dt.textContent = '死神の呪いを受けた'; dt.classList.add('bless');
+        dt.textContent = '死神の祝福を受けた'; dt.classList.add('bless');
         dt.style.animation = 'none'; void dt.offsetWidth; dt.style.animation = 'deathText 1.4s ease-out both';
         SFX.summon();
       }, 3300);
@@ -2476,7 +2476,9 @@
         state.cursed = true;
         state.mode = 'EXPLORE';
         switchPad('EXPLORE');
-        addLog('死神の呪いにより、HPが1になった。女神の姿はない。懐にポーションがひとつ。');
+        addLog('死神の祝福により、HPが1になった。……祝福とは。');
+        addLog('女神の姿はない。かわりに懐に、ポーションがひとつ。');
+        addLog(`${state.hero.name}「ありがたくない祝福ランキング、堂々の1位だ」`);
         updateUI();
         holdWalk = true;   // 加護を得たあとも停止状態から
       }, 6700);
