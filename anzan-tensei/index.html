@@ -1022,6 +1022,7 @@
         <div id="goddess-list"></div>
       </div>
     </div>
+    <div style="font-size:0.72rem;opacity:0.75;max-width:min(88vw,460px);line-height:1.6;margin:2px 0 4px;text-align:left;">※ 召喚から外した女神は、マップを3コマ進むと全回復して戻ってくる。力尽きて帰還した女神も、外して休ませれば同じ。（外すには、配置スロットの女神をもう一度押す）</div>
     <div>
       <button class="menu-btn" id="btn-battle-go">[ 閉じる ]</button>
     </div>
@@ -1810,6 +1811,7 @@
     state.pos = nextPos;
     state.visited[state.pos] = true;
     state.steps++;
+    tickRest();
     state.walkAnim = 1.0;
     say('walk', 0.3);
 
@@ -2050,7 +2052,7 @@
           btn.innerHTML = `<span>${m.name}</span><span>HP ${m.hp}/${m.maxHp}</span>`;
           btn.onclick = () => {
             SFX.beep();
-            if (state.selectedSlot === i) { state.saved[m.id] = { hp: m.hp, hit1: !!m.hit1 }; state.party[i] = null; }   // 同じスロット再クリックで解除（残りHPは記録）
+            if (state.selectedSlot === i) { state.saved[m.id] = { hp: m.hp, hit1: !!m.hit1, rest: REST_STEPS }; state.party[i] = null; }   // 同じスロット再クリックで解除（残りHPは記録）
             else state.selectedSlot = i;
             updateUI();
             renderSummonLists();
@@ -2081,7 +2083,7 @@
       const btn = document.createElement('button');
       btn.className = 'goddess-btn';
       btn.disabled = alreadyIn || fallen;
-      btn.innerHTML = fallen ? `<span>${d.name}</span><span>天界へ帰還</span>` : `<span>${d.name}</span><span>HP: ${sv ? sv.hp : d.maxHp}</span>`;
+      btn.innerHTML = fallen ? `<span>${d.name}</span><span>休息中 あと${sv.rest}コマ</span>` : sv ? `<span>${d.name}</span><span>HP ${sv.hp}／あと${sv.rest}コマで全回復</span>` : `<span>${d.name}</span><span>HP: ${d.maxHp}</span>`;
       btn.onclick = () => {
         SFX.beep();
         if (state.party[state.selectedSlot] && state.party[state.selectedSlot].isHero) return;
@@ -3303,6 +3305,23 @@
     state.paused = false;
     document.getElementById('status-modal').style.display = 'none';
     if (state.mode === 'EXPLORE' && !holdWalk) scheduleAutoWalk(500);
+  }
+
+  // 外した女神は、マップを3コマ進むと全回復して戻ってくる（力尽きた女神も同じ）
+  const REST_STEPS = 3;
+  function tickRest() {
+    Object.keys(state.saved || {}).forEach(id => {
+      const sv = state.saved[id];
+      sv.rest = (sv.rest === undefined ? REST_STEPS : sv.rest) - 1;
+      if (sv.rest <= 0) {
+        delete state.saved[id];
+        const d = GODDESS_POOL.find(x => x.id === id);
+        if (d) {
+          addLog(`${d.name} は休息を終え、全回復した！（召喚できる）`);
+          addLog(`${d.name}「${pickLine(SUMMON_LINES[id])}」`);
+        }
+      }
+    });
   }
 
   // === 装備（クリア1周ごとに1つ増える。それぞれ1回だけ、主人公へのダメージを防ぐ）。9周目以降はポーション ===
