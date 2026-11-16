@@ -625,6 +625,31 @@
   #noise-screen { position: fixed; inset: 0; z-index: 70; display: none; background: #000; pointer-events: all; }
   #noise-canvas { width: 100%; height: 100%; image-rendering: pixelated; display: block; }
   #noise-msg { position: absolute; left: 0; right: 0; top: 46%; text-align: center; font-size: 1.4rem; letter-spacing: 0.3em; color: #7dffb0; text-shadow: 2px 0 #f0f, -2px 0 #0ff; }
+
+  /* アイテム画面 */
+  .item-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; border: 1px solid var(--main); padding: 8px 12px; min-width: min(80vw, 300px); }
+  .item-row small { display: block; font-size: 0.7rem; opacity: 0.7; }
+  .item-row .menu-btn { margin: 0; }
+  .item-row .menu-btn:disabled { opacity: 0.35; }
+  /* 女神の愛による復活：神々しい光 */
+  #revive-screen { position: fixed; inset: 0; z-index: 80; display: none; overflow: hidden; pointer-events: all;
+    background: radial-gradient(ellipse at 50% 45%, #fff6c8 0%, #ffe28a 22%, rgba(255,200,90,0.62) 50%, rgba(24,14,0,0.94) 100%); }
+  #revive-screen.on { display: block; animation: rvIn 3.6s ease-in-out both; }
+  @keyframes rvIn { 0% { opacity: 0; } 20% { opacity: 1; } 78% { opacity: 1; } 100% { opacity: 0; } }
+  .rv-rays { position: absolute; left: 50%; top: 45%; width: 170vmax; height: 170vmax; margin: -85vmax 0 0 -85vmax;
+    background: repeating-conic-gradient(from 0deg, rgba(255,255,255,0.6) 0deg 4deg, rgba(255,255,255,0) 4deg 15deg);
+    -webkit-mask-image: radial-gradient(circle closest-side, #000 0%, transparent 90%); mask-image: radial-gradient(circle closest-side, #000 0%, transparent 90%);
+    animation: rvSpin 14s linear infinite; }
+  @keyframes rvSpin { to { transform: rotate(360deg); } }
+  .rv-glow { position: absolute; left: 50%; top: 45%; width: 46vmin; height: 46vmin; margin: -23vmin 0 0 -23vmin; border-radius: 50%;
+    background: radial-gradient(circle, #fff 0%, rgba(255,255,255,0.7) 30%, rgba(255,240,170,0) 70%); animation: rvPulse 1.6s ease-in-out infinite; }
+  @keyframes rvPulse { 0%,100% { transform: scale(0.9); opacity: 0.85; } 50% { transform: scale(1.12); opacity: 1; } }
+  #rv-parts i { position: absolute; bottom: -10px; width: var(--sz); height: var(--sz); border-radius: 50%; background: #fffbe0; box-shadow: 0 0 8px 2px #ffe27a; opacity: 0; animation: rvUp 3s linear infinite; }
+  @keyframes rvUp { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-105vh); opacity: 0; } }
+  .rv-text { position: absolute; left: 0; right: 0; top: 45%; transform: translateY(-50%); text-align: center; color: #5a3300; }
+  .rv-main { font-size: clamp(1.4rem, 6.4vw, 2.6rem); font-weight: bold; letter-spacing: 0.14em; text-shadow: 0 0 14px #fff, 0 0 30px #fff7c0; animation: rvText 3.6s ease-out both; }
+  .rv-sub { margin-top: 10px; font-size: clamp(0.9rem, 3.6vw, 1.2rem); letter-spacing: 0.2em; text-shadow: 0 0 10px #fff; }
+  @keyframes rvText { 0%,15% { opacity: 0; letter-spacing: 0.5em; } 45% { opacity: 1; letter-spacing: 0.14em; } 100% { opacity: 1; } }
   .diff-btn { display: block; width: min(86vw, 320px); margin: 5px 0; text-align: center; }
   .diff-btn small { display: block; font-size: 0.68rem; font-weight: normal; opacity: 0.8; margin-top: 2px; letter-spacing: 0; }
   .diff-btn.death { color: var(--alert); border-color: var(--alert); }
@@ -886,6 +911,7 @@
     <div id="status-display">LV: 1 | EXP: 0/15</div>
     <div class="header-controls">
       <button id="btn-status">STATUS</button>
+      <button id="btn-item">ITEM</button>
       <button id="btn-theme">COLOR: GRN</button>
       <button id="btn-sound">SOUND: ON</button>
     </div>
@@ -917,7 +943,7 @@
         <button class="move-btn" id="btn-back">▼ 後ろへ戻る (BACK)</button>
         <div class="look-row"><button class="move-btn" id="btn-look-l">◀ 左を向く</button><button class="move-btn" id="btn-look-r">右を向く ▶</button></div>
         <button class="move-btn" id="btn-summon-pad">召喚（SUMMON）</button>
-        <button class="move-btn" id="btn-status-pad">STATUS（ステータス）</button>
+        <div class="look-row"><button class="move-btn" id="btn-status-pad">STATUS</button><button class="move-btn" id="btn-item-pad">ITEM</button></div>
       </div>
 
       <!-- 戦闘モード用UI -->
@@ -994,6 +1020,17 @@
     <div class="stat-grid" id="stat-grid"></div>
     <button class="menu-btn" id="btn-status-close">[ CLOSE ]</button>
   </div>
+
+  <!-- アイテム画面（戦闘後の停止中に使える） -->
+  <div id="item-modal" class="overlay" style="display:none;">
+    <div style="font-size:1.2rem; font-weight:bold; margin-bottom:10px;">ITEM</div>
+    <div id="item-list"></div>
+    <button class="menu-btn" id="btn-item-close">[ CLOSE ]</button>
+  </div>
+
+  <!-- 女神の愛による復活演出（デス） -->
+  <div id="revive-screen"><div class="rv-rays"></div><div class="rv-glow"></div><div id="rv-parts"></div>
+    <div class="rv-text"><div class="rv-main">女神の愛により、蘇る</div><div class="rv-sub" id="rv-sub"></div></div></div>
 
   <!-- クリア（リザルト）画面：タイトルには戻らず、通路に戻る -->
   <div id="result-screen" class="overlay" style="display:none;">
@@ -1194,6 +1231,9 @@
     { id: 'roza', name: 'ロザリエ', maxHp: 22, comments: ['「その程度の計算に手間取るなんて、呆れますわ」', '「飛ぶ敵には銃。それも教わらないとわからないの？」', '「高みから見下ろすのが性に合っていますの」'] },
     { id: 'miri', name: 'ミリア',   maxHp: 20, comments: ['「祈る価値があるのか、疑わしいところね」', '「加護？ 自力で何とかなさい」', '「お守り代わりに使うなんて、不敬よ」'] },
     { id: 'lyum', name: 'リュミエーナ', maxHp: 16, comments: ['「間違えたら笑ってあげる。せいぜい頑張って」', '「呼ばれたけど暇ね。あなたの顔も見飽きたわ」', '「数字ばかり…頭が悪くなりそう」'] },
+    { id: 'sylph', name: 'シルフィ', maxHp: 14, comments: ["「ちょっと、早く解きなさいよ！」", "「べ、別に応援してないもん」", "「風が教えてくれたわ。次、来るわよ」"] },
+    { id: 'nerei', name: 'ネレイア', maxHp: 21, comments: ["「式を見直してください」", "「評価は『可』です」", "「焦りは誤答の原因です」"] },
+    { id: 'volta', name: 'ヴォルタ', maxHp: 26, comments: ["「何やってんのよ！」", "「さっさと解きなさいよ！」", "「当たり前でしょ！」"] },
   ];
 
   // === セリフ集（女神ごと・場面ごと）。場面: ok=正解 fast=迅速 crit=神速 miss=計算ミス guard=ガード成功 hurt=被弾
@@ -1309,6 +1349,72 @@
         dragon: ['ドラゴン！ いいわね、面白そう', 'ちびドラゴン、可愛いわ。火を吹くのかしら']
       }
     },
+    sylph: {
+      ok: ["せ、正解じゃない。べ、別に嬉しくないもん", "ふーん、やるじゃない。風が少し吹いたわ", "当然よ。わたしが見てるんだから", "まあまあね。もっとびゅんっと解きなさいよ", "当たった当たった！ ……って、はしゃいでないもん", "ちょっと！ 速いじゃない、風より速くないけど", "その調子。……ほめてるんじゃなくて、事実を言っただけよ", "正解なんだから、胸くらい張ったらどうなの"],
+      fast: ["わっ、速い！ 髪が乱れちゃったじゃない", "風みたいに解いたわね。わたしの方が速いけど", "い、今の、もう一回やって見せなさいよ", "速すぎて目が追いつかないもん", "びゅんって聞こえたわよ、今！"],
+      crit: ["すごい……！ あ、いや、風のおかげなんだから！", "一撃！？ わたしの追い風のおかげね、絶対", "やるじゃない！ ……ちょっとだけ見直したもん", "きゃーっ！ 今の、かっこよ……くないわ！ 普通よ！", "決まった……！ 風が止まったわ、息をのんで"],
+      miss: ["ちょっと、何やってるのよ！ 風が吹き飛んじゃうわ", "ばか！ そこ、違うじゃない！", "あーもう、見てられないんだから", "計算ミスなんて、わたしの前でやらないでよ", "ぽかんとしてないで、早く解き直しなさいよ！", "落ち着きなさいよ。わたしまで焦るじゃない", "ふん、次は絶対当ててよね！"],
+      guard: ["あ、危なかったじゃない！ 心臓が風になったわ", "ナイスガード……って、別に応援してないもん", "もう、ひやひやさせないでよ！", "間に合ったのね。……ほっとしてなんかないんだから", "反応だけは速いのね、あんた"],
+      hurt: ["きゃっ！ 風が乱れたじゃない！", "いったーい！ ちょっと、責任とりなさいよ！", "何するのよ！ 髪がぐしゃぐしゃになっちゃうでしょ！", "う、痛くないもん！ ちょっとだけよ！", "ぶつかってきて、失礼な敵ね！"],
+      start: ["敵よ、敵！ 早く構えなさいよ！", "わっ、出てきた。わたしの後ろに隠れてもいいわよ", "風が教えてくれたわ。来るわよ！", "ほら、来たじゃない。ぼーっとしてないで！", "さっさと終わらせて、先に行きましょ"],
+      win: ["やったじゃない！ ……べ、別に、嬉しくないもん", "終わったわね。風が気持ちいいわ", "まあまあよ。まあまあ、ね", "あんた、意外とやるのね。ちょっとだけよ", "勝ったんだから、もっと喜びなさいよ", "ふふん、わたしの追い風のおかげね", "次はもっとびゅんっと勝ってよね", "ほら、息して。深呼吸よ", "髪が乱れちゃったじゃない。直すの手伝ってよ", "風がやんだわ。静かでいい勝利ね", "ちょっと待って。お菓子……ないの？ ないのね", "わたし、何もしてないけど、勝ったのよ。いいわね！", "あんたの計算、風より速かったかも。かも、ね", "勝利の風が吹いてるわ。ほら、感じなさい", "ふー、どきどきしたじゃない。もう", "さ、行きましょ。風の向く方へ", "今日のあんた、ちょっとだけ頼りになったわよ", "勝ったからって、油断しちゃだめなんだから", "わたしの出番、なかったじゃない。つまんないもん", "……ほめてあげる。一回だけよ", "ぐるぐる回って喜びたいけど、我慢するわ", "終わったのね。ちょっと休憩しましょ", "敵が吹き飛んだみたいで、いい気分だわ", "あんたが無事なら、まあ、それでいいわよ", "これで風も機嫌がいいわ。たぶん", "ほら、胸を張って。勝者なんだから", "廊下の風が、少し軽くなったわね", "またすぐ次が来るわよ。覚悟しなさい", "今のは、ちょっとかっこよかったわ。ちょっとよ！", "よくできました。……って、先生じゃないわよ！"],
+      lvup: ["成長したのね。わ、わたしのおかげよね！", "レベルアップ！ ……べ、別に祝ってないもん", "強くなったじゃない。風も驚いてるわ", "おめでと。……一回しか言わないから"],
+      walk: ["ここ、風が通らなくて息苦しいわね", "ほら、足元に気をつけなさいよ", "暗いわね。……こ、怖くなんてないもん", "先に行ってもいいけど、手は離さないでよ", "窓が割れてない？ 風が入るわよ", "ねえ、まだ着かないの？", "早く進みなさいよ、のろのろしてないで", "なんだか、ひとりごとが響くわね"],
+      clear: ["着いたじゃない！ やったー！ ……じゃなくて、当然よ", "突き当たりね。霊水、冷たくて気持ちいいわ", "ふーん、案外すぐだったじゃない", "お疲れ。……ほめてるのよ、これでも"],
+      low: ["ちょっと、顔色悪いわよ。大丈夫なの？", "無茶しないでよ、もう！", "あんた、倒れたらわたしが困るんだから", "後ろに下がりなさいよ！"],
+      back: ["ちょっと、後ろは見ちゃだめよ！", "戻ってどうするのよ。前に行きなさいよ", "後ろは危ないんだから。わたし、知ってるもん"],
+      enemy: {
+        slime: ["ぷよぷよしてる。つついたら怒るかしら", "風で吹き飛ばせそうね"],
+        bat: ["コウモリ！ 風の邪魔をしないでよね", "ひらひらしてるわ。わたしのほうが軽やかだけど"],
+        bird: ["鳥！ 同じ空の仲間……じゃないわよ、敵よ", "ふわふわね。わたしの方が上手に飛べるわ"],
+        puppy: ["わんちゃん！ かわいい……はっ、敵よね！", "しっぽを振ってるわ。まあ、倒すけど"],
+        dragon: ["ドラゴン！ 風を巻き起こされたら負けないんだから", "小さいのに偉そうね。風よりは遅いけど"]
+      }
+    },
+    nerei: {
+      ok: ["正解です。当然の結果ですね", "計算は合っています。過程は雑ですが", "評価は「可」です。これ以上は望みません", "合っていますよ。喜ぶほどではありません", "悪くありません。……平均点程度には", "正答。次の問題も同じ精度でお願いします", "よろしい。水面のように静かな解答でした", "正解ですね。拍手は省略します"],
+      fast: ["速さは認めます。精度が伴えば、ですが", "その速さ、潮の満ち引きより忙しいですね", "速いですね。見直す時間もあったでしょうに", "……速い。記録しておきます", "早押しは得意なようですね。点数は変わりませんが"],
+      crit: ["一撃……想定外です。再評価します", "見事。水面に波紋が広がりました", "今のは優です。滅多に出しません", "ほう。やればできるのですね、最初から出してください", "計算に一切の無駄がありませんでした。驚きです"],
+      miss: ["不正解です。式を見直してください", "焦りは誤答の原因です。深呼吸を", "途中式が崩れていますね。やり直しです", "残念ながら不可です。次に期待します", "間違いは責めません。ただ、評価は下がります", "水に流しましょう。同じ誤りは二度としないでください", "計算が濁っていますね。落ち着いて"],
+      guard: ["防御成功。判断は妥当でした", "ぎりぎり間に合いましたね。次は余裕を持って", "反応速度は合格です", "落ち着いていましたね。評価に値します", "よく守りました。点数に反映します"],
+      hurt: ["……っ。濡れてしまったではありませんか", "痛みは想定内です。想定内ですが、痛いです", "失礼な敵ですね。減点対象です", "私に当てるとは、いい度胸です", "冷静に。冷静に……痛いです"],
+      start: ["敵ですね。分析を開始します", "来ましたか。計算の準備を", "遭遇を確認。落ち着いて対処を", "相手の動きを観察しましょう。焦らずに", "では、採点を始めましょうか"],
+      win: ["お疲れ様でした。評価は「良」です", "勝利を確認。記録しておきます", "水に流れるように、静かな勝利でしたね", "悪くない結果です。悪くない、とだけ言っておきます", "計算も判断も及第点です。次も同水準でお願いします", "敵は沈みました。潮が引くように、静かに", "よくやりました。……少しだけ、見直しました", "息を整えてください。次の問題が来ます", "勝利の余韻は、三秒で十分です", "あなたの暗算は、波のように安定していますね", "終わりましたね。水を一杯どうぞ", "評価を更新します。信頼度、微増です", "見事でした。点数は内緒にしておきます", "感情の起伏が少ないのは、美点ですよ", "また一つ、問題を解きましたね。その調子です", "静かな戦いでした。私は嫌いではありません", "大きな失点はありませんでした。立派です", "計算は水と同じ。形を変えても、本質は変わりません", "結果は結果です。素直に喜んでもいいのでは", "敵の残響が消えました。廊下が静かです", "合格点です。ただし、油断は減点です", "よい戦いでした。私の評価は甘くありません。つまり本物です", "潮目が変わりましたね。流れは、あなたに味方しています", "勝ちましたね。私はずっと見ていました", "今のは、私の記録に残しておきます", "次の階層まで、この調子でお願いします", "……悪くないです。もう一度は言いませんが", "結果を見れば、あなたは頼れる計算係です", "お疲れ様。少し休みましょう。水分補給も大切です", "感謝は、控えめに伝えておきます。ありがとうございました"],
+      lvup: ["成長を確認しました。評価を上方修正します", "レベルアップですね。おめでとうございます", "また一段、水位が上がりましたね", "実力が伴ってきましたね。素直に称賛します"],
+      walk: ["廊下の湿度が高いですね。気のせいでしょうか", "足音が反響しています。慎重に", "静かですね。静かすぎて、計算が捗りそうです", "一歩ずつ、確実に進みましょう", "水の気配がします。この旧校舎、何かありますね", "迷わずに進めています。順調です", "暗いですが、足元だけ見ていれば問題ありません", "先は長いですね。体力配分に注意を"],
+      clear: ["到達です。お疲れ様でした", "霊水で全員が回復しましたね。効率的です", "突き当たりですね。ここまでの成績は優です", "踏破、確認しました。見事な歩みです"],
+      low: ["体力が危険域です。無理は禁物です", "顔色が優れませんね。後退も検討を", "これ以上の被弾は許されません", "慎重に。次は、一度の失敗も命取りです"],
+      back: ["後方は評価対象外です。前へ", "戻る意味は薄いですね。進みましょう", "後ろには何もありません。……たぶん"],
+      enemy: {
+        slime: ["水分の多い敵ですね。親近感はありません", "ぷるぷるしていますね。分析対象としては単純です"],
+        bat: ["コウモリ。超音波を使う種ですね、たぶん", "飛行型です。計算に集中しましょう"],
+        bird: ["鳥ですね。羽根の水はけが良さそうです", "愛らしい鳴き声です。敵でなければ"],
+        puppy: ["犬ですか。濡れると臭いが強くなりますね", "忠実そうな目です。倒しますが"],
+        dragon: ["小型の竜。小さくても油断は禁物です", "竜ですね。水属性なら楽でしたのに"]
+      }
+    },
+    volta: {
+      ok: ["当たり前でしょ！ 威張らないでよ", "ふん、正解。さっさと次いきなさいよ", "やるじゃない。……って、褒めてないわよ！", "合ってるわよ。雷が落ちなくて残念ね", "よし！ ……じゃなくて、普通よ、普通", "その調子！ ……いや、気を抜くんじゃないわよ！", "正解したくらいで喜ぶんじゃないわよ！", "悪くないわ。次、もっと速く！"],
+      fast: ["速いじゃない！ 雷にも負けないわよ！", "おお、今の速さ、わたしの稲妻並みね！ ……並みよ！", "は、速っ！ 思わず叫びそうになったわ！", "そんなに急がなくてもいいでしょ！ ……でも速いわね", "ちょっと、わたしより目立つんじゃないわよ！"],
+      crit: ["一撃！？ ちょっと、わたしの出番がないじゃない！", "ドカンと決めたわね！ ……す、すごいじゃない", "雷が落ちたかと思ったわ！ 今の、あんた！？", "決まったわ！ やるじゃない！ いや、やるわね！", "ふ、ふん！ 悪くないわ！ ……すごいわ！"],
+      miss: ["何やってんのよ！ 雷落とすわよ！", "ちょっと！ そこは違うでしょ！", "あーもう！ イライラするわね！", "計算ミス？ 信じられない！ 信じられないわ！", "落ち着きなさいよ！ ……わたしが落ち着けないわ！", "いい加減にしなさいよ、もう！", "次は絶対当ててよね！ 絶対よ！"],
+      guard: ["あっぶないわね！ 心臓が止まるかと思ったじゃない！", "よく防いだじゃない！ ……ほっとしてないわよ！", "ぎりぎりじゃないの！ 寿命が縮んだわ！", "反応いいじゃない！ 最初からそうしなさいよ！", "ナイス！ ……って、叫んじゃったじゃない！"],
+      hurt: ["いったーい！ このっ、許さないわよ！", "痛っ！ わたしに当てるなんて、百年早いわ！", "くぅっ！ 雷が出ちゃいそうよ！", "きゃっ！ ……ちょっと、今のは卑怯よ！", "何すんのよ！ 覚えてなさいよ！"],
+      start: ["敵よ！ 構えなさいよ！", "来たわね！ 返り討ちにしてやるわ！", "さあ、蹴散らすわよ！ ぼーっとしないで！", "ちょっと、突っ立ってないで早く戦いなさいよ！", "敵が出たわよ！ 準備はいいの！？"],
+      win: ["やったわね！ ……って、当然よ！", "よし！ 今の気持ちいいわね！", "ふん、軽いもんよ。もっと骨のある敵を出しなさいよ", "勝ったじゃない！ ほら、もっと喜びなさいよ！", "雷が落ちたような勝利だったわね！ たぶん！", "まあまあね。次はもっと派手にいくわよ！", "悪くないわ。……いえ、すごく悪くなかったわ！", "ちょっと、息切れしてるじゃない。しっかりしなさいよ", "さ、次に行くわよ！ ぼやぼやしない！", "今のは気分がいいわ！ もう一戦、いける！", "勝利のあとに水を飲むのよ。ほら、持ってきなさい！", "あんた、意外とやるじゃない。意外とよ、意外と！", "怒鳴りすぎて喉が痛いわ。……勝ったからいいけど", "わたしの雷の出番がなかったじゃない！ つまんない！", "終わったの？ ふーん、早かったじゃない", "勝ったんだから、ちょっとは堂々としなさいよ！", "敵の悲鳴が心地いいわね。……冗談よ、冗談！", "気を抜いちゃだめよ！ ……って、わたしも抜いてるけど", "よく頑張ったわね。……ふん、聞こえなかったことにしなさい！", "雷より早く解いたかも。かもよ、かも！", "ほら、行くわよ！ 休憩は歩きながら！", "すっきりしたわ！ 雷雲も晴れたみたい！", "あんたの計算、案外悪くないじゃない。案外よ！", "次の敵が出る前に、深呼吸しときなさい！", "悔しいけど、今のは助かったわ。……ほんのちょっとよ！", "どう？ わたしの応援のおかげでしょ！", "勝利って最高ね！ あっ、声が大きかったかしら", "落ち着いたら、おやつにしましょ！ ね！", "廊下がちょっと焦げ臭いわ。気のせいね！", "まあ、よくやったわよ。……ええ、本当に！"],
+      lvup: ["レベルアップ！？ やるじゃない！ ……おめでと！", "強くなったわね！ わたしも負けてられないわ！", "成長したじゃない！ ちょっとだけ誇らしいわ！", "ふん、やっとね！ ……お、おめでとう！"],
+      walk: ["暗い廊下ね！ 雷でも落として明るくしてやろうかしら！", "ほら、きびきび歩きなさいよ！", "静かすぎるのよ。落ち着かないわ！", "足元、気をつけなさいよ！ 転んだら笑うわよ！", "なんか出そうね！ ……出たら叩くけど！", "ずいぶん長いわね、この廊下！ イライラするわ！", "先頭は譲らないわよ！ ……あんたが前でもいいけど", "わたし、じっとしてるの苦手なのよ！"],
+      clear: ["着いたわ！ 長かったわね、もう！", "突き当たりよ！ ほら、早く水を飲みなさい！", "やったじゃない！ ……さすがわたしの仲間ね！", "ゴール！ 気持ちいいわね！"],
+      low: ["ちょっと、ふらふらじゃない！ 下がりなさいよ！", "無茶しすぎよ！ 倒れたら承知しないわよ！", "HPが減ってるわよ！ ほら、気をつけて！", "あんた、顔真っ青よ！ 大丈夫なの！？"],
+      back: ["後ろ！？ 振り向かないでよ、嫌な予感がするわ！", "戻るなんてだめよ！ 前に進みなさい！", "後ろは見ないのが一番なのよ、こういうときは！"],
+      enemy: {
+        slime: ["ぷよぷよ！ 雷で焦がしてやろうかしら！", "ぬるぬるしてて嫌ね、触りたくないわ！"],
+        bat: ["コウモリ！ うるさいのは嫌いよ！", "ひらひら飛んで、鬱陶しいわね！"],
+        bird: ["鳥ね！ 雷に打たれる前に逃げなさいよ！", "ふわふわしちゃって、むかつくわ……かわいいけど！"],
+        puppy: ["犬！ わたし、犬は苦手なのよ……いや、苦手じゃないわ！", "しっぽ振ってるわよ！ 敵なのに！"],
+        dragon: ["ドラゴン！ 雷は効くかしら！ 試したいわ！", "小さくても竜なんでしょ！ 面白いじゃない！"]
+      }
+    },
   };
   // 主人公のひとりごと（たまに）
   const HERO_LINES = {
@@ -1362,6 +1468,9 @@
     roza: [7, 9, 12, 16, 14],
     miri: [8, 10, 9, 15, 18],
     lyum: [9, 6, 17, 13, 16],
+    sylph: [6, 5, 19, 11, 14],
+    nerei: [5, 8, 9, 19, 12],
+    volta: [16, 11, 13, 7, 10],
   };
   // 女神の習得スキル（完全な飾り。戦闘には一切影響しない）[名前, ルビ, 説明]
   const GODDESS_SKILLS = {
@@ -1389,6 +1498,21 @@
       ['嘲笑ノ月光', 'ミラージュ・ルナ', '月が三つ見える日にだけ笑う'],
       ['白銀ノ断罪曲', 'シルバー・ジャッジメント', '判決は拍手で決まる'],
       ['刹那ニ咲ク嘲弄', 'フラッシュ・モッカリー', '咲いた瞬間に、もう飽きている']
+    ],
+    sylph: [
+      ["烈風ノ戯レ", "ゲイル・プレイ", "気まぐれに吹くので当たらない"],
+      ["天翔ケル囁キ", "スカイ・ウィスパー", "内緒話が全部ほかの人に聞こえる"],
+      ["千ノ旋風ノ舞", "サウザンド・ツイスター", "散らかしたあと片付けない"]
+    ],
+    nerei: [
+      ["蒼海ノ断罪式", "アビス・ジャッジ", "採点は常に辛口"],
+      ["潮騒ノ論理", "タイダル・ロジック", "途中式まで水に流す"],
+      ["深淵ニ沈ム静寂", "ディープ・サイレンス", "黙っているのではなく、答えを待っている"]
+    ],
+    volta: [
+      ["雷霆ノ叱責", "サンダー・ロア", "落ちる前に必ず怒鳴る"],
+      ["紫電一閃・遅刻", "スパーク・レイト", "光ってから音が来るまでが長い"],
+      ["天罰ノ筆頭", "ジャッジメント・ボルト", "対象は主に主人公（本人談）"]
     ],
   };
   // 常時エンカウント（歩くたびに必ず戦闘）
@@ -1418,13 +1542,15 @@
   ];
 
   // === 難易度（開始時に選ぶ）：廊下の長さ（クリアまでの歩数）と制限時間の倍率 ===
+  const ALL_IDS = ['lumi', 'fers', 'roza', 'miri', 'lyum', 'sylph', 'nerei', 'volta'];
   const DIFFS = [
-    { name: '甘口', len: 6,  time: 1.5, desc: '廊下 6マス ／ 制限時間 ×1.5' },
-    { name: '中辛', len: 10, time: 1.0, desc: '廊下 10マス ／ 制限時間 ×1.0' },
-    { name: '辛口', len: 14, time: 0.8, desc: '廊下 14マス ／ 制限時間 ×0.8' },
-    { name: 'デス', len: 20, time: 0.6, desc: '廊下 20マス ／ 制限時間 ×0.6' },
-    { name: '電卓', len: 10, time: 0.8, calc: true, desc: '廊下 10マス ／ 4〜5桁の四則演算 ／ 制限時間 ×0.8' }
+    { name: '甘口', len: 6,  time: 1.5, roster: ['lumi', 'fers'], desc: '廊下 6マス ／ 制限時間 ×1.5 ／ 仲間の女神 2人' },
+    { name: '中辛', len: 10, time: 1.0, roster: ALL_IDS.slice(0, 5), desc: '廊下 10マス ／ 制限時間 ×1.0 ／ 仲間の女神 5人' },
+    { name: '辛口', len: 14, time: 0.8, roster: ALL_IDS.slice(), desc: '廊下 14マス ／ 制限時間 ×0.8 ／ 仲間の女神 8人' },
+    { name: 'デス', len: 14, time: 0.8, roster: [], solo: true, desc: '廊下 14マス ／ 制限時間 ×0.8 ／ 女神なしのソロ ／ HP1・復活3回' },
+    { name: '電卓', len: 10, time: 0.8, calc: true, roster: ALL_IDS.slice(0, 5), desc: '廊下 10マス ／ 4〜5桁の四則演算 ／ 制限時間 ×0.8 ／ 仲間の女神 5人' }
   ];
+  let roster = ALL_IDS.slice(0, 5), soloMode = false;   // 仲間になっている女神（召喚できる顔ぶれ）／デス（ソロ）
   let corridorLen = 10, timeScale = 1, diffName = '中辛', calcMode = false;
 
   // === ゲーム状態 ===
@@ -1512,7 +1638,7 @@
   }
   function makeGoddess(id) {
     const d = GODDESS_POOL.find(x => x.id === id);
-    return { isHero: false, id: d.id, name: d.name, hp: d.maxHp, maxHp: d.maxHp, comments: d.comments };
+    return { isHero: false, id: d.id, name: d.name, hp: d.maxHp, maxHp: d.maxHp, hit1: false, comments: d.comments };
   }
 
   // === 初期化・リスタート ===
@@ -1532,7 +1658,11 @@
     resultOpen = false;
     document.getElementById('result-screen').style.display = 'none';
     state.moonPhase = 0;
-    state.hero = { name: '主人公', lv: 1, hp: 2, maxHp: 6, atk: 6, exp: 0, nextExp: 15 };   // 最大HP6・開始時2。女神を召喚しないと一撃で死ぬ
+    state.hero = soloMode ? { name: '主人公', lv: 1, hp: 1, maxHp: 1, atk: 6, exp: 0, nextExp: 15 }   // デス：死神の呪いで最大HPも1
+      : { name: '主人公', lv: 1, hp: 2, maxHp: 6, atk: 6, exp: 0, nextExp: 15 };   // 最大HP6・開始時2。女神を召喚しないと一撃で死ぬ
+    state.potions = soloMode ? 1 : 0;
+    state.revives = soloMode ? 3 : 0;
+    state.saved = {};    // 外した女神の残りHPの記録（外して呼び直しての全回復を防ぐ）
     state.party = initialParty();
     state.lastFormation = state.party.map(m => !m ? null : m.isHero ? { isHero: true } : { goddessId: m.id });
     state.paused = false;
@@ -1542,6 +1672,8 @@
 
     document.getElementById('gameover-screen').style.display = 'none';
     document.getElementById('summon-modal').style.display = 'none';
+    document.getElementById('item-modal').style.display = 'none';
+    document.getElementById('revive-screen').classList.remove('on');
     switchPad('EXPLORE');
     logBox.innerHTML = '';
     addLog('旧校舎 1F 廊下に侵入した。暗算の力で魔を打ち倒せ。');
@@ -1689,7 +1821,8 @@
     SFX.clear();
     state.clears = (state.clears || 0) + 1;
     state.hero.hp = state.hero.maxHp;
-    state.party.forEach(m => { if (m && !m.isHero) m.hp = m.maxHp; });
+    state.party.forEach(m => { if (m && !m.isHero) { m.hp = m.maxHp; m.hit1 = false; } });
+    state.saved = {};
     addLog('廊下の突き当たりに到達！ 霊水で全員が全回復した。');
     say('clear', 1);
     updateUI();
@@ -1837,7 +1970,10 @@
     fers: ['フェルだ。盾が必要なら、後ろに下がってろ', '呼んだか。……なら、前は俺が引き受ける', 'おう、来てやったぞ。しっかり守ってやる', '勘違いするなよ。仲間を守りに来ただけだ', 'よし、持ち場につく。指示は短く頼むぞ'],
     roza: ['ロザリエ、参上いたしましたわ。お手柔らかに', '薔薇の香りとともに、優雅に参りますわ', '呼ばれて飛び出る、というわけではありませんのよ。念のため', 'あら、わたくしの銃の出番ですの？ 楽しみですわ', '隊列に加わりましょう。棘は控えめにいたしますわ'],
     miri: ['ミリアよ。祈りは期待しないでね', '呼ばれたのね。星が少しだけ傾いたわ', 'お邪魔するわ。静かな場所を、お借りするわね', '加護は約束できないけれど、そばにいるわ', '……来てしまったわ。数珠は持ってきたから大丈夫よ'],
-    lyum: ['あはっ、呼んだ？ 退屈してたのよ', 'リュミエーナ登場。笑う準備はできてるわ', 'ふふ、面白そう。しばらく付き合ってあげる', '間違えたら笑ってあげるから、よろしくね', '月が三つ見える前に、呼んでくれてよかったわ']
+    lyum: ['あはっ、呼んだ？ 退屈してたのよ', 'リュミエーナ登場。笑う準備はできてるわ', 'ふふ、面白そう。しばらく付き合ってあげる', '間違えたら笑ってあげるから、よろしくね', '月が三つ見える前に、呼んでくれてよかったわ'],
+    sylph: ["シルフィよ。べ、別に呼ばれて嬉しくないんだからね！", "風と一緒に来てあげたわ。感謝しなさいよ", "わっ、ここ狭いわね。まあいいわ、入ってあげる", "しょうがないから手伝ってあげる。今回だけよ", "あんた、ひとりじゃ頼りないものね。……仕方ないわ"],
+    nerei: ["ネレイアです。必要であれば、お手伝いします", "呼ばれましたね。よろしくお願いします", "配置につきます。指示は簡潔にお願いします", "お呼びでしたか。効率よく片付けましょう", "参加します。評価は厳しいので、ご了承を"],
+    volta: ["ヴォルタよ！ 呼ぶのが遅いじゃない！", "来たわよ！ 準備はいいんでしょうね！", "雷を落としてやるわ！ ……味方には落とさないけど！", "ようやくわたしの出番ね！ 暴れるわよ！", "さあ、行くわよ！ 足を引っ張らないでよ！"],
   };
   function openSummonModal() {
     if (state.mode !== 'EXPLORE' || state.paused || resultOpen) return;
@@ -1873,7 +2009,7 @@
           btn.innerHTML = `<span>${m.name}</span><span>HP ${m.hp}/${m.maxHp}</span>`;
           btn.onclick = () => {
             SFX.beep();
-            if (state.selectedSlot === i) state.party[i] = null;   // 同じスロット再クリックで解除
+            if (state.selectedSlot === i) { state.saved[m.id] = { hp: m.hp, hit1: !!m.hit1 }; state.party[i] = null; }   // 同じスロット再クリックで解除（残りHPは記録）
             else state.selectedSlot = i;
             updateUI();
             renderSummonLists();
@@ -1891,12 +2027,20 @@
       slotList.appendChild(row);
     }
 
-    GODDESS_POOL.forEach(d => {
+    if (!roster.length) {
+      const n = document.createElement('div');
+      n.style.cssText = 'font-size:0.8rem;opacity:0.75;padding:10px 4px;line-height:1.7;';
+      n.textContent = '仲間の女神は、ひとりもいない。……ソロでの挑戦だ。';
+      goddessList.appendChild(n);
+    }
+    GODDESS_POOL.filter(d => roster.includes(d.id)).forEach(d => {
       const alreadyIn = state.party.some(m => m && !m.isHero && m.id === d.id);
+      const sv = (state.saved || {})[d.id];
+      const fallen = !!sv && sv.hp <= 0;
       const btn = document.createElement('button');
       btn.className = 'goddess-btn';
-      btn.disabled = alreadyIn;
-      btn.innerHTML = `<span>${d.name}</span><span>HP: ${d.maxHp}</span>`;
+      btn.disabled = alreadyIn || fallen;
+      btn.innerHTML = fallen ? `<span>${d.name}</span><span>天界へ帰還</span>` : `<span>${d.name}</span><span>HP: ${sv ? sv.hp : d.maxHp}</span>`;
       btn.onclick = () => {
         SFX.beep();
         if (state.party[state.selectedSlot] && state.party[state.selectedSlot].isHero) return;
@@ -1904,10 +2048,12 @@
           isHero: false,
           id: d.id,
           name: d.name,
-          hp: d.maxHp,
+          hp: sv ? sv.hp : d.maxHp,
           maxHp: d.maxHp,
+          hit1: sv ? !!sv.hit1 : false,
           comments: d.comments
         };
+        delete state.saved[d.id];
         SFX.summon();
         addLog(`${d.name}「${pickLine(SUMMON_LINES[d.id])}」`);
         updateUI();
@@ -1935,7 +2081,7 @@
         const d = GODDESS_POOL.find(x => x.id === item.goddessId);
         if (d) {
           newParty[slotCursor] = {
-            isHero: false, id: d.id, name: d.name, hp: d.maxHp, maxHp: d.maxHp, comments: d.comments
+            isHero: false, id: d.id, name: d.name, hp: d.maxHp, maxHp: d.maxHp, hit1: false, comments: d.comments
           };
         }
       }
@@ -2117,7 +2263,10 @@
     fers: ['謝るな。お前は何も悪くない。盾の役目を果たしただけだ', 'そんな顔をするな。……よく頑張ったな', '守れてよかった。それだけで、俺は満足だ', '先へ進め。後ろは気にするな。俺が見ててやる', '強がりはここまでだ。……お前に会えて、よかった', '誰も責めやしない。胸を張って、歩いていけ', '少し休むだけだ。すぐまた、盾を構えて戻ってくる', 'お前の計算に、何度も救われたぞ。ありがとうな', '泣くな。守る者がいるというのは、悪くないもんだ', 'さあ、行け。お前なら、きっと大丈夫だ'],
     roza: ['そんなに悲しい顔をなさらないで。薔薇は散っても、香りは残りますわ', 'あなたを守れたのなら、この身に悔いはありませんわ', '誰も責めたりしませんわ。どうか、ご自分を許してあげて', 'わたくしの銃は、もう構えられませんけれど……あなたの味方ですわ', '綺麗な夜でしたわね。あなたと歩けて、幸せでしたわ', '棘はもう要りませんわね。あなたを傷つけるものなど、何もなくなりました', 'さあ、前へ。わたくしの薔薇が、道を照らしますわ', '強がってばかりで、ごめんなさい。……あなたが、大切でしたの', 'またお会いしましょう。紅茶を淹れて、待っておりますわ', '泣かないで。あなたの笑顔が、一番の勲章ですのよ'],
     miri: ['大丈夫よ。あなたのせいじゃないわ。ひとつも', '祈りが届いたのね。……あなたが生きていてくれて、嬉しいわ', '星になるだけよ。いつでも、見守っているわ', 'どうか、ご自分を責めないで。あなたはよくやっているわ', '痛くはないの。あたたかい光に包まれているみたい', '神様が留守でも、私がそばにいるわ。……最後まで', 'さあ、顔を上げて。星があなたの道を示しているわ', 'ありがとう。あなたと歩いた時間は、私の宝物よ', '泣かないで。また会える日まで、祈り続けるわ', 'あなたの歩みが、どうか光に満ちていますように'],
-    lyum: ['あはは……もう笑ってあげられないわね。ごめんね', 'そんな顔しないで。あなたは、ちっとも悪くないわ', '楽しかったわよ。本当に、すごく', 'ほら、笑って。最後に見るのは、あなたの笑顔がいいわ', '飽きっぽい私が、最後まで付き合えたのよ。誇っていいわ', '泣くのはなし。月が心配してしまうわ', '先へ行って。私の分まで、笑ってちょうだい', 'あなたを守れたなんて、らしくないけれど……悪くないわ', '責めたりしないわ。あなたは、精一杯だったもの', 'じゃあね、また月の下で。待っているわ']
+    lyum: ['あはは……もう笑ってあげられないわね。ごめんね', 'そんな顔しないで。あなたは、ちっとも悪くないわ', '楽しかったわよ。本当に、すごく', 'ほら、笑って。最後に見るのは、あなたの笑顔がいいわ', '飽きっぽい私が、最後まで付き合えたのよ。誇っていいわ', '泣くのはなし。月が心配してしまうわ', '先へ行って。私の分まで、笑ってちょうだい', 'あなたを守れたなんて、らしくないけれど……悪くないわ', '責めたりしないわ。あなたは、精一杯だったもの', 'じゃあね、また月の下で。待っているわ'],
+    sylph: ["泣かないで。あんたのせいじゃないわ。ちっとも", "風になるだけよ。ずっとそばにいるわ", "ありがとう。あんたと吹いた風、楽しかった", "ほら、笑って。最後に見るのは笑顔がいいの", "わたしが守れたなら、それでいいの。ね", "ごめんね、先に行くわ。あんたは前へ進んで", "風はやまないわ。だから、大丈夫よ", "責めたりしない。あんたは、がんばってたもの", "ふふ……最後くらい、素直になるわ。……あんたが、大切だったの", "また風の中で会いましょう。待ってるわ"],
+    nerei: ["どうか気に病まないでください。あなたの評価は、満点です", "冷静に、前へ。私は水に還るだけです", "最後まで、あなたを見ていました。立派でしたよ", "悔いはありません。あなたを守れたのですから", "責める理由が見当たりません。あなたは、よく戦いました", "水は巡ります。また、会えますよ", "採点は、全て満点にしておきます。……全て、です", "ありがとうございました。あなたと歩けたこと、光栄です", "悲しまないでください。静かな、よい時間でした", "顔を上げて。あなたの道は、まだ続いています"],
+    volta: ["ほら、泣くんじゃないわよ！ あんたは何も悪くないわ！", "雷は消えても、音は残るのよ。……忘れないでね", "よくやったわ、あんた。本当に、よくやったのよ", "わたしが守れたんだから、胸を張りなさい！", "怒鳴ってばかりでごめんね。……あんたが、大事だったわ", "叱らないわよ、今日は。ゆっくり、休みなさい", "前を向きなさい。あんたなら、きっと大丈夫よ", "雲の上で、見てるわよ。ずっとね", "ありがとう。あんたの隣、悪くなかったわ", "また会いましょう。そのときは、雷を鳴らしてあげる"],
   };
   function resolvePlayerFail(reason) {
     SFX.hit(); SFX.miss();
@@ -2125,7 +2274,8 @@
     addLog(`${reason} 敵の攻撃を許した！`);
 
     // 女神たちは残りHPを見ながら、毎回だれかが身代わりになる（いちばんHPに余裕のある女神。同じなら順不同）。
-    // 女神が誰もいなければ、主人公が直接受ける（HP2なので一撃で死ぬ）
+    // 女神はHPの数字に関係なく「2回」被弾すると力尽きる。1回目は半分前後まで減らし、2回目で残りが全部消える（数字は辻褄を合わせる）。
+    // 女神が誰もいなければ、主人公が直接受ける（HPが低いので一撃で死ぬ）
     const guardians = state.party.filter(m => m && !m.isHero && m.hp > 0);
     const topHp = guardians.reduce((mx, m) => Math.max(mx, m.hp), 0);
     const best = guardians.filter(m => m.hp === topHp);
@@ -2133,11 +2283,21 @@
     const dmg = Math.max(1, state.enemy.atk + Math.floor(Math.random() * 3) - 1);
 
     if (target.isHero) {
-      state.hero.hp -= dmg;
+      state.hero.hp = Math.max(0, state.hero.hp - dmg);
       addLog(`${state.enemy.name}の攻撃！ 主人公に ${dmg} のダメージ！`);
     } else {
-      target.hp -= dmg;
-      addLog(`${state.enemy.name}の攻撃！ ${target.name} が身代わりになり ${dmg} のダメージ！`);
+      let shown;
+      if (!target.hit1) {
+        target.hit1 = true;
+        const frac = Math.max(0.3, Math.min(0.62, 0.62 - (state.enemy.atk - 4) * 0.03 + (Math.random() - 0.5) * 0.1));
+        const nh = Math.max(1, Math.min(target.hp - 1, Math.round(target.maxHp * frac)));
+        shown = Math.max(1, target.hp - nh);
+        target.hp -= shown;
+      } else {
+        shown = target.hp;   // 2回目：残りが全部持っていかれる
+        target.hp = 0;
+      }
+      addLog(`${state.enemy.name}の攻撃！ ${target.name} が身代わりになり ${shown} のダメージ！`);
       if (target.hp <= 0) {
         target.hp = 0;
         addLog(`${target.name} は力尽きて天界へ帰還した……。`);
@@ -2158,6 +2318,7 @@
     }
 
     if (state.hero.hp <= 0) {
+      if (canRevive()) { doRevive('BATTLE'); return; }
       state.mode = 'GAMEOVER';
       document.getElementById('gameover-stats').textContent =
         `到達LV: ${state.hero.lv} / 歩数: ${state.steps}歩`;
@@ -2166,6 +2327,49 @@
     } else {
       generateProblem();
     }
+  }
+
+  // === デス：女神の愛による復活（3回まで）===
+  const REVIVE_LINES = [
+    '……まだです。まだ、あなたの物語は終わっていません。',
+    '大丈夫。もう一度だけ、立ち上がりなさい。',
+    '最後の光を、あなたに。——どうか、生きて。'
+  ];
+  function canRevive() { return soloMode && (state.revives || 0) > 0; }
+  function doRevive(after) {
+    state.revives--;
+    state.mode = 'REVIVE';
+    clearTimeout(walkTimer);
+    switchPad('NONE');
+    const rv = document.getElementById('revive-screen');
+    document.getElementById('rv-sub').textContent = state.revives > 0 ? `のこり ${state.revives} 回` : 'これが、最後の光';
+    const parts = document.getElementById('rv-parts');
+    parts.innerHTML = '';
+    for (let i = 0; i < 30; i++) {
+      const p = document.createElement('i');
+      p.style.left = (Math.random() * 100) + '%';
+      p.style.animationDelay = (Math.random() * 2) + 's';
+      p.style.animationDuration = (2.2 + Math.random() * 2) + 's';
+      p.style.setProperty('--sz', (3 + Math.random() * 6) + 'px');
+      parts.appendChild(p);
+    }
+    rv.classList.remove('on'); void rv.offsetWidth; rv.classList.add('on');
+    addLog('——光が降りてくる。');
+    SFX.summon(); setTimeout(SFX.clear, 600);
+    setTimeout(() => {
+      addLog(`女神「${REVIVE_LINES[Math.min(2, 2 - state.revives)]}」`);
+      addLog(`女神の愛により、主人公は蘇った。（のこり ${state.revives} 回）`);
+    }, 1400);
+    setTimeout(() => {
+      rv.classList.remove('on');
+      state.hero.hp = state.hero.maxHp;
+      state.guard = null;
+      if (after === 'BATTLE' && state.enemy) {
+        state.mode = 'BATTLE'; switchPad('BATTLE'); updateUI(); generateProblem();
+      } else {
+        state.mode = 'EXPLORE'; switchPad('EXPLORE'); holdWalk = true; updateUI();
+      }
+    }, 3600);
   }
 
   // === 後ろへ戻る → 死神に斬られてゲームオーバー ===
@@ -2211,7 +2415,7 @@
       // デス：死なずにスタート。「死神の加護を得た」→ 画面が静まり、主人公の枠が呪われる（演出のみ・意味はない）
       T(() => {
         const dt = document.getElementById('death-text');
-        dt.textContent = '死神の加護を得た'; dt.classList.add('bless');
+        dt.textContent = '死神の呪いを受けた'; dt.classList.add('bless');
         dt.style.animation = 'none'; void dt.offsetWidth; dt.style.animation = 'deathText 1.4s ease-out both';
         SFX.summon();
       }, 3300);
@@ -2224,14 +2428,15 @@
         state.cursed = true;
         state.mode = 'EXPLORE';
         switchPad('EXPLORE');
-        addLog('死神の加護を得た。主人公の背後に、呪われた気配がまとわりつく。（演出のみ・効果なし）');
+        addLog('死神の呪いにより、HPが1になった。女神の姿はない。懐にポーションがひとつ。');
         updateUI();
         holdWalk = true;   // 加護を得たあとも停止状態から
       }, 6700);
       return;
     }
-    // 4.6秒：ゲームオーバー画面（血はその後ろに残す）
+    // 4.6秒：ゲームオーバー画面（血はその後ろに残す）。デスは女神の愛で復活できることがある
     T(() => {
+      if (canRevive()) { clearDeath(); addLog('死神の鎌は確かに命を断った——だが、光がそれを拒んだ。'); doRevive('EXPLORE'); return; }
       state.mode = 'GAMEOVER';
       const go = document.getElementById('gameover-screen');
       go.classList.add('death-over');
@@ -2906,6 +3111,7 @@
     b.onclick = () => {
       const d = DIFFS[+b.dataset.d];
       corridorLen = d.len; timeScale = d.time; diffName = d.name; calcMode = !!d.calc;
+      roster = d.roster.slice(); soloMode = !!d.solo;
       SFX.start();
       document.getElementById('diff-screen').style.display = 'none';
       resetGame();
@@ -2996,6 +3202,9 @@
     roza: '巻き髪を長く垂らし、胸に紅薔薇。スカートには茨が絡み、細身の銃を携える。',
     miri: 'ヴェールを深くかぶり、祈りの形に手を組む。数珠を下げ、頭上には迷い星。',
     lyum: 'ボブヘアに三日月の髪飾り。短い裾にブーツ、片手は腰。口もとは常に嘲り。',
+    sylph: "短い翠の髪に羽根飾り。風をはらむマントを、ふわりと翻す。",
+    nerei: "青い長髪を一つに束ね、細い眼鏡をかけている。手には、濡れた巻物。",
+    volta: "逆立つ金髪に稲妻の髪飾り。腕組みで仁王立ち、ブーツは泥だらけ。",
   };
 
   let statIdx = 0;
@@ -3036,7 +3245,7 @@
     grid.appendChild(card);
   }
   function openStatus() {
-    if (state.mode === 'TITLE' || state.mode === 'GAMEOVER' || state.mode === 'DEATH' || resultOpen) return;
+    if (state.mode === 'TITLE' || state.mode === 'GAMEOVER' || state.mode === 'DEATH' || state.mode === 'REVIVE' || resultOpen) return;
     SFX.statusOpen();
     state.paused = true;
     statIdx = 0;   // 開くたびに主人公から
@@ -3049,6 +3258,47 @@
     document.getElementById('status-modal').style.display = 'none';
     if (state.mode === 'EXPLORE' && !holdWalk) scheduleAutoWalk(500);
   }
+  // === アイテム（戦闘のあと、停止中にだけ使える）===
+  function renderItem() {
+    const n = state.potions || 0;
+    const box = document.getElementById('item-list');
+    box.innerHTML = '';
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    row.innerHTML = `<div><b>ポーション ×${n}</b><small>HPを全回復する</small></div>`;
+    const b = document.createElement('button');
+    b.className = 'menu-btn'; b.textContent = '[ 使う ]'; b.disabled = n <= 0;
+    b.onclick = usePotion;
+    row.appendChild(b);
+    box.appendChild(row);
+    if (n <= 0) { const e = document.createElement('div'); e.style.cssText = 'opacity:.6;font-size:.8rem;margin-top:6px;'; e.textContent = state.potions === 0 && !soloMode ? '持っているアイテムはない。' : 'ポーションは、もうない。'; box.appendChild(e); }
+  }
+  function openItem() {
+    if (state.mode !== 'EXPLORE' || state.paused || resultOpen) return;   // 戦闘が終わって止まっているときだけ
+    SFX.statusOpen();
+    state.paused = true;
+    renderItem();
+    document.getElementById('item-modal').style.display = 'flex';
+  }
+  function closeItem() {
+    SFX.statusClose();
+    state.paused = false;
+    document.getElementById('item-modal').style.display = 'none';
+    if (state.mode === 'EXPLORE' && !holdWalk) scheduleAutoWalk(500);
+  }
+  function usePotion() {
+    if ((state.potions || 0) <= 0) return;
+    state.potions--;
+    SFX.summon();
+    state.hero.hp = state.hero.maxHp;
+    addLog(`ポーションを使った。HPが全回復した！（${state.hero.hp}/${state.hero.maxHp}）`);
+    if (state.hero.maxHp <= 1) addLog(`${state.hero.name}「……最大HPが1だから、何も変わらないな」`);
+    updateUI();
+    renderItem();
+  }
+  document.getElementById('btn-item').onclick = openItem;
+  document.getElementById('btn-item-pad').onclick = openItem;
+  document.getElementById('btn-item-close').onclick = closeItem;
   document.getElementById('btn-status').onclick = openStatus;
   document.getElementById('btn-status-pad').onclick = openStatus; // 戦闘後などの停止中に、大きいボタンから開ける
   document.getElementById('btn-status-close').onclick = closeStatus;
