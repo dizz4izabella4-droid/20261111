@@ -1355,7 +1355,7 @@
 
   // 表示用ステータス（ゲーム内の計算には使わない・意味なし）
   const STAT_KEYS = ['STR', 'VIT', 'AGI', 'INT', 'LUK'];
-  const HERO_STATS = [12, 10, 11, 14, 9];
+  const HERO_STATS = [12, 7, 11, 6, 39];
   const GODDESS_STATS = {
     lumi: [6, 7, 13, 17, 15],
     fers: [18, 16, 12, 5, 8],
@@ -2727,7 +2727,7 @@
   }
   // キャラごとの容姿（ステータス画面の説明文）
   const APPEARANCE = {
-    hero: '黒髪の短髪。旧校舎に迷い込んだ制服姿の少年。手には、いつも計算メモ。',
+    hero: '夜の散歩をしているうちに旧校舎に迷い込んだ、ピアスの少年。手には、いつも電卓。',
     lumi: 'ツインテールに光輪を戴く高貴な少女。ドレスの裾は床に届き、扇を手放さない。',
     fers: '短髪に小さな二本角。大きな肩当てと大盾、ミニスカートの下は無骨な脛当て。',
     roza: '巻き髪を長く垂らし、胸に紅薔薇。スカートには茨が絡み、細身の銃を携える。',
@@ -2762,7 +2762,7 @@
       ? '<div class="skills-wrap"><div class="sec-label">SKILL（スキル）</div><ul class="skills">' + GODDESS_SKILLS[m.id].map(k =>
           `<li><span class="sk-name"><ruby>${k[0]}<rt>${k[1]}</rt></ruby></span><span class="sk-desc">${k[2]}</span></li>`
         ).join('') + '</ul></div>'
-      : '<div class="skills-wrap"><div class="sec-label">SKILL（スキル）</div><div class="sk-desc" style="font-size:0.7rem;opacity:0.65;">なし（暗算の腕だけが武器）</div></div>';
+      : '<div class="skills-wrap"><div class="sec-label">SKILL（スキル）</div><div class="sk-desc" style="font-size:0.7rem;opacity:0.65;">なし</div></div>';
     const card = document.createElement('div');
     card.className = 'stat-card';
     card.innerHTML = `<div class="stat-head"><span>${name}</span><small>${sub}</small></div>` +
