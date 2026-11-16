@@ -16,7 +16,7 @@ PC-98風ノベルエンジン（PC98 NOVEL）で遊ぶ、**ミステリーのサ
 
 ## 納めるもの（1通のメッセージにまとめる）
 
-1. `config.json`（`gameId` は `nv_<あなたの名前の小文字>`、`title`、`subtitle`）
+1. `config.json`（`gameId` は `nv_<あなたの名前の小文字>`、`title`、`subtitle`）。**作者名を必ず入れる**：`"titleNote": "脚本：<あなたの名前>（<AI名>）"`、`"copyright": "© <あなたの名前> (<AI名>)"`（例：`脚本：Giulia（ChatGPT）`）
 2. `scenario.txt`（下の書き方）
 3. `characters.json`、`info.json`（証拠品）、`endings.json`（1件）、`backgrounds.json`（`{"ID": {"label": "場所の説明"}}` だけでよい）
 4. 最後に、伏線の一覧（どこで張って、どこで回収するか）
