@@ -407,9 +407,9 @@
     pointer-events: none;
   }
   /* 起動ログが出そろったあと、少し間を置いて、暗闇からタイトルが浮かぶ */
-  #title-main.reveal .title-logo-img { animation: logoRise 3.2s ease-out both; }
-  #title-main.reveal .title-sub { animation: fadeUp 1.4s ease-out 2.6s both; }
-  #title-main.reveal #btn-start { animation: fadeUp 1.4s ease-out 3.2s both; }
+  #title-main.reveal .title-logo-img { animation: logoRise 2.1s ease-out both; }
+  #title-main.reveal .title-sub { animation: fadeUp 1.0s ease-out 1.6s both; }
+  #title-main.reveal #btn-start { animation: fadeUp 1.0s ease-out 2.1s both; }
   #title-main:not(.ready) #btn-start { pointer-events: none; }
   @keyframes logoRise {
     0%   { opacity: 0; filter: brightness(0.15) blur(10px); }
@@ -608,6 +608,9 @@
   .skills-wrap .skills { margin-top: 0; padding-top: 0; border-top: 0; }
   #result-screen { z-index: 58; }
   #diff-screen { z-index: 59; }
+  #noise-screen { position: fixed; inset: 0; z-index: 70; display: none; background: #000; pointer-events: all; }
+  #noise-canvas { width: 100%; height: 100%; image-rendering: pixelated; display: block; }
+  #noise-msg { position: absolute; left: 0; right: 0; top: 46%; text-align: center; font-size: 1.4rem; letter-spacing: 0.3em; color: #7dffb0; text-shadow: 2px 0 #f0f, -2px 0 #0ff; }
   .diff-btn { display: block; width: min(86vw, 320px); margin: 5px 0; text-align: center; }
   .diff-btn small { display: block; font-size: 0.68rem; font-weight: normal; opacity: 0.8; margin-top: 2px; letter-spacing: 0; }
   .diff-btn.death { color: var(--alert); border-color: var(--alert); }
@@ -895,9 +898,10 @@
 
       <!-- 探索モード用UI -->
       <div id="explore-pad" class="box">
-        <div style="font-size:0.8rem; opacity:0.8;">[W / ↑] 前進 [S / ↓] 後退　※自動で歩行します</div>
+        <div style="font-size:0.8rem; opacity:0.8;">[W / ↑] 前進 [S / ↓] 後退</div>
         <button class="move-btn" id="btn-forward">▲ 前へ進む (FORWARD)</button>
         <button class="move-btn" id="btn-back">▼ 後ろへ戻る (BACK)</button>
+        <button class="move-btn" id="btn-summon-pad">召喚（SUMMON）</button>
         <button class="move-btn" id="btn-status-pad">STATUS（ステータス）</button>
       </div>
 
@@ -948,10 +952,13 @@
     </div>
   </div>
 
+  <!-- 開始演出（電子ノイズ） -->
+  <div id="noise-screen"><canvas id="noise-canvas"></canvas><div id="noise-msg"></div></div>
+
   <!-- 召喚モーダル -->
   <div id="summon-modal" class="overlay">
     <div style="font-size:1.2rem; font-weight:bold; margin-bottom:4px;">女神召喚</div>
-    <div style="font-size:0.8rem; opacity:0.85;">配置スロットを選択し、召喚する女神を指定せよ（戦闘は何もしない）</div>
+    <div style="font-size:0.8rem; opacity:0.85;">配置スロットを選び、召喚する女神を指定せよ（女神は5人固定。呼ぶかどうかは自由）</div>
     <div class="summon-grid">
       <div>
         <div class="box-title">パーティ隊列（主人公は固定）</div>
@@ -964,7 +971,7 @@
     </div>
     <div>
       <button class="menu-btn" id="btn-auto-summon">[ 前回と同じ編成 ]</button>
-      <button class="menu-btn" id="btn-battle-go">[ 戦闘開始 (ENGAGE) ]</button>
+      <button class="menu-btn" id="btn-battle-go">[ 閉じる ]</button>
     </div>
   </div>
 
@@ -1154,6 +1161,7 @@
       });
     },
     // --- 追加の効果音（それらしい合成音）---
+    noiseStart: () => { playNoise(0.5, 0.14); setTimeout(() => playNoise(0.25, 0.1), 700); setTimeout(() => playNoise(0.3, 0.08), 1300); setTimeout(() => playTone(1200, 'square', 0.12, 0.05, 300), 1900); },
     start: () => { playTone(220, 'sawtooth', 0.35, 0.09, 880); setTimeout(() => playTone(880, 'square', 0.12, 0.07), 280); },          // SYSTEM START／REBUILD
     statusOpen: () => { playTone(520, 'triangle', 0.09, 0.09, 780); setTimeout(() => playTone(780, 'triangle', 0.12, 0.09, 1040), 70); },  // 画面が開く
     statusClose: () => { playTone(780, 'triangle', 0.09, 0.08, 520); setTimeout(() => playTone(520, 'triangle', 0.12, 0.08, 330), 70); },  // 画面が閉じる
@@ -1175,7 +1183,6 @@
     { id: 'roza', name: 'ロザリエ', maxHp: 22, comments: ['「その程度の計算に手間取るなんて、呆れますわ」', '「飛ぶ敵には銃。それも教わらないとわからないの？」', '「高みから見下ろすのが性に合っていますの」'] },
     { id: 'miri', name: 'ミリア',   maxHp: 20, comments: ['「祈る価値があるのか、疑わしいところね」', '「加護？ 自力で何とかなさい」', '「お守り代わりに使うなんて、不敬よ」'] },
     { id: 'lyum', name: 'リュミエーナ', maxHp: 16, comments: ['「間違えたら笑ってあげる。せいぜい頑張って」', '「呼ばれたけど暇ね。あなたの顔も見飽きたわ」', '「数字ばかり…頭が悪くなりそう」'] },
-    { id: 'ilum', name: 'イルミネーア', maxHp: 24, comments: ['「照らしてあげているのだから、感謝くらいなさい」', '「別に心配などしていません。見ているだけよ」', '「遅い。灯りがもったいないわ」'] }
   ];
 
   // === セリフ集（女神ごと・場面ごと）。場面: ok=正解 fast=迅速 crit=神速 miss=計算ミス guard=ガード成功 hurt=被弾
@@ -1291,28 +1298,6 @@
         dragon: ['ドラゴン！ いいわね、面白そう', 'ちびドラゴン、可愛いわ。火を吹くのかしら']
       }
     },
-    ilum: {
-      ok: ['正解ね。灯りのおかげだと思いなさい', 'ふふ、悪くないわ。もう少し明るく計算なさい', 'その調子よ。足元は私が照らしてあげる', '当たったのね。……べ、別に嬉しくないわ', 'いい答えね。蝋が少し溶けたわ', '計算が速いと、灯りの減りも遅くて助かるわ'],
-      fast: ['速いわね。灯りが追いつかないわ', '目にも止まらぬ速さね。ふふ、まぶしいくらい', 'あら、輝いているわよ。今のあなた', 'その速さ、嫌いじゃないわ', 'ふふ、火花が散ったみたいね'],
-      crit: ['一撃……！ 聖痕が疼いたわ', '眩しいわ！ 今のは本当に眩しかったの', '素晴らしい。永劫に語り継いでもいいわ', 'ええ、見事。燭台の炎も揺れたわ', '照覧しなさい。これがあなたの力よ'],
-      miss: ['遅い。灯りがもったいないわ', '間違えたのね。落ち着いて、もう一度見なさい', '暗がりで迷子になるわよ。ちゃんと照らしてあげるから', 'ほら、手元をしっかり見なさい', '失敗しても大丈夫。次を照らしてあげるわ', '別に怒っていないわ。ため息は出たけれど'],
-      guard: ['いい反応ね。光の速さには遠いけれど', 'ガード成功。灯りが消えなくて良かったわ', '危なかったわね。心配していません。見ていただけよ', 'その調子で自分の身は守りなさい', 'ふふ、いい動きよ'],
-      hurt: ['きゃっ……！ 灯りが揺れたじゃない！', '痛いわ。……でも、まだ消えないわよ', 'ちょっと、火傷するところだったわ。逆よ、私が火傷させるのよ', '大丈夫。これくらいで灯りは消えないわ', 'やったわね。覚えておきなさい'],
-      start: ['敵ね。灯りで照らしてあげるわ', '暗がりから出てきたのね。逃がさないわよ', '構えなさい。足元は私が照らすわ', 'さあ、行くわよ。落ち着いて', '大丈夫、見ているから。……見ているだけよ'],
-      win: ['終わったのね。灯りを少し落とすわ', 'お疲れ様。……別に心配していたわけじゃないわ', 'よくやったわ。蝋が一滴減ったくらいよ', '勝利の光ね。眩しいわ', '次の敵が来るまで、ゆっくりしなさい', 'ふふ、いい戦いだったわ', '終わったのね。灯りを少しだけ明るくするわ', '敵の影が消えたわ。廊下が少し広く見える', 'よくやったわ。……蝋が熱くなってしまったじゃない', '勝利の光は、いつもより少し暖かいわ', '怪我はない？ 灯りで照らして確かめるわ', '暗がりに潜むものは、もういないみたいね', 'お疲れ様。しばらく、灯りの下で休むといいわ', '隠し事ができないのよ、この灯りの下では。勝って嬉しいのでしょう？', '燭台が揺れているわ。喜んでいるだけよ、たぶん', '次の敵が来るまで、静かに待ちましょう', '蝋が一滴、落ちたわ。いい戦いだった証拠ね', 'あなたの計算、灯りよりも眩しかったわ。……少しだけよ', '焦げた匂いがするのは、気のせいにして', '勝ったのだから、顔を上げなさい。灯りが届かないわ', '頭上の蝋燭が、今日はよく燃えたわ', '廊下の闇も、少しだけ怖くなくなったでしょう', 'よくできました。……子ども扱いじゃないわよ', '灯りは消さないわ。次も照らし続けるから', '勝利の余韻は、蝋が溶けるくらいの時間で十分よ', 'お疲れ様。灯りの色を、少し柔らかくしておくわ', '影が短くなったわね。敵が減った証拠だわ', '別に褒めているわけではないわ。……事実を言っているだけ', '天井が焦げなくて、よかったわ', '静かな勝利ね。灯りがよく見えるわ', 'あなたの背中、灯りに照らされるとよく見えるわ。……なんでもない', '蝋が減らないのは、あなたが無事だからかもしれないわね', '次も照らしてあげる。感謝は、いらないわ', '勝ったのだから、少し休んで。灯りの番は私がするわ', 'ふふ、悪くない夜ね。灯りがそう言っているわ', '行きましょう。灯りが、道を知っているわ'],
-      lvup: ['成長したのね。灯りがまた明るくなったわ', 'おめでとう。照らしてあげたかいがあったわ', '強くなったわね。ほんの少しだけ、誇らしいわ'],
-      walk: ['暗い廊下ね。私がいなければ迷子よ', '蝋が減らないの。誰も理由を知らないのよ', '灯りの下では隠し事ができないわ。覚えておきなさい', '誰かの足音が聞こえるわ。気のせいね', '天井が焦げるから、屋内では本気を出せないのよ', '静かね。炎の揺れる音が聞こえるわ', '歩幅を合わせなさい。灯りがぶれるわ', '窓の外は真っ暗ね。私の灯りがなければ何も見えないわ'],
-      clear: ['到着ね。ここまで照らしてきて良かったわ', '踏破おめでとう。……少し誇らしいわ', 'ふふ、いい道のりだったわ'],
-      low: ['顔色が悪いわ。休みなさい', '無理をしないで。灯りが心配しているのよ', '消えそうな灯みたいよ。気を付けなさい'],
-      back: ['後ろは暗いわ。見ない方がいいわ', '何かいるわ……前を向いて！', '振り返らないで。照らせないわ'],
-      enemy: {
-        slime: ['ぷにぷにの子ね。灯りに寄ってくるかしら', '溶けそう。熱くしちゃ駄目ね'],
-        bat: ['コウモリ？ 灯りに寄ってこないで', '羽音がうるさいわ'],
-        bird: ['小鳥ね。灯りに惹かれてきたのかしら', 'ふわふわ……ちょっとだけ撫でたいわ'],
-        puppy: ['犬ね。迷子かしら。灯りで道を教えてあげたいわ', 'しっぽが揺れてるわ。可愛いわね'],
-        dragon: ['小さな竜……火は私の領分よ', 'ドラゴンの炎と私の灯り、どちらが強いかしら']
-      }
-    }
   };
   // 主人公のひとりごと（たまに）
   const HERO_LINES = {
@@ -1342,7 +1327,7 @@
     if (Math.random() >= prob) return false;
     let alive = state.party.filter(m => m && !m.isHero && m.hp > 0 && LINES[m.id]);
     if (kind === 'win') { const o = alive.filter(m => m.id !== lastWinSpeaker); if (o.length) alive = o; }
-    if (who === 'hero' || (!who && Math.random() < 0.15 && HERO_LINES[kind])) {
+    if (who === 'hero' || (!who && (!alive.length || Math.random() < 0.15) && HERO_LINES[kind])) {
       if (!HERO_LINES[kind]) return false;
       addLog(`${state.hero.name}「${pickLine(HERO_LINES[kind])}」`);
       return true;
@@ -1366,7 +1351,6 @@
     roza: [7, 9, 12, 16, 14],
     miri: [8, 10, 9, 15, 18],
     lyum: [9, 6, 17, 13, 16],
-    ilum: [11, 12, 10, 18, 13]
   };
   // 女神の習得スキル（完全な飾り。戦闘には一切影響しない）[名前, ルビ, 説明]
   const GODDESS_SKILLS = {
@@ -1395,11 +1379,6 @@
       ['白銀ノ断罪曲', 'シルバー・ジャッジメント', '判決は拍手で決まる'],
       ['刹那ニ咲ク嘲弄', 'フラッシュ・モッカリー', '咲いた瞬間に、もう飽きている']
     ],
-    ilum: [
-      ['天蓋ヲ灼ク照覧', 'スカイ・バーン・ルミネ', '天井が焦げるので屋内では禁止'],
-      ['聖痕ノ灯火', 'スティグマ・ランタン', '灯りの下では、隠し事ができない'],
-      ['永劫回帰ノ燭台', 'エターナル・キャンドラブラ', '蝋が減らない。誰も理由を知らない']
-    ]
   };
   // 常時エンカウント（歩くたびに必ず戦闘）
   const ENCOUNTER_RATE = 1.0;
@@ -1409,8 +1388,8 @@
   const SAMPLE_BACK = ['roza', 'miri', 'lyum'];    // 後衛の左・中・右
   const SAMPLE_PARTY = SAMPLE_FRONT.concat(SAMPLE_BACK);
   function initialParty() {
-    return [makeGoddess(SAMPLE_FRONT[0]), { isHero: true, ref: state.hero }, makeGoddess(SAMPLE_FRONT[1])]
-      .concat(SAMPLE_BACK.map(makeGoddess));
+    // 初期は主人公のみ（前衛の真ん中）。女神は「召喚」で呼ぶ
+    return [null, { isHero: true, ref: state.hero }, null, null, null, null];
   }
 
   const ASSUMED_HITS = 1.5; // 敵HPの計算に使う、1回の正解あたりの想定ヒット数（1〜3回）
@@ -1528,7 +1507,7 @@
   function resetGame() {
     clearDeath();
     state.guard = null;
-    holdWalk = false;
+    holdWalk = true;   // 開始は停止状態。「前へ進む」で動き出す
     forceEncounter = false;
     state.mode = 'EXPLORE';
     state.pos = 0;
@@ -1542,7 +1521,7 @@
     state.moonPhase = 0;
     state.hero = { name: '主人公', lv: 1, hp: 35, maxHp: 35, atk: 6, exp: 0, nextExp: 15 };
     state.party = initialParty();
-    state.lastFormation = state.party.map(m => m.isHero ? { isHero: true } : { goddessId: m.id });
+    state.lastFormation = state.party.map(m => !m ? null : m.isHero ? { isHero: true } : { goddessId: m.id });
     state.paused = false;
     clearTimeout(walkTimer);
     state.enemy = null;
@@ -1553,8 +1532,8 @@
     switchPad('EXPLORE');
     logBox.innerHTML = '';
     addLog('旧校舎 1F 廊下に侵入した。暗算の力で魔を打ち倒せ。');
+    addLog('歩みは止まっている。召喚やステータスを確かめ、準備ができたら「前へ進む」。');
     updateUI();
-    scheduleAutoWalk(1200);
   }
 
   function switchPad(mode) {
@@ -1813,7 +1792,17 @@
     generateProblem();
   }
 
+  // 召喚したときのひとこと（女神ごとに5パターン、ランダム）
+  const SUMMON_LINES = {
+    lumi: ['わたくしを呼びつけるなんて、いい度胸ですわ', 'ようやく呼びましたわね。待たせすぎですわよ', 'よろしくてよ。わたくしが加わって差し上げますわ', '光輪が反応しましたわ。仕方ありませんわね、お相手します', 'あなたの隊列に入るのは、今夜だけ特別ですわ'],
+    fers: ['フェルだ。盾が必要なら、後ろに下がってろ', '呼んだか。……なら、前は俺が引き受ける', 'おう、来てやったぞ。しっかり守ってやる', '勘違いするなよ。仲間を守りに来ただけだ', 'よし、持ち場につく。指示は短く頼むぞ'],
+    roza: ['ロザリエ、参上いたしましたわ。お手柔らかに', '薔薇の香りとともに、優雅に参りますわ', '呼ばれて飛び出る、というわけではありませんのよ。念のため', 'あら、わたくしの銃の出番ですの？ 楽しみですわ', '隊列に加わりましょう。棘は控えめにいたしますわ'],
+    miri: ['ミリアよ。祈りは期待しないでね', '呼ばれたのね。星が少しだけ傾いたわ', 'お邪魔するわ。静かな場所を、お借りするわね', '加護は約束できないけれど、そばにいるわ', '……来てしまったわ。数珠は持ってきたから大丈夫よ'],
+    lyum: ['あはっ、呼んだ？ 退屈してたのよ', 'リュミエーナ登場。笑う準備はできてるわ', 'ふふ、面白そう。しばらく付き合ってあげる', '間違えたら笑ってあげるから、よろしくね', '月が三つ見える前に、呼んでくれてよかったわ']
+  };
   function openSummonModal() {
+    if (state.mode !== 'EXPLORE' || state.paused || resultOpen) return;
+    state.paused = true;
     const modal = document.getElementById('summon-modal');
     modal.style.display = 'flex';
     SFX.summon();
@@ -1876,6 +1865,9 @@
           maxHp: d.maxHp,
           comments: d.comments
         };
+        SFX.summon();
+        addLog(`${d.name}「${pickLine(SUMMON_LINES[d.id])}」`);
+        updateUI();
         // 次の空きスロットへ自動移動
         const nextEmpty = state.party.findIndex(m => m === null);
         if (nextEmpty !== -1) state.selectedSlot = nextEmpty;
@@ -1909,6 +1901,13 @@
     renderSummonLists();
   }
 
+  function closeSummon() {
+    SFX.beep();
+    state.lastFormation = state.party.map(m => !m ? null : m.isHero ? { isHero: true } : { goddessId: m.id });
+    document.getElementById('summon-modal').style.display = 'none';
+    state.paused = false;
+    updateUI();
+  }
   function startBattle() {
     SFX.beep();
     // 現在の編成を記憶
@@ -2170,7 +2169,7 @@
         switchPad('EXPLORE');
         addLog('死神の加護を得た。主人公の背後に、呪われた気配がまとわりつく。（演出のみ・効果なし）');
         updateUI();
-        scheduleAutoWalk(1200);
+        holdWalk = true;   // 加護を得たあとも停止状態から
       }, 6700);
       return;
     }
@@ -2691,10 +2690,10 @@
           const tm = document.getElementById('title-main');
           tm.style.display = 'block';
           tm.classList.add('reveal');
-          setTimeout(() => tm.classList.add('ready'), 3400);
-        }, 1200);
+          setTimeout(() => tm.classList.add('ready'), 2300);
+        }, 500);
       }
-    }, 260);
+    }, 170);
   }
 
   // === イベントリスナー登録（キーボード＆タップ両対応） ===
@@ -2725,9 +2724,59 @@
       resetGame();
       state.cursed = false;
       addLog(`難易度【${d.name}】廊下${d.len}マス／制限時間×${d.time}`);
-      if (d.name === 'デス') { clearTimeout(walkTimer); startDeath(true); }   // 死神に切られる演出だけ起きて、死なずにスタート
+      clearTimeout(walkTimer);
+      // 電子ノイズの演出のあと、停止状態からスタート（デスは死神に切られる演出つき）
+      noiseIntro(() => { if (d.name === 'デス') startDeath(true); });
     };
   });
+
+  // === 開始演出：電子ノイズ ===
+  function noiseIntro(done) {
+    const ov = document.getElementById('noise-screen');
+    const cv = document.getElementById('noise-canvas');
+    const msg = document.getElementById('noise-msg');
+    const W = cv.width = 160, H = cv.height = 90;
+    const g = cv.getContext('2d');
+    const img = g.createImageData(W, H);
+    const MSGS = ['SIGNAL LOST', 'RE-SYNC...', 'LINK 0x%X', 'NO CARRIER', 'CONNECTED'];
+    ov.style.display = 'block'; ov.style.opacity = 1;
+    state.paused = true;
+    SFX.noiseStart();
+    const t0 = performance.now(), DUR = 2100;
+    let mi = 0;
+    (function frame(now) {
+      const t = now - t0;
+      if (t >= DUR) {
+        ov.style.display = 'none'; msg.textContent = '';
+        state.paused = false;
+        if (done) done();
+        return;
+      }
+      const k = t / DUR;                       // 0→1：ノイズが徐々に引いていく
+      const amp = Math.max(0, 1 - k * 0.9);
+      const d = img.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const v = Math.random() < 0.5 + amp * 0.3 ? (Math.random() * 255 * amp) | 0 : 0;
+        d[i] = v * 0.4; d[i + 1] = v; d[i + 2] = v * 0.55; d[i + 3] = 255;
+      }
+      g.putImageData(img, 0, 0);
+      // 横に裂ける帯（ずれ）と色ずれ
+      const bars = 2 + ((Math.random() * 5) | 0);
+      for (let b = 0; b < bars; b++) {
+        const y = (Math.random() * H) | 0, h = 1 + ((Math.random() * 7) | 0), off = ((Math.random() - 0.5) * 50 * amp) | 0;
+        g.drawImage(cv, 0, y, W, h, off, y, W, h);
+        g.fillStyle = Math.random() < 0.5 ? `rgba(0,255,120,${0.25 * amp})` : `rgba(200,0,255,${0.2 * amp})`;
+        g.fillRect(0, y, W, h);
+      }
+      if (Math.random() < 0.08) { g.fillStyle = `rgba(255,255,255,${0.35 * amp})`; g.fillRect(0, 0, W, H); }
+      // メッセージの点滅
+      const idx = Math.min(MSGS.length - 1, (k * MSGS.length) | 0);
+      if (idx !== mi || !msg.textContent) { mi = idx; msg.textContent = MSGS[idx].replace('%X', ((Math.random() * 65535) | 0).toString(16).toUpperCase()); }
+      msg.style.opacity = Math.random() < 0.2 ? 0.2 : 1;
+      if (k > 0.75) ov.style.opacity = Math.max(0, (1 - k) / 0.25);
+      requestAnimationFrame(frame);
+    })(t0);
+  }
 
   // 敵をタッチ（クリック）でガード。PCは Space / Enter でも可
   document.getElementById('viewport-wrap').addEventListener('pointerdown', (e) => {
@@ -2737,7 +2786,11 @@
   document.getElementById('btn-back').onclick = () => move(-1);
 
   document.getElementById('btn-auto-summon').onclick = applyLastFormation;
-  document.getElementById('btn-battle-go').onclick = startBattle;
+  document.getElementById('btn-battle-go').onclick = closeSummon;
+  document.getElementById('btn-summon-pad').onclick = openSummonModal;
+  document.addEventListener('keydown', (e) => {
+    if (document.getElementById('summon-modal').style.display === 'flex' && (e.key === 'Escape' || e.key === 'Enter')) { e.preventDefault(); closeSummon(); }
+  });
 
   document.querySelectorAll('.num-btn').forEach(btn => {
     btn.onclick = () => handleNumInput(btn.dataset.key);
@@ -2755,7 +2808,6 @@
     roza: '巻き髪を長く垂らし、胸に紅薔薇。スカートには茨が絡み、細身の銃を携える。',
     miri: 'ヴェールを深くかぶり、祈りの形に手を組む。数珠を下げ、頭上には迷い星。',
     lyum: 'ボブヘアに三日月の髪飾り。短い裾にブーツ、片手は腰。口もとは常に嘲り。',
-    ilum: '長い髪の先が炎のように揺れる。頭上の蝋燭と、片手の燭台が灯りを放つ。'
   };
 
   let statIdx = 0;
