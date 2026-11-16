@@ -1434,7 +1434,7 @@
     visited: Array(corridorLen).fill(false),
     steps: 0,
     moonPhase: 0,
-    hero: { name: '主人公', lv: 1, hp: 35, maxHp: 35, atk: 6, exp: 0, nextExp: 15 },
+    hero: { name: '主人公', lv: 1, hp: 2, maxHp: 6, atk: 6, exp: 0, nextExp: 15 },
     // 5スロット: 0,1,2=前衛 / 3,4=後衛。初期は0に主人公のみ
     party: [null, null, null, null, null, null],
     lastFormation: [null, null, null, null, null, null],
@@ -1532,7 +1532,7 @@
     resultOpen = false;
     document.getElementById('result-screen').style.display = 'none';
     state.moonPhase = 0;
-    state.hero = { name: '主人公', lv: 1, hp: 35, maxHp: 35, atk: 6, exp: 0, nextExp: 15 };
+    state.hero = { name: '主人公', lv: 1, hp: 2, maxHp: 6, atk: 6, exp: 0, nextExp: 15 };   // 最大HP6・開始時2。女神を召喚しないと一撃で死ぬ
     state.party = initialParty();
     state.lastFormation = state.party.map(m => !m ? null : m.isHero ? { isHero: true } : { goddessId: m.id });
     state.paused = false;
@@ -2111,14 +2111,25 @@
     updateUI();
     generateProblem();
   }
+  // 女神の体力が尽きるときのひとこと（10通りずつ）。普段のツンは消え、主人公を責めず、慈愛に満ちる
+  const FALL_LINES = {
+    lumi: ['泣かないでくださいな。あなたは、何も悪くありませんわ', 'わたくしの光輪が、あなたを守れたのなら……それで十分ですわ', '大丈夫。天界で、少しだけ休んでまいりますわ', 'どうか顔を上げて。あなたの歩む先を、見守っておりますわ', '強がりばかり言って、ごめんなさい。……あなたが無事で、よかった', '光は消えませんわ。いつでも、あなたの傍にありますのよ', 'あなたの背中を押せたこと、誇りに思いますわ', '悲しまないで。わたくしは、満ち足りておりますの', 'さあ、前へ。あなたの足は、まだ動くでしょう？', 'ふふ、最後くらい素直に言わせて。……ありがとう、ですわ'],
+    fers: ['謝るな。お前は何も悪くない。盾の役目を果たしただけだ', 'そんな顔をするな。……よく頑張ったな', '守れてよかった。それだけで、俺は満足だ', '先へ進め。後ろは気にするな。俺が見ててやる', '強がりはここまでだ。……お前に会えて、よかった', '誰も責めやしない。胸を張って、歩いていけ', '少し休むだけだ。すぐまた、盾を構えて戻ってくる', 'お前の計算に、何度も救われたぞ。ありがとうな', '泣くな。守る者がいるというのは、悪くないもんだ', 'さあ、行け。お前なら、きっと大丈夫だ'],
+    roza: ['そんなに悲しい顔をなさらないで。薔薇は散っても、香りは残りますわ', 'あなたを守れたのなら、この身に悔いはありませんわ', '誰も責めたりしませんわ。どうか、ご自分を許してあげて', 'わたくしの銃は、もう構えられませんけれど……あなたの味方ですわ', '綺麗な夜でしたわね。あなたと歩けて、幸せでしたわ', '棘はもう要りませんわね。あなたを傷つけるものなど、何もなくなりました', 'さあ、前へ。わたくしの薔薇が、道を照らしますわ', '強がってばかりで、ごめんなさい。……あなたが、大切でしたの', 'またお会いしましょう。紅茶を淹れて、待っておりますわ', '泣かないで。あなたの笑顔が、一番の勲章ですのよ'],
+    miri: ['大丈夫よ。あなたのせいじゃないわ。ひとつも', '祈りが届いたのね。……あなたが生きていてくれて、嬉しいわ', '星になるだけよ。いつでも、見守っているわ', 'どうか、ご自分を責めないで。あなたはよくやっているわ', '痛くはないの。あたたかい光に包まれているみたい', '神様が留守でも、私がそばにいるわ。……最後まで', 'さあ、顔を上げて。星があなたの道を示しているわ', 'ありがとう。あなたと歩いた時間は、私の宝物よ', '泣かないで。また会える日まで、祈り続けるわ', 'あなたの歩みが、どうか光に満ちていますように'],
+    lyum: ['あはは……もう笑ってあげられないわね。ごめんね', 'そんな顔しないで。あなたは、ちっとも悪くないわ', '楽しかったわよ。本当に、すごく', 'ほら、笑って。最後に見るのは、あなたの笑顔がいいわ', '飽きっぽい私が、最後まで付き合えたのよ。誇っていいわ', '泣くのはなし。月が心配してしまうわ', '先へ行って。私の分まで、笑ってちょうだい', 'あなたを守れたなんて、らしくないけれど……悪くないわ', '責めたりしないわ。あなたは、精一杯だったもの', 'じゃあね、また月の下で。待っているわ']
+  };
   function resolvePlayerFail(reason) {
     SFX.hit(); SFX.miss();
     triggerShake();
     addLog(`${reason} 敵の攻撃を許した！`);
 
-    // 生存しているパーティメンバーからランダム1体が被弾
-    const targets = state.party.filter(m => m && (m.isHero || m.hp > 0));
-    const target = targets[Math.floor(Math.random() * targets.length)];
+    // 女神たちは残りHPを見ながら、毎回だれかが身代わりになる（いちばんHPに余裕のある女神。同じなら順不同）。
+    // 女神が誰もいなければ、主人公が直接受ける（HP2なので一撃で死ぬ）
+    const guardians = state.party.filter(m => m && !m.isHero && m.hp > 0);
+    const topHp = guardians.reduce((mx, m) => Math.max(mx, m.hp), 0);
+    const best = guardians.filter(m => m.hp === topHp);
+    const target = guardians.length ? best[Math.floor(Math.random() * best.length)] : state.party.find(m => m && m.isHero);
     const dmg = Math.max(1, state.enemy.atk + Math.floor(Math.random() * 3) - 1);
 
     if (target.isHero) {
@@ -2126,9 +2137,12 @@
       addLog(`${state.enemy.name}の攻撃！ 主人公に ${dmg} のダメージ！`);
     } else {
       target.hp -= dmg;
-      addLog(`${state.enemy.name}の攻撃！ 女神 ${target.name} が身代わりになり ${dmg} のダメージ！`);
+      addLog(`${state.enemy.name}の攻撃！ ${target.name} が身代わりになり ${dmg} のダメージ！`);
       if (target.hp <= 0) {
-        addLog(`${target.name} は力尽きて天界へ帰還した！`);
+        target.hp = 0;
+        addLog(`${target.name} は力尽きて天界へ帰還した……。`);
+        // 力尽きるときだけは、責めることなく、慈愛に満ちたひとこと
+        addLog(`${target.name}「${pickLine(FALL_LINES[target.id])}」`);
       }
     }
 
@@ -2251,8 +2265,6 @@
       state.hero.lv++;
       state.hero.exp -= state.hero.nextExp;
       state.hero.nextExp = Math.round(state.hero.nextExp * 1.45);
-      state.hero.maxHp += 8;
-      state.hero.hp = state.hero.maxHp;
       state.hero.atk += 2;
       addLog(`LEVEL UP！ Lv.${state.hero.lv} になった！ 計算の項数が増加する！`);
       spoke = true;
@@ -2344,7 +2356,7 @@
   }
 
   // === ワイヤーフレーム廊下（細線・単色） ===
-  const ZMAX = 9, ZC = 0.55;
+  const ZMAX = 27, ZC = 0.45;   // 廊下の奥行き（約3倍）
   function zT(z) { const f = q => q * ZC / (1 + q * ZC); return f(z) / f(ZMAX); }
   function corridorGeo(w, h) {
     const endD = Math.min(210, w * 0.4);
