@@ -1075,7 +1075,20 @@
       [440, 554, 659, 880].forEach((f, i) => {
         setTimeout(() => playTone(f, 'square', 0.15, 0.1), i * 90);
       });
-    }
+    },
+    // --- 追加の効果音（それらしい合成音）---
+    start: () => { playTone(220, 'sawtooth', 0.35, 0.09, 880); setTimeout(() => playTone(880, 'square', 0.12, 0.07), 280); },          // SYSTEM START／REBUILD
+    statusOpen: () => { playTone(520, 'triangle', 0.09, 0.09, 780); setTimeout(() => playTone(780, 'triangle', 0.12, 0.09, 1040), 70); },  // 画面が開く
+    statusClose: () => { playTone(780, 'triangle', 0.09, 0.08, 520); setTimeout(() => playTone(520, 'triangle', 0.12, 0.08, 330), 70); },  // 画面が閉じる
+    tab: () => { playTone(1040, 'square', 0.035, 0.05); setTimeout(() => playTone(1320, 'square', 0.04, 0.05), 35); },                  // キャラ切替（スワイプ）
+    summon: () => { [330, 440, 554, 659, 880].forEach((f, i) => setTimeout(() => playTone(f, 'sine', 0.3, 0.09), i * 70)); playNoise(0.25, 0.04); },  // 女神召喚
+    correct: () => { playTone(1320, 'sine', 0.12, 0.08); setTimeout(() => playTone(1760, 'sine', 0.18, 0.07), 70); },                   // 正解の「ピンッ」
+    miss: () => { playTone(160, 'sawtooth', 0.22, 0.12, 110); setTimeout(() => playTone(120, 'sawtooth', 0.25, 0.12, 80), 110); },    // 計算ミス
+    crit: () => { playTone(1760, 'square', 0.18, 0.08, 2640); playNoise(0.1, 0.12); setTimeout(() => playTone(880, 'sawtooth', 0.3, 0.1, 220), 60); },  // 神速クリティカル
+    win: () => { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => playTone(f, 'square', 0.14, 0.08), i * 80)); setTimeout(() => playTone(1046, 'triangle', 0.4, 0.09), 340); },  // 撃破
+    clear: () => { [523, 659, 784, 1046, 784, 1046, 1318].forEach((f, i) => setTimeout(() => playTone(f, 'square', 0.18, 0.09), i * 110)); setTimeout(() => playTone(1318, 'triangle', 0.7, 0.09), 800); },  // クリア
+    gameover: () => { [392, 330, 262, 196].forEach((f, i) => setTimeout(() => playTone(f, 'sawtooth', 0.4, 0.1, f * 0.7), i * 260)); },   // ゲームオーバー
+    guardReady: () => { playTone(1500, 'square', 0.08, 0.1); setTimeout(() => playTone(1500, 'square', 0.08, 0.1), 110); }               // ガードの合図
   };
 
   // === マスターデータ ===
@@ -1355,7 +1368,7 @@
 
   // === クリア（リザルト） ===
   function showResult() {
-    SFX.levelup();
+    SFX.clear();
     state.clears = (state.clears || 0) + 1;
     state.hero.hp = state.hero.maxHp;
     state.party.forEach(m => { if (m && !m.isHero) m.hp = m.maxHp; });
@@ -1416,6 +1429,7 @@
   function openSummonModal() {
     const modal = document.getElementById('summon-modal');
     modal.style.display = 'flex';
+    SFX.summon();
     // 最初の空きスロットを選択状態にする
     const emptyIdx = state.party.findIndex(m => m === null);
     state.selectedSlot = emptyIdx !== -1 ? emptyIdx : 1;
@@ -1584,6 +1598,7 @@
   }
 
   function resolvePlayerSuccess() {
+    SFX.correct();
     const ratio = state.problem.remainTime / state.problem.maxTime;
     let hits = 1;
     let speedLabel = '通常';
@@ -1613,6 +1628,7 @@
     }
 
     if (isCritical) {
+      setTimeout(SFX.crit, 60);
       addLog(`【神速】CRITICAL！ ${weaponType}${hits}回攻撃！ ${state.enemy.name}に ${totalDmg} ダメージ！一撃で仕留めた！`);
     } else {
       addLog(`【${speedLabel}】${weaponType}${hits}回攻撃！ ${state.enemy.name}に ${totalDmg} ダメージ！敵の反撃を回避！`);
@@ -1641,7 +1657,7 @@
     state.guard = { elapsed: 0 };
     const tbar = document.getElementById('timer-bar');
     tbar.style.width = '0%';
-    SFX.encounter();
+    SFX.guardReady();
     addLog('敵が目の前に迫った！ GUARD！ 敵をタッチ！');
   }
   function guardSuccess() {
@@ -1654,7 +1670,7 @@
     generateProblem();
   }
   function resolvePlayerFail(reason) {
-    SFX.hit();
+    SFX.hit(); SFX.miss();
     triggerShake();
     addLog(`${reason} 敵の攻撃を許した！`);
 
@@ -1681,6 +1697,7 @@
       document.getElementById('gameover-stats').textContent =
         `到達LV: ${state.hero.lv} / 歩数: ${state.steps}歩`;
       document.getElementById('gameover-screen').style.display = 'flex';
+      SFX.gameover();
     } else {
       generateProblem();
     }
@@ -1732,6 +1749,7 @@
       document.getElementById('gameover-stats').textContent =
         `到達LV: ${state.hero.lv} / 歩数: ${state.steps}歩 ／ 背後には、死神がいた…`;
       go.style.display = 'flex';
+      SFX.gameover();
     }, 4600);
   }
   function clearDeath() {
@@ -1747,6 +1765,7 @@
     addLog(`${state.enemy.name} を撃破！ EXP ${gainedExp} を獲得。`);
     state.hero.exp += gainedExp;
     state.kills = (state.kills || 0) + 1;
+    setTimeout(SFX.win, 350);
 
     if (state.hero.exp >= state.hero.nextExp) {
       SFX.levelup();
@@ -2243,13 +2262,13 @@
     initAudio();
     bgmStarted = true;
     bgmSync();
-    SFX.beep();
+    SFX.start();
     document.getElementById('title-screen').style.display = 'none';
     resetGame();
   };
 
   document.getElementById('btn-retry').onclick = () => {
-    SFX.beep();
+    SFX.start();
     resetGame();
   };
 
@@ -2292,7 +2311,7 @@
       const b = document.createElement('button');
       b.className = 'stat-tab' + (i === statIdx ? ' sel' : '');
       b.textContent = m.isHero ? state.hero.name : m.name.slice(0, 4);
-      b.onclick = () => { SFX.beep(); statIdx = i; renderStatus(); };
+      b.onclick = () => { SFX.tab(); statIdx = i; renderStatus(); };
       tabs.appendChild(b);
     });
     const grid = document.getElementById('stat-grid');
@@ -2319,14 +2338,14 @@
   }
   function openStatus() {
     if (state.mode === 'TITLE' || state.mode === 'GAMEOVER' || state.mode === 'DEATH' || resultOpen) return;
-    SFX.beep();
+    SFX.statusOpen();
     state.paused = true;
     statIdx = 0;   // 開くたびに主人公から
     renderStatus();
     document.getElementById('status-modal').style.display = 'flex';
   }
   function closeStatus() {
-    SFX.beep();
+    SFX.statusClose();
     state.paused = false;
     document.getElementById('status-modal').style.display = 'none';
     if (state.mode === 'EXPLORE' && !holdWalk) scheduleAutoWalk(500);
@@ -2338,7 +2357,7 @@
   function statStep(d) {
     const n = state.party.filter(Boolean).length;
     statIdx = (statIdx + d + n) % n;
-    SFX.beep(); renderStatus();
+    SFX.tab(); renderStatus();
   }
   (() => {
     const el = document.getElementById('status-modal');
