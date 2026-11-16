@@ -456,9 +456,9 @@
     background: rgba(10, 6, 2, 0.94);
   }
   .summon-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
     width: 100%;
     max-width: 620px;
     margin: 12px 0;
@@ -478,6 +478,12 @@
     display: flex;
     justify-content: space-between;
   }
+  /* 隊列は実際のパーティ表示と同じく、前衛・後衛の2段×3列 */
+  .slot-row { display: grid; grid-template-columns: 3.2em repeat(3, 1fr); gap: 6px; align-items: stretch; margin-bottom: 6px; }
+  .slot-row .row-label { align-self: center; font-size: 0.8rem; opacity: 0.85; }
+  .slot-row .slot-btn { margin-bottom: 0; flex-direction: column; justify-content: center; align-items: center; text-align: center; min-height: 3.2em; }
+  #goddess-list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+  #goddess-list .goddess-btn { width: auto; flex: 1 1 7em; margin-bottom: 0; flex-direction: column; align-items: center; text-align: center; }
   .slot-btn.selected {
     background: var(--main);
     color: var(--bg);
@@ -958,19 +964,15 @@
   <!-- 召喚モーダル -->
   <div id="summon-modal" class="overlay">
     <div style="font-size:1.2rem; font-weight:bold; margin-bottom:4px;">女神召喚</div>
-    <div style="font-size:0.8rem; opacity:0.85;">配置スロットを選び、召喚する女神を指定せよ（女神は5人固定。呼ぶかどうかは自由）</div>
     <div class="summon-grid">
       <div>
-        <div class="box-title">パーティ隊列（主人公は固定）</div>
         <div id="slot-list"></div>
       </div>
       <div>
-        <div class="box-title">ストック女神（クリックで配置/解除）</div>
         <div id="goddess-list"></div>
       </div>
     </div>
     <div>
-      <button class="menu-btn" id="btn-auto-summon">[ 前回と同じ編成 ]</button>
       <button class="menu-btn" id="btn-battle-go">[ 閉じる ]</button>
     </div>
   </div>
@@ -1818,34 +1820,38 @@
     slotList.innerHTML = '';
     goddessList.innerHTML = '';
 
-    for (let i = 0; i < 6; i++) {
-      const posLabel = i < 3 ? '前衛' : '後衛';
-      const m = state.party[i];
-      const btn = document.createElement('button');
-      btn.className = 'slot-btn' + (state.selectedSlot === i ? ' selected' : '');
-      if (m && m.isHero) {
-        btn.innerHTML = `<span>[${posLabel}] ${state.hero.name}</span><span>(固定)</span>`;
-        btn.disabled = true;
-      } else if (m) {
-        btn.innerHTML = `<span>[${posLabel}] ${m.name}</span><span>HP:${m.hp}/${m.maxHp}</span>`;
-        btn.onclick = () => {
-          SFX.beep();
-          if (state.selectedSlot === i) {
-            state.party[i] = null; // 同じスロット再クリックで解除
-          } else {
+    for (let r = 0; r < 2; r++) {
+      const row = document.createElement('div');
+      row.className = 'slot-row';
+      row.innerHTML = `<span class="row-label">${r === 0 ? '前衛' : '後衛'}</span>`;
+      for (let c = 0; c < 3; c++) {
+        const i = r * 3 + c;
+        const m = state.party[i];
+        const btn = document.createElement('button');
+        btn.className = 'slot-btn' + (state.selectedSlot === i ? ' selected' : '');
+        if (m && m.isHero) {
+          btn.innerHTML = `<span>${state.hero.name}</span>`;
+          btn.disabled = true;
+        } else if (m) {
+          btn.innerHTML = `<span>${m.name}</span><span>HP ${m.hp}/${m.maxHp}</span>`;
+          btn.onclick = () => {
+            SFX.beep();
+            if (state.selectedSlot === i) state.party[i] = null;   // 同じスロット再クリックで解除
+            else state.selectedSlot = i;
+            updateUI();
+            renderSummonLists();
+          };
+        } else {
+          btn.innerHTML = `<span>―</span>`;
+          btn.onclick = () => {
+            SFX.beep();
             state.selectedSlot = i;
-          }
-          renderSummonLists();
-        };
-      } else {
-        btn.innerHTML = `<span>[${posLabel}] --- EMPTY ---</span><span>選択中</span>`;
-        btn.onclick = () => {
-          SFX.beep();
-          state.selectedSlot = i;
-          renderSummonLists();
-        };
+            renderSummonLists();
+          };
+        }
+        row.appendChild(btn);
       }
-      slotList.appendChild(btn);
+      slotList.appendChild(row);
     }
 
     GODDESS_POOL.forEach(d => {
@@ -2785,7 +2791,6 @@
   document.getElementById('btn-forward').onclick = () => move(1);
   document.getElementById('btn-back').onclick = () => move(-1);
 
-  document.getElementById('btn-auto-summon').onclick = applyLastFormation;
   document.getElementById('btn-battle-go').onclick = closeSummon;
   document.getElementById('btn-summon-pad').onclick = openSummonModal;
   document.addEventListener('keydown', (e) => {
