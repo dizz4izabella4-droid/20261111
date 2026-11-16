@@ -219,6 +219,9 @@
     font-weight: bold;
     cursor: pointer;
   }
+  .look-row { display: flex; gap: 8px; width: 80%; }
+  .look-row .move-btn { width: 50%; padding: 12px 4px; font-size: 0.9rem; }
+  .move-btn.on { background: var(--main); color: var(--bg); }
   #explore-pad.locked .move-btn { opacity: 0.35; pointer-events: none; }
   .move-btn:active, .move-btn:hover {
     background: var(--main);
@@ -317,6 +320,10 @@
   .member-card.active {
     border-color: var(--main);
   }
+  .hpcell { position: relative; display: inline-block; min-width: 4.2em; text-align: center; overflow: hidden; border: 1px solid var(--dim); }
+  .hpcell .hpbar { position: absolute; left: 0; top: 0; bottom: 0; background: color-mix(in srgb, var(--main) 45%, transparent); transition: width 0.25s; }
+  .hpcell .hpbar.low { background: color-mix(in srgb, var(--alert) 65%, transparent); }
+  .hpcell b { position: relative; font-weight: normal; padding: 0 3px; }
   .member-card.dead {
     opacity: 0.4;
     border-style: dashed;
@@ -518,6 +525,7 @@
     .row-label { font-size: 0.68rem; white-space: nowrap; }
     .member-card { flex-direction: column; padding: 1px 4px; line-height: 1.25; min-width: 0; }
     .member-card span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .member-card .hpcell { display: block; width: 100%; }
     .summon-grid { gap: 8px; margin: 8px 0; }
     .slot-btn, .goddess-btn { font-size: 0.72rem; padding: 5px 6px; gap: 0; flex-direction: column; }
     #summon-modal { background: rgba(5, 8, 5, 0.99); }
@@ -904,9 +912,10 @@
 
       <!-- 探索モード用UI -->
       <div id="explore-pad" class="box">
-        <div style="font-size:0.8rem; opacity:0.8;">[W / ↑] 前進 [S / ↓] 後退</div>
+        <div style="font-size:0.8rem; opacity:0.8;">[W / ↑] 前進 [S / ↓] 後退 [A / ←][D / →] 左右を向く</div>
         <button class="move-btn" id="btn-forward">▲ 前へ進む (FORWARD)</button>
         <button class="move-btn" id="btn-back">▼ 後ろへ戻る (BACK)</button>
+        <div class="look-row"><button class="move-btn" id="btn-look-l">◀ 左を向く</button><button class="move-btn" id="btn-look-r">右を向く ▶</button></div>
         <button class="move-btn" id="btn-summon-pad">召喚（SUMMON）</button>
         <button class="move-btn" id="btn-status-pad">STATUS（ステータス）</button>
       </div>
@@ -1434,6 +1443,7 @@
     enemy: null,
     problem: { text: '', answer: 0, input: '', maxTime: 5000, remainTime: 5000 },
     walkAnim: 0,
+    viewZ: 0, look: 0, lookCur: 0, walking: false, walkVis: null,   // 演出用（マップ進行とは連動しない）
     effects: [] // { type: 'sword'|'gun', progress: 0..1 }
   };
 
@@ -1510,6 +1520,7 @@
     clearDeath();
     state.guard = null;
     holdWalk = true;   // 開始は停止状態。「前へ進む」で動き出す
+    state.walking = false; state.walkVis = null; state.look = 0; state.lookCur = 0;
     forceEncounter = false;
     state.mode = 'EXPLORE';
     state.pos = 0;
@@ -1544,6 +1555,11 @@
     document.getElementById('enemy-hud').style.display = mode === 'BATTLE' ? 'flex' : 'none';
   }
 
+  // HPは数値の下にバーを敷く（数字にバーが重なる）
+  function hpCell(hp, max) {
+    const r = Math.max(0, Math.min(1, hp / max));
+    return `<span class="hpcell"><i class="hpbar${r <= 0.25 ? ' low' : ''}" style="width:${(r * 100).toFixed(0)}%"></i><b>${hp}/${max}</b></span>`;
+  }
   // === UI更新 ===
   function updateUI() {
     // ヘッダー
@@ -1584,14 +1600,14 @@
       } else if (member.isHero) {
         card.classList.add('active');
         if (state.cursed) card.classList.add('cursed');
-        card.innerHTML = `<span>${state.hero.name}</span><span>${state.hero.hp}/${state.hero.maxHp}</span>`;
+        card.innerHTML = `<span>${state.hero.name}</span>${hpCell(state.hero.hp, state.hero.maxHp)}`;
       } else {
         if (member.hp <= 0) {
           card.classList.add('dead');
           card.innerHTML = `<span>${member.name}</span><span>DEAD</span>`;
         } else {
           card.classList.add('active');
-          card.innerHTML = `<span>${member.name}</span><span>${member.hp}/${member.maxHp}</span>`;
+          card.innerHTML = `<span>${member.name}</span>${hpCell(member.hp, member.maxHp)}`;
         }
       }
     }
@@ -1609,10 +1625,11 @@
 
   // === ダンジョン移動 ===
   function move(dir) {
-    if (state.mode !== 'EXPLORE' || state.paused) return;
+    if (state.mode !== 'EXPLORE' || state.paused || state.walking) return;
     if (performance.now() < moveLockUntil) return;
     clearTimeout(walkTimer);
     holdWalk = false;
+    setLookState(0);
     // 後ろを振り返ると、死神がいる
     if (dir < 0) { startDeath(); return; }
     const nextPos = state.pos + dir;
@@ -1638,13 +1655,33 @@
 
     updateUI();
 
-    // エンカウント（戦闘後の最初の一歩は必ず戦闘。それ以外は確率）
-    if (forceEncounter || Math.random() < ENCOUNTER_RATE) {
-      forceEncounter = false;
-      triggerEncounter();
-    } else {
-      scheduleAutoWalk();
-    }
+    // 演出：ダンジョンの景色だけ2〜3ブロック歩いてから、エンカウント（マップの進行は1マスのまま）
+    const blocks = 2 + (Math.random() < 0.5 ? 1 : 0);
+    state.walking = true;
+    state.walkVis = { p: 0, dur: blocks * 650, from: state.viewZ, to: state.viewZ + blocks, lastBlock: Math.floor(state.viewZ), done: () => {
+      if (forceEncounter || Math.random() < ENCOUNTER_RATE) {
+        forceEncounter = false;
+        triggerEncounter();
+      } else {
+        scheduleAutoWalk();
+      }
+    } };
+  }
+
+  // === 左右を向く（演出のみ）：左は窓、右は教室 ===
+  function setLookState(v) {
+    state.look = v;
+    const l = document.getElementById('btn-look-l'), r = document.getElementById('btn-look-r');
+    if (l) l.classList.toggle('on', v < 0);
+    if (r) r.classList.toggle('on', v > 0);
+  }
+  function setLook(dir) {
+    if (state.mode !== 'EXPLORE' || state.paused || state.walking || resultOpen) return;
+    const next = state.look === dir ? 0 : dir;
+    setLookState(next);
+    SFX.beep();
+    if (next < 0) addLog('左を向いた。窓が並んでいる。外は暗く、月だけが見える。');
+    else if (next > 0) addLog('右を向いた。教室の引き戸が並んでいる。机の影が見える。');
   }
 
   // === クリア（リザルト） ===
@@ -2284,13 +2321,179 @@
       }
     }
 
-    // 歩行ズーム減衰
+    // 演出：視点が進む（2〜3ブロック）／左右を向く
+    if (state.walkVis && !state.paused && state.mode === 'EXPLORE') {
+      const v = state.walkVis;
+      v.p += dt / v.dur;
+      const q = Math.min(1, v.p), e = 0.5 - 0.5 * Math.cos(Math.PI * q);
+      state.viewZ = v.from + (v.to - v.from) * e;
+      const fb = Math.floor(state.viewZ);
+      if (fb > v.lastBlock) { v.lastBlock = fb; SFX.step(); }
+      if (v.p >= 1) { state.walkVis = null; state.walking = false; state.viewZ = v.to; v.done(); }
+    }
+    state.lookCur += (state.look - state.lookCur) * Math.min(1, dt * 0.012);
+    if (Math.abs(state.look - state.lookCur) < 0.003) state.lookCur = state.look;
+
+    // 歩行ズーム減衰（旧）
     if (state.walkAnim > 0) {
       state.walkAnim = Math.max(0, state.walkAnim - dt * 0.005);
     }
 
     drawViewport(dt);
     requestAnimationFrame(renderLoop);
+  }
+
+  // === ワイヤーフレーム廊下（細線・単色） ===
+  const ZMAX = 9, ZC = 0.55;
+  function zT(z) { const f = q => q * ZC / (1 + q * ZC); return f(z) / f(ZMAX); }
+  function corridorGeo(w, h) {
+    const endD = Math.min(210, w * 0.4);
+    return { endX: endD, endY: endD * 0.65, endW: w - endD * 2, endH: h - endD * 1.3 };
+  }
+  function drawFront(c, w, h, viewZ, col, geo) {
+    const { endX, endY, endW, endH } = geo;
+    const R = z => { const t = zT(Math.max(0, Math.min(ZMAX, z))); return { l: endX * t, r: w + (endX + endW - w) * t, t: endY * t, b: h + (endY + endH - h) * t }; };
+    const Y = (q, v) => q.t + v * (q.b - q.t);
+    const P = (side, z, v) => { const q = R(z); return [side < 0 ? q.l : q.r, Y(q, v)]; };
+    const Cc = (z, u) => { const q = R(z); return [q.l + u * (q.r - q.l), q.t]; };
+    const poly = (pts) => { c.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]); c.closePath(); };
+    const seg = (a, b) => { c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); };
+    const quad = (side, za, zb, v1, v2) => poly([P(side, za, v1), P(side, zb, v1), P(side, zb, v2), P(side, za, v2)]);
+    c.strokeStyle = col; c.lineWidth = 0.9; c.lineJoin = 'round';
+    const base = Math.floor(viewZ), frac = viewZ - base;
+    const r0 = R(0), r1 = R(ZMAX);
+    // 壁・床・天井の角の線
+    c.globalAlpha = 1; c.beginPath();
+    seg([r0.l, r0.t], [r1.l, r1.t]); seg([r0.r, r0.t], [r1.r, r1.t]); seg([r0.l, r0.b], [r1.l, r1.b]); seg([r0.r, r0.b], [r1.r, r1.b]);
+    c.stroke();
+    // 腰壁・床と天井の割り付け線（淡く）
+    c.globalAlpha = 0.5; c.beginPath();
+    seg([r0.l, Y(r0, 0.7)], [r1.l, Y(r1, 0.7)]); seg([r0.r, Y(r0, 0.7)], [r1.r, Y(r1, 0.7)]);
+    [1 / 3, 2 / 3].forEach(u => {
+      seg([r0.l + (r0.r - r0.l) * u, r0.b], [r1.l + (r1.r - r1.l) * u, r1.b]);
+      seg([r0.l + (r0.r - r0.l) * u, r0.t], [r1.l + (r1.r - r1.l) * u, r1.t]);
+    });
+    c.stroke();
+    // 1ブロックごとの装飾（手前へ流れてくる）
+    for (let k = 0; k <= ZMAX; k++) {
+      const n = base + k, z1 = k - frac, z2 = z1 + 1;
+      if (z2 <= 0 || z1 >= ZMAX) continue;
+      c.globalAlpha = Math.max(0.18, 1 - 0.78 * zT(Math.max(0, z1)));
+      c.beginPath();
+      const A = R(z1);
+      if (z1 > 0.02) c.rect(A.l, A.t, A.r - A.l, A.b - A.t);   // 断面の枠
+      const za = z1 + 0.14, zb = z1 + 0.86, zm = z1 + 0.5;
+      // 左：窓
+      quad(-1, za, zb, 0.18, 0.58);
+      quad(-1, za + 0.05, zb - 0.05, 0.22, 0.54);
+      seg(P(-1, zm, 0.22), P(-1, zm, 0.54));
+      seg(P(-1, za + 0.05, 0.38), P(-1, zb - 0.05, 0.38));
+      seg(P(-1, za - 0.04, 0.6), P(-1, zb + 0.04, 0.6));
+      quad(-1, z1 + 0.3, z1 + 0.7, 0.68, 0.84);
+      seg(P(-1, z1 + 0.4, 0.68), P(-1, z1 + 0.4, 0.84)); seg(P(-1, z1 + 0.5, 0.68), P(-1, z1 + 0.5, 0.84)); seg(P(-1, z1 + 0.6, 0.68), P(-1, z1 + 0.6, 0.84));
+      // 右：教室の引き戸／掲示板
+      if (n % 2 === 0) {
+        quad(1, z1 + 0.18, z1 + 0.82, 0.12, 1.0);
+        seg(P(1, zm, 0.12), P(1, zm, 1.0));
+        quad(1, z1 + 0.24, z1 + 0.76, 0.2, 0.5);
+        seg(P(1, zm, 0.2), P(1, zm, 0.5));
+        seg(P(1, z1 + 0.24, 0.35), P(1, z1 + 0.76, 0.35));
+        seg(P(1, zm - 0.05, 0.62), P(1, zm - 0.05, 0.72)); seg(P(1, zm + 0.05, 0.62), P(1, zm + 0.05, 0.72));
+        seg(P(1, z1 + 0.18, 0.86), P(1, z1 + 0.82, 0.86));
+        quad(1, z1 + 0.38, z1 + 0.62, 0.03, 0.09);
+      } else {
+        quad(1, z1 + 0.2, z1 + 0.8, 0.22, 0.55);
+        quad(1, z1 + 0.28, z1 + 0.42, 0.28, 0.42);
+        quad(1, z1 + 0.55, z1 + 0.72, 0.3, 0.48);
+      }
+      // 天井の照明
+      poly([Cc(z1 + 0.3, 0.38), Cc(z1 + 0.7, 0.38), Cc(z1 + 0.7, 0.62), Cc(z1 + 0.3, 0.62)]);
+      seg(Cc(z1 + 0.5, 0.38), Cc(z1 + 0.5, 0.62));
+      c.stroke();
+    }
+    // 突き当たり：非常口
+    c.globalAlpha = 0.8; c.beginPath();
+    const ew = r1.r - r1.l, eh = r1.b - r1.t;
+    c.rect(r1.l, r1.t, ew, eh);
+    c.rect(r1.l + ew * 0.3, r1.t + eh * 0.15, ew * 0.4, eh * 0.85);
+    seg([r1.l + ew * 0.5, r1.t + eh * 0.15], [r1.l + ew * 0.5, r1.b]);
+    c.stroke();
+    c.globalAlpha = 1;
+  }
+  function sideBase(c, w, h, col) {
+    c.strokeStyle = col; c.lineWidth = 0.9; c.globalAlpha = 1; c.lineJoin = 'round';
+    const fy = h * 0.84;
+    c.beginPath();
+    c.moveTo(0, h * 0.1); c.lineTo(w, h * 0.1);
+    c.moveTo(0, h * 0.78); c.lineTo(w, h * 0.78);
+    c.moveTo(0, fy); c.lineTo(w, fy);
+    c.stroke();
+    c.globalAlpha = 0.45; c.beginPath();
+    for (let i = 1; i <= 3; i++) { const y = fy + (h - fy) * Math.pow(i / 3, 1.5); c.moveTo(0, y); c.lineTo(w, y); }
+    for (let x = 0; x <= w; x += w / 8) { c.moveTo(x, h); c.lineTo(w / 2 + (x - w / 2) * 0.6, fy); }
+    c.stroke();
+    c.globalAlpha = 1;
+    return fy;
+  }
+  function drawSideLeft(c, w, h, col) {
+    sideBase(c, w, h, col);
+    const ww = w * 0.26, wy1 = h * 0.2, wy2 = h * 0.62;
+    for (let i = 0; i < 3; i++) {
+      const x = w * 0.07 + i * w * 0.31;
+      c.beginPath();
+      c.rect(x, wy1, ww, wy2 - wy1);
+      c.rect(x + 5, wy1 + 5, ww - 10, wy2 - wy1 - 10);
+      c.moveTo(x + ww / 3, wy1 + 5); c.lineTo(x + ww / 3, wy2 - 5);
+      c.moveTo(x + ww * 2 / 3, wy1 + 5); c.lineTo(x + ww * 2 / 3, wy2 - 5);
+      c.moveTo(x + 5, wy1 + (wy2 - wy1) * 0.42); c.lineTo(x + ww - 5, wy1 + (wy2 - wy1) * 0.42);
+      c.moveTo(x - 7, wy2 + 4); c.lineTo(x + ww + 7, wy2 + 4);
+      c.moveTo(x - 4, wy2 + 8); c.lineTo(x + ww + 4, wy2 + 8);
+      c.rect(x + 8, wy2 + 14, ww - 16, h * 0.76 - wy2 - 14);
+      for (let f = 1; f < 9; f++) { const fx = x + 8 + (ww - 16) * f / 9; c.moveTo(fx, wy2 + 14); c.lineTo(fx, h * 0.76); }
+      c.stroke();
+      c.globalAlpha = 0.5; c.beginPath();
+      c.moveTo(x + 12, wy1 + 28); c.lineTo(x + 24, wy1 + 12); c.moveTo(x + 18, wy1 + 34); c.lineTo(x + 34, wy1 + 14);
+      c.stroke(); c.globalAlpha = 1;
+      if (i === 1) {   // 月
+        const mx = x + ww * 0.66, my = wy1 + (wy2 - wy1) * 0.26;
+        c.beginPath(); c.arc(mx, my, 9, Math.PI * 0.5, Math.PI * 1.5); c.arc(mx + 4, my, 7.5, Math.PI * 1.5, Math.PI * 0.5, true); c.stroke();
+      }
+    }
+  }
+  function drawSideRight(c, w, h, col) {
+    const fy = sideBase(c, w, h, col);
+    const dw = w * 0.34, top = h * 0.17;
+    ['1-A', '1-B'].forEach((name, i) => {
+      const x = w * (i === 0 ? 0.06 : 0.58);
+      const mid = x + dw / 2;
+      c.beginPath();
+      c.rect(x, top, dw, fy - top);
+      c.moveTo(mid, top); c.lineTo(mid, fy);
+      [[x + 6, mid - 4], [mid + 4, x + dw - 6]].forEach(([a, b]) => {
+        c.rect(a, h * 0.24, b - a, h * 0.26);
+        c.moveTo((a + b) / 2, h * 0.24); c.lineTo((a + b) / 2, h * 0.5);
+        c.moveTo(a, h * 0.37); c.lineTo(b, h * 0.37);
+        c.rect(a, h * 0.7, b - a, h * 0.12);
+      });
+      c.moveTo(mid - 9, h * 0.55); c.lineTo(mid - 9, h * 0.63);
+      c.moveTo(mid + 9, h * 0.55); c.lineTo(mid + 9, h * 0.63);
+      c.rect(mid - 20, h * 0.105, 40, h * 0.045);
+      c.stroke();
+      // ガラス越しの机（淡く）
+      c.globalAlpha = 0.4; c.beginPath();
+      for (let d = 0; d < 3; d++) { const dx0 = x + 14 + d * (dw - 28) / 3; c.rect(dx0, h * 0.42, 14, 7); c.moveTo(dx0 + 3, h * 0.42 + 7); c.lineTo(dx0 + 3, h * 0.5); c.moveTo(dx0 + 11, h * 0.42 + 7); c.lineTo(dx0 + 11, h * 0.5); }
+      c.stroke(); c.globalAlpha = 1;
+      c.fillStyle = col; c.font = '9px monospace'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText(name, mid, h * 0.128);
+    });
+    // 戸と戸の間：掲示板と時計
+    c.beginPath();
+    c.rect(w * 0.43, h * 0.32, w * 0.1, h * 0.2);
+    c.rect(w * 0.445, h * 0.36, w * 0.03, h * 0.06); c.rect(w * 0.485, h * 0.38, w * 0.035, h * 0.08);
+    c.stroke();
+    c.beginPath(); c.arc(w * 0.48, h * 0.23, 9, 0, Math.PI * 2);
+    c.moveTo(w * 0.48, h * 0.23); c.lineTo(w * 0.48, h * 0.23 - 6); c.moveTo(w * 0.48, h * 0.23); c.lineTo(w * 0.48 + 4, h * 0.23 + 2);
+    c.stroke();
   }
 
   function drawViewport(dt) {
@@ -2301,49 +2504,15 @@
 
     ctx.clearRect(0, 0, w, h);
 
-    // 1. 擬似3D 校舎廊下ワイヤーフレーム
-    ctx.strokeStyle = state.mode === 'BATTLE' ? dimCol : mainCol;
-    ctx.lineWidth = 1.5;
-
-    const zoomOffset = state.walkAnim * 18;
-    const depths = [0, 60 + zoomOffset, 125 + zoomOffset * 0.6, 175 + zoomOffset * 0.3, 210];
-
-    // 奥行き矩形（廊下のフレーム）
-    depths.forEach((d, idx) => {
-      const rx = d;
-      const ry = d * 0.65;
-      const rw = w - d * 2;
-      const rh = h - d * 1.3;
-      if (rw > 10 && rh > 10) {
-        ctx.strokeRect(rx, ry, rw, rh);
-        // 学校の廊下らしい窓枠の示唆（左側壁）
-        if (idx < depths.length - 1) {
-          const nd = depths[idx + 1];
-          const nry = nd * 0.65;
-          ctx.beginPath();
-          ctx.moveTo(rx + 10, ry + (h - ry * 2) * 0.25);
-          ctx.lineTo(nd - 6, nry + (h - nry * 2) * 0.25);
-          ctx.lineTo(nd - 6, nry + (h - nry * 2) * 0.65);
-          ctx.lineTo(rx + 10, ry + (h - ry * 2) * 0.65);
-          ctx.closePath();
-          ctx.stroke();
-        }
-      }
-    });
-
-    // 四隅から奥へのパース線
-    const endD = depths[depths.length - 1];
-    const endX = endD;
-    const endY = endD * 0.65;
-    const endW = w - endD * 2;
-    const endH = h - endD * 1.3;
-
-    ctx.beginPath();
-    ctx.moveTo(0, 0); ctx.lineTo(endX, endY);
-    ctx.moveTo(w, 0); ctx.lineTo(endX + endW, endY);
-    ctx.moveTo(0, h); ctx.lineTo(endX, endY + endH);
-    ctx.moveTo(w, h); ctx.lineTo(endX + endW, endY + endH);
-    ctx.stroke();
+    // 1. 擬似3D 校舎廊下ワイヤーフレーム（細線・単色）。視点が進むと窓・戸・照明が手前へ流れる
+    const geo = corridorGeo(w, h);
+    const { endX, endY, endW, endH } = geo;
+    const col = state.mode === 'BATTLE' ? dimCol : mainCol;
+    const dx = -state.lookCur * w;
+    ctx.save(); ctx.translate(dx, 0); drawFront(ctx, w, h, state.viewZ, col, geo); ctx.restore();
+    if (state.lookCur < -0.01) { ctx.save(); ctx.translate(dx - w, 0); drawSideLeft(ctx, w, h, col); ctx.restore(); }
+    if (state.lookCur > 0.01) { ctx.save(); ctx.translate(dx + w, 0); drawSideRight(ctx, w, h, col); ctx.restore(); }
+    ctx.globalAlpha = 1; ctx.strokeStyle = col; ctx.lineWidth = 1.5;
 
     // 2. 敵グラフィック描画（サイバー・オカルト幾何学ベクター）
     if ((state.mode === 'BATTLE' || state.mode === 'SUMMON') && state.enemy) {
@@ -2790,6 +2959,8 @@
   });
   document.getElementById('btn-forward').onclick = () => move(1);
   document.getElementById('btn-back').onclick = () => move(-1);
+  document.getElementById('btn-look-l').onclick = () => setLook(-1);
+  document.getElementById('btn-look-r').onclick = () => setLook(1);
 
   document.getElementById('btn-battle-go').onclick = closeSummon;
   document.getElementById('btn-summon-pad').onclick = openSummonModal;
@@ -2936,6 +3107,12 @@
       } else if (key === 'ArrowDown' || key === 's' || key === 'S') {
         e.preventDefault();
         move(-1);
+      } else if (key === 'ArrowLeft' || key === 'a' || key === 'A') {
+        e.preventDefault();
+        setLook(-1);
+      } else if (key === 'ArrowRight' || key === 'd' || key === 'D') {
+        e.preventDefault();
+        setLook(1);
       }
     } else if (state.mode === 'BATTLE') {
       if (state.guard && (key === ' ' || key === 'Enter')) {
