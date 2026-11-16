@@ -334,18 +334,18 @@
   }
 
   /* 廊下画面（左・約3）とメッセージウィンドウ（右いっぱい・約2）の左右分割 */
-  #viewport-wrap { flex-direction: row; }
+  #viewport-wrap { flex-direction: column; }
   #dungeon { position: relative; flex: 3 1 0; min-width: 0; display: flex; flex-direction: column; }
   #dungeon canvas#view { flex: 1; min-height: 0; height: auto; }
   #viewport-wrap #log-box {
     flex: 2 1 0; min-width: 0; height: auto; max-height: none; width: auto;
     display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden;
-    padding: 8px 10px; border: 0; border-left: 1px solid var(--dim); border-radius: 0;
+    padding: 6px 10px; border: 0; border-top: 1px solid var(--dim); border-radius: 0;
     font-size: 0.8rem; line-height: 1.4; background: rgba(0, 0, 0, 0.45);
     text-align: left;
   }
-  #viewport-wrap #log-box div { flex: none; opacity: 0.55; }
-  #viewport-wrap #log-box div:last-child { opacity: 1; }
+  #viewport-wrap #log-box div { flex: none; opacity: 0.5; white-space: nowrap; overflow: hidden; text-overflow: clip; }
+  #viewport-wrap #log-box div.real { opacity: 1; color: #fff; text-shadow: 0 0 6px var(--main); }
   #dungeon #enemy-hud { gap: 4px; align-items: center; font-size: 0.7rem; padding: 3px 6px; }
   #dungeon #enemy-hud span { white-space: nowrap; }
   #dungeon #enemy-hud #enemy-hp { flex: 1 1 0; min-width: 24px; }
@@ -493,7 +493,7 @@
     header { font-size: 0.72rem; padding: 4px 8px; padding-right: 40px; gap: 2px 8px; }
     .header-controls button { font-size: 0.7rem; padding: 1px 6px; }
     main { flex-direction: column; }
-    #viewport-wrap { flex: 0 0 auto; height: clamp(96px, 20dvh, 170px); border-right: none; border-bottom: 1px solid var(--main); min-height: 0; }
+    #viewport-wrap { flex: 0 0 auto; flex-direction: row; height: clamp(96px, 20dvh, 170px); border-right: none; border-bottom: 1px solid var(--main); min-height: 0; }
     #enemy-hud { top: 4px; left: 4px; right: 4px; padding: 2px 6px; font-size: 0.72rem; }
     #side-panel { flex: 1; min-width: 0; min-height: 0; padding: 6px; gap: 6px; }
     .box { padding: 4px; }
@@ -1459,9 +1459,38 @@
   function addLog(msg) {
     const p = document.createElement('div');
     p.textContent = '> ' + msg;
+    p.className = 'real';
+    pushLog(p);
+  }
+  function pushLog(p) {
     logBox.appendChild(p);
+    while (logBox.childElementCount > 60) logBox.removeChild(logBox.firstChild);
     logBox.scrollTop = logBox.scrollHeight;
   }
+  // ネトゲのチャット欄のように、読み切れない速さで流れ続ける雑談ログ（約10倍速）。重要な出来事だけ白く光る
+  const CHAT_SYS = ['LOAD 0x%X ... OK', 'SYNC %N ms', 'PING %N', 'ECHO: 暗算力 %N', 'MEM %N KB FREE', 'TICK %N', 'ROLL %N/%N', 'CALC BUF %N'];
+  function chatLine() {
+    const r = Math.random();
+    const n = () => Math.floor(Math.random() * 9999);
+    if (r < 0.2) return CHAT_SYS[Math.floor(Math.random() * CHAT_SYS.length)].replace('%X', n().toString(16).toUpperCase()).replace(/%N/g, n);
+    const mem = state.party.filter(m => m && !m.isHero && LINES[m.id]);
+    if (!mem.length || r > 0.93) {
+      const h = Object.keys(HERO_LINES); const pool = HERO_LINES[h[Math.floor(Math.random() * h.length)]];
+      return `${state.hero ? state.hero.name : '主人公'}「${pool[Math.floor(Math.random() * pool.length)]}」`;
+    }
+    const m = mem[Math.floor(Math.random() * mem.length)];
+    const ks = Object.keys(LINES[m.id]).filter(k => Array.isArray(LINES[m.id][k]) && LINES[m.id][k].length);
+    const pool = LINES[m.id][ks[Math.floor(Math.random() * ks.length)]];
+    return `${m.name}「${pool[Math.floor(Math.random() * pool.length)]}」`;
+  }
+  setInterval(() => {
+    if (document.hidden || state.paused || state.resultOpen) return;
+    if (state.mode !== 'EXPLORE' && state.mode !== 'BATTLE') return;
+    const burst = 1 + (Math.random() < 0.5 ? 1 : 0);
+    for (let i = 0; i < burst; i++) {
+      const p = document.createElement('div'); p.textContent = chatLine(); pushLog(p);
+    }
+  }, 110);
 
   function getThemeColor() {
     return document.body.classList.contains('theme-amber') ? '#ffaa22' : '#33ff66';
