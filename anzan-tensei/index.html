@@ -1187,37 +1187,46 @@
     if (typeof loadSlash === 'function') loadSlash();
   }
 
-  function playTone(freq, type, duration, vol = 0.12, slideTo = null) {
+  // 効果音は「低く、重く」。高い倍音は lowpass（cut=遮断周波数）で丸める
+  function playTone(freq, type, duration, vol = 0.12, slideTo = null, cut = 2000) {
     if (!soundEnabled) return;
     initAudio();
+    const t = audioCtx.currentTime;
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
+    const lp = audioCtx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = cut; lp.Q.value = 0.7;
     osc.type = type;
-    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    osc.frequency.setValueAtTime(freq, t);
     if (slideTo) {
-      osc.frequency.exponentialRampToValueAtTime(slideTo, audioCtx.currentTime + duration);
+      osc.frequency.exponentialRampToValueAtTime(slideTo, t + duration);
     }
-    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-    osc.connect(gain);
+    gain.gain.setValueAtTime(vol, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+    osc.connect(lp);
+    lp.connect(gain);
     gain.connect(audioCtx.destination);
     osc.start();
-    osc.stop(audioCtx.currentTime + duration);
+    osc.stop(t + duration);
   }
 
-  function playNoise(duration, vol = 0.15) {
+  function playNoise(duration, vol = 0.15, cut = 1800) {
     if (!soundEnabled) return;
     initAudio();
+    const t = audioCtx.currentTime;
     const bufferSize = audioCtx.sampleRate * duration;
     const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
     const data = buffer.getChannelData(0);
     for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
     const noise = audioCtx.createBufferSource();
     noise.buffer = buffer;
+    const lp = audioCtx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = cut; lp.Q.value = 0.7;
     const gain = audioCtx.createGain();
-    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-    noise.connect(gain);
+    gain.gain.setValueAtTime(vol, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+    noise.connect(lp);
+    lp.connect(gain);
     gain.connect(audioCtx.destination);
     noise.start();
   }
@@ -1256,57 +1265,60 @@
     if (slashNow) { try { slashNow.g.gain.cancelScheduledValues(t); slashNow.g.gain.setValueAtTime(slashNow.g.gain.value, t); slashNow.g.gain.linearRampToValueAtTime(0, t + 0.06); slashNow.s.stop(t + 0.07); } catch (e) {} }
     const src = audioCtx.createBufferSource(), g = audioCtx.createGain();
     src.buffer = slashBufs[idx];
-    src.playbackRate.value = 0.96 + Math.random() * 0.1;
-    g.gain.value = 0.9;
-    src.connect(g); g.connect(audioCtx.destination);
+    src.playbackRate.value = 0.74 + Math.random() * 0.08;   // 低く重く（従来は約1.0）
+    const shelf = audioCtx.createBiquadFilter();             // 低域を持ち上げて、軽さを消す
+    shelf.type = 'lowshelf'; shelf.frequency.value = 260; shelf.gain.value = 6;
+    g.gain.value = 0.65;
+    src.connect(shelf); shelf.connect(g); g.connect(audioCtx.destination);
     src.start(t);
     slashNow = { s: src, g: g };
     return true;
   }
 
+  // 音程は元の約1オクターブ下。スマホのスピーカーでも鳴るよう、極低音は倍音のある波形（triangle／sawtooth）で出す
   const SFX = {
-    step: () => playTone(110, 'triangle', 0.08, 0.1, 60),
-    beep: () => playTone(880, 'square', 0.05, 0.06),
-    guard: () => { playTone(660, 'square', 0.09, 0.1, 1320); playNoise(0.06, 0.06); },
-    tick: (urgent) => playTone(urgent ? 1320 : 990, 'square', 0.03, 0.035),
+    step: () => { playTone(100, 'triangle', 0.14, 0.15, 50, 700); playNoise(0.06, 0.09, 700); },
+    beep: () => playTone(330, 'square', 0.07, 0.07, null, 1300),
+    guard: () => { playTone(220, 'sawtooth', 0.16, 0.14, 330, 1500); playNoise(0.09, 0.1, 1400); setTimeout(() => playTone(110, 'triangle', 0.16, 0.2, 70, 800), 40); },
+    tick: (urgent) => playTone(urgent ? 520 : 390, 'square', 0.04, 0.05, null, 1200),
     encounter: () => {
-      playTone(320, 'sawtooth', 0.12, 0.15, 140);
-      setTimeout(() => playTone(240, 'sawtooth', 0.25, 0.15, 90), 110);
+      playTone(160, 'sawtooth', 0.2, 0.17, 70, 1200);
+      setTimeout(() => playTone(110, 'sawtooth', 0.4, 0.18, 50, 1000), 120);
     },
     sword: (combo = 1) => {
       // 斬撃音は3種類のうちどれかをランダムで鳴らす（読み込み前・失敗時は従来の合成音）
       if (!playSlash()) {
-        playNoise(0.12, 0.18);
-        playTone(600 + combo * 220, 'sawtooth', 0.14, 0.12, 180);
+        playNoise(0.14, 0.2, 2200);
+        playTone(300 + combo * 110, 'sawtooth', 0.16, 0.14, 90, 1600);
       }
     },
     gun: (combo = 1) => {
-      playNoise(0.16, 0.24);
-      playTone(260 + combo * 120, 'square', 0.1, 0.14, 55);
+      playNoise(0.2, 0.38, 1500);
+      playTone(140 + combo * 50, 'square', 0.16, 0.22, 40, 900);
     },
     hit: () => {
-      playNoise(0.22, 0.25);
-      playTone(130, 'sawtooth', 0.25, 0.18, 45);
+      playNoise(0.3, 0.42, 1100);
+      playTone(80, 'sawtooth', 0.35, 0.3, 35, 700);
     },
     levelup: () => {
-      [440, 554, 659, 880].forEach((f, i) => {
-        setTimeout(() => playTone(f, 'square', 0.15, 0.1), i * 90);
+      [220, 277, 330, 440].forEach((f, i) => {
+        setTimeout(() => playTone(f, 'sawtooth', 0.2, 0.13, null, 1500), i * 90);
       });
     },
     // --- 追加の効果音（それらしい合成音）---
-    noiseStart: () => { playNoise(0.5, 0.14); setTimeout(() => playNoise(0.25, 0.1), 700); setTimeout(() => playNoise(0.3, 0.08), 1300); setTimeout(() => playTone(1200, 'square', 0.12, 0.05, 300), 1900); },
-    start: () => { playTone(220, 'sawtooth', 0.35, 0.09, 880); setTimeout(() => playTone(880, 'square', 0.12, 0.07), 280); },          // SYSTEM START／REBUILD
-    statusOpen: () => { playTone(520, 'triangle', 0.09, 0.09, 780); setTimeout(() => playTone(780, 'triangle', 0.12, 0.09, 1040), 70); },  // 画面が開く
-    statusClose: () => { playTone(780, 'triangle', 0.09, 0.08, 520); setTimeout(() => playTone(520, 'triangle', 0.12, 0.08, 330), 70); },  // 画面が閉じる
-    tab: () => { playTone(1040, 'square', 0.035, 0.05); setTimeout(() => playTone(1320, 'square', 0.04, 0.05), 35); },                  // キャラ切替（スワイプ）
-    summon: () => { [330, 440, 554, 659, 880].forEach((f, i) => setTimeout(() => playTone(f, 'sine', 0.3, 0.09), i * 70)); playNoise(0.25, 0.04); },  // 女神召喚
-    correct: () => { playTone(1320, 'sine', 0.12, 0.08); setTimeout(() => playTone(1760, 'sine', 0.18, 0.07), 70); },                   // 正解の「ピンッ」
-    miss: () => { playTone(160, 'sawtooth', 0.22, 0.12, 110); setTimeout(() => playTone(120, 'sawtooth', 0.25, 0.12, 80), 110); },    // 計算ミス
-    crit: () => { playTone(1760, 'square', 0.18, 0.08, 2640); playNoise(0.1, 0.12); setTimeout(() => playTone(880, 'sawtooth', 0.3, 0.1, 220), 60); },  // 神速クリティカル
-    win: () => { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => playTone(f, 'square', 0.14, 0.08), i * 80)); setTimeout(() => playTone(1046, 'triangle', 0.4, 0.09), 340); },  // 撃破
-    clear: () => { [523, 659, 784, 1046, 784, 1046, 1318].forEach((f, i) => setTimeout(() => playTone(f, 'square', 0.18, 0.09), i * 110)); setTimeout(() => playTone(1318, 'triangle', 0.7, 0.09), 800); },  // クリア
-    gameover: () => { [392, 330, 262, 196].forEach((f, i) => setTimeout(() => playTone(f, 'sawtooth', 0.4, 0.1, f * 0.7), i * 260)); },   // ゲームオーバー
-    guardReady: () => { playTone(1500, 'square', 0.08, 0.1); setTimeout(() => playTone(1500, 'square', 0.08, 0.1), 110); }               // ガードの合図
+    noiseStart: () => { playNoise(0.5, 0.22, 2200); setTimeout(() => playNoise(0.25, 0.16, 1800), 700); setTimeout(() => playNoise(0.3, 0.13, 1500), 1300); setTimeout(() => playTone(600, 'square', 0.14, 0.09, 150, 1200), 1900); },
+    start: () => { playTone(110, 'sawtooth', 0.4, 0.11, 440, 1500); setTimeout(() => playTone(440, 'square', 0.14, 0.07, null, 1400), 280); },          // SYSTEM START／REBUILD
+    statusOpen: () => { playTone(260, 'triangle', 0.1, 0.12, 390); setTimeout(() => playTone(390, 'triangle', 0.14, 0.12, 520), 70); },  // 画面が開く
+    statusClose: () => { playTone(390, 'triangle', 0.1, 0.11, 260); setTimeout(() => playTone(260, 'triangle', 0.14, 0.11, 165), 70); },  // 画面が閉じる
+    tab: () => { playTone(390, 'square', 0.05, 0.05, null, 1200); setTimeout(() => playTone(495, 'square', 0.05, 0.05, null, 1200), 35); },                  // キャラ切替（スワイプ）
+    summon: () => { [165, 220, 277, 330, 440].forEach((f, i) => setTimeout(() => playTone(f, 'triangle', 0.36, 0.13), i * 70)); playNoise(0.25, 0.05, 800); },  // 女神召喚
+    correct: () => { playTone(660, 'triangle', 0.14, 0.12); setTimeout(() => playTone(880, 'triangle', 0.22, 0.11), 70); },                   // 正解の「ポーン」
+    miss: () => { playTone(100, 'sawtooth', 0.26, 0.15, 70, 800); setTimeout(() => playTone(75, 'sawtooth', 0.3, 0.15, 50, 700), 110); },    // 計算ミス
+    crit: () => { playTone(440, 'square', 0.2, 0.1, 660, 1800); playNoise(0.12, 0.15, 1500); setTimeout(() => playTone(220, 'sawtooth', 0.4, 0.14, 70, 1000), 60); },  // 神速クリティカル
+    win: () => { [262, 330, 392, 523].forEach((f, i) => setTimeout(() => playTone(f, 'sawtooth', 0.16, 0.09, null, 1500), i * 80)); setTimeout(() => playTone(262, 'triangle', 0.45, 0.13), 340); },  // 撃破
+    clear: () => { [262, 330, 392, 523, 392, 523, 659].forEach((f, i) => setTimeout(() => playTone(f, 'sawtooth', 0.2, 0.09, null, 1500), i * 110)); setTimeout(() => playTone(330, 'triangle', 0.8, 0.13), 800); },  // クリア
+    gameover: () => { [196, 165, 131, 98].forEach((f, i) => setTimeout(() => playTone(f, 'sawtooth', 0.5, 0.13, f * 0.7, 900), i * 260)); },   // ゲームオーバー
+    guardReady: () => { playTone(560, 'square', 0.1, 0.1, null, 1400); setTimeout(() => playTone(560, 'square', 0.1, 0.1, null, 1400), 110); }               // ガードの合図
   };
 
   // === マスターデータ ===
