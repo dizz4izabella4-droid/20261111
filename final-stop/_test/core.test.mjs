@@ -24,9 +24,9 @@ log('1. 自動プレイ（窓で0.3s後にスワイプ）');
 {
   const c = CORE.create(CONFIG, { seed: 1 }); const bot = s => c.bot(s, { skip: false, replay: false });
   const r = run(c, 1 / 60, 600, s => bot(s), s => s.sub === 'END');
-  const ph = r.evs.filter(e => e.type === 'phase'); const pull = ph.find(e => e.to === 'PULLOVER'), chase = ph.find(e => e.to === 'CHASE');
+  const ph = r.evs.filter(e => e.type === 'phase'); const pull = ph.find(e => e.to === 'PULLOVER'), chase = r.evs.find(e => e.type === 'sub' && e.sub === 'INTRO'), opn = r.evs.find(e => e.type === 'sub' && e.sub === 'OPEN_PARK');
   const dur = pull.at - chase.at; log('   CHASE ' + dur.toFixed(2) + 's, END到達 ' + c.state.sub);
-  ok(c.state.sub === 'END', 'ENDに届く'); ok(dur >= 24 && dur <= 30, 'CHASEが24〜30s: ' + dur.toFixed(2));
+  ok(c.state.sub === 'END', 'ENDに届く'); ok(dur >= 24 && dur <= 30, 'INTRO以降が24〜30s: ' + dur.toFixed(2)); ok(chase.at - opn.at > 8 && chase.at - opn.at < 14, '開始演出が8〜14s: ' + (chase.at - opn.at).toFixed(2));
   ok(r.evs.filter(e => e.type === 'hit').length === 3, 'HITがちょうど3回');
   ok(!r.evs.some(e => e.type === 'stuck'), 'stuckなし');
 }
@@ -61,11 +61,11 @@ log('3. 入力なし（startだけ）');
   const c = CORE.create(CONFIG, { seed: 1 }); let started = false;
   const r = run(c, 1 / 30, 900, s => { if (!started) { started = true; return { swipe: null, tap: false, button: 'start' }; } return NONE(); }, s => false);
   const subs = r.evs.filter(e => e.type === 'sub').map(e => e.sub);
-  const ph = r.evs.filter(e => e.type === 'phase'); const pull = ph.find(e => e.to === 'PULLOVER'), chase = ph.find(e => e.to === 'CHASE');
+  const ph = r.evs.filter(e => e.type === 'phase'); const pull = ph.find(e => e.to === 'PULLOVER'), chase = r.evs.find(e => e.type === 'sub' && e.sub === 'INTRO'), opn = r.evs.find(e => e.type === 'sub' && e.sub === 'OPEN_PARK');
   const dead = subs.indexOf('DEAD'), ti = subs.indexOf('TITLE', dead);
   log('   CHASE ' + (pull.at - chase.at).toFixed(1) + 's, DEAD→TITLE ' + (dead >= 0 && ti > dead));
   ok(dead >= 0, '声が出ないとDEADへ'); ok(ti > dead, 'DEADの後TITLEへ戻る');
-  const t150 = r.evs.find(e => e.type === 'hit'); ok(t150 && t150.at - chase.at >= 150 - 1, '最初のHITは救済(150s)以降');
+  const t150 = r.evs.find(e => e.type === 'hit'); log('   firstHIT ' + (t150&&(t150.at-chase.at).toFixed(1))); ok(t150 && t150.at - chase.at >= 150 - 1, '最初のHITは救済(150s)以降');
   ok(!r.evs.some(e => e.type === 'stuck'), 'stuckなし');
   ok(r.evs.some(e => e.type === 'shot') && r.evs.some(e => e.type === 'dead'), 'shotとdeadが出る');
 }
@@ -173,3 +173,19 @@ log('8. warp');
 // 9. 凍結（定数）
 ok(Object.isFrozen(CONFIG), 'CONFIGは凍結されている');
 console.log(fail === 0 ? '\n全 ' + total + ' 項目 OK' : '\n失敗 ' + fail + ' / ' + total); process.exit(fail ? 1 : 0);
+
+// 開始演出：サイレンを押さなくても先へ進む／押すと追いつきへ
+log('9. 開始演出');
+{
+  const mk = () => CORE.create(CONFIG, { seed: 1 });
+  let c = mk(); let subs = []; let t = 0, started = false;
+  for (; t < 60 && c.state.sub !== 'INTRO'; t += 1 / 60) { const e = c.step(1 / 60, !started ? (started = true, { button: 'start' }) : NONE()); for (const x of e) if (x.type === 'sub') subs.push(x.sub); }
+  ok(c.state.sub === 'INTRO' && subs.join() === 'OPEN_PARK,OPEN_GO,OPEN_SIREN,OPEN_CATCH,INTRO', '押さなくても自動で追いつく: ' + subs.join('>') + ' ' + t.toFixed(1) + 's');
+  ok(c.state.siren !== 'OFF', '押さなかった場合は自動でサイレンが鳴る');
+  c = mk(); started = false; subs = []; let pressed = 0, tp = 0;
+  for (t = 0; t < 60 && c.state.sub !== 'INTRO'; t += 1 / 60) { const inp = !started ? (started = true, { button: 'start' }) : (c.state.sub === 'OPEN_SIREN' && c.state.t > 1 && !pressed ? (pressed = 1, tp = t, { button: 'siren' }) : NONE()); for (const x of c.step(1 / 60, inp)) if (x.type === 'sub') subs.push(x.sub); }
+  ok(pressed && t - tp < CONFIG.OPEN.CATCH + 0.6, 'サイレンを押すと約' + CONFIG.OPEN.CATCH + 's後にINTRO: ' + (t - tp).toFixed(2));
+  // 駐車中は自車が動かず、赤い車が右から来る
+  c = mk(); c.step(1 / 60, { button: 'start' }); for (let k = 0; k < 60; k++) c.step(1 / 60, NONE()); const sp = c.state;
+  ok(c.state.sub === 'OPEN_PARK' && sp.speed === 0 && sp.px === 0 && sp.sx > 1, '駐車中：自車は停止、赤い車は右から横切る: sx=' + sp.sx.toFixed(2));
+}

@@ -5,7 +5,7 @@ import json, os, sys
 from playwright.sync_api import sync_playwright
 HERE = os.path.dirname(os.path.abspath(__file__)); OUT = os.path.join(HERE, 'out'); os.makedirs(OUT, exist_ok=True)
 URL = 'file://' + os.path.abspath(os.path.join(HERE, '..', 'index.html'))
-SHOTS = [('TITLE', 0), ('INTRO', 1.0), ('APPROACH', 2.0), ('WINDOW', 0), ('HIT1', 0), ('HIT1', 0.5), ('HIT2', 0), ('HIT3', 0), ('HIT3', 0.5), ('MISS', 0.3), ('PULLOVER', 1.2), ('PULLOVER', 2.6), ('PULLOVER', 3.9), ('EVENT', 2.0), ('PREVIEW0', 0), ('REACT0', 0.8), ('PREVIEW1', 0), ('PREVIEW2', 0), ('REACT2', 1.5), ('PREVIEW3', 0), ('REACT3', 2.0), ('ARREST', 1.0), ('END', 0.2), ('YOURTURN0', 0.5), ('YOURTURN0', 1.6), ('YOURTURN0', 4.2), ('DEAD', 0.4), ('DEAD', 0.75), ('DEAD', 1.6), ('DEAD', 2.8), ('REACT3', 0.3), ('HIT1', 0.1), ('HIT2', 0.1)]
+SHOTS = [('TITLE', 0), ('OPEN_PARK', 1.2), ('OPEN_GO', 1.0), ('OPEN_SIREN', 1.0), ('OPEN_CATCH', 1.5), ('INTRO', 1.0), ('APPROACH', 2.0), ('WINDOW', 0), ('HIT1', 0), ('HIT1', 0.5), ('HIT2', 0), ('HIT3', 0), ('HIT3', 0.5), ('MISS', 0.3), ('PULLOVER', 1.2), ('PULLOVER', 2.6), ('PULLOVER', 3.9), ('EVENT', 2.0), ('PREVIEW0', 0), ('REACT0', 0.8), ('PREVIEW1', 0), ('PREVIEW2', 0), ('REACT2', 1.5), ('PREVIEW3', 0), ('REACT3', 2.0), ('ARREST', 1.0), ('END', 0.2), ('YOURTURN0', 0.5), ('YOURTURN0', 1.6), ('YOURTURN0', 4.2), ('DEAD', 0.4), ('DEAD', 0.75), ('DEAD', 1.6), ('DEAD', 2.8), ('REACT3', 0.3), ('HIT1', 0.1), ('HIT2', 0.1)]
 VPS = {'port': (390, 844), 'land': (844, 390)}
 # 設計書 3.3 縦の表: (幅, 上, 下)
 EXPECT_PORT = {'WINDOW': (121, 347, 444)}

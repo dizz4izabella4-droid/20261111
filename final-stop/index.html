@@ -52,11 +52,13 @@ canvas{position:absolute;left:0;top:0;display:block}
 #micdiag{display:none;margin:0;max-width:330px;white-space:pre-wrap;word-break:break-all;text-align:left;font:10.5px/1.45 ui-monospace,Menlo,monospace;color:#9fe8ff;background:rgba(0,0,0,.55);padding:6px 8px;border-radius:6px;pointer-events:auto;user-select:text}
 #vmic{width:210px!important;height:44px!important;font-size:15px!important;display:none;align-items:center;justify-content:center;flex:none}
 #title{gap:10px}
-#jpsub{left:12px;right:12px;top:64px;text-align:center;font:700 15px/1.5 'Hiragino Sans','Yu Gothic','Meiryo','Noto Sans JP',sans-serif;color:#fff;text-shadow:0 1px 3px #000,0 0 8px #000;opacity:0;transition:opacity .2s}
+#jpsub{left:12px;top:300px;width:300px;box-sizing:border-box;text-align:left;font:700 14px/1.45 'Hiragino Sans','Yu Gothic','Meiryo','Noto Sans JP',sans-serif;color:#fff;background:rgba(10,16,36,.86);border:1px solid #8fb4ff;border-radius:10px;padding:6px 10px;text-shadow:0 1px 2px #000;opacity:0;transition:opacity .2s;pointer-events:none}
+#jpsub::after{content:'';position:absolute;left:var(--tx,40px);bottom:-8px;margin-left:-7px;border:7px solid transparent;border-top-color:#8fb4ff;border-bottom:0}
 #jpsub.on{opacity:1}
-.land #jpsub{right:42%;top:44px;font-size:14px}
-#jpsub b{color:#8fb4ff}
+#jpsub b{color:#8fb4ff;font-size:11px;letter-spacing:.06em}
 #jpsub .ja{font-size:13px;color:#ffe9b0;font-weight:600}
+#siren.pulse{animation:sp .6s ease-in-out infinite alternate;box-shadow:0 0 0 3px #ffd84a}
+@keyframes sp{from{transform:scale(1);filter:brightness(1)}to{transform:scale(1.14);filter:brightness(1.6)}}
 #cmdja{font:600 13px/1.4 'Hiragino Sans','Yu Gothic','Meiryo','Noto Sans JP',sans-serif;color:#cfe0ff;text-align:center}
 #cmdhint{font-family:'Hiragino Sans','Yu Gothic','Meiryo','Noto Sans JP',sans-serif!important;letter-spacing:0!important}
 #alert{inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;pointer-events:auto;z-index:6;overflow:hidden;font-family:'Hiragino Sans','Yu Gothic','Meiryo','Noto Sans JP',sans-serif}
@@ -330,6 +332,7 @@ const CONFIG = Object.freeze({
   STEP: 1 / 120, DT_MAX: 0.1,
   HITS_TO_STOP: 3, SIDES: [1, -1, 1],            // 1=右 -1=左。ミスしたときは同じ側をもう一度出す
   INTRO: 4.0, INTRO_GAP: [40, 26],
+  OPEN: { PARK: 2.4, GO: 2.8, SIREN_WAIT: 14, CATCH: 4.0, GAP_GO: 62 },      // 開始演出：駐車中に赤い車が通る→追跡開始→サイレンを鳴らす→追いつく
   APPROACH: 5.5, APPROACH_AFTER_MISS: 2.7, GAP_WINDOW: 3,
   WINDOW: 3.2, WINDOW_RESCUE: 4.6, ALIGN: 0.5, ALIGN_RESCUE: 0.85,        // フラつく車が真正面（横ズレ ALIGN 以内）に来た間にタップで突撃
   LUNGE: 0.18, HITSTOP: [0.08, 0.08, 0.12], TILT: [3, 4, 6],
@@ -345,6 +348,9 @@ const CONFIG = Object.freeze({
   ALERT_RADIO: '至急、至急。管内で強盗事件発生。犯人は赤いセダンで北へ逃走中。付近の車両は追跡せよ。',
   // 相棒 REYES のセリフ：英語（音声あり＝say）と日本語字幕を併記。日本語の音声はタイトル前の無線デモだけ
   JP: {
+    OPEN_GO: { en: "That red car! Let's get him!", ja: '赤い車だ！ 追うぞ！', say: true },
+    OPEN_SIREN: { en: 'Hit the siren!', ja: 'サイレンを鳴らせ！', say: true },
+    OPEN_CATCH: { en: 'The sound changes every press!', ja: '押す度に音が変わるぞ', say: true },
     INTRO: { en: "That's the robber's car! When he swings right in front of you, TAP to ram him!", ja: '強盗犯の車だ！ ふらつく車が真正面に来たら、タップして突っ込め！', say: true },
     WINDOW: { en: "Now! He's right ahead. TAP!", ja: '真正面に来た！ タップだ！', say: 'once' },
     HIT1: { en: 'Good hit! Two more!', ja: 'いいぞ！ あと2回！', say: true },
@@ -383,10 +389,10 @@ const CORE = (function () {
     }
     return pts[pts.length - 1][1];
   }
-  const PHASE_OF = { TITLE: 'TITLE', INTRO: 'CHASE', APPROACH: 'CHASE', WINDOW: 'CHASE', LUNGE: 'CHASE', HIT: 'CHASE', RECOVER: 'CHASE', MISS: 'CHASE', FINISH: 'CHASE',
+  const PHASE_OF = { TITLE: 'TITLE', OPEN_PARK: 'CHASE', OPEN_GO: 'CHASE', OPEN_SIREN: 'CHASE', OPEN_CATCH: 'CHASE', INTRO: 'CHASE', APPROACH: 'CHASE', WINDOW: 'CHASE', LUNGE: 'CHASE', HIT: 'CHASE', RECOVER: 'CHASE', MISS: 'CHASE', FINISH: 'CHASE',
     PULLOVER: 'PULLOVER', EVENT: 'EVENT', PREVIEW: 'CMD', SPEAK: 'CMD', YOURTURN: 'CMD', REACT: 'CMD', ARREST: 'ARREST', END: 'END', DEAD: 'DEAD' };
-  const MAX_DWELL = { INTRO: 6, APPROACH: 8, WINDOW: 6, LUNGE: 1, HIT: 1, RECOVER: 3, MISS: 2, FINISH: 2, PULLOVER: 6, EVENT: 10, SPEAK: 6, YOURTURN: 14, REACT: 6, ARREST: 5, DEAD: 8 };
-  const FORCE_NEXT = { INTRO: 'APPROACH', APPROACH: 'WINDOW', WINDOW: 'MISS', LUNGE: 'HIT', HIT: 'RECOVER', RECOVER: 'APPROACH', MISS: 'APPROACH', FINISH: 'PULLOVER',
+  const MAX_DWELL = { OPEN_PARK: 6, OPEN_GO: 6, OPEN_SIREN: 30, OPEN_CATCH: 8, INTRO: 6, APPROACH: 8, WINDOW: 6, LUNGE: 1, HIT: 1, RECOVER: 3, MISS: 2, FINISH: 2, PULLOVER: 6, EVENT: 10, SPEAK: 6, YOURTURN: 14, REACT: 6, ARREST: 5, DEAD: 8 };
+  const FORCE_NEXT = { OPEN_PARK: 'OPEN_GO', OPEN_GO: 'OPEN_SIREN', OPEN_SIREN: 'OPEN_CATCH', OPEN_CATCH: 'INTRO', INTRO: 'APPROACH', APPROACH: 'WINDOW', WINDOW: 'MISS', LUNGE: 'HIT', HIT: 'RECOVER', RECOVER: 'APPROACH', MISS: 'APPROACH', FINISH: 'PULLOVER',
     PULLOVER: 'EVENT', EVENT: 'PREVIEW', SPEAK: 'YOURTURN', YOURTURN: 'REACT', REACT: 'PREVIEW', ARREST: 'END', DEAD: 'TITLE' };
 
   function create(C, opt) {
@@ -424,9 +430,29 @@ const CORE = (function () {
     function swipeOutside(wob) { if (wob && swipeLock <= 0) { wobble = C.WOBBLE; swipeLock = C.WOBBLE + C.SWIPE_LOCK; emit('whiff'); } }
 
     const subs = {
-      TITLE: { enter() { reset(); }, upd(h, i, locked) { if (i.button === 'start' && !locked) { reset(); go('INTRO'); } } },
-      INTRO: {
+      TITLE: { enter() { reset(); }, upd(h, i, locked) { if (i.button === 'start' && !locked) { reset(); sirenIdx = 0; S.siren = C.SIRENS[0]; go('OPEN_PARK'); } } },
+      OPEN_PARK: {                                           // 駐車中。目の前を赤いセダンが右から入ってきて通る
+        enter() { S.speed = 0; S.gap = 10; S.sx = 7; pxF = 0; S.px = 0; },
+        upd(h) { const p = ss(S.t / C.OPEN.PARK); S.speed = 0; S.gap = 10; S.sx = lerp(7, 0, p); pxF = 0; S.px = 0; if (S.t >= C.OPEN.PARK) go('OPEN_GO'); }
+      },
+      OPEN_GO: {                                             // 「赤い車だ！ 追うぞ！」発進。赤い車は加速して遠ざかる
+        enter() {},
+        upd(h) { const p = ss(S.t / C.OPEN.GO); S.speed = lerp(0, 30, p); S.gap = lerp(10, C.OPEN.GAP_GO, p); S.sx = 0; if (S.t >= C.OPEN.GO) go('OPEN_SIREN'); }
+      },
+      OPEN_SIREN: {                                          // 「サイレンを鳴らせ！」プレイヤーがサイレンを押すまで待つ
         enter() { S.speed = 30; },
+        upd(h, i, locked) {
+          S.speed = 30; S.sx = 0; S.gap = C.OPEN.GAP_GO + 2 * ss(S.t / 6);
+          if (i.button === 'siren' && S.siren !== 'OFF' && !locked) go('OPEN_CATCH');
+          else if (S.t >= C.OPEN.SIREN_WAIT) { sirenIdx = 1; S.siren = C.SIRENS[1]; emit('siren', { mode: S.siren }); go('OPEN_CATCH'); }       // 押さなくても進む
+        }
+      },
+      OPEN_CATCH: {                                          // 「押す度に音が変わるぞ」サイレンが鳴り、赤い車に追いつく
+        enter() { S.speed = 30; },
+        upd(h) { S.sx = 0; S.gap = lerp(gapE, C.INTRO_GAP[0], ss(S.t / C.OPEN.CATCH)); if (S.t >= C.OPEN.CATCH) go('INTRO'); }
+      },
+      INTRO: {
+        enter() { S.speed = 30; S.sinceHit = 0; },
         upd(h, i) {
           S.gap = lerp(C.INTRO_GAP[0], C.INTRO_GAP[1], ss(S.t / C.INTRO));
           S.sx = snake(S.ct) * ss(S.t / 1.5);
@@ -578,11 +604,12 @@ const CORE = (function () {
       if (b === 'lights') { S.lights = !S.lights; emit('lights', { on: S.lights }); }
       if (b === 'ram' && S.ram && S.phase === 'CHASE' && !locked && S.sub !== 'WINDOW') { S.ramArmed = true; emit('ramArm'); }
       if (S.phase === 'CHASE') {
-        S.ct += h; S.elapsed += h;
-        if (S.sub !== 'INTRO') S.sinceHit += h;
+        const inOpen = S.sub.indexOf('OPEN') === 0;
+        if (!inOpen) { S.ct += h; S.elapsed += h; }
+        if (S.sub !== 'INTRO' && !inOpen) S.sinceHit += h;
         if (radioIdx < C.RADIO.length && S.ct >= C.RADIO[radioIdx].t) { emit('radio', { text: C.RADIO[radioIdx].text }); radioIdx++; }
         if (S.sinceHit >= C.RESCUE.idle && !S.ram) { S.ram = true; emit('ram', { on: true }); }
-        pxF += (S.sx - pxF) * (1 - Math.exp(-h / C.LAG));
+        if (S.sub !== 'OPEN_PARK') pxF += (S.sx - pxF) * (1 - Math.exp(-h / C.LAG));
         S.px = pxF + S.pxKick;
       }
       const sub = subs[S.sub];
@@ -615,6 +642,7 @@ const CORE = (function () {
       o = o || {};
       const i = { swipe: null, tap: false, button: null, voice: false };
       if (s.sub === 'TITLE') i.button = 'start';
+      else if (s.sub === 'OPEN_SIREN' && s.t >= 0.6) i.button = 'siren';
       else if (s.sub === 'WINDOW' && s.window && s.window.t >= (o.delay || 0.3) && !o.noSwipe && Math.abs(s.sx - s.px) <= 0.25) i.tap = true;   // 真正面に来たらタップ
       else if (s.sub === 'PREVIEW') i.tap = true;
       else if (s.sub === 'YOURTURN') i.voice = !o.noVoice;
@@ -832,7 +860,13 @@ const CORE = (function () {
         this.talkUntil = performance.now() + (text.length * 0.08 + 0.8) * 1000;      // speechSynthesis.speaking は iOS で残りっぱなしになるので、自前で「話し中」を数える
         if (style === 'radio' || style === 'radioja') { u.onstart = () => AUDIO.radioOn(); const off = () => { AUDIO.radioOff(); fire(); }; u.onend = off; u.onerror = off; setTimeout(off, 9000); AUDIO.radioOn(); }
         else { AUDIO.radioOff(); u.onend = fire; u.onerror = fire; setTimeout(fire, (text.length * 0.08 + 1.2) * 1000); }
+        let started = false; const o0 = u.onstart; u.onstart = () => { started = true; if (o0) o0(); };
         if (stale) setTimeout(() => { try { sy.speak(u); } catch (e) {} }, 90); else sy.speak(u);
+        setTimeout(() => {     // iOS：声が始まらないまま固まった時は、いったん取り消してもう一度だけ話し直す
+          if (started || fin || this.seq !== tk) return; try { sy.cancel(); sy.resume(); } catch (e) {}
+          const u2 = new SpeechSynthesisUtterance(text); u2.voice = u.voice; u2.lang = u.lang; u2.rate = u.rate; u2.pitch = u.pitch; u2.onend = u.onend; u2.onerror = u.onerror;
+          setTimeout(() => { try { sy.speak(u2); } catch (e) {} }, 120);
+        }, 1600);
         AUDIO.duck(text.length * 0.07 + 0.6);
       } catch (e) {}
     },
@@ -878,7 +912,7 @@ const CORE = (function () {
           stage = 'node';
           this.stream = st; try { st.getAudioTracks()[0].addEventListener('ended', () => { if (this.stream === st) this.release(); }); } catch (x) {}   // 無線・お手本の読み上げ中などに iOS がマイクを切ったら、使えない状態に戻す
           this.src = c.createMediaStreamSource(st); this.an = c.createAnalyser(); this.an.fftSize = 1024; this.an.smoothingTimeConstant = 0; this.src.connect(this.an);
-          this.buf = new Float32Array(this.an.fftSize); this.ready = true; this.busy = false; this.err = ''; AUDIO.init(); return true;
+          this.buf = new Float32Array(this.an.fftSize); this.ready = true; this.busy = false; this.err = ''; this.n = (this.n || 0) + 1; AUDIO.init(); return true;
         });
       }).catch(e => { try { if (this.stream) this.stream.getTracks().forEach(t => t.stop()); if (this.mc) this.mc.close(); } catch (x) {} this.stream = this.mc = null; this.busy = false; this.ready = false; this.err = nm(e) + '/' + stage; D.push('final: ' + nm(e) + '/' + stage + ' ' + String((e && e.message) || '').slice(0, 90)); return false; });
     },
@@ -961,7 +995,7 @@ const CORE = (function () {
       pend.button = k;
     });
   });
-  { const vb = $('vmicbtn'), dn = e => { e.stopPropagation(); e.preventDefault(); MICV.press = true; vb.classList.add('down'); wake(); VOICE.cancel(); if (MICV.busy && performance.now() - (MICV.busyAt || 0) > 2500) MICV.busy = false;
+  { const vb = $('vmicbtn'), dn = e => { e.stopPropagation(); e.preventDefault(); MICV.press = true; vb.classList.add('down'); wake(); VOICE.cancel(); if (S.cmd && S.cmd.i === 0) { MICV.n = 0; if (MICV.capped) { MICV.capped = false; MICV.fallback = false; } } if ((MICV.n || 0) >= 2 && !MICV.pseudo()) { MICV.fallback = true; MICV.capped = true; }   /* iOS：マイクの開け閉めを何度も繰り返すと3回目以降に固まるので、2回開いた後は「心のマイク」に切り替える */ if (MICV.busy && performance.now() - (MICV.busyAt || 0) > 2500) MICV.busy = false;
       if (!MICV.pseudo() && !NOMIC && !MICV.ready && !MICV.busy) MICV.acquire(true).then(ok => { if (!ok) MICV.fallback = true; });   /* 押した操作の中でマイクを開く。だめなら押している間を声とみなす */ try { vb.setPointerCapture(e.pointerId); } catch (x) {} }, up = e => { e.stopPropagation(); MICV.press = false; vb.classList.remove('down'); };
     vb.addEventListener('pointerdown', dn); vb.addEventListener('pointerup', up); vb.addEventListener('pointercancel', up); vb.addEventListener('lostpointercapture', up); vb.addEventListener('contextmenu', e => e.preventDefault()); }
   function refreshVoiceBtn() { $('voicebtn').textContent = VOICE.on ? 'VOICE ON' : 'VOICE OFF'; }
@@ -976,6 +1010,13 @@ const CORE = (function () {
   const el = { title: $('title'), end: $('end'), cmdp: $('cmdp'), ram: $('ram'), radio: $('radio'), sirenm: $('sirenm'), gauge: $('gauge').children, unit: $('unit'),
     cmdtext: $('cmdtext'), cmdhint: $('cmdhint'), dbg: $('dbg'), siren: $('siren'), lights: $('lights'), gaugeBox: $('gauge') };
   let radioT = 0, ui = {}, jpKey = '', jpT = 0, spoken = {};
+  const SUBA = { x: 120, y: 400 };
+  function posSub(W, land) {   // 字幕：パトカーの助手席（REYES）の斜め上に出す
+    const e = $('jpsub'); if (!e.classList.contains('on')) return;
+    const w = Math.min(W - 16, land ? 300 : 316); e.style.width = w + 'px';
+    const h = e.offsetHeight; let l = SUBA.x - w * 0.35; l = Math.max(8, Math.min(W - 8 - w, l));
+    e.style.left = l + 'px'; e.style.top = Math.max(4, SUBA.y - h - 14) + 'px'; e.style.setProperty('--tx', Math.max(16, Math.min(w - 16, SUBA.x - l)) + 'px');
+  }
   function showSub(en, ja, sec) { $('jpsub').innerHTML = '<b>' + CONFIG.PARTNER + '</b> ' + en + '<br><span class="ja">「' + ja + '」</span>'; $('jpsub').classList.add('on'); jpT = sec; }
   // デバッグパネル：追跡を飛ばして音声・場面を確認する
   { const dp = $('dbgp'), db = $('dbgb');
@@ -986,7 +1027,7 @@ const CORE = (function () {
       spoken = {}; core.restart(); core.warp(label); syncGlass(); jpKey = ''; dp.classList.remove('on');
     };
     const items = [['SCENES'], ['Emergency radio screen', () => { dp.classList.remove('on'); VOICE.cancel(); ALERT = true; alertStep = 0; $('alert').classList.remove('hide'); $('alerttx').textContent = '強盗事件発生。犯人は車で逃走中。'; $('alertt4').textContent = 'TAP TO RECEIVE'; }],
-      ['Chase (start)', () => jump('INTRO')], ['Hit window', () => jump('WINDOW')],
+      ['Opening (parked)', () => jump('OPEN_PARK')], ['Opening: siren!', () => jump('OPEN_SIREN')], ['Chase (start)', () => jump('INTRO')], ['Hit window', () => jump('WINDOW')],
       ['Cmd 1 listen', () => jump('PREVIEW0')], ['Cmd 2 listen', () => jump('PREVIEW1')], ['Cmd 3 listen', () => jump('PREVIEW2')], ['Cmd 4 listen', () => jump('PREVIEW3')],
       ['SAY IT (cmd 1)', () => jump('YOURTURN0')], ['SAY IT (cmd 4)', () => jump('YOURTURN3')], ['Praise (cmd 1)', () => jump('REACT0')], ['Dead (shot)', () => jump('DEAD')], ['Arrest', () => jump('ARREST')],
       ['VOICE TEST'], ['Radio JP (dispatch)', () => { AUDIO.init(); VOICE.speak(CONFIG.ALERT_RADIO, 'radioja'); }], ['Model EN (Police!...)', () => { AUDIO.init(); VOICE.speak(CONFIG.CMDS[0].text); }],
@@ -1020,6 +1061,7 @@ const CORE = (function () {
     setUI('btns', ph !== 'TITLE' && ph !== 'END' && ph !== 'CMD' && ph !== 'DEAD', v => { el.siren.classList.toggle('hide', !v); el.lights.classList.toggle('hide', !v); });
     setUI('ram', ph === 'CHASE' && S.ram, v => el.ram.classList.toggle('hide', !v));
     setUI('armed', S.ramArmed, v => el.ram.classList.toggle('armed', v));
+    el.siren.classList.toggle('pulse', S.sub === 'OPEN_SIREN');
     setUI('sirenm', S.siren, v => { el.sirenm.textContent = v; });
     setUI('dmg', S.damage, v => { for (let i = 0; i < 3; i++) el.gauge[i].classList.toggle('on', i < v); });
     if (ph === 'CMD') {
@@ -1029,11 +1071,11 @@ const CORE = (function () {
       setUI('cmdhint', hint, v => { el.cmdhint.textContent = v; });
     }
     // 日本語のセリフ（相棒 REYES）：場面が変わるたびに出す
-    const jk = S.sub === 'HIT' ? 'HIT' + Math.min(3, S.hits) : (S.sub === 'INTRO' || S.sub === 'WINDOW' || S.sub === 'MISS' || S.sub === 'PULLOVER' || S.sub === 'EVENT' || S.sub === 'PREVIEW' || S.sub === 'YOURTURN' || S.phase === 'ARREST') ? (S.phase === 'ARREST' ? 'ARREST' : S.sub) : '';
+    const jk = S.sub === 'HIT' ? 'HIT' + Math.min(3, S.hits) : (S.sub === 'INTRO' || S.sub === 'OPEN_GO' || S.sub === 'OPEN_SIREN' || S.sub === 'OPEN_CATCH' || S.sub === 'WINDOW' || S.sub === 'MISS' || S.sub === 'PULLOVER' || S.sub === 'EVENT' || S.sub === 'PREVIEW' || S.sub === 'YOURTURN' || S.phase === 'ARREST') ? (S.phase === 'ARREST' ? 'ARREST' : S.sub) : '';
     if (jk !== jpKey) {
       jpKey = jk; const t = jk && CONFIG.JP[jk];
       if (t) {
-        showSub(t.en, t.ja, jk === 'YOURTURN' || jk === 'PREVIEW' ? 99 : 3.6);
+        showSub(t.en, t.ja, jk === 'YOURTURN' || jk === 'PREVIEW' || jk === 'OPEN_SIREN' ? 99 : 3.6);
         if (t.say === true || (t.say === 'once' && !spoken[jk]) || (t.say === 'first' && S.cmd.i === 0 && !spoken[jk])) { spoken[jk] = 1; VOICE.speak(t.en); }   // 英語の音声
       }
     }
@@ -1515,13 +1557,6 @@ const CORE = (function () {
     ctx.restore();
     ctx.strokeStyle = 'rgba(143,180,255,.9)'; ctx.lineWidth = 1.5; rrect(bx, by, bw, bh, 10); ctx.stroke();
     ctx.fillStyle = 'rgba(0,0,0,.65)'; ctx.fillRect(bx + 1, by + bh - 15, bw - 2, 14); ctx.fillStyle = '#cfe0ff'; ctx.font = '700 10px ui-monospace,Menlo,monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(CONFIG.PARTNER, cx, by + bh - 8);
-    if (line) {
-      ctx.font = '700 12px ui-monospace,Menlo,monospace'; const maxW = land ? 190 : 170, lines = wrapText(line, maxW), bh2 = lines.length * 15 + 12; let w2 = 0; for (const l of lines) w2 = Math.max(w2, ctx.measureText(l).width);
-      const bx2 = bx, by2 = by - bh2 - 10, bw2 = w2 + 16;
-      ctx.fillStyle = 'rgba(255,255,255,.95)'; rrect(bx2, by2, bw2, bh2, 8); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(bx2 + 26, by2 + bh2 - 1); ctx.lineTo(bx2 + 36, by2 + bh2 + 8); ctx.lineTo(bx2 + 42, by2 + bh2 - 1); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = '#10182e'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; lines.forEach((l, i) => ctx.fillText(l, bx2 + 8, by2 + 6 + 7.5 + i * 15));
-    }
     ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'start';
   }
 
@@ -1574,6 +1609,7 @@ const CORE = (function () {
     const camX = S.px + (land && inEv ? 1.5 : 0);
     const sz = ZP + CAR.l + S.gap, sb = carBox(S.sx, sz, camX), pb = carBox(S.px, ZP, camX), ks = sb.w / CAR.w;
     const flash = Math.floor(tNow * 4) % 2 === 0, so = FX.off();
+    SUBA.x = pb.cx + pb.w * 0.17; SUBA.y = pb.bot - pb.h * 1.0; posSub(W, land);
     const zoom = S.phase === 'ARREST' ? 1 + 0.08 * clamp01(S.t / 3) : S.phase === 'END' ? 1.08 : 1;
     ctx.setTransform(scale * dpr, 0, 0, scale * dpr, so[0] * scale * dpr, so[1] * scale * dpr);
     if (zoom !== 1) { ctx.translate(sb.cx, sb.top); ctx.scale(zoom, zoom); ctx.translate(-sb.cx, -sb.top); }
