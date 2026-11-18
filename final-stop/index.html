@@ -47,7 +47,14 @@ canvas{position:absolute;left:0;top:0;display:block}
 #title .btn,#end .btn{position:static;width:150px;height:52px;font-size:18px}
 #micnote,#micerr{font:600 13px/1.55 'Hiragino Sans','Yu Gothic','Meiryo','Noto Sans JP',sans-serif;text-align:center;max-width:300px;padding:0 8px;text-shadow:0 1px 4px #000}
 #micnote{color:#ffe9b0}
-#micerr{color:#ff9a9a;font-size:12px}
+#micerr{color:#ff9a9a;font-size:11.5px;line-height:1.5;text-align:left;max-height:34vh;overflow:auto;pointer-events:auto}
+#micerr b{color:#ffe9b0}
+#vmic{width:210px!important;height:44px!important;font-size:15px!important;display:none;align-items:center;justify-content:center;flex:none}
+#title{gap:10px}
+#vmicbtn{pointer-events:auto;touch-action:none;width:74px;height:74px;border-radius:50%;border:2px solid #fff;background:#c01428;display:flex;align-items:center;justify-content:center;z-index:4;box-shadow:0 0 14px rgba(255,40,60,.7);-webkit-user-select:none;user-select:none}
+#vmicbtn.down{background:#ff3a4a;transform:scale(1.12);box-shadow:0 0 28px rgba(255,80,90,1)}
+.port #vmicbtn{left:50%;margin-left:-37px;bottom:16px}
+.land #vmicbtn{right:calc(20% - 37px);bottom:16px}
 #end{background:linear-gradient(rgba(5,8,20,.65),rgba(5,8,20,0) 40%,rgba(5,8,20,0) 70%,rgba(5,8,20,.6));justify-content:space-between;padding:12% 0 18%}
 .land #end{padding:6% 0 8%}
 #end h2{margin:0;font:800 34px ui-monospace,Menlo,monospace;letter-spacing:.1em;color:#6cff9a;text-shadow:0 0 14px #000}
@@ -281,7 +288,8 @@ canvas{position:absolute;left:0;top:0;display:block}
     <div id="cmdhint"></div>
     <div id="cmdbtn"><button class="btn" data-iz-base-ui data-b="again">AGAIN</button><button class="btn" data-iz-base-ui data-b="next">NEXT &#9654;</button></div>
   </div>
-  <div id="title" class="ui ov"><h1>FINAL STOP</h1><button class="btn" data-iz-base-ui data-b="start" style="pointer-events:auto">START</button><button id="voicebtn" class="btn" data-iz-base-ui data-b="voice" style="pointer-events:auto;position:static;width:150px;height:36px">VOICE ON</button><div id="micnote">申し訳ありませんが、マイクをオンにしないとクリアできません。</div><div id="micerr"></div></div>
+  <button id="vmicbtn" class="ui hide" aria-label="mic"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3" fill="#fff"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/></svg></button>
+  <div id="title" class="ui ov"><h1>FINAL STOP</h1><button class="btn" data-iz-base-ui data-b="start" style="pointer-events:auto">START</button><button id="voicebtn" class="btn" data-iz-base-ui data-b="voice" style="pointer-events:auto;position:static;width:150px;height:36px">VOICE ON</button><div id="micnote">申し訳ありませんが、マイクをオンにしないとクリアできません。</div><div id="micerr"></div><button id="vmic" class="btn" data-iz-base-ui data-b="vmic" style="pointer-events:auto">心のマイクを使う</button></div>
   <div id="end" class="ui ov hide"><h2>ARRESTED</h2><button class="btn" data-iz-base-ui data-b="replay" style="pointer-events:auto">REPLAY</button></div>
   <div id="resume" class="ui ov hide">TAP TO RESUME</div>
   <div id="dbg" class="ui hide"></div>
@@ -772,7 +780,7 @@ const CORE = (function () {
   const NOMIC = Q.get('nomic') === '1';
   const MICV = {
     ready: false, busy: false, stream: null, src: null, an: null, buf: null,
-    level: 0, floor: 0.01, voiced: 0, sinceSound: 9, moreSent: false, gauge: 0, err: '',
+    level: 0, floor: 0.01, voiced: 0, sinceSound: 9, moreSent: false, gauge: 0, err: '', virtual: false, press: false,
     need: 0.35, grace: 0.9, gapMore: 1.1,
     acquire() {
       if (this.ready) return Promise.resolve(true);
@@ -789,9 +797,10 @@ const CORE = (function () {
     release() { try { if (this.src) this.src.disconnect(); if (this.stream) this.stream.getTracks().forEach(t => t.stop()); } catch (e) {} this.src = this.an = this.stream = null; this.ready = false; this.reset(); },
     reset() { this.voiced = 0; this.sinceSound = 9; this.moreSent = false; this.gauge = 0; },
     update(dt, S) {
-      if (!this.ready) { this.reset(); return null; }
-      let sum = 0; const b = this.buf; this.an.getFloatTimeDomainData(b); for (let i = 0; i < b.length; i++) sum += b[i] * b[i];
-      this.level = this.level * 0.5 + Math.sqrt(sum / b.length) * 0.5;
+      if (!this.ready && !this.virtual) { this.reset(); return null; }
+      if (this.virtual) this.level = this.level * 0.5 + (this.press ? 0.08 : 0) * 0.5;       // 心のマイク：ボタンを押している間が「声」
+      else { let sum = 0; const b = this.buf; this.an.getFloatTimeDomainData(b); for (let i = 0; i < b.length; i++) sum += b[i] * b[i];
+      this.level = this.level * 0.5 + Math.sqrt(sum / b.length) * 0.5; }
       const talking = !!(window.speechSynthesis && speechSynthesis.speaking), inYT = S.sub === 'YOURTURN' && S.t > 0.3 && !talking;
       if (!inYT) { if (!talking) this.floor = Math.min(0.03, this.floor * 0.98 + this.level * 0.02); if (S.sub !== 'YOURTURN') this.reset(); return null; }
       const thr = Math.max(0.012, this.floor * 2.0);
@@ -833,10 +842,19 @@ const CORE = (function () {
   function speakIfPreview() {
     if (S.phase === 'CMD' && S.sub === 'PREVIEW' && S.lock <= 0) VOICE.speak(CONFIG.CMDS[S.cmd.i].text);   // iOS：操作の中でしか話せない
   }
-  function onTap() { if (paused) return; wake(); speakIfPreview(); if (S.sub === 'YOURTURN' && !MICV.ready && !NOMIC && !AUTO) MICV.acquire(); pend.tap = true; }
+  function onTap() { if (paused) return; wake(); speakIfPreview(); if (S.sub === 'YOURTURN' && !MICV.ready && !MICV.virtual && !NOMIC && !AUTO) MICV.acquire(); pend.tap = true; }
   function startWithMic() {
     const er = $('micerr'); er.textContent = '';
-    MICV.acquire().then(ok => { if (ok) pend.button = 'start'; else { const n = MICV.err, why = n === 'NotAllowedError' ? 'マイクが許可されていません。ブラウザ（iPhoneは 設定→Safari→マイク）で許可してから、もう一度 START を押してください。埋め込み表示（アーティファクト内）では許可できないので、公開URLをブラウザで直接開いてください。' : n === 'NotFoundError' ? 'マイクが見つかりません。' : n === 'unsupported' || n === 'SecurityError' ? 'このページではマイクを使えません（埋め込み表示、または https でないページ）。公開URLをブラウザで直接開いてください。' : 'マイクを使えませんでした。もう一度 START を押してください。'; er.textContent = why + '（' + n + '）'; } });
+    MICV.acquire().then(ok => { if (ok) pend.button = 'start'; else {
+        const n = MICV.err, ios = /iPhone|iPad|iPod/.test(navigator.userAgent), safari = ios && !/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
+        const why = n === 'NotAllowedError' ? 'マイクが許可されていません。' : n === 'NotFoundError' ? 'マイクが見つかりません。' : n === 'unsupported' || n === 'SecurityError' ? 'このページではマイクを使えません。' : 'マイクを使えませんでした。';
+        let h = why + '（' + n + '）';
+        if (safari) h += '<br><b>iPhone（Safari）の設定</b><br>① アドレスバー左の「ぁあ」をタップ<br>② 「Webサイトの設定」→「マイク」を「許可」<br>③ ページを再読み込みして START<br>（直らないときは 設定→Safari→マイク も確認）';
+        else if (ios) h += '<br><b>設定方法</b><br>設定アプリ→使っているブラウザ→「マイク」を許可して、再読み込みしてください。';
+        else h += '<br>ブラウザのアドレスバー付近のマイク許可を「許可」にして、再読み込みしてください。';
+        h += '<br>それでも使えないときは、下の「心のマイクを使う」で進めます。';
+        er.innerHTML = h; $('vmic').style.display = 'flex';
+      } });
   }
   stage.querySelectorAll('[data-b]').forEach(b => {
     b.addEventListener('pointerdown', e => e.stopPropagation());
@@ -847,15 +865,18 @@ const CORE = (function () {
       if (k === 'start') AUDIO.init();
       wake();
       if (k === 'voice') { VOICE.toggle(); refreshVoiceBtn(); return; }
+      if (k === 'vmic') { MICV.virtual = true; $('micerr').textContent = ''; $('vmic').style.display = 'none'; pend.button = 'start'; return; }
       if (k === 'start' && !NOMIC && !AUTO) { startWithMic(); return; }
       if (k === 'next') { speakIfPreview(); }
       if (k === 'again') { if (S.phase === 'CMD') VOICE.speak(CONFIG.CMDS[S.cmd.i].text); }
       pend.button = k;
     });
   });
+  { const vb = $('vmicbtn'), dn = e => { e.stopPropagation(); e.preventDefault(); MICV.press = true; vb.classList.add('down'); try { vb.setPointerCapture(e.pointerId); } catch (x) {} }, up = e => { e.stopPropagation(); MICV.press = false; vb.classList.remove('down'); };
+    vb.addEventListener('pointerdown', dn); vb.addEventListener('pointerup', up); vb.addEventListener('pointercancel', up); vb.addEventListener('lostpointercapture', up); vb.addEventListener('contextmenu', e => e.preventDefault()); }
   function refreshVoiceBtn() { $('voicebtn').textContent = VOICE.on ? 'VOICE ON' : 'VOICE OFF'; }
   refreshVoiceBtn();
-  $('resume').addEventListener('pointerdown', e => { e.stopPropagation(); AUDIO.init(); if (!NOMIC && !AUTO) MICV.acquire(); paused = false; $('resume').classList.add('hide'); last = performance.now(); });
+  $('resume').addEventListener('pointerdown', e => { e.stopPropagation(); AUDIO.init(); if (!NOMIC && !AUTO && !MICV.virtual) MICV.acquire(); paused = false; $('resume').classList.add('hide'); last = performance.now(); });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && !SHOT) { paused = true; VOICE.cancel(); MICV.release(); AUDIO.mute(); }
     else if (paused && !SHOT) { $('resume').classList.remove('hide'); }
@@ -871,6 +892,7 @@ const CORE = (function () {
     setUI('title', ph === 'TITLE', v => el.title.classList.toggle('hide', !v));
     setUI('end', ph === 'END', v => el.end.classList.toggle('hide', !v));
     setUI('cmdp', ph === 'CMD', v => el.cmdp.classList.toggle('hide', !v));
+    setUI('vmicbtn', MICV.virtual && S.sub === 'YOURTURN', v => { $('vmicbtn').classList.toggle('hide', !v); if (!v) { MICV.press = false; $('vmicbtn').classList.remove('down'); } });
     setUI('cmdbtn', S.sub !== 'YOURTURN', v => { $('cmdbtn').style.visibility = v ? 'visible' : 'hidden'; });
     setUI('hud', ph !== 'TITLE' && ph !== 'DEAD', v => { el.unit.classList.toggle('hide', !v); el.gaugeBox.classList.toggle('hide', !v); });
     setUI('btns', ph !== 'TITLE' && ph !== 'END' && ph !== 'CMD' && ph !== 'DEAD', v => { el.siren.classList.toggle('hide', !v); el.lights.classList.toggle('hide', !v); });
@@ -1301,7 +1323,7 @@ const CORE = (function () {
   // YOURTURN：「SAY IT!」をしつこく出す（脈打つ本体＋広がる残像＋残り時間の棒＋マイクの声ゲージ）
   function drawSayIt(W, H, land) {
     const cx = land ? W * 0.3 : W / 2, cy = land ? H * 0.34 : H * 0.26, base = land ? 40 : 46, word = 'SAY IT!', mono = 'ui-monospace,Menlo,monospace';
-    const lim = S.ytLimit || CONFIG.YOURTURN, left = clamp01(1 - S.t / lim), micOff = !MICV.ready && !NOMIC;
+    const lim = S.ytLimit || CONFIG.YOURTURN, left = clamp01(1 - S.t / lim), micOff = !MICV.ready && !MICV.virtual && !NOMIC;
     if (left < 0.4) { const pa = (0.4 - left) / 0.4 * (0.25 + 0.2 * Math.sin(tNow * 18)), vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.8); vg.addColorStop(0, 'rgba(255,0,0,0)'); vg.addColorStop(1, 'rgba(255,0,0,' + Math.max(0, pa).toFixed(3) + ')'); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H); }
     ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
     for (let i = 0; i < 3; i++) { const ph = (tNow * 1.8 + i / 3) % 1; ctx.globalAlpha = (1 - ph) * 0.55; ctx.strokeStyle = '#ffe14a'; ctx.lineWidth = 2; ctx.font = '800 ' + (base * (1 + ph * 0.8)).toFixed(1) + 'px ' + mono; ctx.strokeText(word, cx, cy); }
@@ -1312,7 +1334,7 @@ const CORE = (function () {
     ctx.fillStyle = flash ? '#ffffff' : '#ffe14a'; ctx.fillText(word, cx, cy);
     ctx.shadowBlur = 0; ctx.font = '700 13px ' + mono; ctx.fillStyle = micOff ? '#ff9a9a' : '#fff';
     const y1 = cy + base * 0.85;
-    ctx.fillText(micOff ? 'TAP TO TURN ON THE MIC' : 'SAY THE COMMAND OUT LOUD', cx, y1);
+    ctx.fillText(micOff ? 'TAP TO TURN ON THE MIC' : MICV.virtual ? 'HOLD THE MIC BUTTON & SAY IT' : 'SAY THE COMMAND OUT LOUD', cx, y1);
     const bw = 150; ctx.fillStyle = 'rgba(255,255,255,.2)'; ctx.fillRect(cx - bw / 2, y1 + 14, bw, 5);
     ctx.fillStyle = left > 0.3 ? '#ffe14a' : '#ff5a50'; ctx.fillRect(cx - bw / 2, y1 + 14, bw * left, 5);
     // 声ゲージ（緑）と、マイクに入っている音の大きさ
