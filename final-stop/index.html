@@ -865,7 +865,7 @@ const CORE = (function () {
         const n = MICV.err, ios = /iPhone|iPad|iPod/.test(navigator.userAgent), safari = ios && !/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
         const why = n === 'NotAllowedError' ? 'マイクが許可されていません。' : n === 'NotFoundError' ? 'マイクが見つかりません。' : n === 'unsupported' || n === 'SecurityError' ? 'このページではマイクを使えません。' : 'マイクを使えませんでした。';
         let h = why + '（' + n + '）';
-        if (safari) h += '<br><b>iPhone（Safari）の設定</b><br>① アドレスバー左の「ぁあ」をタップ<br>② 「Webサイトの設定」→「マイク」を「許可」<br>③ ページを再読み込みして START<br>（直らないときは 設定→Safari→マイク も確認）';
+        if (safari) h += '<br><b>iPhone（Safari）の設定</b><br>① アドレスバー左の「ぁあ」をタップ<br>② 「Webサイトの設定」→「マイク」を「許可」<br>③ ページを再読み込みして START<br><br>「ぁあ」が見つからないとき：設定アプリ→Safari（iOS 18 は 設定→アプリ→Safari）→「マイク」を「許可」または「確認」';
         else if (ios) h += '<br><b>設定方法</b><br>設定アプリ→使っているブラウザ→「マイク」を許可して、再読み込みしてください。';
         else h += '<br>ブラウザのアドレスバー付近のマイク許可を「許可」にして、再読み込みしてください。';
         h += '<br>それでも使えないときは、下の「心のマイクを使う」で進めます。';
