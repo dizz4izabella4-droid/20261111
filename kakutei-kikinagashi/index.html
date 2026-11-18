@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>確定申告 聞き流し</title>
+<script>try{navigator.audioSession&&(navigator.audioSession.type='playback')}catch(e){}</script>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:#f4f5f7;color:#1f2937;font-size:15px;line-height:1.7;padding-bottom:230px;
+ font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic UI",Meiryo,"Noto Sans JP",sans-serif}
+header{background:#111827;color:#fff;padding:12px 16px}
+header h1{margin:0;font-size:17px}
+header p{margin:2px 0 0;font-size:11.5px;color:#9ca3af}
+.wrap{max-width:760px;margin:0 auto;padding:14px}
+.note{background:#fffbeb;border-left:4px solid #b45309;border-radius:4px;padding:8px 11px;font-size:12px;color:#78350f;margin-bottom:12px}
+.tabs{display:flex;gap:8px;margin-bottom:10px}
+.tabs button{flex:1;border:2px solid #d1d5db;background:#fff;border-radius:9px;padding:9px 8px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;text-align:left}
+.tabs button small{display:block;font-weight:400;font-size:11px;color:#6b7280}
+.tabs button.on{border-color:#1d4ed8;background:#eff6ff}
+.ch{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #d1d5db;border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer}
+.ch.cur{border-color:#1d4ed8;box-shadow:0 0 0 3px #dbeafe}
+.ch .no{flex:none;width:34px;height:34px;border-radius:50%;background:#e5e7eb;display:grid;place-items:center;font-size:12px;font-weight:700;color:#374151}
+.ch.cur .no{background:#1d4ed8;color:#fff}
+.ch.done .no{background:#047857;color:#fff}
+.ch .t{flex:1;font-size:14px;font-weight:700;line-height:1.45}
+.ch .m{font-size:11px;color:#6b7280;font-weight:400;display:block;margin-top:1px}
+.bar{height:4px;background:#e5e7eb;border-radius:2px;margin-top:5px;overflow:hidden}
+.bar i{display:block;height:100%;background:#1d4ed8}
+details.tx{background:#fff;border:1px solid #d1d5db;border-radius:10px;padding:10px 13px;margin-top:12px}
+details.tx summary{cursor:pointer;font-size:13px;font-weight:700}
+.tx .body{font-size:14px;line-height:1.95;margin-top:8px}
+.tx .body p{margin:0 0 .7em}
+.tx .refs{font-size:11.5px;color:#6b7280;border-top:1px dotted #d1d5db;margin-top:10px;padding-top:8px}
+/* プレイヤー */
+.pl{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #d1d5db;box-shadow:0 -4px 16px rgba(0,0,0,.08);padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
+.pl .in{max-width:760px;margin:0 auto}
+.pl .ti{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl .su{font-size:11px;color:#6b7280}
+.seek{width:100%;margin:6px 0 0;accent-color:#1d4ed8}
+.tm{display:flex;justify-content:space-between;font-size:11px;color:#6b7280;font-family:monospace}
+.ct{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:4px}
+.ct button{border:1px solid #d1d5db;background:#fff;border-radius:50%;width:44px;height:44px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.ct button.play{width:58px;height:58px;background:#1d4ed8;color:#fff;border-color:#1d4ed8;font-size:20px}
+.ct button:disabled{opacity:.35}
+.op{display:flex;gap:8px;justify-content:center;margin-top:6px;flex-wrap:wrap}
+.op select,.op button{border:1px solid #d1d5db;background:#fff;border-radius:7px;padding:5px 9px;font:inherit;font-size:12px}
+.op .on{background:#eff6ff;border-color:#1d4ed8;color:#1e40af;font-weight:700}
+</style>
+</head>
+<body>
+<header>
+  <h1>確定申告 聞き流し</h1>
+  <p>画面を閉じても流れる音声講座 ／ 章をまたいで自動で続けて再生</p>
+</header>
+<div class="wrap">
+  <div class="note">学習用の読み上げです。制度の数値・様式は年分ごとに変わります。実務の判断には、当該年分の国税庁資料と法令（e-Gov法令検索）を確認してください。声は合成音声です。</div>
+  <div class="tabs" id="tabs"></div>
+  <div id="list"></div>
+  <details class="tx" id="txbox" style="display:none"><summary>いまの章の本文と参考資料</summary><div class="body" id="txbody"></div></details>
+</div>
+
+<div class="pl">
+  <div class="in">
+    <div class="ti" id="ti">章を選んでください</div>
+    <div class="su" id="su">&nbsp;</div>
+    <input type="range" class="seek" id="seek" min="0" max="1000" value="0" aria-label="再生位置">
+    <div class="tm"><span id="cur">0:00</span><span id="dur">0:00</span></div>
+    <div class="ct">
+      <button id="bPrev" aria-label="前の章">⏮</button>
+      <button id="bBack" aria-label="15秒戻る">−15</button>
+      <button id="bPlay" class="play" aria-label="再生・一時停止">▶</button>
+      <button id="bFwd" aria-label="30秒進む">+30</button>
+      <button id="bNext" aria-label="次の章">⏭</button>
+    </div>
+    <div class="op">
+      <select id="spd" aria-label="速度"><option value="0.8">0.8倍</option><option value="0.9">0.9倍</option><option value="1" selected>1.0倍</option><option value="1.15">1.15倍</option><option value="1.3">1.3倍</option><option value="1.5">1.5倍</option><option value="1.75">1.75倍</option><option value="2">2.0倍</option></select>
+      <select id="slp" aria-label="スリープタイマー"><option value="0">タイマーなし</option><option value="15">15分で停止</option><option value="30">30分で停止</option><option value="60">60分で停止</option><option value="end">この章の終わりで停止</option></select>
+      <button id="bAuto" class="on">自動で次の章へ</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var D=null, PI=0, CI=-1, AUTO=true, au=new Audio(), SLEEP=null, SLEEP_END=false;
+au.preload='metadata';
+var SK='kikinagashi_v1', S={pos:{},done:{},last:null,spd:1,auto:true};
+function load(){try{var j=JSON.parse(localStorage.getItem(SK)||'null');if(j)S=Object.assign(S,j)}catch(e){}}
+function save(){try{localStorage.setItem(SK,JSON.stringify(S))}catch(e){}}
+function $(i){return document.getElementById(i)}
+function mmss(s){s=Math.max(0,Math.floor(s||0));var h=Math.floor(s/3600),m=Math.floor(s%3600/60),r=s%60;return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(r).padStart(2,'0')}
+function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+
+function renderTabs(){
+  $('tabs').innerHTML=D.programs.map(function(p,i){
+    var tot=p.chapters.reduce(function(a,c){return a+c.sec},0);
+    return '<button data-i="'+i+'" class="'+(i===PI?'on':'')+'">'+esc(p.title)+'<small>'+esc(p.sub)+'・全'+p.chapters.length+'本・約'+(tot/3600).toFixed(1)+'時間</small></button>';
+  }).join('');
+  Array.prototype.forEach.call($('tabs').children,function(b){b.onclick=function(){PI=+b.dataset.i;renderTabs();renderList()}});
+}
+function renderList(){
+  var p=D.programs[PI];
+  $('list').innerHTML=p.chapters.map(function(c,i){
+    var pos=S.pos[c.key]||0, pct=Math.min(100,Math.round(pos/c.sec*100));
+    var cur=(S.last&&S.last.key===c.key);
+    return '<div class="ch'+(cur?' cur':'')+(S.done[c.key]?' done':'')+'" data-i="'+i+'"><div class="no">'+esc(c.no)+'</div><div class="t">'+esc(c.title)+
+      '<span class="m">'+mmss(c.sec)+(S.done[c.key]?'・聞き終わり':pos>5?'・'+mmss(pos)+' から':'')+'</span>'+
+      (pos>5&&!S.done[c.key]?'<div class="bar"><i style="width:'+pct+'%"></i></div>':'')+'</div></div>';
+  }).join('');
+  Array.prototype.forEach.call($('list').children,function(e){e.onclick=function(){open(PI,+e.dataset.i,true)}});
+}
+function curCh(){return CI<0?null:D.programs[PI].chapters[CI]}
+function open(pi,ci,play){
+  if(CI>=0&&curCh()) S.pos[curCh().key]=au.currentTime||0;
+  PI=pi;CI=ci;var c=curCh();
+  au.src=c.file; au.playbackRate=+S.spd; 
+  var start=S.done[c.key]?0:(S.pos[c.key]||0);
+  au.onloadedmetadata=function(){ if(start>3&&start<au.duration-5) au.currentTime=start-2; };
+  S.last={pi:pi,ci:ci,key:c.key};save();
+  renderTabs();renderList();setMeta();showText(c);
+  if(play) au.play().catch(function(){});
+  $('bPrev').disabled=CI<=0; $('bNext').disabled=CI>=D.programs[PI].chapters.length-1;
+}
+function setMeta(){
+  var p=D.programs[PI],c=curCh(); if(!c) return;
+  $('ti').textContent=c.no+'　'+c.title; $('su').textContent=p.title;
+  if('mediaSession' in navigator){
+    navigator.mediaSession.metadata=new MediaMetadata({title:c.no+' '+c.title,artist:'確定申告 聞き流し',album:p.title});
+  }
+}
+function showText(c){
+  $('txbox').style.display='';
+  var t=c.text.split('\n').filter(function(x){return x.trim()}).map(function(x){return '<p>'+esc(x)+'</p>'}).join('');
+  var r=(c.refs&&c.refs.length)?'<div class="refs"><b>参考資料（原稿に記載のもの）</b><br>'+c.refs.map(esc).join('<br>')+'</div>':'';
+  $('txbody').innerHTML=t+r;
+}
+function toggle(){ if(CI<0){open(S.last?S.last.pi:0,S.last?S.last.ci:0,true);return} au.paused?au.play().catch(function(){}):au.pause() }
+function go(d){ var n=D.programs[PI].chapters.length,ni=CI+d; if(ni<0||ni>=n) return; S.done[curCh().key]=S.done[curCh().key]; open(PI,ni,true) }
+$('bPlay').onclick=toggle;
+$('bBack').onclick=function(){au.currentTime=Math.max(0,au.currentTime-15)};
+$('bFwd').onclick=function(){au.currentTime=Math.min(au.duration||1e9,au.currentTime+30)};
+$('bPrev').onclick=function(){ if(au.currentTime>5) au.currentTime=0; else go(-1) };
+$('bNext').onclick=function(){go(1)};
+$('spd').onchange=function(){S.spd=+$('spd').value;au.playbackRate=S.spd;au.defaultPlaybackRate=S.spd;save()};
+$('bAuto').onclick=function(){AUTO=!AUTO;S.auto=AUTO;$('bAuto').className=AUTO?'on':'';save()};
+$('slp').onchange=function(){
+  if(SLEEP){clearTimeout(SLEEP);SLEEP=null} SLEEP_END=false;
+  var v=$('slp').value; if(v==='end') SLEEP_END=true; else if(+v>0) SLEEP=setTimeout(function(){au.pause();$('slp').value='0'},+v*60000);
+};
+var dragging=false;
+$('seek').oninput=function(){dragging=true;$('cur').textContent=mmss(au.duration*($('seek').value/1000))};
+$('seek').onchange=function(){if(au.duration) au.currentTime=au.duration*($('seek').value/1000);dragging=false};
+au.onplay=function(){$('bPlay').textContent='❚❚';if('mediaSession' in navigator)navigator.mediaSession.playbackState='playing'};
+au.onpause=function(){$('bPlay').textContent='▶';if('mediaSession' in navigator)navigator.mediaSession.playbackState='paused';if(curCh()){S.pos[curCh().key]=au.currentTime;save()}};
+var lastSave=0;
+au.ontimeupdate=function(){
+  var d=au.duration||curCh()&&curCh().sec||0;
+  if(!dragging){$('seek').value=d?Math.round(au.currentTime/d*1000):0;$('cur').textContent=mmss(au.currentTime)}
+  $('dur').textContent=mmss(d);
+  if(Date.now()-lastSave>4000&&curCh()){lastSave=Date.now();S.pos[curCh().key]=au.currentTime;save()}
+  if('mediaSession' in navigator&&navigator.mediaSession.setPositionState&&d&&isFinite(d)){
+    try{navigator.mediaSession.setPositionState({duration:d,playbackRate:au.playbackRate,position:Math.min(au.currentTime,d)})}catch(e){}
+  }
+};
+au.onended=function(){
+  var c=curCh(); if(!c) return; S.done[c.key]=1; S.pos[c.key]=0; save();
+  if(SLEEP_END){SLEEP_END=false;$('slp').value='0';renderList();return}
+  var n=D.programs[PI].chapters.length;
+  if(AUTO&&CI<n-1) open(PI,CI+1,true); else renderList();
+};
+if('mediaSession' in navigator){
+  var ms=navigator.mediaSession;
+  [['play',function(){au.play()}],['pause',function(){au.pause()}],
+   ['previoustrack',function(){go(-1)}],['nexttrack',function(){go(1)}],
+   ['seekbackward',function(){au.currentTime=Math.max(0,au.currentTime-15)}],
+   ['seekforward',function(){au.currentTime=Math.min(au.duration||1e9,au.currentTime+30)}],
+   ['seekto',function(d){if(d.seekTime!=null)au.currentTime=d.seekTime}]
+  ].forEach(function(a){try{ms.setActionHandler(a[0],a[1])}catch(e){}});
+}
+document.addEventListener('keydown',function(e){
+  if(/INPUT|SELECT/.test((e.target||{}).tagName||'')) return;
+  if(e.code==='Space'){e.preventDefault();toggle()} if(e.code==='ArrowLeft')$('bBack').click(); if(e.code==='ArrowRight')$('bFwd').click();
+});
+fetch('data.json').then(function(r){return r.json()}).then(function(j){
+  D=j; load(); AUTO=S.auto!==false; $('bAuto').className=AUTO?'on':''; $('spd').value=String(S.spd);
+  if(S.last&&D.programs[S.last.pi]) PI=S.last.pi;
+  renderTabs();renderList();
+  if(S.last&&D.programs[S.last.pi]&&D.programs[S.last.pi].chapters[S.last.ci]){ open(S.last.pi,S.last.ci,false); }
+}).catch(function(){ $('list').innerHTML='<div class="note">データを読み込めません。公開ページ（http/https）から開いてください。</div>'; });
+</script>
+</body>
+</html>

@@ -312,12 +312,15 @@ const FRESH=d=>{ const p=String(d).split('-').map(Number), u=new Date(p[0],p[1]-
 // ===== 実用の部屋の作品 =====
 // 書き方はトップ（../index.html）の APPS と同じ。path はこの部屋から見た場所（../フォルダ名/）。新しいものを先頭に足す
 const ROOM=[
+  {path:'../kakutei-kikinagashi/', ja:'確定申告の聞き流し', label:'確定申告 聞き流し（音声講座）', name:'TAX RETURN RADIO', for:'both', color:'lav', icon:'phones',
+   start:'2026-11-19', upd:'2026-11-19', ver:'1.0'},
   {path:'../nogyo-keihi-drill/', ja:'農業所得の経費判定', label:'農業所得 経費判定ドリル', name:'FARM EXPENSE DRILL', for:'both', color:'mint', icon:'ledger',
    start:'2026-11-19', upd:'2026-11-19', ver:'1.0'},
   {path:'../dentaku-drill/', ja:'電卓の使い方', label:'電卓ドリル（電卓の使い方）', name:'CALCULATOR DRILL', for:'both', color:'pink', icon:'calc',
    start:'2026-11-10', upd:'2026-11-18', ver:'1.0'},
 ];
 const ICONS={
+  phones:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 30v-6a15 15 0 0 1 30 0v6"/><rect x="7" y="29" width="8" height="12" rx="3" fill="rgba(255,255,255,.25)"/><rect x="33" y="29" width="8" height="12" rx="3" fill="rgba(255,255,255,.25)"/></svg>',
   ledger:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="6" width="30" height="36" rx="3" fill="rgba(255,255,255,.25)"/><path d="M16 15h16M16 22h16M16 29h9"/></svg>',
   calc:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><rect x="10" y="5" width="28" height="38" rx="3" fill="rgba(255,255,255,.25)"/><path d="M15 11h18v8H15zM17 26h2M24 26h2M31 26h0M17 33h2M24 33h2M31 30v6M28 33h6"/></svg>',
   blob:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M24 8c10 0 17 8 17 18 0 9-7 14-17 14S7 35 7 26C7 16 14 8 24 8z" fill="rgba(255,255,255,.25)"/><circle cx="18" cy="24" r="1.6" fill="#fff"/><circle cx="30" cy="24" r="1.6" fill="#fff"/><path d="M20 31q4 3 8 0"/></svg>',

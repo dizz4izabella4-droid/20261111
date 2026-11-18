@@ -12,6 +12,7 @@
 | ワイヤダ（数字で輪を作るパズル。ルール説明つき） | `kumiwake-bou/` | スマホ・PC |
 | ガラス割り（GLASS BREAKER） | `glass-breaker/` | スマホ |
 | 電卓ドリル（電卓ドリルの自動生成） | `dentaku-drill/` | スマホ・PC |
+| 確定申告 聞き流し（音声講座。画面を閉じても流れるプレイヤーつき。実用の部屋） | `kakutei-kikinagashi/` | スマホ・PC |
 | 農業所得 経費判定ドリル（実用の部屋。帳簿から算入できない経費を見分ける練習） | `nogyo-keihi-drill/` | スマホ・PC |
 | WHERE WHICH（ひらがなを教える育成アプリ） | `where-which/` | スマホ・PC |
 | Noche sin Luna（フラメンコの音ゲー。test ver.） | `noche-sin-luna/` | スマホ・PC |
