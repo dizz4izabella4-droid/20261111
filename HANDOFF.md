@@ -1044,3 +1044,4 @@ PC-98ふうのノベルゲームエンジンの**土台**。ゲームの中身�
 - 旧トップ（ゲーム一覧）は `toybox/index.html` に移動（パスは `../` 付き、左上「◀ 入り口」で戻る）。`tools/apply_game_base.py` の対象も `toybox/index.html` に変更。各部屋の「もどる」は `../`＝新トップ。
 - 未解決（BRAIN README参照）: 背景ループが短い／低解像度、実機Safari未確認。癒しの扉は `toybox/` 内に残している。
 - 追記: lab-brain の更新版(1de8f55: 白背景・木札・「これから」札・5つ目の扉「べつのせかい」)を採用。窓は5枚（toybox/・lab/・cinema/・utility/・外部 iz3ico.github.io/app/）。URLは新構成の相対パス、内部は同一タブ。ガラスは静止画でなく各ページのiframeライブ表示（外部と未公開は代替表示）。扉が開いた状態で中央の扉をタップして移動。Google Fonts（Shippori）は標準フォント方針に合わせ不使用（ヒラギノ/游明朝）。
+- 電卓ドリル(`dentaku-drill/`)を おもちゃ箱(`toybox/`) の一覧から `utility/`（実用の部屋）の ROOM に移動（パス `../dentaku-drill/`、upd 2026-11-18）。本体は動かしていないのでURLは変わらない。
