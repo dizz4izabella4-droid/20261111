@@ -15,7 +15,7 @@
 - **WHERE WHICH**（旧名：ことばのおへや）：ひらがなの言葉を教えると、イリスが覚えて話す育成アプリ（スマホ・PC両対応）。21章。
 - **PC98 NOVEL**：PC-98ふうのノベルゲームエンジンの土台（サンプル「零時の記録」つき。スマホ・PC両対応。test ver.）。27章。
 - **やわらか**（YAWARAKA PUNIRU）：粘土をこねて顔を付け、部位ごとの柔らかさを決めて振り回して揺らす（スマホむけ・PC不可。実験室に置く。test ver.）。28章。
-- **暗算転生 〜Rebuild〜**：学校の廊下を進み、暗算で悪魔と戦うレトロRPG（実験室。スマホ・PC両対応。test ver.）。28章。
+- **暗算輪廻 〜Rebuild〜**：学校の廊下を進み、暗算で悪魔と戦うレトロRPG（実験室。スマホ・PC両対応。test ver.）。28章。
 - **Noche sin Luna**：フラメンコ曲を叩いて鳴らす、メキシコ風の「気持ちいい」ゲーム（判定・スコアなし、観客が増える。スマホ・PC両対応。test ver.）。25章。
 
 ---
@@ -38,7 +38,7 @@
 | 　WHERE WHICH | https://dizz4izabella4-droid.github.io/20261111/where-which/ | 旧名：ことばのおへや（フォルダ kotoba-oheya） |
 | 　Noche sin Luna | https://dizz4izabella4-droid.github.io/20261111/noche-sin-luna/ | |
 | 　PC98 NOVEL | https://dizz4izabella4-droid.github.io/20261111/pc98-novel/ | |
-| 　暗算転生 | https://dizz4izabella4-droid.github.io/20261111/anzan-tensei/ | 実験室 |
+| 　暗算輪廻 | https://dizz4izabella4-droid.github.io/20261111/anzan-tensei/ | 実験室 |
 | 　やわらか | https://dizz4izabella4-droid.github.io/20261111/yawaraka/ | 実験室に掲載 |
 | claude.ai アーティファクト（PC版） | https://claude.ai/artifact/NctPezS87FshtyQGQ1YaDf | 開発中の確認用。曲2つも同梱して公開済み |
 | claude.ai アーティファクト（コウモリ） | https://claude.ai/artifact/RtGte1cpPBFfU2wHBe8bEi | 開発の正本はこちら。リポジトリの tori-to-kemono/index.html は、その写し |
@@ -47,7 +47,7 @@
 | claude.ai アーティファクト（Noche sin Luna） | https://claude.ai/artifact/19pEEfxhWj1sVAtjrNZD3M | テスト公開用。リポジトリの noche-sin-luna/index.html と同じ内容 |
 | claude.ai アーティファクト（PC98 NOVEL） | https://claude.ai/artifact/SNF4KH2uPebe6rfbagSH26 | 確認用。リポジトリの pc98-novel/index.html と同じ内容。アーティファクト上では、セーブの EXPORT（ファイルの書き出し）だけ働かない（閲覧画面がダウンロードを許可しないため） |
 | claude.ai アーティファクト（やわらか） | https://claude.ai/artifact/Kdh4VQFMh9ZJx5sVnWiuay | 確認用。リポジトリの yawaraka/index.html と同じ内容 |
-| claude.ai アーティファクト（暗算転生） | https://claude.ai/artifact/4udv85XyfcgbJL511ZPRgR | 確認用。リポジトリの anzan-tensei/index.html と同じ内容 |
+| claude.ai アーティファクト（暗算輪廻） | https://claude.ai/artifact/4udv85XyfcgbJL511ZPRgR | 確認用。リポジトリの anzan-tensei/index.html と同じ内容 |
 | claude.ai アーティファクト（旧スマホ版） | https://claude.ai/artifact/TwbhHpCo6BMetgr6v178bd | 試作（フリック入力と偉人の名言）。新しいスマホ版に置き換えたので使わない |
 
 ### リポジトリの構成
@@ -627,7 +627,7 @@ PC版の筋立てと仕組み（防御→追跡→反撃、攻撃信号、耐久
 ## 17. トップの主題歌モード「ABYSS CODE」（廃止）
 
 - 2026-11-16 に、トップの主題歌スイッチ・崩壊演出・歌詞の巻物を削除した（launcher-scroll.jpg / launcher-rod.jpg / tools/make_scroll_textures.py も削除）。
-- 主題歌（旧 launcher-bgm.mp3）は `anzan-tensei/ending.mp3` に移し、暗算転生のクリア時のエンディング（読めない文字のスタッフロール → fin.）で流す。
+- 主題歌（旧 launcher-bgm.mp3）は `anzan-tensei/ending.mp3` に移し、暗算輪廻のクリア時のエンディング（読めない文字のスタッフロール → fin.）で流す。
 
 ---
 
@@ -970,13 +970,13 @@ PC-98ふうのノベルゲームエンジンの**土台**。ゲームの中身�
 
 ---
 
-## 28. 暗算転生 〜Rebuild〜（anzan-tensei）（2026-11-14）
+## 28. 暗算輪廻 〜Rebuild〜（anzan-tensei）（2026-11-14）
 
 - 渡されたHTML（1ファイル、外部読み込みなし）をそのまま置き、実験室（`lab/index.html` の `LAB` の先頭）に載せた。一覧は「ANZAN TENSEI／暗算で戦う（未完）」、Ver.0.1、アイコンは電卓（`calc`）。メモの「あんざんてんせい」にあたる作品。
 - 内容：旧校舎1Fの1×10マスの廊下を進む（W/S・↑↓・ボタン）。28%で敵と遭遇 → 仲魔を召喚（戦闘には参加しない飾り。身代わりで被弾する）→ 暗算の答えをテンキーで入力。桁数がそろった瞬間に自動判定。速いほど2〜3回攻撃。飛行の敵は銃、地上は剣。レベルが上がると項数が増える（最大6項）。廊下の突き当たりで全回復して入口へ戻る。月齢は飾り。
 - 元のコードから変えた点：`audioSession.type='ambient'`（マナーモードで鳴らさない）、全作品共通の基本設計（`apply_game_base.py` の `TARGETS` に登録）、ヘッダーの右に40pxの余白（右上の ⛶ ボタンと重ならないように）。
 - 確認：Chromium（1280×800、390×780）でタイトル → 探索 → 遭遇 → 召喚 → 戦闘まで、エラーなし。実機は未確認。
-- タイトルロゴ（2026-11-15）：タイトル画面の文字「暗算転生 〜Rebuild〜」を、渡された画像ロゴ（Mental Calculation Reborn -rebuild-）に差し替えた。元のPNG（2172×724、約2.4MB）を幅1400pxのWebP（約180KB）にして、HTMLへ base64 で埋め込み（外部読み込みなし）。黒背景の画像なので `mix-blend-mode:screen` で画面の暗い背景になじませている。`<h1>` の中の `<img alt>` にして、読み上げ・検索用に「暗算転生 〜Rebuild〜」を残した。ページの `<title>` は変えていない。確認：Chromium（390×780のタッチ端末、1280×800）でタイトル表示とSYSTEM STARTの動作、エラーなし。
+- タイトルロゴ（2026-11-15）：タイトル画面の文字「暗算輪廻 〜Rebuild〜」を、渡された画像ロゴ（Mental Calculation Reborn -rebuild-）に差し替えた。元のPNG（2172×724、約2.4MB）を幅1400pxのWebP（約180KB）にして、HTMLへ base64 で埋め込み（外部読み込みなし）。黒背景の画像なので `mix-blend-mode:screen` で画面の暗い背景になじませている。`<h1>` の中の `<img alt>` にして、読み上げ・検索用に「暗算輪廻 〜Rebuild〜」を残した。ページの `<title>` は変えていない。確認：Chromium（390×780のタッチ端末、1280×800）でタイトル表示とSYSTEM STARTの動作、エラーなし。
 - 追加の女神30名（2026-11-16、GOD-02）：Giulia（G01〜G10）・Chiara（C01〜C10）・Olivia（O01〜O10）が作ったセリフ付きの女神を、`index.html` の `NEW_GODDESS_DATA` に埋め込んだ。既存の8名・難易度ごとの初期の顔ぶれは変えない。**クリアごとに1名ずつ仲間入り**（既存8名のあと、G→C→O の順）。場面の対応：correct→ok・fast、critical→crit、wrong→miss、hit1→hurt（1回目の被弾）、exit→力尽きるとき、victory→win、idle→walk、clear→clear、summon→召喚、recover→休息明け、revive→デスの復活（仲間入りした追加の女神のうち1名が言う）、status→ステータス画面の「ひとこと」。見た目の文は容姿欄に。HP・ステータスの数値は名前から決まる飾り。スキルは「なし」。名簿は `claude/anzan-goddess-roster.md`（プロジェクト側）。
   - O06〜O10（ガロ・ヴィリス・ザヴァ・メル・ギルヴァ）は、口の悪さも愛嬌として監督が採用（句読点なしのまま）。明らかな誤字だけ直した。O02・O03・O04 は不自然な文・強すぎる語を少し直して採用。C03 の一人称はピュリカに差し替え。
   - 確認：Chromium（390×780）で、召喚画面（33名）・ステータス・戦闘中の台詞・力尽き・デスの復活・クリアでの仲間入りまで、エラーなし。実機は未確認。
@@ -1029,8 +1029,8 @@ PC-98ふうのノベルゲームエンジンの**土台**。ゲームの中身�
 ### 2026-11-17追記：PixAIと画像素材の優先評価
 - **アニメ調・可愛い系キャラクターの新規生成はPixAIを使用する。** 生成枠・商用利用条件・利用規約は実使用時に確認。ChatGPTが勝手に代替生成しない。
 - アストリッドは現行作品ごとに、画像生成または既存写真の加工で品質向上が見込める箇所を評価し、用途、必要素材、優先度、制作方法、工数・権利上の注意をClaudeへ報告する。実画面未確認の評価は暫定とする。
-- 暫定優先度：BRAIN（高：樹皮、根、古い木窓、金具、波打ちガラス。自前写真の加工を第一候補）、GLASS BREAKER（高：破壊対象の外観・破片・カットイン。見た目の差し替えだけでは破壊挙動は改善しない）、イリス育成（高：PixAIでキャラクターと表情差分、森の背景。絵柄・差分整合性の確認が必要）、PC98 NOVEL ENGINE（高：背景・立ち絵・イベントCG。画風統一が前提）、暗算転生（中：UI装飾・仲間キャラ。ただし既存ロゴは流用）、CYBER BREACH（低：既存方針は文字なしの動的幾何学演出。静止画像の大量導入は避ける）。
+- 暫定優先度：BRAIN（高：樹皮、根、古い木窓、金具、波打ちガラス。自前写真の加工を第一候補）、GLASS BREAKER（高：破壊対象の外観・破片・カットイン。見た目の差し替えだけでは破壊挙動は改善しない）、イリス育成（高：PixAIでキャラクターと表情差分、森の背景。絵柄・差分整合性の確認が必要）、PC98 NOVEL ENGINE（高：背景・立ち絵・イベントCG。画風統一が前提）、暗算輪廻（中：UI装飾・仲間キャラ。ただし既存ロゴは流用）、CYBER BREACH（低：既存方針は文字なしの動的幾何学演出。静止画像の大量導入は避ける）。
 - BRAIN向けにユーザーへ相談する写真：古木の幹・樹皮・根、木製窓枠、古材、錆びた蝶番、古いガラス、苔・土・石。GLASS BREAKER向け：ガラス器、家具、金属、建物内装の写真。写真は無断アップロードしない。
 - 素材の必要性・採用可否・実装方法はClaudeが最終判断する。現時点で画像生成は実施していない。
 
-- **2026-11-18 更新**：暗算転生を実験室からトップの `APPS` の先頭へ移した。カードは「コードネーム ANZAN（小）／タイトル ANZAN TENSEI（大。元タイトルの英語表記）」、Ver.0.5。やわらかは「開発困難」、WHERE WHICH（ことばのいみ）は「開発凍結」の表示に変えた（`LAB` の `stopped` に文字列を入れると、その文言が下の小さな表示に出る。`true` なら従来どおり「開発中止」）。
+- **2026-11-18 更新**：暗算輪廻を実験室からトップの `APPS` の先頭へ移した。カードは「コードネーム ANZAN（小）／タイトル 暗算（大）」、Ver.0.5。同日、ゲーム名の「転生」を「輪廻」に変えた（正式名は「暗算輪廻 〜Rebuild〜」。フォルダ名・URLの `anzan-tensei` は公開URLを変えないためそのまま。ロゴ画像の英語「Mental Calculation Reborn」は画像のため未変更）。やわらかは「開発困難」、WHERE WHICH（ことばのいみ）は「開発凍結」の表示に変えた（`LAB` の `stopped` に文字列を入れると、その文言が下の小さな表示に出る。`true` なら従来どおり「開発中止」）。
