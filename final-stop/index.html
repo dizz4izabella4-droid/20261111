@@ -836,7 +836,7 @@ const CORE = (function () {
   function onTap() { if (paused) return; wake(); speakIfPreview(); if (S.sub === 'YOURTURN' && !MICV.ready && !NOMIC && !AUTO) MICV.acquire(); pend.tap = true; }
   function startWithMic() {
     const er = $('micerr'); er.textContent = '';
-    MICV.acquire().then(ok => { if (ok) pend.button = 'start'; else er.textContent = 'マイクを使えませんでした。ブラウザのマイク許可を確認して、もう一度 START を押してください。（埋め込み表示では使えないことがあります）'; });
+    MICV.acquire().then(ok => { if (ok) pend.button = 'start'; else { const n = MICV.err, why = n === 'NotAllowedError' ? 'マイクが許可されていません。ブラウザ（iPhoneは 設定→Safari→マイク）で許可してから、もう一度 START を押してください。埋め込み表示（アーティファクト内）では許可できないので、公開URLをブラウザで直接開いてください。' : n === 'NotFoundError' ? 'マイクが見つかりません。' : n === 'unsupported' || n === 'SecurityError' ? 'このページではマイクを使えません（埋め込み表示、または https でないページ）。公開URLをブラウザで直接開いてください。' : 'マイクを使えませんでした。もう一度 START を押してください。'; er.textContent = why + '（' + n + '）'; } });
   }
   stage.querySelectorAll('[data-b]').forEach(b => {
     b.addEventListener('pointerdown', e => e.stopPropagation());
