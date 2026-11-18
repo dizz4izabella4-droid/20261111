@@ -803,14 +803,22 @@ const CORE = (function () {
       if (this.busy) return Promise.resolve(false);
       const md = navigator.mediaDevices;
       if (!md || !md.getUserMedia) { this.err = 'unsupported'; return Promise.resolve(false); }
-      this.busy = true; AUDIO.init();
-      return md.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }).then(st => {
-        const c = AUDIO.ctx; if (!c) { st.getTracks().forEach(t => t.stop()); throw new Error('audio'); }
-        this.stream = st; this.src = c.createMediaStreamSource(st); this.an = c.createAnalyser(); this.an.fftSize = 1024; this.an.smoothingTimeConstant = 0; this.src.connect(this.an);
-        this.buf = new Float32Array(this.an.fftSize); this.ready = true; this.busy = false; this.err = ''; return true;
-      }).catch(e => { this.busy = false; this.ready = false; this.err = (e && e.name) || 'error'; return false; });
+      this.busy = true; let stage = 'gum';
+      // iOS Safari 対策：先にマイクだけを取り、その後に（専用の）AudioContext をつなぐ。制約は最小限、失敗したら少し待って1回だけやり直す
+      const grab = () => md.getUserMedia({ audio: true });
+      const gp = grab(); AUDIO.init();            // マイク要求を先に出し、同じ操作の中で出力側の音も有効にする
+      return gp.catch(e => { if (e && e.name === 'InvalidStateError') return new Promise(r => setTimeout(r, 400)).then(grab); throw e; }).then(st => {
+        stage = 'ctx';
+        const AC = window.AudioContext || window.webkitAudioContext; if (!AC) { st.getTracks().forEach(t => t.stop()); throw new Error('unsupported'); }
+        const c = this.mc = new AC();
+        return Promise.resolve(c.resume ? c.resume() : 0).catch(() => {}).then(() => {
+          stage = 'node';
+          this.stream = st; this.src = c.createMediaStreamSource(st); this.an = c.createAnalyser(); this.an.fftSize = 1024; this.an.smoothingTimeConstant = 0; this.src.connect(this.an);
+          this.buf = new Float32Array(this.an.fftSize); this.ready = true; this.busy = false; this.err = ''; return true;
+        });
+      }).catch(e => { try { if (this.stream) this.stream.getTracks().forEach(t => t.stop()); if (this.mc) this.mc.close(); } catch (x) {} this.stream = this.mc = null; this.busy = false; this.ready = false; this.err = ((e && e.name) || 'error') + '/' + stage; return false; });
     },
-    release() { try { if (this.src) this.src.disconnect(); if (this.stream) this.stream.getTracks().forEach(t => t.stop()); } catch (e) {} this.src = this.an = this.stream = null; this.ready = false; this.reset(); },
+    release() { try { if (this.src) this.src.disconnect(); if (this.stream) this.stream.getTracks().forEach(t => t.stop()); if (this.mc) this.mc.close(); } catch (e) {} this.src = this.an = this.stream = this.mc = null; this.ready = false; this.reset(); },
     reset() { this.voiced = 0; this.sinceSound = 9; this.moreSent = false; this.gauge = 0; },
     update(dt, S) {
       if (!this.ready && !this.virtual) { this.reset(); return null; }
@@ -862,8 +870,8 @@ const CORE = (function () {
   function startWithMic() {
     const er = $('micerr'); er.textContent = '';
     MICV.acquire().then(ok => { if (ok) pend.button = 'start'; else {
-        const n = MICV.err, ios = /iPhone|iPad|iPod/.test(navigator.userAgent), safari = ios && !/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
-        const why = n === 'NotAllowedError' ? 'マイクが許可されていません。' : n === 'NotFoundError' ? 'マイクが見つかりません。' : n === 'unsupported' || n === 'SecurityError' ? 'このページではマイクを使えません。' : 'マイクを使えませんでした。';
+        const n = MICV.err, nm = n.split('/')[0], ios = /iPhone|iPad|iPod/.test(navigator.userAgent), safari = ios && !/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
+        const why = nm === 'NotAllowedError' ? 'マイクが許可されていません。' : nm === 'NotFoundError' ? 'マイクが見つかりません。' : nm === 'InvalidStateError' ? 'マイクの準備に失敗しました（他のアプリがマイクを使用中、または再読み込みで直ることがあります）。' : nm === 'unsupported' || nm === 'SecurityError' ? 'このページではマイクを使えません。' : 'マイクを使えませんでした。';
         let h = why + '（' + n + '）';
         if (safari) h += '<br><b>iPhone（Safari）の設定</b><br>① アドレスバー左の「ぁあ」をタップ<br>② 「Webサイトの設定」→「マイク」を「許可」<br>③ ページを再読み込みして START<br><br>「ぁあ」が見つからないとき：設定アプリ→Safari（iOS 18 は 設定→アプリ→Safari）→「マイク」を「許可」または「確認」';
         else if (ios) h += '<br><b>設定方法</b><br>設定アプリ→使っているブラウザ→「マイク」を許可して、再読み込みしてください。';
@@ -878,8 +886,8 @@ const CORE = (function () {
       e.stopPropagation();
       if (paused) return;
       const k = b.getAttribute('data-b');
-      if (k === 'start') AUDIO.init();
-      wake();
+      if (k === 'start' && (NOMIC || AUTO)) AUDIO.init();
+      if (!(k === 'start' && !NOMIC && !AUTO)) wake();
       if (k === 'voice') { VOICE.toggle(); refreshVoiceBtn(); return; }
       if (k === 'vmic') { MICV.virtual = true; $('micerr').textContent = ''; $('vmic').style.display = 'none'; pend.button = 'start'; return; }
       if (k === 'start' && !NOMIC && !AUTO) { startWithMic(); return; }
