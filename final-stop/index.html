@@ -791,6 +791,11 @@ const CORE = (function () {
       this.sir.g.gain.setTargetAtTime(live ? 0.035 : 0, now, 0.12);
     },
     mute() { if (this.ctx && this.ctx.state === 'running') this.ctx.suspend(); },
+    // iOS：マイクや読み上げのあとで AudioContext が止まった(interrupted/suspended)まま戻らないことがある。何度か起こし直す
+    kick() {
+      const go = () => { const c = this.ctx; if (!c || paused) return; if (c.state === 'closed') { this.ctx = null; try { this.init(); } catch (e) {} return; } if (c.state !== 'running') { try { c.resume(); } catch (e) {} } };
+      go(); [150, 600, 1500, 3000].forEach(ms => setTimeout(go, ms));
+    },
     // 効果音
     sfx(name, a) {
       if (a && typeof a === 'object') a = a.stage || a.i;
@@ -856,7 +861,7 @@ const CORE = (function () {
         const u = new SpeechSynthesisUtterance(text), ja = style === 'ja' || style === 'radioja', vv = ja ? this.ja : this.voice;
         if (vv) u.voice = vv;
         u.lang = (vv && vv.lang) || (ja ? 'ja-JP' : 'en-US'); u.rate = style === 'praise' ? 1.05 : style === 'radio' || style === 'radioja' ? 1.1 : 1.0; u.pitch = style === 'praise' ? 1.15 : style === 'radio' || style === 'radioja' ? 0.8 : 0.95;
-        let fin = false; const tk = ++this.seq, fire = () => { if (!fin) { fin = true; if (this.seq === tk) this.talkUntil = 0; if (done) done(); } };
+        let fin = false; const tk = ++this.seq, fire = () => { if (!fin) { fin = true; AUDIO.kick(); if (this.seq === tk) this.talkUntil = 0; if (done) done(); } };
         this.talkUntil = performance.now() + (text.length * 0.08 + 0.8) * 1000;      // speechSynthesis.speaking は iOS で残りっぱなしになるので、自前で「話し中」を数える
         if (style === 'radio' || style === 'radioja') { u.onstart = () => AUDIO.radioOn(); const off = () => { AUDIO.radioOff(); fire(); }; u.onend = off; u.onerror = off; setTimeout(off, 9000); AUDIO.radioOn(); }
         else { AUDIO.radioOff(); u.onend = fire; u.onerror = fire; setTimeout(fire, (text.length * 0.08 + 1.2) * 1000); }
@@ -916,7 +921,7 @@ const CORE = (function () {
         });
       }).catch(e => { try { if (this.stream) this.stream.getTracks().forEach(t => t.stop()); if (this.mc) this.mc.close(); } catch (x) {} this.stream = this.mc = null; this.busy = false; this.ready = false; this.err = nm(e) + '/' + stage; D.push('final: ' + nm(e) + '/' + stage + ' ' + String((e && e.message) || '').slice(0, 90)); return false; });
     },
-    release() { try { if (this.src) this.src.disconnect(); if (this.stream) this.stream.getTracks().forEach(t => t.stop()); if (this.mc) this.mc.close(); } catch (e) {} this.src = this.an = this.stream = this.mc = null; this.ready = false; this.reset(); try { if (navigator.audioSession) navigator.audioSession.type = 'auto'; } catch (e) {} },
+    release() { try { if (this.src) this.src.disconnect(); if (this.stream) this.stream.getTracks().forEach(t => t.stop()); if (this.mc) this.mc.close(); } catch (e) {} this.src = this.an = this.stream = this.mc = null; this.ready = false; this.reset(); try { if (navigator.audioSession) navigator.audioSession.type = 'auto'; } catch (e) {} AUDIO.kick(); },
     reset() { this.voiced = 0; this.sinceSound = 9; this.moreSent = false; this.gauge = 0; },
     live() { const t = this.stream && this.stream.getAudioTracks()[0]; return !!(this.ready && t && t.readyState === 'live'); },
     // 読み上げでマイクが切られていたら、「SAY IT!」の間だけ静かに取り直す
@@ -960,7 +965,9 @@ const CORE = (function () {
     trk = null;
   };
   hit.addEventListener('pointerup', endTrk); hit.addEventListener('pointercancel', endTrk);
-  function wake() { if (AUDIO.ctx && AUDIO.ctx.state !== 'running') AUDIO.ctx.resume(); }
+  function wake() { if (AUDIO.ctx && AUDIO.ctx.state !== 'running') AUDIO.kick(); }
+  document.addEventListener('pointerdown', () => { if (!paused) wake(); }, true);
+  setInterval(() => { if (!paused && !document.hidden && AUDIO.ctx && AUDIO.ctx.state !== 'running') AUDIO.kick(); }, 1000);
   function speakIfPreview() {
     if (S.phase === 'CMD' && S.sub === 'PREVIEW' && S.lock <= 0) VOICE.speak(CONFIG.CMDS[S.cmd.i].text);   // iOS：操作の中でしか話せない
   }
