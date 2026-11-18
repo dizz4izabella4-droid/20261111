@@ -116,6 +116,7 @@ const REEL=document.getElementById('reel');
 const data=[
   {name:'TOY BOX',url:'toybox/'},
   {name:'LABORATORY',url:'lab/'},
+  {name:'CINEMA'},      // 幕は下ろしたまま（まだ入れない）
   {name:'UTILITY ROOM',url:'utility/'},
   {name:'OTHER WORLD',url:'https://iz3ico.github.io/app/'},
 ];
@@ -134,9 +135,10 @@ for(let i=0;i<data.length;i++){
 }
 const mounted=[];
 function fitGlass(){win.forEach(el=>{const g=el.querySelector('.glass'),f=g&&g.querySelector('iframe');if(!f)return;f.style.transform='scale('+Math.max(g.offsetWidth/600,g.offsetHeight/900).toFixed(4)+')'})}
-const TINT=['linear-gradient(180deg,#fff3f9,#f4eaff 55%,#e4f6f0)','radial-gradient(ellipse at 50% 30%,#2a4a9a,#0a1230 75%)','#fff','radial-gradient(ellipse at 50% 38%,#fff6d8 0%,#cfeee6 38%,#a9b8ee 78%,#8f95d8 100%)'];
+const TINT=['linear-gradient(180deg,#fff3f9,#f4eaff 55%,#e4f6f0)','radial-gradient(ellipse at 50% 30%,#2a4a9a,#0a1230 75%)','linear-gradient(90deg,#5a0f18,#a01f2c 20%,#5a0f18 40%,#a01f2c 60%,#5a0f18 80%,#a01f2c)','#fff','radial-gradient(ellipse at 50% 38%,#fff6d8 0%,#cfeee6 38%,#a9b8ee 78%,#8f95d8 100%)'];
 function mount(i){if(mounted[i])return;mounted[i]=true;const g=win[i].querySelector('.glass');const d=document.createElement('div');d.style.cssText='position:absolute;inset:0;background:'+TINT[i];g.append(d)}
 function mountGlass(){win.forEach((el,i)=>{const g=el.querySelector('.glass');el.querySelector('.plate').textContent=data[i].name;
+  if(i===2){const k=document.createElement('div');k.className='sticker';k.textContent='COMING SOON';el.querySelector('.window-shell').append(k)}
   
   if(data[i].url){const ext=/^https?:/.test(data[i].url);const a=document.createElement('a');a.className='gate';a.href=data[i].url;if(ext){a.target='_blank';a.rel='noopener'}a.setAttribute('aria-label',data[i].name+'を開く');a.addEventListener('click',e=>{e.stopPropagation();if(!ext){e.preventDefault();lightGo(i,true)}});el.querySelector('.window-shell').append(a)}});fitGlass()}
 addEventListener('pageshow',()=>closeAll());
@@ -153,7 +155,7 @@ function lightGo(i,fast){if(lighting||leaving)return;lighting=true;const f=docum
   setTimeout(()=>go(i),reduceMotion?60:(fast?800:1250))}
 addEventListener('pageshow',()=>{lighting=false;leaving=false;const f=document.getElementById('flash');f.classList.remove('go');f.style.transform=''});
 function activate(i){const d=centeredDelta(i,visual);if(Math.abs(d)>.38){closeAll();target+=d;return}
-  if(openIndex!==i){closeAll();openIndex=i;win[i].classList.add('open');win[i].setAttribute('aria-expanded','true');if(!/^https?:/.test(data[i].url||'x:'))setTimeout(()=>{if(openIndex===i)lightGo(i,false)},reduceMotion?100:650);return}
+  if(openIndex!==i){closeAll();openIndex=i;win[i].classList.add('open');win[i].setAttribute('aria-expanded','true');if(data[i].url&&!/^https?:/.test(data[i].url))setTimeout(()=>{if(openIndex===i)lightGo(i,false)},reduceMotion?100:650);return}
   if(data[i].url)return;closeAll();
 }
 function onDown(e){if(e.button!==undefined&&e.button!==0)return;drag=true;moved=false;downX=lastX=e.clientX;dragStart=target;downTime=performance.now();pid=e.pointerId}
@@ -168,13 +170,14 @@ addEventListener('resize',()=>{resize();fitGlass()});resize();mountGlass();
 const HUBS=[
  {i:0,name:'TOY BOX',s:-1,y:235,w:[['ANZAN'],['NOCHE SIN LUNA'],['NOBIRU HIGE'],['GLASS BREAKER'],['WAIYADA'],['KOUMORI'],['CMD TYPING MOBILE'],['CMD TYPING']]},
  {i:1,name:'LABORATORY',s:1,y:365,w:[['REDLINE'],['YAWARAKA',1],['PC98 NOVEL'],['NOBIRU HIGE 2'],['WHERE WHICH',1],['ICARUS']]},
- {i:2,name:'UTILITY ROOM',s:1,y:655,w:[['CALCULATOR DRILL']]},
- {i:3,name:'OTHER WORLD',s:-1,y:800,w:[['HEALING DOOR']]}];
+ {i:2,name:'CINEMA',s:-1,y:545,w:[['COMING SOON',1]]},
+ {i:3,name:'UTILITY ROOM',s:1,y:655,w:[['CALCULATOR DRILL']]},
+ {i:4,name:'OTHER WORLD',s:-1,y:800,w:[['HEALING DOOR']]}];
 const treeEl=document.getElementById('tree');let hubG=[];
 const PORTRAIT=matchMedia('(max-aspect-ratio: 4/5)');
 let seed=7;function rnd(){seed=(seed*1664525+1013904223)%4294967296;return seed/4294967296}
 function buildTree(){seed=7;const P=PORTRAIT.matches,N='http://www.w3.org/2000/svg',C=700,deg=Math.PI/180;
- const ANG=P?{0:240,1:300,2:60,3:270}:{0:205,1:335,2:25,3:270};
+ const ANG=P?{0:240,1:300,2:120,3:60,4:270}:{0:205,1:335,2:155,3:25,4:270};
  const pt=(a,r)=>[C+Math.cos(a*deg)*r,C+Math.sin(a*deg)*r];
  const curve=(a,r0,r1,bend)=>{const p0=pt(a,r0),p1=pt(a+bend,r1),m=pt(a+bend*1.6,(r0+r1)/2);return 'M'+p0[0].toFixed(1)+' '+p0[1].toFixed(1)+' Q'+m[0].toFixed(1)+' '+m[1].toFixed(1)+' '+p1[0].toFixed(1)+' '+p1[1].toFixed(1)};
  let h='<svg viewBox="0 0 1400 1400" xmlns="'+N+'">';
