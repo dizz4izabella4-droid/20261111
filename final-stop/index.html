@@ -804,12 +804,14 @@ const CORE = (function () {
       const md = navigator.mediaDevices;
       if (!md || !md.getUserMedia) { this.err = 'unsupported'; return Promise.resolve(false); }
       this.busy = true; let stage = 'gum'; const log = [];
+      // iOS：出力用に「再生専用」になっている音声セッションは、録音（マイク）と両立しない。録音もできる種類に切り替える
+      try { if (navigator.audioSession) navigator.audioSession.type = 'play-and-record'; } catch (e) {}
       // iOS Safari 対策：チェックページで通った取り方（A/B/D）を順に試す。成功したら専用の AudioContext でレベルを読む
       const nm = e => ((e && e.name) || 'error');
       const attempt = (k, pre, cons) => () => { stage = 'gum' + k; if (pre) pre(); return md.getUserMedia(cons).catch(e => { log.push(k + ':' + nm(e)); throw e; }); };
       const wait = ms => new Promise(r => setTimeout(r, ms));
       const a1 = attempt(1, null, { audio: true });
-      const a2 = attempt(2, () => AUDIO.init(), { audio: true });
+      const a2 = attempt(2, () => { try { if (AUDIO.ctx) { AUDIO.ctx.close(); AUDIO.ctx = null; AUDIO.bgm = null; AUDIO.hiss = null; } } catch (e) {} }, { audio: true });   // 出力側の AudioContext が音声セッションを占有しているときのために閉じる
       const a3 = attempt(3, null, { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
       return a1().catch(() => wait(300).then(a2)).catch(() => wait(300).then(a3)).then(st => {
         stage = 'ctx';
