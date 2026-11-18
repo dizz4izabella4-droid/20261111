@@ -87,10 +87,18 @@ html,body,#world{background:#fff!important}
 .window-shell::before{content:'';position:absolute;left:6%;right:6%;bottom:-3%;height:9%;border-radius:50%;background:radial-gradient(ellipse,rgba(40,50,70,.38),transparent 70%);pointer-events:none}
 #snd{position:fixed;z-index:40;right:max(10px,env(safe-area-inset-right,0px));bottom:max(12px,env(safe-area-inset-bottom,0px));width:36px;height:36px;border-radius:50%;border:1px solid #c9ced3;background:rgba(255,255,255,.85);color:#6b737b;display:grid;place-items:center;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
 #snd svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}#snd .x{display:none}#snd.off .x{display:block}#snd.off .w{display:none}
+#gate{position:fixed;inset:0;z-index:100;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:34px;transition:opacity 1.4s ease}
+#gate.out{opacity:0;pointer-events:none}
+#gate .g-t{font:400 26px Georgia,'Times New Roman',serif;letter-spacing:10px;text-indent:10px;color:#6b737b}
+#gate button{all:unset;cursor:pointer;box-sizing:border-box;padding:11px 38px 11px 43px;border:1px solid #c3c8cd;border-radius:2px;font:400 12px Georgia,'Times New Roman',serif;letter-spacing:6px;color:#6b737b;transition:background .35s,color .35s,border-color .35s;-webkit-tap-highlight-color:transparent}
+#gate button:hover,#gate button:focus-visible{background:#3b4650;border-color:#3b4650;color:#fff}
+#gate .g-n{font:400 10px system-ui,sans-serif;letter-spacing:3px;color:#aab0b6;margin-top:-14px}
+body.pre #tree,body.pre #tree *{animation-play-state:paused!important}
 </style>
 </head>
 <body>
 <div id="brain" aria-hidden="true">BRAIN</div>
+<div id="gate" role="dialog" aria-label="入り口"><div class="g-t">BRAIN</div><button id="gateBtn" type="button">ENTER</button><div class="g-n">♪ 音が流れます</div></div>
 <audio id="bgm" src="assets/bgm/tides-under-glass.mp3" loop preload="auto"></audio>
 <button id="snd" type="button" aria-label="BGMのオン・オフ"><svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><g class="w"><path d="M15.5 9a4.2 4.2 0 0 1 0 6"/><path d="M18 6.6a7.6 7.6 0 0 1 0 10.8"/></g><path class="x" d="M16 9.5l5 5M21 9.5l-5 5"/></svg></button>
 <main id="world" aria-label="おもちゃ箱の入り口。左右にドラッグして窓を選び、タップで扉が開きます。">
@@ -186,9 +194,9 @@ PORTRAIT.addEventListener('change',buildTree);buildTree();
 const AMP=30;
 
 let growMs=0;(function(){let m=0;treeEl.querySelectorAll('[style*="--d"]').forEach(x=>{const v=parseFloat((x.getAttribute('style').match(/--d:([\d.]+)s/)||[])[1]);if(v>m)m=v});growMs=(m+2.4)*1000})();
-const T0=performance.now();let icReady=false,revealed=false;const bgi=document.getElementById('bgi');
+let T0=performance.now(),entered=false;let icReady=false,revealed=false;const bgi=document.getElementById('bgi');
 addEventListener('message',e=>{if(e.data&&e.data.icarusReady)icReady=true});
-const revealTimer=setInterval(()=>{if(revealed)return;const el=performance.now()-T0;if(el<growMs)return;
+const revealTimer=setInterval(()=>{if(revealed||!entered)return;const el=performance.now()-T0;if(el<growMs)return;
  if(icReady||el>40000){revealed=true;treeEl.classList.remove('waiting');try{bgi.contentWindow.postMessage('start','*')}catch(e){}bgi.classList.add('show');clearInterval(revealTimer)}
  else treeEl.classList.add('waiting')},250);
 function render(t){let dt=Math.min(.05,(t-last)/1000);last=t;if(!drag){visual+=(target-visual)*Math.min(1,dt*(reduceMotion?20:11));if(Math.abs(target-visual)<.0008)visual=target}
@@ -228,6 +236,12 @@ requestAnimationFrame(render);
  addEventListener('pagehide',()=>a.pause());
  addEventListener('pageshow',e=>{if(e.persisted&&on&&!armed)a.play().catch(()=>{})});
 })();
+
+/* 入り口: 最初に1回ボタンを押してもらう（音を流すため）。同じ訪問中に戻ってきたときは出さない */
+(function(){const g=document.getElementById('gate'),b=document.getElementById('gateBtn');let seen=false;try{seen=sessionStorage.getItem('izTopEntered')==='1'}catch(e){}
+ function enter(){if(entered)return;entered=true;T0=performance.now();document.body.classList.remove('pre');try{sessionStorage.setItem('izTopEntered','1')}catch(e){}g.classList.add('out');setTimeout(()=>g.remove(),1500)}
+ if(seen){g.remove();enter();return}
+ document.body.classList.add('pre');b.addEventListener('click',enter)})();
 // Exposed only for automated quality checking. No visible debug UI.
 window.__BRAIN_QA__={state:()=>({camera:'fixed',target,visual,travel,openIndex}),select:(i)=>{closeAll();target=i},close:closeAll};
 })();
