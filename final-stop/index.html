@@ -318,8 +318,8 @@ canvas{position:absolute;left:0;top:0;display:block}
   <button id="vmicbtn" class="ui hide" aria-label="mic"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3" fill="#fff"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/></svg><span class="lab">HOLD TO TALK</span></button>
   <button id="dbgb" aria-label="debug"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="8" height="11" rx="4"/><path d="M12 8V6M9 8 7 5M15 8l2-3M8 12H4M16 12h4M8 16l-3 2M16 16l3 2M10 5.2a2 2 0 0 1 4 0"/></svg></button>
   <div id="dbgp"></div>
-  <div id="alert" class="ui"><div class="lr"></div><div class="lb"></div><div class="t1">EMERGENCY RADIO</div><div class="t2">ROBBERY IN PROGRESS</div><div class="t3" id="alerttx">強盗事件発生。犯人は車で逃走中。</div><div class="t4" id="alertt4">TAP TO RECEIVE</div></div>
-  <div id="title" class="ui ov"><h1>FINAL STOP</h1><button class="btn" data-iz-base-ui data-b="start" style="pointer-events:auto">START</button><button id="voicebtn" class="btn" data-iz-base-ui data-b="voice" style="pointer-events:auto;position:static;width:150px;height:36px">VOICE ON</button><div id="micnote">申し訳ありませんが、マイクをオンにしないとクリアできません。</div><div id="micerr"></div><pre id="micdiag"></pre><button id="vmic" class="btn" data-iz-base-ui data-b="vmic" style="pointer-events:auto">心のマイクを使う</button></div>
+  <div id="alert" class="ui"><div class="lr"></div><div class="lb"></div><div class="t1">EMERGENCY RADIO</div><div class="t2">ROBBERY IN PROGRESS</div><div class="t3" id="alerttx">Robbery reported. The suspect is fleeing by car.</div><div class="t4" id="alertt4">TAP TO RECEIVE</div></div>
+  <div id="title" class="ui ov"><h1>FINAL STOP</h1><button class="btn" data-iz-base-ui data-b="start" style="pointer-events:auto">START</button><button id="voicebtn" class="btn" data-iz-base-ui data-b="voice" style="pointer-events:auto;position:static;width:150px;height:36px">VOICE ON</button><div id="micnote">Sorry, you can't clear this game without turning the mic on.</div><div id="micerr"></div><pre id="micdiag"></pre><button id="vmic" class="btn" data-iz-base-ui data-b="vmic" style="pointer-events:auto">Use pretend mic</button></div>
   <div id="end" class="ui ov hide"><h2>ARRESTED</h2><button class="btn" data-iz-base-ui data-b="replay" style="pointer-events:auto">REPLAY</button></div>
   <div id="resume" class="ui ov hide">TAP TO RESUME</div>
   <div id="dbg" class="ui hide"></div>
@@ -332,7 +332,7 @@ const CONFIG = Object.freeze({
   STEP: 1 / 120, DT_MAX: 0.1,
   HITS_TO_STOP: 3, SIDES: [1, -1, 1],            // 1=右 -1=左。ミスしたときは同じ側をもう一度出す
   INTRO: 4.0, INTRO_GAP: [40, 26],
-  OPEN: { PARK: 2.4, GO: 2.8, SIREN_WAIT: 14, CATCH: 4.0, GAP_GO: 62 },      // 開始演出：駐車中に赤い車が通る→追跡開始→サイレンを鳴らす→追いつく
+  OPEN: { PARK: 2.4, GO: 2.8, SIREN_WAIT: 14, CATCH: 14, SWING: 14, GAP_GO: 62 },      // 開始演出：駐車中に赤い車が通る→追跡開始→サイレンを鳴らす→追いつく
   APPROACH: 5.5, APPROACH_AFTER_MISS: 2.7, GAP_WINDOW: 3,
   WINDOW: 3.2, WINDOW_RESCUE: 4.6, ALIGN: 0.5, ALIGN_RESCUE: 0.85,        // フラつく車が真正面（横ズレ ALIGN 以内）に来た間にタップで突撃
   LUNGE: 0.18, HITSTOP: [0.08, 0.08, 0.12], TILT: [3, 4, 6],
@@ -345,7 +345,7 @@ const CONFIG = Object.freeze({
   BRIEF: 'Dispatch to Unit 12. Suspect vehicle fleeing northbound. Pursue and stop him.',
   EVENT_RADIO: 'Dispatch, suspect vehicle stopped.',
   PARTNER: 'REYES',
-  ALERT_RADIO: '至急、至急。管内で強盗事件発生。犯人は赤いセダンで北へ逃走中。付近の車両は追跡せよ。',
+  ALERT_RADIO: 'All units, all units. Robbery in progress. Suspect is fleeing north in a red sedan. Nearby units, pursue.',
   // 相棒 REYES のセリフ：英語（音声あり＝say）と日本語字幕を併記。日本語の音声はタイトル前の無線デモだけ
   JP: {
     OPEN_GO: { en: "That red car! Let's get him!", ja: '赤い車だ！ 追うぞ！', say: true },
@@ -391,7 +391,7 @@ const CORE = (function () {
   }
   const PHASE_OF = { TITLE: 'TITLE', OPEN_PARK: 'CHASE', OPEN_GO: 'CHASE', OPEN_SIREN: 'CHASE', OPEN_CATCH: 'CHASE', INTRO: 'CHASE', APPROACH: 'CHASE', WINDOW: 'CHASE', LUNGE: 'CHASE', HIT: 'CHASE', RECOVER: 'CHASE', MISS: 'CHASE', FINISH: 'CHASE',
     PULLOVER: 'PULLOVER', EVENT: 'EVENT', PREVIEW: 'CMD', SPEAK: 'CMD', YOURTURN: 'CMD', REACT: 'CMD', ARREST: 'ARREST', END: 'END', DEAD: 'DEAD' };
-  const MAX_DWELL = { OPEN_PARK: 6, OPEN_GO: 6, OPEN_SIREN: 30, OPEN_CATCH: 8, INTRO: 6, APPROACH: 8, WINDOW: 6, LUNGE: 1, HIT: 1, RECOVER: 3, MISS: 2, FINISH: 2, PULLOVER: 6, EVENT: 10, SPEAK: 6, YOURTURN: 14, REACT: 6, ARREST: 5, DEAD: 8 };
+  const MAX_DWELL = { OPEN_PARK: 6, OPEN_GO: 6, OPEN_SIREN: 30, OPEN_CATCH: 20, INTRO: 6, APPROACH: 8, WINDOW: 6, LUNGE: 1, HIT: 1, RECOVER: 3, MISS: 2, FINISH: 2, PULLOVER: 6, EVENT: 10, SPEAK: 6, YOURTURN: 14, REACT: 6, ARREST: 5, DEAD: 8 };
   const FORCE_NEXT = { OPEN_PARK: 'OPEN_GO', OPEN_GO: 'OPEN_SIREN', OPEN_SIREN: 'OPEN_CATCH', OPEN_CATCH: 'INTRO', INTRO: 'APPROACH', APPROACH: 'WINDOW', WINDOW: 'MISS', LUNGE: 'HIT', HIT: 'RECOVER', RECOVER: 'APPROACH', MISS: 'APPROACH', FINISH: 'PULLOVER',
     PULLOVER: 'EVENT', EVENT: 'PREVIEW', SPEAK: 'YOURTURN', YOURTURN: 'REACT', REACT: 'PREVIEW', ARREST: 'END', DEAD: 'TITLE' };
 
@@ -432,15 +432,15 @@ const CORE = (function () {
     const subs = {
       TITLE: { enter() { reset(); }, upd(h, i, locked) { if (i.button === 'start' && !locked) { reset(); sirenIdx = 0; S.siren = C.SIRENS[0]; go('OPEN_PARK'); } } },
       OPEN_PARK: {                                           // 駐車中。目の前を赤いセダンが右から入ってきて通る
-        enter() { S.speed = 0; S.gap = 10; S.sx = 7; pxF = 0; S.px = 0; },
+        enter() { S.speed = 0; S.gap = 10; S.sx = 7; pxF = 0; S.px = 0; S.lights = false; },      // パトライトは赤い車を見つけるまで消灯
         upd(h) { const p = ss(S.t / C.OPEN.PARK); S.speed = 0; S.gap = 10; S.sx = lerp(7, 0, p); pxF = 0; S.px = 0; if (S.t >= C.OPEN.PARK) go('OPEN_GO'); }
       },
       OPEN_GO: {                                             // 「赤い車だ！ 追うぞ！」発進。赤い車は加速して遠ざかる
-        enter() {},
+        enter() { if (!S.lights) { S.lights = true; emit('lights', { on: true }); } },      // 赤い車を見つけてパトライト点灯
         upd(h) { const p = ss(S.t / C.OPEN.GO); S.speed = lerp(0, 30, p); S.gap = lerp(10, C.OPEN.GAP_GO, p); S.sx = 0; if (S.t >= C.OPEN.GO) go('OPEN_SIREN'); }
       },
       OPEN_SIREN: {                                          // 「サイレンを鳴らせ！」プレイヤーがサイレンを押すまで待つ
-        enter() { S.speed = 30; },
+        enter() { S.speed = 30; S.lights = true; },
         upd(h, i, locked) {
           S.speed = 30; S.sx = 0; S.gap = C.OPEN.GAP_GO + 2 * ss(S.t / 6);
           if (i.button === 'siren' && S.siren !== 'OFF' && !locked) go('OPEN_CATCH');
@@ -449,7 +449,10 @@ const CORE = (function () {
       },
       OPEN_CATCH: {                                          // 「押す度に音が変わるぞ」サイレンが鳴り、赤い車に追いつく
         enter() { S.speed = 30; },
-        upd(h) { S.sx = 0; S.gap = lerp(gapE, C.INTRO_GAP[0], ss(S.t / C.OPEN.CATCH)); if (S.t >= C.OPEN.CATCH) go('INTRO'); }
+        upd(h) {   // しばらくサイレンで遊べるよう、追いつきそうになったり離されたりしながら、最後に追いつく
+          const u = Math.min(1, S.t / C.OPEN.CATCH), env = Math.sin(Math.PI * u);
+          S.sx = 0; S.gap = lerp(gapE, C.INTRO_GAP[0], ss(u)) + C.OPEN.SWING * env * Math.sin(S.t * 1.3); if (S.t >= C.OPEN.CATCH) go('INTRO');
+        }
       },
       INTRO: {
         enter() { S.speed = 30; S.sinceHit = 0; },
@@ -978,14 +981,14 @@ const CORE = (function () {
   function beginGame() { pend.button = 'start'; }
   function startWithMic() {
     const er = $('micerr'); er.textContent = ''; $('micdiag').style.display = 'none';
-    MICV.acquire().then(ok => { if (ok) { MICV.release(); beginGame(); } else {
+    MICV.acquire().then(ok => { if (ok) { MICV.release(); AUDIO.kick(); beginGame(); } else {
         const n = MICV.err, nm = n.split('/')[0], ios = /iPhone|iPad|iPod/.test(navigator.userAgent), safari = ios && !/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
-        const why = nm === 'NotAllowedError' ? 'マイクが許可されていません。' : nm === 'NotFoundError' ? 'マイクが見つかりません。' : nm === 'InvalidStateError' ? 'マイクの準備に失敗しました（他のアプリがマイクを使用中、または再読み込みで直ることがあります）。' : nm === 'unsupported' || nm === 'SecurityError' ? 'このページではマイクを使えません。' : 'マイクを使えませんでした。';
-        let h = why + '（' + n + '）';
-        if (safari) h += '<br><b>iPhone（Safari）の設定</b><br>① アドレスバー左の「ぁあ」をタップ<br>② 「Webサイトの設定」→「マイク」を「許可」<br>③ ページを再読み込みして START<br><br>「ぁあ」が見つからないとき：設定アプリ→Safari（iOS 18 は 設定→アプリ→Safari）→「マイク」を「許可」または「確認」';
-        else if (ios) h += '<br><b>設定方法</b><br>設定アプリ→使っているブラウザ→「マイク」を許可して、再読み込みしてください。';
-        else h += '<br>ブラウザのアドレスバー付近のマイク許可を「許可」にして、再読み込みしてください。';
-        h += '<br>それでも使えないときは、下の「心のマイクを使う」で進めます。';
+        const why = nm === 'NotAllowedError' ? 'Microphone access is not allowed.' : nm === 'NotFoundError' ? 'No microphone found.' : nm === 'InvalidStateError' ? 'Could not start the microphone (another app may be using it; reloading can help).' : nm === 'unsupported' || nm === 'SecurityError' ? 'The microphone is not available on this page.' : 'Could not use the microphone.';
+        let h = why + ' (' + n + ')';
+        if (safari) h += '<br><b>iPhone (Safari) settings</b><br>1) Tap the "aA" icon at the left of the address bar<br>2) Website Settings > Microphone > Allow<br>3) Reload the page and press START<br><br>No "aA"? Settings > Safari (iOS 18: Settings > Apps > Safari) > Microphone > Allow or Ask';
+        else if (ios) h += '<br><b>Settings</b><br>Settings app > your browser > allow Microphone, then reload.';
+        else h += '<br>Set the microphone permission near the address bar to Allow, then reload.';
+        h += '<br>If it still fails, press "Use pretend mic" below to play.';
         er.innerHTML = h; setTimeout(() => { const pd = $('micdiag'); pd.textContent = (MICV.diag || []).join('\n'); pd.style.display = 'block'; }, 900); $('vmic').style.display = 'flex';
       } });
   }
@@ -999,7 +1002,7 @@ const CORE = (function () {
       if (!(k === 'start' && !NOMIC && !AUTO)) wake();
       if (k === 'voice') { VOICE.toggle(); refreshVoiceBtn(); return; }
       if (k === 'vmic') { MICV.virtual = true; $('micerr').textContent = ''; $('vmic').style.display = 'none'; beginGame(); return; }
-      if (k === 'start' && !NOMIC && !AUTO) { startWithMic(); return; }
+      if (k === 'start' && !NOMIC && !AUTO) { AUDIO.init(); startWithMic(); return; }      /* 音は先に（タッチの中で）用意してからマイクを開く */
       if (k === 'next') { speakIfPreview(); }
       if (k === 'start' && !AUTO) { beginGame(); return; }
       pend.button = k;
@@ -1036,11 +1039,11 @@ const CORE = (function () {
       ALERT = false; $('alert').classList.add('hide'); AUDIO.init(); wake(); paused = false; $('resume').classList.add('hide');
       spoken = {}; core.restart(); core.warp(label); syncGlass(); jpKey = ''; dp.classList.remove('on');
     };
-    const items = [['SCENES'], ['Emergency radio screen', () => { dp.classList.remove('on'); VOICE.cancel(); ALERT = true; alertStep = 0; $('alert').classList.remove('hide'); $('alerttx').textContent = '強盗事件発生。犯人は車で逃走中。'; $('alertt4').textContent = 'TAP TO RECEIVE'; }],
+    const items = [['SCENES'], ['Emergency radio screen', () => { dp.classList.remove('on'); VOICE.cancel(); ALERT = true; alertStep = 0; $('alert').classList.remove('hide'); $('alerttx').textContent = 'Robbery reported. The suspect is fleeing by car.'; $('alertt4').textContent = 'TAP TO RECEIVE'; }],
       ['Opening (parked)', () => jump('OPEN_PARK')], ['Opening: siren!', () => jump('OPEN_SIREN')], ['Chase (start)', () => jump('INTRO')], ['Hit window', () => jump('WINDOW')],
       ['Cmd 1 listen', () => jump('PREVIEW0')], ['Cmd 2 listen', () => jump('PREVIEW1')], ['Cmd 3 listen', () => jump('PREVIEW2')], ['Cmd 4 listen', () => jump('PREVIEW3')],
       ['SAY IT (cmd 1)', () => jump('YOURTURN0')], ['SAY IT (cmd 4)', () => jump('YOURTURN3')], ['Praise (cmd 1)', () => jump('REACT0')], ['Dead (shot)', () => jump('DEAD')], ['Arrest', () => jump('ARREST')],
-      ['VOICE TEST'], ['Radio JP (dispatch)', () => { AUDIO.init(); VOICE.speak(CONFIG.ALERT_RADIO, 'radioja'); }], ['Model EN (Police!...)', () => { AUDIO.init(); VOICE.speak(CONFIG.CMDS[0].text); }],
+      ['VOICE TEST'], ['Radio (dispatch)', () => { AUDIO.init(); VOICE.speak(CONFIG.ALERT_RADIO, 'radio'); }], ['Model EN (Police!...)', () => { AUDIO.init(); VOICE.speak(CONFIG.CMDS[0].text); }],
       ['Praise EN', () => { AUDIO.init(); VOICE.speak('Perfect! That\'s how it\'s done!', 'praise'); }], ['REYES guide EN', () => { AUDIO.init(); VOICE.speak(CONFIG.JP.INTRO.en); }],
       ['Mic check (3s level)', (b) => { MICV.acquire(true).then(ok => { const t0 = performance.now(), iv = setInterval(() => { b.textContent = 'Mic ' + (ok ? 'OK ' : 'NG ') + MICV.level.toFixed(3) + ' ' + (MICV.err || ''); if (performance.now() - t0 > 3000) { clearInterval(iv); MICV.release(); b.textContent = 'Mic check (3s level)'; } }, 100); }); }]];
     for (const it of items) { if (it.length === 1) { const h = document.createElement('h4'); h.textContent = it[0]; dp.appendChild(h); } else { const b = document.createElement('button'); b.textContent = it[0]; b.addEventListener('click', e => { e.stopPropagation(); it[1](b); }); dp.appendChild(b); } }
@@ -1056,7 +1059,7 @@ const CORE = (function () {
     if (alertStep === 0) {
       alertStep = 1; const tx = CONFIG.ALERT_RADIO; $('alerttx').textContent = ''; $('alertt4').textContent = 'TAP TO CONTINUE';
       let n = 0; const ty = setInterval(() => { n += 1; $('alerttx').textContent = tx.slice(0, n); if (n >= tx.length) clearInterval(ty); }, 70);
-      VOICE.speak(tx, 'radioja'); AUDIO.sfx('radio');
+      VOICE.speak(tx, 'radio'); AUDIO.sfx('radio');
     } else { VOICE.cancel(); ALERT = false; $('alert').classList.add('hide'); }
   });
   function setUI(k, v, fn) { if (ui[k] !== v) { ui[k] = v; fn(v); } }

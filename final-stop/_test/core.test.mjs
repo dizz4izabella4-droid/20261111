@@ -26,7 +26,7 @@ log('1. 自動プレイ（窓で0.3s後にスワイプ）');
   const r = run(c, 1 / 60, 600, s => bot(s), s => s.sub === 'END');
   const ph = r.evs.filter(e => e.type === 'phase'); const pull = ph.find(e => e.to === 'PULLOVER'), chase = r.evs.find(e => e.type === 'sub' && e.sub === 'INTRO'), opn = r.evs.find(e => e.type === 'sub' && e.sub === 'OPEN_PARK');
   const dur = pull.at - chase.at; log('   CHASE ' + dur.toFixed(2) + 's, END到達 ' + c.state.sub);
-  ok(c.state.sub === 'END', 'ENDに届く'); ok(dur >= 24 && dur <= 30, 'INTRO以降が24〜30s: ' + dur.toFixed(2)); ok(chase.at - opn.at > 8 && chase.at - opn.at < 14, '開始演出が8〜14s: ' + (chase.at - opn.at).toFixed(2));
+  ok(c.state.sub === 'END', 'ENDに届く'); ok(dur >= 24 && dur <= 30, 'INTRO以降が24〜30s: ' + dur.toFixed(2)); ok(chase.at - opn.at > 18 && chase.at - opn.at < 40, '開始演出が18〜40s: ' + (chase.at - opn.at).toFixed(2));
   ok(r.evs.filter(e => e.type === 'hit').length === 3, 'HITがちょうど3回');
   ok(!r.evs.some(e => e.type === 'stuck'), 'stuckなし');
 }
