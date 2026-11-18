@@ -765,64 +765,221 @@ const CORE = (function () {
     if (DEBUG && evs.length) window.__events = (window.__events || []).concat(evs).slice(-40);
   }
 
-  /* ================= DRAW（B0：矩形と文字。投影の検証が目的） ================= */
+  /* ================= DRAW（B1：道路・景色・車・窓HUD） ================= */
   let scroll = 0, tNow = 0;
   const probe = window.__probe = {};
+  const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
+  const hash = n => { n = Math.imul(n ^ 61, 0x45d9f3b); n = Math.imul(n ^ (n >>> 15), 0x2c1b3c6d); return ((n ^ (n >>> 13)) >>> 0) / 4294967296; };
+  const SKY = (function () {
+    const stars = []; for (let i = 0; i < 70; i++) stars.push({ x: hash(i * 3 + 1), y: hash(i * 3 + 2), r: 0.5 + hash(i * 3 + 3) * 1.1 });
+    const bld = []; let x = -20; for (let i = 0; i < 40; i++) { const w = 14 + hash(i + 200) * 26, h = 10 + hash(i + 300) * 44; bld.push({ x: x, w: w, h: h, s: i }); x += w + hash(i + 400) * 6; }
+    return { stars: stars, bld: bld, span: x + 20 };
+  })();
+
+  function drawSky(W, camX) {
+    const hor = V.hor, g = ctx.createLinearGradient(0, 0, 0, hor);
+    g.addColorStop(0, '#060a18'); g.addColorStop(0.7, '#1c1838'); g.addColorStop(1, '#4a2f55');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, hor + 1);
+    ctx.fillStyle = '#fff';
+    for (const s of SKY.stars) { ctx.globalAlpha = 0.35 + 0.45 * hash(((s.x * 997) | 0) + ((tNow * 1.3) | 0) % 5); ctx.fillRect(s.x * W, s.y * hor * 0.8, s.r, s.r); }
+    ctx.globalAlpha = 1;
+    // 月
+    const mx = W * 0.78 - camX * 1.5, my = hor * 0.28, mg = ctx.createRadialGradient(mx, my, 2, mx, my, 38);
+    mg.addColorStop(0, 'rgba(255,244,214,.9)'); mg.addColorStop(0.25, 'rgba(255,240,200,.35)'); mg.addColorStop(1, 'rgba(255,240,200,0)');
+    ctx.fillStyle = mg; ctx.fillRect(mx - 40, my - 40, 80, 80);
+    ctx.fillStyle = '#f6edd2'; ctx.beginPath(); ctx.arc(mx, my, 9, 0, 6.2832); ctx.fill();
+    // 遠景の街（視差：カメラ横ずれの0.6倍）
+    const par = -camX * 0.6, k = hor / 230;
+    ctx.fillStyle = '#120f26';
+    for (let rep = -1; rep < 3; rep++) for (const b of SKY.bld) {
+      const bx = b.x + rep * SKY.span + par; if (bx > W + 40 || bx + b.w < -40) continue;
+      ctx.fillRect(bx, hor - b.h * k, b.w, b.h * k + 1);
+    }
+    ctx.fillStyle = 'rgba(255,214,120,.55)';
+    for (let rep = -1; rep < 3; rep++) for (const b of SKY.bld) {
+      const bx = b.x + rep * SKY.span + par; if (bx > W + 40 || bx + b.w < -40) continue;
+      for (let wy = 5; wy < b.h * k - 3; wy += 7) for (let wx = 3; wx < b.w - 3; wx += 6) if (hash(b.s * 131 + wy * 7 + wx) > 0.62) ctx.fillRect(bx + wx, hor - wy - 3, 2, 3);
+    }
+    const hz = ctx.createLinearGradient(0, hor - 36 * k, 0, hor); hz.addColorStop(0, 'rgba(120,70,120,0)'); hz.addColorStop(1, 'rgba(150,90,130,.45)');
+    ctx.fillStyle = hz; ctx.fillRect(0, hor - 36 * k, W, 36 * k);
+  }
+
+  function drawRoad(W, H, camX) {
+    const hor = V.hor;
+    for (let y = hor + 1; y < H; y += 2) {
+      const kk = (y - hor) / CAM_H, z = V.F / kk, d = clamp01((z - 6) / 240);
+      const seg = Math.floor((z + scroll) / 7) & 1;
+      // 路外（草と土）
+      ctx.fillStyle = seg ? '#0f2a1a' : '#12301d'; ctx.fillRect(0, y, W, 2);
+      const cx = W / 2 - camX * kk;
+      const xs = v => cx + v * kk;
+      // 路肩（舗装の外側）
+      ctx.fillStyle = seg ? '#34343c' : '#30303a'; ctx.fillRect(xs(-5.6), y, 11.2 * kk, 2);
+      // 車線
+      ctx.fillStyle = seg ? '#2a2a32' : '#26262e'; ctx.fillRect(xs(-3.6), y, 7.2 * kk, 2);
+      // 外側線（白）と縁石
+      ctx.fillStyle = '#d9d9de'; const lw = Math.max(1, 0.14 * kk);
+      ctx.fillRect(xs(-3.6) - lw, y, lw, 2); ctx.fillRect(xs(3.6), y, lw, 2);
+      ctx.fillStyle = seg ? '#b02a2a' : '#e8e8ea'; const kw = Math.max(1, 0.3 * kk);
+      ctx.fillRect(xs(-5.6) - kw, y, kw, 2); ctx.fillRect(xs(5.6), y, kw, 2);
+      // 中央線（黄の破線）
+      if (((z + scroll) % 12) < 5) { ctx.fillStyle = '#e8d44a'; const mw = Math.max(1, 0.16 * kk); ctx.fillRect(cx - mw / 2, y, mw, 2); }
+      if (d > 0) { ctx.fillStyle = 'rgba(80,50,90,' + (d * 0.55).toFixed(3) + ')'; ctx.fillRect(0, y, W, 2); }   // 遠くは霞む
+    }
+  }
+
+  function lampHead(x, y, k, a) {
+    const r = Math.max(2, 1.6 * k), g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, 'rgba(255,230,160,' + (0.9 * a) + ')'); g.addColorStop(0.3, 'rgba(255,200,110,' + (0.35 * a) + ')'); g.addColorStop(1, 'rgba(255,190,90,0)');
+    ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+
+  function drawScenery(W, camX) {
+    const SP = 22, N = 11;
+    const base = Math.floor(scroll / SP), off = scroll - base * SP;
+    for (let j = 10; j >= 1; j--) {
+      const z = j * SP - off, id = base + j; if (z < 3.2) continue;
+      const p0 = proj(0, z, camX), k = p0.k, gy = p0.y, a = clamp01(1.15 - z / 230);
+      for (const side of [-1, 1]) {
+        const sid = id * 2 + (side > 0 ? 1 : 0);
+        // 街灯（左右とも）
+        const lx = proj(side * 6.7, z, camX).x;
+        ctx.globalAlpha = a;
+        ctx.fillStyle = '#1b1a26'; const pw = Math.max(1, 0.2 * k); ctx.fillRect(lx - pw / 2, gy - 7 * k, pw, 7 * k);
+        const ax = proj(side * 4.9, z, camX).x; ctx.fillRect(Math.min(lx, ax), gy - 7 * k, Math.abs(ax - lx), Math.max(1, 0.15 * k));
+        ctx.globalAlpha = 1; lampHead(ax, gy - 6.9 * k, k, a);
+        // 路面に落ちる光だまり
+        const px = proj(side * 3.4, z, camX).x, pr = 3.4 * k;
+        ctx.globalCompositeOperation = 'lighter';
+        const pg = ctx.createRadialGradient(px, gy, 0, px, gy, pr); pg.addColorStop(0, 'rgba(255,200,120,' + (0.16 * a) + ')'); pg.addColorStop(1, 'rgba(255,200,120,0)');
+        ctx.save(); ctx.translate(px, gy); ctx.scale(1, 0.22); ctx.translate(-px, -gy); ctx.fillStyle = pg; ctx.fillRect(px - pr, gy - pr, pr * 2, pr * 2); ctx.restore();
+        ctx.globalCompositeOperation = 'source-over';
+        // 木・茂み・看板（路外）
+        const h1 = hash(sid + 11), h2 = hash(sid + 77);
+        if (h1 > 0.35) {
+          const tx = proj(side * (9.5 + h2 * 9), z + (h1 - 0.5) * 8, camX).x, th = (4 + h2 * 5) * k, tw = (2.2 + h1 * 1.6) * k;
+          ctx.globalAlpha = a; ctx.fillStyle = '#0a1a14';
+          ctx.beginPath(); ctx.moveTo(tx - tw / 2, gy - th * 0.25); ctx.lineTo(tx, gy - th); ctx.lineTo(tx + tw / 2, gy - th * 0.25); ctx.closePath(); ctx.fill();
+          ctx.fillRect(tx - tw * 0.08, gy - th * 0.3, tw * 0.16, th * 0.3);
+          ctx.globalAlpha = 1;
+        } else if (h2 > 0.7 && side > 0) {
+          const sx = proj(side * 7.6, z, camX).x, sh = 2.8 * k, sw = 2.6 * k;
+          ctx.globalAlpha = a; ctx.fillStyle = '#222'; ctx.fillRect(sx - 0.07 * k, gy - sh, 0.14 * k, sh);
+          ctx.fillStyle = '#1c6b3a'; ctx.fillRect(sx - sw / 2, gy - sh - 1.4 * k, sw, 1.4 * k);
+          ctx.fillStyle = '#e8f4ea'; ctx.fillRect(sx - sw * 0.4, gy - sh - 1.0 * k, sw * 0.8, Math.max(1, 0.12 * k)); ctx.globalAlpha = 1;
+        }
+      }
+    }
+  }
+
+  // 車の後ろ姿（逃走車・パトカー共通）。原点は下辺中央、w×h に収まる。
+  function drawCarRear(cx, bot, w, h, o) {
+    ctx.save(); ctx.translate(cx, bot);
+    if (o.tilt) ctx.rotate(o.tilt * Math.PI / 180);
+    // 影
+    ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.beginPath(); ctx.ellipse(0, -h * 0.02, w * 0.56, h * 0.07, 0, 0, 6.2832); ctx.fill();
+    // タイヤ
+    ctx.fillStyle = '#0b0b0e'; ctx.fillRect(-w * 0.47, -h * 0.26, w * 0.17, h * 0.26); ctx.fillRect(w * 0.30, -h * 0.26, w * 0.17, h * 0.26);
+    // キャビン（上部）
+    const cabW0 = w * 0.84, cabW1 = w * 0.66, y0 = -h * 0.60, y1 = -h * 1.0;
+    ctx.fillStyle = o.roof; ctx.beginPath(); ctx.moveTo(-cabW0 / 2, y0); ctx.lineTo(-cabW1 / 2, y1); ctx.lineTo(cabW1 / 2, y1); ctx.lineTo(cabW0 / 2, y0); ctx.closePath(); ctx.fill();
+    // リアガラス
+    const gl = ctx.createLinearGradient(0, y1, 0, y0); gl.addColorStop(0, '#1d2a44'); gl.addColorStop(1, '#0a0f1c');
+    ctx.fillStyle = gl; ctx.beginPath(); ctx.moveTo(-cabW0 * 0.43, y0 - h * 0.03); ctx.lineTo(-cabW1 * 0.43, y1 + h * 0.05); ctx.lineTo(cabW1 * 0.43, y1 + h * 0.05); ctx.lineTo(cabW0 * 0.43, y0 - h * 0.03); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(180,210,255,.16)'; ctx.beginPath(); ctx.moveTo(-cabW0 * 0.30, y0 - h * 0.03); ctx.lineTo(-cabW1 * 0.12, y1 + h * 0.05); ctx.lineTo(-cabW1 * 0.02, y1 + h * 0.05); ctx.lineTo(-cabW0 * 0.20, y0 - h * 0.03); ctx.closePath(); ctx.fill();
+    // ボディ（トランク〜バンパー）
+    const bg = ctx.createLinearGradient(0, -h * 0.62, 0, -h * 0.12); bg.addColorStop(0, o.body); bg.addColorStop(1, o.bodyLow);
+    ctx.fillStyle = bg; ctx.beginPath(); ctx.moveTo(-w / 2, -h * 0.14); ctx.lineTo(-w / 2, -h * 0.50); ctx.quadraticCurveTo(-w / 2, -h * 0.62, -w * 0.42, -h * 0.62); ctx.lineTo(w * 0.42, -h * 0.62); ctx.quadraticCurveTo(w / 2, -h * 0.62, w / 2, -h * 0.50); ctx.lineTo(w / 2, -h * 0.14); ctx.closePath(); ctx.fill();
+    // トランクの合わせ目
+    ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = Math.max(1, w * 0.008); ctx.beginPath(); ctx.moveTo(-w * 0.44, -h * 0.55); ctx.lineTo(w * 0.44, -h * 0.55); ctx.stroke();
+    // バンパー
+    ctx.fillStyle = o.bumper; ctx.fillRect(-w * 0.5, -h * 0.20, w, h * 0.10);
+    // ナンバー
+    ctx.fillStyle = '#e9e9d8'; ctx.fillRect(-w * 0.12, -h * 0.40, w * 0.24, h * 0.10);
+    ctx.fillStyle = '#334'; ctx.fillRect(-w * 0.09, -h * 0.375, w * 0.18, Math.max(1, h * 0.02));
+    // テールランプ
+    const tl = o.tail || '#ff2a2a';
+    for (const sd of [-1, 1]) {
+      const lx = sd * w * 0.36;
+      ctx.fillStyle = tl; ctx.fillRect(lx - w * 0.10, -h * 0.50, w * 0.20, h * 0.09);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const r = w * 0.2, rg = ctx.createRadialGradient(lx, -h * 0.455, 0, lx, -h * 0.455, r); rg.addColorStop(0, 'rgba(255,40,40,.55)'); rg.addColorStop(1, 'rgba(255,40,40,0)');
+      ctx.fillStyle = rg; ctx.fillRect(lx - r, -h * 0.455 - r, r * 2, r * 2); ctx.restore();
+    }
+    // パトカー：トランクの白と回転灯
+    if (o.police) {
+      ctx.fillStyle = '#f2f2f4'; ctx.fillRect(-w * 0.5, -h * 0.60, w, h * 0.10);
+      ctx.fillStyle = '#16213a'; ctx.font = '800 ' + Math.max(7, h * 0.07).toFixed(0) + 'px ui-monospace,Menlo,monospace'; ctx.textAlign = 'center'; ctx.fillText('POLICE', 0, -h * 0.525);
+      const lb = h * 0.07, ly = y1 - lb * 0.1, lw = cabW1 * 0.78;
+      ctx.fillStyle = '#10131a'; ctx.fillRect(-lw / 2, ly - lb, lw, lb);
+      if (o.lights) {
+        ctx.fillStyle = o.flash ? '#ff2a3a' : '#7a1020'; ctx.fillRect(-lw / 2 + 1, ly - lb + 1, lw / 2 - 2, lb - 2);
+        ctx.fillStyle = o.flash ? '#10307a' : '#2a6bff'; ctx.fillRect(1, ly - lb + 1, lw / 2 - 2, lb - 2);
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        const r = w * 0.7, c1 = o.flash ? 'rgba(255,40,60,.5)' : 'rgba(40,100,255,.5)', gx = o.flash ? -lw / 4 : lw / 4;
+        const rg = ctx.createRadialGradient(gx, ly - lb / 2, 0, gx, ly - lb / 2, r); rg.addColorStop(0, c1); rg.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = rg; ctx.fillRect(gx - r, ly - lb / 2 - r, r * 2, r * 2); ctx.restore();
+      }
+    }
+    // 破損：1=へこみ 2=煙 3=バンパー外れ・大きな煙
+    if (o.damage >= 1) { ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = Math.max(1, w * 0.012); ctx.beginPath(); ctx.moveTo(-w * 0.30, -h * 0.58); ctx.lineTo(-w * 0.18, -h * 0.47); ctx.lineTo(-w * 0.26, -h * 0.38); ctx.stroke(); }
+    if (o.damage >= 2) {
+      ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.beginPath(); ctx.moveTo(w * 0.22, -h * 0.60); ctx.lineTo(w * 0.34, -h * 0.44); ctx.lineTo(w * 0.24, -h * 0.30); ctx.stroke();
+      for (let i = 0; i < 5; i++) { const ph = (tNow * 0.9 + i * 0.2) % 1, r = w * (0.05 + ph * 0.11); ctx.fillStyle = 'rgba(70,70,76,' + (0.5 * (1 - ph)).toFixed(3) + ')'; ctx.beginPath(); ctx.arc(w * (0.14 + 0.05 * Math.sin(i * 2 + tNow)), -h * (0.62 + ph * 0.55), r, 0, 6.2832); ctx.fill(); }
+    }
+    if (o.damage >= 3) {
+      ctx.save(); ctx.translate(-w * 0.36, -h * 0.15); ctx.rotate(-0.18); ctx.fillStyle = o.bumper; ctx.fillRect(-w * 0.14, 0, w * 0.5, h * 0.09); ctx.restore();
+      for (let i = 0; i < 7; i++) { const ph = (tNow * 0.7 + i * 0.15) % 1, r = w * (0.07 + ph * 0.16); ctx.fillStyle = 'rgba(40,40,46,' + (0.62 * (1 - ph)).toFixed(3) + ')'; ctx.beginPath(); ctx.arc(w * 0.1 * Math.sin(i * 3 + tNow * 1.4), -h * (0.55 + ph * 0.8), r, 0, 6.2832); ctx.fill(); }
+    }
+    ctx.restore();
+  }
+
+  function drawWindowHUD(sb) {
+    const w = S.window, p = clamp01(w.t / w.len), cy = (sb.top + sb.bot) / 2;
+    const r1 = Math.max(26, sb.w * 0.5), r0 = r1 + 64, r = r0 + (r1 - r0) * p;
+    const col = p < 0.55 ? '255,255,255' : p < 0.85 ? '255,225,74' : '255,90,80';
+    ctx.save();
+    ctx.strokeStyle = 'rgba(' + col + ',.95)'; ctx.lineWidth = 3; ctx.shadowColor = 'rgba(' + col + ',.8)'; ctx.shadowBlur = 10;
+    ctx.beginPath(); ctx.arc(sb.cx, cy, r, 0, 6.2832); ctx.stroke();
+    ctx.shadowBlur = 0; ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.arc(sb.cx, cy, r1, 0, 6.2832); ctx.stroke();
+    // 矢印（スワイプ方向）：進行方向へ流れる3つのシェブロン
+    const sd = w.side, ax = Math.max(40, Math.min(V.W - 40, sb.cx - sd * (r1 + 56)));
+    for (let i = 0; i < 3; i++) {
+      const ph = (tNow * 3 + i * 0.33) % 1, xx = ax + sd * (ph * 54 - 18), al = Math.sin(ph * Math.PI);
+      ctx.strokeStyle = 'rgba(255,225,74,' + al.toFixed(3) + ')'; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.beginPath(); ctx.moveTo(xx - sd * 10, cy - 18); ctx.lineTo(xx + sd * 6, cy); ctx.lineTo(xx - sd * 10, cy + 18); ctx.stroke();
+    }
+    ctx.restore();
+    if (!S.hintShown && S.hits === 0 && S.misses === 0) {
+      ctx.fillStyle = '#fff'; ctx.font = '800 22px ui-monospace,Menlo,monospace'; ctx.textAlign = 'center'; ctx.fillText('SWIPE!', V.W / 2, V.hor - 40);
+    }
+  }
+
   function render() {
     const W = V.W, H = V.H, camX = S.px;
     ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
-    // 空
-    const g = ctx.createLinearGradient(0, 0, 0, V.hor); g.addColorStop(0, '#0b1020'); g.addColorStop(1, '#3a2a4a');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, V.hor + 1);
-    // 地面
-    ctx.fillStyle = '#12301a'; ctx.fillRect(0, V.hor, W, H - V.hor);
-    // 路面（路肩 |x|<=5.5、車線 |x|<=3.5）
-    const zN = 2, zF = 300;
-    function band(x0, x1, col) {
-      const a = proj(x0, zN, camX), b = proj(x1, zN, camX), c = proj(x1, zF, camX), d = proj(x0, zF, camX);
-      ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(c.x, c.y); ctx.lineTo(d.x, d.y); ctx.closePath(); ctx.fill();
-    }
-    band(-5.5, 5.5, '#2c2c34'); band(-3.5, 3.5, '#25252c');
-    // 縞：中央線と路肩の線は走行距離で流す
-    const seg = 12, off = scroll % seg;
-    ctx.fillStyle = '#e8d44a';
-    for (let z0 = -off + seg; z0 < zF; z0 += seg) {
-      const za = Math.max(z0, zN), zb = z0 + 4; if (zb < zN) continue;
-      const a = proj(-0.08, za, camX), b = proj(0.08, za, camX), c = proj(0.08, zb, camX), d = proj(-0.08, zb, camX);
-      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(c.x, c.y); ctx.lineTo(d.x, d.y); ctx.closePath(); ctx.fill();
-    }
+    drawSky(W, camX);
+    drawRoad(W, H, camX);
+    drawScenery(W, camX);
     // 逃走車
     const sz = ZP + CAR.l + S.gap, sb = carBox(S.sx, sz, camX);
-    ctx.save(); ctx.translate(sb.cx, sb.bot); ctx.rotate(S.tilt * Math.PI / 180);
-    ctx.fillStyle = S.damage >= 3 ? '#552' : '#8a2a2a'; ctx.fillRect(-sb.w / 2, -sb.h, sb.w, sb.h);
-    ctx.fillStyle = '#111'; ctx.fillRect(-sb.w * 0.33, -sb.h * 0.93, sb.w * 0.66, sb.h * 0.31);
-    ctx.restore();
-    ctx.fillStyle = '#fff'; ctx.font = '700 11px ui-monospace,Menlo,monospace'; ctx.textAlign = 'center';
-    ctx.fillText('SUSPECT', sb.cx, sb.top - 6);
+    drawCarRear(sb.cx, sb.bot, sb.w, sb.h, { body: '#a82b2b', bodyLow: '#6e1c1c', roof: '#8c2424', bumper: '#2a2a30', tail: '#ff3030', tilt: S.tilt, damage: S.damage });
     // パトカー（後端 z=7.6、x=camX 固定）
-    const pb = carBox(S.px, ZP, camX);
-    ctx.fillStyle = '#1a3a8a'; ctx.fillRect(pb.cx - pb.w / 2, pb.top, pb.w, pb.h);
-    const flash = Math.floor(tNow * 4) % 2 === 0;
-    if (S.lights) { ctx.fillStyle = flash ? '#ff2a3a' : '#2a6bff'; ctx.fillRect(pb.cx - pb.w * 0.2, pb.top - 6, pb.w * 0.18, 6); ctx.fillStyle = flash ? '#2a6bff' : '#ff2a3a'; ctx.fillRect(pb.cx + pb.w * 0.02, pb.top - 6, pb.w * 0.18, 6); }
+    const pb = carBox(S.px, ZP, camX), flash = Math.floor(tNow * 4) % 2 === 0;
+    drawCarRear(pb.cx, pb.bot, pb.w, pb.h, { body: '#1b2440', bodyLow: '#0e1426', roof: '#141b32', bumper: '#0a0d18', tail: '#ff2a2a', police: true, lights: S.lights, flash: flash });
     // 警光灯の染まり
     if (S.lights) {
       const a = ctx.globalCompositeOperation; ctx.globalCompositeOperation = 'lighter';
-      const lw = ctx.createLinearGradient(0, 0, W * 0.45, 0); lw.addColorStop(0, flash ? 'rgba(255,40,60,.35)' : 'rgba(40,100,255,.35)'); lw.addColorStop(1, 'rgba(0,0,0,0)');
+      const lw = ctx.createLinearGradient(0, 0, W * 0.45, 0); lw.addColorStop(0, flash ? 'rgba(255,40,60,.32)' : 'rgba(40,100,255,.32)'); lw.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = lw; ctx.fillRect(0, 0, W * 0.45, H);
-      const rw = ctx.createLinearGradient(W, 0, W * 0.55, 0); rw.addColorStop(0, flash ? 'rgba(40,100,255,.35)' : 'rgba(255,40,60,.35)'); rw.addColorStop(1, 'rgba(0,0,0,0)');
+      const rw = ctx.createLinearGradient(W, 0, W * 0.55, 0); rw.addColorStop(0, flash ? 'rgba(40,100,255,.32)' : 'rgba(255,40,60,.32)'); rw.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = rw; ctx.fillRect(W * 0.55, 0, W * 0.45, H);
       ctx.globalCompositeOperation = a;
     }
-    // 窓：矢印と縮む輪
-    if (S.window) {
-      const w = S.window, p = w.t / w.len, cy = (sb.top + sb.bot) / 2;
-      ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(sb.cx, cy, 70 * (1 - p) + 14, 0, 6.2832); ctx.stroke();
-      const ax = Math.max(48, Math.min(W - 48, sb.cx + w.side * (sb.w / 2 + 44)));
-      ctx.fillStyle = '#ffe14a'; ctx.beginPath(); ctx.moveTo(ax + w.side * 18, cy); ctx.lineTo(ax - w.side * 12, cy - 16); ctx.lineTo(ax - w.side * 12, cy + 16); ctx.closePath(); ctx.fill();
-      if (!S.hintShown && S.hits === 0 && S.misses === 0) { ctx.fillStyle = '#fff'; ctx.font = '800 22px ui-monospace,Menlo,monospace'; ctx.fillText('SWIPE!', W / 2, V.hor - 40); }
-    }
+    if (S.window) drawWindowHUD(sb);
+    ctx.textAlign = 'center';
     if (S.sub === 'MISS') { ctx.fillStyle = '#ff6a6a'; ctx.font = '700 14px ui-monospace,Menlo,monospace'; ctx.fillText('MISS', W / 2, V.hor - 40); }
-    if (S.phase === 'CMD' || S.phase === 'ARREST') { ctx.fillStyle = '#fff'; ctx.font = '700 12px ui-monospace,Menlo,monospace'; ctx.fillText('POSE: ' + S.pose.to + ' ' + S.pose.k.toFixed(2), sb.cx, sb.bot + 16); }
+    if (DEBUG && (S.phase === 'CMD' || S.phase === 'ARREST')) { ctx.fillStyle = '#fff'; ctx.font = '700 12px ui-monospace,Menlo,monospace'; ctx.fillText('POSE: ' + S.pose.to + ' ' + S.pose.k.toFixed(2), sb.cx, sb.bot + 16); }
     if (S.fade > 0) { ctx.fillStyle = 'rgba(0,0,0,' + S.fade + ')'; ctx.fillRect(0, 0, W, H); }
     ctx.textAlign = 'start';
     // 検証用の外接矩形（shots.py が表と照合する）
