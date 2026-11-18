@@ -44,6 +44,12 @@ svg#sv{position:absolute;left:6px;top:6px;width:calc(100% - 12px);height:calc(10
 .shake{animation:sh .3s}
 @keyframes sh{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 @media(max-width:520px){#stamp{font-size:28px;padding:6px 14px}#hud .nm{display:none}#hud .t{font-size:12px}}
+#zoom{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;flex-direction:column;background:rgba(8,6,5,.88);cursor:zoom-out;padding:14px;box-sizing:border-box}
+#zoom.on{display:flex}
+#zoom .fr{background:#f4f1ea;padding:10px 10px 12px;border-radius:2px;box-shadow:0 8px 30px rgba(0,0,0,.7);max-width:96vw;max-height:88vh;display:flex;flex-direction:column;align-items:center}
+#zoom img{display:block;max-width:calc(96vw - 20px);max-height:calc(88vh - 70px);width:auto;height:auto;object-fit:contain}
+#zoom .cap{margin-top:8px;font:700 clamp(16px,3.2vw,26px) ui-monospace,Menlo,Consolas,"Courier New",monospace;letter-spacing:.06em;color:#1d1d1d;min-height:1em}
+#zoom .x{position:absolute;right:14px;top:12px;font-size:26px;color:#eadfce;line-height:1;background:rgba(30,24,20,.7);border:1px solid #6b5a4a;border-radius:4px;padding:4px 10px}
 </style>
 <!--IZ-GAME-BASE:START-->
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -265,6 +271,7 @@ svg#sv{position:absolute;left:6px;top:6px;width:calc(100% - 12px);height:calc(10
   <div id="desk"><div id="ctrl"><button id="bReset" title="Reset">↺ RESET</button><button id="bSnd" title="Music">♪ ON</button></div></div>
 </div>
 <div id="title"><h1>RED<b>LINE</b></h1><div class="ln"></div><p>TAP TO START</p></div>
+<div id="zoom"><span class="x">✕</span><div class="fr"><img id="zimg" alt=""><div class="cap" id="zcap"></div></div></div>
 <div id="clear"><div id="stamp">CASE CLOSED</div><button class="btn" id="bNext">NEXT ▶</button></div>
 
 <script>
@@ -369,7 +376,7 @@ function build(){
   const iconAt=(g,name,x,y,s,color)=>{const u=el('g',{transform:`translate(${x},${y}) scale(${s/24})`,style:'color:'+(color||'#2b2b2b')},g); u.innerHTML=ICON[name];};
 
   function photo(p,x,y,w,h,tilt){
-    const g=el('g',{transform:`rotate(${tilt} ${x+w/2} ${y+h/2})`,filter:'url(#sh)'},gItems);
+    const g=el('g',{transform:`rotate(${tilt} ${x+w/2} ${y+h/2})`,filter:'url(#sh)','data-zoom':p.img||'','data-zts':p.ts||'',style:p.img?'cursor:zoom-in':''},gItems);
     const pad=7, ext=p.ts?24:16;
     el('rect',{x:x-pad,y:y-pad,width:w+pad*2,height:h+pad+ext,fill:'#f4f1ea',rx:1.5},g);
     if(p.img&&IMG[p.img]){ el('image',{href:IMG[p.img],x,y,width:w,height:h,preserveAspectRatio:'xMidYMid slice'},g); }
@@ -506,7 +513,13 @@ function check(){
 function svgPt(e){ const p=sv.createSVGPoint(); p.x=e.clientX; p.y=e.clientY; return p.matrixTransform(sv.getScreenCTM().inverse()); }
 function pinFrom(e){ const t=document.elementFromPoint(e.clientX,e.clientY); const g=t&&t.closest&&t.closest('[data-pin]'); return g?g.getAttribute('data-pin'):null; }
 let down=null;
+let zd=null;
+function openZoom(g){ const k=g.getAttribute('data-zoom'); if(!k||!IMG[k]) return; document.getElementById('zimg').src=IMG[k]; document.getElementById('zcap').textContent=g.getAttribute('data-zts')||''; document.getElementById('zoom').classList.add('on'); blip(520,.05,'sine',.04); }
+function closeZoom(){ document.getElementById('zoom').classList.remove('on'); }
+document.getElementById('zoom').addEventListener('click',closeZoom);
+window.addEventListener('keydown',e=>{ if(e.key==='Escape') closeZoom(); });
 sv.addEventListener('pointerdown',e=>{
+  zd=null; { let zg=e.target.closest&&e.target.closest('[data-zoom]'); if(!zg&&solved){ const hit=document.elementsFromPoint(e.clientX,e.clientY).find(n=>n.closest&&n.closest('[data-zoom]')); if(hit) zg=hit.closest('[data-zoom]'); } if(zg&&zg.getAttribute('data-zoom')&&!pinFrom(e)&&(solved||!(e.target.getAttribute&&e.target.getAttribute('data-link')))) zd={g:zg,x:e.clientX,y:e.clientY}; }
   if(solved) return;
   const lk=e.target.getAttribute&&e.target.getAttribute('data-link');
   const id=pinFrom(e);
@@ -521,6 +534,7 @@ sv.addEventListener('pointermove',e=>{
     el('path',{d:curve(a,p),fill:'none',stroke:'#b3261e','stroke-width':4,'stroke-linecap':'round','stroke-dasharray':'1.4 5',opacity:.85},layout.gTmp); }
 });
 sv.addEventListener('pointerup',e=>{
+  if(zd&&!down){ const z=zd; zd=null; if(Math.hypot(e.clientX-z.x,e.clientY-z.y)<10) openZoom(z.g); return; }
   if(!down) return; const st=down; down=null; layout.gTmp.innerHTML='';
   const tgt=pinFrom(e);
   if(st.drag){ if(tgt && tgt!==st.id) connect(st.id,tgt); sel=null; drawLinks(); return; }
