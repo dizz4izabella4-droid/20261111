@@ -91,7 +91,7 @@ void main(){vUv=uv;vN=normalMatrix*normal;vec3 p=position;
 const waxMat=new T.ShaderMaterial({uniforms:Object.assign({},U,VMU),vertexShader:WAX_VS,fragmentShader:WAX_FS});
 
 const wings=(function(){
-  const group=new T.Group();vmScene.add(group);
+  const group=new T.Group();if(!window.__BG)vmScene.add(group);
   const all=[];
   const sides=[];
   function addFeather(parent,x,z,beta,len,wf,seed,kind,lift){

@@ -48,4 +48,7 @@ window.__icarus={G:G,b:b,KF:KF,U:U,P:P,ISL:ISL,RING:RING,pathAt:pathAt,DY:DY,PS:
     for(const c of COLS){const r=c.r+m;const dx=x-c.x,dy=y-c.y,dz=z-c.z;if(dx*dx+dy*dy+dz*dz<r*r)hit=3;}
     return hit;}
 };
+// 背景モード: 親ページの合図(start)でオート再生を始め、終わったら繰り返す
+if(window.__BG){let started=false;window.addEventListener('message',function(e){if(e.data!=='start'||started)return;started=true;startAuto();setInterval(function(){if(G.mode!=='auto')startAuto()},1500)});
+  setTimeout(function(){try{parent.postMessage({icarusReady:true},'*')}catch(e){}},700);}
 requestAnimationFrame(frame);

@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b1422">
 <script>try{navigator.audioSession.type='ambient'}catch(e){}</script>
+<script>/* ?bg=1: おもちゃ箱トップの背景用（UIなし・羽なし・無音・等倍・親の合図で再生開始） */
+window.__BG=/[?&]bg=1(&|$)/.test(location.search);
+if(window.__BG){document.documentElement.className='bg';
+Object.defineProperty(window,'devicePixelRatio',{get:function(){return 1}});
+(function(){var AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;var P=function(){var c=new (Function.prototype.bind.apply(AC,[null].concat([].slice.call(arguments))))();try{c.suspend()}catch(e){}c.resume=function(){return Promise.resolve()};return c};P.prototype=AC.prototype;window.AudioContext=P;window.webkitAudioContext=P})();}
+</script>
 <title>イカロス</title>
 <style>
 :root{color-scheme:dark;--ja:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","游ゴシック","Meiryo","Noto Sans JP",sans-serif}
@@ -36,6 +42,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b1422;col
 #prog{position:fixed;left:0;bottom:0;height:2px;width:0;background:rgba(255,236,200,.55);opacity:0;pointer-events:none;transition:opacity 1.2s}
 #prog.on{opacity:.5}
 #err{position:fixed;inset:0;display:none;place-items:center;text-align:center;padding:30px;background:#0b1422;font-size:15px;line-height:1.9;letter-spacing:.1em;z-index:9}
+html.bg,html.bg body{background:transparent!important}html.bg #title,html.bg #hint,html.bg #mode,html.bg #prog,html.bg #snd,html.bg #ori,html.bg #fs,html.bg #err,html.bg .ov,html.bg .tb,html.bg button{display:none!important}
 </style>
 </head>
 <body>
