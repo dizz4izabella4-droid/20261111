@@ -37,6 +37,8 @@ TARGETS = [
     'pc98-novel/works/elena/index.html',
     'pc98-novel/works/olivia/index.html',
     'lab/index.html',
+    'cinema/index.html',
+    'utility/index.html',
     'yawaraka/index.html',
     'anzan-tensei/index.html',
     'redline/play/index.html',
