@@ -637,7 +637,7 @@ const CORE = (function () {
 
   /* ================= AUDIO（B2：合成音。マナーモードではiOSの既定で鳴らない） ================= */
   const AUDIO = {
-    ctx: null, master: null, nbuf: null, eng: null, sir: null, bgm: null,
+    ctx: null, master: null, nbuf: null, eng: null, sir: null, bgm: null, hiss: null,
     init() {
       if (this.ctx) { if (this.ctx.state !== 'running') this.ctx.resume(); return; }
       try {
@@ -680,6 +680,20 @@ const CORE = (function () {
       if (!this.ctx) return;
       const g = this.master.gain, t = this.ctx.currentTime;
       g.cancelScheduledValues(t); g.setValueAtTime(0.6, t); g.setValueAtTime(0.6, t + sec); g.linearRampToValueAtTime(1, t + sec + 0.3);
+    },
+    // 無線風：声そのものは加工できない（ブラウザの音声は取り出せない）ので、前後のスケルチと背景のノイズで無線らしくする
+    radioOn() {
+      if (!this.on() || this.hiss) return; const c = this.ctx, t = c.currentTime;
+      this.noise(0.06, 2600, 0, 'bandpass', 0.10); this.beep(1400, 0.05, 'square', 0.035);
+      const s = c.createBufferSource(), hp = c.createBiquadFilter(), lp = c.createBiquadFilter(), g = c.createGain(), lf = c.createOscillator(), lg = c.createGain();
+      s.buffer = this.nbuf; s.loop = true; hp.type = 'highpass'; hp.frequency.value = 900; lp.type = 'lowpass'; lp.frequency.value = 3400; g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.028, t + 0.08);
+      lf.frequency.value = 7; lg.gain.value = 0.012; lf.connect(lg); lg.connect(g.gain);            // ザラつきの揺れ
+      s.connect(hp); hp.connect(lp); lp.connect(g); g.connect(this.master); s.start(); lf.start(); this.hiss = { s: s, g: g, lf: lf };
+    },
+    radioOff() {
+      const h = this.hiss; if (!h) return; this.hiss = null; const c = this.ctx, t = c.currentTime;
+      try { h.g.gain.cancelScheduledValues(t); h.g.gain.setTargetAtTime(0.0001, t, 0.03); h.s.stop(t + 0.2); h.lf.stop(t + 0.2); } catch (e) {}
+      this.noise(0.09, 2200, 600, 'bandpass', 0.09); this.beep(900, 0.04, 'square', 0.03);
     },
     // BGM：追跡（CHASE）中だけ。パトカーが寄せて停車〜命令（喋る場面）は無音
     bgmUpdate(S) {
@@ -766,12 +780,14 @@ const CORE = (function () {
         speechSynthesis.cancel();
         const u = new SpeechSynthesisUtterance(text);
         if (this.voice) u.voice = this.voice;
-        u.lang = (this.voice && this.voice.lang) || 'en-US'; u.rate = style === 'praise' ? 1.05 : 1.0; u.pitch = style === 'praise' ? 1.15 : 0.95;
+        u.lang = (this.voice && this.voice.lang) || 'en-US'; u.rate = style === 'praise' ? 1.05 : style === 'radio' ? 1.12 : 1.0; u.pitch = style === 'praise' ? 1.15 : style === 'radio' ? 0.8 : 0.95; if (style === 'radio') u.volume = 0.85;
+        if (style === 'radio') { u.onstart = () => AUDIO.radioOn(); const off = () => AUDIO.radioOff(); u.onend = off; u.onerror = off; setTimeout(off, 7000); AUDIO.radioOn(); }
+        else AUDIO.radioOff();
         speechSynthesis.speak(u);
         AUDIO.duck(text.length * 0.07 + 0.6);
       } catch (e) {}
     },
-    cancel() { try { speechSynthesis.cancel(); } catch (e) {} },
+    cancel() { try { speechSynthesis.cancel(); } catch (e) {} AUDIO.radioOff(); },
     toggle() { this.on = !this.on; try { localStorage.setItem('fs.voice', this.on ? 'on' : 'off'); } catch (e) {} }
   };
   VOICE.init();
@@ -923,7 +939,7 @@ const CORE = (function () {
         case 'cuffs': AUDIO.sfx('cuffs'); FX.glint(); break;
         case 'window': case 'miss': case 'whiff': case 'ramArm': case 'spot': case 'door': case 'arrest': AUDIO.sfx(e.type, e); break;
         case 'hit': AUDIO.sfx('hit', e); FX.hit(e); GLASS.hit(e.stage, e.side, true); break;
-        case 'radio': el.radio.textContent = e.text; el.radio.classList.add('on'); radioT = 3; AUDIO.sfx('radio'); break;
+        case 'radio': el.radio.textContent = e.text; el.radio.classList.add('on'); radioT = 3; if (VOICE.ok && VOICE.on) VOICE.speak(e.text, 'radio'); else AUDIO.sfx('radio'); break;
         case 'cmd': if (e.step === 'speak') SAY = { text: e.text, t0: tNow, dur: e.dur || 2.4 }; break;
         case 'more': reyesSay(CONFIG.ONE_MORE, 1.8, 'praise'); AUDIO.sfx('more'); break;
         case 'react': { const pr = CONFIG.CMDS[e.i].praise; PR = { t0: tNow, i: e.i }; reyesSay(pr.say, 1.6, 'praise'); FX.praise(); AUDIO.sfx('praise', e.i); if (e.sfx && e.sfx !== 'none' && e.sfx !== 'door' && e.sfx !== 'cuffs') AUDIO.sfx(e.sfx); break; }
