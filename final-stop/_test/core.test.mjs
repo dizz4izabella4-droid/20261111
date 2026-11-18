@@ -86,10 +86,10 @@ log('3b. YOURTURN と DEAD');
   ok(c.state.sub === 'TITLE' && d < CONFIG.YOURTURN + CONFIG.DEAD + 0.5, '放置でも' + (CONFIG.YOURTURN + CONFIG.DEAD) + 's程度でTITLEへ: ' + d.toFixed(2));
   // ワンモア：途切れたら2sずつ延長（最大2回）。延長なら5s→7s→9s
   c = toYT(); d = 0; let kk = 0; while (c.state.sub === 'YOURTURN' && d < 20) { c.step(1 / 60, { more: kk === 270 }); kk++; d += 1 / 60; }
-  ok(c.state.sub === 'DEAD' && d > 6.5 && d < 7.5, 'ワンモア1回で約7s: ' + d.toFixed(2));
+  ok(c.state.sub === 'DEAD' && Math.abs(d - (CONFIG.YOURTURN + CONFIG.MORE_EXTRA)) < 0.5, 'ワンモア1回で制限+2s: ' + d.toFixed(2));
   c = toYT(); d = 0; let sent = 0; while (c.state.sub === 'YOURTURN' && d < 20) { const kx = Math.round(d * 60), want = (kx === 270 || kx === 390 || kx === 510 || kx === 520); c.step(1 / 60, { more: want }); if (want) sent++; d += 1 / 60; }
-  ok(c.state.sub === 'DEAD' && d > 8.5 && d < 9.6, 'ワンモアは最大2回（約9sで打ち切り）: ' + d.toFixed(2) + ' sent=' + sent);
-  c = toYT(); for (let k = 0; k < 400; k++) c.step(1 / 60, { more: k === 120 }); ok(c.state.ytLimit === 7 || c.state.sub === 'DEAD', 'ytLimitが状態に出る');
+  ok(c.state.sub === 'DEAD' && Math.abs(d - (CONFIG.YOURTURN + CONFIG.MORE_EXTRA * CONFIG.MORE_MAX)) < 0.6, 'ワンモアは最大2回で打ち切り: ' + d.toFixed(2) + ' sent=' + sent);
+  c = toYT(); for (let k = 0; k < 400; k++) c.step(1 / 60, { more: k === 120 }); ok(c.state.ytLimit === CONFIG.YOURTURN + CONFIG.MORE_EXTRA || c.state.sub === 'DEAD', 'ytLimitが状態に出る');
   const w = CORE.create(CONFIG, { seed: 1 }); ok(w.warp('DEAD') && w.state.sub === 'DEAD', 'warp DEAD');
 }
 

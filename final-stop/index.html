@@ -52,10 +52,27 @@ canvas{position:absolute;left:0;top:0;display:block}
 #micdiag{display:none;margin:0;max-width:330px;white-space:pre-wrap;word-break:break-all;text-align:left;font:10.5px/1.45 ui-monospace,Menlo,monospace;color:#9fe8ff;background:rgba(0,0,0,.55);padding:6px 8px;border-radius:6px;pointer-events:auto;user-select:text}
 #vmic{width:210px!important;height:44px!important;font-size:15px!important;display:none;align-items:center;justify-content:center;flex:none}
 #title{gap:10px}
+#jpsub{left:12px;right:12px;top:64px;text-align:center;font:700 15px/1.5 'Hiragino Sans','Yu Gothic','Meiryo','Noto Sans JP',sans-serif;color:#fff;text-shadow:0 1px 3px #000,0 0 8px #000;opacity:0;transition:opacity .2s}
+#jpsub.on{opacity:1}
+.land #jpsub{right:42%;top:44px;font-size:14px}
+#jpsub b{color:#8fb4ff}
+#cmdja{font:600 13px/1.4 'Hiragino Sans','Yu Gothic','Meiryo','Noto Sans JP',sans-serif;color:#cfe0ff;text-align:center}
+#cmdhint{font-family:'Hiragino Sans','Yu Gothic','Meiryo','Noto Sans JP',sans-serif!important;letter-spacing:0!important}
+#alert{inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;pointer-events:auto;z-index:6;overflow:hidden;font-family:'Hiragino Sans','Yu Gothic','Meiryo','Noto Sans JP',sans-serif}
+#alert .lr,#alert .lb{position:absolute;top:0;bottom:0;width:60%;filter:blur(30px);opacity:0}
+#alert .lr{left:-10%;background:radial-gradient(closest-side,#ff1a2a,transparent);animation:fr .5s infinite}
+#alert .lb{right:-10%;background:radial-gradient(closest-side,#1a4aff,transparent);animation:fb .5s infinite}
+@keyframes fr{0%,45%{opacity:.95}50%,100%{opacity:.08}}
+@keyframes fb{0%,45%{opacity:.08}50%,100%{opacity:.95}}
+#alert .t1{position:relative;font-size:13px;letter-spacing:.3em;color:#ffb0a8}
+#alert .t2{position:relative;font-size:28px;font-weight:800;color:#fff;text-shadow:0 0 14px #ff2a3a}
+#alert .t3{position:relative;font-size:14px;line-height:1.7;color:#e8eefc;max-width:300px;text-align:center;min-height:5em}
+#alert .t4{position:relative;font-size:13px;color:#fff;opacity:.85;animation:bl .8s infinite alternate}
 #vmicbtn{pointer-events:auto;touch-action:none;width:74px;height:74px;border-radius:50%;border:2px solid #fff;background:#c01428;display:flex;align-items:center;justify-content:center;z-index:4;box-shadow:0 0 14px rgba(255,40,60,.7);-webkit-user-select:none;user-select:none}
 #vmicbtn.down{background:#ff3a4a;transform:scale(1.12);box-shadow:0 0 28px rgba(255,80,90,1)}
-.port #vmicbtn{left:50%;margin-left:-37px;bottom:16px}
-.land #vmicbtn{right:calc(20% - 37px);bottom:16px}
+.port #vmicbtn{left:50%;margin-left:-41px;bottom:14px;width:82px;height:82px}
+#vmicbtn .lab{position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);white-space:nowrap;font:700 11px 'Hiragino Sans','Yu Gothic','Meiryo','Noto Sans JP',sans-serif;color:#fff}
+.land #vmicbtn{right:calc(20% - 37px);bottom:30px}
 #end{background:linear-gradient(rgba(5,8,20,.65),rgba(5,8,20,0) 40%,rgba(5,8,20,0) 70%,rgba(5,8,20,.6));justify-content:space-between;padding:12% 0 18%}
 .land #end{padding:6% 0 8%}
 #end h2{margin:0;font:800 34px ui-monospace,Menlo,monospace;letter-spacing:.1em;color:#6cff9a;text-shadow:0 0 14px #000}
@@ -281,15 +298,18 @@ canvas{position:absolute;left:0;top:0;display:block}
   <div id="unit" class="ui mono">UNIT 12</div>
   <div id="gauge" class="ui"><i></i><i></i><i></i></div>
   <div id="radio" class="ui"></div>
+  <div id="jpsub" class="ui"></div>
   <button id="siren" class="btn" data-iz-base-ui data-b="siren">SIREN<br><span id="sirenm">OFF</span></button>
   <button id="lights" class="btn" data-iz-base-ui data-b="lights">LIGHTS</button>
   <button id="ram" class="btn hide" data-iz-base-ui data-b="ram">RAM</button>
   <div id="cmdp" class="ui hide">
     <div id="cmdtext"></div>
+    <div id="cmdja"></div>
     <div id="cmdhint"></div>
-    <div id="cmdbtn"><button class="btn" data-iz-base-ui data-b="again">AGAIN</button><button class="btn" data-iz-base-ui data-b="next">NEXT &#9654;</button></div>
+    <div id="cmdbtn"><button class="btn" data-iz-base-ui data-b="next" style="width:170px;font-family:&#39;Hiragino Sans&#39;,&#39;Yu Gothic&#39;,&#39;Meiryo&#39;,&#39;Noto Sans JP&#39;,sans-serif">&#9654; お手本を聞く</button></div>
   </div>
-  <button id="vmicbtn" class="ui hide" aria-label="mic"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3" fill="#fff"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/></svg></button>
+  <button id="vmicbtn" class="ui hide" aria-label="mic"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3" fill="#fff"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/></svg><span class="lab">押しながら話す</span></button>
+  <div id="alert" class="ui"><div class="lr"></div><div class="lb"></div><div class="t1">EMERGENCY RADIO</div><div class="t2">緊急無線</div><div class="t3" id="alerttx">強盗事件発生。犯人は車で逃走中。</div><div class="t4" id="alertt4">タップして無線を受信</div></div>
   <div id="title" class="ui ov"><h1>FINAL STOP</h1><button class="btn" data-iz-base-ui data-b="start" style="pointer-events:auto">START</button><button id="voicebtn" class="btn" data-iz-base-ui data-b="voice" style="pointer-events:auto;position:static;width:150px;height:36px">VOICE ON</button><div id="micnote">申し訳ありませんが、マイクをオンにしないとクリアできません。</div><div id="micerr"></div><pre id="micdiag"></pre><button id="vmic" class="btn" data-iz-base-ui data-b="vmic" style="pointer-events:auto">心のマイクを使う</button></div>
   <div id="end" class="ui ov hide"><h2>ARRESTED</h2><button class="btn" data-iz-base-ui data-b="replay" style="pointer-events:auto">REPLAY</button></div>
   <div id="resume" class="ui ov hide">TAP TO RESUME</div>
@@ -309,12 +329,27 @@ const CONFIG = Object.freeze({
   RECOVER: 1.2, RECOVER_GAP: 24, MISS: 0.8, MISS_GAP: 20, FINISH: 0.6, SLOWMO: 0.4,
   WOBBLE: 0.4, SWIPE_LOCK: 0.6, LOCK: 0.4,
   RESCUE: { misses: 2, idle: 25, widen: 3, auto: 150 },
-  PULLOVER: 4.0, EVENT: 6.0, ARREST: 3.0, CMD_PREVIEW_AUTO: 20, YOURTURN: 5.0, MORE_EXTRA: 2.0, MORE_MAX: 2, DEAD: 4.0, DEAD_SKIP: 2.0,
+  PULLOVER: 4.0, EVENT: 6.0, ARREST: 3.0, CMD_PREVIEW_AUTO: 20, YOURTURN: 7.0, MORE_EXTRA: 2.0, MORE_MAX: 2, DEAD: 4.0, DEAD_SKIP: 2.0,
   SNAKE: { a1: 1.2, p1: 3.1, a2: 0.35, p2: 1.3 }, LAG: 0.6,
   RADIO: [],                                                         // 追跡中の無線は無し（無線はゲーム開始前の指令だけ）
   BRIEF: 'Dispatch to Unit 12. Suspect vehicle fleeing northbound. Pursue and stop him.',
   EVENT_RADIO: 'Dispatch, suspect vehicle stopped.',
   PARTNER: 'REYES',
+  ALERT_RADIO: '至急、至急。管内で強盗事件発生。犯人は赤いセダンで北へ逃走中。付近の車両は追跡せよ。',
+  JP: {
+    INTRO: '強盗犯の車だ！ 横に並んだら、左右にスワイプして体当たりしろ！',
+    WINDOW: '今だ！ スワイプ！',
+    HIT1: 'いいぞ！ あと2回！', HIT2: 'あと1回！ 止めるぞ！', HIT3: 'やった、止まるぞ！',
+    MISS: '惜しい！ 次の合図に合わせろ！',
+    PULLOVER: '停車させた！',
+    EVENT: 'ここからは英語で命令だ。まず俺がお手本を言う。',
+    PREVIEW: '「お手本を聞く」を押せ。',
+    SPEAK: 'よく聞け…',
+    YOURTURN: 'マイクボタンを押しながら、英語で命令しろ！',
+    REACT: 'その調子だ！',
+    ARREST: '確保！ よくやった、相棒。'
+  },
+  CMDS_JA: ['警察だ！ 手を見せろ！', 'エンジンを切れ！', '車から降りろ！', '地面に伏せろ！'],
   CMDS: [
     { text: 'Police! Show me your hands!', pose: 'handsUpInCar', dur: 1.8, sfx: 'none', praise: { word: 'GOOD!', say: 'Good job!' } },
     { text: 'Turn off the engine!', pose: 'handsUpInCar', dur: 2.0, sfx: 'engineOff', praise: { word: 'GREAT!', say: 'Nice! Keep it up!' } },
@@ -340,7 +375,7 @@ const CORE = (function () {
   }
   const PHASE_OF = { TITLE: 'TITLE', INTRO: 'CHASE', APPROACH: 'CHASE', WINDOW: 'CHASE', LUNGE: 'CHASE', HIT: 'CHASE', RECOVER: 'CHASE', MISS: 'CHASE', FINISH: 'CHASE',
     PULLOVER: 'PULLOVER', EVENT: 'EVENT', PREVIEW: 'CMD', SPEAK: 'CMD', YOURTURN: 'CMD', REACT: 'CMD', ARREST: 'ARREST', END: 'END', DEAD: 'DEAD' };
-  const MAX_DWELL = { INTRO: 6, APPROACH: 8, WINDOW: 3.5, LUNGE: 1, HIT: 1, RECOVER: 3, MISS: 2, FINISH: 2, PULLOVER: 6, EVENT: 10, SPEAK: 6, YOURTURN: 10, REACT: 6, ARREST: 5, DEAD: 8 };
+  const MAX_DWELL = { INTRO: 6, APPROACH: 8, WINDOW: 3.5, LUNGE: 1, HIT: 1, RECOVER: 3, MISS: 2, FINISH: 2, PULLOVER: 6, EVENT: 10, SPEAK: 6, YOURTURN: 14, REACT: 6, ARREST: 5, DEAD: 8 };
   const FORCE_NEXT = { INTRO: 'APPROACH', APPROACH: 'WINDOW', WINDOW: 'MISS', LUNGE: 'HIT', HIT: 'RECOVER', RECOVER: 'APPROACH', MISS: 'APPROACH', FINISH: 'PULLOVER',
     PULLOVER: 'EVENT', EVENT: 'PREVIEW', SPEAK: 'YOURTURN', YOURTURN: 'REACT', REACT: 'PREVIEW', ARREST: 'END', DEAD: 'TITLE' };
 
@@ -766,6 +801,7 @@ const CORE = (function () {
         let v = null;
         for (const nm of names) { v = vs.find(x => x.lang === 'en-US' && x.name.indexOf(nm) >= 0); if (v) break; }
         this.voice = v || vs.find(x => x.lang === 'en-US') || vs.find(x => /^en/i.test(x.lang)) || null;
+        this.ja = vs.find(x => /^ja/i.test(x.lang) && /Kyoko|Otoya|Hattori/.test(x.name)) || vs.find(x => /^ja/i.test(x.lang)) || null;
       };
       pick();
       try { speechSynthesis.addEventListener('voiceschanged', pick); } catch (e) {}
@@ -775,12 +811,12 @@ const CORE = (function () {
       if (!this.ok || !this.on) { if (done) setTimeout(done, 50); return; }
       try {
         if (!this.voice && this.pick) this.pick();
-        speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(text);
-        if (this.voice) u.voice = this.voice;
-        u.lang = (this.voice && this.voice.lang) || 'en-US'; u.rate = style === 'praise' ? 1.05 : style === 'radio' ? 1.12 : 1.0; u.pitch = style === 'praise' ? 1.15 : style === 'radio' ? 0.8 : 0.95; if (style === 'radio') u.volume = 0.85;
+        speechSynthesis.cancel(); if (!MICV.virtual) MICV.release();        // iOS：読み上げとマイクは同時に使えないので、話す前にマイクを閉じる
+        const u = new SpeechSynthesisUtterance(text), ja = style === 'ja' || style === 'radioja', vv = ja ? this.ja : this.voice;
+        if (vv) u.voice = vv;
+        u.lang = (vv && vv.lang) || (ja ? 'ja-JP' : 'en-US'); u.rate = style === 'praise' ? 1.05 : style === 'radio' || style === 'radioja' ? 1.1 : 1.0; u.pitch = style === 'praise' ? 1.15 : style === 'radio' || style === 'radioja' ? 0.8 : 0.95;
         let fin = false; const fire = () => { if (!fin) { fin = true; if (done) done(); } };
-        if (style === 'radio') { u.onstart = () => AUDIO.radioOn(); const off = () => { AUDIO.radioOff(); fire(); }; u.onend = off; u.onerror = off; setTimeout(off, 9000); AUDIO.radioOn(); }
+        if (style === 'radio' || style === 'radioja') { u.onstart = () => AUDIO.radioOn(); const off = () => { AUDIO.radioOff(); fire(); }; u.onend = off; u.onerror = off; setTimeout(off, 9000); AUDIO.radioOn(); }
         else { AUDIO.radioOff(); if (done) { u.onend = fire; u.onerror = fire; setTimeout(fire, 9000); } }
         speechSynthesis.speak(u);
         AUDIO.duck(text.length * 0.07 + 0.6);
@@ -795,7 +831,7 @@ const CORE = (function () {
   const NOMIC = Q.get('nomic') === '1';
   const MICV = {
     ready: false, busy: false, stream: null, src: null, an: null, buf: null,
-    level: 0, floor: 0.01, voiced: 0, sinceSound: 9, moreSent: false, gauge: 0, err: '', diag: [], virtual: false, press: false,
+    level: 0, floor: 0.01, voiced: 0, sinceSound: 9, moreSent: false, gauge: 0, err: '', diag: [], virtual: false, press: false, fallback: false,
     need: 0.35, grace: 0.9, gapMore: 1.1,
     acquire(quiet) {
       if (this.ready) return Promise.resolve(true);
@@ -830,22 +866,18 @@ const CORE = (function () {
         });
       }).catch(e => { try { if (this.stream) this.stream.getTracks().forEach(t => t.stop()); if (this.mc) this.mc.close(); } catch (x) {} this.stream = this.mc = null; this.busy = false; this.ready = false; this.err = nm(e) + '/' + stage; D.push('final: ' + nm(e) + '/' + stage + ' ' + String((e && e.message) || '').slice(0, 90)); return false; });
     },
-    release() { try { if (this.src) this.src.disconnect(); if (this.stream) this.stream.getTracks().forEach(t => t.stop()); if (this.mc) this.mc.close(); } catch (e) {} this.src = this.an = this.stream = this.mc = null; this.ready = false; this.reset(); },
+    release() { try { if (this.src) this.src.disconnect(); if (this.stream) this.stream.getTracks().forEach(t => t.stop()); if (this.mc) this.mc.close(); } catch (e) {} this.src = this.an = this.stream = this.mc = null; this.ready = false; this.reset(); try { if (navigator.audioSession) navigator.audioSession.type = 'auto'; } catch (e) {} },
     reset() { this.voiced = 0; this.sinceSound = 9; this.moreSent = false; this.gauge = 0; },
     live() { const t = this.stream && this.stream.getAudioTracks()[0]; return !!(this.ready && t && t.readyState === 'live'); },
     // 読み上げでマイクが切られていたら、「SAY IT!」の間だけ静かに取り直す
-    ensure(dt, S) {
-      if (this.ready && !this.live()) this.release();
-      // 命令の場面（お手本の読み上げ中を除く）はマイクを開けておく。読み上げが終わった直後に取り直す
-      const speaking = !!(window.speechSynthesis && speechSynthesis.speaking);
-      if (this.virtual || NOMIC || AUTO || S.phase !== 'CMD' || speaking || this.ready || this.busy) { if (S.phase !== 'CMD') this.retryT = 0; return; }
-      this.retryT = (this.retryT || 0) - dt; if (this.retryT > 0) return; this.retryT = 0.6; this.acquire(true);
-    },
+    ensure() { if (this.ready && !this.live()) this.release(); },
+    pseudo() { return this.virtual || this.fallback; },
     update(dt, S) {
-      if (!this.ready && !this.virtual) { this.reset(); return null; }
-      if (this.virtual) this.level = this.level * 0.5 + (this.press ? 0.08 : 0) * 0.5;       // 心のマイク：ボタンを押している間が「声」
+      const ps = this.pseudo();
+      if (!this.ready && !ps) { this.level = 0; if (S.sub !== 'YOURTURN') this.reset(); return null; }
+      if (ps) this.level = this.level * 0.5 + (this.press ? 0.08 : 0) * 0.5;       // 心のマイク：ボタンを押している間が「声」
       else { let sum = 0; const b = this.buf; this.an.getFloatTimeDomainData(b); for (let i = 0; i < b.length; i++) sum += b[i] * b[i];
-      this.level = this.level * 0.5 + Math.sqrt(sum / b.length) * 0.5; }
+      this.level = this.level * 0.5 + (this.press ? Math.sqrt(sum / b.length) : 0) * 0.5; }   // 押している間だけ聞く（プッシュ・トゥ・トーク）
       const talking = !!(window.speechSynthesis && speechSynthesis.speaking), inYT = S.sub === 'YOURTURN' && S.t > 0.3 && !talking;
       if (!inYT) { if (!talking) this.floor = Math.min(0.03, this.floor * 0.98 + this.level * 0.02); if (S.sub !== 'YOURTURN') this.reset(); return null; }
       const thr = Math.max(0.012, this.floor * 2.0);
@@ -888,17 +920,11 @@ const CORE = (function () {
   function speakIfPreview() {
     if (S.phase === 'CMD' && S.sub === 'PREVIEW' && S.lock <= 0) VOICE.speak(CONFIG.CMDS[S.cmd.i].text);   // iOS：操作の中でしか話せない
   }
-  function onTap() { if (paused) return; wake(); speakIfPreview(); if (S.sub === 'YOURTURN' && !MICV.ready && !MICV.virtual && !NOMIC && !AUTO) MICV.acquire(); pend.tap = true; }
-  // ゲーム開始前の無線（指令）。読み上げ（または文字）が終わってから追跡へ
-  let BRIEF = null;
-  function beginGame() {
-    if (BRIEF) return; BRIEF = { t0: tNow, text: CONFIG.BRIEF, done: false };
-    VOICE.speak(CONFIG.BRIEF, 'radio', () => { if (BRIEF) BRIEF.done = true; });
-    AUDIO.sfx('radio');
-  }
+  function onTap() { if (paused) return; wake(); speakIfPreview(); pend.tap = true; }
+  function beginGame() { pend.button = 'start'; }
   function startWithMic() {
     const er = $('micerr'); er.textContent = ''; $('micdiag').style.display = 'none';
-    MICV.acquire().then(ok => { if (ok) beginGame(); else {
+    MICV.acquire().then(ok => { if (ok) { MICV.release(); beginGame(); } else {
         const n = MICV.err, nm = n.split('/')[0], ios = /iPhone|iPad|iPod/.test(navigator.userAgent), safari = ios && !/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
         const why = nm === 'NotAllowedError' ? 'マイクが許可されていません。' : nm === 'NotFoundError' ? 'マイクが見つかりません。' : nm === 'InvalidStateError' ? 'マイクの準備に失敗しました（他のアプリがマイクを使用中、または再読み込みで直ることがあります）。' : nm === 'unsupported' || nm === 'SecurityError' ? 'このページではマイクを使えません。' : 'マイクを使えませんでした。';
         let h = why + '（' + n + '）';
@@ -921,16 +947,16 @@ const CORE = (function () {
       if (k === 'vmic') { MICV.virtual = true; $('micerr').textContent = ''; $('vmic').style.display = 'none'; beginGame(); return; }
       if (k === 'start' && !NOMIC && !AUTO) { startWithMic(); return; }
       if (k === 'next') { speakIfPreview(); }
-      if (k === 'again') { if (S.phase === 'CMD') VOICE.speak(CONFIG.CMDS[S.cmd.i].text); }
       if (k === 'start' && !AUTO) { beginGame(); return; }
       pend.button = k;
     });
   });
-  { const vb = $('vmicbtn'), dn = e => { e.stopPropagation(); e.preventDefault(); MICV.press = true; vb.classList.add('down'); try { vb.setPointerCapture(e.pointerId); } catch (x) {} }, up = e => { e.stopPropagation(); MICV.press = false; vb.classList.remove('down'); };
+  { const vb = $('vmicbtn'), dn = e => { e.stopPropagation(); e.preventDefault(); MICV.press = true; vb.classList.add('down'); wake();
+      if (!MICV.pseudo() && !NOMIC && !MICV.ready && !MICV.busy) MICV.acquire(true).then(ok => { if (!ok) MICV.fallback = true; });   /* 押した操作の中でマイクを開く。だめなら押している間を声とみなす */ try { vb.setPointerCapture(e.pointerId); } catch (x) {} }, up = e => { e.stopPropagation(); MICV.press = false; vb.classList.remove('down'); };
     vb.addEventListener('pointerdown', dn); vb.addEventListener('pointerup', up); vb.addEventListener('pointercancel', up); vb.addEventListener('lostpointercapture', up); vb.addEventListener('contextmenu', e => e.preventDefault()); }
   function refreshVoiceBtn() { $('voicebtn').textContent = VOICE.on ? 'VOICE ON' : 'VOICE OFF'; }
   refreshVoiceBtn();
-  $('resume').addEventListener('pointerdown', e => { e.stopPropagation(); AUDIO.init(); if (!NOMIC && !AUTO && !MICV.virtual) MICV.acquire(); paused = false; $('resume').classList.add('hide'); last = performance.now(); });
+  $('resume').addEventListener('pointerdown', e => { e.stopPropagation(); AUDIO.init(); paused = false; $('resume').classList.add('hide'); last = performance.now(); });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && !SHOT) { paused = true; VOICE.cancel(); MICV.release(); AUDIO.mute(); }
     else if (paused && !SHOT) { $('resume').classList.remove('hide'); }
@@ -939,14 +965,26 @@ const CORE = (function () {
   /* ================= UI ================= */
   const el = { title: $('title'), end: $('end'), cmdp: $('cmdp'), ram: $('ram'), radio: $('radio'), sirenm: $('sirenm'), gauge: $('gauge').children, unit: $('unit'),
     cmdtext: $('cmdtext'), cmdhint: $('cmdhint'), dbg: $('dbg'), siren: $('siren'), lights: $('lights'), gaugeBox: $('gauge') };
-  let radioT = 0, ui = {};
+  let radioT = 0, ui = {}, jpKey = '', jpT = 0;
+  // タイトルの前：赤と青の光と緊急無線
+  let ALERT = !AUTO && !SHOT, alertStep = 0;
+  if (!ALERT) $('alert').classList.add('hide');
+  $('alert').addEventListener('pointerdown', e => { e.stopPropagation(); });
+  $('alert').addEventListener('click', e => {
+    e.stopPropagation(); AUDIO.init(); wake();
+    if (alertStep === 0) {
+      alertStep = 1; const tx = CONFIG.ALERT_RADIO; $('alerttx').textContent = ''; $('alertt4').textContent = 'タップしてタイトルへ';
+      let n = 0; const ty = setInterval(() => { n += 1; $('alerttx').textContent = tx.slice(0, n); if (n >= tx.length) clearInterval(ty); }, 70);
+      VOICE.speak(tx, 'radioja'); AUDIO.sfx('radio');
+    } else { VOICE.cancel(); ALERT = false; $('alert').classList.add('hide'); }
+  });
   function setUI(k, v, fn) { if (ui[k] !== v) { ui[k] = v; fn(v); } }
   function updateUI(dt) {
     const ph = S.phase, inGame = ph !== 'TITLE' && ph !== 'END';
-    setUI('title', ph === 'TITLE' && !BRIEF, v => el.title.classList.toggle('hide', !v));
+    setUI('title', ph === 'TITLE' && !ALERT, v => el.title.classList.toggle('hide', !v));
     setUI('end', ph === 'END', v => el.end.classList.toggle('hide', !v));
     setUI('cmdp', ph === 'CMD', v => el.cmdp.classList.toggle('hide', !v));
-    setUI('vmicbtn', MICV.virtual && S.sub === 'YOURTURN', v => { $('vmicbtn').classList.toggle('hide', !v); if (!v) { MICV.press = false; $('vmicbtn').classList.remove('down'); } });
+    setUI('vmicbtn', S.sub === 'YOURTURN' && !AUTO, v => { $('vmicbtn').classList.toggle('hide', !v); if (!v) { MICV.press = false; $('vmicbtn').classList.remove('down'); } });
     setUI('cmdbtn', S.sub !== 'YOURTURN', v => { $('cmdbtn').style.visibility = v ? 'visible' : 'hidden'; });
     setUI('hud', ph !== 'TITLE' && ph !== 'DEAD', v => { el.unit.classList.toggle('hide', !v); el.gaugeBox.classList.toggle('hide', !v); });
     setUI('btns', ph !== 'TITLE' && ph !== 'END' && ph !== 'CMD' && ph !== 'DEAD', v => { el.siren.classList.toggle('hide', !v); el.lights.classList.toggle('hide', !v); });
@@ -957,9 +995,15 @@ const CORE = (function () {
     if (ph === 'CMD') {
       const t = CONFIG.CMDS[Math.min(S.cmd.i, CONFIG.CMDS.length - 1)].text;
       setUI('cmdtext', t, v => { el.cmdtext.textContent = v; });
-      const hint = S.sub === 'PREVIEW' ? 'TAP: REYES SHOWS HOW' : S.sub === 'SPEAK' ? 'LISTEN...' : S.sub === 'YOURTURN' ? 'NOW YOU!' : '';
+      setUI('cmdja', CONFIG.CMDS_JA[Math.min(S.cmd.i, 3)], v => { $('cmdja').textContent = '（' + v + '）'; });
+      const hint = S.sub === 'PREVIEW' ? '下のボタンで相棒のお手本を聞こう' : S.sub === 'SPEAK' ? '相棒のお手本を聞こう…' : '';
       setUI('cmdhint', hint, v => { el.cmdhint.textContent = v; });
     }
+    // 日本語のセリフ（相棒 REYES）：場面が変わるたびに出す
+    const jk = S.sub === 'HIT' ? 'HIT' + Math.min(3, S.hits) : (S.sub === 'INTRO' || S.sub === 'WINDOW' || S.sub === 'MISS' || S.sub === 'PULLOVER' || S.sub === 'EVENT' || S.phase === 'CMD' || S.phase === 'ARREST') ? (S.phase === 'ARREST' ? 'ARREST' : S.sub) : '';
+    if (jk !== jpKey) { jpKey = jk; const t = jk && CONFIG.JP[jk]; if (t) { $('jpsub').innerHTML = '<b>' + CONFIG.PARTNER + '</b>「' + t + '」'; $('jpsub').classList.add('on'); jpT = jk === 'YOURTURN' || jk === 'PREVIEW' ? 99 : 3.2; } }
+    if (jpT > 0) { jpT -= dt; if (jpT <= 0) $('jpsub').classList.remove('on'); }
+    if (ph === 'TITLE' || ph === 'END' || ph === 'DEAD') $('jpsub').classList.remove('on');
     if (radioT > 0) { radioT -= dt; if (radioT <= 0) el.radio.classList.remove('on'); }
     if (DEBUG) {
       el.dbg.classList.remove('hide');
@@ -979,7 +1023,7 @@ const CORE = (function () {
         case 'hit': AUDIO.sfx('hit', e); FX.hit(e); GLASS.hit(e.stage, e.side, true); break;
         case 'radio': el.radio.textContent = e.text; el.radio.classList.add('on'); radioT = 3; AUDIO.sfx('radio'); break;
         case 'cmd': if (e.step === 'speak') SAY = { text: e.text, t0: tNow, dur: e.dur || 2.4 }; break;
-        case 'more': reyesSay(CONFIG.ONE_MORE, 1.8, 'praise'); AUDIO.sfx('more'); break;
+        case 'more': SAY = { text: CONFIG.ONE_MORE, t0: tNow, dur: 1.8 }; AUDIO.sfx('more'); break;          // マイクを閉じないよう文字だけ
         case 'react': { const pr = CONFIG.CMDS[e.i].praise; PR = { t0: tNow, i: e.i }; reyesSay(pr.say, 1.6, 'praise'); FX.praise(); AUDIO.sfx('praise', e.i); if (e.sfx && e.sfx !== 'none' && e.sfx !== 'door' && e.sfx !== 'cuffs') AUDIO.sfx(e.sfx); break; }
         case 'draw': AUDIO.sfx('draw'); VOICE.cancel(); SAY = { text: '', t0: -9, dur: 0 }; PR = null; break;
         case 'shot': AUDIO.sfx('gunshot'); FX.flash = 1; FX.shake = 22; break;
@@ -1377,7 +1421,7 @@ const CORE = (function () {
   // YOURTURN：「SAY IT!」をしつこく出す（脈打つ本体＋広がる残像＋残り時間の棒＋マイクの声ゲージ）
   function drawSayIt(W, H, land) {
     const cx = land ? W * 0.3 : W / 2, cy = land ? H * 0.34 : H * 0.26, base = land ? 40 : 46, word = 'SAY IT!', mono = 'ui-monospace,Menlo,monospace';
-    const lim = S.ytLimit || CONFIG.YOURTURN, left = clamp01(1 - S.t / lim), micOff = !MICV.ready && !MICV.virtual && !NOMIC;
+    const lim = S.ytLimit || CONFIG.YOURTURN, left = clamp01(1 - S.t / lim), micOff = false;
     if (left < 0.4) { const pa = (0.4 - left) / 0.4 * (0.25 + 0.2 * Math.sin(tNow * 18)), vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.8); vg.addColorStop(0, 'rgba(255,0,0,0)'); vg.addColorStop(1, 'rgba(255,0,0,' + Math.max(0, pa).toFixed(3) + ')'); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H); }
     ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
     for (let i = 0; i < 3; i++) { const ph = (tNow * 1.8 + i / 3) % 1; ctx.globalAlpha = (1 - ph) * 0.55; ctx.strokeStyle = '#ffe14a'; ctx.lineWidth = 2; ctx.font = '800 ' + (base * (1 + ph * 0.8)).toFixed(1) + 'px ' + mono; ctx.strokeText(word, cx, cy); }
@@ -1388,8 +1432,8 @@ const CORE = (function () {
     ctx.fillStyle = flash ? '#ffffff' : '#ffe14a'; ctx.fillText(word, cx, cy);
     ctx.shadowBlur = 0; ctx.font = '700 13px ' + mono; ctx.fillStyle = micOff ? '#ff9a9a' : '#fff';
     const y1 = cy + base * 0.85;
-    ctx.fillText(micOff ? 'TAP TO TURN ON THE MIC' : MICV.virtual ? 'HOLD THE MIC BUTTON & SAY IT' : 'SAY THE COMMAND OUT LOUD', cx, y1);
-    if (micOff && MICV.err) { ctx.font = '600 10px ' + mono; ctx.fillStyle = '#ffb0a8'; ctx.fillText(MICV.err.slice(0, 44), cx, y1 + 52); }
+    ctx.fillText('HOLD THE MIC & SAY IT', cx, y1);
+    if (MICV.fallback && MICV.err) { ctx.font = '600 10px ' + mono; ctx.fillStyle = '#ffb0a8'; ctx.fillText(MICV.err.slice(0, 44), cx, y1 + 52); }
     const bw = 150; ctx.fillStyle = 'rgba(255,255,255,.2)'; ctx.fillRect(cx - bw / 2, y1 + 14, bw, 5);
     ctx.fillStyle = left > 0.3 ? '#ffe14a' : '#ff5a50'; ctx.fillRect(cx - bw / 2, y1 + 14, bw * left, 5);
     // 声ゲージ（緑）と、マイクに入っている音の大きさ
@@ -1556,14 +1600,6 @@ const CORE = (function () {
       const vg = ctx.createRadialGradient(W / 2, H * 0.5, H * 0.2, W / 2, H * 0.5, H * 0.75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.6)');
       ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
     }
-    if (BRIEF) {
-      const bt = tNow - BRIEF.t0, mono = 'ui-monospace,Menlo,monospace'; ctx.fillStyle = 'rgba(0,0,0,.72)'; ctx.fillRect(0, 0, W, H);
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = Math.floor(bt * 2.5) % 2 ? '#ff5a50' : '#ffb0a8'; ctx.font = '800 15px ' + mono; ctx.fillText('● DISPATCH RADIO', W / 2, H * 0.34);
-      ctx.font = '700 16px ' + mono; ctx.fillStyle = '#cfe0ff'; const full = BRIEF.text, n = Math.min(full.length, Math.floor(bt * 26)), lines = wrapText(full.slice(0, n), Math.min(W - 40, 320));
-      lines.forEach((l, i) => ctx.fillText(l, W / 2, H * 0.42 + i * 24));
-      for (let i = 0; i < 9; i++) { const hh = 3 + 14 * hash(i * 13 + ((tNow * 16) | 0)); ctx.fillStyle = 'rgba(108,255,154,.7)'; ctx.fillRect(W / 2 - 54 + i * 12, H * 0.62 - hh / 2, 7, hh); }
-      ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'start';
-    }
     if (S.phase === 'DEAD') drawDead(W, H, land);
     if (FX.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,' + Math.min(1, FX.flash).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H); }
     if (S.fade > 0) { ctx.fillStyle = 'rgba(0,0,0,' + S.fade + ')'; ctx.fillRect(0, 0, W, H); }
@@ -1578,11 +1614,10 @@ const CORE = (function () {
   function frame(now) {
     const dt = Math.min((now - last) / 1000, 0.1); last = now;
     if (!paused) {
-      if (!AUTO) { MICV.ensure(dt, S); const r = MICV.update(dt, S); if (r === 'voice') pend.voice = true; else if (r === 'more') pend.more = true; if (NOMIC && S.sub === 'YOURTURN' && S.t > 1.0) pend.voice = true; }
+      if (!AUTO) { MICV.ensure(); const r = MICV.update(dt, S); if (r === 'voice') pend.voice = true; else if (r === 'more') pend.more = true; if (NOMIC && S.sub === 'YOURTURN' && S.t > 1.0) pend.voice = true; }
       const evs = core.step(dt, AUTO ? core.bot(S, { replay: true }) : null);
       if (!AUTO) { /* 入力は下の pend で渡す */ }
       handle(evs);
-      if (BRIEF && ((BRIEF.done && tNow - BRIEF.t0 > 1.8) || tNow - BRIEF.t0 > 7)) { BRIEF = null; VOICE.cancel(); pend.button = 'start'; }
       tNow += dt; scroll += S.speed * dt * S.timeScale; AUDIO.update(S, tNow); FX.update(dt);
       if (S.sub === 'YOURTURN') { yTick += dt; if (yTick >= ((1 - S.t / S.ytLimit) < 0.4 ? 0.25 : 0.5)) { yTick = 0; AUDIO.sfx('tick'); } } else yTick = 0;
       fpsN++; fpsT += dt; if (fpsT >= 0.5) { fps = fpsN / fpsT; fpsN = 0; fpsT = 0; }
