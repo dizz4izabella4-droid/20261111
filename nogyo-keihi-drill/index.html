@@ -1,0 +1,1016 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>農業所得 経費判定ドリル</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#eef1f4;color:#1f2937;font-size:15px;line-height:1.7;
+ font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic UI",Meiryo,sans-serif}
+header{background:#111827;color:#fff;padding:12px 18px}
+header h1{margin:0;font-size:17px}
+header p{margin:2px 0 0;font-size:11.5px;color:#9ca3af}
+
+/* 注記 */
+.warn{background:#fef2f2;border-bottom:4px solid #b91c1c;padding:15px 18px}
+.warn .in{max-width:1180px;margin:0 auto}
+.warn .ttl{font-size:16px;font-weight:700;color:#991b1b;margin-bottom:6px}
+.warn .ttl .tag{background:#b91c1c;color:#fff;border-radius:4px;padding:2px 10px;
+ font-size:13px;margin-right:8px}
+.warn ul{margin:0;padding-left:21px;font-size:13.5px;color:#7f1d1d;line-height:1.85}
+.warn summary{cursor:pointer;font-size:12.5px;color:#991b1b;font-weight:700}
+.warn details[open] summary{margin-bottom:6px}
+.warn b{background:#fee2e2;padding:1px 4px;border-radius:3px}
+
+.wrap{max-width:1180px;margin:0 auto;padding:16px}
+.card{background:#fff;border:1px solid #d1d5db;border-radius:10px;padding:15px;margin-bottom:14px}
+.card h2{margin:0 0 11px;font-size:14.5px;border-left:4px solid #1d4ed8;padding-left:9px}
+
+/* 難易度 */
+.lvs{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-bottom:14px}
+@media(max-width:820px){.lvs{grid-template-columns:1fr}}
+.lv{border:2px solid #d1d5db;border-radius:10px;padding:13px;cursor:pointer}
+.lv:hover{border-color:#1d4ed8;background:#f8faff}
+.lv.on{border-color:#1d4ed8;background:#eff6ff;box-shadow:0 0 0 3px #dbeafe}
+.lv .n{font-size:15px;font-weight:700;margin-bottom:5px}
+.lv .n .b{border-radius:4px;padding:1px 9px;font-size:11px;color:#fff;margin-right:7px}
+.lv1 .b{background:#047857}.lv2 .b{background:#b45309}.lv3 .b{background:#b91c1c}
+.lv .d{font-size:12px;color:#6b7280;line-height:1.65}
+
+/* 帳簿 */
+.bookwrap{perspective:1500px;margin-bottom:14px}
+.book{background:#fdfbf4;border:1px solid #cbbfa3;border-radius:4px;
+ box-shadow:0 3px 0 #e8e2d2,0 6px 0 #ddd6c4,0 10px 20px rgba(0,0,0,.13);
+ transform-origin:left center;transition:transform .4s,opacity .4s}
+.book.flip{transform:rotateY(-75deg);opacity:.12}
+.bh{background:#e8e0cc;border-bottom:2px solid #b9ab8c;padding:9px 15px;
+ display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.bh .t{font-size:14px;font-weight:700;letter-spacing:1.5px;color:#4a3f28}
+.bh .s{font-size:10.5px;color:#7d7158;margin-top:1px}
+.bh .p{font-size:11.5px;color:#6b5d42;font-weight:700;text-align:right}
+table.bk{width:100%;border-collapse:collapse;font-size:14.5px}
+table.bk th{background:#f2ecdc;border-bottom:1px solid #c9bda0;padding:5px 10px;
+ font-size:10.5px;color:#6b5d42;font-weight:700;text-align:left}
+table.bk th.r{text-align:right}
+table.bk td{border-bottom:1px solid #c8d4e0;padding:5px 10px;vertical-align:top}
+table.bk tr:last-child td{border-bottom:none}
+.k-no{width:32px;text-align:center;color:#a39580;font-size:11px;font-family:monospace}
+.k-dt{width:58px;color:#7d7158;font-size:11px}
+.k-ka{width:94px;font-size:11.5px;color:#5c5342}
+.k-tk{font-size:12px;color:#4a4537}
+.k-am{width:115px;text-align:right;font-family:"Courier New",monospace;
+ font-size:17px;font-weight:700;color:#2b2a24}
+tr.ng{background:#fdf0f0}
+tr.ng .k-am{color:#b91c1c;text-decoration:line-through;text-decoration-thickness:2px}
+tr.pt{background:#fffbeb}
+.mk{border-radius:3px;padding:0 5px;font-size:9.5px;font-weight:700;
+ color:#fff;margin-right:4px}
+.mk.x{background:#b91c1c}.mk.p{background:#b45309}
+.rz{display:block;font-size:10.5px;background:#fee2e2;border-left:3px solid #b91c1c;
+ padding:4px 7px;margin-top:4px;color:#991b1b;line-height:1.5}
+.rz.p{background:#fef3c7;border-left-color:#b45309;color:#92400e}
+.rz .lw{font-weight:700}
+.bf{border-top:2px solid #b9ab8c;background:#f2ecdc;padding:9px 15px}
+.bf .r{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.bf .r+.r{margin-top:6px;padding-top:6px;border-top:1px dotted #b9ab8c}
+.bf .l{font-size:11.5px;color:#6b5d42;font-weight:700}
+.bf .v{min-width:150px;text-align:right;border-bottom:2px solid #8b7f63;
+ font-family:"Courier New",monospace;font-size:18px;font-weight:700;
+ color:#8b7f63;padding:1px 9px}
+.bf .v.on{color:#111827;border-bottom-color:#111827}
+
+/* めくり案内 */
+.fb{background:#111827;color:#fff;border-radius:9px;padding:13px 16px;
+ display:none;margin-bottom:14px}
+.fb.on{display:block}
+.fb .t1{font-size:14.5px;font-weight:700}
+.fb .t2{font-size:12px;color:#9ca3af;margin-top:3px;line-height:1.7}
+.fb .t2 b{color:#fbbf24}
+.fb .ls{background:#1f2937;border-radius:7px;padding:10px 13px;margin-top:10px;font-size:12px}
+.fb .ls .h{font-size:11px;color:#fbbf24;font-weight:700;margin-bottom:5px}
+.fb .ls ul{margin:0;padding-left:18px;line-height:1.75;color:#d1d5db}
+.fb .ls li b{color:#fca5a5}
+.fb .ls li .lw{color:#9ca3af;font-size:11px}
+.sp{display:inline-block;background:#374151;border:1px solid #4b5563;
+ border-bottom-width:3px;border-radius:5px;padding:1px 17px;
+ font-family:monospace;font-size:11.5px;font-weight:700}
+
+/* 進捗 */
+.st{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:13px}
+.st div{background:#fff;border:1px solid #d1d5db;border-radius:8px;padding:8px;text-align:center}
+.st b{display:block;font-size:9.5px;color:#6b7280;font-weight:700}
+.st span{font-family:monospace;font-weight:700;font-size:17px}
+@media(max-width:640px){.st{grid-template-columns:repeat(2,1fr)}}
+
+/* 入力 */
+.ent{background:#eff6ff;border:2px solid #1d4ed8;border-radius:10px;padding:14px 16px;margin-bottom:13px}
+.ent .h{font-size:13.5px;font-weight:700;color:#1e40af;margin-bottom:9px}
+.ent label{font-size:11px;color:#6b7280;font-weight:700;display:block;margin-bottom:4px}
+.ent input{padding:9px 11px;border:1px solid #d1d5db;border-radius:7px;
+ font-family:"Courier New",monospace;font-size:19px;font-weight:700;
+ text-align:right;width:190px;background:#fff}
+.ent input:focus{outline:none;border-color:#1d4ed8;box-shadow:0 0 0 3px #dbeafe}
+.ent .nt{font-size:11.5px;color:#6b7280;margin-top:8px}
+
+/* 結果 */
+.res{background:#fff;border:2px solid #1d4ed8;border-radius:10px;
+ padding:17px;margin-bottom:14px;display:none}
+.res.on{display:block}
+.res .top{display:flex;justify-content:space-between;align-items:flex-start;
+ gap:10px;flex-wrap:wrap;margin-bottom:15px}
+.res .top h3{margin:0;font-size:16.5px}
+.nx{background:#111827;color:#fff;border:none;border-radius:8px;padding:10px 20px;
+ font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
+.nx:hover{background:#1f2937}
+.sc{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:15px}
+.sc div{border:1px solid #d1d5db;border-radius:9px;padding:11px;text-align:center}
+.sc b{display:block;font-size:10px;color:#6b7280;font-weight:700;margin-bottom:2px}
+.sc span{font-family:monospace;font-weight:700;font-size:23px}
+.sc .g{background:#f0fdf4;border-color:#86efac}
+.sc .r{background:#fef2f2;border-color:#fca5a5}
+@media(max-width:640px){.sc{grid-template-columns:repeat(2,1fr)}}
+table.rt{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:12px}
+table.rt th{background:#f3f4f6;border:1px solid #d1d5db;padding:7px 8px;
+ font-size:11px;text-align:center}
+table.rt td{border:1px solid #d1d5db;padding:6px 8px;text-align:right;
+ font-family:"Courier New",monospace}
+table.rt td.l{text-align:left;font-family:inherit}
+table.rt tr.e td{background:#fef2f2}
+table.rt tr.g td{background:#f0fdf4}
+table.rt tr.ph td{background:#eef1f5;font-weight:700;text-align:left;
+ font-family:inherit;font-size:12px}
+table.rt tr.rs td{font-family:inherit;text-align:left;font-size:11.5px}
+.bg{display:inline-block;border-radius:4px;padding:1px 8px;font-size:10.5px;
+ font-weight:700;font-family:inherit}
+.bg.g{background:#d1fae5;color:#065f46}
+.bg.r{background:#fee2e2;color:#991b1b}
+.bg.y{background:#fef3c7;color:#92400e}
+.dg{padding:12px 14px;border-radius:8px;font-size:13px;margin-bottom:13px}
+.dg.g{background:#ecfdf5;border-left:5px solid #047857}
+.dg.y{background:#fffbeb;border-left:5px solid #b45309}
+.dg.r{background:#fef2f2;border-left:5px solid #b91c1c}
+.dg b{display:block;font-size:13.5px;margin-bottom:4px}
+
+/* 成績 */
+.hs{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:11px}
+.hs div{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:7px;text-align:center}
+.hs b{display:block;font-size:9.5px;color:#6b7280;font-weight:700}
+.hs span{font-family:monospace;font-weight:700;font-size:16px}
+@media(max-width:640px){.hs{grid-template-columns:repeat(2,1fr)}}
+.wk{margin:0;padding-left:20px;font-size:12.5px;line-height:1.8}
+.wk .c{color:#b91c1c;font-weight:700;font-family:monospace}
+.wk .lw{color:#6b7280;font-size:11px}
+.hist{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:6px}
+.hist td,.hist th{border-bottom:1px solid #e5e7eb;padding:3px 6px;text-align:left}
+.hist th{font-size:10.5px;color:#6b7280}
+.chk{display:flex;align-items:center;gap:6px;font-size:12px;margin-top:10px}
+.chk input{width:16px;height:16px}
+.btns button.sm{padding:5px 11px;font-size:11.5px;font-weight:400;color:#6b7280}
+/* 設定 */
+.row{display:flex;gap:11px;flex-wrap:wrap}
+.f{display:flex;flex-direction:column;gap:4px;flex:1;min-width:118px}
+.f label{font-size:10.5px;color:#6b7280;font-weight:700}
+select{padding:6px 9px;border:1px solid #d1d5db;border-radius:6px;
+ font-size:12.5px;font-family:inherit;background:#fff}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.btns button{border:1px solid #d1d5db;background:#fff;border-radius:7px;
+ padding:8px 15px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}
+.btns button:hover{background:#f3f4f6}
+.btns button.pri{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
+.btns button.pri:hover{background:#1e40af}
+.nt{font-size:11.5px;color:#6b7280;margin-top:8px}
+.tp{margin-top:10px;padding:10px 12px;background:#eff6ff;border-left:4px solid #1d4ed8;
+ border-radius:4px;font-size:12px;line-height:1.8}
+.kb{display:inline-block;background:#f8fafc;border:1px solid #d1d5db;
+ border-bottom-width:2px;border-radius:4px;padding:1px 8px;
+ font-family:monospace;font-size:11.5px;font-weight:700}
+.src{background:#f9fafb;border:1px solid #d1d5db;border-radius:8px;
+ padding:11px 13px;font-size:11.5px;color:#6b7280;line-height:1.85}
+.src b{color:#1f2937;display:block;margin-bottom:4px;font-size:12px}
+.src a{color:#1d4ed8;text-decoration:none}
+.src a:hover{text-decoration:underline}
+.start{background:#fff;border:2px dashed #d1d5db;border-radius:10px;
+ padding:32px 20px;text-align:center;margin-bottom:14px}
+.start .b1{font-size:17px;font-weight:700;margin-bottom:5px}
+.start .b2{font-size:12.5px;color:#6b7280}
+</style>
+<!--IZ-GAME-BASE:START-->
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black">
+<script>
+/* iz-game-base v1 — 全ゲーム共通の基本設計
+ *  1. iOS の「ダブルタップで拡大」「ピンチ拡大」を無効にする
+ *  2. 全画面表示の切り替え（Fullscreen API。iPhone は非対応のため「ホーム画面に追加」を案内）
+ *  3. 画面の向き（自動 / 縦 / 横）の選択（Androidは全画面時に固定、非対応端末は回転の案内を出す）
+ * 各作品の <head> へ tools/apply_game_base.py が埋め込む（作品は1ファイル完結のため、外部読み込みはしない）。
+ * 位置を変えたいときは、この前に window.IZ_BASE={pos:'tr'|'tl'|'br'|'bl'} を書く。
+ */
+(function () {
+  'use strict';
+  if (window.__izGameBase) return;
+  window.__izGameBase = 1;
+  var D = document, W = window, DE = D.documentElement;
+  var KEY = 'izGameBase.orient';
+  var cfg = W.IZ_BASE || {};
+  /* 表示文言。作品側で window.IZ_BASE={lang:'en'} を書くと英語になる（既定は日本語） */
+  var T = cfg.lang === 'en'
+    ? { set: 'Display settings', scr: 'SCREEN', fs: 'Go full screen', fsOff: 'Exit full screen', ori: 'ORIENTATION', auto: 'Auto', port: 'Portrait', land: 'Landscape', close: 'Close', nAuto: 'Follows your device orientation.', nFix: 'Locks the orientation in full screen. If it cannot be locked, please rotate your device.', rot: function (m) { return '\u21bb Please turn your device to ' + (m === 'land' ? 'landscape' : 'portrait'); } }
+    : { set: '表示設定', scr: '画面', fs: '全画面にする', fsOff: '全画面をやめる', ori: '向き', auto: '自動', port: '縦', land: '横', close: '閉じる', nAuto: '端末の向きに合わせます。', nFix: '全画面のときに向きを固定します。固定できない場合は、端末を回してください。', rot: function (m) { return '\u21bb 端末を' + (m === 'land' ? '横' : '縦') + '向きにしてください'; } };
+
+  /* ---------- 1. 拡大の無効化 ---------- */
+  function fixViewport() {
+    var m = D.querySelector('meta[name="viewport"]');
+    if (!m) {
+      m = D.createElement('meta');
+      m.name = 'viewport';
+      (D.head || DE).appendChild(m);
+      m.content = 'width=device-width,initial-scale=1,viewport-fit=cover';
+    }
+    var c = m.getAttribute('content') || '';
+    c = c.replace(/(^|,)\s*(maximum-scale|minimum-scale|user-scalable)\s*=\s*[^,]*/gi, '').replace(/^,/, '');
+    m.setAttribute('content', c + ',maximum-scale=1,user-scalable=no');
+  }
+  fixViewport();
+
+  var st = D.createElement('style');
+  st.textContent = 'html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}';
+  (D.head || DE).appendChild(st);
+
+  // iOS Safari はピンチを gesture イベントで受ける
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (t) {
+    D.addEventListener(t, function (e) { e.preventDefault(); }, { passive: false });
+  });
+  // 2本指の拡大（scale が 1 から動いたとき）だけを止める。マルチタッチ操作そのものは妨げない
+  D.addEventListener('touchmove', function (e) {
+    if (e.touches && e.touches.length > 1 && e.scale && e.scale !== 1) e.preventDefault();
+  }, { passive: false });
+  // ダブルタップ拡大の保険。ボタン・入力欄などは click を壊さないよう除外し、CSS の touch-action に任せる
+  var lastEnd = 0;
+  var SKIP = 'input,textarea,select,button,a,label,summary,video,audio,[contenteditable],[role="button"],[data-iz-base-ui]';
+  D.addEventListener('touchend', function (e) {
+    var now = Date.now();
+    var t = e.target;
+    var skip = t && t.closest && t.closest(SKIP);
+    if (!skip && now - lastEnd < 350 && e.cancelable) e.preventDefault();
+    lastEnd = now;
+  }, { passive: false });
+
+  /* ---------- 2・3. 全画面と向き ---------- */
+  var fsEl = DE;
+  var fsReq = fsEl.requestFullscreen || fsEl.webkitRequestFullscreen || fsEl.msRequestFullscreen;
+  var fsOk = !!fsReq && (D.fullscreenEnabled !== false) && (D.webkitFullscreenEnabled !== false);
+  function isFs() { return !!(D.fullscreenElement || D.webkitFullscreenElement); }
+  function standalone() {
+    return !!(navigator.standalone || (W.matchMedia && W.matchMedia('(display-mode: standalone)').matches));
+  }
+  function enterFs() {
+    try {
+      var p = fsReq.call(fsEl, { navigationUI: 'hide' });
+      if (p && p.catch) p.catch(function () {});
+      return p;
+    } catch (e) { return null; }
+  }
+  function exitFs() {
+    var f = D.exitFullscreen || D.webkitExitFullscreen || D.msExitFullscreen;
+    try { var p = f && f.call(D); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+  }
+  function lockApi() { return W.screen && screen.orientation && screen.orientation.lock; }
+  // 変更できない機能は表示しない（iPhone は両方とも不可なので、ボタン自体を出さない）
+  var orOk = !!lockApi() && (navigator.maxTouchPoints > 0);
+  var uiOk = fsOk || orOk;
+  function applyOrient(mode, wantFs) {
+    // 戻り値は使わず、結果は banner() が画面の向きで判定する
+    if (mode === 'auto') {
+      try { if (W.screen && screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (e) {}
+      return;
+    }
+    var tgt = mode === 'land' ? 'landscape' : 'portrait';
+    function lock() {
+      if (!lockApi()) return;
+      try { var p = screen.orientation.lock(tgt); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+    }
+    if (isFs() || standalone()) lock();
+    else if (wantFs && fsOk) {
+      var p = enterFs();
+      if (p && p.then) p.then(lock, function () {}); else lock();
+    }
+  }
+  var mode = 'auto';
+  try { mode = localStorage.getItem(KEY) || 'auto'; } catch (e) {}
+  if ((mode !== 'land' && mode !== 'port') || !orOk) mode = 'auto';
+
+  /* ---------- UI ---------- */
+  var ui, btn, panel, banner, bT;
+  var pos = cfg.pos || 'tr';
+  function build() {
+    if (ui || !D.body || !uiOk) return;
+    var css = D.createElement('style');
+    css.textContent =
+      '#izb{position:fixed;z-index:2147483646;font:12px/1.4 "Hiragino Sans","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;color:#fff;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}' +
+      '#izb *{box-sizing:border-box}' +
+      '#izb.tr{top:calc(6px + env(safe-area-inset-top,0px));right:calc(6px + env(safe-area-inset-right,0px))}' +
+      '#izb.tl{top:calc(6px + env(safe-area-inset-top,0px));left:calc(6px + env(safe-area-inset-left,0px))}' +
+      '#izb.br{bottom:calc(6px + env(safe-area-inset-bottom,0px));right:calc(6px + env(safe-area-inset-right,0px))}' +
+      '#izb.bl{bottom:calc(6px + env(safe-area-inset-bottom,0px));left:calc(6px + env(safe-area-inset-left,0px))}' +
+      '#izb button{font:inherit;color:inherit;border:0;margin:0;cursor:pointer;-webkit-appearance:none;appearance:none}' +
+      '#izb .iz-b{width:30px;height:30px;border-radius:8px;background:rgba(20,20,24,.45);border:1px solid rgba(255,255,255,.25);font-size:16px;line-height:28px;text-align:center;padding:0;opacity:.45;transition:opacity .2s}' +
+      '#izb .iz-b:active,#izb.open .iz-b{opacity:1}' +
+      '#izb .iz-p{display:none;position:absolute;width:210px;padding:10px;border-radius:10px;background:rgba(18,18,22,.94);border:1px solid rgba(255,255,255,.22);box-shadow:0 4px 18px rgba(0,0,0,.5)}' +
+      '#izb.open .iz-p{display:block}' +
+      '#izb.tr .iz-p,#izb.tl .iz-p{top:36px}#izb.br .iz-p,#izb.bl .iz-p{bottom:36px}' +
+      '#izb.tr .iz-p,#izb.br .iz-p{right:0}#izb.tl .iz-p,#izb.bl .iz-p{left:0}' +
+      '#izb .iz-h{font-size:11px;color:#aab;margin:0 0 5px}' +
+      '#izb .iz-r{display:flex;gap:4px;margin-bottom:9px}' +
+      '#izb .iz-r button{flex:1;padding:8px 0;border-radius:7px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);font-size:13px}' +
+      '#izb .iz-r button.on{background:#e8c13a;color:#111;border-color:#e8c13a;font-weight:700}' +
+      '#izb .iz-r button[disabled]{opacity:.4}' +
+      '#izb .iz-n{font-size:10.5px;color:#9a9aa8;margin:-3px 0 6px}' +
+      '#izb .iz-x{display:block;width:100%;padding:6px 0;border-radius:7px;background:transparent;border:1px solid rgba(255,255,255,.18);font-size:12px;color:#ccd}' +
+      '#izbn{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:2147483645;padding:7px 14px;border-radius:18px;background:rgba(18,18,22,.88);border:1px solid rgba(255,255,255,.25);color:#fff;font:13px/1.3 "Hiragino Sans","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;pointer-events:none;display:none;white-space:nowrap}';
+    (D.head || DE).appendChild(css);
+
+    ui = D.createElement('div');
+    ui.id = 'izb';
+    ui.className = pos;
+    ui.setAttribute('data-iz-base-ui', '');
+    ui.innerHTML =
+      '<button type="button" class="iz-b" tabindex="-1" aria-label="' + T.set + '">⛶</button>' +
+      '<div class="iz-p">' +
+      (fsOk ? '<div class="iz-h">' + T.scr + '</div><div class="iz-r"><button type="button" tabindex="-1" data-fs="1">' + T.fs + '</button></div>' : '') +
+      (orOk ? '<div class="iz-h">' + T.ori + '</div><div class="iz-r" id="izor"><button type="button" tabindex="-1" data-o="auto">' + T.auto + '</button><button type="button" tabindex="-1" data-o="port">' + T.port + '</button><button type="button" tabindex="-1" data-o="land">' + T.land + '</button></div><div class="iz-n" id="izon"></div>' : '') +
+      '<button type="button" class="iz-x" tabindex="-1" data-close="1">' + T.close + '</button>' +
+      '</div>';
+    D.body.appendChild(ui);
+    btn = ui.querySelector('.iz-b');
+    panel = ui.querySelector('.iz-p');
+
+    banner = D.createElement('div');
+    banner.id = 'izbn';
+    D.body.appendChild(banner);
+
+    // UI 上の操作はゲーム側へ伝えない
+    ['touchstart', 'touchend', 'pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'dblclick', 'keydown', 'keyup'].forEach(function (t) {
+      ui.addEventListener(t, function (e) { e.stopPropagation(); });
+    });
+    ui.addEventListener('click', function (e) {
+      var t = e.target.closest('button');
+      if (!t) return;
+      if (t === btn) { ui.classList.toggle('open'); refresh(); }
+      else if (t.getAttribute('data-close')) ui.classList.remove('open');
+      else if (t.getAttribute('data-fs')) { isFs() ? exitFs() : enterFs(); setTimeout(refresh, 250); }
+      else if (t.getAttribute('data-o')) setMode(t.getAttribute('data-o'), true);
+      if (t.blur) t.blur();
+    });
+    refresh();
+  }
+  function setMode(m, fromUser) {
+    mode = m;
+    try { localStorage.setItem(KEY, m); } catch (e) {}
+    applyOrient(m, fromUser);
+    refresh();
+    setTimeout(banner_, 400);
+  }
+  function refresh() {
+    if (!ui) return;
+    var fb = ui.querySelector('[data-fs]');
+    if (fb) fb.textContent = isFs() ? T.fsOff : T.fs;
+    var bs = ui.querySelectorAll('[data-o]');
+    for (var i = 0; i < bs.length; i++) bs[i].classList.toggle('on', bs[i].getAttribute('data-o') === mode);
+    var on = ui.querySelector('#izon');
+    if (on) on.textContent = mode === 'auto' ? T.nAuto : T.nFix;
+  }
+  function banner_() {
+    if (!banner) return;
+    var land = W.innerWidth > W.innerHeight;
+    var bad = (mode === 'land' && !land) || (mode === 'port' && land);
+    if (bad) {
+      banner.textContent = T.rot(mode);
+      banner.style.display = 'block';
+      clearTimeout(bT);
+      bT = setTimeout(function () { banner.style.display = 'none'; }, 6000);
+    } else banner.style.display = 'none';
+  }
+  function onChange() { refresh(); setTimeout(banner_, 300); }
+  D.addEventListener('fullscreenchange', onChange);
+  D.addEventListener('webkitfullscreenchange', onChange);
+  W.addEventListener('orientationchange', onChange);
+  W.addEventListener('resize', function () { setTimeout(banner_, 300); });
+
+  function init() {
+    build();
+    if (mode !== 'auto') { applyOrient(mode, false); setTimeout(banner_, 600); }
+  }
+  if (D.body) init(); else D.addEventListener('DOMContentLoaded', init);
+
+  W.IZBase = { fullscreen: function (on) { on === false ? exitFs() : enterFs(); }, orientation: setMode, get mode() { return mode; } };
+})();
+</script>
+<!--IZ-GAME-BASE:END-->
+</head>
+<body>
+
+<header>
+  <h1>農業所得 経費判定ドリル</h1>
+  <p>個人事業主（白色申告・農業）／ 申告相談時の帳簿確認を想定した実務練習 ／ 実機電卓を使用</p>
+</header>
+
+<div class="warn">
+  <div class="in">
+    <div class="ttl"><span class="tag">注意</span>練習用の仮データです。実務の判断根拠にはしないでください</div>
+    <details>
+      <summary>注意事項をすべて見る</summary>
+      <ul>
+        <li>出題は<b>電卓操作と経費判定の訓練</b>を目的とした架空データです。実在の納税者・取引とは関係ありません。</li>
+        <li>経費の判定は<b>個別の事実関係</b>により結論が変わります。本ツールは論点が明確なものに限定しています。</li>
+        <li>実際の申告相談では、必ず<b>当該年分の国税庁資料・法令（e-Gov法令検索）・通達・庁内マニュアル</b>を確認してください。</li>
+        <li>按分割合・減価償却の判定・専従者の取扱いは<b>個別事情により異なります</b>。表示の数値は仮定値です。</li>
+        <li>判断に迷う事案は<b>税務署または上席に確認</b>してください。本ツールの表示を納税者への回答根拠にしないでください。</li>
+      </ul>
+    </details>
+  </div>
+</div>
+
+<div class="wrap">
+
+<div class="card">
+  <h2>難易度の選択</h2>
+  <div class="lvs">
+    <div class="lv lv1 on" id="L1" onclick="setLv(1)">
+      <div class="n"><span class="b">初級</span>マーキング済</div>
+      <div class="d">算入できない項目が最初から赤く表示され、理由も出ます。何が対象外になるかを覚える段階。</div>
+    </div>
+    <div class="lv lv2" id="L2" onclick="setLv(2)">
+      <div class="n"><span class="b">中級</span>めくる前に判明</div>
+      <div class="d">入力中は手がかりなし。小計を入力すると、その丁の対象外項目と理由が表示されます。</div>
+    </div>
+    <div class="lv lv3" id="L3" onclick="setLv(3)">
+      <div class="n"><span class="b">上級</span>結果まで非表示</div>
+      <div class="d">全ページを通じて手がかりなし。最終結果で初めて対象外項目が判明します。実務に最も近い形式。</div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="f"><label>丁数</label>
+      <select id="oPg"><option>2</option><option selected>3</option><option>4</option><option>5</option></select></div>
+    <div class="f"><label>1丁の行数</label>
+      <select id="oRw"><option>6</option><option selected>8</option><option>10</option></select></div>
+    <div class="f"><label>対象外の割合</label>
+      <select id="oRt">
+        <option value="1">少なめ（1〜2件／丁）</option>
+        <option value="2" selected>標準（2〜3件／丁）</option>
+        <option value="3">多め（3〜4件／丁）</option>
+      </select></div>
+    <div class="f"><label>按分項目</label>
+      <select id="oPt"><option value="1" selected>含める</option><option value="0">含めない</option></select></div>
+  </div>
+  <div class="btns">
+    <button class="pri" onclick="start()">帳簿を開く</button>
+    <button onclick="finish(1)">中断して結果を見る</button>
+  </div>
+  <div class="tp">
+    <b>進め方</b>　お手元の実機電卓を使用します。<br>
+    ① 帳簿を見て、必要経費に算入すべき行を電卓で加算<br>
+    ② 対象外と判断した行は飛ばす（按分項目は按分後の額を加算）<br>
+    ③ 小計を入力欄に記入 → <span class="kb">Enter</span> でページをめくる<br>
+    ④ 全丁終了後、各丁の小計と総計を照合
+  </div>
+</div>
+
+<div class="card" id="hcard">
+  <h2>これまでの成績（この端末のブラウザにだけ保存）</h2>
+  <div class="hs" id="hs"></div>
+  <div id="hw"></div>
+  <label class="chk"><input type="checkbox" id="oWk"><span>間違えやすい項目を多めに出題する（除外項目の出題が対象）</span></label>
+  <div class="btns"><button class="sm" onclick="histToggle()">履歴を見る／隠す</button><button class="sm" onclick="histClear()">記録を消す</button></div>
+  <div id="hh" style="display:none"></div>
+</div>
+
+<div class="res" id="res"></div>
+
+<div class="start" id="startBox">
+  <div class="b1">難易度と条件を選んで「帳簿を開く」</div>
+  <div class="b2">お手元に実機の電卓をご用意ください</div>
+</div>
+
+<div id="run" style="display:none">
+  <div class="st">
+    <div><b>セット</b><span id="vSet">0</span></div>
+    <div><b>難易度</b><span id="vLv">—</span></div>
+    <div><b>丁</b><span id="vPg">—</span></div>
+    <div><b>経過</b><span id="vTm">0.0s</span></div>
+  </div>
+
+  <div class="fb" id="fb">
+    <div class="t1" id="fbT1"></div>
+    <div class="t2" id="fbT2"></div>
+    <div class="ls" id="fbLs" style="display:none"></div>
+  </div>
+
+  <div class="ent" id="ent">
+    <div class="h" id="entH">第 1 丁 の小計を入力</div>
+    <label>必要経費に算入すべき額の小計</label>
+    <input type="text" id="entV" inputmode="numeric" autocomplete="off"
+           placeholder="0" onkeydown="entKey(event)">
+    <div class="nt">数字のみ入力（カンマ不要）。<span class="kb">Enter</span> で確定しページをめくります。</div>
+  </div>
+
+  <div class="bookwrap">
+    <div class="book" id="book">
+      <div class="bh">
+        <div>
+          <div class="t">農 業 経 費 帳</div>
+          <div class="s">白色申告 ／ 収支内訳書（農業所得用）準拠</div>
+        </div>
+        <div class="p" id="bkPg">—</div>
+      </div>
+      <table class="bk">
+        <tr><th class="k-no">行</th><th class="k-dt">日付</th><th class="k-ka">科目</th>
+            <th class="k-tk">摘要</th><th class="k-am r">支払額</th></tr>
+        <tbody id="bkRows"></tbody>
+      </table>
+      <div class="bf">
+        <div class="r"><span class="l">支払額の総額（参考）</span><span class="v" id="bfAll">—</span></div>
+        <div class="r"><span class="l">必要経費に算入すべき小計</span><span class="v" id="bfSub">—</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>判定の根拠資料</h2>
+  <div class="src">
+    <b>出題項目の設計に参照した資料</b>
+    ・<a href="https://www.nta.go.jp/taxes/shiraberu/shinkoku/tebiki/2024/pdf/035.pdf" target="_blank">国税庁「収支内訳書（農業所得用）の書き方」</a>（科目区分・必要経費にならないものの例）<br>
+    ・<a href="https://www.nta.go.jp/law/tsutatsu/kihon/shotoku/07/01.htm" target="_blank">所得税基本通達 45-1・45-2</a>（家事関連費）<br>
+    ・<a href="https://www.nta.go.jp/law/tsutatsu/kihon/shotoku/08/12.htm" target="_blank">所得税基本通達 49-39・49-40</a>（少額減価償却資産の判定単位）<br>
+    ・<a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2210.htm" target="_blank">タックスアンサー No.2210</a>（やさしい必要経費の知識）<br>
+    ・<a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2075.htm" target="_blank">タックスアンサー No.2075</a>（青色事業専従者給与と事業専従者控除）
+    <div style="margin-top:8px;padding-top:8px;border-top:1px dotted #d1d5db">
+      上記は出題区分の設計時に参照した一般的な取扱いです。<b>適用年分・個別事情により結論が異なります。</b>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+/* =======================================================================
+   農業所得 経費判定ドリル（軽量再設計版）
+   kind: 0=算入可 / 1=算入不可 / 2=按分（家事関連費）
+   ======================================================================= */
+
+var LV=1, BK=null, P=0, SET=0, PH='idle', ANS=[], T0=0, TM=null;
+
+function ri(a,b){return Math.floor(Math.random()*(b-a+1))+a}
+function pk(a){return a[Math.floor(Math.random()*a.length)]}
+function nf(n){return Number(n).toLocaleString('ja-JP')}
+
+/* ---- 算入できる科目（収支内訳書・農業所得用の科目に準拠） ---- */
+var OK=[
+ ['種苗費',['水稲 種もみ','キャベツ苗 500本','ねぎ 種子','だいこん 種子','りんご苗木 10本'],8000,88000],
+ ['肥料費',['化成肥料 20袋','堆肥 2t','石灰 15袋','有機肥料 10袋','液肥 20L'],12000,180000],
+ ['飼料費',['配合飼料 1t','乾草 20個','牧草ロール 5個','子牛用飼料'],45000,420000],
+ ['農薬衛生費',['殺虫剤 5本','除草剤 10L','殺菌剤 3kg','畜舎消毒薬','防疫用石灰'],6000,96000],
+ ['諸材料費',['マルチフィルム 10本','出荷用段ボール 200枚','ハウス用ビニール','結束ひも 20巻','育苗トレイ 50枚'],5000,86000],
+ ['農具費',['剪定ばさみ 3丁','スコップ 2本','草刈り刃 20枚','一輪車 1台','鎌 5丁'],2000,88000],
+ ['修繕費',['トラクター 整備','農業用倉庫 屋根修理','管理機 刃交換','ハウス 骨組み補修','畜舎 給水管修理'],8000,96000],
+ ['動力光熱費',['軽油 200L（農機用）','農業用電力','ハウス暖房用重油','選果場 電気料'],9000,145000],
+ ['作業用衣料費',['作業用長靴 2足','農作業用手袋 20組','防除用カッパ','作業ズボン 3本'],2000,28000],
+ ['農業共済掛金',['水稲共済掛金','果樹共済掛金','収入保険 保険料','家畜共済掛金'],12000,185000],
+ ['荷造運賃手数料',['農協 出荷手数料','市場 販売手数料','宅配便 出荷運賃','選果料'],8000,168000],
+ ['雇人費',['臨時雇 収穫作業 3名分','臨時雇 田植え手伝い','臨時雇 選果作業'],28000,320000],
+ ['小作料・賃借料',['農地 小作料','コンバイン 借上料','ライスセンター 利用料'],18000,240000],
+ ['利子割引料',['農業近代化資金 利息','農機具購入ローン 利息'],3000,86000],
+ ['租税公課',['農業用倉庫 固定資産税','農耕用トラクター 軽自動車税','農地 固定資産税','個人事業税'],6000,128000],
+ ['土地改良費',['土地改良区 賦課金','用水路 維持管理費'],8000,96000],
+ ['諸経費',['農業研修会 参加費','農業新聞 購読料','営農指導 資料代'],2000,68000]
+];
+
+/* ---- 算入できない項目 ----
+   [科目, 摘要, 理由, 根拠, 固定額(0=自動), 出題レベル] */
+var NG=[
+ ['租税公課','所得税 予定納税（第1期分）',
+  '所得税は所得を計算した後に課される税金であり、所得を得るための費用ではないため算入できません。',
+  '所得税法45条1項',0,1],
+ ['租税公課','市町村民税・県民税 納付（第2期分）',
+  '個人に課される住民税は算入できません。事業用資産に係る固定資産税や軽自動車税とは区別します。',
+  '所得税法45条1項',0,1],
+ ['租税公課','所得税 延滞税',
+  '延滞税・加算税などの附帯税は、所得を得るために通常必要な費用ではないため算入できません。',
+  '所得税法45条1項',0,2],
+ ['租税公課','無申告加算税',
+  '加算税は申告義務の履行に関する負担であり、算入できません。',
+  '所得税法45条1項',0,2],
+ ['諸経費','交通違反 反則金（速度超過）',
+  '罰金・科料・過料は算入できません。業務中の違反であっても算入できない点に注意します。',
+  '所得税法45条1項',0,1],
+ ['諸経費','駐車違反 放置違反金',
+  '違反行為に対する制裁として支払う金銭は算入できません。業務上の有料駐車場料金とは性質が異なります。',
+  '所得税法45条1項',0,2],
+ ['諸経費','家族の食費（米・食料品）',
+  '家族の食費は家事上の費用であり、農業収入を得るための費用ではないため算入できません。',
+  '所得税法45条1項',0,1],
+ ['作業用衣料費','家族の普段着・私服 購入',
+  '私生活上の衣料費は家事費です。農作業専用の長靴・手袋・作業服であれば算入できます。',
+  '所得税法45条1項',0,1],
+ ['諸経費','家族旅行 宿泊費',
+  '私的な旅行費用は家事費であり算入できません。',
+  '所得税法45条1項',0,2],
+ ['修繕費','住宅部分 風呂場 改修工事',
+  '居住部分の修繕費は家事費です。農業用建物兼住宅の住宅部分に対応する費用は算入できません。',
+  '収支内訳書（農業所得用）の書き方',0,2],
+ ['租税公課','居住用部分 固定資産税',
+  '住宅部分に対応する固定資産税は算入できません。農業用建物・農地に係る部分のみが対象です。',
+  '収支内訳書（農業所得用）の書き方',0,3],
+ ['諸経費','国民健康保険料（世帯分）',
+  '国民健康保険料は社会保険料控除の対象であり、農業所得の必要経費ではありません。',
+  '所得控除の対象',0,1],
+ ['諸経費','国民年金保険料',
+  '国民年金保険料は社会保険料控除の対象であり、必要経費には算入しません。',
+  '所得控除の対象',0,2],
+ ['農業共済掛金','事業主の生命保険料',
+  '事業主自身の生命保険料は生命保険料控除の対象であり、必要経費ではありません。農業共済掛金とは区別します。',
+  '所得控除の対象',0,2],
+ ['農具費','動力噴霧器 購入（税込）',
+  '取得価額10万円以上の農機具は減価償却資産となり、購入年に全額を農具費として算入できません。',
+  '所得税基本通達49-39ほか',268000,2],
+ ['農具費','管理機 購入（税込）',
+  '取得価額10万円以上のため減価償却の対象です。20万円未満であれば、一括償却資産（3年均等）を選ぶ方法もあります。',
+  '所得税基本通達49-39ほか',182500,2],
+ ['修繕費','農業用倉庫 増築工事',
+  '資産の価値を高める支出は資本的支出として資産計上し、減価償却の対象となります。修繕費として全額算入できません。',
+  '所得税法施行令181条',1450000,3],
+ ['雇人費','同居の長男へ 農作業の手伝い賃金',
+  '生計を一にする親族への対価は算入できません。白色申告では事業専従者控除の制度で処理します。',
+  '所得税法56条・57条',0,2],
+ ['小作料・賃借料','同居の父へ 農地の小作料',
+  '生計を一にする親族へ支払う地代・家賃は算入できません。親族側も収入に計上しません。',
+  '所得税法56条',0,3],
+ ['利子割引料','住宅ローン 利息',
+  '農業と関係のない借入金の利息は算入できません。農業用借入金の利息であれば算入できます。',
+  '所得税法37条1項',0,3],
+ ['諸経費','家庭菜園用 種苗・肥料',
+  '自家用・家庭菜園用の支出は農業収入を得るための費用ではないため算入できません。',
+  '所得税法37条1項',0,3]
+];
+
+/* ---- 按分項目（家事関連費） ----
+   [科目, 摘要, 割合候補, 理由] */
+var PT=[
+ ['動力光熱費','自宅兼作業場 電気料',[30,40,50],
+  '農業用と家事用が混在する費用は、事業に必要な部分を合理的に区分できる場合のみ、その部分を算入します。'],
+ ['動力光熱費','ガソリン代（兼用軽トラック）',[60,70,80],
+  '私用と兼用する車両の燃料費は、走行距離等の合理的な基準で按分した事業使用分のみ算入します。'],
+ ['諸経費','固定電話・通信費',[30,40,50],
+  '家事関連費のため、業務使用割合を合理的に説明できる部分のみ算入します。'],
+ ['租税公課','兼用軽トラック 軽自動車税',[60,70,80],
+  '事業用と私用を兼ねる車両に係る税金は、事業使用割合に応じて按分します。'],
+ ['租税公課','住宅兼倉庫 固定資産税',[40,50,60],
+  '農業用部分と居住部分を床面積等で区分し、農業用部分のみ算入します。'],
+ ['修繕費','兼用軽トラック 車検・整備',[60,70,80],
+  '兼用車両の修理費は事業使用割合で按分します。按分根拠の記録が必要です。']
+];
+var PT_LAW='所得税法施行令96条・基本通達45-2';
+
+/* ---- 成績の保存（localStorage。使えない環境では記録しない） ---- */
+var HK='nkd_v1', H={sets:[],miss:{}};
+function hLoad(){try{var j=JSON.parse(localStorage.getItem(HK)||'null');if(j&&j.sets&&j.miss)H=j;}catch(e){}}
+function hSave(){try{localStorage.setItem(HK,JSON.stringify(H));}catch(e){}}
+function esc(t){return String(t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function lvName(l){return l===1?'初級':l===2?'中級':'上級'}
+function hRender(){
+  var n=H.sets.length, ok=0, i, t=0, best=null;
+  for(i=0;i<n;i++){ if(H.sets[i].allOk) ok++; t+=H.sets[i].pgOk; }
+  var pgAll=0; for(i=0;i<n;i++) pgAll+=H.sets[i].pgN;
+  for(i=0;i<n;i++) if(H.sets[i].allOk && (best===null||H.sets[i].sec<best)) best=H.sets[i].sec;
+  document.getElementById('hs').innerHTML=
+    '<div><b>完了セット</b><span>'+n+'</span></div>'+
+    '<div><b>全丁一致のセット</b><span>'+ok+'</span></div>'+
+    '<div><b>丁ごとの一致率</b><span>'+(pgAll?Math.round(t/pgAll*100)+'%':'—')+'</span></div>'+
+    '<div><b>全丁一致の最短</b><span>'+(best===null?'—':best.toFixed(1)+'s')+'</span></div>';
+  var arr=[], k; for(k in H.miss) arr.push([k,H.miss[k]]);
+  arr.sort(function(a,b){return b[1].n-a[1].n});
+  var h='';
+  if(arr.length){
+    h='<div class="nt" style="margin:0 0 4px">算入してしまった（判定を誤った）ことのある項目 <span class="lw">※差額が除外額と一致した丁から推定</span></div><ol class="wk">';
+    for(i=0;i<arr.length&&i<5;i++) h+='<li>'+esc(arr[i][0])+' <span class="c">'+arr[i][1].n+'回</span> <span class="lw">（'+esc(arr[i][1].lw)+'）</span></li>';
+    h+='</ol>';
+  }else h='<div class="nt" style="margin:0">まだ間違えた項目の記録はありません。</div>';
+  document.getElementById('hw').innerHTML=h;
+  var hh='<table class="hist"><tr><th>日時</th><th>難易度</th><th>丁</th><th>一致</th><th>時間</th></tr>';
+  for(i=n-1;i>=0&&i>=n-15;i--){var e=H.sets[i];
+    hh+='<tr><td>'+esc(e.d)+'</td><td>'+lvName(e.lv)+'</td><td>'+e.pgN+'丁×'+e.rw+'行</td><td>'+e.pgOk+'/'+e.pgN+(e.allOk?'（全一致）':'')+'</td><td>'+e.sec.toFixed(1)+'s</td></tr>';}
+  document.getElementById('hh').innerHTML=n?hh+'</table>':'<div class="nt">履歴はありません。</div>';
+}
+function histToggle(){var e=document.getElementById('hh');e.style.display=e.style.display==='none'?'':'none'}
+function histClear(){ if(!confirm('この端末の成績の記録をすべて消します。よろしいですか？')) return; H={sets:[],miss:{}}; hSave(); hRender(); }
+function hRecord(sec,rw){
+  var n=ANS.length, ok=0, i;
+  for(i=0;i<n;i++){
+    var a=ANS[i]; if(a.ok){ok++;continue;}
+    var d=Math.abs(a.got-a.exp), rr=BK.pages[i].rows, j, hit=[];
+    for(j=0;j<rr.length;j++){
+      var r=rr[j];
+      if(r.k===1 && r.am===d) hit.push(r);
+      if(r.k===2 && (r.am===d || r.am-r.inc===d)) hit.push(r);
+    }
+    if(hit.length===1){ var r1=hit[0], m=H.miss[r1.tk]||{n:0,lw:r1.lw}; m.n++; H.miss[r1.tk]=m; }
+  }
+  var dt=new Date(), pad=function(x){return String(x).padStart(2,'0')};
+  H.sets.push({d:(dt.getMonth()+1)+'/'+dt.getDate()+' '+pad(dt.getHours())+':'+pad(dt.getMinutes()),
+    lv:LV,pgN:n,pgOk:ok,rw:rw,sec:sec,allOk:(ok===n&&tAllOk())});
+  if(H.sets.length>200) H.sets.shift();
+  hSave(); hRender();
+}
+function tAllOk(){var g=0,e=0,i;for(i=0;i<ANS.length;i++){g+=ANS[i].got;e+=BK.pages[i].sub}return g===e}
+
+/* ---- 生成 ---- */
+function amtOf(lo,hi){return Math.round(ri(lo,hi)/100)*100}
+function dtOf(i){return ri(3,11)+'/'+String(Math.min(28,2+i*3+ri(0,2))).padStart(2,'0')}
+
+function mkPage(nr,lv,rt,usePt){
+  var ngN = rt===1?ri(1,2) : rt===2?ri(2,3) : ri(3,4);
+  var ptN = usePt ? (rt===3?ri(1,2):ri(0,1)) : 0;
+  var okN = Math.max(nr-ngN-ptN,2);
+  var rows=[], i, used={};
+
+  for(i=0;i<okN;i++){
+    var o=pk(OK);
+    rows.push({k:0,ka:o[0],tk:pk(o[1]),am:amtOf(o[2],o[3])});
+  }
+
+  var pool=[],j;
+  var wkOn=document.getElementById('oWk')&&document.getElementById('oWk').checked;
+  for(j=0;j<NG.length;j++) if(NG[j][5]<=lv){
+    pool.push(NG[j]);
+    if(wkOn && H.miss[NG[j][1]]){ pool.push(NG[j]); pool.push(NG[j]); }
+  }
+  if(!pool.length) pool=NG;
+  for(i=0;i<ngN;i++){
+    var g, guard=0;
+    do{ g=pk(pool); guard++; }while(used[g[1]]&&guard<40);
+    used[g[1]]=1;
+    var am = g[4]>0 ? g[4] : amtOf(6000,128000);
+    rows.push({k:1,ka:g[0],tk:g[1],am:am,rs:g[2],lw:g[3]});
+  }
+
+  for(i=0;i<ptN;i++){
+    var p=pk(PT), pct=pk(p[2]), a=Math.round(ri(40000,240000)/1000)*1000;
+    rows.push({k:2,ka:p[0],tk:p[1],am:a,pct:pct,
+      inc:Math.floor(a*pct/100),rs:p[3],lw:PT_LAW});
+  }
+
+  for(i=rows.length-1;i>0;i--){var x=ri(0,i),t=rows[i];rows[i]=rows[x];rows[x]=t}
+  var sub=0, all=0;
+  for(i=0;i<rows.length;i++){
+    rows[i].no=i+1; rows[i].dt=dtOf(i);
+    all+=rows[i].am;
+    if(rows[i].k===0) sub+=rows[i].am;
+    else if(rows[i].k===2) sub+=rows[i].inc;
+  }
+  return {rows:rows,sub:sub,all:all};
+}
+
+/* ---- UI ---- */
+function setLv(n){
+  LV=n;
+  for(var i=1;i<=3;i++){
+    var e=document.getElementById('L'+i);
+    if(e) e.className='lv lv'+i+(i===n?' on':'');
+  }
+}
+
+function start(){
+  var np=+document.getElementById('oPg').value;
+  var nr=+document.getElementById('oRw').value;
+  var rt=+document.getElementById('oRt').value;
+  var up=document.getElementById('oPt').value==='1';
+
+  BK={pages:[],rw:nr};
+  for(var i=0;i<np;i++) BK.pages.push(mkPage(nr,LV,rt,up));
+
+  P=0; ANS=[]; SET++; PH='input';
+  document.getElementById('res').className='res';
+  document.getElementById('startBox').style.display='none';
+  document.getElementById('run').style.display='';
+  document.getElementById('book').className='book';
+  document.getElementById('fb').className='fb';
+  document.getElementById('ent').style.display='';
+
+  T0=Date.now();
+  if(TM) clearInterval(TM);
+  TM=setInterval(function(){
+    document.getElementById('vTm').textContent=((Date.now()-T0)/1000).toFixed(1)+'s';
+  },200);
+
+  draw();
+  setTimeout(function(){document.getElementById('entV').focus()},80);
+}
+
+function draw(){
+  var pg=BK.pages[P];
+  var rev = (LV===1) || (LV===2 && PH==='reveal');
+  var lvn = LV===1?'初級':LV===2?'中級':'上級';
+
+  document.getElementById('bkPg').innerHTML =
+    '第 '+(P+1)+' 丁 ／ 全 '+BK.pages.length+' 丁<br>'+
+    '<span style="font-size:10.5px;font-weight:400">'+lvn+'</span>';
+  document.getElementById('vSet').textContent=SET;
+  document.getElementById('vLv').textContent=lvn;
+  document.getElementById('vPg').textContent=(P+1)+' / '+BK.pages.length;
+  document.getElementById('entH').textContent='第 '+(P+1)+' 丁 の小計を入力';
+
+  var h='', i, r;
+  for(i=0;i<pg.rows.length;i++){
+    r=pg.rows[i];
+    var cls='', mk='', rz='';
+    if(rev && r.k===1){
+      cls='ng'; mk='<span class="mk x">除外</span>';
+      rz='<span class="rz"><span class="lw">'+r.lw+'</span>　'+r.rs+'</span>';
+    }else if(rev && r.k===2){
+      cls='pt'; mk='<span class="mk p">按分</span>';
+      rz='<span class="rz p"><span class="lw">'+r.lw+'</span>　'+r.rs+
+         '<br>事業使用割合 <b>'+r.pct+'%</b> → 算入額 <b>'+nf(r.inc)+' 円</b></span>';
+    }
+    h+='<tr class="'+cls+'"><td class="k-no">'+r.no+'</td>'+
+       '<td class="k-dt">'+r.dt+'</td>'+
+       '<td class="k-ka">'+mk+r.ka+'</td>'+
+       '<td class="k-tk">'+r.tk+rz+'</td>'+
+       '<td class="k-am">'+nf(r.am)+'</td></tr>';
+  }
+  document.getElementById('bkRows').innerHTML=h;
+  document.getElementById('bfAll').textContent=nf(pg.all);
+  var bs=document.getElementById('bfSub');
+  if(rev){ bs.textContent=nf(pg.sub); bs.className='v on'; }
+  else { bs.textContent='—'; bs.className='v'; }
+}
+
+function entKey(e){
+  if(e.key!=='Enter') return;
+  e.preventDefault();
+  if(PH==='input') submit();
+  else if(PH==='reveal') next();
+}
+
+function submit(){
+  var el=document.getElementById('entV');
+  var v=parseInt(String(el.value).replace(/[^0-9]/g,''),10);
+  if(isNaN(v)){ el.focus(); return; }
+  var pg=BK.pages[P];
+  ANS.push({pg:P+1,got:v,exp:pg.sub,ok:v===pg.sub});
+  el.value='';
+  if(LV===2){ PH='reveal'; draw(); reveal(); return; }
+  next();
+}
+
+function reveal(){
+  var pg=BK.pages[P], a=ANS[ANS.length-1];
+  var li='', i, r;
+  for(i=0;i<pg.rows.length;i++){
+    r=pg.rows[i];
+    if(r.k===1) li+='<li><b>'+r.no+'行 '+r.ka+'／'+r.tk+'</b> <span class="lw">（'+r.lw+'）</span>　'+nf(r.am)+'円を除外</li>';
+    if(r.k===2) li+='<li><b>'+r.no+'行 '+r.ka+'／'+r.tk+'</b> <span class="lw">（家事関連費）</span>　'+nf(r.am)+'円 × '+r.pct+'% = '+nf(r.inc)+'円のみ算入</li>';
+  }
+  document.getElementById('fbT1').textContent =
+    a.ok ? '第'+(P+1)+'丁 小計 一致（'+nf(a.got)+' 円）' : '第'+(P+1)+'丁 小計 不一致';
+  document.getElementById('fbT2').innerHTML =
+    (a.ok ? '判定・計算ともに正しく処理できています。'
+          : '入力 <b>'+nf(a.got)+'</b> 円 ／ 正 <b>'+nf(a.exp)+'</b> 円（差 '+(a.got>a.exp?'+':'')+nf(a.got-a.exp)+' 円）')
+    + '<br><span class="sp">Enter</span> で次の丁へ';
+  var ls=document.getElementById('fbLs');
+  ls.style.display='';
+  ls.innerHTML = li
+    ? '<div class="h">この丁で必要経費に算入しない項目</div><ul>'+li+'</ul>'
+    : '<div class="h">この丁は全行が必要経費に算入できます</div>';
+  document.getElementById('fb').className='fb on';
+  document.getElementById('ent').style.display='none';
+}
+
+function next(){
+  document.getElementById('fb').className='fb';
+  document.getElementById('ent').style.display='';
+  var bk=document.getElementById('book');
+  bk.className='book flip';
+  setTimeout(function(){
+    if(P+1>=BK.pages.length){ finish(); return; }
+    P++; PH='input';
+    bk.className='book';
+    draw();
+    document.getElementById('entV').focus();
+  },400);
+}
+
+/* ---- 結果 ---- */
+function finish(abort){
+  if(!BK || PH==='result') return;
+  PH='result';
+  if(TM){ clearInterval(TM); TM=null; }
+  document.getElementById('fb').className='fb';
+  document.getElementById('book').className='book';
+  document.getElementById('run').style.display='none';
+
+  var sec=(Date.now()-T0)/1000, n=ANS.length, i, a;
+  var okN=0, tGot=0, tExp=0, tAll=0, spN=0;
+  for(i=0;i<n;i++){ a=ANS[i]; if(a.ok) okN++; tGot+=a.got; }
+  for(i=0;i<n;i++){
+    tExp+=BK.pages[i].sub; tAll+=BK.pages[i].all;
+    var rr=BK.pages[i].rows, j;
+    for(j=0;j<rr.length;j++) if(rr[j].k!==0) spN++;
+  }
+  var tOK = tGot===tExp;
+  if(!abort && n===BK.pages.length && n>0) hRecord(sec,BK.rw);
+
+  var pgRows='';
+  for(i=0;i<n;i++){
+    a=ANS[i];
+    pgRows+='<tr class="'+(a.ok?'g':'e')+'"><td>第'+a.pg+'丁</td>'+
+      '<td>'+nf(a.got)+'</td><td>'+nf(a.exp)+'</td>'+
+      '<td>'+(a.ok?'—':(a.got>a.exp?'+':'')+nf(a.got-a.exp))+'</td>'+
+      '<td class="l">'+(a.ok?'<span class="bg g">一致</span>':'<span class="bg r">不一致</span>')+'</td></tr>';
+  }
+
+  var ex='';
+  for(i=0;i<n;i++){
+    var pg=BK.pages[i], sp=[], j;
+    for(j=0;j<pg.rows.length;j++) if(pg.rows[j].k!==0) sp.push(pg.rows[j]);
+    if(!sp.length) continue;
+    ex+='<tr class="ph"><td colspan="5">第'+(i+1)+'丁　支払額 '+nf(pg.all)+
+        ' 円 → 算入額 '+nf(pg.sub)+' 円（除外・按分 '+sp.length+' 件）</td></tr>';
+    for(j=0;j<sp.length;j++){
+      var r=sp[j];
+      if(r.k===1){
+        ex+='<tr class="e"><td>'+r.no+'</td><td class="l">'+r.ka+'</td>'+
+            '<td class="l">'+r.tk+'</td><td>'+nf(r.am)+'</td>'+
+            '<td class="l"><span class="bg r">全額除外</span></td></tr>'+
+            '<tr class="rs"><td></td><td colspan="4" style="color:#7f1d1d">'+
+            '<b>'+r.lw+'</b>　'+r.rs+'</td></tr>';
+      }else{
+        ex+='<tr style="background:#fffbeb"><td>'+r.no+'</td><td class="l">'+r.ka+'</td>'+
+            '<td class="l">'+r.tk+'</td><td>'+nf(r.am)+'</td>'+
+            '<td class="l"><span class="bg y">'+r.pct+'% 算入</span></td></tr>'+
+            '<tr class="rs"><td></td><td colspan="4" style="color:#92400e">'+
+            '<b>'+r.lw+'</b>　'+r.rs+'<br>'+nf(r.am)+' × '+r.pct+'% = <b>'+nf(r.inc)+' 円</b>のみ算入</td></tr>';
+      }
+    }
+  }
+
+  var dg='', dc='g';
+  if(okN===n && tOK){
+    dg='<b>全丁の小計・総計が一致しました</b>経費判定と電卓計算の両方が正確です。'+
+       (LV<3 ? '次は<b>'+(LV===1?'中級':'上級')+'</b>に進み、手がかりなしで判定する練習に移る段階です。'
+             : '上級をノーミスで完走しました。丁数・行数を増やす、対象外の割合を上げるなどで負荷を高めてください。');
+  }else if(okN===n){
+    dc='y';
+    dg='<b>各丁は一致しましたが総計に差があります</b>丁ごとの小計は正しいため、総計の集計時にずれが生じています。'+
+       'GT機能を使う場合、= の押下回数だけ加算される点（確認のための押し直しで二重計上）に注意してください。';
+  }else{
+    dc='r';
+    var near=false;
+    for(i=0;i<n;i++){
+      if(ANS[i].ok) continue;
+      var d=Math.abs(ANS[i].got-ANS[i].exp), rr=BK.pages[i].rows, j2;
+      for(j2=0;j2<rr.length;j2++){
+        if(rr[j2].k===1 && rr[j2].am===d) near=true;
+        if(rr[j2].k===2 && (rr[j2].am===d || rr[j2].am-rr[j2].inc===d)) near=true;
+      }
+    }
+    dg='<b>'+(n-okN)+' 丁で小計が一致しませんでした</b>'+
+       (near ? '差額が除外項目の金額と一致しています。<b>判定の誤り</b>が原因です。下表で該当項目を確認してください。'
+             : '差額が除外項目の金額と一致しないため、<b>打鍵の誤りと判定の誤りが混在</b>している可能性があります。');
+  }
+
+  var box=document.getElementById('res');
+  box.className='res on';
+  box.innerHTML=
+   '<div class="top"><h3>セット '+SET+'（'+(LV===1?'初級':LV===2?'中級':'上級')+'）の結果'+(abort?'・中断':'')+'</h3>'+
+   '<button class="nx" onclick="start()">次の帳簿へ</button></div>'+
+   '<div class="sc">'+
+   '<div class="'+(okN===n?'g':'')+'"><b>小計が一致した丁</b><span>'+okN+' / '+n+'</span></div>'+
+   '<div class="'+(tOK?'g':'r')+'"><b>総計</b><span style="font-size:18px">'+(tOK?'一致':'不一致')+'</span></div>'+
+   '<div><b>所要時間</b><span>'+sec.toFixed(1)+'s</span></div>'+
+   '<div><b>除外・按分件数</b><span>'+spN+'</span></div></div>'+
+   '<div class="dg '+dc+'">'+dg+'</div>'+
+   '<table class="rt"><tr><th colspan="5">丁別の小計</th></tr>'+
+   '<tr><th>丁</th><th>入力した額</th><th>正しい額</th><th>差額</th><th>判定</th></tr>'+pgRows+
+   '<tr style="background:#f3f4f6;font-weight:700"><td class="l">総計</td>'+
+   '<td>'+nf(tGot)+'</td><td>'+nf(tExp)+'</td>'+
+   '<td>'+(tOK?'—':(tGot>tExp?'+':'')+nf(tGot-tExp))+'</td>'+
+   '<td class="l">'+(tOK?'<span class="bg g">一致</span>':'<span class="bg r">不一致</span>')+'</td></tr></table>'+
+   '<div class="nt" style="margin-bottom:13px">帳簿の支払額総額 '+nf(tAll)+
+   ' 円 のうち、必要経費に算入すべき額は '+nf(tExp)+' 円（算入率 '+(tAll?(tExp/tAll*100).toFixed(1):'0')+'%）</div>'+
+   (ex ? '<table class="rt"><tr><th colspan="5">必要経費に算入しない項目・按分項目（全丁）</th></tr>'+
+         '<tr><th style="width:34px">行</th><th style="width:96px">科目</th><th>摘要</th>'+
+         '<th style="width:98px">支払額</th><th style="width:92px">取扱い</th></tr>'+ex+'</table>'
+       : '<div class="nt">除外・按分項目はありませんでした。</div>')+
+   '<div class="dg y" style="margin-top:13px"><b>実務での確認事項</b>'+
+   '上記は論点が明確な項目に限定した練習用の整理です。実際の申告相談では、'+
+   '<b>家事按分の根拠資料、減価償却の取得価額・取得時期、専従者の従事実態</b>などを'+
+   '納税者に確認する必要があります。判断に迷う事案は税務署または上席にご相談ください。</div>';
+
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+setLv(1);
+hLoad(); hRender();
+</script>
+</body>
+</html>

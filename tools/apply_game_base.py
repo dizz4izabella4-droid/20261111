@@ -22,6 +22,7 @@ TARGETS = [
     'glass-breaker/index.html',
     'glass-breaker-fps/index.html',
     'dentaku-drill/index.html',
+    'nogyo-keihi-drill/index.html',
     'nobiru-hige/index.html',
     'fire-hakoniwa/index.html',
     'icarus/index.html',
