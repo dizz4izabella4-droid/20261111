@@ -21,6 +21,10 @@ svg#sv{position:absolute;left:6px;top:6px;width:calc(100% - 12px);height:calc(10
 #hud .t{white-space:nowrap;font-weight:700;letter-spacing:.12em;font-size:13px;color:#333;background:rgba(255,255,255,.7);padding:4px 8px;border-radius:3px}
 #hint{position:absolute;left:0;right:0;bottom:0;z-index:4;pointer-events:none;text-align:center;padding:5px 10px;font-size:12px;line-height:1.45;color:#3a342c;background:rgba(244,241,234,.82);border-top:1px solid rgba(0,0,0,.12)}
 #hint b{display:block;font-size:12.5px;letter-spacing:.02em;color:#222}
+#hint.tut{background:rgba(255,244,200,.94);color:#2a2000}
+.ring{fill:none;stroke:#ffb400;stroke-width:3;pointer-events:none;display:none;transform-box:fill-box;transform-origin:center;animation:rp 1.2s ease-out infinite}
+.ring.on{display:block}
+@keyframes rp{0%{transform:scale(.8);opacity:.95}100%{transform:scale(2.1);opacity:0}}
 #hint.s4{background:rgba(255,236,170,.92);color:#2a2000}
 #ctrl{position:absolute;left:12px;bottom:10px;display:flex;gap:8px;z-index:5}
 #ctrl button,.btn{font:inherit;font-size:13px;letter-spacing:.1em;border:1px solid #6b5a4a;background:rgba(30,24,20,.85);color:#eadfce;padding:7px 12px;border-radius:4px;cursor:pointer}
@@ -399,6 +403,7 @@ function build(){
   function pinAt(id,x,y,label){
     const g=el('g',{class:'pin','data-pin':id},gPins);
     el('ellipse',{cx:x+3,cy:y+5,rx:7,ry:4,fill:'rgba(0,0,0,.22)'},g);
+    el('circle',{cx:x,cy:y,r:10,class:'ring'},g);
     el('circle',{cx:x,cy:y,r:8.5,fill:'url(#pgOff)',class:'head'},g);
     if(label){ el('text',{x,y:y-14,'text-anchor':'middle','font-size':15,'font-weight':800,fill:'#2b2b2b'},g).textContent=label; }
     el('circle',{cx:x,cy:y,r:24,fill:'transparent','data-pin':id},g);
@@ -449,7 +454,7 @@ function build(){
   drawLinks();
   document.getElementById('stt').innerHTML=`CASE ${String(si+1).padStart(2,'0')}<span class="nm">  ·  ${st.name}</span>`;
   renderDots();
-  const hh=HINTS[st.name]; const hn=document.getElementById('hint'); hn.className=st.type==='route'?'s4':''; hn.innerHTML='<b>'+hh[0]+'</b>'+hh[1];
+  const hh=HINTS[st.name]; const hn=document.getElementById('hint'); hn.className=st.type==='route'?'s4':''; hn.innerHTML='<b>'+hh[0]+'</b>'+hh[1]; tutorial();
 }
 
 /* ---------- strings ---------- */
@@ -472,6 +477,19 @@ function drawLinks(flash){
   const deg=degrees();
   for(const id in pins){ const h=pins[id].g.querySelector('.head'); h.setAttribute('fill',deg[id]?'url(#pg)':'url(#pgOff)');
     h.setAttribute('r',sel===id?11:8.5); h.setAttribute('stroke',sel===id?'#ffcc33':'none'); h.setAttribute('stroke-width',3); }
+  tutorial();
+}
+function tutorial(){
+  const hn=document.getElementById('hint');
+  for(const id in layout.pins){ const r=layout.pins[id].g.querySelector('.ring'); if(r) r.classList.remove('on'); }
+  if(si!==0||solved){ return; }
+  const d=degrees(), has=links.length>0; let on=[], b, t;
+  if(sel&&sel[0]==='p'){ b='② 同じ場所の地図のピンをタップ'; t='その写真に写っている場所を、下の地図から選ぶ。（もう一度タップで選択を取り消し）'; on=Object.keys(layout.pins).filter(i=>i[0]==='m'&&!d[i]); }
+  else if(sel){ b='② 同じ場所の写真のピンをタップ'; t='この場所が写っている写真を選ぶ。'; on=Object.keys(layout.pins).filter(i=>i[0]==='p'&&!d[i]); }
+  else if(!has){ b='操作の練習：糸をつなぐ'; t='① 光っている写真のピンをタップ → ② 同じ場所の地図のピンをタップ。ドラッグでつないでもOK。写真は触ると拡大できる。'; on=Object.keys(layout.pins).filter(i=>i[0]==='p'); }
+  else { b='その調子。ぜんぶの写真をつなごう'; t='間違えた糸は、糸をタップすると外せる。つなぎ直すときは、もう一度ピンから。'; on=Object.keys(layout.pins).filter(i=>i[0]==='p'&&!d[i]); }
+  on.forEach(i=>layout.pins[i].g.querySelector('.ring').classList.add('on'));
+  hn.className='tut'; hn.innerHTML='<b>'+b+'</b>'+t;
 }
 function degrees(){ const d={}; links.forEach(k=>k.split('|').forEach(x=>d[x]=(d[x]||0)+1)); return d; }
 function maxDeg(st,id){ if(st.type==='match') return 1; if(st.type==='chain') return 2; return (id==='n:S'||id==='n:T')?1:2; }
