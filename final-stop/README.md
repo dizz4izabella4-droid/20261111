@@ -14,4 +14,10 @@
 - `_test/shots.py` … `python3 final-stop/_test/shots.py`（Playwright で縦横を撮影し、逃走車の大きさを設計書の表と照合）
 - URL: `?debug=1`（状態表示）／`?auto=1`（自動プレイ）／`?seed=N`／`?shot=HIT2&t=0.5`（その場面で止めて撮影）
 
-- 音声入力：タイトルの MIC ON/OFF（初期はOFF）。SAY IT! の間だけ SpeechRecognition（en-US）で聞き、命令の重要語の6割以上が合えば NICE! で先へ進む。合わなくても待ち時間（4.5秒）の後は進む。非対応・拒否のときは MIC N/A で従来どおり。判定は CORE の MATCH（純ロジック）。`python3 final-stop/_test/mic.py` で擬似の聞き取りを差し込んで3経路を確認
+## v1.3 コマンド・被弾まわりの再編成
+- 音声は**言語判定なし**。マイクに音（音量）が入っていれば OK。途切れても約0.9秒は聞き続ける。
+- タイトルで「マイクをオンにしないとクリアできません」と表示。START でマイク許可を求め、拒否されたら開始しない。テスト用に `?nomic=1`。
+- YOURTURN は5秒。声が出なければ犯人に撃たれて「YOU'RE DEAD..」→タイトルへ。
+- 声が途中で切れたら同僚 REYES が「One more, please!」（+2秒、最大2回）。
+- 喋っている間、REYES は拳銃を構えて頷き「Good!」。言い終えると GOOD/GREAT/EXCELLENT/PERFECT を派手に表示し、REYES が褒める。お手本も REYES。
+- 逃走車は被弾ごとにガラスが割れて飛び散る（GLASS BREAKER 方式）：1=接触側テール＋リアガラスにヒビ、2=反対側テール＋ガラス一部落下、3=残りが全壊。

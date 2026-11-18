@@ -6,7 +6,7 @@ const m = /\/\*@TESTABLE\*\/([\s\S]*?)\/\*@END_TESTABLE\*\//.exec(html);
 if (!m) throw new Error('TESTABLE 区間が見つかりません');
 const ctx = vm.createContext({ Math, Object, Date });
 vm.runInContext(m[1], ctx);
-const { CONFIG, CORE, MATCH } = vm.runInContext('({CONFIG,CORE,MATCH})', ctx);
+const { CONFIG, CORE } = vm.runInContext('({CONFIG,CORE})', ctx);
 let fail = 0, total = 0;
 const ok = (c, msg) => { total++; if (!c) { fail++; console.log('  NG:', msg); } };
 const log = s => console.log(s);
@@ -45,6 +45,7 @@ log('2. 乱数入力 3000本');
         else if (r < 0.10) inp.swipe = { dir: rnd() < 0.5 ? -1 : 1 };
         else if (r < 0.18) inp.tap = true;
         else if (r < 0.22) inp.button = ['ram', 'siren', 'lights', 'next', 'again'][Math.floor(rnd() * 5)];
+        else if (r < 0.42) inp.voice = true;                                   // 声（5s以内に必ず入る確率）
         const e = c.step(dt, inp);
         if (e.some(x => x.type === 'stuck')) { bad++; break; }
         if (c.state.sub === 'TITLE' && t > 0.5) { bad++; break; }
@@ -55,16 +56,41 @@ log('2. 乱数入力 3000本');
   log('   異常 ' + bad + ' / ENDに届かない ' + notEnd); ok(bad === 0, '例外・stuckなし'); ok(notEnd === 0, '全てENDに届く');
 }
 
-// 3. 入力なし
+// 3. 入力なし：追跡は救済で進み、命令で声が出ないので撃たれてタイトルに戻る
 log('3. 入力なし（startだけ）');
 {
   const c = CORE.create(CONFIG, { seed: 1 }); let started = false;
-  const r = run(c, 1 / 30, 900, s => { if (!started) { started = true; return { swipe: null, tap: false, button: 'start' }; } return NONE(); }, s => s.sub === 'END');
+  const r = run(c, 1 / 30, 900, s => { if (!started) { started = true; return { swipe: null, tap: false, button: 'start' }; } return NONE(); }, s => false);
+  const subs = r.evs.filter(e => e.type === 'sub').map(e => e.sub);
   const ph = r.evs.filter(e => e.type === 'phase'); const pull = ph.find(e => e.to === 'PULLOVER'), chase = ph.find(e => e.to === 'CHASE');
-  log('   CHASE ' + (pull.at - chase.at).toFixed(1) + 's, 全体 ' + r.t.toFixed(0) + 's, ' + c.state.sub);
-  ok(c.state.sub === 'END', 'ENDに届く'); ok(r.t < 420, '420s以内');
+  const dead = subs.indexOf('DEAD'), ti = subs.indexOf('TITLE', dead);
+  log('   CHASE ' + (pull.at - chase.at).toFixed(1) + 's, DEAD→TITLE ' + (dead >= 0 && ti > dead));
+  ok(dead >= 0, '声が出ないとDEADへ'); ok(ti > dead, 'DEADの後TITLEへ戻る');
   const t150 = r.evs.find(e => e.type === 'hit'); ok(t150 && t150.at - chase.at >= 150 - 1, '最初のHITは救済(150s)以降');
   ok(!r.evs.some(e => e.type === 'stuck'), 'stuckなし');
+  ok(r.evs.some(e => e.type === 'shot') && r.evs.some(e => e.type === 'dead'), 'shotとdeadが出る');
+}
+
+// 3b. 声が入れば進み、入らなければ5秒で撃たれる。DEADはタップで早く戻れる
+log('3b. YOURTURN と DEAD');
+{
+  const toYT = () => { const c = CORE.create(CONFIG, { seed: 1 }); c.warp('PREVIEW0'); let n = 0; while (c.state.sub !== 'YOURTURN' && n++ < 3000) c.step(1 / 60, { tap: c.state.sub === 'PREVIEW' }); return c; };
+  let c = toYT(); let d = 0; while (c.state.sub === 'YOURTURN' && d < 10) { c.step(1 / 60, { tap: true, button: 'next' }); d += 1 / 60; }
+  ok(c.state.sub === 'DEAD' && Math.abs(d - CONFIG.YOURTURN) < 0.1, 'タップ・NEXTでは進まず' + CONFIG.YOURTURN + 's後にDEAD: ' + d.toFixed(2) + ' ' + c.state.sub);
+  c = toYT(); for (let k = 0; k < 30; k++) c.step(1 / 60, NONE()); c.step(1 / 60, { voice: true }); ok(c.state.sub === 'REACT', '声が入ればREACTへ: ' + c.state.sub);
+  c = toYT(); d = 0; while (c.state.sub === 'YOURTURN' && d < 10) { c.step(1 / 60, NONE()); d += 1 / 60; }
+  for (let k = 0; k < 40; k++) c.step(1 / 60, { tap: true }); ok(c.state.sub === 'DEAD', 'DEAD直後（2s未満）のタップでは戻らない: ' + c.state.sub);
+  for (let k = 0; k < 100; k++) c.step(1 / 60, NONE()); c.step(1 / 60, { tap: true }); ok(c.state.sub === 'TITLE', '2s後のタップでTITLEへ: ' + c.state.sub);
+  ok(c.state.hits === 0 && c.state.phase === 'TITLE', 'TITLEでは状態がリセットされている');
+  c = toYT(); d = 0; while (c.state.sub !== 'TITLE' && d < 20) { c.step(1 / 60, NONE()); d += 1 / 60; }
+  ok(c.state.sub === 'TITLE' && d < CONFIG.YOURTURN + CONFIG.DEAD + 0.5, '放置でも' + (CONFIG.YOURTURN + CONFIG.DEAD) + 's程度でTITLEへ: ' + d.toFixed(2));
+  // ワンモア：途切れたら2sずつ延長（最大2回）。延長なら5s→7s→9s
+  c = toYT(); d = 0; let kk = 0; while (c.state.sub === 'YOURTURN' && d < 20) { c.step(1 / 60, { more: kk === 270 }); kk++; d += 1 / 60; }
+  ok(c.state.sub === 'DEAD' && d > 6.5 && d < 7.5, 'ワンモア1回で約7s: ' + d.toFixed(2));
+  c = toYT(); d = 0; let sent = 0; while (c.state.sub === 'YOURTURN' && d < 20) { const kx = Math.round(d * 60), want = (kx === 270 || kx === 390 || kx === 510 || kx === 520); c.step(1 / 60, { more: want }); if (want) sent++; d += 1 / 60; }
+  ok(c.state.sub === 'DEAD' && d > 8.5 && d < 9.6, 'ワンモアは最大2回（約9sで打ち切り）: ' + d.toFixed(2) + ' sent=' + sent);
+  c = toYT(); for (let k = 0; k < 400; k++) c.step(1 / 60, { more: k === 120 }); ok(c.state.ytLimit === 7 || c.state.sub === 'DEAD', 'ytLimitが状態に出る');
+  const w = CORE.create(CONFIG, { seed: 1 }); ok(w.warp('DEAD') && w.state.sub === 'DEAD', 'warp DEAD');
 }
 
 // 4. 窓を必ず逃す → 2回目のMISSでram、3回目で窓2.1s
@@ -122,43 +148,13 @@ log('7. dt 1/30 と 1/144');
 // 8. warp
 log('8. warp');
 {
-  for (const label of ['WINDOW', 'HIT1', 'HIT2', 'HIT3', 'MISS', 'PULLOVER', 'EVENT', 'PREVIEW0', 'REACT1', 'PREVIEW3', 'ARREST', 'END']) {
+  for (const label of ['WINDOW', 'HIT1', 'HIT2', 'HIT3', 'MISS', 'PULLOVER', 'EVENT', 'PREVIEW0', 'REACT1', 'PREVIEW3', 'ARREST', 'END', 'DEAD']) {
     const c = CORE.create(CONFIG, { seed: 1 }); const okw = c.warp(label); const s = c.state;
     const good = okw && (/^HIT(\d)/.test(label) ? s.sub === 'HIT' && s.hits === +label[3] : label === 'WINDOW' ? s.sub === 'WINDOW' : label === 'MISS' ? s.sub === 'MISS' : /^(PREVIEW|REACT)\d$/.test(label) ? s.sub === label.slice(0, -1) && s.cmd.i === +label.slice(-1) : s.sub === label);
     ok(good, 'warp(' + label + ') → ' + s.sub + ' hits=' + s.hits);
   }
 }
 
-// 9. 音声入力：一致判定と待ち時間
-log('9. 音声入力');
-{
-  const T = CONFIG.CMDS.map(c => c.text), min = CONFIG.MATCH_MIN, P = (i, h) => MATCH.pass(T[i], h, min);
-  ok(P(0, 'police show me your hands'), '命令1：全文');
-  ok(P(0, 'show me your hands'), '命令1：Policeが欠けても通る');
-  ok(!P(0, 'hands up'), '命令1：hands だけでは通らない');
-  ok(P(1, 'turn off the engine'), '命令2：全文');
-  ok(P(1, 'turn of the engine'), '命令2：offの聞き間違い（of）でも通る');
-  ok(P(2, 'step out of the vehicle'), '命令3：全文');
-  ok(P(2, 'step out of the vehicles'), '命令3：複数形');
-  ok(P(3, 'get on the ground'), '命令4：全文');
-  ok(P(3, 'get on the grounds'), '命令4：複数形');
-  ok(!P(3, 'hello world'), '無関係な文は通らない');
-  ok(!P(1, ''), '空は通らない');
-  ok(!P(1, 'step out of the vehicle'), '別の命令は通らない');
-  // YOURTURN の待ち時間：mic なし=3.0s、mic あり=4.5s。どちらも見張り(5s)より短い
-  const meas = micOn => {
-    const c = CORE.create(CONFIG, { seed: 1 }); c.warp('PREVIEW0');
-    let n = 0; while (c.state.sub !== 'YOURTURN' && n++ < 3000) c.step(1 / 60, { tap: c.state.sub === 'PREVIEW', mic: micOn });
-    let stuck = false, d = 0; while (c.state.sub === 'YOURTURN' && d < 10) { const e = c.step(1 / 60, { mic: micOn }); d += 1 / 60; if (e.some(x => x.type === 'stuck')) stuck = true; }
-    return { d, stuck };
-  };
-  const a = meas(false), b = meas(true);
-  log('   mic無し ' + a.d.toFixed(2) + 's / mic有り ' + b.d.toFixed(2) + 's');
-  ok(Math.abs(a.d - CONFIG.YOURTURN) < 0.1, 'mic無し：3.0s');
-  ok(Math.abs(b.d - CONFIG.YOURTURN_MIC) < 0.1, 'mic有り：4.5s');
-  ok(!a.stuck && !b.stuck, '見張りは発動しない');
-}
-
-// 10. 凍結（定数）
+// 9. 凍結（定数）
 ok(Object.isFrozen(CONFIG), 'CONFIGは凍結されている');
 console.log(fail === 0 ? '\n全 ' + total + ' 項目 OK' : '\n失敗 ' + fail + ' / ' + total); process.exit(fail ? 1 : 0);
