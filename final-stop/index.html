@@ -707,6 +707,7 @@ const CORE = (function () {
         case 'react': this.beep(520, 0.08, 'triangle', 0.06); break;
         case 'arrest': [440, 554, 659].forEach((f, i) => { const t0 = i * 0.11; setTimeout(() => this.beep(f, 0.6, 'triangle', 0.14), t0 * 1000); }); break;
         case 'ui': this.beep(880, 0.05, 'square', 0.06); break;
+        case 'tick': this.beep(1200, 0.04, 'square', 0.04); break;
       }
     }
   };
@@ -1150,6 +1151,26 @@ const CORE = (function () {
   }
 
   const EVPH = { EVENT: 1, CMD: 1, ARREST: 1, END: 1 };
+  // YOURTURN：「SAY IT!」をしつこく出す（脈打つ本体＋広がる残像＋残り時間の棒）
+  function drawSayIt(W, H, land) {
+    const cx = land ? W * 0.3 : W / 2, cy = land ? H * 0.36 : H * 0.30, base = land ? 40 : 46, word = 'SAY IT!', mono = 'ui-monospace,Menlo,monospace';
+    const lim = MIC.state === 'listening' ? CONFIG.YOURTURN_MIC : CONFIG.YOURTURN, left = clamp01(1 - S.t / lim);
+    ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+    for (let i = 0; i < 3; i++) {
+      const ph = (tNow * 1.8 + i / 3) % 1;
+      ctx.globalAlpha = (1 - ph) * 0.55; ctx.strokeStyle = '#ffe14a'; ctx.lineWidth = 2; ctx.font = '800 ' + (base * (1 + ph * 0.8)).toFixed(1) + 'px ' + mono; ctx.strokeText(word, cx, cy);
+    }
+    ctx.globalAlpha = 1;
+    const pulse = 1 + 0.07 * Math.sin(tNow * 16), flash = Math.floor(tNow * 6) % 2 === 0;
+    ctx.font = '800 ' + (base * pulse).toFixed(1) + 'px ' + mono; ctx.shadowColor = '#ff2a3a'; ctx.shadowBlur = 18;
+    ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.strokeText(word, cx, cy);
+    ctx.fillStyle = flash ? '#ffffff' : '#ffe14a'; ctx.fillText(word, cx, cy);
+    ctx.shadowBlur = 0; ctx.font = '700 13px ' + mono; ctx.fillStyle = '#fff';
+    ctx.fillText(MIC.heard ? 'NICE!' : MIC.state === 'listening' ? '\u25CF REC  SPEAK NOW' : 'SAY THE COMMAND OUT LOUD', cx, cy + base * 0.85);
+    const bw = 150; ctx.fillStyle = 'rgba(255,255,255,.2)'; ctx.fillRect(cx - bw / 2, cy + base * 0.85 + 14, bw, 5);
+    ctx.fillStyle = left > 0.3 ? '#ffe14a' : '#ff5a50'; ctx.fillRect(cx - bw / 2, cy + base * 0.85 + 14, bw * left, 5);
+    ctx.restore();
+  }
   function render() {
     const W = V.W, H = V.H, land = W > H, inEv = !!EVPH[S.phase];
     const camX = S.px + (land && inEv ? 1.5 : 0);
@@ -1203,6 +1224,7 @@ const CORE = (function () {
     FX.draw();
     if (S.window) drawWindowHUD(sb);
     ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+    if (S.sub === 'YOURTURN') drawSayIt(W, H, land);
     ctx.textAlign = 'center';
     if (S.sub === 'MISS') { ctx.fillStyle = '#ff6a6a'; ctx.font = '700 14px ui-monospace,Menlo,monospace'; ctx.fillText('MISS', W / 2, V.hor - 40); }
     if (DEBUG && (S.phase === 'CMD' || S.phase === 'ARREST')) { ctx.fillStyle = '#fff'; ctx.font = '700 12px ui-monospace,Menlo,monospace'; ctx.fillText('POSE: ' + S.pose.to + ' ' + S.pose.k.toFixed(2), sb.cx, sb.bot + 16); }
@@ -1221,7 +1243,7 @@ const CORE = (function () {
   }
 
   /* ================= MAIN ================= */
-  let last = performance.now(), fps = 60, fpsN = 0, fpsT = 0;
+  let yTick = 0, last = performance.now(), fps = 60, fpsN = 0, fpsT = 0;
   function frame(now) {
     const dt = Math.min((now - last) / 1000, 0.1); last = now;
     if (!paused) {
@@ -1229,6 +1251,7 @@ const CORE = (function () {
       if (!AUTO) { /* 入力は下の pend で渡す */ }
       handle(evs);
       tNow += dt; scroll += S.speed * dt * S.timeScale; AUDIO.update(S, tNow); FX.update(dt);
+      if (S.sub === 'YOURTURN') { yTick += dt; if (yTick >= 0.5) { yTick = 0; AUDIO.sfx('tick'); } } else yTick = 0;
       fpsN++; fpsT += dt; if (fpsT >= 0.5) { fps = fpsN / fpsT; fpsN = 0; fpsT = 0; }
       updateUI(dt);
     }
