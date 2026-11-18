@@ -14,7 +14,7 @@ START = '<!--IZ-GAME-BASE:START-->'
 END = '<!--IZ-GAME-BASE:END-->'
 # 本体とソース(テンプレート)の両方を列挙する。rules.html のような説明ページは対象外
 TARGETS = [
-    'index.html',
+    'toybox/index.html',
     'typing-pc/index.html',
     'typing-mobile/index.html',
     'tori-to-kemono/index.html',
