@@ -297,16 +297,14 @@ footer .keys{opacity:.8}
 const LAB=[
   {path:'../redline/play/', ja:'赤い紐（未完）', label:'REDLINE test ver.（赤い紐・未完）', name:'REDLINE', color:'pink', icon:'star',
    start:'2026-11-18', upd:'2026-11-18', ver:'0.1'},
-  {path:'../anzan-tensei/', ja:'暗算で戦う（未完）', label:'暗算転生 test ver.（暗算で戦う・未完）', name:'ANZAN TENSEI', color:'mint', icon:'calc',
-   start:'2026-11-14', upd:'2026-11-17', ver:'0.5'},
-  {path:'../yawaraka/', ja:'やわらか（PC不可）', label:'やわらか test ver.（PC不可）', name:'YAWARAKA', color:'lemon', icon:'blob',
-   start:'2026-11-14', upd:'2026-11-14', ver:'0.1'},
+  {path:'../yawaraka/', ja:'やわらか（PC不可・開発困難）', label:'やわらか test ver.（PC不可・開発困難）', name:'YAWARAKA', color:'lemon', icon:'blob',
+   start:'2026-11-14', upd:'2026-11-14', ver:'0.1', stopped:'開発困難'},
   {path:'../pc98-novel/', ja:'土台（未完）', label:'PC98ノベル test ver.（土台・未完）', name:'PC98 NOVEL', color:'mint', icon:'novel',
    start:'2026-11-14', upd:'2026-11-14', ver:'0.1'},
   {path:'../fire-hakoniwa/', ja:'燃やし尽くす（未完）', label:'伸びるヒゲ2 test ver.（燃やし尽くす・未完）', name:'NOBIRU HIGE2', color:'pink', icon:'flame',
    start:'2026-11-13', upd:'2026-11-14', ver:'0.2'},
-  {path:'../where-which/', ja:'ことばのいみ（開発休止）', label:'ウェア・ウィッチ test ver.（ことばのいみ・開発休止）', name:'WHERE WHICH', color:'mint', icon:'star',
-   start:'2026-11-13', upd:'2026-11-13', ver:'0.2', stopped:true},
+  {path:'../where-which/', ja:'ことばのいみ（開発凍結）', label:'ウェア・ウィッチ test ver.（ことばのいみ・開発凍結）', name:'WHERE WHICH', color:'mint', icon:'star',
+   start:'2026-11-13', upd:'2026-11-13', ver:'0.2', stopped:'開発凍結'},
   {path:'../icarus/', ja:'雰囲気だけ（未完）', label:'イカロス〜蝋で固めた鳥の羽〜 test ver.（雰囲気だけ・未完）', name:'ICARUS', color:'lav', icon:'wing',
    start:'2026-11-12', upd:'2026-11-16', ver:'1.5'},
 ];
@@ -336,7 +334,7 @@ const items=LAB.map((a,i)=>{
   el.addEventListener('mouseenter',()=>{ sel=i; mark(); });
   el.addEventListener('click',e=>{ e.preventDefault(); launch(i); });
   li.appendChild(el);
-  const f=d=>d.replace(/-/g,'.'), t=[]; if(a.start) t.push('開始 '+f(a.start)); if(a.upd) t.push('更新 '+f(a.upd)); if(a.ver) t.push('Ver.'+a.ver); if(a.stopped) t.push('開発中止');
+  const f=d=>d.replace(/-/g,'.'), t=[]; if(a.start) t.push('開始 '+f(a.start)); if(a.upd) t.push('更新 '+f(a.upd)); if(a.ver) t.push('Ver.'+a.ver); if(a.stopped) t.push(typeof a.stopped==='string'?a.stopped:'開発中止');
   if(t.length){ const dt=document.createElement('div'); dt.className='dt'; dt.textContent=t.join(' ／ '); li.appendChild(dt); }
   $('list').appendChild(li); return el;
 });
