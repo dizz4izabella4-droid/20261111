@@ -602,7 +602,8 @@ tz.addEventListener('pointerup',tup);tz.addEventListener('pointercancel',tup);
 var sb=$('sb');sb.addEventListener('pointerdown',function(e){e.preventDefault();press()});['pointerup','pointercancel','pointerleave'].forEach(function(n){sb.addEventListener(n,release)});
 if(touch)document.body.classList.add('t');
 $('hint').textContent=touch?'LEFT: MOVE   DRAG: LOOK   HOLD SWING FOR POWER':'WASD MOVE   MOUSE LOOK   CLICK / SPACE SWING (HOLD = POWER)';
-$('go').onclick=function(){initAudio();loadBGM();startBGM();$('ti').style.display='none';playing=1;if(!touch&&cv.requestPointerLock)cv.requestPointerLock()};
+$('go').onclick=function(){initAudio();loadBGM();startBGM();$('ti').style.display='none';playing=1;if(!touch&&cv.requestPointerLock){try{var _pl=cv.requestPointerLock();if(_pl&&_pl.catch)_pl.catch(function(){})}catch(_){}}};
+if(/[?&]start=1(&|$)/.test(location.search)){$('go').onclick();var rsA=function(){try{if(AC&&AC.state==='suspended')AC.resume()}catch(_){}};['pointerdown','keydown','touchstart'].forEach(function(n){addEventListener(n,rsA,{passive:true})})}
 $('ag').onclick=function(){location.reload()};
 
 /* ---------- main loop ---------- */
