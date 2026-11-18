@@ -43,6 +43,7 @@ TARGETS = [
     'anzan-tensei/index.html',
     'redline/play/index.html',
     'redline/play/template.html',
+    'final-stop/index.html',
 ]
 PWA_META = (
     '<meta name="apple-mobile-web-app-capable" content="yes">'

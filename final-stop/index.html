@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#0b1020">
+<title>FINAL STOP</title>
+<script>window.IZ_BASE={lang:'en',pos:'tr'};</script>
+<style>
+html,body{margin:0;height:100%;background:#000;overflow:hidden;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;
+  font-family:system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;color:#fff}
+#stage{position:absolute;left:0;top:0;transform-origin:0 0;overflow:hidden;background:#0b1020}
+canvas{position:absolute;left:0;top:0;display:block}
+#hit{position:absolute;inset:0;z-index:1;touch-action:none}
+.ui{position:absolute;z-index:2;pointer-events:none}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+.btn{position:absolute;z-index:3;pointer-events:auto;touch-action:manipulation;font:700 13px ui-monospace,Menlo,Consolas,monospace;color:#fff;
+  background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.55);border-radius:8px;letter-spacing:.06em;padding:0;cursor:pointer}
+.btn:active{background:rgba(255,255,255,.25)}
+.hide{display:none!important}
+#unit{left:14px;top:12px;font:700 12px ui-monospace,Menlo,monospace;letter-spacing:.14em;opacity:.85}
+#gauge{top:14px;left:50%;transform:translateX(-50%);display:flex;gap:4px}
+#gauge i{display:block;width:34px;height:8px;border:1px solid rgba(255,255,255,.7);border-radius:2px;background:transparent}
+#gauge i.on{background:#ff2a3a;border-color:#ff2a3a}
+#radio{font:600 13px ui-monospace,Menlo,monospace;color:#6cff9a;background:rgba(0,0,0,.55);border:1px solid rgba(108,255,154,.45);border-radius:4px;padding:6px 10px;text-align:center;opacity:0;transition:opacity .2s}
+#radio.on{opacity:1}
+.port #radio{left:20px;right:20px;top:44px}
+.land #radio{left:20%;right:20%;top:36px}
+#siren{left:12px;bottom:12px;width:76px;height:56px;line-height:1.25}
+#lights{right:12px;bottom:12px;width:76px;height:56px}
+#ram{left:50%;bottom:14px;margin-left:-60px;width:120px;height:64px;background:#c01428;border-color:#fff;font-size:18px;animation:bl .5s infinite alternate}
+#ram.armed{animation:none;background:#6a0a14}
+@keyframes bl{from{opacity:1}to{opacity:.45}}
+#cmdp{background:rgba(5,8,20,.82);border-top:1px solid rgba(108,255,154,.4);display:flex;flex-direction:column;justify-content:center;gap:10px;padding:14px 18px;box-sizing:border-box;pointer-events:auto}
+.port #cmdp{left:0;right:0;bottom:0;height:33%}
+.land #cmdp{right:0;top:0;bottom:0;width:40%;border-top:0;border-left:1px solid rgba(108,255,154,.4)}
+#cmdtext{font:700 22px/1.25 ui-monospace,Menlo,monospace;color:#6cff9a;text-align:center}
+#cmdhint{font:700 12px ui-monospace,Menlo,monospace;letter-spacing:.12em;text-align:center;opacity:.85}
+#cmdbtn{display:flex;gap:12px;justify-content:center}
+#cmdbtn .btn{position:static;width:110px;height:42px}
+.ov{inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;pointer-events:none}
+#title{background:rgba(5,8,20,.55)}
+#title h1{margin:0;font:800 40px ui-monospace,Menlo,monospace;letter-spacing:.12em;text-shadow:0 0 16px #ff2a3a,0 0 28px #2a6bff}
+#title .btn,#end .btn{position:static;width:150px;height:52px;font-size:18px}
+#end{background:rgba(5,8,20,.55)}
+#end h2{margin:0;font:800 34px ui-monospace,Menlo,monospace;letter-spacing:.1em;color:#6cff9a;text-shadow:0 0 14px #000}
+#resume{background:rgba(0,0,0,.75);pointer-events:auto;font:700 20px ui-monospace,Menlo,monospace;letter-spacing:.1em;z-index:5}
+#dbg{left:6px;top:64px;font:11px/1.35 ui-monospace,Menlo,monospace;color:#9f9;background:rgba(0,0,0,.6);padding:4px 6px;white-space:pre;z-index:6}
+</style>
+<!--IZ-GAME-BASE:START-->
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black">
+<script>
+/* iz-game-base v1 — 全ゲーム共通の基本設計
+ *  1. iOS の「ダブルタップで拡大」「ピンチ拡大」を無効にする
+ *  2. 全画面表示の切り替え（Fullscreen API。iPhone は非対応のため「ホーム画面に追加」を案内）
+ *  3. 画面の向き（自動 / 縦 / 横）の選択（Androidは全画面時に固定、非対応端末は回転の案内を出す）
+ * 各作品の <head> へ tools/apply_game_base.py が埋め込む（作品は1ファイル完結のため、外部読み込みはしない）。
+ * 位置を変えたいときは、この前に window.IZ_BASE={pos:'tr'|'tl'|'br'|'bl'} を書く。
+ */
+(function () {
+  'use strict';
+  if (window.__izGameBase) return;
+  window.__izGameBase = 1;
+  var D = document, W = window, DE = D.documentElement;
+  var KEY = 'izGameBase.orient';
+  var cfg = W.IZ_BASE || {};
+  /* 表示文言。作品側で window.IZ_BASE={lang:'en'} を書くと英語になる（既定は日本語） */
+  var T = cfg.lang === 'en'
+    ? { set: 'Display settings', scr: 'SCREEN', fs: 'Go full screen', fsOff: 'Exit full screen', ori: 'ORIENTATION', auto: 'Auto', port: 'Portrait', land: 'Landscape', close: 'Close', nAuto: 'Follows your device orientation.', nFix: 'Locks the orientation in full screen. If it cannot be locked, please rotate your device.', rot: function (m) { return '\u21bb Please turn your device to ' + (m === 'land' ? 'landscape' : 'portrait'); } }
+    : { set: '表示設定', scr: '画面', fs: '全画面にする', fsOff: '全画面をやめる', ori: '向き', auto: '自動', port: '縦', land: '横', close: '閉じる', nAuto: '端末の向きに合わせます。', nFix: '全画面のときに向きを固定します。固定できない場合は、端末を回してください。', rot: function (m) { return '\u21bb 端末を' + (m === 'land' ? '横' : '縦') + '向きにしてください'; } };
+
+  /* ---------- 1. 拡大の無効化 ---------- */
+  function fixViewport() {
+    var m = D.querySelector('meta[name="viewport"]');
+    if (!m) {
+      m = D.createElement('meta');
+      m.name = 'viewport';
+      (D.head || DE).appendChild(m);
+      m.content = 'width=device-width,initial-scale=1,viewport-fit=cover';
+    }
+    var c = m.getAttribute('content') || '';
+    c = c.replace(/(^|,)\s*(maximum-scale|minimum-scale|user-scalable)\s*=\s*[^,]*/gi, '').replace(/^,/, '');
+    m.setAttribute('content', c + ',maximum-scale=1,user-scalable=no');
+  }
+  fixViewport();
+
+  var st = D.createElement('style');
+  st.textContent = 'html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}';
+  (D.head || DE).appendChild(st);
+
+  // iOS Safari はピンチを gesture イベントで受ける
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (t) {
+    D.addEventListener(t, function (e) { e.preventDefault(); }, { passive: false });
+  });
+  // 2本指の拡大（scale が 1 から動いたとき）だけを止める。マルチタッチ操作そのものは妨げない
+  D.addEventListener('touchmove', function (e) {
+    if (e.touches && e.touches.length > 1 && e.scale && e.scale !== 1) e.preventDefault();
+  }, { passive: false });
+  // ダブルタップ拡大の保険。ボタン・入力欄などは click を壊さないよう除外し、CSS の touch-action に任せる
+  var lastEnd = 0;
+  var SKIP = 'input,textarea,select,button,a,label,summary,video,audio,[contenteditable],[role="button"],[data-iz-base-ui]';
+  D.addEventListener('touchend', function (e) {
+    var now = Date.now();
+    var t = e.target;
+    var skip = t && t.closest && t.closest(SKIP);
+    if (!skip && now - lastEnd < 350 && e.cancelable) e.preventDefault();
+    lastEnd = now;
+  }, { passive: false });
+
+  /* ---------- 2・3. 全画面と向き ---------- */
+  var fsEl = DE;
+  var fsReq = fsEl.requestFullscreen || fsEl.webkitRequestFullscreen || fsEl.msRequestFullscreen;
+  var fsOk = !!fsReq && (D.fullscreenEnabled !== false) && (D.webkitFullscreenEnabled !== false);
+  function isFs() { return !!(D.fullscreenElement || D.webkitFullscreenElement); }
+  function standalone() {
+    return !!(navigator.standalone || (W.matchMedia && W.matchMedia('(display-mode: standalone)').matches));
+  }
+  function enterFs() {
+    try {
+      var p = fsReq.call(fsEl, { navigationUI: 'hide' });
+      if (p && p.catch) p.catch(function () {});
+      return p;
+    } catch (e) { return null; }
+  }
+  function exitFs() {
+    var f = D.exitFullscreen || D.webkitExitFullscreen || D.msExitFullscreen;
+    try { var p = f && f.call(D); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+  }
+  function lockApi() { return W.screen && screen.orientation && screen.orientation.lock; }
+  // 変更できない機能は表示しない（iPhone は両方とも不可なので、ボタン自体を出さない）
+  var orOk = !!lockApi() && (navigator.maxTouchPoints > 0);
+  var uiOk = fsOk || orOk;
+  function applyOrient(mode, wantFs) {
+    // 戻り値は使わず、結果は banner() が画面の向きで判定する
+    if (mode === 'auto') {
+      try { if (W.screen && screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (e) {}
+      return;
+    }
+    var tgt = mode === 'land' ? 'landscape' : 'portrait';
+    function lock() {
+      if (!lockApi()) return;
+      try { var p = screen.orientation.lock(tgt); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+    }
+    if (isFs() || standalone()) lock();
+    else if (wantFs && fsOk) {
+      var p = enterFs();
+      if (p && p.then) p.then(lock, function () {}); else lock();
+    }
+  }
+  var mode = 'auto';
+  try { mode = localStorage.getItem(KEY) || 'auto'; } catch (e) {}
+  if ((mode !== 'land' && mode !== 'port') || !orOk) mode = 'auto';
+
+  /* ---------- UI ---------- */
+  var ui, btn, panel, banner, bT;
+  var pos = cfg.pos || 'tr';
+  function build() {
+    if (ui || !D.body || !uiOk) return;
+    var css = D.createElement('style');
+    css.textContent =
+      '#izb{position:fixed;z-index:2147483646;font:12px/1.4 "Hiragino Sans","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;color:#fff;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}' +
+      '#izb *{box-sizing:border-box}' +
+      '#izb.tr{top:calc(6px + env(safe-area-inset-top,0px));right:calc(6px + env(safe-area-inset-right,0px))}' +
+      '#izb.tl{top:calc(6px + env(safe-area-inset-top,0px));left:calc(6px + env(safe-area-inset-left,0px))}' +
+      '#izb.br{bottom:calc(6px + env(safe-area-inset-bottom,0px));right:calc(6px + env(safe-area-inset-right,0px))}' +
+      '#izb.bl{bottom:calc(6px + env(safe-area-inset-bottom,0px));left:calc(6px + env(safe-area-inset-left,0px))}' +
+      '#izb button{font:inherit;color:inherit;border:0;margin:0;cursor:pointer;-webkit-appearance:none;appearance:none}' +
+      '#izb .iz-b{width:30px;height:30px;border-radius:8px;background:rgba(20,20,24,.45);border:1px solid rgba(255,255,255,.25);font-size:16px;line-height:28px;text-align:center;padding:0;opacity:.45;transition:opacity .2s}' +
+      '#izb .iz-b:active,#izb.open .iz-b{opacity:1}' +
+      '#izb .iz-p{display:none;position:absolute;width:210px;padding:10px;border-radius:10px;background:rgba(18,18,22,.94);border:1px solid rgba(255,255,255,.22);box-shadow:0 4px 18px rgba(0,0,0,.5)}' +
+      '#izb.open .iz-p{display:block}' +
+      '#izb.tr .iz-p,#izb.tl .iz-p{top:36px}#izb.br .iz-p,#izb.bl .iz-p{bottom:36px}' +
+      '#izb.tr .iz-p,#izb.br .iz-p{right:0}#izb.tl .iz-p,#izb.bl .iz-p{left:0}' +
+      '#izb .iz-h{font-size:11px;color:#aab;margin:0 0 5px}' +
+      '#izb .iz-r{display:flex;gap:4px;margin-bottom:9px}' +
+      '#izb .iz-r button{flex:1;padding:8px 0;border-radius:7px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);font-size:13px}' +
+      '#izb .iz-r button.on{background:#e8c13a;color:#111;border-color:#e8c13a;font-weight:700}' +
+      '#izb .iz-r button[disabled]{opacity:.4}' +
+      '#izb .iz-n{font-size:10.5px;color:#9a9aa8;margin:-3px 0 6px}' +
+      '#izb .iz-x{display:block;width:100%;padding:6px 0;border-radius:7px;background:transparent;border:1px solid rgba(255,255,255,.18);font-size:12px;color:#ccd}' +
+      '#izbn{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:2147483645;padding:7px 14px;border-radius:18px;background:rgba(18,18,22,.88);border:1px solid rgba(255,255,255,.25);color:#fff;font:13px/1.3 "Hiragino Sans","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;pointer-events:none;display:none;white-space:nowrap}';
+    (D.head || DE).appendChild(css);
+
+    ui = D.createElement('div');
+    ui.id = 'izb';
+    ui.className = pos;
+    ui.setAttribute('data-iz-base-ui', '');
+    ui.innerHTML =
+      '<button type="button" class="iz-b" tabindex="-1" aria-label="' + T.set + '">⛶</button>' +
+      '<div class="iz-p">' +
+      (fsOk ? '<div class="iz-h">' + T.scr + '</div><div class="iz-r"><button type="button" tabindex="-1" data-fs="1">' + T.fs + '</button></div>' : '') +
+      (orOk ? '<div class="iz-h">' + T.ori + '</div><div class="iz-r" id="izor"><button type="button" tabindex="-1" data-o="auto">' + T.auto + '</button><button type="button" tabindex="-1" data-o="port">' + T.port + '</button><button type="button" tabindex="-1" data-o="land">' + T.land + '</button></div><div class="iz-n" id="izon"></div>' : '') +
+      '<button type="button" class="iz-x" tabindex="-1" data-close="1">' + T.close + '</button>' +
+      '</div>';
+    D.body.appendChild(ui);
+    btn = ui.querySelector('.iz-b');
+    panel = ui.querySelector('.iz-p');
+
+    banner = D.createElement('div');
+    banner.id = 'izbn';
+    D.body.appendChild(banner);
+
+    // UI 上の操作はゲーム側へ伝えない
+    ['touchstart', 'touchend', 'pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'dblclick', 'keydown', 'keyup'].forEach(function (t) {
+      ui.addEventListener(t, function (e) { e.stopPropagation(); });
+    });
+    ui.addEventListener('click', function (e) {
+      var t = e.target.closest('button');
+      if (!t) return;
+      if (t === btn) { ui.classList.toggle('open'); refresh(); }
+      else if (t.getAttribute('data-close')) ui.classList.remove('open');
+      else if (t.getAttribute('data-fs')) { isFs() ? exitFs() : enterFs(); setTimeout(refresh, 250); }
+      else if (t.getAttribute('data-o')) setMode(t.getAttribute('data-o'), true);
+      if (t.blur) t.blur();
+    });
+    refresh();
+  }
+  function setMode(m, fromUser) {
+    mode = m;
+    try { localStorage.setItem(KEY, m); } catch (e) {}
+    applyOrient(m, fromUser);
+    refresh();
+    setTimeout(banner_, 400);
+  }
+  function refresh() {
+    if (!ui) return;
+    var fb = ui.querySelector('[data-fs]');
+    if (fb) fb.textContent = isFs() ? T.fsOff : T.fs;
+    var bs = ui.querySelectorAll('[data-o]');
+    for (var i = 0; i < bs.length; i++) bs[i].classList.toggle('on', bs[i].getAttribute('data-o') === mode);
+    var on = ui.querySelector('#izon');
+    if (on) on.textContent = mode === 'auto' ? T.nAuto : T.nFix;
+  }
+  function banner_() {
+    if (!banner) return;
+    var land = W.innerWidth > W.innerHeight;
+    var bad = (mode === 'land' && !land) || (mode === 'port' && land);
+    if (bad) {
+      banner.textContent = T.rot(mode);
+      banner.style.display = 'block';
+      clearTimeout(bT);
+      bT = setTimeout(function () { banner.style.display = 'none'; }, 6000);
+    } else banner.style.display = 'none';
+  }
+  function onChange() { refresh(); setTimeout(banner_, 300); }
+  D.addEventListener('fullscreenchange', onChange);
+  D.addEventListener('webkitfullscreenchange', onChange);
+  W.addEventListener('orientationchange', onChange);
+  W.addEventListener('resize', function () { setTimeout(banner_, 300); });
+
+  function init() {
+    build();
+    if (mode !== 'auto') { applyOrient(mode, false); setTimeout(banner_, 600); }
+  }
+  if (D.body) init(); else D.addEventListener('DOMContentLoaded', init);
+
+  W.IZBase = { fullscreen: function (on) { on === false ? exitFs() : enterFs(); }, orientation: setMode, get mode() { return mode; } };
+})();
+</script>
+<!--IZ-GAME-BASE:END-->
+</head>
+<body>
+<div id="stage" class="port">
+  <canvas id="cv"></canvas>
+  <div id="hit"></div>
+  <div id="unit" class="ui mono">UNIT 12</div>
+  <div id="gauge" class="ui"><i></i><i></i><i></i></div>
+  <div id="radio" class="ui"></div>
+  <button id="siren" class="btn" data-iz-base-ui data-b="siren">SIREN<br><span id="sirenm">OFF</span></button>
+  <button id="lights" class="btn" data-iz-base-ui data-b="lights">LIGHTS</button>
+  <button id="ram" class="btn hide" data-iz-base-ui data-b="ram">RAM</button>
+  <div id="cmdp" class="ui hide">
+    <div id="cmdtext"></div>
+    <div id="cmdhint"></div>
+    <div id="cmdbtn"><button class="btn" data-iz-base-ui data-b="again">AGAIN</button><button class="btn" data-iz-base-ui data-b="next">NEXT &#9654;</button></div>
+  </div>
+  <div id="title" class="ui ov"><h1>FINAL STOP</h1><button class="btn" data-iz-base-ui data-b="start" style="pointer-events:auto">START</button><button id="voicebtn" class="btn" data-iz-base-ui data-b="voice" style="pointer-events:auto;position:static;width:150px;height:36px">VOICE ON</button></div>
+  <div id="end" class="ui ov hide"><h2>ARRESTED</h2><button class="btn" data-iz-base-ui data-b="replay" style="pointer-events:auto">REPLAY</button></div>
+  <div id="resume" class="ui ov hide">TAP TO RESUME</div>
+  <div id="dbg" class="ui hide"></div>
+</div>
+
+<script>
+/*@TESTABLE*/
+/*@CONFIG*/
+const CONFIG = Object.freeze({
+  STEP: 1 / 120, DT_MAX: 0.1,
+  HITS_TO_STOP: 3, SIDES: [1, -1, 1],            // 1=右 -1=左。ミスしたときは同じ側をもう一度出す
+  INTRO: 4.0, INTRO_GAP: [40, 26],
+  APPROACH: 5.5, APPROACH_AFTER_MISS: 2.7, GAP_WINDOW: 3,
+  WINDOW: 1.4, WINDOW_RESCUE: 2.1, PREBUF: 0.15,
+  LUNGE: 0.18, HITSTOP: [0.08, 0.08, 0.12], TILT: [3, 4, 6],
+  RECOVER: 1.2, RECOVER_GAP: 24, MISS: 0.8, MISS_GAP: 20, FINISH: 0.6, SLOWMO: 0.4,
+  WOBBLE: 0.4, SWIPE_LOCK: 0.6, LOCK: 0.4,
+  RESCUE: { misses: 2, idle: 25, widen: 3, auto: 150 },
+  PULLOVER: 4.0, EVENT: 6.0, ARREST: 3.0, CMD_PREVIEW_AUTO: 20, YOURTURN: 3.0,
+  SNAKE: { a1: 1.2, p1: 3.1, a2: 0.35, p2: 1.3 }, LAG: 0.6,
+  RADIO: [
+    { t: 2, text: 'Unit 12, in pursuit, northbound.' },
+    { t: 14, text: 'All units, suspect still running.' },
+    { t: 30, text: 'Unit 12, stay on him.' }
+  ],
+  EVENT_RADIO: 'Dispatch, suspect vehicle stopped.',
+  CMDS: [
+    { text: 'Police! Show me your hands!', pose: 'handsUpInCar', dur: 1.2, sfx: 'none' },
+    { text: 'Turn off the engine!', pose: 'handsUpInCar', dur: 1.8, sfx: 'engineOff' },
+    { text: 'Step out of the vehicle!', pose: 'standing', dur: 2.4, sfx: 'door' },
+    { text: 'Get on the ground!', pose: 'prone', dur: 2.4, sfx: 'cuffs' }
+  ],
+  SIRENS: ['OFF', 'WAIL', 'YELP', 'PHASER']
+});
+/*@END*/
+
+/*@CORE*/
+const CORE = (function () {
+  function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  const ss = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x);
+  const lerp = (a, b, k) => a + (b - a) * k;
+  function kf(t, pts) {                               // [[時刻,値],…] を smoothstep で補間
+    if (t <= pts[0][0]) return pts[0][1];
+    for (let i = 1; i < pts.length; i++) {
+      if (t <= pts[i][0]) return lerp(pts[i - 1][1], pts[i][1], ss((t - pts[i - 1][0]) / (pts[i][0] - pts[i - 1][0])));
+    }
+    return pts[pts.length - 1][1];
+  }
+  const PHASE_OF = { TITLE: 'TITLE', INTRO: 'CHASE', APPROACH: 'CHASE', WINDOW: 'CHASE', LUNGE: 'CHASE', HIT: 'CHASE', RECOVER: 'CHASE', MISS: 'CHASE', FINISH: 'CHASE',
+    PULLOVER: 'PULLOVER', EVENT: 'EVENT', PREVIEW: 'CMD', SPEAK: 'CMD', YOURTURN: 'CMD', REACT: 'CMD', ARREST: 'ARREST', END: 'END' };
+  const MAX_DWELL = { INTRO: 6, APPROACH: 8, WINDOW: 3.5, LUNGE: 1, HIT: 1, RECOVER: 3, MISS: 2, FINISH: 2, PULLOVER: 6, EVENT: 10, SPEAK: 6, YOURTURN: 5, REACT: 6, ARREST: 5 };
+  const FORCE_NEXT = { INTRO: 'APPROACH', APPROACH: 'WINDOW', WINDOW: 'MISS', LUNGE: 'HIT', HIT: 'RECOVER', RECOVER: 'APPROACH', MISS: 'APPROACH', FINISH: 'PULLOVER',
+    PULLOVER: 'EVENT', EVENT: 'PREVIEW', SPEAK: 'YOURTURN', YOURTURN: 'REACT', REACT: 'PREVIEW', ARREST: 'END' };
+
+  function create(C, opt) {
+    opt = opt || {};
+    const rnd = mulberry32(opt.seed || 1);
+    const phi = rnd() * 6.2832;
+    const S = { phase: 'TITLE', sub: 'TITLE', t: 0, ct: 0, gap: C.INTRO_GAP[0], sx: 0, px: 0, speed: 0, hits: 0, damage: 0, misses: 0, streakMiss: 0, sinceHit: 0,
+      window: null, ram: false, ramArmed: false, cmd: { i: 0, step: '' }, pose: { from: 'inCar', to: 'inCar', k: 1 }, siren: 'OFF', lights: true, timeScale: 1,
+      elapsed: 0, side: 1, tilt: 0, fade: 0, wobble: 0, lock: 0, dur: 0, auto: false, crackSeed: Math.floor(rnd() * 1e9), pxKick: 0, hintShown: false };
+    let ev = [], n = 0, simT = 0, acc = 0, wentAt = -1, lock = 0, swipeLock = 0, wobble = 0;
+    let gapE = 0, sxE = 0, pxE = 0, tiltE = 0, beatSide = C.SIDES[0], afterMiss = false, buffered = false, radioIdx = 0, pxF = 0, speakAuto = false, stuckSent = false;
+    let flags = {}, sirenIdx = 0;
+    let pend = { swipe: null, tap: false, button: null };
+
+    const emit = (type, o) => { ev.push(Object.assign({ type: type, at: n * C.STEP }, o || {})); };
+    const snake = ct => C.SNAKE.a1 * Math.sin(6.2832 * ct / C.SNAKE.p1) + C.SNAKE.a2 * Math.sin(6.2832 * ct / C.SNAKE.p2 + phi);
+
+    function reset() {
+      Object.assign(S, { hits: 0, damage: 0, misses: 0, streakMiss: 0, sinceHit: 0, window: null, ram: false, ramArmed: false, elapsed: 0, ct: 0, gap: C.INTRO_GAP[0], sx: 0, px: 0,
+        pose: { from: 'inCar', to: 'inCar', k: 1 }, cmd: { i: 0, step: '' }, tilt: 0, fade: 0, timeScale: 1, pxKick: 0, speed: 0, hintShown: false });
+      pxF = 0; radioIdx = 0; beatSide = C.SIDES[0]; afterMiss = false; buffered = false;
+    }
+    function go(sub) {
+      if (wentAt === n) return false;                   // 同じ瞬間の二重遷移は捨てる
+      wentAt = n;
+      const prev = S.phase;
+      S.sub = sub; S.phase = PHASE_OF[sub]; S.t = 0; stuckSent = false; flags = {};
+      gapE = S.gap; sxE = S.sx; pxE = S.px; tiltE = S.tilt;
+      if (S.phase !== prev) { lock = C.LOCK; emit('phase', { from: prev, to: S.phase }); }
+      emit('sub', { sub: sub });
+      if (subs[sub].enter) subs[sub].enter();
+      return true;
+    }
+    function lunge() { go('LUNGE'); }
+    function swipeOutside(wob) { if (wob && swipeLock <= 0) { wobble = C.WOBBLE; swipeLock = C.WOBBLE + C.SWIPE_LOCK; emit('whiff'); } }
+
+    const subs = {
+      TITLE: { upd(h, i, locked) { if (i.button === 'start' && !locked) { reset(); go('INTRO'); } } },
+      INTRO: {
+        enter() { S.speed = 30; },
+        upd(h, i) {
+          S.gap = lerp(C.INTRO_GAP[0], C.INTRO_GAP[1], ss(S.t / C.INTRO));
+          S.sx = snake(S.ct) * ss(S.t / 1.5);
+          if (S.t >= C.INTRO) go('APPROACH');
+        }
+      },
+      APPROACH: {
+        enter() { S.dur = afterMiss ? C.APPROACH_AFTER_MISS : C.APPROACH; buffered = false; },
+        upd(h, i) {
+          const d = S.dur;
+          S.gap = lerp(gapE, C.GAP_WINDOW, ss(S.t / d));
+          const base = lerp(sxE, snake(S.ct), ss(S.t / 0.8));
+          S.sx = lerp(base, beatSide * 1.0, ss((S.t - (d - 1)) / 1));
+          S.tilt = tiltE * (1 - ss(S.t / 0.5));
+          if (i.swipe) { if (d - S.t <= C.PREBUF) buffered = true; else swipeOutside(true); }
+          if (S.t >= d) go('WINDOW');
+        }
+      },
+      WINDOW: {
+        enter() {
+          const len = S.streakMiss >= C.RESCUE.widen ? C.WINDOW_RESCUE : C.WINDOW;
+          S.window = { side: beatSide, t: 0, len: len }; S.gap = C.GAP_WINDOW;
+          emit('window', { side: beatSide, len: len });
+        },
+        upd(h, i, locked) {
+          S.window.t = S.t; S.gap = C.GAP_WINDOW; S.side = beatSide;
+          S.sx = beatSide * 1.0 + 0.2 * Math.sin(6.2832 * 5 * S.t);
+          const ramNow = i.button === 'ram' && S.ram && !locked;
+          if (i.swipe || buffered || ramNow || S.ramArmed || S.elapsed >= C.RESCUE.auto) { lunge(); return; }
+          if (S.t >= S.window.len) go('MISS');
+        }
+      },
+      LUNGE: {
+        enter() { S.window = null; },
+        upd(h) {
+          const p = ss(S.t / C.LUNGE);
+          S.gap = lerp(C.GAP_WINDOW, 0, p); S.sx = lerp(sxE, beatSide * 1.2, p); S.pxKick = beatSide * 0.6 * p;
+          if (S.t >= C.LUNGE) {
+            S.hits++; S.damage = Math.min(3, S.hits); S.sinceHit = 0; S.streakMiss = 0; S.ram = false; S.ramArmed = false;
+            emit('hit', { stage: S.hits, x: S.sx, side: beatSide });
+            go('HIT');
+          }
+        }
+      },
+      HIT: {
+        enter() { S.timeScale = 0; S.tilt = beatSide * C.TILT[Math.min(S.hits, 3) - 1]; S.dur = C.HITSTOP[Math.min(S.hits, 3) - 1]; },
+        upd(h) { if (S.t >= S.dur) { S.timeScale = 1; go(S.hits >= C.HITS_TO_STOP ? 'FINISH' : 'RECOVER'); } }
+      },
+      FINISH: {
+        enter() { S.timeScale = C.SLOWMO; },
+        upd(h) { if (S.t >= C.FINISH) { S.timeScale = 1; go('PULLOVER'); } }
+      },
+      RECOVER: {
+        upd(h, i) {
+          const p = ss(S.t / C.RECOVER);
+          S.gap = lerp(gapE, C.RECOVER_GAP, p); S.sx = lerp(sxE, 0, p); S.tilt = tiltE * (1 - p); S.pxKick = (beatSide * 0.6) * (1 - p);
+          if (i.swipe) swipeOutside(true);
+          if (S.t >= C.RECOVER) { beatSide = C.SIDES[S.hits % C.SIDES.length]; afterMiss = false; S.pxKick = 0; go('APPROACH'); }
+        }
+      },
+      MISS: {
+        enter() {
+          S.misses++; S.streakMiss++; S.window = null; emit('miss', { streak: S.streakMiss });
+          if (S.streakMiss >= C.RESCUE.misses && !S.ram) { S.ram = true; emit('ram', { on: true }); }
+        },
+        upd(h) {
+          const p = ss(S.t / C.MISS);
+          S.gap = lerp(gapE, C.MISS_GAP, p); S.sx = lerp(sxE, 0, p);
+          if (S.t >= C.MISS) { afterMiss = true; go('APPROACH'); }
+        }
+      },
+      PULLOVER: {
+        enter() { S.speed = 30; S.fade = 0; },
+        upd(h) {
+          const t = S.t;
+          S.sx = kf(t, [[0, sxE], [1.2, 3.5], [2.6, 4.6]]);
+          S.px = kf(t, [[0, pxE], [1.2, pxE], [2.6, 3.0]]);
+          S.gap = kf(t, [[0, gapE], [2.6, 13]]);
+          S.speed = kf(t, [[0, 30], [1.2, 12], [2.6, 0]]);
+          S.tilt = kf(t, [[0, tiltE], [1.8, 0], [2.6, 5]]);
+          if (t >= 2.6 && !flags.stopped) { flags.stopped = true; emit('stopped'); }
+          S.fade = ss((t - 3.5) / 0.5);
+          if (t >= C.PULLOVER) go('EVENT');
+        }
+      },
+      EVENT: {
+        enter() { S.speed = 0; S.fade = 1; S.cmd = { i: 0, step: '' }; emit('radio', { text: C.EVENT_RADIO }); },
+        upd(h, i, locked) {
+          S.fade = 1 - ss(S.t / 0.5);
+          if (S.t >= 1.5 && !flags.spot) { flags.spot = true; emit('spot'); }
+          if (S.t >= 3.0 && !flags.door) { flags.door = true; emit('door'); }
+          if (((i.tap || i.button === 'next') && !locked) || S.t >= C.EVENT) go('PREVIEW');
+        }
+      },
+      PREVIEW: {
+        enter() { S.cmd.step = 'preview'; emit('cmd', { i: S.cmd.i, step: 'preview', text: C.CMDS[S.cmd.i].text }); },
+        upd(h, i, locked) {
+          const tapped = (i.tap || i.button === 'next') && !locked;
+          if (tapped || S.t >= C.CMD_PREVIEW_AUTO) { speakAuto = !tapped; go('SPEAK'); }
+        }
+      },
+      SPEAK: {
+        enter() { const t = C.CMDS[S.cmd.i].text; S.dur = t.length * 0.07 + 0.6; S.cmd.step = 'speak'; emit('cmd', { i: S.cmd.i, step: 'speak', text: t, auto: speakAuto, dur: S.dur }); },
+        upd(h) { if (S.t >= S.dur) go('YOURTURN'); }
+      },
+      YOURTURN: {
+        enter() { S.cmd.step = 'yourturn'; emit('cmd', { i: S.cmd.i, step: 'yourturn' }); },
+        upd(h, i, locked) { if (((i.tap || i.button === 'next') && !locked) || S.t >= C.YOURTURN) go('REACT'); }
+      },
+      REACT: {
+        enter() {
+          const c = C.CMDS[S.cmd.i]; S.cmd.step = 'react';
+          S.pose = { from: S.pose.to, to: c.pose, k: 0 }; S.dur = c.dur;
+          emit('react', { i: S.cmd.i, pose: c.pose, sfx: c.sfx });
+        },
+        upd(h) {
+          S.pose.k = ss(S.t / (S.dur * 0.8));
+          if (S.t >= S.dur) { S.cmd.i++; go(S.cmd.i >= C.CMDS.length ? 'ARREST' : 'PREVIEW'); }
+        }
+      },
+      ARREST: {
+        enter() { emit('arrest'); },
+        upd(h) {
+          if (S.t >= 0.5 && !flags.cuffs) { flags.cuffs = true; emit('cuffs'); }
+          if (S.t >= C.ARREST) go('END');
+        }
+      },
+      END: {
+        enter() { emit('end'); },
+        upd(h, i, locked) { if ((i.button === 'replay' || i.tap) && !locked) { reset(); go('INTRO'); } }
+      }
+    };
+
+    function tick(h, inp) {
+      n++; S.t += h; lock = Math.max(0, lock - h); swipeLock = Math.max(0, swipeLock - h); wobble = Math.max(0, wobble - h);
+      S.wobble = wobble > 0 ? wobble / C.WOBBLE : 0; S.lock = lock;
+      const locked = lock > 0, b = inp.button;
+      if (b === 'siren') { sirenIdx = (sirenIdx + 1) % C.SIRENS.length; S.siren = C.SIRENS[sirenIdx]; emit('siren', { mode: S.siren }); }
+      if (b === 'lights') { S.lights = !S.lights; emit('lights', { on: S.lights }); }
+      if (b === 'ram' && S.ram && S.phase === 'CHASE' && !locked && S.sub !== 'WINDOW') { S.ramArmed = true; emit('ramArm'); }
+      if (S.phase === 'CHASE') {
+        S.ct += h; S.elapsed += h;
+        if (S.sub !== 'INTRO') S.sinceHit += h;
+        if (radioIdx < C.RADIO.length && S.ct >= C.RADIO[radioIdx].t) { emit('radio', { text: C.RADIO[radioIdx].text }); radioIdx++; }
+        if (S.sinceHit >= C.RESCUE.idle && !S.ram) { S.ram = true; emit('ram', { on: true }); }
+        pxF += (S.sx - pxF) * (1 - Math.exp(-h / C.LAG));
+        S.px = pxF + S.pxKick;
+      }
+      const sub = subs[S.sub];
+      if (sub.upd) sub.upd(h, inp, locked);
+      if (MAX_DWELL[S.sub] && S.t > MAX_DWELL[S.sub]) {      // 見張り：想定より長く居座ったら先へ進める
+        if (!stuckSent) { stuckSent = true; emit('stuck', { sub: S.sub }); }
+        if (FORCE_NEXT[S.sub]) go(FORCE_NEXT[S.sub]);
+      }
+    }
+
+    function step(dt, input) {
+      if (input) {
+        if (input.swipe) pend.swipe = input.swipe;
+        if (input.tap) pend.tap = true;
+        if (input.button) pend.button = input.button;
+      }
+      acc += Math.min(Math.max(dt, 0), C.DT_MAX);
+      ev = [];
+      while (acc >= C.STEP - 1e-9) {
+        acc -= C.STEP;
+        const inp = pend; pend = { swipe: null, tap: false, button: null };
+        tick(C.STEP, inp);
+      }
+      const r = ev; ev = []; return r;
+    }
+
+    function bot(s, o) {
+      o = o || {};
+      const i = { swipe: null, tap: false, button: null };
+      if (s.sub === 'TITLE') i.button = 'start';
+      else if (s.sub === 'WINDOW' && s.window && s.window.t >= (o.delay || 0.3) && !o.noSwipe) i.swipe = { dir: s.window.side };
+      else if (s.sub === 'PREVIEW' || s.sub === 'YOURTURN') i.tap = true;
+      else if (s.sub === 'EVENT' && o.skip) i.tap = true;
+      else if (s.sub === 'END' && o.replay) i.button = 'replay';
+      return i;
+    }
+    function warp(label) {
+      const m = /^(PREVIEW|REACT)(\d)$/.exec(label), mh = /^HIT(\d)$/.exec(label);
+      const pred = {
+        WINDOW: () => S.sub === 'WINDOW' && S.window && S.window.t >= 0.2,
+        MISS: () => S.sub === 'MISS'
+      }[label] || (mh ? () => S.sub === 'HIT' && S.hits === +mh[1]
+        : m ? () => S.sub === m[1] && S.cmd.i === +m[2] : () => S.sub === label);
+      const o = { noSwipe: label === 'MISS' };
+      for (let k = 0; k < 60 * 900; k++) {
+        if (pred()) { ev = []; return true; }
+        step(1 / 60, bot(S, o));
+      }
+      return false;
+    }
+    return { step: step, state: S, warp: warp, bot: bot, config: C, get simTime() { return n * C.STEP; } };
+  }
+  return { create: create };
+})();
+/*@END*/
+/*@END_TESTABLE*/
+</script>
+
+<script>
+(function () {
+  'use strict';
+  const Q = new URLSearchParams(location.search);
+  const DEBUG = Q.get('debug') === '1', AUTO = Q.get('auto') === '1', SHOT = Q.get('shot');
+  const core = CORE.create(CONFIG, { seed: +Q.get('seed') || 1 });
+  const S = core.state;
+  const $ = id => document.getElementById(id);
+  const stage = $('stage'), cv = $('cv'), ctx = cv.getContext('2d');
+
+  /* ================= VIEW ================= */
+  const VIEWS = {
+    port: { W: 360, H: 640, hor: 230, F: 1018 },
+    land: { W: 640, H: 360, hor: 110, F: 720 }
+  };
+  const CAM_H = 3.2, CAR = { w: 1.8, h: 1.45, l: 4.6 }, ZP = 7.6;
+  let V = VIEWS.port, scale = 1, dpr = 1;
+  function layout() {
+    const land = innerWidth > innerHeight;
+    V = land ? VIEWS.land : VIEWS.port;
+    stage.className = land ? 'land' : 'port';
+    scale = Math.min(innerWidth / V.W, innerHeight / V.H);
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    stage.style.width = V.W + 'px'; stage.style.height = V.H + 'px';
+    stage.style.transform = 'translate(' + ((innerWidth - V.W * scale) / 2) + 'px,' + ((innerHeight - V.H * scale) / 2) + 'px) scale(' + scale + ')';
+    cv.style.width = V.W + 'px'; cv.style.height = V.H + 'px';
+    cv.width = Math.round(V.W * scale * dpr); cv.height = Math.round(V.H * scale * dpr);
+  }
+  addEventListener('resize', () => { layout(); if (SHOT) render(); });
+  layout();
+  const proj = (x, z, camX) => { const k = V.F / z; return { x: V.W / 2 + (x - camX) * k, y: V.hor + CAM_H * k, k: k }; };
+  function carBox(x, z, camX) { const p = proj(x, z, camX); return { cx: p.x, w: CAR.w * p.k, bot: p.y, top: p.y - CAR.h * p.k, h: CAR.h * p.k }; }
+
+  /* ================= AUDIO（B0：ビープ1種） ================= */
+  const AUDIO = {
+    ctx: null, master: null,
+    init() {
+      if (this.ctx) { if (this.ctx.state !== 'running') this.ctx.resume(); return; }
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AC(); this.master = this.ctx.createGain(); this.master.gain.value = 1;
+        const comp = this.ctx.createDynamicsCompressor();
+        this.master.connect(comp); comp.connect(this.ctx.destination); this.ctx.resume();
+      } catch (e) {}
+    },
+    beep(f, d, type, v) {
+      if (!this.ctx || AUTO) return;
+      const c = this.ctx, o = c.createOscillator(), g = c.createGain(), t = c.currentTime;
+      o.type = type || 'square'; o.frequency.value = f;
+      g.gain.setValueAtTime(v || 0.12, t); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      o.connect(g); g.connect(this.master); o.start(t); o.stop(t + d + 0.02);
+    },
+    duck(sec) {
+      if (!this.ctx) return;
+      const g = this.master.gain, t = this.ctx.currentTime;
+      g.cancelScheduledValues(t); g.setValueAtTime(0.6, t); g.setValueAtTime(0.6, t + sec); g.linearRampToValueAtTime(1, t + sec + 0.3);
+    }
+  };
+
+  /* ================= VOICE（TTS） ================= */
+  const VOICE = {
+    ok: 'speechSynthesis' in window, on: true, voice: null, count: 0,
+    init() {
+      try { this.on = localStorage.getItem('fs.voice') !== 'off'; } catch (e) {}
+      if (!this.ok) return;
+      const pick = () => {
+        const vs = speechSynthesis.getVoices() || []; this.count = vs.length;
+        const names = ['Aaron', 'Fred', 'Samantha', 'Daniel'];
+        let v = null;
+        for (const nm of names) { v = vs.find(x => x.lang === 'en-US' && x.name.indexOf(nm) >= 0); if (v) break; }
+        this.voice = v || vs.find(x => x.lang === 'en-US') || vs.find(x => /^en/i.test(x.lang)) || null;
+      };
+      pick();
+      try { speechSynthesis.addEventListener('voiceschanged', pick); } catch (e) {}
+      this.pick = pick;
+    },
+    speak(text) {
+      if (!this.ok || !this.on) return;
+      try {
+        if (!this.voice && this.pick) this.pick();
+        speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        if (this.voice) u.voice = this.voice;
+        u.lang = (this.voice && this.voice.lang) || 'en-US'; u.rate = 0.95; u.pitch = 0.85;
+        speechSynthesis.speak(u);
+        AUDIO.duck(text.length * 0.07 + 0.6);
+      } catch (e) {}
+    },
+    cancel() { try { speechSynthesis.cancel(); } catch (e) {} },
+    toggle() { this.on = !this.on; try { localStorage.setItem('fs.voice', this.on ? 'on' : 'off'); } catch (e) {} }
+  };
+  VOICE.init();
+
+  /* ================= INPUT ================= */
+  const hit = $('hit');
+  let pend = { swipe: null, tap: false, button: null }, trk = null, paused = false;
+  hit.addEventListener('pointerdown', e => {
+    if (trk || paused) return;
+    trk = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), done: false };
+    try { hit.setPointerCapture(e.pointerId); } catch (x) {}
+  });
+  hit.addEventListener('pointermove', e => {
+    if (!trk || e.pointerId !== trk.id || trk.done) return;
+    const dx = e.clientX - trk.x, dy = e.clientY - trk.y;
+    if (Math.abs(dx) >= 28 && Math.abs(dx) >= Math.abs(dy) * 1.2 && performance.now() - trk.t <= 700) {
+      trk.done = true; pend.swipe = { dir: dx > 0 ? 1 : -1 };
+    }
+  });
+  const endTrk = e => {
+    if (!trk || e.pointerId !== trk.id) return;
+    const moved = Math.hypot(e.clientX - trk.x, e.clientY - trk.y);
+    if (!trk.done && moved < 12 && e.type === 'pointerup') onTap();
+    trk = null;
+  };
+  hit.addEventListener('pointerup', endTrk); hit.addEventListener('pointercancel', endTrk);
+  function wake() { if (AUDIO.ctx && AUDIO.ctx.state !== 'running') AUDIO.ctx.resume(); }
+  function speakIfPreview() {
+    if (S.phase === 'CMD' && S.sub === 'PREVIEW' && S.lock <= 0) VOICE.speak(CONFIG.CMDS[S.cmd.i].text);   // iOS：操作の中でしか話せない
+  }
+  function onTap() { if (paused) return; wake(); speakIfPreview(); pend.tap = true; }
+  stage.querySelectorAll('[data-b]').forEach(b => {
+    b.addEventListener('pointerdown', e => e.stopPropagation());
+    b.addEventListener('click', e => {
+      e.stopPropagation();
+      if (paused) return;
+      const k = b.getAttribute('data-b');
+      if (k === 'start') AUDIO.init();
+      wake();
+      if (k === 'voice') { VOICE.toggle(); refreshVoiceBtn(); return; }
+      if (k === 'next') { speakIfPreview(); }
+      if (k === 'again') { if (S.phase === 'CMD') VOICE.speak(CONFIG.CMDS[S.cmd.i].text); }
+      pend.button = k;
+    });
+  });
+  function refreshVoiceBtn() { $('voicebtn').textContent = VOICE.on ? 'VOICE ON' : 'VOICE OFF'; }
+  refreshVoiceBtn();
+  $('resume').addEventListener('pointerdown', e => { e.stopPropagation(); AUDIO.init(); paused = false; $('resume').classList.add('hide'); last = performance.now(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && !SHOT) { paused = true; VOICE.cancel(); }
+    else if (paused && !SHOT) { $('resume').classList.remove('hide'); }
+  });
+
+  /* ================= UI ================= */
+  const el = { title: $('title'), end: $('end'), cmdp: $('cmdp'), ram: $('ram'), radio: $('radio'), sirenm: $('sirenm'), gauge: $('gauge').children, unit: $('unit'),
+    cmdtext: $('cmdtext'), cmdhint: $('cmdhint'), dbg: $('dbg'), siren: $('siren'), lights: $('lights'), gaugeBox: $('gauge') };
+  let radioT = 0, ui = {};
+  function setUI(k, v, fn) { if (ui[k] !== v) { ui[k] = v; fn(v); } }
+  function updateUI(dt) {
+    const ph = S.phase, inGame = ph !== 'TITLE' && ph !== 'END';
+    setUI('title', ph === 'TITLE', v => el.title.classList.toggle('hide', !v));
+    setUI('end', ph === 'END', v => el.end.classList.toggle('hide', !v));
+    setUI('cmdp', ph === 'CMD', v => el.cmdp.classList.toggle('hide', !v));
+    setUI('hud', ph !== 'TITLE', v => { el.unit.classList.toggle('hide', !v); el.gaugeBox.classList.toggle('hide', !v); });
+    setUI('btns', ph !== 'TITLE' && ph !== 'END' && ph !== 'CMD', v => { el.siren.classList.toggle('hide', !v); el.lights.classList.toggle('hide', !v); });
+    setUI('ram', ph === 'CHASE' && S.ram, v => el.ram.classList.toggle('hide', !v));
+    setUI('armed', S.ramArmed, v => el.ram.classList.toggle('armed', v));
+    setUI('sirenm', S.siren, v => { el.sirenm.textContent = v; });
+    setUI('dmg', S.damage, v => { for (let i = 0; i < 3; i++) el.gauge[i].classList.toggle('on', i < v); });
+    if (ph === 'CMD') {
+      const t = CONFIG.CMDS[Math.min(S.cmd.i, CONFIG.CMDS.length - 1)].text;
+      setUI('cmdtext', t, v => { el.cmdtext.textContent = v; });
+      const hint = S.sub === 'PREVIEW' ? 'TAP TO COMMAND' : S.sub === 'YOURTURN' ? 'SAY IT!' : '';
+      setUI('cmdhint', hint, v => { el.cmdhint.textContent = v; });
+    }
+    if (radioT > 0) { radioT -= dt; if (radioT <= 0) el.radio.classList.remove('on'); }
+    if (DEBUG) {
+      el.dbg.classList.remove('hide');
+      el.dbg.textContent = S.phase + '/' + S.sub + ' t=' + S.t.toFixed(2) + ' gap=' + S.gap.toFixed(1) + ' sx=' + S.sx.toFixed(2) +
+        '\nhits=' + S.hits + ' miss=' + S.misses + ' el=' + S.elapsed.toFixed(1) + '\naudio=' + (AUDIO.ctx ? AUDIO.ctx.state : 'none') +
+        ' voices=' + VOICE.count + ' ' + (VOICE.voice ? VOICE.voice.name : '-') + ' on=' + VOICE.on + '\nfps=' + fps.toFixed(0) + ' ' + innerWidth + 'x' + innerHeight + ' s=' + scale.toFixed(2);
+    }
+  }
+
+  /* ================= 配送 ================= */
+  function handle(evs) {
+    for (const e of evs) {
+      switch (e.type) {
+        case 'window': AUDIO.beep(880, 0.08); break;
+        case 'hit': AUDIO.beep(140, 0.3, 'sawtooth', 0.2); break;
+        case 'miss': AUDIO.beep(200, 0.15, 'triangle'); break;
+        case 'whiff': AUDIO.beep(300, 0.08, 'triangle', 0.06); break;
+        case 'radio': el.radio.textContent = e.text; el.radio.classList.add('on'); radioT = 3; AUDIO.beep(620, 0.05, 'square', 0.05); break;
+        case 'door': case 'spot': case 'cuffs': case 'stopped': AUDIO.beep(520, 0.08); break;
+        case 'react': AUDIO.beep(440, 0.1); break;
+        case 'arrest': AUDIO.beep(330, 0.4, 'triangle', 0.18); break;
+        case 'stuck': console.warn('stuck', e); break;
+      }
+    }
+    if (DEBUG && evs.length) window.__events = (window.__events || []).concat(evs).slice(-40);
+  }
+
+  /* ================= DRAW（B0：矩形と文字。投影の検証が目的） ================= */
+  let scroll = 0, tNow = 0;
+  const probe = window.__probe = {};
+  function render() {
+    const W = V.W, H = V.H, camX = S.px;
+    ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+    // 空
+    const g = ctx.createLinearGradient(0, 0, 0, V.hor); g.addColorStop(0, '#0b1020'); g.addColorStop(1, '#3a2a4a');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, V.hor + 1);
+    // 地面
+    ctx.fillStyle = '#12301a'; ctx.fillRect(0, V.hor, W, H - V.hor);
+    // 路面（路肩 |x|<=5.5、車線 |x|<=3.5）
+    const zN = 2, zF = 300;
+    function band(x0, x1, col) {
+      const a = proj(x0, zN, camX), b = proj(x1, zN, camX), c = proj(x1, zF, camX), d = proj(x0, zF, camX);
+      ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(c.x, c.y); ctx.lineTo(d.x, d.y); ctx.closePath(); ctx.fill();
+    }
+    band(-5.5, 5.5, '#2c2c34'); band(-3.5, 3.5, '#25252c');
+    // 縞：中央線と路肩の線は走行距離で流す
+    const seg = 12, off = scroll % seg;
+    ctx.fillStyle = '#e8d44a';
+    for (let z0 = -off + seg; z0 < zF; z0 += seg) {
+      const za = Math.max(z0, zN), zb = z0 + 4; if (zb < zN) continue;
+      const a = proj(-0.08, za, camX), b = proj(0.08, za, camX), c = proj(0.08, zb, camX), d = proj(-0.08, zb, camX);
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(c.x, c.y); ctx.lineTo(d.x, d.y); ctx.closePath(); ctx.fill();
+    }
+    // 逃走車
+    const sz = ZP + CAR.l + S.gap, sb = carBox(S.sx, sz, camX);
+    ctx.save(); ctx.translate(sb.cx, sb.bot); ctx.rotate(S.tilt * Math.PI / 180);
+    ctx.fillStyle = S.damage >= 3 ? '#552' : '#8a2a2a'; ctx.fillRect(-sb.w / 2, -sb.h, sb.w, sb.h);
+    ctx.fillStyle = '#111'; ctx.fillRect(-sb.w * 0.33, -sb.h * 0.93, sb.w * 0.66, sb.h * 0.31);
+    ctx.restore();
+    ctx.fillStyle = '#fff'; ctx.font = '700 11px ui-monospace,Menlo,monospace'; ctx.textAlign = 'center';
+    ctx.fillText('SUSPECT', sb.cx, sb.top - 6);
+    // パトカー（後端 z=7.6、x=camX 固定）
+    const pb = carBox(S.px, ZP, camX);
+    ctx.fillStyle = '#1a3a8a'; ctx.fillRect(pb.cx - pb.w / 2, pb.top, pb.w, pb.h);
+    const flash = Math.floor(tNow * 4) % 2 === 0;
+    if (S.lights) { ctx.fillStyle = flash ? '#ff2a3a' : '#2a6bff'; ctx.fillRect(pb.cx - pb.w * 0.2, pb.top - 6, pb.w * 0.18, 6); ctx.fillStyle = flash ? '#2a6bff' : '#ff2a3a'; ctx.fillRect(pb.cx + pb.w * 0.02, pb.top - 6, pb.w * 0.18, 6); }
+    // 警光灯の染まり
+    if (S.lights) {
+      const a = ctx.globalCompositeOperation; ctx.globalCompositeOperation = 'lighter';
+      const lw = ctx.createLinearGradient(0, 0, W * 0.45, 0); lw.addColorStop(0, flash ? 'rgba(255,40,60,.35)' : 'rgba(40,100,255,.35)'); lw.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = lw; ctx.fillRect(0, 0, W * 0.45, H);
+      const rw = ctx.createLinearGradient(W, 0, W * 0.55, 0); rw.addColorStop(0, flash ? 'rgba(40,100,255,.35)' : 'rgba(255,40,60,.35)'); rw.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = rw; ctx.fillRect(W * 0.55, 0, W * 0.45, H);
+      ctx.globalCompositeOperation = a;
+    }
+    // 窓：矢印と縮む輪
+    if (S.window) {
+      const w = S.window, p = w.t / w.len, cy = (sb.top + sb.bot) / 2;
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(sb.cx, cy, 70 * (1 - p) + 14, 0, 6.2832); ctx.stroke();
+      const ax = Math.max(48, Math.min(W - 48, sb.cx + w.side * (sb.w / 2 + 44)));
+      ctx.fillStyle = '#ffe14a'; ctx.beginPath(); ctx.moveTo(ax + w.side * 18, cy); ctx.lineTo(ax - w.side * 12, cy - 16); ctx.lineTo(ax - w.side * 12, cy + 16); ctx.closePath(); ctx.fill();
+      if (!S.hintShown && S.hits === 0 && S.misses === 0) { ctx.fillStyle = '#fff'; ctx.font = '800 22px ui-monospace,Menlo,monospace'; ctx.fillText('SWIPE!', W / 2, V.hor - 40); }
+    }
+    if (S.sub === 'MISS') { ctx.fillStyle = '#ff6a6a'; ctx.font = '700 14px ui-monospace,Menlo,monospace'; ctx.fillText('MISS', W / 2, V.hor - 40); }
+    if (S.phase === 'CMD' || S.phase === 'ARREST') { ctx.fillStyle = '#fff'; ctx.font = '700 12px ui-monospace,Menlo,monospace'; ctx.fillText('POSE: ' + S.pose.to + ' ' + S.pose.k.toFixed(2), sb.cx, sb.bot + 16); }
+    if (S.fade > 0) { ctx.fillStyle = 'rgba(0,0,0,' + S.fade + ')'; ctx.fillRect(0, 0, W, H); }
+    ctx.textAlign = 'start';
+    // 検証用の外接矩形（shots.py が表と照合する）
+    probe.suspect = { w: sb.w, top: sb.top, bot: sb.bot, cx: sb.cx }; probe.police = { w: pb.w, top: pb.top, bot: pb.bot, cx: pb.cx };
+    probe.view = { W: W, H: H, scale: scale, hor: V.hor };
+    probe.state = { phase: S.phase, sub: S.sub, gap: S.gap, sx: S.sx, px: S.px, hits: S.hits };
+  }
+
+  /* ================= MAIN ================= */
+  let last = performance.now(), fps = 60, fpsN = 0, fpsT = 0;
+  function frame(now) {
+    const dt = Math.min((now - last) / 1000, 0.1); last = now;
+    if (!paused) {
+      const evs = core.step(dt, AUTO ? core.bot(S, { replay: true }) : null);
+      if (!AUTO) { /* 入力は下の pend で渡す */ }
+      handle(evs);
+      tNow += dt; scroll += S.speed * dt * S.timeScale;
+      fpsN++; fpsT += dt; if (fpsT >= 0.5) { fps = fpsN / fpsT; fpsN = 0; fpsT = 0; }
+      updateUI(dt);
+    }
+    render();
+    requestAnimationFrame(frame);
+  }
+  // 入力は core.step に1フレーム分まとめて渡す
+  const _step = core.step;
+  core.step = function (dt, input) {
+    const merged = { swipe: pend.swipe, tap: pend.tap, button: pend.button };
+    pend = { swipe: null, tap: false, button: null };
+    if (input) { merged.swipe = merged.swipe || input.swipe; merged.tap = merged.tap || input.tap; merged.button = merged.button || input.button; }
+    return _step(dt, merged);
+  };
+
+  if (SHOT) {
+    // 撮影用：その場面まで進めて止める（?shot=HIT2&t=0.5）
+    document.documentElement.classList.add('shot');
+    core.warp(SHOT === 'TITLE' ? 'TITLE' : SHOT);
+    const extra = +Q.get('t') || 0, o = {};
+    for (let k = 0; k < Math.round(extra * 60); k++) { const evs = _step(1 / 60, core.bot(S, o)); scroll += S.speed / 60 * S.timeScale; tNow += 1 / 60; }
+    updateUI(0.016); render(); window.__ready = true;
+  } else {
+    requestAnimationFrame(frame);
+  }
+  window.__core = core;
+})();
+</script>
+</body>
+</html>
