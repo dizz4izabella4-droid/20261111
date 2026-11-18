@@ -70,6 +70,7 @@ footer .keys{opacity:.8}
   font:italic 600 12px/1 "Times New Roman","Liberation Serif",serif;letter-spacing:.08em;color:var(--ink2);opacity:.6;pointer-events:none}
 @media (max-width:480px){ .app{gap:10px} .ds{font-size:14px} footer .keys{display:none} }
 @media (prefers-reduced-motion:reduce){ .app,.app.show{opacity:1;transform:none;transition:none} #flash{display:none} }
+.dt .fresh{color:#ff3550;font-size:1.45em;font-weight:900;text-shadow:0 1px 2px rgba(0,0,0,.55)}
 </style>
 <!--IZ-GAME-BASE:START-->
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -294,6 +295,9 @@ footer .keys{opacity:.8}
 </div>
 <div class="byiz">by iz</div>
 <script>
+/* 昨日・今日の更新日は 赤字で大きく */
+const FRESH=d=>{ const p=String(d).split('-').map(Number), u=new Date(p[0],p[1]-1,p[2]), n=new Date(); n.setHours(0,0,0,0); const k=Math.round((n-u)/864e5); return k===0||k===1; };
+
 // ===== 映画館の作品 =====
 // 書き方はトップ（../index.html）の APPS と同じ。path はこの部屋から見た場所（../フォルダ名/）。新しいものを先頭に足す
 const ROOM=[
@@ -324,8 +328,8 @@ const items=ROOM.map((a,i)=>{
   el.addEventListener('mouseenter',()=>{ sel=i; mark(); });
   el.addEventListener('click',e=>{ e.preventDefault(); launch(i); });
   li.appendChild(el);
-  const f=d=>d.replace(/-/g,'.'), t=[]; if(a.start) t.push('開始 '+f(a.start)); if(a.upd) t.push('更新 '+f(a.upd)); if(a.ver) t.push('Ver.'+a.ver); if(a.stopped) t.push(typeof a.stopped==='string'?a.stopped:'開発中止');
-  if(t.length){ const dt=document.createElement('div'); dt.className='dt'; dt.textContent=t.join(' ／ '); li.appendChild(dt); }
+  const f=d=>d.replace(/-/g,'.'), t=[]; if(a.start) t.push('開始 '+f(a.start)); if(a.upd) t.push(FRESH(a.upd)?{fresh:'更新 '+f(a.upd)}:'更新 '+f(a.upd)); if(a.ver) t.push('Ver.'+a.ver); if(a.stopped) t.push(typeof a.stopped==='string'?a.stopped:'開発中止');
+  if(t.length){ const dt=document.createElement('div'); dt.className='dt'; t.forEach((x,k)=>{ if(k) dt.appendChild(document.createTextNode(' ／ ')); if(typeof x==='string'){ dt.appendChild(document.createTextNode(x)); } else { const s=document.createElement('b'); s.className='fresh'; s.textContent=x.fresh; dt.appendChild(s); } }); li.appendChild(dt); }
   $('list').appendChild(li); return el;
 });
 function mark(){ items.forEach((el,i)=>el.classList.toggle('sel',i===sel)); }

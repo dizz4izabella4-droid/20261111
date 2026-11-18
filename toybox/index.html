@@ -118,6 +118,7 @@ footer .keys{opacity:.8}
 
 @media (prefers-reduced-motion:reduce){.ribbon .t{animation:none}.app,.app.show{opacity:1;transform:none;transition:none}}
 .roomexit{position:fixed;left:max(8px,env(safe-area-inset-left,0px));top:max(8px,env(safe-area-inset-top,0px));z-index:20;font:600 12px system-ui,sans-serif;color:#6b5a78;background:rgba(255,255,255,.7);border:1px solid #fff;border-radius:14px;padding:5px 10px;text-decoration:none}
+.dt .fresh{color:#ff3550;font-size:1.45em;font-weight:900;text-shadow:0 1px 2px rgba(0,0,0,.55)}
 </style>
 <!--IZ-GAME-BASE:START-->
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -346,6 +347,9 @@ footer .keys{opacity:.8}
 <div class="corner"><a class="ext" id="ext" href="https://iz3ico.github.io/app/" target="_blank" rel="noopener noreferrer" aria-label="癒しの扉" title="癒しの扉"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 28V5h20v23"/><path d="M3 28h26"/><path d="M11 9l10-1.5v19.5L11 28z" fill="currentColor" fill-opacity=".2"/><path d="M18.4 18.5h.01" stroke-width="3.2"/></svg></a></div>
 <div class="byiz" id="byiz">by iz</div>
 <script>
+/* 昨日・今日の更新日は 赤字で大きく */
+const FRESH=d=>{ const p=String(d).split('-').map(Number), u=new Date(p[0],p[1]-1,p[2]), n=new Date(); n.setHours(0,0,0,0); const k=Math.round((n-u)/864e5); return k===0||k===1; };
+
 // ===== 作品の一覧 =====
 // 新しい作品を載せるとき: リポジトリに作品のフォルダ（中に index.html）を作り、ここに1件足す
 //   path … フォルダ名（末尾に /）   ja … 日本語の名前   name … 英語の名前（小さく上に出る）   label … 読み上げ用の名前（省略すると ja）
@@ -405,8 +409,8 @@ const items=APPS.map((a,i)=>{
   el.addEventListener('mouseenter',()=>{ sel=i; mark(); pop(560+i*80); });
   el.addEventListener('click',e=>{ e.preventDefault(); launch(i); });
   li.appendChild(el);
-  { const f=d=>d.replace(/-/g,'.'), t=[]; if(a.start) t.push('開始 '+f(a.start)); if(a.upd) t.push('更新 '+f(a.upd)); if(a.ver) t.push('Ver.'+a.ver); if(a.stopped) t.push(typeof a.stopped==='string'?a.stopped:'開発中止');
-    if(t.length){ const dt=document.createElement('div'); dt.className='dt'; dt.textContent=t.join(' ／ '); li.appendChild(dt); } }
+  { const f=d=>d.replace(/-/g,'.'), t=[]; if(a.start) t.push('開始 '+f(a.start)); if(a.upd) t.push(FRESH(a.upd)?{fresh:'更新 '+f(a.upd)}:'更新 '+f(a.upd)); if(a.ver) t.push('Ver.'+a.ver); if(a.stopped) t.push(typeof a.stopped==='string'?a.stopped:'開発中止');
+    if(t.length){ const dt=document.createElement('div'); dt.className='dt'; t.forEach((x,k)=>{ if(k) dt.appendChild(document.createTextNode(' ／ ')); if(typeof x==='string'){ dt.appendChild(document.createTextNode(x)); } else { const s=document.createElement('b'); s.className='fresh'; s.textContent=x.fresh; dt.appendChild(s); } }); li.appendChild(dt); } }
   list.appendChild(li); return el;
 });
 sel=0;
