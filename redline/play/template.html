@@ -12,6 +12,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",Ar
 #board{flex:0 0 80%;position:relative;background:#2a2420;padding:6px;box-sizing:border-box}
 #wb{position:absolute;inset:6px;border-radius:6px;background:linear-gradient(160deg,#f7f7f4 0%,#eceae4 55%,#e2dfd8 100%);
  box-shadow:inset 0 0 0 7px #9a9da1,inset 0 0 0 9px #6d7074,inset 0 0 40px rgba(0,0,0,.12),0 3px 10px rgba(0,0,0,.6)}
+#wb{background-size:cover;background-position:center}
 #wb:after{content:"";position:absolute;inset:9px;border-radius:3px;pointer-events:none;
  background:repeating-linear-gradient(115deg,rgba(0,0,0,0) 0 40px,rgba(120,120,120,.035) 40px 44px)}
 svg#sv{position:absolute;left:6px;top:6px;width:calc(100% - 12px);height:calc(100% - 12px - 46px);touch-action:none}
@@ -540,6 +541,7 @@ const bS=document.getElementById('bSnd');
 function sndLabel(){ bS.textContent=sndOn?'♪ ON':'♪ OFF'; }
 bS.onclick=()=>{ sndOn=!sndOn; try{localStorage.setItem('redline_snd',sndOn?'1':'0')}catch(e){} sndLabel(); if(bgm){ sndOn?bgm.play().catch(()=>{}):bgm.pause(); } };
 sndLabel();
+if(IMG.board){const w=document.getElementById('wb');w.style.backgroundImage=`linear-gradient(rgba(255,255,255,.18),rgba(255,255,255,.18)),url(${IMG.board})`;}
 if(IMG.desk) document.getElementById('desk').style.backgroundImage=`url(${IMG.desk})`;
 document.getElementById('title').addEventListener('click',function(){ initAudio(); this.remove(); });
 let rt; window.addEventListener('resize',()=>{clearTimeout(rt); rt=setTimeout(build,120);});
