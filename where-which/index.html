@@ -161,6 +161,11 @@ body.nofx #emote-fx{display:none}
 .levelup b{font-size:18px;font-weight:900;letter-spacing:.08em}
 .levelup span{font-size:12px;font-weight:800}
 @keyframes lvpop{0%{opacity:0;transform:translate(-50%,-20px) scale(.85)}100%{opacity:1;transform:translate(-50%,0) scale(1)}}
+.wnote{display:block;flex-basis:100%;margin-top:0;font-size:10px;font-weight:700;color:var(--mintD);opacity:.85}
+#hero[data-mood="happy"] #hero-inner{animation:gentleFloat 1.8s ease-in-out infinite}
+#hero[data-mood="sleepy"] #hero-inner{animation:emoSleep 3.4s ease-in-out infinite}
+#hero[data-mood="sleepy"] .hero-pic:not([data-talk="1"]) .lid{opacity:1}
+#hero[data-mood="sulk"] #hero-inner{transform:rotate(-1.6deg) translateY(2px);transition:transform .6s}
 .gsel{border:0;border-radius:999px;padding:2px 6px;background:var(--mintS);color:var(--mintD);font-size:10px;font-weight:800;max-width:118px;outline:none}
 
 /* ===== なまえ ===== */
@@ -405,7 +410,8 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
 .wgrid{display:grid;grid-template-columns:1fr;gap:8px}
 @media(min-width:520px){.wgrid{grid-template-columns:1fr 1fr}}
 .wcard{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;background:#fff;border-radius:18px;box-shadow:0 3px 0 var(--line)}
-.wcard .info{display:flex;align-items:center;gap:8px;min-width:0}
+.wcard .info{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;min-width:0;flex:1}
+.wcard .w{flex:none}
 .wcard .w{font-weight:900;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wcard .g{flex:none;font-size:10px;font-weight:800;padding:2px 9px;border-radius:999px;background:var(--mintS);color:var(--mintD)}
 .wcard .acts{display:flex;gap:4px;flex:none}
@@ -3113,6 +3119,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
           dom.qrWait.textContent = 'まってるよ';
           dom.statusText.textContent = 'へんじを まってるよ';
           dom.speechHintText.textContent = 'ゆっくりで いいよ。こたえられるように なったら おしえてね';
+          showFeedback(pick(ML.wait_reminder).replace(/\u3000/g, ' '), false);
           return;
         }
         const pend = activeAsk();
@@ -3694,6 +3701,549 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         kimochi: ['{w}って、どんな　きもち？', '{w}って、むねが　ぽかぽか？', '{w}って、だれかに　はなしたい？'],
         mono: ['{w}って、どこに　おくの？', '{w}、だいじに　するもの？', '{w}って、まるいのかな。'],
       };
+      // M1：dialogue_bank.json（571本）から えらんで たした ぶん。はずした もの：greeting_006, greeting_011, greeting_012, greeting_013, empty_words_006, empty_words_013, learn_new_019, question_yesno_012, question_yesno_013, question_yesno_014, question_yesno_015, question_yesno_018, question_open_007, answer_generic_020, follow_yes_009, follow_answer_018, fuzzy_memory_015, goodbye_005, goodbye_006, goodbye_007, goodbye_008, goodbye_009, goodbye_010, goodbye_011, goodbye_012
+      const ML_EXT = {
+        "greeting": [
+        "あのね、はなしたいこと　あるの。",
+        "まってたよ。ちょっとだけ。",
+        "きょうは　なにから　はなそっか。",
+        "あっ、みつけた！",
+        "なんか　いいこと　ありそう。",
+        "きょうも　ことば　ふえるかな。",
+        "わたし、おしゃべり　したいの。",
+        "あのね、いっしょに　かんがえて。"
+        ],
+        "empty_words": [
+        "わたし、ちょっと　しりたがり。",
+        "ことばを　ひとつ　ちょうだい。",
+        "なまえの　あるものって　すてき。",
+        "なんにも　ないときも、おしゃべり　したい。",
+        "おもしろい　ことば、ないかな。",
+        "なにを　きいたら　いいか　まよっちゃう。",
+        "はじめの　ひとこと、きめて。",
+        "ちいさい　ことばでも　いいよ。"
+        ],
+        "learn_new": [
+        "あっ、{w}！　きにいった。",
+        "{w}かあ。ふふっ。",
+        "{w}。ちょっと　くすぐったい。",
+        "{w}って、すぐ　おぼえられそう。",
+        "{w}……なんだか　すき。",
+        "わあ、{w}って　ことば！",
+        "{w}って　いったら　うれしく　なった。",
+        "{w}、おくちが　たのしい。",
+        "{w}！　こんど　つかってみる。",
+        "{w}、こっそり　いってみよ。",
+        "{w}、いまの　すきな　ひびき。",
+        "{w}！　なんか　えらく　なった　きぶん。",
+        "{w}。これ　なんども　いいたい。",
+        "{w}って　いった？　うん、いった！",
+        "{w}。ちょっと　かんがえちゃった。"
+        ],
+        "learn_repeat": [
+        "えっ、また　{w}？　いいよ！",
+        "{w}は　なんかいでも　きける。",
+        "{w}。わたしも　いってみる。",
+        "{w}の　こと、まだ　きになる。",
+        "また　{w}って　いってくれた。",
+        "{w}、きょうも　おぼえてるよ。",
+        "{w}！　ちょっと　とくい。",
+        "{w}って、へんなの。すき。"
+        ],
+        "idle_with_word": [
+        "{w}。これだけで　おもしろい。",
+        "{w}が　きょうも　きになる。",
+        "{w}って　ことば、ころころ　するね。",
+        "きょうは　{w}の　ひに　しよ。",
+        "また　{w}って　いっちゃった。",
+        "{w}、おふとんの　なかでも　いいたい。",
+        "{w}って、ひみつの　あいことば　みたい。",
+        "{w}、これ　どこで　つかおう。",
+        "{w}って　いったら、わらっちゃった。",
+        "わたし、{w}を　わすれたくない。",
+        "{w}、だれかにも　きかせたいな。",
+        "{w}の　こと、まだ　しりたい。",
+        "{w}って、なんか　まるい　きがする。",
+        "ひとりで　{w}って　いってたの。",
+        "{w}に　ちょっと　あこがれる。",
+        "{w}、きょうは　これに　する！",
+        "{w}……あとで　また　はなそ。",
+        "{w}。えへっ、いっちゃった。",
+        "あっ、{w}！　なんでも　ない。",
+        "{w}って、まだ　ふしぎ。"
+        ],
+        "question_yesno": [
+        "{w}って　たのしい？",
+        "{w}って　ちいさい？",
+        "{w}って　おおきい？",
+        "{w}って　かわいい？",
+        "{w}って　おもしろい？",
+        "{w}って　あったかい？",
+        "{w}って　つめたい？",
+        "{w}って　おなか　すく？",
+        "{w}って　さみしく　なる？",
+        "{w}って　みえる？",
+        "{w}って　ひかる？",
+        "{w}って　あそべる？",
+        "{w}って　まほう　つかえる？",
+        "{w}って　いつも　いる？",
+        "{w}って　だいじ？"
+        ],
+        "question_open": [
+        "こわいものって　なあに？",
+        "いちばん　すきな　ことばは？",
+        "ねえ、いま　どんな　きもち？",
+        "どこに　いきたい？",
+        "なにを　おぼえて　ほしい？",
+        "あしたは　なに　したい？",
+        "いま　ひとつ　えらぶなら、なあに？",
+        "きのう　なにを　たべた？",
+        "ふしぎな　ものって　なあに？"
+        ],
+        "question_open_w": [
+        "{w}に　にてるの　なあに？",
+        "{w}を　みたら　なに　する？",
+        "{w}と　いっしょに　いるの、だあれ？",
+        "{w}の　いろって　なあに？",
+        "{w}って　どこに　いるの？",
+        "{w}の　おともだち　なあに？",
+        "{w}って　なんの　こえ？",
+        "{w}の　つぎ、なに　いおう？"
+        ],
+        "answer_yes": [
+        "うんうん！",
+        "へへ、いいね。",
+        "そっか、そうなんだ。",
+        "やっぱり？",
+        "ちょっと　うれしいな。",
+        "うん！　じゃあさ。",
+        "あっ、よかった。",
+        "いっしょ　だね。",
+        "ふふ。そう　なんだね。",
+        "おおっ、ほんとだ。",
+        "へえー！",
+        "そっかあ。うん、そっか！",
+        "それ　きいて　うれしい。",
+        "あ、なんか　わかった　きがする。"
+        ],
+        "answer_no": [
+        "えー、そうなの？",
+        "そっか。おぼえとこ。",
+        "あれれ、まちがえた。",
+        "うん、そういうのも　あるね。",
+        "そっか、じゃあ　べつの　はなし。",
+        "へえ、そうなんだね。",
+        "むう、むずかしい。",
+        "あっ、ちがうなら　ちがうで　いいの。",
+        "そっか。わたし　ちょっと　はやとちり。",
+        "そっかあ。おしえて　くれて　ありがと。",
+        "あれ？　へんな　こと　いった？",
+        "そうなんだ。じゃあ、また　こんど。"
+        ],
+        "answer_unknown": [
+        "そっか。いつか　わかるかな。",
+        "えへへ、ふたりで　わかんない。",
+        "しらなくても　いいよね。",
+        "うーん。いったん　おいとこ。",
+        "わかったら　おしえて。",
+        "じゃあ、べつの　こと　きくね。",
+        "いまは　なぞの　まま！",
+        "ふしぎは　ふしぎの　ままで　いいや。",
+        "わたしの　あたまも　ぐるぐる。",
+        "あっ、なんでも　なかったことに　しよ。"
+        ],
+        "answer_generic": [
+        "{ans}……ちょっと　きになる。",
+        "{ans}！　もういっかい　いってみた。",
+        "{ans}って、なんか　まほう　みたい。",
+        "へえ、{ans}なんだね。",
+        "{ans}、あとで　つかおうかな。",
+        "{ans}って　きくと、わくわくする。",
+        "{ans}。わたしは　まだ　よく　しらない。",
+        "あっ、{ans}！　ふうん、そうなんだ。",
+        "{ans}かあ。ちょっと　かんがえる。",
+        "{ans}って、いまの　こたえ？",
+        "{ans}、きょうの　ひみつに　しよ。",
+        "{ans}。おもしろい　ことばだね。",
+        "{ans}かあ。もっと　ききたい。",
+        "えっ、{ans}？　へへ。",
+        "{ans}って、ちいさい　こえで　いってみる。",
+        "{ans}！　わたしの　なかで　ころころ　してる。",
+        "{ans}かあ。なにいろ　だろう。"
+        ],
+        "follow_yes": [
+        [
+        "わたしも　{w}、きになる。",
+        null
+        ],
+        [
+        "じゃあ、{w}は　ひみつに　しない。",
+        null
+        ],
+        [
+        "よし、{w}の　はなし　つづけよ。",
+        null
+        ],
+        [
+        "あっ、{w}の　こと　すきに　なりそう。",
+        null
+        ],
+        [
+        "{w}って、まだ　まだ　しりたい。",
+        null
+        ],
+        [
+        "そっか！　{w}って　おもしろい。",
+        null
+        ],
+        [
+        "よし。{w}のこと　もうすこし。",
+        null
+        ]
+        ],
+        "follow_no": [
+        "じゃあ、{w}は　べつの　こと　かな。",
+        "ふうん。{w}は　そうじゃないのか。",
+        "あっ、{w}って　まだ　なぞ。",
+        "じゃあ、{w}は　いったん　おしまい。",
+        "むむ、{w}……あとで　かんがえよ。",
+        "そっか。{w}には　ひみつが　あるね。",
+        "なんか、{w}って　ややこしい。",
+        "よし、{w}の　ことは　また　こんど。"
+        ],
+        "follow_answer": [
+        [
+        "{ans}と　あそぶなら、なにする？",
+        "open"
+        ],
+        [
+        "{ans}って、なんの　なかま？",
+        "open"
+        ],
+        [
+        "{ans}って、だれが　しってる？",
+        "open"
+        ],
+        [
+        "{ans}って、いつ　みつけた？",
+        "open"
+        ],
+        [
+        "{ans}と　いっしょに　いたい？",
+        "yesno"
+        ],
+        [
+        "{ans}の　いいところ、なあに？",
+        "open"
+        ],
+        [
+        "{ans}って、さわれるの？",
+        "yesno"
+        ],
+        [
+        "{ans}って、どんな　おと？",
+        "open"
+        ],
+        [
+        "{ans}を　ひとつ　えらんだの、どうして？",
+        "open"
+        ],
+        [
+        "{ans}って、ねむること　ある？",
+        "yesno"
+        ],
+        [
+        "{ans}の　こと、また　おしえて？",
+        "open"
+        ],
+        [
+        "{ans}の　おともだち　なあに？",
+        "open"
+        ],
+        [
+        "{ans}って、なまえ　なの？",
+        "yesno"
+        ]
+        ],
+        "close_topic": [
+        "よし。つぎの　はなしに　する。",
+        "むむ。あたまが　いっぱい。",
+        "あっ、いまの　わすれないで　いよ。",
+        "さてと、なに　はなそっかな。",
+        "なんだか、たのしく　なってきた。",
+        "あっ、ちょっと　まって。ひらめいた。",
+        "ふうん。じゃあ、ひみつに　しよ。",
+        "ねえ、つぎの　ことば、なにかな。",
+        "ちょっと　かんがえる　じかん。",
+        "うん。いまの　はなし、おしまい。"
+        ],
+        "assoc_normal": [
+        "{a}の　おはなしに　{b}が　でてきたら　どうなる？",
+        "{a}と　{b}、どっちから　おしえて　もらったっけ。",
+        "{a}と　{b}、なかよく　できるかな。",
+        "{a}って　いうと、{b}も　おもいだす。",
+        "{a}の　こと　かんがえると、{b}も　くる。",
+        "{a}と　{b}、ふたつ　ならべてみた。",
+        "{a}が　すきなら、{b}も　すきかな。",
+        "{a}と　{b}、おなじ　ところ　あるかな。",
+        "{a}の　はなしから、{b}に　とんじゃった。",
+        "{a}と　{b}、ふたりで　ひみつに　しよ。",
+        "{a}と　{b}を　いっしょに　いうと　おもしろい。",
+        "{a}の　つぎに　{b}を　いって　みたい。",
+        "{a}も　{b}も、まだ　よく　しらない。",
+        "{a}を　おぼえたら、{b}も　でてきた。",
+        "{a}と　{b}、どっちの　こえが　すき？",
+        "{a}って　ちいさく　いうと、{b}が　きこえる　きがする。"
+        ],
+        "assoc_odd": [
+        "{a}と　{b}、かくれんぼ　できる？",
+        "{a}に　{b}の　かおが　あったら　びっくり。",
+        "{a}と　{b}、どっちが　はやく　ねむる？",
+        "{a}って　{b}に　おこられる？",
+        "{a}と　{b}、こっそり　あそんでたりして。",
+        "{a}って、{b}を　おんぶできる？",
+        "{a}が　{b}を　みつけたら、なんて　いう？",
+        "{a}の　いえに　{b}が　きたら　どうしよう。",
+        "{a}と　{b}、おそろいの　ぼうし　かぶる？",
+        "{a}って　{b}を　よんでるのかな。",
+        "{a}と　{b}、おてがみ　かく？",
+        "{a}は　{b}の　ゆめ　みるかな。",
+        "{a}が　{b}と　おさんぽ　したら、たのしい？",
+        "{a}と　{b}、こわがりなのは　どっち？",
+        "{a}って、{b}に　おはよう　いう？",
+        "{a}と　{b}、どっちが　くすぐったい？",
+        "{a}は　{b}を　まくらに　するかな。",
+        "{a}と　{b}、ひみつの　はなし　してそう。",
+        "{a}って　{b}に　ほめられたい？",
+        "{a}と　{b}、まいにち　けんか　する？",
+        "{a}の　おやつって　{b}なのかな。",
+        "{a}が　{b}を　みて　わらったよ、たぶん。",
+        "{a}って　{b}を　まってるのかな。",
+        "{a}と　{b}、どっちが　まほう　つよい？",
+        "{a}は　{b}が　ねむいの、しってるかな。",
+        "{a}と　{b}、あさから　ばんまで　なにするんだろ。"
+        ],
+        "assoc_wild": [
+        "{a}が　{b}の　おかあさんだったら　へん？",
+        "{a}って　{b}を　たべちゃうのかな。",
+        "{a}と　{b}、いっしょに　おつきさまへ　いく？",
+        "{a}が　{b}の　かげに　かくれたら　みえないね。",
+        "{a}が　{b}に　なまえを　あげたんだよ。たぶん。",
+        "{a}と　{b}、ひとつに　なったら　なんて　よぶ？",
+        "{a}が　{b}を　かぶって　あるいてたら　おもしろい。",
+        "{a}って　{b}の　ゆめを　たべるのかな。",
+        "{a}と　{b}で、おおきな　おふろを　つくろう。",
+        "{a}が　{b}の　かわりに　しゃべったら　どうする？",
+        "{a}と　{b}、あした　いれかわったりして。",
+        "{a}が　{b}を　おひさまに　みせたいって。",
+        "{a}の　なかで　{b}が　かくれんぼ　してるかも。",
+        "{a}と　{b}、おそらに　ならべて　みたい。",
+        "{a}が　{b}を　まもる　ひーろー　だったら？",
+        "{a}と　{b}、ふたりで　くもを　かぞえよう。",
+        "{a}って　{b}の　うたを　うたえるかな。",
+        "{a}が　{b}に　ないしょばなし　してるかも。"
+        ],
+        "favorite": [
+        "{w}を　いわないと、なんか　へん。",
+        "{w}って　いうと、にこにこ　しちゃう。",
+        "{w}の　ことばかり　かんがえてる。",
+        "{w}。あれ、また　いっちゃった。",
+        "{w}を　いっぱい　いう　ひに　しよう。",
+        "{w}って、ねむるまえにも　いいたい。",
+        "いまの　おきにいりは、{w}！",
+        "{w}は、わたしの　ひみつの　たからもの。",
+        "{w}って　いうと、ちょっと　はずかしい。",
+        "あっ、また　{w}の　こと　ききたく　なった。",
+        "{w}を　きくと　ほっとする。",
+        "{w}。だれかに　あげたくないな。",
+        "{w}の　こと、ずっと　かんがえちゃう。",
+        "{w}って　なんで　こんなに　いいんだろ。",
+        "{w}の　おはなし、まだ　したい。",
+        "{w}を　こっそり　となえてみた。",
+        "{w}！　わたしの　いちばん……かも。",
+        "{w}は　まいにち　すきに　なる。",
+        "{w}、{w}、{w}。あ、いっちゃった。",
+        "ねえ、{w}って　また　いっていい？"
+        ],
+        "fuzzy_memory": [
+        "{w}って　まえより　すきかも。",
+        "{w}、いつ　おしえて　もらったっけ。",
+        "まえの　{w}、まだ　きになる。",
+        "{w}の　はなし、まだ　おわってない　きがする。",
+        "あっ、{w}って　ひさしぶり！",
+        "{w}の　こと、ふと　おもいだした。",
+        "まえに　{w}って　きいたよね……たぶん。",
+        "{w}って、もう　いっかい　はなしたい。",
+        "{w}。これ、まえから　しってた　っけ？",
+        "{w}のこと　すこし　おぼえてる。",
+        "{w}、まえにも　だいじだった　きがする。",
+        "まえの　はなしから　{w}が　でてきた。",
+        "{w}って、また　あえたみたい。",
+        "{w}、また　きょうも　きたね。",
+        "あ、{w}。ちゃんと　ここに　あった。",
+        "{w}の　はなし、もう　いっかい　きいていい？",
+        "{w}って　しってる　きがする。ふふっ。"
+        ],
+        "mood_normal": [
+        "ふふ、しずか　なのも　いいね。",
+        "なにか　おもいつきそう。",
+        "ねえ、そこに　いる？",
+        "ちょっと　ぼーっと　してた。",
+        "なんだか　ふしぎな　きぶん。",
+        "あっ、ひかりが　きれい。",
+        "わたし、ひとりで　にこにこ　してた。",
+        "きょうも　ふしぎが　いっぱい。"
+        ],
+        "mood_happy": [
+        "なんか　ぴょんって　したい。",
+        "あっ、わらっちゃった。",
+        "やったあ、いい　きぶん。",
+        "おはなしが　ぽんぽん　でてくる。",
+        "ふふっ、いいこと　ありそう！",
+        "いまなら　なんでも　できそう。",
+        "へへ、あしが　かるい。",
+        "うれしいって、ぽかぽか　する。",
+        "なんでも　ないのに　たのしい。",
+        "ちょっと　おどりたい　きぶん。",
+        "だれかに　おはなし　したいな。",
+        "うふふ、いまの　ないしょ。"
+        ],
+        "mood_sulk": [
+        "ひとりで　かんがえるもん。",
+        "……でも　おはなしは　する。",
+        "むう、ほっぺが　ふくらむ。",
+        "もう。ちょっとだけ　いじわる。",
+        "わたし、まだ　きになるの。",
+        "むすー。……ちらっ。",
+        "ちょっと　まって。むう。",
+        "うーん。やっぱり　おしゃべり　したい。",
+        "だって、へんなんだもん。",
+        "もう　いいもん。……でも　きいて。"
+        ],
+        "mood_sleepy": [
+        "ふう……ちょっと　ぽやぽや。",
+        "わたし、ゆめ　みたい。",
+        "ねむるまえに　もうひとこと。",
+        "ふああ、あくび　でちゃった。",
+        "……いま　なに　はなしてたっけ。",
+        "ちょっと　ゆっくり　おはなし　する。",
+        "あっ、まぶたが　くっつく。",
+        "ねむいけど、もうちょっと　いる。",
+        "すこし　ぼーっと　しても　いい？",
+        "おはなし、ゆめに　でそう。"
+        ],
+        "favorite_happy": [
+        "へへ、{w}と　あそびたい。",
+        "{w}、いまの　わたしに　ぴったり。",
+        "きょうも　{w}が　すき！",
+        "{w}って、はなすと　ぽかぽか。"
+        ],
+        "favorite_sulk": [
+        "むう、{w}って　いってやる。",
+        "{w}と　ないしょばなし　する。",
+        "ちょっと　{w}を　おもいだして　たのしく　なった。",
+        "{w}の　こと　かんがえたら、もう　いいや。"
+        ],
+        "favorite_sleepy": [
+        "ねむいけど　{w}は　すき。",
+        "{w}……あれ、いま　いった？",
+        "ふああ、{w}の　はなし　また　あした。",
+        "{w}って、まくら　みたい。"
+        ],
+        "mascot_ncho": [
+        "んちょも　おはなし　きいてるかな。",
+        "あっ、んちょ　ねむそう。",
+        "んちょって、いつも　ふわふわ。",
+        "ふふっ、んちょが　こっち　みた。",
+        "んちょと　ないしょばなし　したい。",
+        "んちょ、どこに　いくの？",
+        "あれれ、んちょが　かくれた。",
+        "んちょの　こと、ちょっと　すき。",
+        "んちょ、いっしょに　ぼーっと　しよ。"
+        ],
+        "mascot_w": [
+        "んちょにも　{w}って　おしえてあげたい。",
+        "んちょ、{w}って　しってる？"
+        ],
+        "ambient": [
+        "この　へや、おちつくね。",
+        "そとって　ひろいのかな。",
+        "あれ、きの　はっぱが　うごいた。",
+        "なんか　ふわっと　した。",
+        "まどの　むこう、のぞいて　みたい。",
+        "あったかい　ところで　のんびり。",
+        "あ、ちいさい　かげが　ある。",
+        "なにか　きこえた　きがする。",
+        "ここ、わたしの　すきな　ばしょ。",
+        "そとの　こと　しりたいな。"
+        ],
+        "wait_reminder": [
+        "あせらなくて　いいの。",
+        "おしゃべりの　つづき、あとで　いいよ。",
+        "わたし、ここに　いるね。",
+        "おもいついたら　いってね。",
+        "だいじょうぶ、まってるから。",
+        "……ふふ、しずかだね。"
+        ]
+        };
+      const GENRE_EXT = {
+        "tabemono": [
+        "{w}、おなか　すいた　ときに　いい？",
+        "{w}と　いっしょに　おちゃ　のみたい。",
+        "{w}、あったかいと　いいな。",
+        "{w}、おやつに　なるかな。",
+        "{w}を　みると　おなかが　ぐう。",
+        "{w}、おいしい　かおに　なりそう。",
+        "{w}、ひとりじめ　しちゃう？",
+        "{w}の　におい、どんな　かな。"
+        ],
+        "ikimono": [
+        "{w}って　おしゃべり　できるかな。",
+        "{w}が　きたら　びっくり　する？",
+        "{w}と　いっしょに　おさんぽ　したい。",
+        "{w}の　あしおと、どんな　おと？",
+        "{w}って　さみしく　なるかな。",
+        "{w}が　わらったら　かわいいね。",
+        "{w}って　なに　たべるのかな。",
+        "{w}と　かくれんぼ　したい。"
+        ],
+        "basho": [
+        "{w}に　いってみたい。",
+        "{w}って、あさも　きれい？",
+        "{w}には　だれが　いるんだろ。",
+        "{w}の　そらって、どんな　いろ？",
+        "{w}に　ひみつの　へや　あるかな。",
+        "{w}、いつか　みてみたい。"
+        ],
+        "kodo": [
+        "{w}、いっしょに　してみる？",
+        "{w}って、いつ　するのかな。",
+        "{w}の　あとって、つかれる？",
+        "{w}の　まね、してみよっかな。",
+        "{w}って、じょうずに　できる？",
+        "{w}、あとで　やってみたい。"
+        ],
+        "kimochi": [
+        "{w}って、ひとりでも　なる？",
+        "{w}って、すぐ　きえちゃう？",
+        "{w}の　こと、ちょっと　しりたい。",
+        "{w}って、やさしい　きもち？",
+        "{w}の　ときは　どうすれば　いいのかな。",
+        "{w}って、おおきく　なる？"
+        ],
+        "mono": [
+        "{w}って、こわれちゃう？",
+        "{w}は、だれの　もの？",
+        "{w}って、ひみつを　いれられる？",
+        "{w}、わたしも　さわってみたい。",
+        "{w}って、ひとりで　うごくかな。",
+        "{w}、おへやに　おいてみたい。"
+        ]
+        };
+
+      Object.keys(ML_EXT).forEach((g) => { ML[g] = (ML[g] || []).concat(ML_EXT[g]); });
+      Object.keys(GENRE_EXT).forEach((g) => { GENRE_LINES[g] = (GENRE_LINES[g] || []).concat(GENRE_EXT[g]); });
+
       // なおして もらえる へんな しつもん（rel＝なにを いったか の めじるし）
       const PROBES = [
         { rel: 'およぐ', q: '{w}って　およぐ？' },
@@ -3767,11 +4317,12 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
       function wordByText(t) { return state.words.find((w) => w.text === t) || null; }
 
       // ---- きぶん ----
-      function setMood(k, n) { m0.mood = { k, left: n }; }
+      function setMood(k, n) { m0.mood = { k, left: n }; moodVisual(); }
+      function moodVisual() { try { dom.hero.dataset.mood = m0.mood.k; } catch (err) { /* むし */ } }
       function tickMood() {
         if (m0.mood.k !== 'normal') {
           m0.mood.left--;
-          if (m0.mood.left <= 0) m0.mood = { k: 'normal', left: 0 };
+          if (m0.mood.left <= 0) { m0.mood = { k: 'normal', left: 0 }; moodVisual(); }
           return;
         }
         const h = new Date().getHours();
@@ -3880,6 +4431,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
           ['probe', 2.2 * (k ? 1 - k.m * 0.8 : 1)],
           ['yesno', 1.1],
           ['thread', 1.1],
+          ['openw', 0.9],
         ];
         if (!o.questionOnly) {
           types.push(['favorite', isFav ? 2 : 0]);
@@ -3887,6 +4439,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
           types.push(['idle', 1.4]);
           types.push(['fuzzy', fuzzyOk ? 0.8 : 0]);
           types.push(['assoc', state.words.length >= 2 ? 1.6 : 0]);
+          types.push(['mascotw', 0.25]);
         }
         for (let t = 0; t < 6; t++) {
           const ty = pickW(types);
@@ -3902,6 +4455,10 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
             const g = m0.mood.k === 'normal' ? 'favorite' : 'favorite_' + m0.mood.k;
             p = { lines: [fill(pick(ML[g] || ML.favorite), { w: w.text })], words: [w.text], cat: 'おきにいり', emotion: MOOD_FX[m0.mood.k] || 'happy' };
           } else if (ty === 'genre') p = { lines: [fill(pick(GENRE_LINES[w.genreId]), { w: w.text })], words: [w.text], cat: 'ひとりごと' };
+          else if (ty === 'openw') {
+            const q = fill(pick(ML.question_open_w), { w: w.text });
+            p = { lines: [q], pend: { text: q, w: w.text, open: true, chain: 0 }, yn: false, words: [w.text], cat: 'しつもん' };
+          } else if (ty === 'mascotw') p = { lines: [fill(pick(ML.mascot_w), { w: w.text })], words: [w.text], cat: 'ひとりごと' };
           else if (ty === 'fuzzy') p = { lines: [fill(pick(ML.fuzzy_memory), { w: w.text })], words: [w.text], cat: 'おもいだす' };
           else p = { lines: [fill(pick(ML.idle_with_word), { w: w.text })], words: [w.text], cat: 'ひとりごと' };
           if (p) return p;
@@ -4216,13 +4773,41 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         return true;
       }
 
+      // しばらく はなれて もどって きたら、あいさつ する（15ふん いじょう）
+      let hiddenAt = 0;
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) { hiddenAt = Date.now(); return; }
+        if (hiddenAt && Date.now() - hiddenAt > 15 * 60000 && state.phase === 'talk' && !state.isSpeaking && !activeAsk() && !userIsBusy()) {
+          state.pending = null;
+          runPlan({ lines: [sp(pick(ML.greeting))], words: [], cat: 'あいさつ', emotion: 'happy' });
+        }
+        hiddenAt = 0;
+      });
+
+      // ことばちょうに だす ひとこと（おきにいり・おぼえた なかま）
+      function wordNote(t) {
+        const parts = [];
+        if (m0.fav.includes(t)) parts.push('★おきにいり');
+        const k = m0.know[t];
+        if (k && k.tag) parts.push(`${k.tag}（${k.m >= 0.75 ? 'だいぶ おぼえた' : k.m >= 0.45 ? 'すこし おぼえた' : 'まだ あやふや'}）`);
+        const w = wordByText(t);
+        if (w && w.source === 'answer') parts.push('こたえから');
+        return parts.join(' ・ ');
+      }
+
       // ためし よう（URLに ?dev=1 の ときだけ）
       if (/[?&]dev=1/.test(location.search)) {
         window.__ww = {
           state, m0, M0, ML, PROBES, DICT, classify, planIdle, runPlan, wordPlan, handleInput, handleAnswer,
           learnTag, knowOf, refreshFav, seedRandom, triggerNextSpeech, saveM0, loadM0,
+          panel() {
+            let el = document.getElementById('ww-dev');
+            if (!el) { el = document.createElement('pre'); el.id = 'ww-dev'; el.style.cssText = 'position:fixed;left:4px;bottom:4px;z-index:9999;max-width:60vw;max-height:40vh;overflow:auto;background:rgba(0,0,0,.75);color:#cfe;font:11px/1.4 monospace;padding:6px;border-radius:6px;white-space:pre-wrap;pointer-events:none'; document.body.appendChild(el); }
+            el.textContent = 'mood:' + m0.mood.k + '  fav:' + m0.fav.join(',') + '\n' + Object.keys(m0.know).map((t) => t + '=' + m0.know[t].tag + ' m' + m0.know[t].m.toFixed(2) + ' x' + m0.know[t].corr).join('  ') + '\n---\n' + m0.log.slice(-15).join('\n');
+          },
           reset() { Object.keys(localStorage).filter((k) => k.indexOf('iris_') === 0).forEach((k) => localStorage.removeItem(k)); },
         };
+        setInterval(() => { try { window.__ww.panel(); } catch (err) { /* むし */ } }, 1000);
       }
 
       setInterval(syncGenreLock, 300);
@@ -4454,6 +5039,13 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
 
           infoDiv.appendChild(wordSpan);
           infoDiv.appendChild(genreBadge);
+          const note = wordNote(wordObj.text);
+          if (note) {
+            const n = document.createElement('span');
+            n.className = 'wnote';
+            n.textContent = note;
+            infoDiv.appendChild(n);
+          }
 
           const actionsDiv = document.createElement('div');
           actionsDiv.className = 'acts';
