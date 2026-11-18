@@ -607,29 +607,86 @@ const CORE = (function () {
   const proj = (x, z, camX) => { const k = V.F / z; return { x: V.W / 2 + (x - camX) * k, y: V.hor + CAM_H * k, k: k }; };
   function carBox(x, z, camX) { const p = proj(x, z, camX); return { cx: p.x, w: CAR.w * p.k, bot: p.y, top: p.y - CAR.h * p.k, h: CAR.h * p.k }; }
 
-  /* ================= AUDIO（B0：ビープ1種） ================= */
+  /* ================= AUDIO（B2：合成音。マナーモードではiOSの既定で鳴らない） ================= */
   const AUDIO = {
-    ctx: null, master: null,
+    ctx: null, master: null, nbuf: null, eng: null, sir: null,
     init() {
       if (this.ctx) { if (this.ctx.state !== 'running') this.ctx.resume(); return; }
       try {
         const AC = window.AudioContext || window.webkitAudioContext;
-        this.ctx = new AC(); this.master = this.ctx.createGain(); this.master.gain.value = 1;
-        const comp = this.ctx.createDynamicsCompressor();
-        this.master.connect(comp); comp.connect(this.ctx.destination); this.ctx.resume();
-      } catch (e) {}
+        const c = this.ctx = new AC(); this.master = c.createGain(); this.master.gain.value = 1;
+        const comp = c.createDynamicsCompressor(); this.master.connect(comp); comp.connect(c.destination);
+        const nb = c.createBuffer(1, c.sampleRate * 1, c.sampleRate), d = nb.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; this.nbuf = nb;
+        // エンジン：のこぎり波＋ローパス
+        const eo = c.createOscillator(), ef = c.createBiquadFilter(), eg = c.createGain(); eo.type = 'sawtooth'; eo.frequency.value = 60; ef.type = 'lowpass'; ef.frequency.value = 420; eg.gain.value = 0;
+        eo.connect(ef); ef.connect(eg); eg.connect(this.master); eo.start(); this.eng = { o: eo, g: eg, f: ef };
+        // サイレン：矩形波＋ローパス
+        const so = c.createOscillator(), sf = c.createBiquadFilter(), sg = c.createGain(); so.type = 'square'; so.frequency.value = 700; sf.type = 'lowpass'; sf.frequency.value = 2200; sg.gain.value = 0;
+        so.connect(sf); sf.connect(sg); sg.connect(this.master); so.start(); this.sir = { o: so, g: sg };
+        this.ctx.resume();
+      } catch (e) { this.ctx = null; }
     },
-    beep(f, d, type, v) {
-      if (!this.ctx || AUTO) return;
+    on() { return this.ctx && !AUTO && this.ctx.state === 'running'; },
+    beep(f, d, type, v, f2) {
+      if (!this.on()) return;
       const c = this.ctx, o = c.createOscillator(), g = c.createGain(), t = c.currentTime;
-      o.type = type || 'square'; o.frequency.value = f;
+      o.type = type || 'square'; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
       g.gain.setValueAtTime(v || 0.12, t); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
       o.connect(g); g.connect(this.master); o.start(t); o.stop(t + d + 0.02);
+    },
+    noise(d, f0, f1, type, v, delay) {
+      if (!this.on()) return;
+      const c = this.ctx, s = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain(), t = c.currentTime + (delay || 0);
+      s.buffer = this.nbuf; fl.type = type || 'bandpass'; fl.frequency.setValueAtTime(f0, t); if (f1) fl.frequency.exponentialRampToValueAtTime(f1, t + d); fl.Q.value = 0.9;
+      g.gain.setValueAtTime(v || 0.2, t); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      s.connect(fl); fl.connect(g); g.connect(this.master); s.start(t); s.stop(t + d + 0.05);
     },
     duck(sec) {
       if (!this.ctx) return;
       const g = this.master.gain, t = this.ctx.currentTime;
       g.cancelScheduledValues(t); g.setValueAtTime(0.6, t); g.setValueAtTime(0.6, t + sec); g.linearRampToValueAtTime(1, t + sec + 0.3);
+    },
+    // 毎フレーム：エンジンとサイレンの連続音
+    update(S, t) {
+      if (!this.on()) return;
+      const c = this.ctx, now = c.currentTime, moving = S.speed > 1 && (S.phase === 'CHASE' || S.phase === 'PULLOVER');
+      this.eng.o.frequency.setTargetAtTime(48 + Math.min(S.speed, 70) * 1.5, now, 0.15);
+      this.eng.f.frequency.setTargetAtTime(300 + Math.min(S.speed, 70) * 9, now, 0.2);
+      this.eng.g.gain.setTargetAtTime(moving ? 0.07 : 0, now, 0.25);
+      const m = S.siren, live = m !== 'OFF' && (S.phase === 'CHASE' || S.phase === 'PULLOVER');
+      let f = 700;
+      if (m === 'WAIL') f = 640 + 560 * (0.5 + 0.5 * Math.sin(t * 2 * Math.PI * 0.28));
+      else if (m === 'YELP') f = 640 + 560 * (0.5 + 0.5 * Math.sin(t * 2 * Math.PI * 3.2));
+      else if (m === 'PHASER') f = (Math.floor(t * 9) % 2 ? 1250 : 820) + (Math.floor(t * 9) % 4) * 40;
+      this.sir.o.frequency.setTargetAtTime(f, now, m === 'PHASER' ? 0.005 : 0.03);
+      this.sir.g.gain.setTargetAtTime(live ? 0.035 : 0, now, 0.12);
+    },
+    mute() { if (this.ctx && this.ctx.state === 'running') this.ctx.suspend(); },
+    // 効果音
+    sfx(name, a) {
+      if (!this.on()) return;
+      switch (name) {
+        case 'window': this.beep(740, 0.07, 'square', 0.08); this.beep(1100, 0.09, 'square', 0.08); break;
+        case 'hit': {
+          const st = (a && a.stage) || 1;
+          this.beep(150 - st * 12, 0.35, 'sine', 0.35, 40); this.noise(0.22 + st * 0.05, 1800, 300, 'bandpass', 0.28 + st * 0.04);
+          this.beep(2200, 0.12, 'triangle', 0.05, 900);
+          if (st >= 3) { this.noise(0.6, 900, 120, 'lowpass', 0.25, 0.08); this.beep(70, 0.5, 'sine', 0.3, 30); }
+          break;
+        }
+        case 'miss': this.beep(260, 0.2, 'triangle', 0.12, 120); break;
+        case 'whiff': this.noise(0.14, 800, 3200, 'highpass', 0.07); break;
+        case 'radio': this.noise(0.05, 2400, 0, 'bandpass', 0.07); this.beep(1000, 0.05, 'square', 0.04); this.noise(0.05, 2200, 0, 'bandpass', 0.05, 0.12); break;
+        case 'ramArm': this.beep(90, 0.4, 'sawtooth', 0.18, 160); break;
+        case 'stopped': this.noise(0.9, 3200, 700, 'bandpass', 0.18); this.beep(100, 0.5, 'sine', 0.2, 50); break;
+        case 'spot': this.beep(1300, 0.15, 'sine', 0.1); break;
+        case 'door': this.noise(0.08, 500, 0, 'lowpass', 0.3); this.beep(110, 0.18, 'sine', 0.3, 60); this.noise(0.05, 1500, 0, 'bandpass', 0.1, 0.12); break;
+        case 'engineOff': this.beep(70, 0.7, 'sawtooth', 0.12, 25); break;
+        case 'cuffs': this.noise(0.03, 4200, 0, 'highpass', 0.14); this.noise(0.03, 4800, 0, 'highpass', 0.14, 0.11); this.beep(2600, 0.04, 'square', 0.04); break;
+        case 'react': this.beep(520, 0.08, 'triangle', 0.06); break;
+        case 'arrest': [440, 554, 659].forEach((f, i) => { const t0 = i * 0.11; setTimeout(() => this.beep(f, 0.6, 'triangle', 0.14), t0 * 1000); }); break;
+        case 'ui': this.beep(880, 0.05, 'square', 0.06); break;
+      }
     }
   };
 
@@ -712,7 +769,7 @@ const CORE = (function () {
   refreshVoiceBtn();
   $('resume').addEventListener('pointerdown', e => { e.stopPropagation(); AUDIO.init(); paused = false; $('resume').classList.add('hide'); last = performance.now(); });
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden && !SHOT) { paused = true; VOICE.cancel(); }
+    if (document.hidden && !SHOT) { paused = true; VOICE.cancel(); AUDIO.mute(); }
     else if (paused && !SHOT) { $('resume').classList.remove('hide'); }
   });
 
@@ -751,14 +808,11 @@ const CORE = (function () {
   function handle(evs) {
     for (const e of evs) {
       switch (e.type) {
-        case 'window': AUDIO.beep(880, 0.08); break;
-        case 'hit': AUDIO.beep(140, 0.3, 'sawtooth', 0.2); break;
-        case 'miss': AUDIO.beep(200, 0.15, 'triangle'); break;
-        case 'whiff': AUDIO.beep(300, 0.08, 'triangle', 0.06); break;
-        case 'radio': el.radio.textContent = e.text; el.radio.classList.add('on'); radioT = 3; AUDIO.beep(620, 0.05, 'square', 0.05); break;
-        case 'door': case 'spot': case 'cuffs': case 'stopped': AUDIO.beep(520, 0.08); break;
-        case 'react': AUDIO.beep(440, 0.1); break;
-        case 'arrest': AUDIO.beep(330, 0.4, 'triangle', 0.18); break;
+        case 'window': case 'miss': case 'whiff': case 'ramArm': case 'stopped': case 'spot': case 'door': case 'cuffs': case 'arrest': AUDIO.sfx(e.type, e); break;
+        case 'hit': AUDIO.sfx('hit', e); break;
+        case 'radio': el.radio.textContent = e.text; el.radio.classList.add('on'); radioT = 3; AUDIO.sfx('radio'); break;
+        case 'react': AUDIO.sfx(e.sfx && e.sfx !== 'none' && e.sfx !== 'door' && e.sfx !== 'cuffs' ? e.sfx : 'react'); break;
+        case 'siren': case 'lights': case 'ram': AUDIO.sfx('ui'); break;
         case 'stuck': console.warn('stuck', e); break;
       }
     }
@@ -996,7 +1050,7 @@ const CORE = (function () {
       const evs = core.step(dt, AUTO ? core.bot(S, { replay: true }) : null);
       if (!AUTO) { /* 入力は下の pend で渡す */ }
       handle(evs);
-      tNow += dt; scroll += S.speed * dt * S.timeScale;
+      tNow += dt; scroll += S.speed * dt * S.timeScale; AUDIO.update(S, tNow);
       fpsN++; fpsT += dt; if (fpsT >= 0.5) { fps = fpsN / fpsT; fpsN = 0; fpsT = 0; }
       updateUI(dt);
     }
