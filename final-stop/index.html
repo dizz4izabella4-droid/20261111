@@ -68,6 +68,11 @@ canvas{position:absolute;left:0;top:0;display:block}
 #alert .t2{position:relative;font-size:22px;letter-spacing:.08em;font-weight:800;color:#fff;text-shadow:0 0 14px #ff2a3a}
 #alert .t3{position:relative;font-size:14px;line-height:1.7;color:#e8eefc;max-width:300px;text-align:center;min-height:5em}
 #alert .t4{position:relative;font-size:13px;color:#fff;opacity:.85;animation:bl .8s infinite alternate}
+#dbgb{position:absolute;z-index:8;left:6px;top:96px;width:34px;height:34px;border-radius:50%;border:1.5px solid rgba(255,255,255,.55);background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;pointer-events:auto;touch-action:manipulation;opacity:.75;padding:0}
+#dbgp{position:absolute;z-index:9;left:8px;top:136px;width:210px;max-height:62%;overflow:auto;background:rgba(5,8,20,.94);border:1px solid #8fb4ff;border-radius:10px;padding:8px;display:none;pointer-events:auto;font:600 12px ui-monospace,Menlo,monospace;color:#fff}
+#dbgp.on{display:block}
+#dbgp h4{margin:6px 0 4px;font:700 10px ui-monospace,Menlo,monospace;color:#8fb4ff;letter-spacing:.15em}
+#dbgp button{display:block;width:100%;margin:3px 0;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,.4);background:#16224a;color:#fff;font:600 12px ui-monospace,Menlo,monospace;text-align:left;touch-action:manipulation}
 #vmicbtn{pointer-events:auto;touch-action:none;width:74px;height:74px;border-radius:50%;border:2px solid #fff;background:#c01428;display:flex;align-items:center;justify-content:center;z-index:4;box-shadow:0 0 14px rgba(255,40,60,.7);-webkit-user-select:none;user-select:none}
 #vmicbtn.down{background:#ff3a4a;transform:scale(1.12);box-shadow:0 0 28px rgba(255,80,90,1)}
 .port #vmicbtn{left:50%;margin-left:-41px;bottom:14px;width:82px;height:82px}
@@ -308,6 +313,8 @@ canvas{position:absolute;left:0;top:0;display:block}
     <div id="cmdbtn"><button class="btn" data-iz-base-ui data-b="next" style="width:150px;font-family:&#39;Hiragino Sans&#39;,&#39;Yu Gothic&#39;,&#39;Meiryo&#39;,&#39;Noto Sans JP&#39;,sans-serif">&#9654; LISTEN</button></div>
   </div>
   <button id="vmicbtn" class="ui hide" aria-label="mic"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3" fill="#fff"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/></svg><span class="lab">HOLD TO TALK</span></button>
+  <button id="dbgb" aria-label="debug"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="8" height="11" rx="4"/><path d="M12 8V6M9 8 7 5M15 8l2-3M8 12H4M16 12h4M8 16l-3 2M16 16l3 2M10 5.2a2 2 0 0 1 4 0"/></svg></button>
+  <div id="dbgp"></div>
   <div id="alert" class="ui"><div class="lr"></div><div class="lb"></div><div class="t1">EMERGENCY RADIO</div><div class="t2">ROBBERY IN PROGRESS</div><div class="t3" id="alerttx">強盗事件発生。犯人は車で逃走中。</div><div class="t4" id="alertt4">TAP TO RECEIVE</div></div>
   <div id="title" class="ui ov"><h1>FINAL STOP</h1><button class="btn" data-iz-base-ui data-b="start" style="pointer-events:auto">START</button><button id="voicebtn" class="btn" data-iz-base-ui data-b="voice" style="pointer-events:auto;position:static;width:150px;height:36px">VOICE ON</button><div id="micnote">申し訳ありませんが、マイクをオンにしないとクリアできません。</div><div id="micerr"></div><pre id="micdiag"></pre><button id="vmic" class="btn" data-iz-base-ui data-b="vmic" style="pointer-events:auto">心のマイクを使う</button></div>
   <div id="end" class="ui ov hide"><h2>ARRESTED</h2><button class="btn" data-iz-base-ui data-b="replay" style="pointer-events:auto">REPLAY</button></div>
@@ -618,14 +625,16 @@ const CORE = (function () {
         MISS: () => S.sub === 'MISS'
       }[label] || (mh ? () => S.sub === 'HIT' && S.hits === +mh[1]
         : m ? () => S.sub === m[1] && S.cmd.i === +m[2] : () => S.sub === label);
-      const o = { noSwipe: label === 'MISS', noVoice: label === 'DEAD' || /^YOURTURN/.test(label) };
+      const o = { noSwipe: label === 'MISS', noVoice: label === 'DEAD' }, yt = /^YOURTURN(\d)$/.exec(label);
       for (let k = 0; k < 60 * 900; k++) {
         if (pred()) { ev = []; return true; }
+        if (yt) o.noVoice = S.cmd.i === +yt[1];     // 目的の命令に着くまでは声ありで進め、着いたら止める
         step(1 / 60, bot(S, o));
       }
       return false;
     }
-    return { step: step, state: S, warp: warp, bot: bot, config: C, get simTime() { return n * C.STEP; } };
+    function restart() { reset(); wentAt = -1; flags = {}; S.timeScale = 1; S.fade = 0; S.window = null; go('TITLE'); ev = []; }
+    return { step: step, state: S, warp: warp, restart: restart, bot: bot, config: C, get simTime() { return n * C.STEP; } };
   }
   return { create: create };
 })();
@@ -958,6 +967,25 @@ const CORE = (function () {
   const el = { title: $('title'), end: $('end'), cmdp: $('cmdp'), ram: $('ram'), radio: $('radio'), sirenm: $('sirenm'), gauge: $('gauge').children, unit: $('unit'),
     cmdtext: $('cmdtext'), cmdhint: $('cmdhint'), dbg: $('dbg'), siren: $('siren'), lights: $('lights'), gaugeBox: $('gauge') };
   let radioT = 0, ui = {}, jpKey = '', jpT = 0;
+  // デバッグパネル：追跡を飛ばして音声・場面を確認する
+  { const dp = $('dbgp'), db = $('dbgb');
+    const syncGlass = () => { GLASS.reset(); for (let h = 1; h <= S.hits; h++) GLASS.hit(h, S.side || 1, false); };
+    const jump = label => {
+      VOICE.cancel(); MICV.release(); SAY = { text: '', t0: -9, dur: 0 }; PR = null; FX.parts.length = 0; FX.rings.length = 0;
+      ALERT = false; $('alert').classList.add('hide'); AUDIO.init(); wake(); paused = false; $('resume').classList.add('hide');
+      core.restart(); core.warp(label); syncGlass(); jpKey = ''; dp.classList.remove('on');
+    };
+    const items = [['SCENES'], ['Emergency radio screen', () => { dp.classList.remove('on'); VOICE.cancel(); ALERT = true; alertStep = 0; $('alert').classList.remove('hide'); $('alerttx').textContent = '強盗事件発生。犯人は車で逃走中。'; $('alertt4').textContent = 'TAP TO RECEIVE'; }],
+      ['Chase (start)', () => jump('INTRO')], ['Hit window', () => jump('WINDOW')],
+      ['Cmd 1 listen', () => jump('PREVIEW0')], ['Cmd 2 listen', () => jump('PREVIEW1')], ['Cmd 3 listen', () => jump('PREVIEW2')], ['Cmd 4 listen', () => jump('PREVIEW3')],
+      ['SAY IT (cmd 1)', () => jump('YOURTURN0')], ['SAY IT (cmd 4)', () => jump('YOURTURN3')], ['Praise (cmd 1)', () => jump('REACT0')], ['Dead (shot)', () => jump('DEAD')], ['Arrest', () => jump('ARREST')],
+      ['VOICE TEST'], ['Radio JP (dispatch)', () => { AUDIO.init(); VOICE.speak(CONFIG.ALERT_RADIO, 'radioja'); }], ['Model EN (Police!...)', () => { AUDIO.init(); VOICE.speak(CONFIG.CMDS[0].text); }],
+      ['Praise EN', () => { AUDIO.init(); VOICE.speak('Perfect! That\'s how it\'s done!', 'praise'); }], ['JP line (REYES)', () => { AUDIO.init(); VOICE.speak('真正面に来た瞬間にタップだ！', 'ja'); }],
+      ['Mic check (3s level)', (b) => { MICV.acquire(true).then(ok => { const t0 = performance.now(), iv = setInterval(() => { b.textContent = 'Mic ' + (ok ? 'OK ' : 'NG ') + MICV.level.toFixed(3) + ' ' + (MICV.err || ''); if (performance.now() - t0 > 3000) { clearInterval(iv); MICV.release(); b.textContent = 'Mic check (3s level)'; } }, 100); }); }]];
+    for (const it of items) { if (it.length === 1) { const h = document.createElement('h4'); h.textContent = it[0]; dp.appendChild(h); } else { const b = document.createElement('button'); b.textContent = it[0]; b.addEventListener('click', e => { e.stopPropagation(); it[1](b); }); dp.appendChild(b); } }
+    for (const el2 of [db, dp]) { el2.addEventListener('pointerdown', e => e.stopPropagation()); }
+    db.addEventListener('click', e => { e.stopPropagation(); AUDIO.init(); dp.classList.toggle('on'); });
+  }
   // タイトルの前：赤と青の光と緊急無線
   let ALERT = !AUTO && !SHOT, alertStep = 0;
   if (!ALERT) $('alert').classList.add('hide');
