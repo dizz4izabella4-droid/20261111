@@ -21,3 +21,6 @@
 - 声が途中で切れたら同僚 REYES が「One more, please!」（+2秒、最大2回）。
 - 喋っている間、REYES は拳銃を構えて頷き「Good!」。言い終えると GOOD/GREAT/EXCELLENT/PERFECT を派手に表示し、REYES が褒める。お手本も REYES。
 - 逃走車は被弾ごとにガラスが割れて飛び散る（GLASS BREAKER 方式）：1=接触側テール＋リアガラスにヒビ、2=反対側テール＋ガラス一部落下、3=残りが全壊。
+
+## v1.4 BGM
+- 追跡中（CHASE）だけ `Night Pursuit`（BPM168・約46秒）をループ再生。停車〜命令（喋る場面）・被弾後の撃たれる場面・タイトルは無音。mp3 を HTML に base64 で埋め込み（単一HTML）。元は `final-stop/bgm.mp3`。
