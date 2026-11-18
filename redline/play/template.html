@@ -315,10 +315,6 @@ const STAGES=[
   photos:[{id:'A',img:'stone_arch'},{id:'B',img:'s03_B'},{id:'C',img:'steel_bridge'},{id:'D',img:'s03_D'}],
   points:[{id:'1',nx:.2,ny:.2,feat:['arch','lampOn']},{id:'2',nx:.66,ny:.3,feat:['arch','lampOff']},{id:'3',nx:.24,ny:.72,feat:['ironbridge','lampOff']},{id:'4',nx:.7,ny:.8,feat:['ironbridge','lampOn']}],
   answer:['D-1','A-2','B-3','C-4']},
- {name:'SEALED STREETS',type:'route',
-  nodes:[{id:'S',nx:.06,ny:.5},{id:'A',nx:.32,ny:.2},{id:'B',nx:.32,ny:.8},{id:'C',nx:.66,ny:.2},{id:'D',nx:.66,ny:.8},{id:'T',nx:.94,ny:.8}],
-  roads:['S-A','S-B','A-B','A-C','B-D','C-D','D-T'],
-  answer:['S-B','B-A','A-C','C-D','D-T']},
  {name:'THE LAST WITNESS',type:'match',
   photos:[{id:'A',img:'s05_A'},{id:'B',img:'s05_B'},{id:'C',img:'s05_C'},{id:'D',img:'s05_D'},{id:'E',img:'s05_E'}],
   points:[{id:'1',nx:.2,ny:.16,feat:['fence','roundwin']},{id:'2',nx:.68,ny:.2,feat:['fence','stairs','chimney']},{id:'3',nx:.36,ny:.5,feat:['roundwin','watertower']},
@@ -326,7 +322,7 @@ const STAGES=[
   answer:['E-5','D-3','B-1','A-2','C-4']}
 ];
 
-const HINTS={"CLOCK TOWER SHADOW": ["Match each photo to the place it shows.", "写真を、写っている場所に結ぶ。写真の特徴が、その地点の特徴にあてはまるものを選ぶ。"], "MIDNIGHT ESCAPE": ["Link the photos in time order, earliest to latest.", "日時の順に、写真を一本の線でつなぐ。日付をまたぐ点に注意。"], "BLACKOUT ZONE": ["Match each photo to a place. Use every clue.", "写真を地点に結ぶ。建物と街灯、両方の手がかりを使う。"], "SEALED STREETS": ["Go from S to T. Visit every pin once. Roads only.", "SからTまで、すべてのピンを1回ずつ通る一本の道にする。結べるのは道路でつながるピンだけ。"], "THE LAST WITNESS": ["Match each photo to a place. Start with the surest one.", "写真を地点に結ぶ。まず1つに決まるものから。"]};
+const HINTS={"CLOCK TOWER SHADOW": ["Match each photo to the place it shows.", "写真を、写っている場所に結ぶ。写真の特徴が、その地点の特徴にあてはまるものを選ぶ。"], "MIDNIGHT ESCAPE": ["Link the photos in time order, earliest to latest.", "日時の順に、写真を一本の線でつなぐ。日付をまたぐ点に注意。"], "BLACKOUT ZONE": ["Match each photo to a place. Use every clue.", "写真を地点に結ぶ。建物と街灯、両方の手がかりを使う。"], "THE LAST WITNESS": ["Match each photo to a place. Start with the surest one.", "写真を地点に結ぶ。まず1つに決まるものから。"]};
 /* ---------- state ---------- */
 let si=0, links=[], sel=null, layout=null, solved=false;
 let save={done:[],cur:0};
