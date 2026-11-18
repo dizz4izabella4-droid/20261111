@@ -43,6 +43,7 @@ canvas{position:absolute;left:0;top:0;display:block}
 #cmdbtn .btn{position:static;width:110px;height:42px}
 .ov{inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;pointer-events:none}
 #title{background:rgba(5,8,20,.55)}
+#title.blk{background:#000}
 #title h1{margin:0;font:800 40px ui-monospace,Menlo,monospace;letter-spacing:.12em;text-shadow:0 0 16px #ff2a3a,0 0 28px #2a6bff}
 #title .btn,#end .btn{position:static;width:150px;height:52px;font-size:18px}
 #micnote,#micerr{font:600 13px/1.55 'Hiragino Sans','Yu Gothic','Meiryo','Noto Sans JP',sans-serif;text-align:center;max-width:300px;padding:0 8px;text-shadow:0 1px 4px #000}
@@ -319,7 +320,7 @@ canvas{position:absolute;left:0;top:0;display:block}
   <button id="dbgb" aria-label="debug"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="8" height="11" rx="4"/><path d="M12 8V6M9 8 7 5M15 8l2-3M8 12H4M16 12h4M8 16l-3 2M16 16l3 2M10 5.2a2 2 0 0 1 4 0"/></svg></button>
   <div id="dbgp"></div>
   <div id="alert" class="ui"><div class="lr"></div><div class="lb"></div><div class="t1">EMERGENCY RADIO</div><div class="t2">ROBBERY IN PROGRESS</div><div class="t3" id="alerttx">Robbery reported. The suspect is fleeing by car.</div><div class="t4" id="alertt4">TAP TO RECEIVE</div></div>
-  <div id="title" class="ui ov"><h1>FINAL STOP</h1><button class="btn" data-iz-base-ui data-b="start" style="pointer-events:auto">START</button><button id="voicebtn" class="btn" data-iz-base-ui data-b="voice" style="pointer-events:auto;position:static;width:150px;height:36px">VOICE ON</button><div id="micnote">Sorry, you can't clear this game without turning the mic on.</div><div id="micerr"></div><pre id="micdiag"></pre><button id="vmic" class="btn" data-iz-base-ui data-b="vmic" style="pointer-events:auto">Use pretend mic</button></div>
+  <div id="title" class="ui ov"><h1>FINAL STOP</h1><button class="btn" data-iz-base-ui data-b="start" style="pointer-events:auto">START</button><button id="voicebtn" class="btn" data-iz-base-ui data-b="voice" style="pointer-events:auto;position:static;width:150px;height:36px">VOICE ON</button><div id="micnote">申し訳ありませんが、マイクをオンにしないとクリアできません。</div><div id="micerr"></div><pre id="micdiag"></pre><button id="vmic" class="btn" data-iz-base-ui data-b="vmic" style="pointer-events:auto">心のマイクを使う</button></div>
   <div id="end" class="ui ov hide"><h2>ARRESTED</h2><button class="btn" data-iz-base-ui data-b="replay" style="pointer-events:auto">REPLAY</button></div>
   <div id="resume" class="ui ov hide">TAP TO RESUME</div>
   <div id="dbg" class="ui hide"></div>
@@ -893,7 +894,7 @@ const CORE = (function () {
   const MICV = {
     ready: false, busy: false, stream: null, src: null, an: null, buf: null,
     level: 0, floor: 0.01, voiced: 0, sinceSound: 9, moreSent: false, gauge: 0, err: '', diag: [], virtual: false, press: false, fallback: false,
-    need: 0.35, grace: 0.9, gapMore: 1.1,
+    need: 1.0, grace: 0.9, gapMore: 1.1,
     acquire(quiet) {
       if (this.ready) return Promise.resolve(true);
       if (this.busy) return Promise.resolve(false);
@@ -983,12 +984,12 @@ const CORE = (function () {
     const er = $('micerr'); er.textContent = ''; $('micdiag').style.display = 'none';
     MICV.acquire().then(ok => { if (ok) { MICV.release(); AUDIO.kick(); beginGame(); } else {
         const n = MICV.err, nm = n.split('/')[0], ios = /iPhone|iPad|iPod/.test(navigator.userAgent), safari = ios && !/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
-        const why = nm === 'NotAllowedError' ? 'Microphone access is not allowed.' : nm === 'NotFoundError' ? 'No microphone found.' : nm === 'InvalidStateError' ? 'Could not start the microphone (another app may be using it; reloading can help).' : nm === 'unsupported' || nm === 'SecurityError' ? 'The microphone is not available on this page.' : 'Could not use the microphone.';
-        let h = why + ' (' + n + ')';
-        if (safari) h += '<br><b>iPhone (Safari) settings</b><br>1) Tap the "aA" icon at the left of the address bar<br>2) Website Settings > Microphone > Allow<br>3) Reload the page and press START<br><br>No "aA"? Settings > Safari (iOS 18: Settings > Apps > Safari) > Microphone > Allow or Ask';
-        else if (ios) h += '<br><b>Settings</b><br>Settings app > your browser > allow Microphone, then reload.';
-        else h += '<br>Set the microphone permission near the address bar to Allow, then reload.';
-        h += '<br>If it still fails, press "Use pretend mic" below to play.';
+        const why = nm === 'NotAllowedError' ? 'マイクが許可されていません。' : nm === 'NotFoundError' ? 'マイクが見つかりません。' : nm === 'InvalidStateError' ? 'マイクの準備に失敗しました（他のアプリがマイクを使用中、または再読み込みで直ることがあります）。' : nm === 'unsupported' || nm === 'SecurityError' ? 'このページではマイクを使えません。' : 'マイクを使えませんでした。';
+        let h = why + '（' + n + '）';
+        if (safari) h += '<br><b>iPhone（Safari）の設定</b><br>① アドレスバー左の「ぁあ」をタップ<br>② 「Webサイトの設定」→「マイク」を「許可」<br>③ ページを再読み込みして START<br><br>「ぁあ」が見つからないとき：設定アプリ→Safari（iOS 18 は 設定→アプリ→Safari）→「マイク」を「許可」または「確認」';
+        else if (ios) h += '<br><b>設定方法</b><br>設定アプリ→使っているブラウザ→「マイク」を許可して、再読み込みしてください。';
+        else h += '<br>ブラウザのアドレスバー付近のマイク許可を「許可」にして、再読み込みしてください。';
+        h += '<br>それでも使えないときは、下の「心のマイクを使う」で進めます。'; $('title').classList.add('blk');
         er.innerHTML = h; setTimeout(() => { const pd = $('micdiag'); pd.textContent = (MICV.diag || []).join('\n'); pd.style.display = 'block'; }, 900); $('vmic').style.display = 'flex';
       } });
   }
@@ -1080,7 +1081,7 @@ const CORE = (function () {
     if (ph === 'CMD') {
       const t = CONFIG.CMDS[Math.min(S.cmd.i, CONFIG.CMDS.length - 1)].text;
       setUI('cmdtext', t, v => { el.cmdtext.textContent = v; });
-      const hint = S.sub === 'PREVIEW' ? 'PRESS LISTEN: REYES SHOWS HOW' : S.sub === 'SPEAK' ? 'LISTEN...' : S.sub === 'YOURTURN' ? 'HOLD THE MIC & SAY IT!' : '';
+      const hint = S.sub === 'PREVIEW' ? 'PRESS LISTEN: REYES SHOWS HOW' : S.sub === 'SPEAK' ? 'LISTEN...' : S.sub === 'YOURTURN' ? 'マイクを押しながら、英語で言え！' : '';
       setUI('cmdhint', hint, v => { el.cmdhint.textContent = v; });
     }
     // 日本語のセリフ（相棒 REYES）：場面が変わるたびに出す
@@ -1089,7 +1090,7 @@ const CORE = (function () {
       jpKey = jk; const t = jk && CONFIG.JP[jk];
       if (t) {
         showSub(t.en, t.ja, jk === 'YOURTURN' || jk === 'PREVIEW' || jk === 'OPEN_SIREN' ? 99 : 3.6);
-        if (t.say === true || (t.say === 'once' && !spoken[jk]) || (t.say === 'first' && S.cmd.i === 0 && !spoken[jk])) { spoken[jk] = 1; VOICE.speak(t.en); }   // 英語の音声
+        /* 音声は命令の場面（LISTENのお手本・SPEAK・褒め）だけ。ここでは字幕のみ */
       }
     }
     if (jpT > 0) { jpT -= dt; if (jpT <= 0) $('jpsub').classList.remove('on'); }
