@@ -803,20 +803,24 @@ const CORE = (function () {
       if (this.busy) return Promise.resolve(false);
       const md = navigator.mediaDevices;
       if (!md || !md.getUserMedia) { this.err = 'unsupported'; return Promise.resolve(false); }
-      this.busy = true; let stage = 'gum';
-      // iOS Safari 対策：先にマイクだけを取り、その後に（専用の）AudioContext をつなぐ。制約は最小限、失敗したら少し待って1回だけやり直す
-      const grab = () => md.getUserMedia({ audio: true });
-      const gp = grab(); AUDIO.init();            // マイク要求を先に出し、同じ操作の中で出力側の音も有効にする
-      return gp.catch(e => { if (e && e.name === 'InvalidStateError') return new Promise(r => setTimeout(r, 400)).then(grab); throw e; }).then(st => {
+      this.busy = true; let stage = 'gum'; const log = [];
+      // iOS Safari 対策：チェックページで通った取り方（A/B/D）を順に試す。成功したら専用の AudioContext でレベルを読む
+      const nm = e => ((e && e.name) || 'error');
+      const attempt = (k, pre, cons) => () => { stage = 'gum' + k; if (pre) pre(); return md.getUserMedia(cons).catch(e => { log.push(k + ':' + nm(e)); throw e; }); };
+      const wait = ms => new Promise(r => setTimeout(r, ms));
+      const a1 = attempt(1, null, { audio: true });
+      const a2 = attempt(2, () => AUDIO.init(), { audio: true });
+      const a3 = attempt(3, null, { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+      return a1().catch(() => wait(300).then(a2)).catch(() => wait(300).then(a3)).then(st => {
         stage = 'ctx';
         const AC = window.AudioContext || window.webkitAudioContext; if (!AC) { st.getTracks().forEach(t => t.stop()); throw new Error('unsupported'); }
         const c = this.mc = new AC();
         return Promise.resolve(c.resume ? c.resume() : 0).catch(() => {}).then(() => {
           stage = 'node';
           this.stream = st; this.src = c.createMediaStreamSource(st); this.an = c.createAnalyser(); this.an.fftSize = 1024; this.an.smoothingTimeConstant = 0; this.src.connect(this.an);
-          this.buf = new Float32Array(this.an.fftSize); this.ready = true; this.busy = false; this.err = ''; return true;
+          this.buf = new Float32Array(this.an.fftSize); this.ready = true; this.busy = false; this.err = ''; AUDIO.init(); return true;
         });
-      }).catch(e => { try { if (this.stream) this.stream.getTracks().forEach(t => t.stop()); if (this.mc) this.mc.close(); } catch (x) {} this.stream = this.mc = null; this.busy = false; this.ready = false; this.err = ((e && e.name) || 'error') + '/' + stage; return false; });
+      }).catch(e => { try { if (this.stream) this.stream.getTracks().forEach(t => t.stop()); if (this.mc) this.mc.close(); } catch (x) {} this.stream = this.mc = null; this.busy = false; this.ready = false; this.err = nm(e) + '/' + stage + (log.length ? ' [' + log.join(',') + ']' : '') + (e && e.message ? ' ' + String(e.message).slice(0, 60) : ''); return false; });
     },
     release() { try { if (this.src) this.src.disconnect(); if (this.stream) this.stream.getTracks().forEach(t => t.stop()); if (this.mc) this.mc.close(); } catch (e) {} this.src = this.an = this.stream = this.mc = null; this.ready = false; this.reset(); },
     reset() { this.voiced = 0; this.sinceSound = 9; this.moreSent = false; this.gauge = 0; },
@@ -856,6 +860,7 @@ const CORE = (function () {
     }
   });
   const endTrk = e => {
+    wake();
     if (!trk || e.pointerId !== trk.id) return;
     const moved = Math.hypot(e.clientX - trk.x, e.clientY - trk.y);
     if (!trk.done && moved < 12 && e.type === 'pointerup') onTap();
