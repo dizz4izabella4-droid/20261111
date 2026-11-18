@@ -42,7 +42,6 @@ log('2. 乱数入力 3000本');
       for (; t < 900 && c.state.sub !== 'END'; t += dt) {
         const r = rnd(), inp = NONE();
         if (!started) { inp.button = 'start'; started = true; }
-        else if (r < 0.10) inp.swipe = { dir: rnd() < 0.5 ? -1 : 1 };
         else if (r < 0.18) inp.tap = true;
         else if (r < 0.22) inp.button = ['ram', 'siren', 'lights', 'next', 'again'][Math.floor(rnd() * 5)];
         else if (r < 0.42) inp.voice = true;                                   // 声（5s以内に必ず入る確率）
@@ -101,22 +100,38 @@ log('4. 窓を逃し続ける');
   for (let t = 0; t < 80; t += 1 / 60) { const e = c.step(1 / 60, !started ? (started = true, { button: 'start' }) : NONE()); for (const x of e) { evs.push(x); if (x.type === 'window') lens.push(x.len); } }
   const miss = evs.filter(e => e.type === 'miss'); const ram = evs.find(e => e.type === 'ram');
   ok(miss.length >= 3, 'MISSが3回以上'); ok(ram && ram.at > miss[1].at - 0.01 && ram.at < miss[2].at, '2回目のMISSでramが出る');
-  ok(lens[0] === 1.4 && lens[1] === 1.4 && lens[2] === 1.4 && lens[3] === 2.1, '4つ目の窓が2.1s（3連続MISS後）: ' + lens.slice(0, 5).join(','));
+  ok(lens[0] === CONFIG.WINDOW && lens[1] === CONFIG.WINDOW && lens[2] === CONFIG.WINDOW && lens[3] === CONFIG.WINDOW_RESCUE, '4つ目の窓が広がる（3連続MISS後）: ' + lens.slice(0, 5).join(','));
 }
 
 // 5. 窓が開く前のスワイプ
-log('5. 先行入力とふらつき');
-function openTime(c) { let t = 0; const s = c.state; let started = false; for (; t < 60; t += 1 / 120) { c.step(1 / 120, !started ? (started = true, { button: 'start' }) : NONE()); if (s.sub === 'APPROACH' && s.t + 1e-9 >= s.dur - 0.5) return; } }
-for (const [before, expectHit] of [[0.10, true], [0.20, false]]) {
-  const c = CORE.create(CONFIG, { seed: 1 }); openTime(c); const s = c.state;
-  // APPROACH の残りが before になるまで進める
-  while (s.dur - s.t > before + 1e-6) c.step(1 / 120, NONE());
-  const evs = c.step(1 / 120, { swipe: { dir: 1 } }); let all = [...evs]; const m0 = s.misses;
-  for (let k = 0; k < 120 * 3; k++) all.push(...c.step(1 / 120, NONE()));
-  const hit = all.some(e => e.type === 'hit');
-  log('   開く ' + before + 's前 → ' + (hit ? 'HIT' : '空振り') + ' miss=' + s.misses);
-  if (expectHit) ok(hit && s.misses === m0, before + 's前は先行入力でHIT');
-  else ok(all.some(e => e.type === 'whiff') && s.misses === m0 + (all.some(e => e.type === 'miss') ? 1 : 0) && !all.some(e => e.type === 'hit' && e.at < s.simTime - 0), before + 's前はふらつき（先行入力でない）');
+log('5. 真正面でタップ＝突撃、ズレていれば空振り');
+function toWindow(seed) { const c = CORE.create(CONFIG, { seed }); let started = false; for (let k = 0; k < 120 * 80; k++) { c.step(1 / 120, !started ? (started = true, { button: 'start' }) : NONE()); if (c.state.sub === 'WINDOW' && c.state.window.t > 0.05) return c; } return null; }
+for (const wantAligned of [true, false]) {
+  let done = false;
+  for (let seed = 1; seed <= 6 && !done; seed++) {
+    const c = toWindow(seed); if (!c) continue; const s = c.state;
+    // 目的の状態（真正面 / 大きくズレ）になるまで待つ
+    let found = false;
+    while (s.sub === 'WINDOW') {
+      const off = Math.abs(s.sx - s.px);
+      if (wantAligned ? off < CONFIG.ALIGN * 0.8 : off > CONFIG.ALIGN * 1.6) { found = true; break; }
+      c.step(1 / 120, NONE());
+    }
+    if (!found) continue;
+    const m0 = s.misses; const all = [...c.step(1 / 120, { tap: true })];
+    for (let k = 0; k < 120 * 3; k++) all.push(...c.step(1 / 120, NONE()));
+    const hit = all.some(e => e.type === 'hit'), whiff = all.some(e => e.type === 'whiff');
+    log('   ' + (wantAligned ? '真正面' : 'ズレ') + ' → ' + (hit ? 'HIT' : whiff ? '空振り' : '-'));
+    ok(wantAligned ? (hit && !whiff) : (whiff && !hit || (!hit && all.some(e => e.type === 'miss'))), wantAligned ? '真正面のタップでHIT' : 'ズレたタップはHITしない（空振り）');
+    done = true;
+  }
+  ok(done, (wantAligned ? '真正面' : 'ズレ') + 'の場面を作れた');
+}
+// 追跡中の swipe 入力は無視される
+{
+  const c = toWindow(1); const s = c.state; const h0 = s.hits; let all = [];
+  for (let k = 0; k < 120 * 6; k++) all.push(...c.step(1 / 120, { swipe: { dir: 1 } }));
+  ok(!all.some(e => e.type === 'hit') && s.hits === h0, 'フリック（swipe）では突撃しない');
 }
 
 // 6. 遷移直後のボタン連打
