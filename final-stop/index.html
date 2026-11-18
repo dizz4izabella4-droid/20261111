@@ -311,11 +311,8 @@ const CONFIG = Object.freeze({
   RESCUE: { misses: 2, idle: 25, widen: 3, auto: 150 },
   PULLOVER: 4.0, EVENT: 6.0, ARREST: 3.0, CMD_PREVIEW_AUTO: 20, YOURTURN: 5.0, MORE_EXTRA: 2.0, MORE_MAX: 2, DEAD: 4.0, DEAD_SKIP: 2.0,
   SNAKE: { a1: 1.2, p1: 3.1, a2: 0.35, p2: 1.3 }, LAG: 0.6,
-  RADIO: [
-    { t: 2, text: 'Unit 12, in pursuit, northbound.' },
-    { t: 14, text: 'All units, suspect still running.' },
-    { t: 30, text: 'Unit 12, stay on him.' }
-  ],
+  RADIO: [],                                                         // 追跡中の無線は無し（無線はゲーム開始前の指令だけ）
+  BRIEF: 'Dispatch to Unit 12. Suspect vehicle fleeing northbound. Pursue and stop him.',
   EVENT_RADIO: 'Dispatch, suspect vehicle stopped.',
   PARTNER: 'REYES',
   CMDS: [
@@ -774,16 +771,17 @@ const CORE = (function () {
       try { speechSynthesis.addEventListener('voiceschanged', pick); } catch (e) {}
       this.pick = pick;
     },
-    speak(text, style) {
-      if (!this.ok || !this.on) return;
+    speak(text, style, done) {
+      if (!this.ok || !this.on) { if (done) setTimeout(done, 50); return; }
       try {
         if (!this.voice && this.pick) this.pick();
         speechSynthesis.cancel();
         const u = new SpeechSynthesisUtterance(text);
         if (this.voice) u.voice = this.voice;
         u.lang = (this.voice && this.voice.lang) || 'en-US'; u.rate = style === 'praise' ? 1.05 : style === 'radio' ? 1.12 : 1.0; u.pitch = style === 'praise' ? 1.15 : style === 'radio' ? 0.8 : 0.95; if (style === 'radio') u.volume = 0.85;
-        if (style === 'radio') { u.onstart = () => AUDIO.radioOn(); const off = () => AUDIO.radioOff(); u.onend = off; u.onerror = off; setTimeout(off, 7000); AUDIO.radioOn(); }
-        else AUDIO.radioOff();
+        let fin = false; const fire = () => { if (!fin) { fin = true; if (done) done(); } };
+        if (style === 'radio') { u.onstart = () => AUDIO.radioOn(); const off = () => { AUDIO.radioOff(); fire(); }; u.onend = off; u.onerror = off; setTimeout(off, 9000); AUDIO.radioOn(); }
+        else { AUDIO.radioOff(); if (done) { u.onend = fire; u.onerror = fire; setTimeout(fire, 9000); } }
         speechSynthesis.speak(u);
         AUDIO.duck(text.length * 0.07 + 0.6);
       } catch (e) {}
@@ -838,8 +836,10 @@ const CORE = (function () {
     // 読み上げでマイクが切られていたら、「SAY IT!」の間だけ静かに取り直す
     ensure(dt, S) {
       if (this.ready && !this.live()) this.release();
-      if (this.virtual || NOMIC || AUTO || S.sub !== 'YOURTURN' || this.ready || this.busy) { if (S.sub !== 'YOURTURN') this.retryT = 0; return; }
-      this.retryT = (this.retryT || 0) - dt; if (this.retryT > 0) return; this.retryT = 0.8; this.acquire(true);
+      // 命令の場面（お手本の読み上げ中を除く）はマイクを開けておく。読み上げが終わった直後に取り直す
+      const speaking = !!(window.speechSynthesis && speechSynthesis.speaking);
+      if (this.virtual || NOMIC || AUTO || S.phase !== 'CMD' || speaking || this.ready || this.busy) { if (S.phase !== 'CMD') this.retryT = 0; return; }
+      this.retryT = (this.retryT || 0) - dt; if (this.retryT > 0) return; this.retryT = 0.6; this.acquire(true);
     },
     update(dt, S) {
       if (!this.ready && !this.virtual) { this.reset(); return null; }
@@ -889,9 +889,16 @@ const CORE = (function () {
     if (S.phase === 'CMD' && S.sub === 'PREVIEW' && S.lock <= 0) VOICE.speak(CONFIG.CMDS[S.cmd.i].text);   // iOS：操作の中でしか話せない
   }
   function onTap() { if (paused) return; wake(); speakIfPreview(); if (S.sub === 'YOURTURN' && !MICV.ready && !MICV.virtual && !NOMIC && !AUTO) MICV.acquire(); pend.tap = true; }
+  // ゲーム開始前の無線（指令）。読み上げ（または文字）が終わってから追跡へ
+  let BRIEF = null;
+  function beginGame() {
+    if (BRIEF) return; BRIEF = { t0: tNow, text: CONFIG.BRIEF, done: false };
+    VOICE.speak(CONFIG.BRIEF, 'radio', () => { if (BRIEF) BRIEF.done = true; });
+    AUDIO.sfx('radio');
+  }
   function startWithMic() {
     const er = $('micerr'); er.textContent = ''; $('micdiag').style.display = 'none';
-    MICV.acquire().then(ok => { if (ok) pend.button = 'start'; else {
+    MICV.acquire().then(ok => { if (ok) beginGame(); else {
         const n = MICV.err, nm = n.split('/')[0], ios = /iPhone|iPad|iPod/.test(navigator.userAgent), safari = ios && !/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
         const why = nm === 'NotAllowedError' ? 'マイクが許可されていません。' : nm === 'NotFoundError' ? 'マイクが見つかりません。' : nm === 'InvalidStateError' ? 'マイクの準備に失敗しました（他のアプリがマイクを使用中、または再読み込みで直ることがあります）。' : nm === 'unsupported' || nm === 'SecurityError' ? 'このページではマイクを使えません。' : 'マイクを使えませんでした。';
         let h = why + '（' + n + '）';
@@ -911,10 +918,11 @@ const CORE = (function () {
       if (k === 'start' && (NOMIC || AUTO)) AUDIO.init();
       if (!(k === 'start' && !NOMIC && !AUTO)) wake();
       if (k === 'voice') { VOICE.toggle(); refreshVoiceBtn(); return; }
-      if (k === 'vmic') { MICV.virtual = true; $('micerr').textContent = ''; $('vmic').style.display = 'none'; pend.button = 'start'; return; }
+      if (k === 'vmic') { MICV.virtual = true; $('micerr').textContent = ''; $('vmic').style.display = 'none'; beginGame(); return; }
       if (k === 'start' && !NOMIC && !AUTO) { startWithMic(); return; }
       if (k === 'next') { speakIfPreview(); }
       if (k === 'again') { if (S.phase === 'CMD') VOICE.speak(CONFIG.CMDS[S.cmd.i].text); }
+      if (k === 'start' && !AUTO) { beginGame(); return; }
       pend.button = k;
     });
   });
@@ -935,7 +943,7 @@ const CORE = (function () {
   function setUI(k, v, fn) { if (ui[k] !== v) { ui[k] = v; fn(v); } }
   function updateUI(dt) {
     const ph = S.phase, inGame = ph !== 'TITLE' && ph !== 'END';
-    setUI('title', ph === 'TITLE', v => el.title.classList.toggle('hide', !v));
+    setUI('title', ph === 'TITLE' && !BRIEF, v => el.title.classList.toggle('hide', !v));
     setUI('end', ph === 'END', v => el.end.classList.toggle('hide', !v));
     setUI('cmdp', ph === 'CMD', v => el.cmdp.classList.toggle('hide', !v));
     setUI('vmicbtn', MICV.virtual && S.sub === 'YOURTURN', v => { $('vmicbtn').classList.toggle('hide', !v); if (!v) { MICV.press = false; $('vmicbtn').classList.remove('down'); } });
@@ -969,7 +977,7 @@ const CORE = (function () {
         case 'cuffs': AUDIO.sfx('cuffs'); FX.glint(); break;
         case 'window': case 'miss': case 'whiff': case 'ramArm': case 'spot': case 'door': case 'arrest': AUDIO.sfx(e.type, e); break;
         case 'hit': AUDIO.sfx('hit', e); FX.hit(e); GLASS.hit(e.stage, e.side, true); break;
-        case 'radio': el.radio.textContent = e.text; el.radio.classList.add('on'); radioT = 3; if (VOICE.ok && VOICE.on) VOICE.speak(e.text, 'radio'); else AUDIO.sfx('radio'); break;
+        case 'radio': el.radio.textContent = e.text; el.radio.classList.add('on'); radioT = 3; AUDIO.sfx('radio'); break;
         case 'cmd': if (e.step === 'speak') SAY = { text: e.text, t0: tNow, dur: e.dur || 2.4 }; break;
         case 'more': reyesSay(CONFIG.ONE_MORE, 1.8, 'praise'); AUDIO.sfx('more'); break;
         case 'react': { const pr = CONFIG.CMDS[e.i].praise; PR = { t0: tNow, i: e.i }; reyesSay(pr.say, 1.6, 'praise'); FX.praise(); AUDIO.sfx('praise', e.i); if (e.sfx && e.sfx !== 'none' && e.sfx !== 'door' && e.sfx !== 'cuffs') AUDIO.sfx(e.sfx); break; }
@@ -1381,6 +1389,7 @@ const CORE = (function () {
     ctx.shadowBlur = 0; ctx.font = '700 13px ' + mono; ctx.fillStyle = micOff ? '#ff9a9a' : '#fff';
     const y1 = cy + base * 0.85;
     ctx.fillText(micOff ? 'TAP TO TURN ON THE MIC' : MICV.virtual ? 'HOLD THE MIC BUTTON & SAY IT' : 'SAY THE COMMAND OUT LOUD', cx, y1);
+    if (micOff && MICV.err) { ctx.font = '600 10px ' + mono; ctx.fillStyle = '#ffb0a8'; ctx.fillText(MICV.err.slice(0, 44), cx, y1 + 52); }
     const bw = 150; ctx.fillStyle = 'rgba(255,255,255,.2)'; ctx.fillRect(cx - bw / 2, y1 + 14, bw, 5);
     ctx.fillStyle = left > 0.3 ? '#ffe14a' : '#ff5a50'; ctx.fillRect(cx - bw / 2, y1 + 14, bw * left, 5);
     // 声ゲージ（緑）と、マイクに入っている音の大きさ
@@ -1547,6 +1556,14 @@ const CORE = (function () {
       const vg = ctx.createRadialGradient(W / 2, H * 0.5, H * 0.2, W / 2, H * 0.5, H * 0.75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.6)');
       ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
     }
+    if (BRIEF) {
+      const bt = tNow - BRIEF.t0, mono = 'ui-monospace,Menlo,monospace'; ctx.fillStyle = 'rgba(0,0,0,.72)'; ctx.fillRect(0, 0, W, H);
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = Math.floor(bt * 2.5) % 2 ? '#ff5a50' : '#ffb0a8'; ctx.font = '800 15px ' + mono; ctx.fillText('● DISPATCH RADIO', W / 2, H * 0.34);
+      ctx.font = '700 16px ' + mono; ctx.fillStyle = '#cfe0ff'; const full = BRIEF.text, n = Math.min(full.length, Math.floor(bt * 26)), lines = wrapText(full.slice(0, n), Math.min(W - 40, 320));
+      lines.forEach((l, i) => ctx.fillText(l, W / 2, H * 0.42 + i * 24));
+      for (let i = 0; i < 9; i++) { const hh = 3 + 14 * hash(i * 13 + ((tNow * 16) | 0)); ctx.fillStyle = 'rgba(108,255,154,.7)'; ctx.fillRect(W / 2 - 54 + i * 12, H * 0.62 - hh / 2, 7, hh); }
+      ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'start';
+    }
     if (S.phase === 'DEAD') drawDead(W, H, land);
     if (FX.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,' + Math.min(1, FX.flash).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H); }
     if (S.fade > 0) { ctx.fillStyle = 'rgba(0,0,0,' + S.fade + ')'; ctx.fillRect(0, 0, W, H); }
@@ -1565,6 +1582,7 @@ const CORE = (function () {
       const evs = core.step(dt, AUTO ? core.bot(S, { replay: true }) : null);
       if (!AUTO) { /* 入力は下の pend で渡す */ }
       handle(evs);
+      if (BRIEF && ((BRIEF.done && tNow - BRIEF.t0 > 1.8) || tNow - BRIEF.t0 > 7)) { BRIEF = null; VOICE.cancel(); pend.button = 'start'; }
       tNow += dt; scroll += S.speed * dt * S.timeScale; AUDIO.update(S, tNow); FX.update(dt);
       if (S.sub === 'YOURTURN') { yTick += dt; if (yTick >= ((1 - S.t / S.ytLimit) < 0.4 ? 0.25 : 0.5)) { yTick = 0; AUDIO.sfx('tick'); } } else yTick = 0;
       fpsN++; fpsT += dt; if (fpsT >= 0.5) { fps = fpsN / fpsT; fpsN = 0; fpsT = 0; }
