@@ -94,11 +94,15 @@ html,body,#world{background:#fff!important}
 #gate button:hover,#gate button:focus-visible{background:#3b4650;border-color:#3b4650;color:#fff}
 #gate .g-n{font:400 10px system-ui,sans-serif;letter-spacing:3px;color:#aab0b6;margin-top:-14px}
 body.pre #tree,body.pre #tree *{animation-play-state:paused!important}
+#flash{position:fixed;left:0;top:0;z-index:95;pointer-events:none;border-radius:50%;opacity:0;will-change:transform,opacity;background:radial-gradient(circle,#fff 0,#fff 42%,rgba(255,246,222,.92) 52%,rgba(255,228,170,.45) 62%,rgba(255,220,150,0) 72%);transform:translate(-50%,-50%) scale(.02)}
+#flash.go{opacity:1;transition:transform 1.15s cubic-bezier(.45,0,.75,.5),opacity .25s ease-out}
+.window.open .portal{background:radial-gradient(ellipse at 50% 45%,#fffdf2 0%,#ffe9b8 40%,#f6b866 80%,#c9803a 100%)}
 </style>
 </head>
 <body>
 <div id="brain" aria-hidden="true">BRAIN</div>
 <div id="gate" role="dialog" aria-label="入り口"><div class="g-t">BRAIN</div><button id="gateBtn" type="button">ENTER</button><div class="g-n">♪ 音が流れます</div></div>
+<div id="flash" aria-hidden="true"></div>
 <audio id="bgm" src="assets/bgm/tides-under-glass.mp3" loop preload="auto"></audio>
 <button id="snd" type="button" aria-label="BGMのオン・オフ"><svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><g class="w"><path d="M15.5 9a4.2 4.2 0 0 1 0 6"/><path d="M18 6.6a7.6 7.6 0 0 1 0 10.8"/></g><path class="x" d="M16 9.5l5 5M21 9.5l-5 5"/></svg></button>
 <main id="world" aria-label="おもちゃ箱の入り口。左右にドラッグして窓を選び、タップで扉が開きます。">
@@ -136,14 +140,22 @@ function mount(i){if(mounted[i])return;mounted[i]=true;const g=win[i].querySelec
 function mountGlass(){win.forEach((el,i)=>{const g=el.querySelector('.glass');el.querySelector('.plate').textContent=data[i].name;
   if(i===2){const k=document.createElement('div');k.className='sticker';k.textContent='COMING SOON';el.querySelector('.window-shell').append(k)}
   
-  if(data[i].url){const ext=/^https?:/.test(data[i].url);const a=document.createElement('a');a.className='gate';a.href=data[i].url;if(ext){a.target='_blank';a.rel='noopener'}a.setAttribute('aria-label',data[i].name+'を開く');a.addEventListener('click',e=>e.stopPropagation());el.querySelector('.window-shell').append(a)}});fitGlass()}
+  if(data[i].url){const ext=/^https?:/.test(data[i].url);const a=document.createElement('a');a.className='gate';a.href=data[i].url;if(ext){a.target='_blank';a.rel='noopener'}a.setAttribute('aria-label',data[i].name+'を開く');a.addEventListener('click',e=>{e.stopPropagation();if(!ext){e.preventDefault();lightGo(i,true)}});el.querySelector('.window-shell').append(a)}});fitGlass()}
 addEventListener('pageshow',()=>closeAll());
 function wrap(n,size){return ((n%size)+size)%size}
 function centeredDelta(i,p){let d=wrap(i-p,data.length);if(d>data.length/2)d-=data.length;if(d===data.length/2&&i!==0&&p>i)d-=data.length;return d}
 function gap(){return Math.min(w*.5,720)}
 function closeAll(){openIndex=-1;win.forEach(el=>{el.classList.remove('open');el.setAttribute('aria-expanded','false')})}
+let lighting=false,leaving=false;
+function go(i){if(leaving)return;leaving=true;location.href=data[i].url}
+function lightGo(i,fast){if(lighting||leaving)return;lighting=true;const f=document.getElementById('flash'),g=win[i].querySelector('.glass').getBoundingClientRect();
+  const cx=g.left+g.width/2,cy=g.top+g.height/2,R=Math.hypot(Math.max(cx,w-cx),Math.max(cy,h-cy))*2.9;
+  f.style.width=f.style.height=R+'px';f.style.left=cx+'px';f.style.top=cy+'px';f.style.transitionDuration=reduceMotion?'.01s':(fast?'.75s,.2s':'1.15s,.25s');
+  void f.offsetWidth;f.classList.add('go');f.style.transform='translate(-50%,-50%) scale(1)';
+  setTimeout(()=>go(i),reduceMotion?60:(fast?800:1250))}
+addEventListener('pageshow',()=>{lighting=false;leaving=false;const f=document.getElementById('flash');f.classList.remove('go');f.style.transform=''});
 function activate(i){const d=centeredDelta(i,visual);if(Math.abs(d)>.38){closeAll();target+=d;return}
-  if(openIndex!==i){closeAll();openIndex=i;win[i].classList.add('open');win[i].setAttribute('aria-expanded','true');return}
+  if(openIndex!==i){closeAll();openIndex=i;win[i].classList.add('open');win[i].setAttribute('aria-expanded','true');if(!/^https?:/.test(data[i].url||'x:'))setTimeout(()=>{if(openIndex===i)lightGo(i,false)},reduceMotion?100:650);return}
   if(data[i].url)return;closeAll();
 }
 function onDown(e){if(e.button!==undefined&&e.button!==0)return;drag=true;moved=false;downX=lastX=e.clientX;dragStart=target;downTime=performance.now();pid=e.pointerId}
