@@ -56,6 +56,7 @@ canvas{position:absolute;left:0;top:0;display:block}
 #jpsub.on{opacity:1}
 .land #jpsub{right:42%;top:44px;font-size:14px}
 #jpsub b{color:#8fb4ff}
+#jpsub .ja{font-size:13px;color:#ffe9b0;font-weight:600}
 #cmdja{font:600 13px/1.4 'Hiragino Sans','Yu Gothic','Meiryo','Noto Sans JP',sans-serif;color:#cfe0ff;text-align:center}
 #cmdhint{font-family:'Hiragino Sans','Yu Gothic','Meiryo','Noto Sans JP',sans-serif!important;letter-spacing:0!important}
 #alert{inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;pointer-events:auto;z-index:6;overflow:hidden;font-family:'Hiragino Sans','Yu Gothic','Meiryo','Noto Sans JP',sans-serif}
@@ -342,20 +343,23 @@ const CONFIG = Object.freeze({
   EVENT_RADIO: 'Dispatch, suspect vehicle stopped.',
   PARTNER: 'REYES',
   ALERT_RADIO: '至急、至急。管内で強盗事件発生。犯人は赤いセダンで北へ逃走中。付近の車両は追跡せよ。',
+  // 相棒 REYES のセリフ：英語（音声あり＝say）と日本語字幕を併記。日本語の音声はタイトル前の無線デモだけ
   JP: {
-    INTRO: '強盗犯の車だ！ ふらつく車が真正面に来たら、タップして突っ込め！',
-    WINDOW: '真正面に来た瞬間にタップだ！',
-    HIT1: 'いいぞ！ あと2回！', HIT2: 'あと1回！ 止めるぞ！', HIT3: 'やった、止まるぞ！',
-    MISS: '惜しい！ もう一度、真正面を狙え！',
-    PULLOVER: '停車させた！',
-    EVENT: 'ここからは英語で命令だ。まず俺がお手本を言う。',
-    PREVIEW: 'ボタンを押して、俺のお手本を聞け。',
-    SPEAK: 'よく聞け…',
-    YOURTURN: 'マイクボタンを押しながら、英語で命令しろ！',
-    REACT: 'その調子だ！',
-    ARREST: '確保！ よくやった、相棒。'
+    INTRO: { en: "That's the robber's car! When he swings right in front of you, TAP to ram him!", ja: '強盗犯の車だ！ ふらつく車が真正面に来たら、タップして突っ込め！', say: true },
+    WINDOW: { en: "Now! He's right ahead. TAP!", ja: '真正面に来た！ タップだ！', say: 'once' },
+    HIT1: { en: 'Good hit! Two more!', ja: 'いいぞ！ あと2回！', say: true },
+    HIT2: { en: 'One more! Stop him!', ja: 'あと1回！ 止めるぞ！', say: true },
+    HIT3: { en: "That's it! He's stopping!", ja: 'やった、止まるぞ！', say: true },
+    MISS: { en: 'Missed! Aim right ahead.', ja: '惜しい！ もう一度、真正面を狙え！' },
+    PULLOVER: { en: 'He pulled over!', ja: '停車させた！', say: true },
+    EVENT: { en: "Now give the orders in English. I'll show you first.", ja: 'ここからは英語で命令だ。まず俺がお手本を言う。', say: true },
+    PREVIEW: { en: 'Press LISTEN to hear my example.', ja: 'ボタンを押して、俺のお手本を聞け。', say: 'first' },
+    YOURTURN: { en: 'Hold the mic and say it!', ja: 'マイクボタンを押しながら、英語で命令しろ！' },
+    ARREST: { en: 'Got him! Nice work, partner.', ja: '確保！ よくやった、相棒。', say: true }
   },
   CMDS_JA: ['警察だ！ 手を見せろ！', 'エンジンを切れ！', '車から降りろ！', '地面に伏せろ！'],
+  PRAISE_JA: ['よくやった！', 'いいぞ、その調子だ！', 'すばらしい！ お手本どおりだ！', '完璧だ！ これぞ警察官だ！'],
+  ONE_MORE_JA: 'もう一回お願い！',
   CMDS: [
     { text: 'Police! Show me your hands!', pose: 'handsUpInCar', dur: 1.8, sfx: 'none', praise: { word: 'GOOD!', say: 'Good job!' } },
     { text: 'Turn off the engine!', pose: 'handsUpInCar', dur: 2.0, sfx: 'engineOff', praise: { word: 'GREAT!', say: 'Nice! Keep it up!' } },
@@ -818,18 +822,23 @@ const CORE = (function () {
       if (!this.ok || !this.on) { if (done) setTimeout(done, 50); return; }
       try {
         if (!this.voice && this.pick) this.pick();
-        speechSynthesis.cancel(); if (!MICV.virtual) MICV.release();        // iOS：読み上げとマイクは同時に使えないので、話す前にマイクを閉じる
+        const sy = speechSynthesis; try { sy.resume(); } catch (e) {}
+        const stale = sy.speaking || sy.pending; if (stale) sy.cancel();       // iOS：cancel 直後の speak は無視されがちなので、少し待ってから話す
+        if (!MICV.virtual) MICV.release();        // iOS：読み上げとマイクは同時に使えないので、話す前にマイクを閉じる
         const u = new SpeechSynthesisUtterance(text), ja = style === 'ja' || style === 'radioja', vv = ja ? this.ja : this.voice;
         if (vv) u.voice = vv;
         u.lang = (vv && vv.lang) || (ja ? 'ja-JP' : 'en-US'); u.rate = style === 'praise' ? 1.05 : style === 'radio' || style === 'radioja' ? 1.1 : 1.0; u.pitch = style === 'praise' ? 1.15 : style === 'radio' || style === 'radioja' ? 0.8 : 0.95;
-        let fin = false; const fire = () => { if (!fin) { fin = true; if (done) done(); } };
+        let fin = false; const tk = ++this.seq, fire = () => { if (!fin) { fin = true; if (this.seq === tk) this.talkUntil = 0; if (done) done(); } };
+        this.talkUntil = performance.now() + (text.length * 0.08 + 0.8) * 1000;      // speechSynthesis.speaking は iOS で残りっぱなしになるので、自前で「話し中」を数える
         if (style === 'radio' || style === 'radioja') { u.onstart = () => AUDIO.radioOn(); const off = () => { AUDIO.radioOff(); fire(); }; u.onend = off; u.onerror = off; setTimeout(off, 9000); AUDIO.radioOn(); }
-        else { AUDIO.radioOff(); if (done) { u.onend = fire; u.onerror = fire; setTimeout(fire, 9000); } }
-        speechSynthesis.speak(u);
+        else { AUDIO.radioOff(); u.onend = fire; u.onerror = fire; setTimeout(fire, (text.length * 0.08 + 1.2) * 1000); }
+        if (stale) setTimeout(() => { try { sy.speak(u); } catch (e) {} }, 90); else sy.speak(u);
         AUDIO.duck(text.length * 0.07 + 0.6);
       } catch (e) {}
     },
-    cancel() { try { speechSynthesis.cancel(); } catch (e) {} AUDIO.radioOff(); },
+    seq: 0, talkUntil: 0,
+    isTalking() { return performance.now() < this.talkUntil; },
+    cancel() { try { speechSynthesis.cancel(); } catch (e) {} this.talkUntil = 0; AUDIO.radioOff(); },
     toggle() { this.on = !this.on; try { localStorage.setItem('fs.voice', this.on ? 'on' : 'off'); } catch (e) {} }
   };
   VOICE.init();
@@ -845,7 +854,7 @@ const CORE = (function () {
       if (this.busy) return Promise.resolve(false);
       const md = navigator.mediaDevices;
       if (!md || !md.getUserMedia) { this.err = 'unsupported'; return Promise.resolve(false); }
-      this.busy = true; let stage = 'gum'; const log = [], D = this.diag = [];
+      this.busy = true; this.busyAt = performance.now(); let stage = 'gum'; const log = [], D = this.diag = [];
       const as = () => { try { return navigator.audioSession ? navigator.audioSession.type : 'なし'; } catch (e) { return 'err'; } };
       D.push('ver 1.13 / audioSession: ' + as() + ' / ctx: ' + (AUDIO.ctx ? AUDIO.ctx.state : 'なし') + ' / vis: ' + document.visibilityState + ' / standalone: ' + !!navigator.standalone + ' / secure: ' + isSecureContext + ' / top: ' + (window.top === window));
       try { if (navigator.permissions && navigator.permissions.query) navigator.permissions.query({ name: 'microphone' }).then(r => D.push('permission: ' + r.state), e => D.push('permission: ' + (e && e.name))); } catch (e) {}
@@ -880,12 +889,12 @@ const CORE = (function () {
     ensure() { if (this.ready && !this.live()) this.release(); },
     pseudo() { return this.virtual || this.fallback; },
     update(dt, S) {
-      const ps = this.pseudo();
+      const ps = this.pseudo() || !this.ready;                      // マイクが開けていない間も、ボタンを押している間を声とみなす（ボタンは必ず効く）
       if (!this.ready && !ps) { this.level = 0; if (S.sub !== 'YOURTURN') this.reset(); return null; }
       if (ps) this.level = this.level * 0.5 + (this.press ? 0.08 : 0) * 0.5;       // 心のマイク：ボタンを押している間が「声」
       else { let sum = 0; const b = this.buf; this.an.getFloatTimeDomainData(b); for (let i = 0; i < b.length; i++) sum += b[i] * b[i];
       this.level = this.level * 0.5 + (this.press ? Math.sqrt(sum / b.length) : 0) * 0.5; }   // 押している間だけ聞く（プッシュ・トゥ・トーク）
-      const talking = !!(window.speechSynthesis && speechSynthesis.speaking), inYT = S.sub === 'YOURTURN' && S.t > 0.3 && !talking;
+      const talking = !ps && VOICE.isTalking(), inYT = S.sub === 'YOURTURN' && S.t > 0.3 && !talking;
       if (!inYT) { if (!talking) this.floor = Math.min(0.03, this.floor * 0.98 + this.level * 0.02); if (S.sub !== 'YOURTURN') this.reset(); return null; }
       const thr = Math.max(0.012, this.floor * 2.0);
       if (this.level > thr) { this.voiced += dt; this.sinceSound = 0; this.moreSent = false; }                                  // 何かしら音が入っていればよい
@@ -952,7 +961,7 @@ const CORE = (function () {
       pend.button = k;
     });
   });
-  { const vb = $('vmicbtn'), dn = e => { e.stopPropagation(); e.preventDefault(); MICV.press = true; vb.classList.add('down'); wake();
+  { const vb = $('vmicbtn'), dn = e => { e.stopPropagation(); e.preventDefault(); MICV.press = true; vb.classList.add('down'); wake(); VOICE.cancel(); if (MICV.busy && performance.now() - (MICV.busyAt || 0) > 2500) MICV.busy = false;
       if (!MICV.pseudo() && !NOMIC && !MICV.ready && !MICV.busy) MICV.acquire(true).then(ok => { if (!ok) MICV.fallback = true; });   /* 押した操作の中でマイクを開く。だめなら押している間を声とみなす */ try { vb.setPointerCapture(e.pointerId); } catch (x) {} }, up = e => { e.stopPropagation(); MICV.press = false; vb.classList.remove('down'); };
     vb.addEventListener('pointerdown', dn); vb.addEventListener('pointerup', up); vb.addEventListener('pointercancel', up); vb.addEventListener('lostpointercapture', up); vb.addEventListener('contextmenu', e => e.preventDefault()); }
   function refreshVoiceBtn() { $('voicebtn').textContent = VOICE.on ? 'VOICE ON' : 'VOICE OFF'; }
@@ -966,21 +975,22 @@ const CORE = (function () {
   /* ================= UI ================= */
   const el = { title: $('title'), end: $('end'), cmdp: $('cmdp'), ram: $('ram'), radio: $('radio'), sirenm: $('sirenm'), gauge: $('gauge').children, unit: $('unit'),
     cmdtext: $('cmdtext'), cmdhint: $('cmdhint'), dbg: $('dbg'), siren: $('siren'), lights: $('lights'), gaugeBox: $('gauge') };
-  let radioT = 0, ui = {}, jpKey = '', jpT = 0;
+  let radioT = 0, ui = {}, jpKey = '', jpT = 0, spoken = {};
+  function showSub(en, ja, sec) { $('jpsub').innerHTML = '<b>' + CONFIG.PARTNER + '</b> ' + en + '<br><span class="ja">「' + ja + '」</span>'; $('jpsub').classList.add('on'); jpT = sec; }
   // デバッグパネル：追跡を飛ばして音声・場面を確認する
   { const dp = $('dbgp'), db = $('dbgb');
     const syncGlass = () => { GLASS.reset(); for (let h = 1; h <= S.hits; h++) GLASS.hit(h, S.side || 1, false); };
     const jump = label => {
       VOICE.cancel(); MICV.release(); SAY = { text: '', t0: -9, dur: 0 }; PR = null; FX.parts.length = 0; FX.rings.length = 0;
       ALERT = false; $('alert').classList.add('hide'); AUDIO.init(); wake(); paused = false; $('resume').classList.add('hide');
-      core.restart(); core.warp(label); syncGlass(); jpKey = ''; dp.classList.remove('on');
+      spoken = {}; core.restart(); core.warp(label); syncGlass(); jpKey = ''; dp.classList.remove('on');
     };
     const items = [['SCENES'], ['Emergency radio screen', () => { dp.classList.remove('on'); VOICE.cancel(); ALERT = true; alertStep = 0; $('alert').classList.remove('hide'); $('alerttx').textContent = '強盗事件発生。犯人は車で逃走中。'; $('alertt4').textContent = 'TAP TO RECEIVE'; }],
       ['Chase (start)', () => jump('INTRO')], ['Hit window', () => jump('WINDOW')],
       ['Cmd 1 listen', () => jump('PREVIEW0')], ['Cmd 2 listen', () => jump('PREVIEW1')], ['Cmd 3 listen', () => jump('PREVIEW2')], ['Cmd 4 listen', () => jump('PREVIEW3')],
       ['SAY IT (cmd 1)', () => jump('YOURTURN0')], ['SAY IT (cmd 4)', () => jump('YOURTURN3')], ['Praise (cmd 1)', () => jump('REACT0')], ['Dead (shot)', () => jump('DEAD')], ['Arrest', () => jump('ARREST')],
       ['VOICE TEST'], ['Radio JP (dispatch)', () => { AUDIO.init(); VOICE.speak(CONFIG.ALERT_RADIO, 'radioja'); }], ['Model EN (Police!...)', () => { AUDIO.init(); VOICE.speak(CONFIG.CMDS[0].text); }],
-      ['Praise EN', () => { AUDIO.init(); VOICE.speak('Perfect! That\'s how it\'s done!', 'praise'); }], ['JP line (REYES)', () => { AUDIO.init(); VOICE.speak('真正面に来た瞬間にタップだ！', 'ja'); }],
+      ['Praise EN', () => { AUDIO.init(); VOICE.speak('Perfect! That\'s how it\'s done!', 'praise'); }], ['REYES guide EN', () => { AUDIO.init(); VOICE.speak(CONFIG.JP.INTRO.en); }],
       ['Mic check (3s level)', (b) => { MICV.acquire(true).then(ok => { const t0 = performance.now(), iv = setInterval(() => { b.textContent = 'Mic ' + (ok ? 'OK ' : 'NG ') + MICV.level.toFixed(3) + ' ' + (MICV.err || ''); if (performance.now() - t0 > 3000) { clearInterval(iv); MICV.release(); b.textContent = 'Mic check (3s level)'; } }, 100); }); }]];
     for (const it of items) { if (it.length === 1) { const h = document.createElement('h4'); h.textContent = it[0]; dp.appendChild(h); } else { const b = document.createElement('button'); b.textContent = it[0]; b.addEventListener('click', e => { e.stopPropagation(); it[1](b); }); dp.appendChild(b); } }
     for (const el2 of [db, dp]) { el2.addEventListener('pointerdown', e => e.stopPropagation()); }
@@ -1019,8 +1029,14 @@ const CORE = (function () {
       setUI('cmdhint', hint, v => { el.cmdhint.textContent = v; });
     }
     // 日本語のセリフ（相棒 REYES）：場面が変わるたびに出す
-    const jk = S.sub === 'HIT' ? 'HIT' + Math.min(3, S.hits) : (S.sub === 'INTRO' || S.sub === 'WINDOW' || S.sub === 'MISS' || S.sub === 'PULLOVER' || S.sub === 'EVENT' || S.phase === 'CMD' || S.phase === 'ARREST') ? (S.phase === 'ARREST' ? 'ARREST' : S.sub) : '';
-    if (jk !== jpKey) { jpKey = jk; const t = jk && CONFIG.JP[jk]; if (t) { $('jpsub').innerHTML = '<b>' + CONFIG.PARTNER + '</b>「' + t + '」'; $('jpsub').classList.add('on'); jpT = jk === 'YOURTURN' || jk === 'PREVIEW' ? 99 : 3.2; } }
+    const jk = S.sub === 'HIT' ? 'HIT' + Math.min(3, S.hits) : (S.sub === 'INTRO' || S.sub === 'WINDOW' || S.sub === 'MISS' || S.sub === 'PULLOVER' || S.sub === 'EVENT' || S.sub === 'PREVIEW' || S.sub === 'YOURTURN' || S.phase === 'ARREST') ? (S.phase === 'ARREST' ? 'ARREST' : S.sub) : '';
+    if (jk !== jpKey) {
+      jpKey = jk; const t = jk && CONFIG.JP[jk];
+      if (t) {
+        showSub(t.en, t.ja, jk === 'YOURTURN' || jk === 'PREVIEW' ? 99 : 3.6);
+        if (t.say === true || (t.say === 'once' && !spoken[jk]) || (t.say === 'first' && S.cmd.i === 0 && !spoken[jk])) { spoken[jk] = 1; VOICE.speak(t.en); }   // 英語の音声
+      }
+    }
     if (jpT > 0) { jpT -= dt; if (jpT <= 0) $('jpsub').classList.remove('on'); }
     if (ph === 'TITLE' || ph === 'END' || ph === 'DEAD') $('jpsub').classList.remove('on');
     if (radioT > 0) { radioT -= dt; if (radioT <= 0) el.radio.classList.remove('on'); }
@@ -1041,9 +1057,9 @@ const CORE = (function () {
         case 'window': case 'miss': case 'whiff': case 'ramArm': case 'spot': case 'door': case 'arrest': AUDIO.sfx(e.type, e); break;
         case 'hit': AUDIO.sfx('hit', e); FX.hit(e); GLASS.hit(e.stage, e.side, true); break;
         case 'radio': el.radio.textContent = e.text; el.radio.classList.add('on'); radioT = 3; AUDIO.sfx('radio'); break;
-        case 'cmd': if (e.step === 'speak') SAY = { text: e.text, t0: tNow, dur: e.dur || 2.4 }; break;
-        case 'more': SAY = { text: CONFIG.ONE_MORE, t0: tNow, dur: 1.8 }; AUDIO.sfx('more'); break;          // マイクを閉じないよう文字だけ
-        case 'react': { const pr = CONFIG.CMDS[e.i].praise; PR = { t0: tNow, i: e.i }; reyesSay(pr.say, 1.6, 'praise'); FX.praise(); AUDIO.sfx('praise', e.i); if (e.sfx && e.sfx !== 'none' && e.sfx !== 'door' && e.sfx !== 'cuffs') AUDIO.sfx(e.sfx); break; }
+        case 'cmd': if (e.step === 'speak') { SAY = { text: e.text, t0: tNow, dur: e.dur || 2.4 }; showSub(e.text, CONFIG.CMDS_JA[e.i], 3.4); } break;
+        case 'more': SAY = { text: CONFIG.ONE_MORE, t0: tNow, dur: 1.8 }; showSub(CONFIG.ONE_MORE, CONFIG.ONE_MORE_JA, 2.2); AUDIO.sfx('more'); break;          // マイクを閉じないよう文字だけ
+        case 'react': { const pr = CONFIG.CMDS[e.i].praise; PR = { t0: tNow, i: e.i }; reyesSay(pr.say, 1.6, 'praise'); showSub(pr.say, CONFIG.PRAISE_JA[e.i], 2.6); FX.praise(); AUDIO.sfx('praise', e.i); if (e.sfx && e.sfx !== 'none' && e.sfx !== 'door' && e.sfx !== 'cuffs') AUDIO.sfx(e.sfx); break; }
         case 'draw': AUDIO.sfx('draw'); VOICE.cancel(); SAY = { text: '', t0: -9, dur: 0 }; PR = null; break;
         case 'shot': AUDIO.sfx('gunshot'); FX.flash = 1; FX.shake = 22; break;
         case 'dead': AUDIO.sfx('dead'); break;
