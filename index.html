@@ -141,12 +141,8 @@ for(let i=0;i<data.length;i++){
 }
 const mounted=[];
 function fitGlass(){win.forEach(el=>{const g=el.querySelector('.glass'),f=g&&g.querySelector('iframe');if(!f)return;f.style.transform='scale('+Math.max(g.offsetWidth/600,g.offsetHeight/900).toFixed(4)+')'})}
-function mount(i){if(mounted[i])return;mounted[i]=true;const g=win[i].querySelector('.glass');
-  if(/^https?:/.test(data[i].url)){const c=document.createElement('div');c.className='other';g.append(c)}
-  else{const f=document.createElement('iframe');f.setAttribute('aria-hidden','true');f.tabIndex=-1;f.setAttribute('scrolling','no');
-   f.addEventListener('load',()=>{try{const d=f.contentDocument;const st=d.createElement('style');st.textContent='[data-iz-base-ui]{display:none!important}html,body{overflow:hidden!important}';d.head.append(st)}catch(e){}});
-   f.src=data[i].url;g.append(f)}
-  fitGlass()}
+const TINT=['linear-gradient(180deg,#fff3f9,#f4eaff 55%,#e4f6f0)','radial-gradient(ellipse at 50% 30%,#2a4a9a,#0a1230 75%)','linear-gradient(90deg,#5a0f18,#a01f2c 20%,#5a0f18 40%,#a01f2c 60%,#5a0f18 80%,#a01f2c)','#fff','radial-gradient(ellipse at 50% 38%,#fff6d8 0%,#cfeee6 38%,#a9b8ee 78%,#8f95d8 100%)'];
+function mount(i){if(mounted[i])return;mounted[i]=true;const g=win[i].querySelector('.glass');const d=document.createElement('div');d.style.cssText='position:absolute;inset:0;background:'+TINT[i];g.append(d)}
 function mountGlass(){win.forEach((el,i)=>{const g=el.querySelector('.glass');el.querySelector('.plate').textContent=data[i].name;
   if(i===2){const k=document.createElement('div');k.className='sticker';k.textContent='COMING SOON';el.querySelector('.window-shell').append(k)}
   
