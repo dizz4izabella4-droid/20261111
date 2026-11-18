@@ -712,6 +712,7 @@ const CORE = (function () {
     ctx: null, master: null, nbuf: null, eng: null, sir: null, bgm: null, hiss: null,
     init() {
       if (this.ctx) { if (this.ctx.state !== 'running') this.ctx.resume(); return; }
+      try { if (navigator.audioSession && !MICV.ready) navigator.audioSession.type = 'playback'; } catch (e) {}
       try {
         const AC = window.AudioContext || window.webkitAudioContext;
         const c = this.ctx = new AC(); this.master = c.createGain(); this.master.gain.value = 1;
@@ -855,6 +856,8 @@ const CORE = (function () {
       if (!this.ok || !this.on) { if (done) setTimeout(done, 50); return; }
       try {
         if (!this.voice && this.pick) this.pick();
+        try { if (navigator.audioSession && !MICV.ready) navigator.audioSession.type = 'playback'; } catch (e) {}   // iOS：効果音(WebAudio)と読み上げを同じ種類にそろえ、読み上げ中もサイレン・BGMが消えないようにする
+        AUDIO.kick();
         const sy = speechSynthesis; try { sy.resume(); } catch (e) {}
         const stale = sy.speaking || sy.pending; if (stale) sy.cancel();       // iOS：cancel 直後の speak は無視されがちなので、少し待ってから話す
         if (!MICV.virtual) MICV.release();        // iOS：読み上げとマイクは同時に使えないので、話す前にマイクを閉じる
@@ -921,7 +924,7 @@ const CORE = (function () {
         });
       }).catch(e => { try { if (this.stream) this.stream.getTracks().forEach(t => t.stop()); if (this.mc) this.mc.close(); } catch (x) {} this.stream = this.mc = null; this.busy = false; this.ready = false; this.err = nm(e) + '/' + stage; D.push('final: ' + nm(e) + '/' + stage + ' ' + String((e && e.message) || '').slice(0, 90)); return false; });
     },
-    release() { try { if (this.src) this.src.disconnect(); if (this.stream) this.stream.getTracks().forEach(t => t.stop()); if (this.mc) this.mc.close(); } catch (e) {} this.src = this.an = this.stream = this.mc = null; this.ready = false; this.reset(); try { if (navigator.audioSession) navigator.audioSession.type = 'auto'; } catch (e) {} AUDIO.kick(); },
+    release() { try { if (this.src) this.src.disconnect(); if (this.stream) this.stream.getTracks().forEach(t => t.stop()); if (this.mc) this.mc.close(); } catch (e) {} this.src = this.an = this.stream = this.mc = null; this.ready = false; this.reset(); try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {} AUDIO.kick(); },
     reset() { this.voiced = 0; this.sinceSound = 9; this.moreSent = false; this.gauge = 0; },
     live() { const t = this.stream && this.stream.getAudioTracks()[0]; return !!(this.ready && t && t.readyState === 'live'); },
     // 読み上げでマイクが切られていたら、「SAY IT!」の間だけ静かに取り直す
