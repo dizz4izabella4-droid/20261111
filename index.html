@@ -107,10 +107,14 @@ html,body,#world{background:#fff!important}
 @keyframes fadein{to{opacity:1}}
 #fog{position:absolute;z-index:2;inset:0;pointer-events:none;background:radial-gradient(ellipse 70% 60% at 50% 52%,rgba(255,255,255,0),rgba(255,255,255,.35) 100%),linear-gradient(180deg,rgba(255,255,255,.3),rgba(255,255,255,0) 22%,rgba(255,255,255,0) 60%,rgba(255,255,255,.7) 94%)}
 .window-shell{filter:drop-shadow(0 22px 19px rgba(40,50,70,.45)) drop-shadow(0 0 9px rgba(218,142,68,.12))!important}
+#snd{position:fixed;z-index:40;right:max(10px,env(safe-area-inset-right,0px));bottom:max(12px,env(safe-area-inset-bottom,0px));width:36px;height:36px;border-radius:50%;border:1px solid #c9ced3;background:rgba(255,255,255,.85);color:#6b737b;display:grid;place-items:center;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#snd svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}#snd .x{display:none}#snd.off .x{display:block}#snd.off .w{display:none}
 </style>
 </head>
 <body>
 <div id="brain" aria-hidden="true">BRAIN</div>
+<audio id="bgm" src="assets/bgm/tides-under-glass.mp3" loop preload="auto"></audio>
+<button id="snd" type="button" aria-label="BGMのオン・オフ"><svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><g class="w"><path d="M15.5 9a4.2 4.2 0 0 1 0 6"/><path d="M18 6.6a7.6 7.6 0 0 1 0 10.8"/></g><path class="x" d="M16 9.5l5 5M21 9.5l-5 5"/></svg></button>
 <main id="world" aria-label="おもちゃ箱の入り口。左右にドラッグして窓を選び、タップで扉が開きます。">
   <div id="sky"></div><div id="moon"></div><div id="nightgrade"></div><div id="mist"></div><div id="glassglow"></div>
   <iframe id="bgi" src="icarus/?bg=1" title="" aria-hidden="true" tabindex="-1" scrolling="no"></iframe><div id="tree" aria-hidden="true"></div><div id="fog"></div><div id="reel"></div><div id="water"></div><canvas id="particles" aria-hidden="true"></canvas><div id="vignette"></div>
@@ -235,6 +239,22 @@ function render(t){let dt=Math.min(.05,(t-last)/1000);last=t;if(!drag){visual+=(
   ctx.shadowBlur=0;requestAnimationFrame(render);
 }
 requestAnimationFrame(render);
+
+/* BGM: 最初のタップ/キーで小さく流し始める（ブラウザの自動再生制限）。ゆっくり音量を上げ、ループ。右下のボタンでオフ（記憶する）。消音スイッチには従う */
+(function(){const a=document.getElementById('bgm'),btn=document.getElementById('snd'),VOL=.5;let on=true,fade=0;
+ try{on=localStorage.getItem('izTopBgm')!=='off'}catch(e){}
+ a.volume=0;btn.classList.toggle('off',!on);
+ function ramp(to,ms){clearInterval(fade);const from=a.volume,t0=performance.now();fade=setInterval(()=>{const k=Math.min(1,(performance.now()-t0)/ms);a.volume=Math.max(0,Math.min(1,from+(to-from)*k));if(k>=1){clearInterval(fade);if(to===0)a.pause()}},60)}
+ function start(){if(!on)return Promise.resolve();return a.play().then(()=>ramp(VOL,3500))}
+ let armed=true;function first(){if(!armed)return;start().then(()=>{armed=false;['pointerdown','keydown','touchend'].forEach(t=>removeEventListener(t,first,true))}).catch(()=>{})}
+ ['pointerdown','keydown','touchend'].forEach(t=>addEventListener(t,first,true));
+ btn.addEventListener('pointerdown',e=>e.stopPropagation());
+ btn.addEventListener('click',e=>{e.stopPropagation();on=!on;btn.classList.toggle('off',!on);try{localStorage.setItem('izTopBgm',on?'on':'off')}catch(_){}
+  if(on){armed=false;a.play().then(()=>ramp(VOL,1200)).catch(()=>{})}else ramp(0,500)});
+ document.addEventListener('visibilitychange',()=>{if(document.hidden){a.pause()}else if(on&&!armed){a.play().catch(()=>{})}});
+ addEventListener('pagehide',()=>a.pause());
+ addEventListener('pageshow',e=>{if(e.persisted&&on&&!armed)a.play().catch(()=>{})});
+})();
 // Exposed only for automated quality checking. No visible debug UI.
 window.__BRAIN_QA__={state:()=>({camera:'fixed',target,visual,travel,openIndex}),select:(i)=>{closeAll();target=i},close:closeAll};
 })();

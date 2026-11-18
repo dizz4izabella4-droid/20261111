@@ -1047,3 +1047,4 @@ PC-98ふうのノベルゲームエンジンの**土台**。ゲームの中身�
 - 電卓ドリル(`dentaku-drill/`)を おもちゃ箱(`toybox/`) の一覧から `utility/`（実用の部屋）の ROOM に移動（パス `../dentaku-drill/`、upd 2026-11-18）。本体は動かしていないのでURLは変わらない。
 - 2026-11-18 トップ刷新(2): 枝を「BRAINを中心に放射状」に変更（飾り。読ませない）。部屋5本だけ英語名＋作品名を小さく表示。一番奥に イカロスをオート再生で流す（`icarus/?bg=1`: UI・羽・音なし、解像度等倍、親ページの合図で再生開始。枝が伸び切り＋読み込み済みで約3秒かけて表示、間に合わなければ枝が明滅して待つ）。イカロス側は `?bg=1` の時だけ挙動が変わる（通常は従来どおり。`icarus/_src` を修正して `python3 build.py ../index.html` で再ビルド、要 `npm i three@0.160.1`）。STRONG/SUBTLE切替は廃止（SUBTLEのみ）。実機iPhoneでの負荷は未確認。
 - 窓のガラスは各ページのイメージ色の単色/グラデーションに変更（ライブ表示はやめた）: toybox=淡いピンク〜ラベンダー、lab=濃紺、cinema=赤いカーテン、utility=白、other world=パステル。
+- トップのBGM: 「Tides Under Glass」(`assets/bgm/tides-under-glass.mp3`、元の192kbpsを128kbpsに再圧縮、約2.8MB、3分ループ)。最初のタップ/キーで約3.5秒かけて音量0.5まで上げて再生、右下のスピーカーボタンでオン/オフ（localStorageに記憶）、タブが隠れたら停止。iPhoneの消音スイッチに従う（audioSession ambient）。
