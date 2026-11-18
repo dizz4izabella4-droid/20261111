@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover,maximum-scale=1,user-scalable=no">
-<meta name="theme-color" content="#e3f6ee">
+<meta name="theme-color" content="#1f2440">
 <title>WHERE WHICH</title>
 <script>/* iPhoneのマナーモードに従わせる */try{ if(navigator.audioSession) navigator.audioSession.type="ambient"; }catch(e){}</script>
 <style>
@@ -424,6 +424,102 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
 .empty b{display:block;font-size:15px;color:var(--ink);margin-bottom:4px}
 .sheet-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;border-top:2px solid var(--line);font-size:11px;color:var(--ink2);background:#fff}
 .sheet-foot .btn-s{background:var(--lavS)}
+
+
+/* ===================== UI v2（2026-11-19）：森の えほん ふう ===================== */
+/* 森の絵と エルフ（紺・金の ローブ）に あわせる。紺＝わく、金＝ふち、ようひし色＝パネル。文字は 標準の 日本語ゴシックの まま */
+:root{
+  --nv:#232745; --nv2:#2f355e; --nvD:#161a31;
+  --gold:#d4b25e; --goldD:#a8873a; --goldS:rgba(212,178,94,.45);
+  --parch:#f8f2e2; --parch2:#eee3c6;
+  --ink:#3a3352; --ink2:#7a7088; --line:#e2d4ae; --white:#f8f2e2;
+  --mint:#5f9a72; --mintD:#43785a; --mintS:#e2eedf;
+  --pink:#d47a8b; --pinkD:#b15a6c; --pinkS:#f6e1e4;
+  --lav:#2f355e; --lavD:#161a31; --lavS:#ece2c6;
+  --lemon:#d4b25e; --lemonD:#a8873a;
+}
+body{background:linear-gradient(172deg,#26304d 0%,#1f2440 55%,#181c33 100%) fixed;transition:background 2s ease}
+body[data-scene="day"]{background:linear-gradient(172deg,#3d5a4f 0%,#2c4148 55%,#232b44 100%) fixed}
+body[data-scene="dusk"]{background:linear-gradient(172deg,#5b4660 0%,#3a3256 55%,#232643 100%) fixed}
+body[data-scene="night"]{background:linear-gradient(172deg,#1f2645 0%,#181d38 55%,#12152a 100%) fixed}
+body[data-scene="rain"]{background:linear-gradient(172deg,#3a4556 0%,#2b3343 55%,#1f2433 100%) fixed}
+/* ヘッダー */
+.logo h1{color:var(--parch);text-shadow:0 2px 0 rgba(0,0,0,.25)}
+.logo h1 b{color:var(--gold)}
+.logo small{color:rgba(248,242,226,.62)}
+.chip-btn{background:var(--nv2);color:var(--parch);border:1.5px solid var(--goldS);box-shadow:0 3px 0 var(--nvD)}
+.chip-btn:active{box-shadow:0 1px 0 var(--nvD)}
+.chip-btn .num{background:var(--gold);color:var(--nvD)}
+.chip-btn.gear{background:var(--nv2);color:var(--gold);box-shadow:0 3px 0 var(--nvD)}
+.name-tag{background:var(--gold);color:var(--nvD);box-shadow:0 2px 0 var(--goldD)}
+.toggle{background:var(--nv2);color:var(--parch);border:1.5px solid var(--goldS);box-shadow:0 3px 0 var(--nvD)}
+.toggle:active{box-shadow:0 1px 0 var(--nvD)}
+.toggle.off{background:#4a4a5e;color:rgba(248,242,226,.6);box-shadow:0 3px 0 #2a2a38}
+/* おへや：金の ふちの がくぶち */
+.room{border:2px solid var(--gold);box-shadow:0 0 0 4px rgba(10,12,26,.45),0 14px 30px rgba(0,0,0,.38)}
+.status{background:rgba(22,26,49,.62);color:var(--parch);border:1px solid var(--goldS);backdrop-filter:blur(2px)}
+.status .dot{background:var(--gold);box-shadow:0 0 6px var(--gold)}
+/* セリフ：むかしの RPG ふうの わく（ふきだしに しない） */
+.speech{background:rgba(24,28,54,.88);border:2px solid var(--gold);border-radius:6px;
+  box-shadow:inset 0 0 0 2px rgba(24,28,54,.9),inset 0 0 0 3px var(--goldS),0 6px 16px rgba(0,0,0,.35);padding:10px 14px 9px}
+#speech-text{color:#fbf6ea;text-shadow:0 1px 0 rgba(0,0,0,.35)}
+.speaking-indicator{width:0;height:0;border-radius:0;background:none;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid var(--gold);margin-left:7px;margin-right:-15px}
+/* おしえる パネル */
+.teach{background:var(--parch);border:1.5px solid var(--goldS);border-radius:18px;box-shadow:0 4px 0 rgba(10,12,26,.35),0 10px 22px rgba(0,0,0,.22)}
+.teach h2::before{background:var(--gold);box-shadow:0 0 0 3px rgba(212,178,94,.25)}
+.field input,.row2 select{border:2px solid var(--line);background:#fffdf6;color:var(--ink)}
+.field input:focus,.row2 select:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,178,94,.22)}
+.field input::placeholder{color:#b5a98b}
+.go{background:var(--nv2);color:var(--parch);border:1.5px solid var(--gold);box-shadow:0 4px 0 var(--nvD)}
+.go:active{box-shadow:0 1px 0 var(--nvD)}
+/* こたえる ばんは みどりで しらせる */
+.teach.answering{border-color:rgba(95,154,114,.7);box-shadow:0 0 0 3px rgba(95,154,114,.25),0 4px 0 rgba(10,12,26,.35),0 10px 22px rgba(0,0,0,.22)}
+.teach.answering h2::before{background:var(--mint);box-shadow:0 0 0 3px rgba(95,154,114,.25)}
+.teach.answering .go{background:var(--mint);border-color:var(--mintD);color:#fff;box-shadow:0 4px 0 var(--mintD)}
+.qr{border-radius:12px}
+.qr.wait{background:transparent;color:var(--nv2);border:1.5px solid var(--nv2);box-shadow:0 3px 0 var(--line)}
+.qr.wait.on{background:var(--nv2);color:var(--parch);box-shadow:0 3px 0 var(--nvD)}
+.sample{color:var(--goldD)}
+/* レベル */
+.level{background:var(--parch);border:1.5px solid var(--goldS);box-shadow:0 3px 0 rgba(10,12,26,.3)}
+.level .lv{background:var(--gold);color:var(--nvD);box-shadow:0 2px 0 var(--goldD)}
+.lvbar{background:var(--parch2)}
+.lvbar i{background:linear-gradient(90deg,var(--goldD),var(--gold))}
+footer{color:rgba(248,242,226,.55)}
+.levelup{background:var(--nv2);color:var(--parch);border:2px solid var(--gold);box-shadow:0 5px 0 var(--nvD),0 14px 30px rgba(0,0,0,.4)}
+.levelup b{color:var(--gold)}
+/* モーダル */
+.modal{background:rgba(12,14,28,.6)}
+.sheet{background:var(--parch);border:2px solid var(--gold)}
+.sheet-head{background:var(--nv2)}
+.sheet-head h2{color:var(--parch)}
+.sheet-head .sub{color:rgba(248,242,226,.7)}
+.badge-n{background:var(--gold);color:var(--nvD)}
+.x{background:rgba(248,242,226,.12);color:var(--parch)}
+.x:hover{background:rgba(248,242,226,.25);color:#fff}
+.filterbar{border-bottom-color:var(--line)}
+.fchip{background:var(--parch2);color:var(--ink2)}
+.fchip.on{background:var(--nv2);color:var(--parch);box-shadow:0 3px 0 var(--nvD)}
+#wordbook-list-container{background:#f3ead3}
+.wcard{background:#fffdf6;box-shadow:0 2px 0 var(--line);border:1px solid #ecdfbd}
+.wnote{color:var(--goldD)}
+.sheet-foot{background:var(--parch);border-top-color:var(--line)}
+.seg button.on{background:var(--nv2);color:var(--parch);box-shadow:0 3px 0 var(--nvD)}
+/* はじまり */
+#setup{background:linear-gradient(172deg,#26304d 0%,#1f2440 55%,#181c33 100%)}
+.setup-card h2{color:var(--parch)}
+.setup-card h2 b{color:var(--gold)}
+.setup-card p{color:rgba(248,242,226,.78)}
+.setup-name{background:var(--parch);border-color:var(--gold);color:var(--ink)}
+.setup-big{background:var(--gold);color:var(--nvD);box-shadow:0 6px 0 var(--goldD)}
+.setup-big:active{box-shadow:0 2px 0 var(--goldD)}
+.setup-link{color:var(--gold)}
+header{min-width:0}
+.hbtns{min-width:0;flex-shrink:1}
+@media(max-width:420px){.chip-btn{gap:6px;padding:6px 10px 7px}.chip-btn.gear{padding:6px 7px 7px}.logo h1{font-size:clamp(17px,5.2vw,22px)}}
+#select-genre.locked,#select-genre:disabled{background:var(--parch2);color:#a89c7c;border-color:var(--line);opacity:.8}
+.sample{color:#8a6d2a}
+.gsel{background:#efe6cc;color:#6d5a2c}
 
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -2162,6 +2258,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         });
         sc.classList.toggle('is-rain', name === 'rain');
         sc.classList.toggle('is-night', name === 'night');
+        document.body.dataset.scene = name; // そとの いろも じかんに あわせる
       }
       function updateScene(instant) {
         let forced = '';
@@ -4799,7 +4896,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
       if (/[?&]dev=1/.test(location.search)) {
         window.__ww = {
           state, m0, M0, ML, PROBES, DICT, classify, planIdle, runPlan, wordPlan, handleInput, handleAnswer,
-          learnTag, knowOf, refreshFav, seedRandom, triggerNextSpeech, saveM0, loadM0,
+          learnTag, knowOf, refreshFav, seedRandom, triggerNextSpeech, saveM0, loadM0, setScene,
           panel() {
             let el = document.getElementById('ww-dev');
             if (!el) { el = document.createElement('pre'); el.id = 'ww-dev'; el.style.cssText = 'position:fixed;left:4px;bottom:4px;z-index:9999;max-width:60vw;max-height:40vh;overflow:auto;background:rgba(0,0,0,.75);color:#cfe;font:11px/1.4 monospace;padding:6px;border-radius:6px;white-space:pre-wrap;pointer-events:none'; document.body.appendChild(el); }
@@ -4913,6 +5010,8 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
           lastLockOn = on;
           const name = state.characterName;
           dom.teachTitleText.textContent = on ? `${name}に こたえる` : `${name}に ことばを おしえる`;
+          const tp = document.querySelector('section.teach');
+          if (tp) tp.classList.toggle('answering', on);
           const go = document.querySelector('#teach-form .go');
           if (go) go.textContent = on ? 'こたえる' : 'おしえる';
         }
