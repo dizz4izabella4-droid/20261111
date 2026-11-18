@@ -241,12 +241,40 @@ body.nofx #emote-fx{display:none}
 .sample:hover{text-decoration:underline}
 footer{display:none;text-align:center;font-size:10px;color:var(--ink2)}
 @media(min-height:820px){body:not(.kb) footer{display:block}}
-body.kb{--chsize:62px}
+body.kb{--chsize:38px}
 body.kb header,body.kb .level,body.kb .teach-head{display:none}
 body.kb .room{min-height:0;height:100%;flex:1 1 0}
 body.kb .app>.stagewrap{height:auto;min-height:120px;flex:1 1 0}
 body.kb .app{justify-content:flex-start}
 body.kb .app{min-height:0;box-sizing:border-box;padding-bottom:var(--kbgap,56px)} /* キーボードの上の アドレス表示と かさならないよう、「ちょっと まって」ぶん あげる */
+
+/* ===== しゅやく（エルフ）：たち絵 と ときどき デフォルメ ===== */
+.room{--chsize:54px}
+body.kb .room{--chsize:38px}
+.hero{position:absolute;right:3%;bottom:1.5%;height:90%;aspect-ratio:255/739;z-index:1;pointer-events:none;user-select:none;transition:opacity .6s ease}
+.hero.away{opacity:0}
+#hero-inner{position:relative;height:100%}
+.hero #character-emote{height:100%;display:block}
+.hero-pic{position:relative;height:100%;filter:drop-shadow(0 6px 6px rgba(0,0,0,.22))}
+.hero-pic img{display:block;height:100%;width:auto}
+.hero-pic .lid{position:absolute;top:6.85%;width:5.6%;height:1.25%;background:#f7d3b7;border-bottom:1px solid #5a3b2e;border-radius:0 0 45% 45%;opacity:0}
+.hero-pic .lid.l{left:47%}.hero-pic .lid.r{left:59.2%}
+.hero-pic[data-blink="1"] .lid{opacity:1}
+.hero-pic .hmouth{position:absolute;left:56.5%;top:10.7%;width:3.5%;height:.7%;background:#8a4440;border-radius:50%;transform:translate(-50%,-50%) scaleY(0);transition:transform .08s}
+.hero-pic[data-talk="1"] .hmouth{transform:translate(-50%,-50%) scaleY(1)}
+.hero #emote-fx{top:4%}
+.chibi{position:absolute;left:0;bottom:0;z-index:1;pointer-events:none;user-select:none;opacity:0;transition:opacity .6s ease;will-change:transform}
+.chibi.on{opacity:1}
+#chibi-inner{position:relative;display:flex;justify-content:center}
+#chibi-img{display:block;height:var(--cbh,110px);width:auto;filter:drop-shadow(0 4px 3px rgba(0,0,0,.2))}
+.chibi .shadow{width:60%;height:10px;margin:-8px auto 0;border-radius:50%;background:rgba(60,40,30,.25);filter:blur(1px)}
+.chibi #emote-fx{top:0}
+.chibi.walking #chibi-inner{animation:walkBob .5s ease-in-out infinite}
+#chibi-inner.napping{animation:chibiNap 2.6s ease-in-out infinite}
+@keyframes chibiNap{0%,100%{transform:translateY(2px) scale(1,.97)}50%{transform:translateY(4px) scale(1.01,.94)}}
+#nc-emote{display:flex;transform-origin:50% 100%}
+.speech{align-self:flex-start;max-width:62%;margin:auto 0 calc(var(--chsize,54px) + 30px) 12px}
+body.chibi-mode .speech{max-width:calc(100% - 24px)}
 
 /* ===== はじめの子（植物スライム）SVG ===== */
 #character-svg{width:var(--chsize,96px);height:var(--chsize,96px);filter:drop-shadow(0 4px 4px rgba(0,0,0,.18))}
@@ -627,7 +655,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
 
   <div class="metarow">
     <div class="metaL">
-      <button id="btn-edit-name" type="button" class="name-tag" title="なまえを かえる"><span id="speech-speaker-label">んちょ</span><i>✎</i></button>
+      <button id="btn-edit-name" type="button" class="name-tag" title="なまえを かえる"><span id="speech-speaker-label">えるふ</span><i>✎</i></button>
     </div>
     <button id="btn-toggle-auto" type="button" class="toggle" title="かってに おはなしするのを きりかえる">ひとりごと: ON</button>
   </div>
@@ -702,10 +730,20 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="ripple" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.006 0.03" numOctaves="2" seed="3" result="n"><animate attributeName="baseFrequency" dur="14s" values="0.006 0.03;0.01 0.042;0.006 0.03" repeatCount="indefinite"/></feTurbulence><feDisplacementMap in="SourceGraphic" in2="n" scale="3.2" xChannelSelector="R" yChannelSelector="G"/></filter></svg>
       </div>
 
+      <div id="hero" class="hero" aria-hidden="true">
+        <div id="hero-inner" class="presence-float">
+          <div id="character-emote"><div class="hero-pic" id="hero-pic"><img src="hero/elf.webp" alt="" draggable="false"><i class="lid l"></i><i class="lid r"></i><i class="hmouth"></i></div></div>
+          <div id="emote-fx" aria-hidden="true"></div>
+        </div>
+      </div>
+      <div id="chibi" class="chibi" aria-hidden="true">
+        <div id="chibi-inner"><img id="chibi-img" src="hero/px_front.webp" alt="" draggable="false"></div>
+        <div class="shadow"></div>
+      </div>
+
       <div id="character-mover" class="hidden">
         <div id="character-sprite-inner" class="presence-float">
-          <div id="character-emote"><div id="character-svg"></div></div>
-          <div id="emote-fx" aria-hidden="true"></div>
+          <div id="nc-emote"><div id="character-svg"></div></div>
         </div>
         <div class="shadow"></div>
       </div>
@@ -731,7 +769,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
       <button type="button" id="qr-wait" class="qr wait">ちょっと まって</button>
     </div>
     <div class="teach-head">
-      <h2 id="teach-title-text">んちょに ことばを おしえる</h2>
+      <h2 id="teach-title-text">えるふに ことばを おしえる</h2>
       <span class="limit">ひらがな・5もじまで</span>
     </div>
     <form id="teach-form" novalidate>
@@ -769,7 +807,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
     <h2>WHERE <b>WHICH</b></h2>
     <div id="setup-preview" class="setup-prev" aria-hidden="true"></div>
     <p>この子と いっしょに すごすよ。<br>なまえを つけてあげよう。</p>
-    <input id="setup-name" class="setup-name" type="text" maxlength="10" value="んちょ" placeholder="なまえ（10もじまで）" autocomplete="off" aria-label="キャラクターの なまえ">
+    <input id="setup-name" class="setup-name" type="text" maxlength="10" value="えるふ" placeholder="なまえ（10もじまで）" autocomplete="off" aria-label="キャラクターの なまえ">
     <div id="setup-err" class="setup-err"></div>
     <button id="setup-decide" type="button" class="setup-big">きめる</button>
   </div>
@@ -1554,7 +1592,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         words: [],
         characterImage: 'default',
         hadImage: false,
-        characterName: 'んちょ',
+        characterName: 'えるふ',
         selectedFilterGenre: 'all',
         recentSpeechIds: [],
         recentCategories: [],
@@ -1651,6 +1689,13 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         levelupGenres: document.getElementById('levelup-genres'),
         topicCount: document.getElementById('topic-count'),
         characterEmote: document.getElementById('character-emote'),
+        ncEmote: document.getElementById('nc-emote'),
+        hero: document.getElementById('hero'),
+        heroPic: document.getElementById('hero-pic'),
+        heroInner: document.getElementById('hero-inner'),
+        chibi: document.getElementById('chibi'),
+        chibiInner: document.getElementById('chibi-inner'),
+        chibiImg: document.getElementById('chibi-img'),
         characterSvg: document.getElementById('character-svg'),
         artov: document.getElementById('artov'),
         artImg: document.getElementById('art-img'),
@@ -1693,9 +1738,9 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
 
         try {
           const savedName = localStorage.getItem(STORAGE_KEYS.CHAR_NAME);
-          state.characterName = savedName ? savedName.trim() : 'んちょ';
+          state.characterName = savedName && savedName.trim() && savedName.trim() !== 'んちょ' ? savedName.trim() : 'えるふ';
         } catch (err) {
-          state.characterName = 'んちょ';
+          state.characterName = 'えるふ';
         }
 
         state.words.forEach((w) => {
@@ -2123,7 +2168,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
 
       function showSetupStep() {
         dom.setup.classList.remove('hidden');
-        dom.setupPreview.innerHTML = NC_SVG;
+        dom.setupPreview.innerHTML = '<img src="hero/px_front.webp" alt="">';
         dom.setupErr.textContent = '';
       }
 
@@ -2210,7 +2255,8 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         if (state.napping) return;
         state.napping = true;
         state.walk.waitTimer = 5 + Math.random() * 3;
-        dom.characterEmote.classList.add('napping');
+        dom.ncEmote.classList.add('napping');
+        dom.chibiInner.classList.add('napping');
         setFace('sleepy');
         spawnZzz();
         clearInterval(state.zzzTimer);
@@ -2221,7 +2267,8 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         state.napping = false;
         clearInterval(state.zzzTimer);
         state.zzzTimer = null;
-        dom.characterEmote.classList.remove('napping');
+        dom.ncEmote.classList.remove('napping');
+        dom.chibiInner.classList.remove('napping');
         setFace('normal');
         dom.emoteFx.innerHTML = '';
       }
@@ -2310,13 +2357,15 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
       function renderCharacterImage() {
         dom.characterMover.classList.remove('hidden');
         startCharacterWalkLoop();
+        startChibiLoop();
       }
 
       function pickNextWalkTarget() {
         const stageWidth = dom.characterStage.clientWidth || 360;
-        const maxOffsetX = Math.max(40, stageWidth / 2 - 68);
+        const stageHeight = dom.characterStage.clientHeight || 300;
+        const maxOffsetX = Math.max(40, stageWidth / 2 - 40);
         state.walk.targetX = (Math.random() * 2 - 1) * maxOffsetX;
-        state.walk.targetY = Math.random() * 22 - 10;
+        state.walk.targetY = -Math.random() * stageHeight * 0.2;
         state.walk.isMoving = true;
         if (state.phase === 'talk') {
           dom.characterSpriteInner.classList.remove('presence-float');
@@ -3072,6 +3121,91 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         return dom.wordbookModal.classList.contains('flex') || document.getElementById('options-modal').classList.contains('flex');
       }
 
+      // ===== しゅやくの デフォルメ（ドット絵 4ほうこう）：ねむる じきと、ときどき あるきまわる =====
+      const CHIBI = { on: false, x: 0, y: 0, tx: 0, ty: 0, moving: false, wait: 0, until: 0, next: 0, last: 0, dir: 'front' };
+      function chibiDims() {
+        const W = dom.characterStage.clientWidth || 360, H = dom.characterStage.clientHeight || 300;
+        const h = Math.max(54, Math.min(130, H * 0.32));
+        return { W, H, h, w: h * 0.6 };
+      }
+      function chibiSet(dir) {
+        if (CHIBI.dir === dir) return;
+        CHIBI.dir = dir;
+        dom.chibiImg.src = 'hero/px_' + dir + '.webp';
+      }
+      function chibiEnter(ms) {
+        const d = chibiDims();
+        CHIBI.on = true;
+        CHIBI.until = ms ? Date.now() + ms : 0;
+        CHIBI.x = d.W - d.w - d.W * 0.06;
+        CHIBI.y = 0;
+        CHIBI.moving = false;
+        CHIBI.wait = 0.6;
+        chibiSet('front');
+        dom.chibiInner.appendChild(dom.emoteFx);
+        dom.hero.classList.add('away');
+        dom.chibi.classList.add('on');
+        document.body.classList.add('chibi-mode');
+      }
+      function chibiExit() {
+        CHIBI.on = false;
+        dom.heroInner.appendChild(dom.emoteFx);
+        dom.chibi.classList.remove('on', 'walking');
+        dom.hero.classList.remove('away');
+        document.body.classList.remove('chibi-mode');
+        CHIBI.next = Date.now() + 30000 + Math.random() * 40000;
+      }
+      function chibiTick(ts) {
+        requestAnimationFrame(chibiTick);
+        const dt = Math.min(((ts - (CHIBI.last || ts)) / 1000), 0.1);
+        CHIBI.last = ts;
+        const now = Date.now();
+        const wantSleep = state.phase === 'sleep' || state.phase === 'intro';
+        if (wantSleep && !CHIBI.on) chibiEnter(0);
+        if (state.phase === 'talk') {
+          if (!CHIBI.next) CHIBI.next = now + 25000 + Math.random() * 30000;
+          if (!CHIBI.on && opts.move !== 'none' && now > CHIBI.next && !state.isSpeaking) {
+            if (Math.random() < 0.45) chibiEnter(12000 + Math.random() * 10000);
+            else CHIBI.next = now + 20000 + Math.random() * 30000;
+          }
+          if (CHIBI.on && CHIBI.until && now > CHIBI.until && !state.isSpeaking && !CHIBI.moving) chibiExit();
+          if (CHIBI.on && !CHIBI.until) chibiExit();
+        }
+        if (!CHIBI.on) return;
+        const d = chibiDims();
+        dom.chibi.style.setProperty('--cbh', d.h.toFixed(0) + 'px');
+        if (CHIBI.moving) {
+          const dx = CHIBI.tx - CHIBI.x, dy = CHIBI.ty - CHIBI.y, dist = Math.hypot(dx, dy);
+          if (dist < 2) {
+            CHIBI.moving = false;
+            CHIBI.wait = 1.5 + Math.random() * 2.5;
+            chibiSet('front');
+            dom.chibi.classList.remove('walking');
+          } else {
+            const sp = d.h * 0.45;
+            CHIBI.x += dx / dist * sp * dt;
+            CHIBI.y += dy / dist * sp * dt;
+            if (Math.abs(dx) > Math.abs(dy) * 1.2) chibiSet(dx < 0 ? 'left' : 'right');
+            else chibiSet(dy > 0 ? 'back' : 'front');
+          }
+        } else if (!state.napping) {
+          CHIBI.wait -= dt;
+          if (CHIBI.wait <= 0 && !(state.isSpeaking && state.phase === 'talk')) {
+            CHIBI.tx = 6 + Math.random() * Math.max(10, d.W - d.w - 12);
+            CHIBI.ty = Math.random() * d.H * 0.18;
+            CHIBI.moving = true;
+            dom.chibi.classList.add('walking');
+          }
+        }
+        dom.chibi.style.transform = `translate3d(${CHIBI.x.toFixed(1)}px, ${(-CHIBI.y - 4).toFixed(1)}px, 0)`;
+      }
+      function startChibiLoop() {
+        if (CHIBI.started) return;
+        CHIBI.started = true;
+        ['front', 'right', 'back', 'left'].forEach((k) => { const im = new Image(); im.src = 'hero/px_' + k + '.webp'; });
+        requestAnimationFrame(chibiTick);
+      }
+
       // ===== はじめの子「んちょ」（植物スライム）：からだ・葉っぱ・目・口を わけた SVG =====
       const NC_SVG = `<svg class="nc" viewBox="0 0 120 120" data-face="normal" aria-hidden="true">
         <g class="bodygroup">
@@ -3149,7 +3283,7 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
           if (opts.move === 'none') return;
           const el = ncEl();
           if (!el || state.phase !== 'talk' || state.isSpeaking || state.napping || state.idleBusy) return;
-          if (dom.characterEmote.className !== '') return;
+          if (dom.ncEmote.className !== '') return;
           state.idleBusy = true;
           const done = (ms, fn) => setTimeout(() => { fn(); state.idleBusy = false; }, ms);
           const roll = Math.random();
@@ -3158,14 +3292,14 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
             el.classList.add(cls);
             done(1500, () => el.classList.remove(cls));
           } else if (roll < 0.5) {
-            dom.characterEmote.classList.add('emo-hop');
-            done(1400, () => dom.characterEmote.classList.remove('emo-hop'));
+            dom.ncEmote.classList.add('emo-hop');
+            done(1400, () => dom.ncEmote.classList.remove('emo-hop'));
           } else if (roll < 0.7) {
             setFace('smile');
             done(1700, () => setFace(state.napping ? 'sleepy' : 'normal'));
           } else if (roll < 0.85) {
-            dom.characterEmote.classList.add('emo-sway');
-            done(1900, () => dom.characterEmote.classList.remove('emo-sway'));
+            dom.ncEmote.classList.add('emo-sway');
+            done(1900, () => dom.ncEmote.classList.remove('emo-sway'));
           } else {
             setFace('sleepy');
             done(2000, () => setFace(state.napping ? 'sleepy' : 'normal'));
@@ -3187,6 +3321,12 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
             el.dataset.blink = '1';
             setTimeout(() => { el.dataset.blink = '0'; }, 140);
           }
+          if (state.phase === 'talk' && Math.random() < 0.85) {
+            setTimeout(() => {
+              dom.heroPic.dataset.blink = '1';
+              setTimeout(() => { dom.heroPic.dataset.blink = '0'; }, 120);
+            }, 400 + Math.random() * 900);
+          }
           setTimeout(blink, 2200 + Math.random() * 3200);
         };
         setTimeout(blink, 1800);
@@ -3194,10 +3334,11 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
         setInterval(() => {
           const el = ncEl();
           if (!el) return;
-          const normal = el.dataset.face === 'normal';
-          open = state.isSpeaking && normal ? !open : false;
-          el.dataset.talk = open ? '1' : '0';
-          el.dataset.say = state.isSpeaking && !normal ? '1' : '0';
+          // しゃべるのは しゅやく。んちょは くちを とじたまま
+          el.dataset.talk = '0';
+          el.dataset.say = '0';
+          open = state.isSpeaking ? !open : false;
+          dom.heroPic.dataset.talk = open ? '1' : '0';
         }, 190);
       }
 
