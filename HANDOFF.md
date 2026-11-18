@@ -1,6 +1,6 @@
 # ゲーム集 引き継ぎ書
 
-最終更新: 2026-11-17
+最終更新: 2026-11-19
 
 このリポジトリは、複数の作品を1つのサイトで公開するゲーム集。トップページ（アプリ選択画面。名前は「izのおもちゃ箱」。左上に、四角い枠で小さく表示している。以前の名前は「試作品箱」、その前は「iz Games」）から遊ぶ作品を選ぶ。
 
@@ -17,6 +17,7 @@
 - **やわらか**（YAWARAKA PUNIRU）：粘土をこねて顔を付け、部位ごとの柔らかさを決めて振り回して揺らす（スマホむけ・PC不可。実験室に置く。test ver.）。28章。
 - **暗算輪廻 〜Rebuild〜**：学校の廊下を進み、暗算で悪魔と戦うレトロRPG（実験室。スマホ・PC両対応。test ver.）。28章。
 - **Noche sin Luna**：フラメンコ曲を叩いて鳴らす、メキシコ風の「気持ちいい」ゲーム（判定・スコアなし、観客が増える。スマホ・PC両対応。test ver.）。25章。
+- **ファンタジー**：ローポリの3Dキャラ（女性エルフ魔法使い）を2Dの背景絵の中で歩かせる試験の記録（動画・画像を並べたページ。実験室。スマホ・PC両対応。test ver.）。30章。
 
 ---
 
@@ -40,6 +41,7 @@
 | 　PC98 NOVEL | https://dizz4izabella4-droid.github.io/20261111/pc98-novel/ | |
 | 　暗算輪廻 | https://dizz4izabella4-droid.github.io/20261111/anzan-tensei/ | 実験室 |
 | 　やわらか | https://dizz4izabella4-droid.github.io/20261111/yawaraka/ | 実験室に掲載 |
+| 　ファンタジー | https://dizz4izabella4-droid.github.io/20261111/fantasy/ | 実験室に掲載 |
 | claude.ai アーティファクト（PC版） | https://claude.ai/artifact/NctPezS87FshtyQGQ1YaDf | 開発中の確認用。曲2つも同梱して公開済み |
 | claude.ai アーティファクト（コウモリ） | https://claude.ai/artifact/RtGte1cpPBFfU2wHBe8bEi | 開発の正本はこちら。リポジトリの tori-to-kemono/index.html は、その写し |
 | claude.ai アーティファクト（GLASS BREAKER） | https://claude.ai/artifact/35FutrJp3Aag1QnQRN6Nmg | 開発の正本はこちら。リポジトリの glass-breaker/index.html は、その写し |
@@ -73,6 +75,8 @@ icarus/index.html                   イカロス の本体（HTML/CSS/JS と thr
 icarus/_src/                        イカロス のソース（src/*.js と build.py。README.md を参照）
 noche-sin-luna/index.html           Noche sin Luna の本体（曲2つ・譜面・画像・打音をすべて1ファイルに埋め込み、約10.3MB。外部読み込みなし）
 noche-sin-luna/_src/                Noche sin Luna のソース（template.html・chart.json・build.py・譜面を作る道具。25章）
+fantasy/index.html                  ファンタジー（実験室。動画・画像を並べるだけの1ページ。外部読み込みなし）
+fantasy/media/                      ファンタジーの動画（mp4）・画像（webp・gif）
 README.md
 HANDOFF.md                         本書
 ```
@@ -1052,3 +1056,10 @@ PC-98ふうのノベルゲームエンジンの**土台**。ゲームの中身�
 - 窓を約0.6倍に縮小（PC clamp(135,19vw,270) / スマホ clamp(125,40vw,185)）、隣の窓は画面端に一部だけ見える間隔(gap=min(w*.5,720))。イカロス背景を見せるため。
 - 入り口(ゲート): 初回だけ白い「BRAIN / ENTER」画面を出し、押すとBGM開始＋枝が伸び始める（枝・イカロス表示の時計はENTER後から）。同じ訪問(sessionStorage)中に戻ったときは出さない。
 - 扉演出: 窓をタップして開く→約0.65秒後に窓の中心から暖かい光の球が広がり画面全体を包み(約1.15秒)、その後ページ移動。開いた状態でもう一度タップなら短縮版(0.75秒)。外部リンク(OTHER WORLD)は光で包まず開いたまま、2回目のタップで別タブ。戻ったとき(pageshow)は光を消す。窓の内側(portal)は開くと暖かい白金色。
+
+## 30. ファンタジー（fantasy）（2026-11-19）
+
+- ローポリの3Dキャラクター（女性エルフ魔法使い。顔は描かない）を、2Dの背景絵の中で動かせるかを試した記録。ゲームではなく、動画と画像を並べた1ページ（`fantasy/index.html`、外部読み込みなし。素材は `fantasy/media/`）。実験室（`lab/index.html` の `LAB` の先頭）に載せた。一覧は英字「FANTASY」、説明「ファンタジー（試作）」、Ver.0.1、開始・更新 2026-11-19。トップ（`APPS`）には載せていない。
+- 中身：①2Dの森の背景（ユーザー提供の絵）を、3Dキャラが後ろ姿で奥へ歩く動画（約5秒）と静止画 ②仮の背景（並木道。絵は手続きで作ったもの）で同じ試験 ③3Dモデルの動き（待機・歩き・見回し）と、正面・側面・背面・斜めの画像 ④ユーザー提供のドット絵の参考画像2点（森の道に立つ姿のGIF、横向きの歩き4コマ）。
+- 3Dモデルは Blender（Python）で自動生成したもの（約1,300ポリゴン・骨格21本・単色のみ）。キャラ層を低解像度で描き、2倍にそのまま拡大して背景に重ねている（PS1〜FF8ふうの粗さ）。生成に使ったスクリプト類はこのリポジトリには入れていない（ユーザーのMacの「書類」フォルダ `LUMINA_elf_mage_proto_v2/` にある）。
+- 動画は muted・loop・playsinline・autoplay（音なし）。`tools/apply_game_base.py` の `TARGETS` に `fantasy/index.html` を追加済み。

@@ -15,6 +15,7 @@
 | WHERE WHICH（ひらがなを教える育成アプリ） | `where-which/` | スマホ・PC |
 | Noche sin Luna（フラメンコの音ゲー。test ver.） | `noche-sin-luna/` | スマホ・PC |
 | PC98 NOVEL（PC-98ふうノベルゲームエンジンの土台。サンプル「零時の記録」つき。test ver.） | `pc98-novel/` | スマホ・PC |
+| ファンタジー（ローポリ3Dキャラを2D背景で歩かせた試作の記録。実験室。test ver.） | `fantasy/` | スマホ・PC |
 
 作品を増やすときは、フォルダを作って中に `index.html` を置き、トップの `index.html` にある `APPS` の先頭に1件足します（新しい作品が上に並びます）。詳しくは [HANDOFF.md](HANDOFF.md) を見てください。
 
