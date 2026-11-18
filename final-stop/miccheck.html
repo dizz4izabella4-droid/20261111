@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>マイクチェック</title>
+<style>body{margin:0;padding:16px;background:#0b1020;color:#e8eefc;font:15px/1.6 'Hiragino Sans','Yu Gothic','Meiryo','Noto Sans JP',sans-serif}
+button{display:block;width:100%;margin:10px 0;padding:14px;font:600 16px 'Hiragino Sans','Yu Gothic','Meiryo','Noto Sans JP',sans-serif;border-radius:10px;border:1px solid #8fb4ff;background:#16224a;color:#fff}
+#log{white-space:pre-wrap;background:#05070d;border:1px solid #334;border-radius:8px;padding:10px;min-height:120px;font:13px/1.5 ui-monospace,Menlo,monospace}
+h1{font-size:18px}</style></head><body>
+<h1>マイクチェック（FINAL STOP）</h1>
+<p>上から順に押して、結果（OK / エラー名）を教えてください。ページは各テストのあと再読み込みしてください。</p>
+<button id="a">A：マイクだけ</button>
+<button id="b">B：音を鳴らしてからマイク</button>
+<button id="c">C：読み上げしてからマイク</button>
+<button id="d">D：音声の設定を使わず（echoCancellation なし）</button>
+<div id="log"></div>
+<script>
+const log = t => { document.getElementById('log').textContent += t + '\n'; };
+log('UA: ' + navigator.userAgent); log('secure: ' + isSecureContext + ' / top: ' + (window.top === window) + '\n');
+async function tryGum(label, c) {
+  try { const st = await navigator.mediaDevices.getUserMedia(c || { audio: true }); log(label + ' → OK（マイク取得できました）'); st.getTracks().forEach(t => t.stop()); }
+  catch (e) { log(label + ' → エラー: ' + (e && e.name) + ' / ' + (e && e.message)); }
+}
+document.getElementById('a').onclick = () => tryGum('A');
+document.getElementById('b').onclick = () => { const AC = window.AudioContext || window.webkitAudioContext, c = new AC(); c.resume(); const o = c.createOscillator(), g = c.createGain(); g.gain.value = 0.01; o.connect(g); g.connect(c.destination); o.start(); tryGum('B'); };
+document.getElementById('c').onclick = () => { try { speechSynthesis.speak(new SpeechSynthesisUtterance('test')); } catch (e) {} tryGum('C'); };
+document.getElementById('d').onclick = () => tryGum('D', { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+</script></body></html>
