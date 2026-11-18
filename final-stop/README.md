@@ -13,3 +13,5 @@
 - `_test/core.test.mjs` … `node final-stop/_test/core.test.mjs`（CORE 単体）
 - `_test/shots.py` … `python3 final-stop/_test/shots.py`（Playwright で縦横を撮影し、逃走車の大きさを設計書の表と照合）
 - URL: `?debug=1`（状態表示）／`?auto=1`（自動プレイ）／`?seed=N`／`?shot=HIT2&t=0.5`（その場面で止めて撮影）
+
+- 音声入力：タイトルの MIC ON/OFF（初期はOFF）。SAY IT! の間だけ SpeechRecognition（en-US）で聞き、命令の重要語の6割以上が合えば NICE! で先へ進む。合わなくても待ち時間（4.5秒）の後は進む。非対応・拒否のときは MIC N/A で従来どおり。判定は CORE の MATCH（純ロジック）。`python3 final-stop/_test/mic.py` で擬似の聞き取りを差し込んで3経路を確認

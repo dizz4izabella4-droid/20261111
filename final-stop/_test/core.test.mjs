@@ -6,7 +6,7 @@ const m = /\/\*@TESTABLE\*\/([\s\S]*?)\/\*@END_TESTABLE\*\//.exec(html);
 if (!m) throw new Error('TESTABLE 区間が見つかりません');
 const ctx = vm.createContext({ Math, Object, Date });
 vm.runInContext(m[1], ctx);
-const { CONFIG, CORE } = vm.runInContext('({CONFIG,CORE})', ctx);
+const { CONFIG, CORE, MATCH } = vm.runInContext('({CONFIG,CORE,MATCH})', ctx);
 let fail = 0, total = 0;
 const ok = (c, msg) => { total++; if (!c) { fail++; console.log('  NG:', msg); } };
 const log = s => console.log(s);
@@ -129,6 +129,36 @@ log('8. warp');
   }
 }
 
-// 9. 凍結（定数）
+// 9. 音声入力：一致判定と待ち時間
+log('9. 音声入力');
+{
+  const T = CONFIG.CMDS.map(c => c.text), min = CONFIG.MATCH_MIN, P = (i, h) => MATCH.pass(T[i], h, min);
+  ok(P(0, 'police show me your hands'), '命令1：全文');
+  ok(P(0, 'show me your hands'), '命令1：Policeが欠けても通る');
+  ok(!P(0, 'hands up'), '命令1：hands だけでは通らない');
+  ok(P(1, 'turn off the engine'), '命令2：全文');
+  ok(P(1, 'turn of the engine'), '命令2：offの聞き間違い（of）でも通る');
+  ok(P(2, 'step out of the vehicle'), '命令3：全文');
+  ok(P(2, 'step out of the vehicles'), '命令3：複数形');
+  ok(P(3, 'get on the ground'), '命令4：全文');
+  ok(P(3, 'get on the grounds'), '命令4：複数形');
+  ok(!P(3, 'hello world'), '無関係な文は通らない');
+  ok(!P(1, ''), '空は通らない');
+  ok(!P(1, 'step out of the vehicle'), '別の命令は通らない');
+  // YOURTURN の待ち時間：mic なし=3.0s、mic あり=4.5s。どちらも見張り(5s)より短い
+  const meas = micOn => {
+    const c = CORE.create(CONFIG, { seed: 1 }); c.warp('PREVIEW0');
+    let n = 0; while (c.state.sub !== 'YOURTURN' && n++ < 3000) c.step(1 / 60, { tap: c.state.sub === 'PREVIEW', mic: micOn });
+    let stuck = false, d = 0; while (c.state.sub === 'YOURTURN' && d < 10) { const e = c.step(1 / 60, { mic: micOn }); d += 1 / 60; if (e.some(x => x.type === 'stuck')) stuck = true; }
+    return { d, stuck };
+  };
+  const a = meas(false), b = meas(true);
+  log('   mic無し ' + a.d.toFixed(2) + 's / mic有り ' + b.d.toFixed(2) + 's');
+  ok(Math.abs(a.d - CONFIG.YOURTURN) < 0.1, 'mic無し：3.0s');
+  ok(Math.abs(b.d - CONFIG.YOURTURN_MIC) < 0.1, 'mic有り：4.5s');
+  ok(!a.stuck && !b.stuck, '見張りは発動しない');
+}
+
+// 10. 凍結（定数）
 ok(Object.isFrozen(CONFIG), 'CONFIGは凍結されている');
 console.log(fail === 0 ? '\n全 ' + total + ' 項目 OK' : '\n失敗 ' + fail + ' / ' + total); process.exit(fail ? 1 : 0);
