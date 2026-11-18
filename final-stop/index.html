@@ -45,7 +45,8 @@ canvas{position:absolute;left:0;top:0;display:block}
 #title{background:rgba(5,8,20,.55)}
 #title h1{margin:0;font:800 40px ui-monospace,Menlo,monospace;letter-spacing:.12em;text-shadow:0 0 16px #ff2a3a,0 0 28px #2a6bff}
 #title .btn,#end .btn{position:static;width:150px;height:52px;font-size:18px}
-#end{background:rgba(5,8,20,.55)}
+#end{background:linear-gradient(rgba(5,8,20,.65),rgba(5,8,20,0) 40%,rgba(5,8,20,0) 70%,rgba(5,8,20,.6));justify-content:space-between;padding:12% 0 18%}
+.land #end{padding:6% 0 8%}
 #end h2{margin:0;font:800 34px ui-monospace,Menlo,monospace;letter-spacing:.1em;color:#6cff9a;text-shadow:0 0 14px #000}
 #resume{background:rgba(0,0,0,.75);pointer-events:auto;font:700 20px ui-monospace,Menlo,monospace;letter-spacing:.1em;z-index:5}
 #dbg{left:6px;top:64px;font:11px/1.35 ui-monospace,Menlo,monospace;color:#9f9;background:rgba(0,0,0,.6);padding:4px 6px;white-space:pre;z-index:6}
@@ -808,8 +809,10 @@ const CORE = (function () {
   function handle(evs) {
     for (const e of evs) {
       switch (e.type) {
-        case 'window': case 'miss': case 'whiff': case 'ramArm': case 'stopped': case 'spot': case 'door': case 'cuffs': case 'arrest': AUDIO.sfx(e.type, e); break;
-        case 'hit': AUDIO.sfx('hit', e); break;
+        case 'stopped': AUDIO.sfx('stopped'); FX.dust(); break;
+        case 'cuffs': AUDIO.sfx('cuffs'); FX.glint(); break;
+        case 'window': case 'miss': case 'whiff': case 'ramArm': case 'spot': case 'door': case 'arrest': AUDIO.sfx(e.type, e); break;
+        case 'hit': AUDIO.sfx('hit', e); FX.hit(e); break;
         case 'radio': el.radio.textContent = e.text; el.radio.classList.add('on'); radioT = 3; AUDIO.sfx('radio'); break;
         case 'react': AUDIO.sfx(e.sfx && e.sfx !== 'none' && e.sfx !== 'door' && e.sfx !== 'cuffs' ? e.sfx : 'react'); break;
         case 'siren': case 'lights': case 'ram': AUDIO.sfx('ui'); break;
@@ -823,6 +826,7 @@ const CORE = (function () {
   let scroll = 0, tNow = 0;
   const probe = window.__probe = {};
   const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
+  const ss01 = v => { v = clamp01(v); return v * v * (3 - 2 * v); };
   const hash = n => { n = Math.imul(n ^ 61, 0x45d9f3b); n = Math.imul(n ^ (n >>> 15), 0x2c1b3c6d); return ((n ^ (n >>> 13)) >>> 0) / 4294967296; };
   const SKY = (function () {
     const stars = []; for (let i = 0; i < 70; i++) stars.push({ x: hash(i * 3 + 1), y: hash(i * 3 + 2), r: 0.5 + hash(i * 3 + 3) * 1.1 });
@@ -932,6 +936,8 @@ const CORE = (function () {
     if (o.tilt) ctx.rotate(o.tilt * Math.PI / 180);
     // 影
     ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.beginPath(); ctx.ellipse(0, -h * 0.02, w * 0.56, h * 0.07, 0, 0, 6.2832); ctx.fill();
+    // 開いた運転席ドア（後ろから見ると薄い板）
+    if (o.door > 0) { const d = o.door; ctx.fillStyle = o.roof; ctx.beginPath(); ctx.moveTo(-w / 2, -h * 0.62); ctx.lineTo(-w / 2 - w * 0.3 * d, -h * 0.60 - h * 0.05 * d); ctx.lineTo(-w / 2 - w * 0.3 * d, -h * 0.17); ctx.lineTo(-w / 2, -h * 0.2); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#0a0f1c'; ctx.fillRect(-w / 2 - w * 0.26 * d, -h * 0.56 - h * 0.04 * d, w * 0.2 * d, h * 0.16); }
     // タイヤ
     ctx.fillStyle = '#0b0b0e'; ctx.fillRect(-w * 0.47, -h * 0.26, w * 0.17, h * 0.26); ctx.fillRect(w * 0.30, -h * 0.26, w * 0.17, h * 0.26);
     // キャビン（上部）
@@ -952,7 +958,7 @@ const CORE = (function () {
     ctx.fillStyle = '#e9e9d8'; ctx.fillRect(-w * 0.12, -h * 0.40, w * 0.24, h * 0.10);
     ctx.fillStyle = '#334'; ctx.fillRect(-w * 0.09, -h * 0.375, w * 0.18, Math.max(1, h * 0.02));
     // テールランプ
-    const tl = o.tail || '#ff2a2a';
+    let tl = o.tail || '#ff2a2a'; if (o.hazard !== null && o.hazard !== undefined) tl = o.hazard ? '#ffb020' : '#5a2a00';
     for (const sd of [-1, 1]) {
       const lx = sd * w * 0.36;
       ctx.fillStyle = tl; ctx.fillRect(lx - w * 0.10, -h * 0.50, w * 0.20, h * 0.09);
@@ -1009,18 +1015,114 @@ const CORE = (function () {
     }
   }
 
+  /* ================= FX（B3：衝突の演出。見た目だけで、進行には関わらない） ================= */
+  const FX = {
+    parts: [], rings: [], shake: 0, flash: 0, glints: [],
+    hit(e) {
+      const sbx = probe.suspect; if (!sbx) return;
+      const st = Math.min(3, e.stage || 1), side = e.side || 1, cx = sbx.cx - side * sbx.w * 0.42, cy = (sbx.top + sbx.bot) / 2 + sbx.w * 0.05;
+      this.shake = [7, 10, 16][st - 1]; this.flash = [0.45, 0.55, 0.85][st - 1]; this.rings.push({ x: cx, y: cy, t: 0, r: sbx.w * (0.5 + st * 0.15) });
+      const n = 18 + st * 10;
+      for (let i = 0; i < n; i++) {
+        const a = -side * Math.PI * (0.1 + Math.random() * 0.8) + (Math.random() - 0.5) * 1.2 + (side > 0 ? Math.PI : 0), sp = 70 + Math.random() * 260;
+        this.parts.push({ k: 's', x: cx, y: cy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 80, t: 0, life: 0.35 + Math.random() * 0.5, sz: 1 + Math.random() * 1.6 });
+      }
+      for (let i = 0; i < st * 3; i++) this.parts.push({ k: 'd', x: cx, y: cy, vx: (Math.random() - 0.5) * 180 - side * 40, vy: -60 - Math.random() * 160, t: 0, life: 0.7 + Math.random() * 0.5, sz: 2 + Math.random() * 3, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 12 });
+    },
+    dust() {
+      const sbx = probe.suspect; if (!sbx) return;
+      for (let i = 0; i < 26; i++) this.parts.push({ k: 'u', x: sbx.cx + (Math.random() - 0.5) * sbx.w, y: sbx.bot - 2, vx: (Math.random() - 0.5) * 50, vy: -10 - Math.random() * 30, t: 0, life: 1.2 + Math.random() * 1.2, sz: sbx.w * (0.08 + Math.random() * 0.1) });
+    },
+    glint() { if (probe.cuffs) this.glints.push({ x: probe.cuffs.x, y: probe.cuffs.y, t: 0 }); },
+    update(dt) {
+      this.shake *= Math.exp(-dt * 11); if (this.shake < 0.2) this.shake = 0;
+      this.flash = Math.max(0, this.flash - dt * 2.4);
+      for (const p of this.parts) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.k === 's' || p.k === 'd') p.vy += 520 * dt; if (p.k === 'd') p.rot += p.vr * dt; if (p.k === 'u') { p.vx *= 0.98; p.sz += dt * 10; } }
+      this.parts = this.parts.filter(p => p.t < p.life);
+      for (const r of this.rings) r.t += dt; this.rings = this.rings.filter(r => r.t < 0.35);
+      for (const g of this.glints) g.t += dt; this.glints = this.glints.filter(g => g.t < 0.8);
+    },
+    off() { return this.shake > 0 ? [(Math.random() - 0.5) * this.shake * 2, (Math.random() - 0.5) * this.shake * 2] : [0, 0]; },
+    draw() {
+      for (const p of this.parts) {
+        const a = 1 - p.t / p.life;
+        if (p.k === 's') { ctx.strokeStyle = 'rgba(255,' + (150 + 100 * a | 0) + ',60,' + a.toFixed(2) + ')'; ctx.lineWidth = p.sz; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * 0.04, p.y - p.vy * 0.04); ctx.stroke(); }
+        else if (p.k === 'd') { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = 'rgba(40,12,14,' + a.toFixed(2) + ')'; ctx.fillRect(-p.sz, -p.sz / 2, p.sz * 2, p.sz); ctx.restore(); }
+        else { ctx.fillStyle = 'rgba(120,120,128,' + (0.35 * a).toFixed(3) + ')'; ctx.beginPath(); ctx.arc(p.x, p.y, p.sz, 0, 6.2832); ctx.fill(); }
+      }
+      for (const r of this.rings) { const q = r.t / 0.35; ctx.strokeStyle = 'rgba(255,240,200,' + (1 - q).toFixed(2) + ')'; ctx.lineWidth = 4 * (1 - q) + 1; ctx.beginPath(); ctx.arc(r.x, r.y, r.r * (0.3 + q * 0.9), 0, 6.2832); ctx.stroke(); }
+      for (const g of this.glints) { const q = g.t / 0.8, s = 14 * Math.sin(q * Math.PI); ctx.strokeStyle = 'rgba(255,255,230,' + (1 - q).toFixed(2) + ')'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(g.x - s, g.y); ctx.lineTo(g.x + s, g.y); ctx.moveTo(g.x, g.y - s); ctx.lineTo(g.x, g.y + s); ctx.stroke(); }
+    }
+  };
+
+  /* ================= 人物（B4：容疑者と警官。関節をメートルで持ち、補間する） ================= */
+  const POSES = {
+    inCar:        { head: [-.45, 1.2], sh: [-.45, 1.02], hip: [-.45, .85], hL: [-.62, .95], hR: [-.28, .95], kL: [-.55, .85], kR: [-.35, .85], fL: [-.55, .85], fR: [-.35, .85] },
+    handsUpInCar: { head: [-.45, 1.2], sh: [-.45, 1.02], hip: [-.45, .85], hL: [-.7, 1.55], hR: [-.2, 1.55], kL: [-.55, .85], kR: [-.35, .85], fL: [-.55, .85], fR: [-.35, .85] },
+    standing:     { head: [-1.9, 1.62], sh: [-1.9, 1.42], hip: [-1.9, .95], hL: [-2.15, 1.85], hR: [-1.65, 1.85], kL: [-1.97, .5], kR: [-1.83, .5], fL: [-2.0, 0], fR: [-1.8, 0] },
+    prone:        { head: [-3.7, .14], sh: [-3.3, .14], hip: [-2.4, .14], hL: [-2.7, .2], hR: [-2.55, .22], kL: [-1.7, .1], kR: [-1.7, .18], fL: [-1.1, .07], fR: [-1.1, .12] }
+  };
+  const OFFICER = { head: [-2.2, 1.72], sh: [-2.2, 1.5], hip: [-2.2, 1.0], hL: [-2.68, .5], hR: [-2.55, .45], kL: [-2.27, .5], kR: [-2.13, .5], fL: [-2.3, 0], fR: [-2.1, 0] };
+  const INCAR = { inCar: 1, handsUpInCar: 1 };
+  function poseJoints(p) {
+    const A = POSES[p.from] || POSES.inCar, B = POSES[p.to] || POSES.inCar, k = p.k, o = {};
+    for (const key in A) o[key] = [A[key][0] + (B[key][0] - A[key][0]) * k, A[key][1] + (B[key][1] - A[key][1]) * k];
+    return o;
+  }
+  function drawFigure(J, ks, ox, oy, col, skin, cap) {
+    const P = v => [ox + v[0] * ks, oy - v[1] * ks];
+    const seg = (a, b, wd) => { const p = P(a), q = P(b); ctx.lineWidth = Math.max(1.5, wd * ks); ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke(); };
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = col;
+    seg(J.hip, J.kL, .17); seg(J.kL, J.fL, .16); seg(J.hip, J.kR, .17); seg(J.kR, J.fR, .16);
+    seg(J.hip, J.sh, .34);
+    seg(J.sh, J.hL, .13); seg(J.sh, J.hR, .13);
+    const h = P(J.head); ctx.fillStyle = skin; ctx.beginPath(); ctx.arc(h[0], h[1], Math.max(2, .12 * ks), 0, 6.2832); ctx.fill();
+    if (cap) { ctx.fillStyle = cap; ctx.fillRect(h[0] - .14 * ks, h[1] - .15 * ks, .28 * ks, .08 * ks); }
+    return { hL: P(J.hL), hR: P(J.hR) };
+  }
+
+  const EVPH = { EVENT: 1, CMD: 1, ARREST: 1, END: 1 };
   function render() {
-    const W = V.W, H = V.H, camX = S.px;
-    ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+    const W = V.W, H = V.H, land = W > H, inEv = !!EVPH[S.phase];
+    const camX = S.px + (land && inEv ? 1.5 : 0);
+    const sz = ZP + CAR.l + S.gap, sb = carBox(S.sx, sz, camX), pb = carBox(S.px, ZP, camX), ks = sb.w / CAR.w;
+    const flash = Math.floor(tNow * 4) % 2 === 0, so = FX.off();
+    const zoom = S.phase === 'ARREST' ? 1 + 0.08 * clamp01(S.t / 3) : S.phase === 'END' ? 1.08 : 1;
+    ctx.setTransform(scale * dpr, 0, 0, scale * dpr, so[0] * scale * dpr, so[1] * scale * dpr);
+    if (zoom !== 1) { ctx.translate(sb.cx, sb.top); ctx.scale(zoom, zoom); ctx.translate(-sb.cx, -sb.top); }
     drawSky(W, camX);
     drawRoad(W, H, camX);
     drawScenery(W, camX);
-    // 逃走車
-    const sz = ZP + CAR.l + S.gap, sb = carBox(S.sx, sz, camX);
-    drawCarRear(sb.cx, sb.bot, sb.w, sb.h, { body: '#a82b2b', bodyLow: '#6e1c1c', roof: '#8c2424', bumper: '#2a2a30', tail: '#ff3030', tilt: S.tilt, damage: S.damage });
-    // パトカー（後端 z=7.6、x=camX 固定）
-    const pb = carBox(S.px, ZP, camX), flash = Math.floor(tNow * 4) % 2 === 0;
-    drawCarRear(pb.cx, pb.bot, pb.w, pb.h, { body: '#1b2440', bodyLow: '#0e1426', roof: '#141b32', bumper: '#0a0d18', tail: '#ff2a2a', police: true, lights: S.lights, flash: flash });
+    // 高速の流線
+    if (S.phase === 'CHASE' && S.speed > 25) {
+      ctx.strokeStyle = 'rgba(255,255,255,.07)'; ctx.lineWidth = 1;
+      for (let i = 0; i < 16; i++) { const a = hash(i + 900) * 6.2832, r0 = 90 + ((tNow * 260 + i * 53) % 260), x0 = W / 2 + Math.cos(a) * r0 * 1.1, y0 = V.hor + 40 + Math.sin(a) * r0 * 0.7; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + Math.cos(a) * 18, y0 + Math.sin(a) * 14); ctx.stroke(); }
+    }
+    // 逃走車（降車後はドアが開く）
+    const doorK = S.phase === 'EVENT' ? ss01((S.t - 3) / 0.4) : (S.phase === 'CMD' || S.phase === 'ARREST' || S.phase === 'END') ? 1 : 0;
+    drawCarRear(sb.cx, sb.bot, sb.w, sb.h, { body: '#a82b2b', bodyLow: '#6e1c1c', roof: '#8c2424', bumper: '#2a2a30', tail: '#ff3030', tilt: S.tilt, damage: S.damage, hazard: inEv ? (Math.floor(tNow * 2.6) % 2 === 0) : null, door: doorK });
+    // 人物（車の窓の中／車外）
+    probe.cuffs = null;
+    if (inEv && !(S.phase === 'EVENT' && S.t < 0.3)) {
+      const J = poseJoints(S.pose), wIn = (INCAR[S.pose.from] ? 1 - S.pose.k : 0) + (INCAR[S.pose.to] ? S.pose.k : 0);
+      ctx.save();
+      if (wIn > 0.5) { ctx.beginPath(); ctx.rect(sb.cx - sb.w * 0.4, sb.bot - 2.2 * ks, sb.w * 0.8, 1.32 * ks); ctx.clip(); }
+      const hs = drawFigure(J, ks, sb.cx, sb.bot, '#7b8190', '#c9a27e', null);
+      ctx.restore();
+      if (S.pose.to === 'prone' && S.pose.k > 0.9) probe.cuffs = { x: (hs.hL[0] + hs.hR[0]) / 2, y: (hs.hL[1] + hs.hR[1]) / 2 };
+      if (S.phase === 'ARREST' || S.phase === 'END') drawFigure(OFFICER, ks * 1.04, sb.cx, sb.bot + 3, '#2a4585', '#c9a27e', '#10182e');
+    }
+    // パトカー（後端 z=7.6、x=camX 固定）。空振りのときは車体が揺れる
+    const sway = S.wobble > 0 ? Math.sin(tNow * 42) * 2.6 * S.wobble : 0;
+    drawCarRear(pb.cx, pb.bot, pb.w, pb.h, { body: '#1b2440', bodyLow: '#0e1426', roof: '#141b32', bumper: '#0a0d18', tail: '#ff2a2a', police: true, lights: S.lights, flash: flash, tilt: sway });
+    // 照射ライト（停止後はパトカーから容疑者へ）
+    if (inEv && !(S.phase === 'EVENT' && S.t < 1.5)) {
+      const a0 = ctx.globalCompositeOperation; ctx.globalCompositeOperation = 'lighter';
+      const sx0 = pb.cx + pb.w * 0.1, sy0 = pb.top + pb.h * 0.02, tx = sb.cx - sb.w * 0.9, ty = sb.top + sb.h * 0.4, spread = sb.w * 1.5;
+      const sg = ctx.createRadialGradient(tx, ty, 2, tx, ty, spread); sg.addColorStop(0, 'rgba(255,250,225,.55)'); sg.addColorStop(1, 'rgba(255,250,225,0)');
+      ctx.fillStyle = sg; ctx.beginPath(); ctx.moveTo(sx0 - 6, sy0); ctx.lineTo(tx - spread, ty + spread * 0.5); ctx.lineTo(tx + spread, ty - spread * 0.2); ctx.lineTo(sx0 + 6, sy0); ctx.closePath(); ctx.fill();
+      ctx.globalCompositeOperation = a0;
+    }
     // 警光灯の染まり
     if (S.lights) {
       const a = ctx.globalCompositeOperation; ctx.globalCompositeOperation = 'lighter';
@@ -1030,10 +1132,18 @@ const CORE = (function () {
       ctx.fillStyle = rw; ctx.fillRect(W * 0.55, 0, W * 0.45, H);
       ctx.globalCompositeOperation = a;
     }
+    FX.draw();
     if (S.window) drawWindowHUD(sb);
+    ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
     ctx.textAlign = 'center';
     if (S.sub === 'MISS') { ctx.fillStyle = '#ff6a6a'; ctx.font = '700 14px ui-monospace,Menlo,monospace'; ctx.fillText('MISS', W / 2, V.hor - 40); }
     if (DEBUG && (S.phase === 'CMD' || S.phase === 'ARREST')) { ctx.fillStyle = '#fff'; ctx.font = '700 12px ui-monospace,Menlo,monospace'; ctx.fillText('POSE: ' + S.pose.to + ' ' + S.pose.k.toFixed(2), sb.cx, sb.bot + 16); }
+    // スローモーション中の周辺減光
+    if (S.sub === 'FINISH' || (S.sub === 'HIT' && S.hits >= 3)) {
+      const vg = ctx.createRadialGradient(W / 2, H * 0.5, H * 0.2, W / 2, H * 0.5, H * 0.75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.6)');
+      ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+    }
+    if (FX.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,' + FX.flash.toFixed(3) + ')'; ctx.fillRect(0, 0, W, H); }
     if (S.fade > 0) { ctx.fillStyle = 'rgba(0,0,0,' + S.fade + ')'; ctx.fillRect(0, 0, W, H); }
     ctx.textAlign = 'start';
     // 検証用の外接矩形（shots.py が表と照合する）
@@ -1050,7 +1160,7 @@ const CORE = (function () {
       const evs = core.step(dt, AUTO ? core.bot(S, { replay: true }) : null);
       if (!AUTO) { /* 入力は下の pend で渡す */ }
       handle(evs);
-      tNow += dt; scroll += S.speed * dt * S.timeScale; AUDIO.update(S, tNow);
+      tNow += dt; scroll += S.speed * dt * S.timeScale; AUDIO.update(S, tNow); FX.update(dt);
       fpsN++; fpsT += dt; if (fpsT >= 0.5) { fps = fpsN / fpsT; fpsN = 0; fpsT = 0; }
       updateUI(dt);
     }
@@ -1072,7 +1182,11 @@ const CORE = (function () {
     core.warp(SHOT === 'TITLE' ? 'TITLE' : SHOT);
     const extra = +Q.get('t') || 0, o = {};
     for (let k = 0; k < Math.round(extra * 60); k++) { const evs = _step(1 / 60, core.bot(S, o)); scroll += S.speed / 60 * S.timeScale; tNow += 1 / 60; }
-    updateUI(0.016); render(); window.__ready = true;
+    updateUI(0.016); render();
+    if (S.sub === 'HIT') { FX.hit({ stage: S.hits, side: S.side || 1 }); FX.update(0.08); }
+    if (S.sub === 'PULLOVER' && S.t > 2.6) { FX.dust(); FX.update(0.5); }
+    if (S.phase === 'ARREST' || S.phase === 'END') { FX.glint(); FX.update(0.2); }
+    render(); window.__ready = true;
   } else {
     requestAnimationFrame(frame);
   }
