@@ -118,33 +118,21 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fixRootLinks); else fixRootLinks();
 
-  /* ---- いいね（数は画面に出さない。制作者だけが集計を見る） ----
-     LIKE_ENDPOINT に集計先のURLを入れると、「押した」ときに1回だけ通知を送る（README「いいね」参照）。
-     空のままなら、押した印をこの端末に残すだけ。どちらでも画面は同じ。 */
-  var LIKE_ENDPOINT = window.IZ_LIKE_ENDPOINT || '';
-  function store(key) {
-    try { var v = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; }
-  }
-  function save(key, arr) { try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) {} }
-  var likes = {
-    has: function (id) { return store('izSite.liked').indexOf(id) >= 0; },
+  /* ---- お気に入り（ハート）：この端末のブラウザにだけ保存。人ごとに別。通信はしない ---- */
+  function readFav() { try { var v = JSON.parse(localStorage.getItem('izSite.fav') || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } }
+  var favs = {
+    all: readFav,
+    has: function (id) { return readFav().indexOf(id) >= 0; },
     toggle: function (id) {
-      var a = store('izSite.liked'), i = a.indexOf(id), on = i < 0;
+      var a = readFav(), i = a.indexOf(id), on = i < 0;
       if (on) a.push(id); else a.splice(i, 1);
-      save('izSite.liked', a);
-      if (on && LIKE_ENDPOINT) { // 取り消して押し直しても、通知は作品ごとに1回だけ
-        var sent = store('izSite.likeSent');
-        if (sent.indexOf(id) < 0) {
-          sent.push(id); save('izSite.likeSent', sent);
-          try { new Image().src = LIKE_ENDPOINT + '?p=' + encodeURIComponent('/like/' + id) + '&t=' + encodeURIComponent('いいね') + '&e=true&r=' + Math.random().toString(36).slice(2); } catch (e) {}
-        }
-      }
+      try { localStorage.setItem('izSite.fav', JSON.stringify(a)); } catch (e) {}
       return on;
     }
   };
 
   window.IZ = {
-    likes: likes,
+    favs: favs,
     ROOT: ROOT, DATA: DATA, CATS: CATS, STATUS: STATUS, load: load, icon: icon, esc: esc, dot: dot,
     catBadge: catBadge, statusBadges: statusBadges, deviceText: deviceText, dateLabel: dateLabel,
     commitURL: commitURL, todayJST: todayJST,

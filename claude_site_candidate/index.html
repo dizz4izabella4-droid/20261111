@@ -125,7 +125,7 @@
     else if (w.isUpdated) badges += '<span class="b upd">更新</span>';
     badges += IZ.catBadge(w) + IZ.statusBadges(w) + (dv ? '<span class="b">' + dv + '</span>' : '');
     var dates = '公開 <b>' + IZ.dateLabel(w, 'first') + '</b>　更新 <b>' + IZ.dateLabel(w, 'last') + '</b>';
-    var liked = IZ.likes.has(w.id);
+    var liked = IZ.favs.has(w.id);
     return '<li class="wrap"><a class="card ' + cat.cls + '" href="' + IZ.esc(w.url) + '">' +
       '<span class="ico">' + IZ.icon(w.icon) + '</span>' +
       '<span class="cbody">' +
@@ -135,7 +135,7 @@
         '<span class="badges">' + badges + '</span>' +
         '<span class="dates">' + dates + '</span>' +
       '</span><span class="go" aria-hidden="true">›</span></a>' +
-      '<button type="button" class="like' + (liked ? ' on' : '') + '" data-id="' + IZ.esc(w.id) + '" aria-pressed="' + liked + '" aria-label="' + IZ.esc(w.title) + 'にいいね"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-9.2-9.4C1.7 7.9 3.6 5 6.7 5c1.9 0 3.5 1 5.3 3 1.8-2 3.4-3 5.3-3 3.1 0 5 2.9 3.9 6.1C19.5 15.9 12 20.5 12 20.5z"/></svg></button></li>';
+      '<button type="button" class="like' + (liked ? ' on' : '') + '" data-id="' + IZ.esc(w.id) + '" aria-pressed="' + liked + '" aria-label="' + IZ.esc(w.title) + 'をお気に入りにする" title="お気に入り"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-9.2-9.4C1.7 7.9 3.6 5 6.7 5c1.9 0 3.5 1 5.3 3 1.8-2 3.4-3 5.3-3 3.1 0 5 2.9 3.9 6.1C19.5 15.9 12 20.5 12 20.5z"/></svg></button></li>';
   }
 
   function cmpDate(a, b, key, desc) {
@@ -148,8 +148,10 @@
     return a.order - b.order;
   }
   function sorted(list) {
-    var s = state.sort;
+    var s = state.sort, fav = IZ.favs.all();
     return list.slice().sort(function (a, b) {
+      var fa = fav.indexOf(a.id) >= 0, fb = fav.indexOf(b.id) >= 0;
+      if (fa !== fb) return fa ? -1 : 1; // お気に入りは、どの並び順でも先頭
       if (s === 'name') return a.title.localeCompare(b.title, 'ja');
       if (s === 'upd') return cmpDate(a, b, 'last', true);
       if (s === 'old') return cmpDate(a, b, 'first', false);
@@ -178,6 +180,8 @@
     $('showAll').hidden = !(list.length === 0 && state.cat && other > 0);
     $('emptyMsg').textContent = (list.length === 0 && state.cat && other > 0) ? IZ.CATS[state.cat].ja + 'には見つかりませんでした。ほかの種類に ' + other + ' 件あります。' : '条件に合う作品が見つかりませんでした。';
     var label = (state.cat ? IZ.CATS[state.cat].ja + 'の作品' : '作品') + ' ' + list.length + '件';
+    var nf = list.filter(function (w) { return IZ.favs.has(w.id); }).length;
+    if (nf) label += '　♥ お気に入り ' + nf + '件を先頭に';
     if (state.q) label += '（「' + state.q + '」で検索）';
     $('count').textContent = label;
     $('qx').hidden = !state.q;
@@ -195,7 +199,7 @@
 
   grid.addEventListener('click', function (e) {
     var b = e.target.closest('.like'); if (!b) return;
-    var on = IZ.likes.toggle(b.getAttribute('data-id'));
+    var on = IZ.favs.toggle(b.getAttribute('data-id')); // 押した直後は並び替えない（指の下でカードが動かないように）。次に表示し直したとき先頭へ
     b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
     b.classList.remove('pop'); void b.offsetWidth; if (on) b.classList.add('pop');
   });
