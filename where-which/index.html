@@ -254,8 +254,11 @@ body.kb .app{justify-content:flex-start}
 body.kb .app{min-height:0;box-sizing:border-box;padding-bottom:var(--kbgap,56px)} /* キーボードの上の アドレス表示と かさならないよう、「ちょっと まって」ぶん あげる */
 
 /* ===== しゅやく（エルフ）：たち絵 と ときどき デフォルメ ===== */
-.room{--chsize:54px}
-body.kb .room{--chsize:38px}
+.room{--chsize:34px}
+body.kb .room{--chsize:26px}
+/* んちょは小さめ。ときどき ふわっと おおきく なって、またもどる（scale は walk の transform とは べつ） */
+#character-mover{scale:var(--ncs,1);transform-origin:50% 100%;transition:scale 1.4s ease-in-out}
+#character-mover .shadow{width:42px;height:8px;margin-top:-8px}
 .hero{position:absolute;right:3%;bottom:1.5%;height:90%;aspect-ratio:255/739;z-index:1;pointer-events:none;user-select:none;transition:opacity .6s ease}
 .hero.away{opacity:0}
 #hero-inner{position:relative;height:100%}
@@ -3488,6 +3491,15 @@ header{min-width:0}
 
       // まばたき と おしゃべり（くちパク）
       function startNcLoops() {
+        const grow = () => {
+          const mv = document.getElementById('character-mover');
+          if (mv && state.phase === 'talk' && opts.move !== 'none') {
+            mv.style.setProperty('--ncs', (1.7 + Math.random() * 0.6).toFixed(2));
+            setTimeout(() => { mv.style.setProperty('--ncs', '1'); }, 5000 + Math.random() * 4000);
+          }
+          setTimeout(grow, (22 + Math.random() * 38) * 1000 * (opts.move === 'many' ? 0.6 : 1));
+        };
+        setTimeout(grow, 12000);
         const blink = () => {
           const el = ncEl();
           if (el && state.phase !== 'setup' && !state.napping) {
