@@ -868,7 +868,7 @@ const CORE = (function () {
       try { speechSynthesis.addEventListener('voiceschanged', pick); } catch (e) {}
       this.pick = pick;
     },
-    speak(text, style, done) {
+    speak(text, style, done, onstart, onbound) {
       if (!this.ok || !this.on) { if (done) setTimeout(done, 50); return; }
       try {
         if (!this.voice && this.pick) this.pick();
@@ -877,21 +877,23 @@ const CORE = (function () {
         const sy = speechSynthesis; try { sy.resume(); } catch (e) {}
         const stale = sy.speaking || sy.pending; if (stale) sy.cancel();       // iOS：cancel 直後の speak は無視されがちなので、少し待ってから話す
         if (!MICV.virtual) MICV.release();        // iOS：読み上げとマイクは同時に使えないので、話す前にマイクを閉じる
-        const u = new SpeechSynthesisUtterance(text), ja = style === 'ja' || style === 'radioja', vv = ja ? this.ja : this.voice;
+        const u = new SpeechSynthesisUtterance(text), ja = style === 'ja' || style === 'radioja' || style === 'quietja', vv = ja ? this.ja : this.voice;
         if (vv) u.voice = vv;
-        u.lang = (vv && vv.lang) || (ja ? 'ja-JP' : 'en-US'); u.rate = style === 'praise' ? 1.05 : style === 'radio' || style === 'radioja' ? 1.1 : 1.0; u.pitch = style === 'praise' ? 1.15 : style === 'radio' || style === 'radioja' ? 0.8 : 0.95;
+        u.lang = (vv && vv.lang) || (ja ? 'ja-JP' : 'en-US'); u.rate = style === 'praise' ? 1.05 : style === 'radio' || style === 'radioja' || style === 'quietja' ? 1.1 : 1.0; u.pitch = style === 'praise' ? 1.15 : style === 'radio' || style === 'radioja' || style === 'quietja' ? 0.8 : 0.95;
         let fin = false; const tk = ++this.seq, fire = () => { if (!fin) { fin = true; AUDIO.kick(); if (this.seq === tk) this.talkUntil = 0; if (done) done(); } };
         this.talkUntil = performance.now() + (text.length * 0.08 + 0.8) * 1000;      // speechSynthesis.speaking は iOS で残りっぱなしになるので、自前で「話し中」を数える
         if (style === 'radio' || style === 'radioja') { u.onstart = () => AUDIO.radioOn(); const off = () => { AUDIO.radioOff(); fire(); }; u.onend = off; u.onerror = off; setTimeout(off, 9000); AUDIO.radioOn(); }
+        else if (style === 'quietja') { u.onend = fire; u.onerror = fire; setTimeout(fire, (text.length * 0.25 + 4) * 1000); }     // 静寂の中の無線：効果音・ノイズ・音量下げは一切なし。声が始まった時・読み進めた位置を知らせる
         else { AUDIO.radioOff(); u.onend = fire; u.onerror = fire; setTimeout(fire, (text.length * 0.08 + 1.2) * 1000); }
-        let started = false; const o0 = u.onstart; u.onstart = () => { started = true; if (o0) o0(); };
+        let started = false; const o0 = u.onstart; u.onstart = () => { started = true; if (o0) o0(); if (onstart) onstart(); };
+        if (onbound) u.onboundary = ev => { try { onbound(ev.charIndex || 0); } catch (x) {} };
         if (stale) setTimeout(() => { try { sy.speak(u); } catch (e) {} }, 90); else sy.speak(u);
         setTimeout(() => {     // iOS：声が始まらないまま固まった時は、いったん取り消してもう一度だけ話し直す
           if (started || fin || this.seq !== tk) return; try { sy.cancel(); sy.resume(); } catch (e) {}
-          const u2 = new SpeechSynthesisUtterance(text); u2.voice = u.voice; u2.lang = u.lang; u2.rate = u.rate; u2.pitch = u.pitch; u2.onend = u.onend; u2.onerror = u.onerror;
+          const u2 = new SpeechSynthesisUtterance(text); u2.voice = u.voice; u2.lang = u.lang; u2.rate = u.rate; u2.pitch = u.pitch; u2.onend = u.onend; u2.onerror = u.onerror; u2.onstart = u.onstart; u2.onboundary = u.onboundary;
           setTimeout(() => { try { sy.speak(u2); } catch (e) {} }, 120);
         }, 1600);
-        AUDIO.duck(text.length * 0.07 + 0.6);
+        if (style !== 'quietja') AUDIO.duck(text.length * 0.07 + 0.6);
       } catch (e) {}
     },
     seq: 0, talkUntil: 0,
@@ -1056,7 +1058,7 @@ const CORE = (function () {
       ['Opening (parked)', () => jump('OPEN_PARK')], ['Opening: siren!', () => jump('OPEN_SIREN')], ['Chase (start)', () => jump('INTRO')], ['Hit window', () => jump('WINDOW')],
       ['Cmd 1 listen', () => jump('PREVIEW0')], ['Cmd 2 listen', () => jump('PREVIEW1')], ['Cmd 3 listen', () => jump('PREVIEW2')], ['Cmd 4 listen', () => jump('PREVIEW3')],
       ['SAY IT (cmd 1)', () => jump('YOURTURN0')], ['SAY IT (cmd 4)', () => jump('YOURTURN3')], ['Praise (cmd 1)', () => jump('REACT0')], ['Dead (shot)', () => jump('DEAD')], ['Arrest', () => jump('ARREST')],
-      ['VOICE TEST'], ['Radio (dispatch JA)', () => { AUDIO.init(); VOICE.speak(CONFIG.ALERT_RADIO_JA, 'radioja'); }], ['Model EN (Police!...)', () => { AUDIO.init(); VOICE.speak(CONFIG.CMDS[0].text); }],
+      ['VOICE TEST'], ['Radio (dispatch JA)', () => { AUDIO.init(); VOICE.speak(CONFIG.ALERT_RADIO_JA, 'quietja'); }], ['Model EN (Police!...)', () => { AUDIO.init(); VOICE.speak(CONFIG.CMDS[0].text); }],
       ['Praise EN', () => { AUDIO.init(); VOICE.speak('Perfect! That\'s how it\'s done!', 'praise'); }], ['REYES guide EN', () => { AUDIO.init(); VOICE.speak(CONFIG.JP.INTRO.en); }],
       ['Mic check (3s level)', (b) => { MICV.acquire(true).then(ok => { const t0 = performance.now(), iv = setInterval(() => { b.textContent = 'Mic ' + (ok ? 'OK ' : 'NG ') + MICV.level.toFixed(3) + ' ' + (MICV.err || ''); if (performance.now() - t0 > 3000) { clearInterval(iv); MICV.release(); b.textContent = 'Mic check (3s level)'; } }, 100); }); }]];
     for (const it of items) { if (it.length === 1) { const h = document.createElement('h4'); h.textContent = it[0]; dp.appendChild(h); } else { const b = document.createElement('button'); b.textContent = it[0]; b.addEventListener('click', e => { e.stopPropagation(); it[1](b); }); dp.appendChild(b); } }
@@ -1078,11 +1080,17 @@ const CORE = (function () {
     e.stopPropagation(); AUDIO.init(); wake();
     if (alertStep !== 0) return;
     alertStep = 1; const tx = CONFIG.ALERT_RADIO_JA; $('alerttx').textContent = ''; $('alertt4').textContent = '受信中…';
-    let typed = false, spoken = false, moved = false;
-    const next = () => { if (typed && spoken && !moved && alertStep === 1) { moved = true; setTimeout(alertMicStep, 600); } };
-    let n = 0; const ty = setInterval(() => { n += 1; $('alerttx').textContent = tx.slice(0, n); if (n >= tx.length) { clearInterval(ty); typed = true; next(); } }, 70);
-    VOICE.speak(tx, 'radioja', () => { spoken = true; next(); }); AUDIO.sfx('radio');
-    setTimeout(() => { spoken = true; typed = true; next(); }, 30000);      // 保険：音声が終わらなくても次へ進む
+    // 静寂の中で無線だけを流す（効果音なし）。文字は音声が始まってから、読み進めた分だけ出す（音声より先には出さない）
+    let shown = 0, spoken = false, moved = false, ty = 0;
+    const draw = () => { if (alertStep === 1) $('alerttx').textContent = tx.slice(0, shown); };
+    const next = () => { if (shown >= tx.length && spoken && !moved && alertStep === 1) { moved = true; setTimeout(alertMicStep, 900); } };
+    const startTyping = () => { if (ty) return; ty = setInterval(() => { if (shown < tx.length - 2 && !spoken) { shown += 1; draw(); } }, 170); };   // 境界イベントが来ない端末用のゆっくりした進行（声が終わるまで最後の2文字は出さない）
+    const finish = () => { spoken = true; clearInterval(ty); shown = tx.length; draw(); next(); };
+    if (VOICE.ok && VOICE.on) {
+      VOICE.speak(tx, 'quietja', finish, startTyping, ci => { if (ci > shown && ci < tx.length) { shown = ci; draw(); } });
+      setTimeout(() => { if (!ty && !spoken) startTyping(); }, 3500);      // 声の開始が通知されない時の保険
+    } else { shown = 0; ty = setInterval(() => { shown += 1; draw(); if (shown >= tx.length) { clearInterval(ty); spoken = true; next(); } }, 110); }       // 音声なし設定：文字だけ
+    setTimeout(finish, 40000);      // 保険：何があっても次へ進む
   });
   $('alertgo').addEventListener('pointerdown', e => e.stopPropagation());
   $('alertgo').addEventListener('click', e => {
