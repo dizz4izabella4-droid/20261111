@@ -122,7 +122,7 @@
     if (w.isNew) badges += '<span class="b new">NEW</span>';
     else if (w.isUpdated) badges += '<span class="b upd">更新</span>';
     badges += IZ.catBadge(w) + IZ.statusBadges(w) + (dv ? '<span class="b">' + dv + '</span>' : '');
-    var dates = '公開 <b>' + IZ.dateLabel(w, 'first') + '</b>　更新 <b>' + IZ.dateLabel(w, 'last') + '</b>';
+    var dates = '<span class="dt">公開 <b>' + IZ.dateLabel(w, 'first') + '</b></span> <span class="dt">更新 <b>' + IZ.dateLabel(w, 'last') + '</b></span>';
     var liked = IZ.favs.has(w.id);
     return '<li class="wrap">' + (w.sticker ? '<span class="sticker">' + IZ.esc(w.sticker) + '</span>' : '') + '<a class="card ' + cat.cls + '" href="' + IZ.esc(w.url) + '">' +
       '<span class="ico">' + IZ.icon(w.icon) + '</span>' +
