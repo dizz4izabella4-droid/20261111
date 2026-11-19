@@ -19,7 +19,7 @@
     --main: #ffaa22;
     --dim: #663d08;
     --glow: rgba(255, 170, 34, 0.35);
-    --alert: #ff4422;
+    --alert: #d12e1e;
   }
   * {
     box-sizing: border-box;
@@ -167,7 +167,7 @@
     align-self: center;
     height: 10px;
     border: 1px solid var(--main);
-    border-radius: 999px;
+    border-radius: 2px;
     background: var(--bg);
     overflow: hidden;
   }
@@ -297,7 +297,7 @@
     position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px;
     background: #000; opacity: 0.85; pointer-events: none; z-index: 2;
   }
-  #timer-bar.t-fast { background: #ffd84d; }   /* 神速：3回攻撃（クリティカル） */
+  #timer-bar.t-fast { background: #e0d2bf; }   /* 神速：3回攻撃（クリティカル） */
   #timer-bar.t-mid  { background: var(--main); } /* 迅速：2回攻撃 */
   #timer-bar.t-slow { background: var(--alert); } /* 通常：1回攻撃 */
   #timer-bar {
@@ -413,9 +413,9 @@
   }
   /* 後ろを振り返る → 死神に斬られる（Death）*/
   #death-screen { position: absolute; inset: 0; z-index: 45; display: none; pointer-events: none; overflow: hidden; }
-  #death-flash { position: absolute; inset: 0; background: #fff; opacity: 0; }
+  #death-flash { position: absolute; inset: 0; background: #7a0000; opacity: 0; }
   #death-screen.go #death-flash { animation: deathFlash 0.9s ease-out; }
-  @keyframes deathFlash { 0% { opacity: 0.95; background: #fff; } 25% { opacity: 0.8; background: #b00000; } 100% { opacity: 0; background: #600000; } }
+  @keyframes deathFlash { 0% { opacity: 0.95; background: #7a0000; } 25% { opacity: 0.8; background: #b00000; } 100% { opacity: 0; background: #600000; } }
   #death-tint { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 40%, rgba(120,0,0,0) 20%, rgba(90,0,0,0.55) 100%); opacity: 0; }
   #death-screen.go #death-tint { animation: deathTint 2s ease-out 0.2s both; }
   @keyframes deathTint { to { opacity: 1; } }
@@ -578,9 +578,9 @@
   body::after { display: none; }
   #app {
     border: 0;
-    border-radius: 22px;
+    border-radius: 2px;
     background: var(--bg);
-    box-shadow: 0 16px 60px rgba(0, 0, 0, 0.65), 0 0 40px var(--glow);
+    box-shadow: 0 16px 60px rgba(0, 0, 0, 0.8), 0 0 16px var(--glow);
     overflow: hidden;
   }
   header, #viewport-wrap, #party-panel, #log-box, #side-panel { border-color: transparent; }
@@ -590,41 +590,41 @@
   #log-box { background: var(--surface-2); color: var(--main); }
   .box, .member-card, .map-cell, #timer-bar-bg, #enemy-hud {
     border-color: transparent;
-    border-radius: 12px;
+    border-radius: 2px;
     background: var(--surface);
   }
   .box { padding: 8px; }
   .box-title { opacity: 0.7; letter-spacing: 0.04em; }
   #enemy-hud { background: rgba(0, 0, 0, 0.5); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
-  .map-cell { border-radius: 8px; background: var(--surface-2); }
+  .map-cell { border-radius: 2px; background: var(--surface-2); }
   .map-cell.visited { border-color: transparent; background: color-mix(in srgb, var(--main) 28%, var(--bg)); }
   .map-cell.current { background: var(--main); box-shadow: 0 0 12px var(--glow); }
   .member-card { background: var(--surface-2); }
   .member-card.active { border-color: transparent; background: color-mix(in srgb, var(--main) 30%, var(--bg)); box-shadow: 0 0 14px var(--glow); }
   .member-card.dead { border-style: solid; opacity: 0.35; }
   /* 死神の加護（呪われた枠）：演出だけで意味はない */
-  .member-card.active.cursed { position: relative; border-color: #b01040; color: #ffd0e6; overflow: visible; animation: curseAura 2.2s ease-in-out infinite, curseFlick 3.1s steps(1) infinite; }
+  .member-card.active.cursed { position: relative; border-color: #b01040; color: #d9a8a8; overflow: visible; animation: curseAura 2.2s ease-in-out infinite, curseFlick 3.1s steps(1) infinite; }
   .member-card.cursed::before { content: ''; position: absolute; left: -3px; right: -3px; top: -3px; bottom: -3px; border-radius: inherit; pointer-events: none; background: repeating-linear-gradient(100deg, rgba(160,0,60,0) 0 6px, rgba(160,0,60,0.35) 7px 9px); mix-blend-mode: screen; animation: curseWave 1.6s linear infinite; }
   .member-card.cursed::after { content: ''; position: absolute; left: 12%; right: 12%; bottom: -9px; height: 9px; pointer-events: none; background: radial-gradient(ellipse at 20% 0, #6a0030 0 3px, transparent 4px), radial-gradient(ellipse at 55% 0, #6a0030 0 4px, transparent 5px), radial-gradient(ellipse at 85% 0, #6a0030 0 3px, transparent 4px); animation: curseDrip 1.9s ease-in infinite; }
   @keyframes curseAura { 0%, 100% { box-shadow: 0 0 6px rgba(150,0,70,0.7), 0 0 14px rgba(90,0,150,0.5); } 50% { box-shadow: 0 0 14px rgba(220,0,90,0.9), 0 0 28px rgba(110,0,190,0.75), inset 0 0 10px rgba(120,0,60,0.6); } }
   @keyframes curseFlick { 0%, 100% { filter: none; } 92% { filter: brightness(0.5) hue-rotate(-20deg); } 94% { filter: brightness(1.4); } 96% { filter: none; } }
   @keyframes curseWave { from { background-position: 0 0; } to { background-position: 30px 0; } }
   @keyframes curseDrip { 0% { transform: translateY(-4px) scaleY(0.4); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(14px) scaleY(1.6); opacity: 0; } }
-  #death-text.bless { font-size: clamp(1.5rem, 8vw, 3rem); letter-spacing: 0.15em; color: #d9b3ff; text-shadow: 0 0 18px rgba(170,60,255,0.7), 0 2px 0 #20003a; }
-  #timer-bar-bg { border-radius: 999px; background: var(--surface-2); overflow: hidden; }
-  #timer-bar { border-radius: 999px; }
-  #problem-display { border-bottom: 0; background: var(--surface); border-radius: 14px; }
-  #input-val { border-bottom: 0; background: var(--surface-2); border-radius: 8px; padding: 0 8px; }
+  #death-text.bless { font-size: clamp(1.5rem, 8vw, 3rem); letter-spacing: 0.15em; color: #d8c8b8; text-shadow: 0 0 18px rgba(150,20,20,0.7), 0 2px 0 #200000; }
+  #timer-bar-bg { border-radius: 2px; background: var(--surface-2); overflow: hidden; }
+  #timer-bar { border-radius: 2px; }
+  #problem-display { border-bottom: 0; background: var(--surface); border-radius: 2px; }
+  #input-val { border-bottom: 0; background: var(--surface-2); border-radius: 2px; padding: 0 8px; }
   .header-controls button, .move-btn, .num-btn, .menu-btn, .slot-btn, .goddess-btn {
     border: 0;
-    border-radius: 14px;
+    border-radius: 2px;
     background: var(--surface-2);
     color: var(--main);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
     transition: background 0.15s, box-shadow 0.15s, transform 0.08s, color 0.15s;
   }
-  .header-controls button { border-radius: 999px; padding: 3px 12px; }
-  .menu-btn { border-radius: 999px; }
+  .header-controls button { border-radius: 2px; padding: 3px 12px; }
+  .menu-btn { border-radius: 2px; }
   .header-controls button:hover, .header-controls button:active,
   .move-btn:hover, .move-btn:active, .num-btn:hover, .num-btn:active,
   .menu-btn:hover, .menu-btn:active {
@@ -639,13 +639,13 @@
   @media (max-width: 650px) {
     #app { border-radius: 0; box-shadow: none; }
     #viewport-wrap { border-bottom: 0; }
-    .map-cell { border-radius: 6px; }
+    .map-cell { border-radius: 2px; }
   }
   /* ステータス画面 */
   #status-modal { z-index: 60; }
   .stat-grid { display: grid; grid-template-columns: 1fr; gap: 10px; width: 100%; max-width: 480px; margin-bottom: 8px; text-align: left; }
   .stat-tabs { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 480px; margin-bottom: 8px; }
-  .stat-tab { font-family: var(--font); font-size: 0.78rem; padding: 5px 10px; border: 0; border-radius: 999px; cursor: pointer; background: var(--surface-2); color: var(--main); }
+  .stat-tab { font-family: var(--font); font-size: 0.78rem; padding: 5px 10px; border: 0; border-radius: 2px; cursor: pointer; background: var(--surface-2); color: var(--main); }
   .stat-tab.sel { background: var(--main); color: var(--bg); box-shadow: 0 0 14px var(--glow); }
   .stat-body { display: flex; gap: 12px; align-items: flex-start; }
   .stat-info { flex: 1; min-width: 0; }
@@ -659,7 +659,7 @@
   #diff-screen { z-index: 59; }
   #noise-screen { position: fixed; inset: 0; z-index: 70; display: none; background: #000; pointer-events: all; }
   #noise-canvas { width: 100%; height: 100%; image-rendering: pixelated; display: block; }
-  #noise-msg { position: absolute; left: 0; right: 0; top: 46%; text-align: center; font-size: 1.4rem; letter-spacing: 0.3em; color: #7dffb0; text-shadow: 2px 0 #f0f, -2px 0 #0ff; }
+  #noise-msg { position: absolute; left: 0; right: 0; top: 46%; text-align: center; font-size: 1.4rem; letter-spacing: 0.3em; color: #c9b9a0; text-shadow: 2px 0 #8a1c1c, -2px 0 #1c3a3a; }
 
   /* アイテム画面 */
   .item-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; border: 1px solid var(--main); padding: 8px 12px; min-width: min(80vw, 300px); }
@@ -668,22 +668,22 @@
   .item-row .menu-btn:disabled { opacity: 0.35; }
   /* 女神の愛による復活：神々しい光 */
   #revive-screen { position: fixed; inset: 0; z-index: 80; display: none; overflow: hidden; pointer-events: all;
-    background: radial-gradient(ellipse at 50% 45%, #fff6c8 0%, #ffe28a 22%, rgba(255,200,90,0.62) 50%, rgba(24,14,0,0.94) 100%); }
+    background: radial-gradient(ellipse at 50% 45%, #7a3a1c 0%, #4a1c10 22%, rgba(60,18,10,0.7) 50%, rgba(6,2,2,0.96) 100%); }
   #revive-screen.on { display: block; animation: rvIn 3.6s ease-in-out both; }
   @keyframes rvIn { 0% { opacity: 0; } 20% { opacity: 1; } 78% { opacity: 1; } 100% { opacity: 0; } }
   .rv-rays { position: absolute; left: 50%; top: 45%; width: 170vmax; height: 170vmax; margin: -85vmax 0 0 -85vmax;
-    background: repeating-conic-gradient(from 0deg, rgba(255,255,255,0.6) 0deg 4deg, rgba(255,255,255,0) 4deg 15deg);
+    background: repeating-conic-gradient(from 0deg, rgba(190,70,40,0.22) 0deg 4deg, rgba(190,70,40,0) 4deg 15deg);
     -webkit-mask-image: radial-gradient(circle closest-side, #000 0%, transparent 90%); mask-image: radial-gradient(circle closest-side, #000 0%, transparent 90%);
     animation: rvSpin 14s linear infinite; }
   @keyframes rvSpin { to { transform: rotate(360deg); } }
   .rv-glow { position: absolute; left: 50%; top: 45%; width: 46vmin; height: 46vmin; margin: -23vmin 0 0 -23vmin; border-radius: 50%;
-    background: radial-gradient(circle, #fff 0%, rgba(255,255,255,0.7) 30%, rgba(255,240,170,0) 70%); animation: rvPulse 1.6s ease-in-out infinite; }
+    background: radial-gradient(circle, rgba(255,150,90,0.55) 0%, rgba(180,60,30,0.35) 30%, rgba(80,20,10,0) 70%); animation: rvPulse 1.6s ease-in-out infinite; }
   @keyframes rvPulse { 0%,100% { transform: scale(0.9); opacity: 0.85; } 50% { transform: scale(1.12); opacity: 1; } }
-  #rv-parts i { position: absolute; bottom: -10px; width: var(--sz); height: var(--sz); border-radius: 50%; background: #fffbe0; box-shadow: 0 0 8px 2px #ffe27a; opacity: 0; animation: rvUp 3s linear infinite; }
+  #rv-parts i { position: absolute; bottom: -10px; width: var(--sz); height: var(--sz); border-radius: 50%; background: #d89a6a; box-shadow: 0 0 8px 2px #8a2f12; opacity: 0; animation: rvUp 3s linear infinite; }
   @keyframes rvUp { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-105vh); opacity: 0; } }
-  .rv-text { position: absolute; left: 0; right: 0; top: 45%; transform: translateY(-50%); text-align: center; color: #5a3300; }
-  .rv-main { font-size: clamp(1.4rem, 6.4vw, 2.6rem); font-weight: bold; letter-spacing: 0.14em; text-shadow: 0 0 14px #fff, 0 0 30px #fff7c0; animation: rvText 3.6s ease-out both; }
-  .rv-sub { margin-top: 10px; font-size: clamp(0.9rem, 3.6vw, 1.2rem); letter-spacing: 0.2em; text-shadow: 0 0 10px #fff; }
+  .rv-text { position: absolute; left: 0; right: 0; top: 45%; transform: translateY(-50%); text-align: center; color: #e6d2bc; }
+  .rv-main { font-size: clamp(1.4rem, 6.4vw, 2.6rem); font-weight: bold; letter-spacing: 0.14em; text-shadow: 0 0 14px #7a1a10, 0 0 30px #3a0806; animation: rvText 3.6s ease-out both; }
+  .rv-sub { margin-top: 10px; font-size: clamp(0.9rem, 3.6vw, 1.2rem); letter-spacing: 0.2em; text-shadow: 0 0 10px #5a1208; }
   @keyframes rvText { 0%,15% { opacity: 0; letter-spacing: 0.5em; } 45% { opacity: 1; letter-spacing: 0.14em; } 100% { opacity: 1; } }
   .look-row.quad .move-btn { width: 25%; font-size: 0.72rem; padding: 12px 2px; }
   #equip-modal { z-index: 61; } #record-modal { z-index: 62; }
@@ -719,22 +719,22 @@
   #end-fin.on { opacity: 1; }
   #end-hint { position: absolute; left: 0; right: 0; bottom: 14%; text-align: center; font-size: 0.8rem; opacity: 0; transition: opacity 1.4s; }
   #end-hint.on { opacity: 0.6; }
-  #end-skip { position: absolute; top: 8px; right: 8px; font-family: var(--font); font-size: 0.7rem; color: #e9e3d2; background: rgba(255,255,255,0.08); border: 0; border-radius: 999px; padding: 5px 12px; opacity: 0.55; cursor: pointer; }
-  .proto-note { margin: 4px 16px 14px; padding: 8px 12px; max-width: 360px; font-size: 0.74rem; line-height: 1.6; text-align: center; border: 1px dashed var(--main); border-radius: 8px; opacity: 0.85; }
+  #end-skip { position: absolute; top: 8px; right: 8px; font-family: var(--font); font-size: 0.7rem; color: #e9e3d2; background: rgba(255,255,255,0.08); border: 0; border-radius: 2px; padding: 5px 12px; opacity: 0.55; cursor: pointer; }
+  .proto-note { margin: 4px 16px 14px; padding: 8px 12px; max-width: 360px; font-size: 0.74rem; line-height: 1.6; text-align: center; border: 1px dashed var(--main); border-radius: 2px; opacity: 0.85; }
   #result-stats { line-height: 1.9; }
-  .stat-card { background: var(--surface); border-radius: 14px; padding: 10px 12px; }
+  .stat-card { background: var(--surface); border-radius: 2px; padding: 10px 12px; }
   .stat-head { display: flex; justify-content: space-between; align-items: baseline; font-weight: bold; margin-bottom: 8px; }
   .stat-head small { font-weight: normal; opacity: 0.75; font-size: 0.75rem; }
   .stat-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; text-align: center; }
   .stat-row .l { font-size: 0.62rem; opacity: 0.65; letter-spacing: 0.04em; }
   .stat-row .v { font-size: 0.95rem; font-weight: bold; }
-  .stat-row .b { height: 4px; border-radius: 4px; background: var(--surface-2); margin-top: 3px; overflow: hidden; }
+  .stat-row .b { height: 4px; border-radius: 1px; background: var(--surface-2); margin-top: 3px; overflow: hidden; }
   .skills { list-style: none; margin: 8px 0 0; padding: 6px 0 0; border-top: 1px solid var(--dim); display: grid; gap: 5px; }
   .skills li { display: flex; flex-direction: column; line-height: 1.25; }
   .skills .sk-name { font-size: 0.82rem; font-weight: bold; }
   .skills .sk-name rt { font-size: 0.5rem; font-weight: normal; opacity: 0.75; letter-spacing: 0.02em; }
   .skills .sk-desc { font-size: 0.66rem; opacity: 0.65; }
-  .stat-row .b i { display: block; height: 100%; background: var(--main); border-radius: 4px; }
+  .stat-row .b i { display: block; height: 100%; background: var(--main); border-radius: 1px; }
   @media (max-width: 650px) { .stat-grid { gap: 6px; } .stat-card { padding: 8px 10px; } .stat-head { margin-bottom: 6px; } }
 
   /* ヘッダーは常に同じ高さ：数字が増えても折り返さず、画面の縦横比が変わらない */
@@ -1187,26 +1187,27 @@
   }
 
   // 効果音は「低く、重く」。高い倍音は lowpass（cut=遮断周波数）で丸める
-  function playTone(freq, type, duration, vol = 0.12, slideTo = null, cut = 2000) {
+  function playTone(freq, type, duration, vol = 0.12, slideTo = null, cut = 2000, detune = 0) {
     if (!soundEnabled) return;
     initAudio();
     const t = audioCtx.currentTime;
-    const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     const lp = audioCtx.createBiquadFilter();
     lp.type = 'lowpass'; lp.frequency.value = cut; lp.Q.value = 0.7;
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, t);
-    if (slideTo) {
-      osc.frequency.exponentialRampToValueAtTime(slideTo, t + duration);
-    }
-    gain.gain.setValueAtTime(vol, t);
+    gain.gain.setValueAtTime(vol * (detune ? 0.65 : 1), t);   // detune＝少しずらした2本目を重ねて、うなりのある太い音にする
     gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
-    osc.connect(lp);
+    for (let i = 0; i < (detune ? 2 : 1); i++) {
+      const osc = audioCtx.createOscillator();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, t);
+      if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, t + duration);
+      if (i) osc.detune.value = detune;
+      osc.connect(lp);
+      osc.start();
+      osc.stop(t + duration);
+    }
     lp.connect(gain);
     gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(t + duration);
   }
 
   function playNoise(duration, vol = 0.15, cut = 1800) {
@@ -1264,60 +1265,67 @@
     if (slashNow) { try { slashNow.g.gain.cancelScheduledValues(t); slashNow.g.gain.setValueAtTime(slashNow.g.gain.value, t); slashNow.g.gain.linearRampToValueAtTime(0, t + 0.06); slashNow.s.stop(t + 0.07); } catch (e) {} }
     const src = audioCtx.createBufferSource(), g = audioCtx.createGain();
     src.buffer = slashBufs[idx];
-    src.playbackRate.value = 0.74 + Math.random() * 0.08;   // 低く重く（従来は約1.0）
+    src.playbackRate.value = 0.64 + Math.random() * 0.08;   // 低く重く（従来は約1.0）
     const shelf = audioCtx.createBiquadFilter();             // 低域を持ち上げて、軽さを消す
-    shelf.type = 'lowshelf'; shelf.frequency.value = 260; shelf.gain.value = 6;
+    shelf.type = 'lowshelf'; shelf.frequency.value = 260; shelf.gain.value = 8;
     g.gain.value = 0.65;
-    src.connect(shelf); shelf.connect(g); g.connect(audioCtx.destination);
+    const dark = audioCtx.createBiquadFilter();               // 高域を削って、鋭さ・明るさを消す
+    dark.type = 'lowpass'; dark.frequency.value = 3000;
+    src.connect(shelf); shelf.connect(dark); dark.connect(g); g.connect(audioCtx.destination);
     src.start(t);
     slashNow = { s: src, g: g };
     return true;
   }
 
-  // 音程は元の約1オクターブ下。スマホのスピーカーでも鳴るよう、極低音は倍音のある波形（triangle／sawtooth）で出す
+  // 重く、暗く。短調と半音のうなり（不協和）、低い唸りと打撃音で作る。明るい和音・ピコ音・上昇音は使わない
   const SFX = {
-    step: () => { playTone(100, 'triangle', 0.14, 0.15, 50, 700); playNoise(0.06, 0.09, 700); },
-    beep: () => playTone(330, 'square', 0.07, 0.07, null, 1300),
-    guard: () => { playTone(220, 'sawtooth', 0.16, 0.14, 330, 1500); playNoise(0.09, 0.1, 1400); setTimeout(() => playTone(110, 'triangle', 0.16, 0.2, 70, 800), 40); },
-    tick: (urgent) => playTone(urgent ? 520 : 390, 'square', 0.04, 0.05, null, 1200),
+    step: () => { playTone(70, 'sawtooth', 0.16, 0.1, 38, 420); playNoise(0.07, 0.06, 380); },
+    beep: () => playTone(160, 'square', 0.06, 0.09, 120, 700),
+    guard: () => { playTone(180, 'sawtooth', 0.22, 0.08, 90, 1200, 12); playNoise(0.12, 0.07, 1100); setTimeout(() => playTone(70, 'sawtooth', 0.2, 0.1, 40, 500), 40); },
+    tick: (urgent) => playTone(urgent ? 210 : 150, 'square', 0.05, urgent ? 0.07 : 0.1, null, 700),
     encounter: () => {
-      playTone(160, 'sawtooth', 0.2, 0.17, 70, 1200);
-      setTimeout(() => playTone(110, 'sawtooth', 0.4, 0.18, 50, 1000), 120);
+      playTone(110, 'sawtooth', 0.5, 0.13, 45, 800, 18);
+      setTimeout(() => { playTone(82, 'square', 0.6, 0.09, 41, 600, 25); playTone(87, 'square', 0.6, 0.07, 43, 600); }, 100);   // 半音ぶつけて不穏に
     },
     sword: (combo = 1) => {
       // 斬撃音は3種類のうちどれかをランダムで鳴らす（読み込み前・失敗時は従来の合成音）
       if (!playSlash()) {
-        playNoise(0.14, 0.2, 2200);
-        playTone(300 + combo * 110, 'sawtooth', 0.16, 0.14, 90, 1600);
+        playNoise(0.16, 0.22, 1600);
+        playTone(220 + combo * 60, 'sawtooth', 0.2, 0.16, 60, 900, 10);
       }
     },
     gun: (combo = 1) => {
-      playNoise(0.2, 0.38, 1500);
-      playTone(140 + combo * 50, 'square', 0.16, 0.22, 40, 900);
+      playNoise(0.28, 0.4, 1100);
+      playTone(90 + combo * 30, 'square', 0.22, 0.24, 35, 700, 10);
     },
     hit: () => {
-      playNoise(0.3, 0.42, 1100);
-      playTone(80, 'sawtooth', 0.35, 0.3, 35, 700);
+      playNoise(0.4, 0.3, 800);
+      playTone(60, 'sawtooth', 0.5, 0.22, 28, 500);
+      playTone(90, 'square', 0.3, 0.1, 40, 600);
     },
-    levelup: () => {
-      [220, 277, 330, 440].forEach((f, i) => {
-        setTimeout(() => playTone(f, 'sawtooth', 0.2, 0.13, null, 1500), i * 90);
+    levelup: () => {   // 低い短調の和音がゆっくり重なる
+      [110, 131, 165].forEach((f, i) => {
+        setTimeout(() => playTone(f, 'sawtooth', 0.7, 0.075, null, 800, 12), i * 130);
       });
     },
-    // --- 追加の効果音（それらしい合成音）---
-    noiseStart: () => { playNoise(0.5, 0.22, 2200); setTimeout(() => playNoise(0.25, 0.16, 1800), 700); setTimeout(() => playNoise(0.3, 0.13, 1500), 1300); setTimeout(() => playTone(600, 'square', 0.14, 0.09, 150, 1200), 1900); },
-    start: () => { playTone(110, 'sawtooth', 0.4, 0.11, 440, 1500); setTimeout(() => playTone(440, 'square', 0.14, 0.07, null, 1400), 280); },          // SYSTEM START／REBUILD
-    statusOpen: () => { playTone(260, 'triangle', 0.1, 0.12, 390); setTimeout(() => playTone(390, 'triangle', 0.14, 0.12, 520), 70); },  // 画面が開く
-    statusClose: () => { playTone(390, 'triangle', 0.1, 0.11, 260); setTimeout(() => playTone(260, 'triangle', 0.14, 0.11, 165), 70); },  // 画面が閉じる
-    tab: () => { playTone(390, 'square', 0.05, 0.05, null, 1200); setTimeout(() => playTone(495, 'square', 0.05, 0.05, null, 1200), 35); },                  // キャラ切替（スワイプ）
-    summon: () => { [165, 220, 277, 330, 440].forEach((f, i) => setTimeout(() => playTone(f, 'triangle', 0.36, 0.13), i * 70)); playNoise(0.25, 0.05, 800); },  // 女神召喚
-    correct: () => { playTone(660, 'triangle', 0.14, 0.12); setTimeout(() => playTone(880, 'triangle', 0.22, 0.11), 70); },                   // 正解の「ポーン」
-    miss: () => { playTone(100, 'sawtooth', 0.26, 0.15, 70, 800); setTimeout(() => playTone(75, 'sawtooth', 0.3, 0.15, 50, 700), 110); },    // 計算ミス
-    crit: () => { playTone(440, 'square', 0.2, 0.1, 660, 1800); playNoise(0.12, 0.15, 1500); setTimeout(() => playTone(220, 'sawtooth', 0.4, 0.14, 70, 1000), 60); },  // 神速クリティカル
-    win: () => { [262, 330, 392, 523].forEach((f, i) => setTimeout(() => playTone(f, 'sawtooth', 0.16, 0.09, null, 1500), i * 80)); setTimeout(() => playTone(262, 'triangle', 0.45, 0.13), 340); },  // 撃破
-    clear: () => { [262, 330, 392, 523, 392, 523, 659].forEach((f, i) => setTimeout(() => playTone(f, 'sawtooth', 0.2, 0.09, null, 1500), i * 110)); setTimeout(() => playTone(330, 'triangle', 0.8, 0.13), 800); },  // クリア
-    gameover: () => { [196, 165, 131, 98].forEach((f, i) => setTimeout(() => playTone(f, 'sawtooth', 0.5, 0.13, f * 0.7, 900), i * 260)); },   // ゲームオーバー
-    guardReady: () => { playTone(560, 'square', 0.1, 0.1, null, 1400); setTimeout(() => playTone(560, 'square', 0.1, 0.1, null, 1400), 110); }               // ガードの合図
+    // --- 追加の効果音 ---
+    noiseStart: () => { playNoise(0.5, 0.22, 1500); setTimeout(() => playNoise(0.25, 0.16, 1100), 700); setTimeout(() => playNoise(0.3, 0.13, 900), 1300); setTimeout(() => playTone(90, 'square', 0.3, 0.1, 45, 500), 1900); },
+    start: () => { playTone(55, 'sawtooth', 0.6, 0.16, 110, 700, 15); setTimeout(() => playTone(110, 'square', 0.3, 0.1, null, 600), 300); },          // SYSTEM START／REBUILD
+    statusOpen: () => { playTone(150, 'square', 0.08, 0.2, 100, 700); setTimeout(() => playTone(110, 'square', 0.1, 0.2, 75, 650), 60); },   // 画面が開く（重い留め金）
+    statusClose: () => { playTone(110, 'square', 0.08, 0.2, 75, 650); setTimeout(() => playTone(85, 'square', 0.1, 0.2, 58, 600), 60); },  // 画面が閉じる
+    tab: () => playTone(160, 'square', 0.05, 0.14, null, 700),                                                                            // キャラ切替（スワイプ）
+    summon: () => {   // 女神召喚：半音のうなりを重ねた、暗い儀式の低音
+      playTone(110, 'sawtooth', 0.9, 0.18, null, 900, 20);
+      playTone(116, 'sawtooth', 0.9, 0.15, null, 900, -20);
+      playNoise(0.6, 0.12, 700);
+    },
+    correct: () => { playTone(147, 'sawtooth', 0.1, 0.22, 120, 900); setTimeout(() => playTone(175, 'sawtooth', 0.14, 0.19, 140, 900), 70); },   // 正解：短調の3度の鈍い二連
+    miss: () => { playTone(80, 'sawtooth', 0.4, 0.1, 50, 600, 22); setTimeout(() => { playTone(60, 'square', 0.5, 0.09, 35, 500); playNoise(0.15, 0.05, 500); }, 100); },   // 計算ミス
+    crit: () => { playNoise(0.25, 0.2, 1400); playTone(110, 'sawtooth', 0.5, 0.12, 45, 900, 15); setTimeout(() => playTone(55, 'square', 0.7, 0.14, 30, 500), 70); },   // 神速クリティカル：重い打撃
+    win: () => { [165, 131, 110, 82].forEach((f, i) => setTimeout(() => playTone(f, 'sawtooth', 0.5, 0.11, null, 800, 12), i * 110)); },   // 撃破：沈んでいく短調
+    clear: () => { [110, 131, 165, 131, 110, 82, 65].forEach((f, i) => setTimeout(() => playTone(f, 'sawtooth', 0.3, 0.15, null, 900, 12), i * 140)); setTimeout(() => playTone(55, 'sawtooth', 1.0, 0.18, null, 600, 15), 1000); },   // クリア
+    gameover: () => { [98, 82, 65, 49].forEach((f, i) => setTimeout(() => playTone(f, 'sawtooth', 0.6, 0.15, f * 0.6, 600, 14), i * 280)); },   // ゲームオーバー
+    guardReady: () => { playTone(130, 'square', 0.14, 0.14, null, 700, 30); setTimeout(() => playTone(130, 'square', 0.14, 0.14, null, 700, 30), 150); }   // ガードの合図
   };
 
   // === マスターデータ ===
@@ -1709,7 +1717,7 @@
     for (let i = 0; i < burst; i++) {
       const p = document.createElement('div'); p.textContent = chatLine(); pushLog(p);
     }
-  }, 138);   // 戦闘中ログの速さ（従来の80%）
+  }, 92);   // 戦闘中ログの速さ（138ms の1.5倍速）
 
   function getThemeColor() {
     return document.body.classList.contains('theme-amber') ? '#ffaa22' : '#33ff66';
@@ -1819,7 +1827,7 @@
         cell.classList.add('current');
         cell.textContent = 'P';
       } else if (i === corridorLen - 1 && state.visited[i]) {
-        cell.textContent = '★';
+        cell.textContent = '◆';
       }
       mapEl.appendChild(cell);
     }
@@ -2381,8 +2389,8 @@
     const per = Array(hits).fill(dmgPerHit);
     if (isCritical) per[hits - 1] += Math.max(0, totalDmg - dmgPerHit * hits);
     per.forEach((v, i) => fxPop(String(v), { delay: i * 130, dx: (Math.random() - 0.5) * 90, dy: -20 + (Math.random() - 0.5) * 30,
-      big: isCritical && i === hits - 1, col: isCritical && i === hits - 1 ? '#ffd84d' : null }));
-    if (isCritical) fxPop('CRITICAL', { delay: 60, dy: -66, col: '#ffd84d' });
+      big: isCritical && i === hits - 1, col: isCritical && i === hits - 1 ? BLOOD : null }));
+    if (isCritical) fxPop('CRITICAL', { delay: 60, dy: -66, col: BLOOD });
 
     // 連続エフェクト＆SE
     for (let i = 0; i < hits; i++) {
@@ -2466,7 +2474,7 @@
       state.broken[guard] = true; saveRec();
       const nm = EQUIP.find(e => e.id === guard).name;
       addLog(`${state.enemy.name}の攻撃！ ……装備（${nm}）が砕け、ダメージを防いだ！`);
-      fxPop('BREAK', { col: '#9fe8ff', dy: 4, delay: 150 }); fxHurt();
+      fxPop('BREAK', { col: STEEL, dy: 4, delay: 150 }); fxHurt();
     } else if (target.isHero) {
       state.hero.hp = Math.max(0, state.hero.hp - dmg);
       addLog(`${state.enemy.name}の攻撃！ 主人公に ${dmg} のダメージ！`);
@@ -2698,7 +2706,8 @@
   // 見た目だけの処理。ゲームの数値・判定・出現確率には触れない。
   const REDUCE_MOTION = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
   const FX_FONT = "'Courier New', Consolas, monospace";
-  // noise=砂嵐の粒の数／vig=四隅の暗さ／tint=全体の色かぶり／dust=漂う光の粒／scan=走査線の濃さ／glitchRate=ズレが走る頻度（毎秒）
+  const BLOOD = '#d8382c', BONE = '#e8dccb', STEEL = '#8e939c';   // 強調色（金・水色・白は使わない）
+  // noise=砂嵐の粒の数／vig=四隅の暗さ／tint=全体の色かぶり／scan=走査線の濃さ／glitchRate=ズレが走る頻度（毎秒）
   const ATMOS = {
     '激甘': { noise: 0,  vig: 0.12, tint: null,                    dust: 14, scan: 0.12, glitchRate: 0 },
     '甘口': { noise: 6,  vig: 0.2,  tint: null,                    dust: 6,  scan: 0.2,  glitchRate: 0 },
@@ -2832,7 +2841,7 @@
           const o = g.chars[j], px = g.x0 - total / 2 + ctx.measureText(chars.slice(0, j).join('')).width;
           ctx.save(); ctx.globalAlpha = Math.max(0, 1 - k * k);
           ctx.translate(px + o.dx * k, g.y0 + o.dy * k * k); ctx.rotate(o.rot * k);
-          stroke(ch, 0, 0, Math.random() < 0.15 ? '#ffffff' : '#ff4444', 4); ctx.restore();
+          stroke(ch, 0, 0, Math.random() < 0.15 ? BONE : '#c0302a', 4); ctx.restore();
         });
       }
       ctx.restore();
@@ -2849,11 +2858,11 @@
       ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fill();
       ctx.strokeStyle = c.fell && k > 0.3 ? '#ff4444' : mainCol; ctx.lineWidth = 2.5; ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 10; ctx.stroke();
       ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, -22); ctx.lineTo(0, 22); ctx.moveTo(-14, -6); ctx.lineTo(14, -6); ctx.stroke();
-      if (c.fell && k > 0.3) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-4, -32); ctx.lineTo(5, -12); ctx.lineTo(-6, 2); ctx.lineTo(6, 16); ctx.lineTo(-2, 32); ctx.stroke(); }
+      if (c.fell && k > 0.3) { ctx.strokeStyle = BONE; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-4, -32); ctx.lineTo(5, -12); ctx.lineTo(-6, 2); ctx.lineTo(6, 16); ctx.lineTo(-2, 32); ctx.stroke(); }
       ctx.shadowBlur = 0; ctx.font = `bold 14px ${FX_FONT}`; stroke(c.name, 0, 52, mainCol, 3);
       ctx.restore();
       if (k >= 0.2 && k < 0.55) {
-        const q = (k - 0.2) / 0.35; ctx.save(); ctx.globalAlpha = 1 - q; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3 * (1 - q) + 0.5;
+        const q = (k - 0.2) / 0.35; ctx.save(); ctx.globalAlpha = 1 - q; ctx.strokeStyle = BONE; ctx.lineWidth = 3 * (1 - q) + 0.5;
         ctx.beginPath(); ctx.arc(x, hy, 18 + q * 60, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
       }
     }
@@ -2863,17 +2872,17 @@
       const p = fx.pops[i]; p.t += dt;
       if (p.t >= p.dur) { fx.pops.splice(i, 1); continue; }
       if (p.t < 0) continue;
-      const k = p.t / p.dur, sc = (k < 0.12 ? 0.6 + (k / 0.12) * 0.7 : 1.3 - 0.3 * Math.min(1, (k - 0.12) / 0.2)) * (p.big ? 1.35 : 1);
+      const k = p.t / p.dur, sc = (k < 0.1 ? 1.55 - (k / 0.1) * 0.55 : 1) * (p.big ? 1.3 : 1);   // 重く叩きつける（弾まない）
       ctx.save(); ctx.globalAlpha = k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3;
-      ctx.translate(w / 2 + p.dx, h / 2 + 12 + p.dy - E(k) * 46); ctx.scale(sc, sc);
+      ctx.translate(w / 2 + p.dx, h / 2 + 12 + p.dy - E(k) * 18); ctx.scale(sc, sc);
       ctx.font = `bold 26px ${FX_FONT}`; stroke(p.text, 0, 0, p.col || mainCol, 5); ctx.restore();
     }
 
     // COMBO
     if (fx.combo > 0) fx.combo = Math.max(0, fx.combo - dt * 0.004);
     if (fx.streak >= 2 && (state.mode === 'BATTLE' || state.mode === 'EXPLORE')) {
-      ctx.save(); ctx.textAlign = 'right'; ctx.translate(w - 10, 56); const pl = 1 + fx.combo * 0.35; ctx.scale(pl, pl);
-      ctx.font = `bold 18px ${FX_FONT}`; stroke('COMBO ×' + fx.streak, 0, 0, fx.streak >= 10 ? '#ffd84d' : mainCol, 4); ctx.restore();
+      ctx.save(); ctx.textAlign = 'right'; ctx.translate(w - 10, 56); const pl = 1 + fx.combo * 0.12; ctx.scale(pl, pl);
+      ctx.font = `bold 18px ${FX_FONT}`; stroke('COMBO ×' + fx.streak, 0, 0, fx.streak >= 10 ? BLOOD : mainCol, 4); ctx.restore();
     }
     ctx.restore();
 
@@ -2901,11 +2910,6 @@
     if (!REDUCE_MOTION) {
       const nn = Math.round(a.noise + warn * 50 + fx.burst * 220);
       if (nn > 0) { ctx.fillStyle = mainCol; ctx.globalAlpha = 0.22; for (let i = 0; i < nn; i++) ctx.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 3, 1); }
-      ctx.fillStyle = mainCol;
-      for (let i = 0; i < a.dust; i++) {
-        const sp = 0.012 + (i % 5) * 0.004, y = h - ((now * sp + i * 53) % (h + 20)), x = (i * 137.5) % w + Math.sin(now * 0.001 + i) * 12;
-        ctx.globalAlpha = 0.25 + 0.2 * Math.sin(now * 0.002 + i); ctx.fillRect(x, y, 2, 2);
-      }
     }
     fx.burst = Math.max(0, fx.burst - dt * 0.0018);
     if (fx.flash > 0) { ctx.globalAlpha = fx.flash * 0.5; ctx.fillStyle = fx.flashCol; ctx.fillRect(0, 0, w, h); fx.flash = Math.max(0, fx.flash - dt * 0.004); }
@@ -3427,28 +3431,28 @@
     ctx.lineWidth = 6;
     ctx.strokeStyle = '#7a0000';
     ctx.strokeText('GUARD!', w / 2, h * 0.5 - 8);
-    ctx.fillStyle = (Math.floor(t / 90) % 2) ? '#ffffff' : '#ffd84d';
+    ctx.fillStyle = (Math.floor(t / 90) % 2) ? BONE : BLOOD;
     ctx.fillText('GUARD!', w / 2, h * 0.5 - 8);
     ctx.font = "bold 22px 'Courier New', Consolas, monospace";
     ctx.lineWidth = 4;
     ctx.strokeText('TAP THE ENEMY', w / 2, h * 0.5 + 40);
     ctx.fillText('TAP THE ENEMY', w / 2, h * 0.5 + 40);
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = BONE;
     ctx.fillRect(0, h - 8, w * left, 8);
     ctx.restore();
   }
 
   function drawAttackEffect(cx, cy, type, p, col) {
     ctx.save();
-    ctx.strokeStyle = '#ffffff';
-    ctx.shadowColor = col;
+    ctx.strokeStyle = BONE;
+    ctx.shadowColor = '#a01810';
     ctx.shadowBlur = 12;
     ctx.lineWidth = 4 * (1 - p * 0.5);
 
     if (type === 'guard') {
-      // ガード成功：広がる光の輪
+      // ガード成功：広がる鋼色の輪
       ctx.lineWidth = 8 * (1 - p);
-      ctx.strokeStyle = '#9fe8ff';
+      ctx.strokeStyle = STEEL;
       ctx.beginPath(); ctx.arc(cx, cy, 40 + p * 190, 0, Math.PI * 2); ctx.stroke();
       ctx.lineWidth = 3;
       ctx.beginPath(); ctx.arc(cx, cy, 20 + p * 120, 0, Math.PI * 2); ctx.stroke();
