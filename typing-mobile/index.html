@@ -2041,7 +2041,8 @@ ${words.map(([w,disp],i)=>(missW.has(i)?'*':' ')+disp+'（'+w+'）').join('\n')}
   body.scrollTop=body.scrollHeight;
   const rec={id:SCORES.length,board:genre+'|'+diff+'|'+TOTAL+'|'+(readHide?1:0),name:'',cpm,time:+s.toFixed(1),miss,acc:+acc.toFixed(1),score,combo:maxStreak};
   SCORES.push(rec); naming=rec; nameBuf=''; rankTab='total';
-  later(()=>showResult(rec),500);
+  // 電源が落ちたままだと、画面の中にある結果画面もキーボードも見えない（0に縮んでいる）。結果を出す前に電源を入れ直す
+  later(()=>{ const b=document.body; if(b.classList.contains('pwroff')){ b.classList.remove('pwroff'); b.classList.add('pwron'); setTimeout(()=>b.classList.remove('pwron'),700); } showResult(rec); },500);
 }
 // 結果画面: TARGET DOWN → 評価 → 数値が数え上がる → 名前入力 → ランキング
 function showResult(rec){
