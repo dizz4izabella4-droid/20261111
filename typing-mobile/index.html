@@ -222,7 +222,8 @@ body.hit #main>.bar{background:#3a0f14}
 .mq.red2{color:#ff6b78;text-shadow:0 0 6px rgba(255,60,80,.95),0 0 18px rgba(255,60,80,.55)}
 .mq.ok2{color:#8dffb5}
 /* mission select */
-#menu{position:absolute;inset:0;z-index:25;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:0 6%}
+#menu{position:absolute;inset:0;z-index:25;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:22px;padding:0 6%;overflow:auto;scrollbar-width:none}
+#menu .mbox{margin:auto 0}
 #menu .mbox{width:min(560px,100%);border:1px solid var(--accent);background:rgba(1,8,4,.92);padding:20px 24px 16px;box-shadow:0 0 30px rgba(34,227,106,.2)}
 #menu .mt{font-size:clamp(18px,2.4vw,26px);letter-spacing:.22em;color:var(--ok);text-shadow:0 0 10px rgba(57,255,136,.5)}
 #menu .ms{font-size:11px;letter-spacing:.24em;color:#4f7d5d;margin:4px 0 14px}
@@ -1770,6 +1771,16 @@ function powerOn(){
 }
 // 開始前の画面: 難易度と問題数を選ぶ
 let mRow=5;
+function fitMenu(){
+  const m=$('menu'), b=m&&m.querySelector('.mbox'); if(!b||m.hidden) return;
+  b.style.zoom=1;
+  const cs=getComputedStyle(m), avail=m.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom)-4;
+  const need=b.offsetHeight+(m.querySelector('.mh')?m.querySelector('.mh').offsetHeight+12:0);
+  b.style.zoom=need>avail&&avail>0?Math.max(.55,avail/need):1;
+  const sel=m.querySelector('.opt.sel,.start.sel'); if(sel&&sel.scrollIntoView) sel.scrollIntoView({block:'nearest'});
+}
+window.addEventListener('resize',()=>setTimeout(fitMenu,50));
+try{ new ResizeObserver(()=>fitMenu()).observe($('menu')); }catch(e){}
 function renderMenu(){
   const og=$('optGenre'); og.textContent='';
   Object.keys(GENRES).forEach(k=>{ const b=document.createElement('button'); b.type='button'; b.textContent=GENRES[k].label; if(k===genre) b.className='on';
@@ -1793,7 +1804,7 @@ function renderMenu(){
     b.addEventListener('click',()=>{ revealMs=n; mRow=4; playTick(); renderMenu(); }); orv.appendChild(b); });
   $('rvDesc').textContent=readHide||DIFF[diff].hide?'読みを隠す設定のときは使いません':revealMs?'漢字が出てから読みが出るまで '+(revealMs/1000).toFixed(1)+'秒。読み上げ中も入力できる':'読みを最初から表示。読み上げが終わってから入力';
   document.querySelectorAll('#menu [data-row]').forEach(el=>el.classList.toggle('sel',+el.dataset.row===mRow));
-  saveOpt();
+  saveOpt(); fitMenu();
 }
 function toMenu(){
   if(naming) finishNaming(); clearOver(); setTension(0); mqList=''; token++; state='menu'; sirenStop(); bgmStop(); clockStop(); mqClear();
