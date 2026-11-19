@@ -63,7 +63,7 @@ button{font:inherit;color:inherit}
 .bar .name small{font-size:12px;font-weight:700;color:var(--ink2);margin-left:8px;letter-spacing:.04em}
 .bar .time{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:.04em}
 .boardwrap{display:flex;justify-content:center}
-.board{display:block;width:100%;width:min(100%,max(240px,calc(100dvh - 346px)));max-width:520px;height:auto;background:var(--card);border:1px solid var(--rule);border-radius:16px;box-shadow:0 2px 0 var(--shadow);
+.board{display:block;width:100%;width:min(100%,max(240px,calc(100dvh - 364px)));max-width:520px;height:auto;background:var(--card);border:1px solid var(--rule);border-radius:16px;box-shadow:0 2px 0 var(--shadow);
   touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:pointer}
 .board text{font-family:var(--ja);font-weight:700;font-size:31px;fill:var(--ink);text-anchor:middle;pointer-events:none;transition:fill .15s}
 .board text.ok{fill:var(--done)}
@@ -108,7 +108,12 @@ button{font:inherit;color:inherit}
 .go{height:42px;padding:0 16px;border-radius:12px;border:1px solid var(--acc);background:var(--acc);color:#fff;font-size:14px;font-weight:800;letter-spacing:.08em;cursor:pointer}
 .go.sub{background:var(--btn);color:var(--ink);border-color:var(--rule)}
 @media (prefers-color-scheme:dark){ .go{color:#10201a} .go.sub{color:var(--ink)} }
-.ops{margin:0;text-align:center;font-size:11.5px;color:var(--ink2)}
+.ops{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+.ops .op{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:12px;border:1.5px solid var(--rule);background:var(--card);font-size:14px;font-weight:700;color:var(--ink);white-space:nowrap}
+.ops .op i{font-style:normal;padding:2px 8px;border-radius:8px;background:var(--ink);color:var(--paper);font-size:13px;letter-spacing:.04em}
+.ops .op.x{border-color:var(--hint)}
+.ops .op.x i{background:var(--hint);color:#fff}
+.ops .op small{font-size:12px;font-weight:700;color:var(--ink2)}
 #play.won .tools,#play.won .ops{display:none}
 
 /* あそびかた・確認の窓 */
@@ -125,9 +130,9 @@ dialog .ex p{font-size:12.5px;color:var(--ink2);margin:0}
 dialog .row{display:flex;gap:8px;margin-top:16px}
 dialog .row button{flex:1}
 /* スマホ: 押しやすさを優先して盤を大きく保つ。背の低い画面では余白と説明を詰める */
-@media (pointer:coarse){ .board{width:min(100%,max(300px,calc(100dvh - 342px)))} }
-@media (max-height:620px){ .app,.col{gap:10px} .ops{display:none} body.playing .top{display:none} .msg{min-height:76px;padding:7px 12px;font-size:13px;line-height:1.55} .tools button{height:46px} }
-@media (max-height:620px) and (pointer:coarse){ .board{width:min(100%,max(300px,calc(100dvh - 232px)))} }
+@media (pointer:coarse){ .board{width:min(100%,max(300px,calc(100dvh - 360px)))} }
+@media (max-height:620px){ .app,.col{gap:10px} .ops .op{padding:3px 8px;font-size:13px;gap:6px} body.playing .top{display:none} .msg{min-height:62px;padding:7px 12px;font-size:13px;line-height:1.55} .tools button{height:46px} }
+@media (max-height:620px) and (pointer:coarse){ .board{width:min(100%,max(300px,calc(100dvh - 282px)))} }
 @media (prefers-reduced-motion:reduce){ .board .e.pop .ln,.board .e.hint .hl,.board .e.wrong .hl{animation:none} .board .tint{transition:none} }
 </style>
 <!--IZ-GAME-BASE:START-->
@@ -367,7 +372,7 @@ dialog .row button{flex:1}
       <button type="button" id="bHint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0012 3z"/></svg>ヒント</button>
       <button type="button" id="bReset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></svg>全部消す</button>
     </div>
-    <p class="ops" id="ops"></p>
+    <div class="ops" id="ops"></div>
   </main>
 </div>
 
@@ -633,11 +638,13 @@ function openPuzzle(id){
   if(pr&&pr.s&&pr.s.length===g.EN){ for(let e=0;e<g.EN;e++) cur.st[e]=+pr.s[e]||0; cur.ms=pr.ms||0; cur.hints=pr.h||0; }
   B=buildBoard($('board'),g,clues);
   $('pName').textContent=lv.name+' '+id.slice(1); const sm=document.createElement('small'); sm.textContent=lv.size; $('pName').appendChild(sm);
-  $('ops').textContent=touchUI?'辺をタップ：線 → × → 消す　／　長押し：×':'左クリック：線　／　右クリック：×　／　Z 戻す・Y 進む・H ヒント';
+  $('ops').innerHTML=touchUI
+    ?'<span class="op"><i>タップ</i>線→×→消す</span><span class="op x"><i>長押し</i>×</span>'
+    :'<span class="op"><i>左クリック</i>線</span><span class="op x"><i>右クリック</i>×</span><span class="op"><small>Z 戻す ・ Y 進む ・ H ヒント</small></span>';
   $('home').hidden=true; $('play').hidden=false; document.body.classList.add('playing'); scrollTo(0,0);
   cur.won=isComplete(g,clues,lineOnly(cur.st));
   clearHint(); paint(B,cur.st,cur.won); syncButtons(); $('pTime').textContent=fmtTime(cur.ms);
-  if(cur.won) showResult(false); else say(cur.st.some(x=>x)?'つづきから再開します。':'辺をえらんで線を引き、1つの輪を作りましょう。こまったら「ヒント」をどうぞ。');
+  if(cur.won) showResult(false); else say(cur.st.some(x=>x)?'つづきから再開します。':(touchUI?'辺を<b>タップ</b>で線、<b>長押し</b>で×。':'辺を<b>左クリック</b>で線、<b>右クリック</b>で×。')+'1つの輪を作りましょう。こまったら「ヒント」をどうぞ。');
 }
 function lineOnly(st){ return st.map(x=>x===1?1:0); }
 function say(html){ $('msg').innerHTML=html; }
