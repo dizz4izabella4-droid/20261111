@@ -71,6 +71,7 @@ canvas{position:absolute;left:0;top:0;display:block}
 #alert .t1{position:relative;font-size:13px;letter-spacing:.3em;color:#ffb0a8}
 #alert .t2{position:relative;font-size:22px;letter-spacing:.08em;font-weight:800;color:#fff;text-shadow:0 0 14px #ff2a3a}
 #alert .t3{position:relative;font-size:14px;line-height:1.7;color:#e8eefc;max-width:300px;text-align:center;min-height:5em}
+#alert.mic .lr,#alert.mic .lb{display:none}
 #alert .t4{position:relative;font-size:13px;color:#fff;opacity:.85;animation:bl .8s infinite alternate}
 #dbgb{position:absolute;z-index:8;left:6px;top:96px;width:34px;height:34px;border-radius:50%;border:1.5px solid rgba(255,255,255,.55);background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;pointer-events:auto;touch-action:manipulation;opacity:.75;padding:0}
 #dbgp{position:absolute;z-index:9;left:8px;top:136px;width:210px;max-height:62%;overflow:auto;background:rgba(5,8,20,.94);border:1px solid #8fb4ff;border-radius:10px;padding:8px;display:none;pointer-events:auto;font:600 12px ui-monospace,Menlo,monospace;color:#fff}
@@ -319,7 +320,7 @@ canvas{position:absolute;left:0;top:0;display:block}
   <button id="vmicbtn" class="ui hide" aria-label="mic"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3" fill="#fff"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/></svg><span class="lab">HOLD TO TALK</span></button>
   <button id="dbgb" aria-label="debug"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="8" height="11" rx="4"/><path d="M12 8V6M9 8 7 5M15 8l2-3M8 12H4M16 12h4M8 16l-3 2M16 16l3 2M10 5.2a2 2 0 0 1 4 0"/></svg></button>
   <div id="dbgp"></div>
-  <div id="alert" class="ui"><div class="lr"></div><div class="lb"></div><div class="t1">EMERGENCY RADIO</div><div class="t2">ROBBERY IN PROGRESS</div><div class="t3" id="alerttx">Robbery reported. The suspect is fleeing by car.</div><div class="t4" id="alertt4">TAP TO RECEIVE</div></div>
+  <div id="alert" class="ui"><div class="lr"></div><div class="lb"></div><div class="t1" id="alertt1">緊急無線</div><div class="t2" id="alertt2">強盗事件発生中</div><div class="t3" id="alerttx">強盗事件が発生。容疑者は車で逃走中。</div><div class="t4" id="alertt4">タップして受信</div><button id="alertgo" class="btn" style="position:static;display:none;width:230px;height:52px;font-size:17px;font-family:inherit;pointer-events:auto;align-items:center;justify-content:center">同意してスタート</button></div>
   <div id="title" class="ui ov"><h1>FINAL STOP</h1><button class="btn" data-iz-base-ui data-b="start" style="pointer-events:auto">START</button><button id="voicebtn" class="btn" data-iz-base-ui data-b="voice" style="pointer-events:auto;position:static;width:150px;height:36px">VOICE ON</button><div id="micnote">申し訳ありませんが、マイクをオンにしないとクリアできません。</div><div id="micerr"></div><pre id="micdiag"></pre><button id="vmic" class="btn" data-iz-base-ui data-b="vmic" style="pointer-events:auto">心のマイクを使う</button></div>
   <div id="end" class="ui ov hide"><h2>ARRESTED</h2><button class="btn" data-iz-base-ui data-b="replay" style="pointer-events:auto">REPLAY</button></div>
   <div id="resume" class="ui ov hide">TAP TO RESUME</div>
@@ -346,18 +347,18 @@ const CONFIG = Object.freeze({
   BRIEF: 'Dispatch to Unit 12. Suspect vehicle fleeing northbound. Pursue and stop him.',
   EVENT_RADIO: 'Dispatch, suspect vehicle stopped.',
   PARTNER: 'REYES',
+  ALERT_RADIO_JA: '全ユニットへ、全ユニットへ。強盗事件発生。容疑者は赤いセダンで北へ逃走中。付近のユニットは直ちに追跡せよ。',
+  MIC_NOTICE_JA: 'このゲームはマイクを使います。マイクをオンにしないとクリアできません。同意するとマイクの許可を求めます。',
   ALERT_RADIO: 'All units, all units. Robbery in progress. Suspect is fleeing north in a red sedan. Nearby units, pursue.',
   // 相棒 REYES のセリフ：英語（音声あり＝say）と日本語字幕を併記。日本語の音声はタイトル前の無線デモだけ
   JP: {
     OPEN_GO: { en: "That red car! Let's get him!", ja: '赤い車だ！ 追うぞ！', say: true },
     OPEN_SIREN: { en: 'Hit the siren!', ja: 'サイレンを鳴らせ！', say: true },
     OPEN_CATCH: { en: 'The sound changes every press!', ja: '押す度に音が変わるぞ', say: true },
-    INTRO: { en: "That's the robber's car! When he swings right in front of you, TAP to ram him!", ja: '強盗犯の車だ！ ふらつく車が真正面に来たら、タップして突っ込め！', say: true },
-    WINDOW: { en: "Now! He's right ahead. TAP!", ja: '真正面に来た！ タップだ！', say: 'once' },
+    INTRO: { en: 'Ram him! Touch!', ja: '「つっこめ！」タッチ！', say: true },
     HIT1: { en: 'Good hit! Two more!', ja: 'いいぞ！ あと2回！', say: true },
     HIT2: { en: 'One more! Stop him!', ja: 'あと1回！ 止めるぞ！', say: true },
     HIT3: { en: "That's it! He's stopping!", ja: 'やった、止まるぞ！', say: true },
-    MISS: { en: 'Missed! Aim right ahead.', ja: '惜しい！ もう一度、真正面を狙え！' },
     PULLOVER: { en: 'He pulled over!', ja: '停車させた！', say: true },
     EVENT: { en: "Now give the orders in English. I'll show you first.", ja: 'ここからは英語で命令だ。まず俺がお手本を言う。', say: true },
     PREVIEW: { en: 'Press LISTEN to hear my example.', ja: 'ボタンを押して、俺のお手本を聞け。', say: 'first' },
@@ -392,7 +393,7 @@ const CORE = (function () {
   }
   const PHASE_OF = { TITLE: 'TITLE', OPEN_PARK: 'CHASE', OPEN_GO: 'CHASE', OPEN_SIREN: 'CHASE', OPEN_CATCH: 'CHASE', INTRO: 'CHASE', APPROACH: 'CHASE', WINDOW: 'CHASE', LUNGE: 'CHASE', HIT: 'CHASE', RECOVER: 'CHASE', MISS: 'CHASE', FINISH: 'CHASE',
     PULLOVER: 'PULLOVER', EVENT: 'EVENT', PREVIEW: 'CMD', SPEAK: 'CMD', YOURTURN: 'CMD', REACT: 'CMD', ARREST: 'ARREST', END: 'END', DEAD: 'DEAD' };
-  const MAX_DWELL = { OPEN_PARK: 6, OPEN_GO: 6, OPEN_SIREN: 30, OPEN_CATCH: 20, INTRO: 6, APPROACH: 8, WINDOW: 6, LUNGE: 1, HIT: 1, RECOVER: 3, MISS: 2, FINISH: 2, PULLOVER: 6, EVENT: 10, SPEAK: 6, YOURTURN: 14, REACT: 6, ARREST: 5, DEAD: 8 };
+  const MAX_DWELL = { OPEN_PARK: 6, OPEN_GO: 6, OPEN_SIREN: 30, OPEN_CATCH: 20, INTRO: 6, APPROACH: 8, WINDOW: 200, LUNGE: 1, HIT: 1, RECOVER: 3, MISS: 2, FINISH: 2, PULLOVER: 6, EVENT: 10, SPEAK: 6, YOURTURN: 14, REACT: 6, ARREST: 5, DEAD: 8 };
   const FORCE_NEXT = { OPEN_PARK: 'OPEN_GO', OPEN_GO: 'OPEN_SIREN', OPEN_SIREN: 'OPEN_CATCH', OPEN_CATCH: 'INTRO', INTRO: 'APPROACH', APPROACH: 'WINDOW', WINDOW: 'MISS', LUNGE: 'HIT', HIT: 'RECOVER', RECOVER: 'APPROACH', MISS: 'APPROACH', FINISH: 'PULLOVER',
     PULLOVER: 'EVENT', EVENT: 'PREVIEW', SPEAK: 'YOURTURN', YOURTURN: 'REACT', REACT: 'PREVIEW', ARREST: 'END', DEAD: 'TITLE' };
 
@@ -428,6 +429,17 @@ const CORE = (function () {
       return true;
     }
     function lunge() { beatSide = (S.sx - S.px) >= 0 ? 1 : -1; go('LUNGE'); }
+    // 好きなタイミングでタッチして突撃。判定だけ残す：逃走車が真正面（横ズレ ALIGN 以内）なら命中、ズレていれば空振り
+    function tapRam(i, locked) {
+      if (!i.tap || locked) return false;
+      const thr = S.streakMiss >= C.RESCUE.widen ? C.ALIGN_RESCUE : C.ALIGN;
+      if (Math.abs(S.sx - S.px) <= thr) { lunge(); return true; }
+      if (swipeLock <= 0) {
+        swipeOutside(true); S.misses++; S.streakMiss++; emit('miss', { streak: S.streakMiss });
+        if (S.streakMiss >= C.RESCUE.misses && !S.ram) { S.ram = true; emit('ram', { on: true }); }
+      }
+      return false;
+    }
     function swipeOutside(wob) { if (wob && swipeLock <= 0) { wobble = C.WOBBLE; swipeLock = C.WOBBLE + C.SWIPE_LOCK; emit('whiff'); } }
 
     const subs = {
@@ -465,35 +477,35 @@ const CORE = (function () {
       },
       APPROACH: {
         enter() { S.dur = afterMiss ? C.APPROACH_AFTER_MISS : C.APPROACH; buffered = false; },
-        upd(h, i) {
+        upd(h, i, locked) {
           const d = S.dur;
           S.gap = lerp(gapE, C.GAP_WINDOW, ss(S.t / d));
           S.sx = lerp(sxE, snake(S.ct), ss(S.t / 0.8));            // 逃走車はずっとフラフラ蛇行する
           S.tilt = tiltE * (1 - ss(S.t / 0.5));
+          if (tapRam(i, locked)) return;                           // 好きなタイミングで突っ込める
           if (S.t >= d) go('WINDOW');
         }
       },
       WINDOW: {
         enter() {
-          const rescue = S.streakMiss >= C.RESCUE.widen, len = rescue ? C.WINDOW_RESCUE : C.WINDOW;
-          S.window = { side: 0, t: 0, len: len, thr: rescue ? C.ALIGN_RESCUE : C.ALIGN, ok: false }; S.gap = C.GAP_WINDOW;
-          emit('window', { side: 0, len: len });
+          const rescue = S.streakMiss >= C.RESCUE.widen;
+          S.window = { side: 0, t: 0, len: 1e9, thr: rescue ? C.ALIGN_RESCUE : C.ALIGN, ok: false }; S.gap = C.GAP_WINDOW;   // 制限時間なし。教えない
         },
         upd(h, i, locked) {
           const W = S.window; W.t = S.t; S.gap = C.GAP_WINDOW;
           S.sx = snake(S.ct);                                      // 蛇行は止まらない
           const off = S.sx - S.px; W.ok = Math.abs(off) <= W.thr; W.off = off; S.side = off >= 0 ? 1 : -1;
           const ramNow = i.button === 'ram' && S.ram && !locked;
-          if (i.tap && !locked) { if (W.ok) { lunge(); return; } swipeOutside(true); }   // 真正面でないタップは空振り（ふらつく）
+          W.thr = S.streakMiss >= C.RESCUE.widen ? C.ALIGN_RESCUE : C.ALIGN; W.ok = Math.abs(off) <= W.thr;
+          if (tapRam(i, locked)) return;
           if (ramNow || S.ramArmed || S.elapsed >= C.RESCUE.auto) { lunge(); return; }
-          if (S.t >= W.len) go('MISS');
         }
       },
       LUNGE: {
         enter() { S.window = null; },
         upd(h) {
           const p = ss(S.t / C.LUNGE);
-          S.gap = lerp(C.GAP_WINDOW, 0, p); S.sx = lerp(sxE, sxE + beatSide * 0.9, p); S.pxKick = beatSide * 0.6 * p;
+          S.gap = lerp(gapE, 0, p); S.sx = lerp(sxE, sxE + beatSide * 0.9, p); S.pxKick = beatSide * 0.6 * p;
           if (S.t >= C.LUNGE) {
             S.hits++; S.damage = Math.min(3, S.hits); S.sinceHit = 0; S.streakMiss = 0; S.ram = false; S.ramArmed = false;
             emit('hit', { stage: S.hits, x: S.sx, side: beatSide });
@@ -982,7 +994,7 @@ const CORE = (function () {
   function beginGame() { pend.button = 'start'; }
   function startWithMic() {
     const er = $('micerr'); er.textContent = ''; $('micdiag').style.display = 'none';
-    MICV.acquire().then(ok => { if (ok) { MICV.release(); AUDIO.kick(); beginGame(); } else {
+    MICV.acquire().then(ok => { endAlert(); if (ok) { MICV.release(); AUDIO.kick(); beginGame(); } else {
         const n = MICV.err, nm = n.split('/')[0], ios = /iPhone|iPad|iPod/.test(navigator.userAgent), safari = ios && !/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
         const why = nm === 'NotAllowedError' ? 'マイクが許可されていません。' : nm === 'NotFoundError' ? 'マイクが見つかりません。' : nm === 'InvalidStateError' ? 'マイクの準備に失敗しました（他のアプリがマイクを使用中、または再読み込みで直ることがあります）。' : nm === 'unsupported' || nm === 'SecurityError' ? 'このページではマイクを使えません。' : 'マイクを使えませんでした。';
         let h = why + '（' + n + '）';
@@ -1040,11 +1052,11 @@ const CORE = (function () {
       ALERT = false; $('alert').classList.add('hide'); AUDIO.init(); wake(); paused = false; $('resume').classList.add('hide');
       spoken = {}; core.restart(); core.warp(label); syncGlass(); jpKey = ''; dp.classList.remove('on');
     };
-    const items = [['SCENES'], ['Emergency radio screen', () => { dp.classList.remove('on'); VOICE.cancel(); ALERT = true; alertStep = 0; $('alert').classList.remove('hide'); $('alerttx').textContent = 'Robbery reported. The suspect is fleeing by car.'; $('alertt4').textContent = 'TAP TO RECEIVE'; }],
+    const items = [['SCENES'], ['Emergency radio screen', () => { dp.classList.remove('on'); VOICE.cancel(); ALERT = true; alertStep = 0; const A = $('alert'); A.classList.remove('hide', 'mic'); $('alertt1').textContent = '緊急無線'; $('alertt2').textContent = '強盗事件発生中'; $('alerttx').textContent = '強盗事件が発生。容疑者は車で逃走中。'; $('alertt4').textContent = 'タップして受信'; $('alertt4').style.display = ''; $('alertgo').style.display = 'none'; }],
       ['Opening (parked)', () => jump('OPEN_PARK')], ['Opening: siren!', () => jump('OPEN_SIREN')], ['Chase (start)', () => jump('INTRO')], ['Hit window', () => jump('WINDOW')],
       ['Cmd 1 listen', () => jump('PREVIEW0')], ['Cmd 2 listen', () => jump('PREVIEW1')], ['Cmd 3 listen', () => jump('PREVIEW2')], ['Cmd 4 listen', () => jump('PREVIEW3')],
       ['SAY IT (cmd 1)', () => jump('YOURTURN0')], ['SAY IT (cmd 4)', () => jump('YOURTURN3')], ['Praise (cmd 1)', () => jump('REACT0')], ['Dead (shot)', () => jump('DEAD')], ['Arrest', () => jump('ARREST')],
-      ['VOICE TEST'], ['Radio (dispatch)', () => { AUDIO.init(); VOICE.speak(CONFIG.ALERT_RADIO, 'radio'); }], ['Model EN (Police!...)', () => { AUDIO.init(); VOICE.speak(CONFIG.CMDS[0].text); }],
+      ['VOICE TEST'], ['Radio (dispatch JA)', () => { AUDIO.init(); VOICE.speak(CONFIG.ALERT_RADIO_JA, 'radioja'); }], ['Model EN (Police!...)', () => { AUDIO.init(); VOICE.speak(CONFIG.CMDS[0].text); }],
       ['Praise EN', () => { AUDIO.init(); VOICE.speak('Perfect! That\'s how it\'s done!', 'praise'); }], ['REYES guide EN', () => { AUDIO.init(); VOICE.speak(CONFIG.JP.INTRO.en); }],
       ['Mic check (3s level)', (b) => { MICV.acquire(true).then(ok => { const t0 = performance.now(), iv = setInterval(() => { b.textContent = 'Mic ' + (ok ? 'OK ' : 'NG ') + MICV.level.toFixed(3) + ' ' + (MICV.err || ''); if (performance.now() - t0 > 3000) { clearInterval(iv); MICV.release(); b.textContent = 'Mic check (3s level)'; } }, 100); }); }]];
     for (const it of items) { if (it.length === 1) { const h = document.createElement('h4'); h.textContent = it[0]; dp.appendChild(h); } else { const b = document.createElement('button'); b.textContent = it[0]; b.addEventListener('click', e => { e.stopPropagation(); it[1](b); }); dp.appendChild(b); } }
@@ -1055,13 +1067,29 @@ const CORE = (function () {
   let ALERT = !AUTO && !SHOT, alertStep = 0;
   if (!ALERT) $('alert').classList.add('hide');
   $('alert').addEventListener('pointerdown', e => { e.stopPropagation(); });
+  function endAlert() { ALERT = false; $('alert').classList.add('hide'); }
+  // 段階：①緊急無線（日本語・全部流れるまで）→ ②マイクの注意書き → ③同意でマイク許可を求めてゲームスタート
+  function alertMicStep() {
+    alertStep = 2; const A = $('alert'); A.classList.add('mic');
+    $('alertt1').textContent = 'マイクについて'; $('alertt2').textContent = 'マイクを使います'; $('alerttx').textContent = CONFIG.MIC_NOTICE_JA;
+    $('alertt4').style.display = 'none'; $('alertgo').style.display = 'flex';
+  }
   $('alert').addEventListener('click', e => {
     e.stopPropagation(); AUDIO.init(); wake();
-    if (alertStep === 0) {
-      alertStep = 1; const tx = CONFIG.ALERT_RADIO; $('alerttx').textContent = ''; $('alertt4').textContent = 'TAP TO CONTINUE';
-      let n = 0; const ty = setInterval(() => { n += 1; $('alerttx').textContent = tx.slice(0, n); if (n >= tx.length) clearInterval(ty); }, 70);
-      VOICE.speak(tx, 'radio'); AUDIO.sfx('radio');
-    } else { VOICE.cancel(); ALERT = false; $('alert').classList.add('hide'); }
+    if (alertStep !== 0) return;
+    alertStep = 1; const tx = CONFIG.ALERT_RADIO_JA; $('alerttx').textContent = ''; $('alertt4').textContent = '受信中…';
+    let typed = false, spoken = false, moved = false;
+    const next = () => { if (typed && spoken && !moved && alertStep === 1) { moved = true; setTimeout(alertMicStep, 600); } };
+    let n = 0; const ty = setInterval(() => { n += 1; $('alerttx').textContent = tx.slice(0, n); if (n >= tx.length) { clearInterval(ty); typed = true; next(); } }, 70);
+    VOICE.speak(tx, 'radioja', () => { spoken = true; next(); }); AUDIO.sfx('radio');
+    setTimeout(() => { spoken = true; typed = true; next(); }, 30000);      // 保険：音声が終わらなくても次へ進む
+  });
+  $('alertgo').addEventListener('pointerdown', e => e.stopPropagation());
+  $('alertgo').addEventListener('click', e => {
+    e.stopPropagation(); AUDIO.init(); wake(); VOICE.cancel();
+    if (NOMIC || AUTO) { endAlert(); beginGame(); return; }
+    $('alertgo').style.display = 'none'; $('alerttx').textContent = 'マイクの許可を確認しています…';
+    startWithMic();
   });
   function setUI(k, v, fn) { if (ui[k] !== v) { ui[k] = v; fn(v); } }
   function updateUI(dt) {
@@ -1390,24 +1418,6 @@ const CORE = (function () {
     ctx.restore();
   }
 
-  function drawWindowHUD(sb, pb) {
-    const w = S.window, p = clamp01(w.t / w.len), cy = (sb.top + sb.bot) / 2, ok = w.ok, mono = 'ui-monospace,Menlo,monospace';
-    const r1 = Math.max(26, sb.w * 0.5), r0 = r1 + 40, r = r0 + (r1 - r0) * p;
-    const col = ok ? '108,255,154' : p < 0.55 ? '255,255,255' : p < 0.85 ? '255,225,74' : '255,90,80';
-    ctx.save();
-    // 自車の進路（真正面）を示す縦のガイド。逃走車がこの帯に入ると緑になる
-    const gx = pb.cx, bw = Math.max(8, sb.w * w.thr / 1.8), gt = sb.top - 18, gb = sb.bot + 6;
-    ctx.fillStyle = 'rgba(' + col + ',' + (ok ? 0.22 : 0.10) + ')'; ctx.fillRect(gx - bw, gt, bw * 2, gb - gt);
-    ctx.strokeStyle = 'rgba(' + col + ',.85)'; ctx.lineWidth = 1.5; ctx.setLineDash([6, 5]); ctx.beginPath(); ctx.moveTo(gx - bw, gt); ctx.lineTo(gx - bw, gb); ctx.moveTo(gx + bw, gt); ctx.lineTo(gx + bw, gb); ctx.stroke(); ctx.setLineDash([]);
-    ctx.shadowColor = 'rgba(' + col + ',.8)'; ctx.shadowBlur = 10; ctx.strokeStyle = 'rgba(' + col + ',.95)'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(sb.cx, cy, r, 0, 6.2832); ctx.stroke();
-    ctx.shadowBlur = 0; ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.arc(sb.cx, cy, r1, 0, 6.2832); ctx.stroke();
-    ctx.restore();
-    ctx.textAlign = 'center';
-    if (ok) { const k = 1 + 0.08 * Math.sin(tNow * 24); ctx.save(); ctx.translate(V.W / 2, V.hor - 44); ctx.scale(k, k); ctx.fillStyle = '#6cff9a'; ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.lineWidth = 5; ctx.lineJoin = 'round'; ctx.font = '900 34px ' + mono; ctx.strokeText('TAP!', 0, 0); ctx.fillText('TAP!', 0, 0); ctx.restore(); }
-    else if (!S.hintShown && S.hits === 0 && S.misses === 0) { ctx.fillStyle = '#fff'; ctx.font = '800 15px ' + mono; ctx.fillText('TAP WHEN HE IS RIGHT AHEAD', V.W / 2, V.hor - 44); }
-    ctx.textAlign = 'start';
-  }
 
   /* ================= FX（B3：衝突の演出。見た目だけで、進行には関わらない） ================= */
   const FX = {
@@ -1671,7 +1681,6 @@ const CORE = (function () {
       ctx.globalCompositeOperation = a;
     }
     FX.draw();
-    if (S.window) drawWindowHUD(sb, pb);
     ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
     if (S.phase === 'CMD' || S.phase === 'ARREST') drawPartner(W, H, land, flash);
     if (S.sub === 'YOURTURN') drawSayIt(W, H, land);

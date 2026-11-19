@@ -92,15 +92,20 @@ log('3b. YOURTURN と DEAD');
   const w = CORE.create(CONFIG, { seed: 1 }); ok(w.warp('DEAD') && w.state.sub === 'DEAD', 'warp DEAD');
 }
 
-// 4. 窓を必ず逃す → 2回目のMISSでram、3回目で窓2.1s
-log('4. 窓を逃し続ける');
+// 4. ズレたタップを続ける → 空振りが数えられ、2回でram、3連続で許容が広がる（時間切れのMISSはもう無い）
+log('4. ズレたタップを続ける（時間切れなし）');
 {
   const c = CORE.create(CONFIG, { seed: 1 }); let started = false; const evs = [];
-  const lens = [];
-  for (let t = 0; t < 80; t += 1 / 60) { const e = c.step(1 / 60, !started ? (started = true, { button: 'start' }) : NONE()); for (const x of e) { evs.push(x); if (x.type === 'window') lens.push(x.len); } }
+  for (let t = 0; t < 120; t += 1 / 60) {
+    const st = c.state; let inp = NONE();
+    if (!started) { started = true; inp = { button: 'start' }; }
+    else if ((st.sub === 'WINDOW' || st.sub === 'APPROACH') && Math.abs(st.sx - st.px) > CONFIG.ALIGN_RESCUE * 1.3) inp = { tap: true };
+    for (const x of c.step(1 / 60, inp)) evs.push(x);
+  }
   const miss = evs.filter(e => e.type === 'miss'); const ram = evs.find(e => e.type === 'ram');
-  ok(miss.length >= 3, 'MISSが3回以上'); ok(ram && ram.at > miss[1].at - 0.01 && ram.at < miss[2].at, '2回目のMISSでramが出る');
-  ok(lens[0] === CONFIG.WINDOW && lens[1] === CONFIG.WINDOW && lens[2] === CONFIG.WINDOW && lens[3] === CONFIG.WINDOW_RESCUE, '4つ目の窓が広がる（3連続MISS後）: ' + lens.slice(0, 5).join(','));
+  ok(miss.length >= 3, '空振りMISSが3回以上'); ok(ram && ram.at > miss[0].at - 0.01 && ram.at < miss[2].at, '2回目のMISSでramが出る');
+  ok(!evs.some(e => e.type === 'window'), '窓の合図（window）は出さない');
+  ok(c.state.sub === 'WINDOW' || c.state.sub === 'APPROACH', '時間切れでMISSへ落ちない');
 }
 
 // 5. 窓が開く前のスワイプ
@@ -163,7 +168,7 @@ log('7. dt 1/30 と 1/144');
 // 8. warp
 log('8. warp');
 {
-  for (const label of ['WINDOW', 'HIT1', 'HIT2', 'HIT3', 'MISS', 'PULLOVER', 'EVENT', 'PREVIEW0', 'REACT1', 'PREVIEW3', 'ARREST', 'END', 'DEAD']) {
+  for (const label of ['WINDOW', 'HIT1', 'HIT2', 'HIT3', 'PULLOVER', 'EVENT', 'PREVIEW0', 'REACT1', 'PREVIEW3', 'ARREST', 'END', 'DEAD']) {
     const c = CORE.create(CONFIG, { seed: 1 }); const okw = c.warp(label); const s = c.state;
     const good = okw && (/^HIT(\d)/.test(label) ? s.sub === 'HIT' && s.hits === +label[3] : label === 'WINDOW' ? s.sub === 'WINDOW' : label === 'MISS' ? s.sub === 'MISS' : /^(PREVIEW|REACT)\d$/.test(label) ? s.sub === label.slice(0, -1) && s.cmd.i === +label.slice(-1) : s.sub === label);
     ok(good, 'warp(' + label + ') → ' + s.sub + ' hits=' + s.hits);
