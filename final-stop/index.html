@@ -879,7 +879,7 @@ const CORE = (function () {
         if (!MICV.virtual) MICV.release();        // iOS：読み上げとマイクは同時に使えないので、話す前にマイクを閉じる
         const u = new SpeechSynthesisUtterance(text), ja = style === 'ja' || style === 'radioja' || style === 'quietja', vv = ja ? this.ja : this.voice;
         if (vv) u.voice = vv;
-        u.lang = (vv && vv.lang) || (ja ? 'ja-JP' : 'en-US'); u.rate = style === 'praise' ? 1.05 : style === 'radio' || style === 'radioja' || style === 'quietja' ? 1.1 : 1.0; u.pitch = style === 'praise' ? 1.15 : style === 'radio' || style === 'radioja' || style === 'quietja' ? 0.8 : 0.95;
+        u.lang = (vv && vv.lang) || (ja ? 'ja-JP' : 'en-US'); u.rate = style === 'praise' ? 1.05 : style === 'radio' || style === 'radioja' ? 1.1 : 1.0; u.pitch = style === 'praise' ? 1.15 : style === 'radio' || style === 'radioja' ? 0.8 : style === 'quietja' ? 1.0 : 0.95;
         let fin = false; const tk = ++this.seq, fire = () => { if (!fin) { fin = true; AUDIO.kick(); if (this.seq === tk) this.talkUntil = 0; if (done) done(); } };
         this.talkUntil = performance.now() + (text.length * 0.08 + 0.8) * 1000;      // speechSynthesis.speaking は iOS で残りっぱなしになるので、自前で「話し中」を数える
         if (style === 'radio' || style === 'radioja') { u.onstart = () => AUDIO.radioOn(); const off = () => { AUDIO.radioOff(); fire(); }; u.onend = off; u.onerror = off; setTimeout(off, 9000); AUDIO.radioOn(); }
@@ -1077,7 +1077,7 @@ const CORE = (function () {
     $('alertt4').style.display = 'none'; $('alertgo').style.display = 'flex';
   }
   $('alert').addEventListener('click', e => {
-    e.stopPropagation(); AUDIO.init(); wake();
+    e.stopPropagation();      // 無線の間は AudioContext を作らない（iOSで読み上げが途中で切れる・ザラつく原因になる）。作るのは「同意してスタート」から
     if (alertStep !== 0) return;
     alertStep = 1; const tx = CONFIG.ALERT_RADIO_JA; $('alerttx').textContent = ''; $('alertt4').textContent = '受信中…';
     // 静寂の中で無線だけを流す（効果音なし）。文字は音声が始まってから、読み進めた分だけ出す（音声より先には出さない）
@@ -1087,8 +1087,18 @@ const CORE = (function () {
     const startTyping = () => { if (ty) return; ty = setInterval(() => { if (shown < tx.length - 2 && !spoken) { shown += 1; draw(); } }, 170); };   // 境界イベントが来ない端末用のゆっくりした進行（声が終わるまで最後の2文字は出さない）
     const finish = () => { spoken = true; clearInterval(ty); shown = tx.length; draw(); next(); };
     if (VOICE.ok && VOICE.on) {
-      VOICE.speak(tx, 'quietja', finish, startTyping, ci => { if (ci > shown && ci < tx.length) { shown = ci; draw(); } });
-      setTimeout(() => { if (!ty && !spoken) startTyping(); }, 3500);      // 声の開始が通知されない時の保険
+      // 1文ずつ読み上げる（長い1発の読み上げは iOS で途中で切れやすい）。文字はその文の声が始まってから出す
+      const sents = tx.match(/[^。]+。?/g) || [tx]; let idx = 0, base = 0;
+      const playNext = () => {
+        if (idx >= sents.length) { finish(); return; }
+        const st = sents[idx], b0 = base; let sd = false, t2 = 0, cur = 0;
+        const upd = n => { if (n > cur) { cur = n; shown = b0 + n; draw(); } };
+        const startT = () => { if (t2) return; t2 = setInterval(() => { if (cur < st.length - 1) upd(cur + 1); }, 160); };
+        const end = () => { if (sd) return; sd = true; clearInterval(t2); upd(st.length); base = b0 + st.length; idx++; setTimeout(playNext, 400); };
+        VOICE.speak(st, 'quietja', end, startT, ci => { if (ci < st.length) upd(ci); });
+        setTimeout(() => { if (!t2 && !sd) startT(); }, 3000);      // 声の開始が通知されない時の保険
+      };
+      playNext();
     } else { shown = 0; ty = setInterval(() => { shown += 1; draw(); if (shown >= tx.length) { clearInterval(ty); spoken = true; next(); } }, 110); }       // 音声なし設定：文字だけ
     setTimeout(finish, 40000);      // 保険：何があっても次へ進む
   });
