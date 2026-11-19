@@ -132,3 +132,13 @@ mark{background:#fff0a8;color:inherit;border-radius:2px}
 @media(max-width:560px){.tabs a{letter-spacing:.1em;font-size:11px;padding-left:2px;padding-right:2px;gap:4px}.tabs svg{width:14px;height:14px}}
 .tabs a{white-space:nowrap}
 @media(max-width:360px){.tabs a{font-size:10px;letter-spacing:.03em;gap:3px}.tabs a span[aria-hidden]{display:none}}
+
+/* ---- いいねボタン（数は出さない。押した状態だけ） ---- */
+.wrap{position:relative}
+.like{position:absolute;right:6px;bottom:6px;width:44px;height:44px;border:0;border-radius:50%;background:transparent;color:#b7bdc3;display:grid;place-items:center;cursor:pointer;padding:0}
+.like svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round;transition:transform .15s}
+.like:hover{color:#e0566b}
+.like.on{color:#e0566b}.like.on svg{fill:currentColor}
+.like.pop svg{animation:likepop .35s ease-out}
+@keyframes likepop{0%{transform:scale(.7)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+.wrap .dates{padding-right:40px}

@@ -125,7 +125,8 @@
     else if (w.isUpdated) badges += '<span class="b upd">更新</span>';
     badges += IZ.catBadge(w) + IZ.statusBadges(w) + (dv ? '<span class="b">' + dv + '</span>' : '');
     var dates = '公開 <b>' + IZ.dateLabel(w, 'first') + '</b>　更新 <b>' + IZ.dateLabel(w, 'last') + '</b>';
-    return '<li><a class="card ' + cat.cls + '" href="' + IZ.esc(w.url) + '">' +
+    var liked = IZ.likes.has(w.id);
+    return '<li class="wrap"><a class="card ' + cat.cls + '" href="' + IZ.esc(w.url) + '">' +
       '<span class="ico">' + IZ.icon(w.icon) + '</span>' +
       '<span class="cbody">' +
         (w.titleEn && w.titleEn !== w.title ? '<span class="en" lang="en">' + hl(w.titleEn) + '</span>' : '') +
@@ -133,7 +134,8 @@
         (w.summary ? '<span class="sum">' + hl(w.summary) + '</span>' : '') +
         '<span class="badges">' + badges + '</span>' +
         '<span class="dates">' + dates + '</span>' +
-      '</span><span class="go" aria-hidden="true">›</span></a></li>';
+      '</span><span class="go" aria-hidden="true">›</span></a>' +
+      '<button type="button" class="like' + (liked ? ' on' : '') + '" data-id="' + IZ.esc(w.id) + '" aria-pressed="' + liked + '" aria-label="' + IZ.esc(w.title) + 'にいいね"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-9.2-9.4C1.7 7.9 3.6 5 6.7 5c1.9 0 3.5 1 5.3 3 1.8-2 3.4-3 5.3-3 3.1 0 5 2.9 3.9 6.1C19.5 15.9 12 20.5 12 20.5z"/></svg></button></li>';
   }
 
   function cmpDate(a, b, key, desc) {
@@ -191,6 +193,12 @@
     try { history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '')); } catch (e) {}
   }
 
+  grid.addEventListener('click', function (e) {
+    var b = e.target.closest('.like'); if (!b) return;
+    var on = IZ.likes.toggle(b.getAttribute('data-id'));
+    b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
+    b.classList.remove('pop'); void b.offsetWidth; if (on) b.classList.add('pop');
+  });
   document.getElementById('cats').addEventListener('click', function (e) {
     var b = e.target.closest('.chip'); if (!b) return;
     state.cat = b.getAttribute('data-cat'); render();
