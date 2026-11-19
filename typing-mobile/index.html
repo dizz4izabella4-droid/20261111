@@ -767,7 +767,8 @@ body.lite .desk::before{display:none!important}
     <div class="opt" data-row="1"><span class="ol">DIFFICULTY</span><span class="oc" id="optDiff"></span><span class="od" id="diffDesc"></span></div>
     <div class="opt" data-row="2"><span class="ol">QUESTIONS</span><span class="oc" id="optCount"></span><span class="od" id="countDesc"></span></div>
     <div class="opt" data-row="3"><span class="ol">READING</span><span class="oc" id="optRead"></span><span class="od" id="readDesc"></span></div>
-    <button type="button" class="start" id="mStart" data-row="4">START MISSION</button>
+    <div class="opt" data-row="4"><span class="ol">READING DELAY</span><span class="oc" id="optRv"></span><span class="od" id="rvDesc"></span></div>
+    <button type="button" class="start" id="mStart" data-row="5">START MISSION</button>
   </div>
   <div class="cyber-deck">
     <div class="track-info">TARGET: <span id="trkName">The_Glass_Perimeter</span><br>STATUS: <span id="trkStatus">STANDBY</span><br>MISSION: <span id="gTrk">Iron Skyline Pursuit</span> <small>150 BPM [HIGH_TENSION]</small></div>
@@ -926,12 +927,15 @@ const GENRES={
   hard:{label:'実用 難',desc:'仕事・行政・税務で使う語句。誤読しやすい読みを含む'},
   nan:{label:'難読',desc:'動植物・月の異名・和語など、難読の漢字'}};
 const COUNTS=[6,9,14,20];
+// 漢字が出てから読み（ひらがな）が出るまでの遅れ（ms）。0 = 最初から表示（従来どおり、読み上げが終わってから入力）
+const RV_PRESETS=[0,300,500,800,1200,2000];
+let revealMs=500;
 let diff='normal', genre='chuni', readHide=false, voiceOn=true, TOTAL=14, BOUNDS=[0,5,9,14];
 function setCount(n){ TOTAL=n; BOUNDS=[0,Math.round(n/3),Math.round(2*n/3),n]; }
 setCount(14);
 // 選んだ難易度と問題数は端末に覚えておく
-try{ const sv=JSON.parse(localStorage.getItem('cmdTypingMobile')||'{}'); if(DIFF[sv.diff]) diff=sv.diff; if(GENRES[sv.genre]) genre=sv.genre; readHide=!!sv.rh; voiceOn=sv.vo!==false; if(COUNTS.includes(sv.n)) setCount(sv.n); }catch(e){}
-function saveOpt(){ try{ localStorage.setItem('cmdTypingMobile',JSON.stringify({diff,genre,rh:readHide,vo:voiceOn,n:TOTAL})); }catch(e){} }
+try{ const sv=JSON.parse(localStorage.getItem('cmdTypingMobile')||'{}'); if(DIFF[sv.diff]) diff=sv.diff; if(GENRES[sv.genre]) genre=sv.genre; readHide=!!sv.rh; if(typeof sv.rv==='number') revealMs=Math.max(0,Math.min(3000,sv.rv)); voiceOn=sv.vo!==false; if(COUNTS.includes(sv.n)) setCount(sv.n); }catch(e){}
+function saveOpt(){ try{ localStorage.setItem('cmdTypingMobile',JSON.stringify({diff,genre,rh:readHide,vo:voiceOn,rv:revealMs,n:TOTAL})); }catch(e){} }
 let lastSet='';
 function pickWords(){
   let pick,key;
@@ -1765,7 +1769,7 @@ function powerOn(){
   later(toMenu,800);
 }
 // 開始前の画面: 難易度と問題数を選ぶ
-let mRow=4;
+let mRow=5;
 function renderMenu(){
   const og=$('optGenre'); og.textContent='';
   Object.keys(GENRES).forEach(k=>{ const b=document.createElement('button'); b.type='button'; b.textContent=GENRES[k].label; if(k===genre) b.className='on';
@@ -1784,22 +1788,27 @@ function renderMenu(){
   [['表示',false],['隠す',true]].forEach(([t,v])=>{ const b=document.createElement('button'); b.type='button'; b.textContent=t; if(v===readHide) b.className='on';
     b.addEventListener('click',()=>{ readHide=v; mRow=3; playTick(); renderMenu(); }); orr.appendChild(b); });
   $('readDesc').textContent=readHide||DIFF[diff].hide?'読みを「・」で隠す。打てた字とミスした字だけ見える（読みの学習向け）':'読みを表示する';
+  const orv=$('optRv'); orv.textContent='';
+  RV_PRESETS.forEach(n=>{ const b=document.createElement('button'); b.type='button'; b.textContent=(n/1000).toFixed(1)+'s'; if(n===revealMs) b.className='on';
+    b.addEventListener('click',()=>{ revealMs=n; mRow=4; playTick(); renderMenu(); }); orv.appendChild(b); });
+  $('rvDesc').textContent=readHide||DIFF[diff].hide?'読みを隠す設定のときは使いません':revealMs?'漢字が出てから読みが出るまで '+(revealMs/1000).toFixed(1)+'秒。読み上げ中も入力できる':'読みを最初から表示。読み上げが終わってから入力';
   document.querySelectorAll('#menu [data-row]').forEach(el=>el.classList.toggle('sel',+el.dataset.row===mRow));
   saveOpt();
 }
 function toMenu(){
   if(naming) finishNaming(); clearOver(); setTension(0); mqList=''; token++; state='menu'; sirenStop(); bgmStop(); clockStop(); mqClear();
   WINS.forEach(id=>$(id).hidden=true); $('alert').hidden=true; $('ov').hidden=true; $('power').hidden=true; $('idle').hidden=true;
-  document.body.classList.remove('alert'); kbShow(false); $('menu').hidden=false; mRow=4; renderMenu(); menuMusicStart();
+  document.body.classList.remove('alert'); kbShow(false); $('menu').hidden=false; mRow=5; renderMenu(); menuMusicStart();
 }
 function menuKey(e){
   const k=e.key;
-  if(k==='ArrowUp'||k==='ArrowDown'){ e.preventDefault(); mRow=(mRow+(k==='ArrowUp'?4:1))%5; playTick(); renderMenu(); return; }
+  if(k==='ArrowUp'||k==='ArrowDown'){ e.preventDefault(); mRow=(mRow+(k==='ArrowUp'?5:1))%6; playTick(); renderMenu(); return; }
   if(k==='ArrowLeft'||k==='ArrowRight'){ e.preventDefault(); const d=k==='ArrowLeft'?-1:1;
     if(mRow===0){ const ks=Object.keys(GENRES); genre=ks[(ks.indexOf(genre)+d+ks.length)%ks.length]; }
     else if(mRow===1){ const ks=Object.keys(DIFF); diff=ks[(ks.indexOf(diff)+d+ks.length)%ks.length]; }
     else if(mRow===2){ const i=COUNTS.indexOf(TOTAL); setCount(COUNTS[(i+d+COUNTS.length)%COUNTS.length]); }
     else if(mRow===3){ readHide=!readHide; }
+    else if(mRow===4){ const i=Math.max(0,RV_PRESETS.indexOf(revealMs)); revealMs=RV_PRESETS[(i+d+RV_PRESETS.length)%RV_PRESETS.length]; }
     playTick(); renderMenu(); return; }
   if(k==='Enter'){ e.preventDefault(); startMission(); }
 }
@@ -1888,6 +1897,7 @@ function speakWord(r,gate){
     vNow=src; src.onended=()=>{ if(vNow===src) hearDone(); }; src.start();
   }).catch(err=>{ voiceWarn((err&&err.message)||'再生が拒否されました'); if(tok===vTok) hearDone(); });
 }
+let lateT=null;
 function newWord(){
   const [r,disp]=words[wi]; const d=document.createElement('div'); d.className='wl';
   const pr=document.createElement('span'); pr.className='pr'; pr.textContent=PH[phase].prompt;
@@ -1896,7 +1906,8 @@ function newWord(){
   // 読みの後ろに Enter（↵）を置き、押して確定するまで次へ進まない
   // EXPERT は読みを「・」で隠し、打てた字とミスした字だけ見せる
   const hide=!!DIFF[diff].hide||readHide; newWord.hide=hide;
-  cur=[...r,'\n'].map(ch=>{ const s=document.createElement('span'); s.className='u'; s._ch=ch; s._seq=seqOf(ch); s._hid=hide&&ch!=='\n';
+  const late=!hide&&revealMs>0; newWord.late=late;   // 読みを少し遅れて出す（隠す設定のときは使わない）
+  cur=[...r,'\n'].map(ch=>{ const s=document.createElement('span'); s.className='u'; s._ch=ch; s._seq=seqOf(ch); s._hid=(hide||late)&&ch!=='\n';
     s.textContent=ch==='\n'?'\u21B5':s._hid?'\u30FB':ch; if(s._hid) s.classList.add('hid'); if(ch==='\n') s.classList.add('ent'); rd.appendChild(s); return s; });
   // 次の語の予告（同じフェーズの中だけ）
   const nx=document.createElement('div'); nx.className='nxw';
@@ -1904,7 +1915,9 @@ function newWord(){
   if(newWord.line) newWord.line.classList.add('old');
   con.appendChild(d); ci=0; sub=0; wStep=0; cur[0].className='c'; wantMod(false); body.scrollTop=body.scrollHeight; d.classList.add('appear');
   newWord.line=d; hintNext();
-  if(!hide) speakWord(r,true);   // 単語が出たら読み上げ、終わってから入力できる（読みを隠している間は、打ち終えたあとに読む）
+  clearTimeout(lateT);
+  if(late){ const mine=cur, tk=token; lateT=setTimeout(()=>{ if(tk===token) mine.forEach(reveal); },revealMs); speakWord(r,false); }   // 読み上げを先に流し、読みは遅れて出す。入力は読み上げ中も受け付ける
+  else if(!hide) speakWord(r,true);   // 単語が出たら読み上げ、終わってから入力できる（読みを隠している間は、打ち終えたあとに読む）
 }
 // 時計は入力している間だけ進める（フェーズの切り替えや演出の時間は、タイムと速さに数えない）
 function elapsed(){ return (tAcc+(tRun!=null?performance.now()-tRun:0))/1000; }
@@ -1946,7 +1959,7 @@ function key(ch){
     else { if(sub) reveal(cur[ci]); cur[ci].className='c'+(sub?' pd':'')+(cur[ci]._ch==='\n'?' ent':''); wantMod(sub>0); hintNext(); }
     update(); return true;
   }
-  miss++; phMiss++; streak=0; missHere=true; missW.add(wi); reveal(el); el.className='c miss'+(sub?' pd':'')+ent; void el.offsetWidth; el.classList.add('shake');
+  miss++; phMiss++; streak=0; missHere=true; missW.add(wi); if(newWord.late){ clearTimeout(lateT); cur.forEach(reveal); } reveal(el); el.className='c miss'+(sub?' pd':'')+ent; void el.offsetWidth; el.classList.add('shake');
   const before=xfer; xfer=Math.max(0,xfer-2); drawXfer(xfer-before);
   playMiss(); dummiesMiss(); fwMiss(); lightMiss(); buzz(30);
   update(); return false;

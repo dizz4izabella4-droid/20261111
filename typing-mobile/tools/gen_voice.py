@@ -24,7 +24,7 @@ import pyopenjtalk
 HERE = os.path.dirname(os.path.abspath(__file__))
 PAGE = os.path.join(HERE, '..', 'index.html')
 OUT = os.path.join(HERE, '..', 'voice')
-SPEED = 0.95                                   # 学習向けに、ほんの少しゆっくり
+SPEED = 0.78                                   # 学習向けにゆっくり（0.95→0.78 でさらに遅く）
 
 def readings():
     """読み → その読みの表示（漢字など）のリスト"""

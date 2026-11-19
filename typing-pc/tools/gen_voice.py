@@ -18,7 +18,7 @@ import espeakng_loader
 HERE = os.path.dirname(os.path.abspath(__file__))
 PAGE = os.path.join(HERE, '..', 'index.html')
 OUT = os.path.join(HERE, '..', 'voice')
-VOICE, RATE, PITCH, RANGE = b'en-us', 135, 38, 30      # ロボット風: 低め・抑揚少なめ・ゆっくり
+VOICE, RATE, PITCH, RANGE = b'en-us', 100, 38, 30      # ロボット風: 低め・抑揚少なめ・ゆっくり（135→100 でさらに遅く）
 
 def words():
     s = open(PAGE, encoding='utf-8').read()

@@ -116,7 +116,8 @@ body.alert .neon{animation:alarm .5s steps(1) infinite}
 .bar .ico{width:16px;height:12px;border:1px solid #4f7d5d;font:9px var(--mono);line-height:10px;text-align:center;color:#a8d8b6;flex:none}
 .bar .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bar .ctl{color:#4f7d5d;letter-spacing:.6em;font-size:10px;flex:none}
-.bar button{background:none;border:0;color:#a8d8b6;font:12px var(--mono);cursor:pointer;padding:2px 8px}
+.bar button{background:none;border:0;color:#a8d8b6;font:12px var(--mono);cursor:pointer;padding:2px 6px;white-space:nowrap;flex:none}
+#main .bar{gap:4px;padding:5px 6px}
 .bar button:hover,.bar button:focus-visible{background:#163222;outline:none}
 .win.alarm{border-color:var(--err)}
 .win.alarm>.bar{background:#3a0f14}
@@ -135,6 +136,8 @@ body.alert .neon{animation:alarm .5s steps(1) infinite}
 .wl{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:0;font-size:17px;letter-spacing:.05em}
 .pr{color:#4f7d5d;font-size:14px;letter-spacing:0}
 .wl.hearing::after{content:"\u266A";color:var(--gold);font-size:.6em;margin-left:.7em;animation:blink2 .45s steps(1) infinite}   /* 読み上げ中の印 */
+.wl.hid .u,.wl.hid .c,.wl.hid .c.miss{color:transparent}   /* 音声のあと、少し遅れて文字が出る（それまで未入力の文字は見えない） */
+.wl.hid .ent.u{color:transparent}
 .wl.now{font-size:34px}   /* 入力中の単語は2倍（34px）。打ち終えた行は17pxに戻る */
 .wl .ent{font-size:.8em;margin-left:.35em;padding:0 .15em}
 .wl .ent.d{color:#2f6b43}
@@ -215,18 +218,20 @@ body.alert .neon{animation:alarm .5s steps(1) infinite}
 .mq.red2{color:#ff6b78;text-shadow:0 0 6px rgba(255,60,80,.95),0 0 18px rgba(255,60,80,.55)}
 .mq.ok2{color:#8dffb5}
 /* mission select */
-#menu{position:absolute;inset:0;z-index:25;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:0 6%}
-#menu .mbox{width:min(560px,100%);border:1px solid var(--accent);background:rgba(1,8,4,.92);padding:20px 24px 16px;box-shadow:0 0 30px rgba(34,227,106,.2)}
+#menu{position:absolute;inset:0;z-index:25;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#menuIn{flex:none;display:flex;flex-direction:column;align-items:center;gap:12px;padding:8px 16px;transform-origin:center center}
+#menu .mbox{width:560px;box-sizing:border-box;border:1px solid var(--accent);background:rgba(1,8,4,.92);padding:14px 22px 12px;box-shadow:0 0 30px rgba(34,227,106,.2)}
 #menu .mt{font-size:clamp(18px,2.4vw,26px);letter-spacing:.22em;color:var(--ok);text-shadow:0 0 10px rgba(57,255,136,.5)}
-#menu .ms{font-size:11px;letter-spacing:.24em;color:#4f7d5d;margin:4px 0 14px}
-#menu .opt{display:grid;grid-template-columns:8.5em 1fr;align-items:center;gap:4px 12px;padding:8px 10px;border:1px solid transparent;margin-bottom:6px}
+#menu .ms{font-size:11px;letter-spacing:.24em;color:#4f7d5d;margin:2px 0 8px}
+#menu #optRv button{padding:5px 8px}
+#menu .opt{display:grid;grid-template-columns:8.5em 1fr;align-items:center;gap:4px 12px;padding:5px 10px;border:1px solid transparent;margin-bottom:3px}
 #menu .opt.sel{border-color:#2f6b43;background:rgba(34,227,106,.06)}
 #menu .ol{font-size:11px;letter-spacing:.16em;color:#6f9a7c}
 #menu .oc{display:flex;gap:6px;flex-wrap:wrap}
 #menu .oc button{background:#03100a;border:1px solid var(--line);color:#7fa98a;font:13px var(--mono);padding:5px 12px;cursor:pointer;letter-spacing:.08em}
 #menu .oc button.on{border-color:var(--accent);color:var(--ok);background:#0a2a16;box-shadow:0 0 10px rgba(34,227,106,.25)}
 #menu .od{grid-column:2;font:11px var(--ja);color:#4f7d5d}
-#menu .start{display:block;width:100%;margin-top:10px;padding:10px;background:#03100a;border:1px solid #2f6b43;color:var(--ok);font:15px var(--mono);letter-spacing:.3em;cursor:pointer}
+#menu .start{display:block;width:100%;margin-top:6px;padding:8px;background:#03100a;border:1px solid #2f6b43;color:var(--ok);font:15px var(--mono);letter-spacing:.3em;cursor:pointer}
 #menu .start.sel,#menu .start:hover{border-color:var(--accent);background:#0d3a1d;box-shadow:0 0 18px rgba(34,227,106,.35)}
 #menu .start.sel{animation:blink2 1.2s steps(1) infinite}
 #menu .mh{margin-top:10px;font-size:10px;letter-spacing:.14em;color:#2f6b43;text-align:center}
@@ -234,7 +239,7 @@ body.alert .neon{animation:alarm .5s steps(1) infinite}
 #menu .mh a{color:#4f7d5d;text-decoration:none;border-bottom:1px solid #2f6b43}
 #menu .mh a:hover,#menu .mh a:focus-visible{color:var(--ok);outline:none}
 /* audio deck (cyan / pink) */
-.cyber-deck{--neon-cyan:#00f0ff;--neon-pink:#ff0055;position:relative;width:min(340px,100%);border:1px solid var(--neon-cyan);background:rgba(0,240,255,.03);padding:18px 20px 14px;
+.cyber-deck{--neon-cyan:#00f0ff;--neon-pink:#ff0055;position:relative;width:340px;box-sizing:border-box;border:1px solid var(--neon-cyan);background:rgba(0,240,255,.03);padding:18px 20px 14px;
   color:var(--neon-cyan);box-shadow:0 0 20px rgba(0,240,255,.15),inset 0 0 15px rgba(0,240,255,.05);text-shadow:0 0 4px rgba(0,240,255,.35)}
 .cyber-deck::before{content:"[AUDIO_DECK_v2.4]";position:absolute;top:-8px;left:15px;background:#010402;padding:0 5px;font-size:10px;letter-spacing:2px;color:var(--neon-pink)}
 .track-info{font-size:12px;letter-spacing:1px;line-height:1.6}
@@ -584,15 +589,16 @@ body.lite .desk::before{display:none!important}
 <div id="impact"></div>
 <div id="hacked" hidden><div class="hk1" data-t="SYSTEM HACKED">SYSTEM HACKED</div><div class="hk2">Remote user 203.0.113.47 has taken control of NODE7.</div><div class="hk3">システムの制御を奪われました</div></div>
 <div id="idle" hidden></div>
-<div id="menu" hidden>
+<div id="menu" hidden><div id="menuIn">
   <div class="mbox">
     <div class="mt">NODE7 DEFENSE SYSTEM</div>
     <div class="ms">SELECT MISSION PARAMETERS</div>
     <div class="opt" data-row="0"><span class="ol">LEVEL</span><span class="oc" id="optLv"></span><span class="od" id="lvDesc"></span></div>
     <div class="opt" data-row="1"><span class="ol">DIFFICULTY</span><span class="oc" id="optDiff"></span><span class="od" id="diffDesc"></span></div>
     <div class="opt" data-row="2"><span class="ol">QUESTIONS</span><span class="oc" id="optCount"></span><span class="od" id="countDesc"></span></div>
-    <button type="button" class="start" id="mStart" data-row="3">START MISSION</button>
-    <div class="mh">&uarr;&darr; select &nbsp; &larr;&rarr; change &nbsp; ENTER start</div>
+    <div class="opt" data-row="3"><span class="ol">REVEAL DELAY</span><span class="oc" id="optRv"></span><span class="od" id="rvDesc"></span></div>
+    <button type="button" class="start" id="mStart" data-row="4">START MISSION</button>
+    <div class="mh">&uarr;&darr; select &nbsp; &larr;&rarr; change &nbsp; ENTER start &nbsp; (in play: [ ] adjust delay)</div>
   </div>
   <div class="cyber-deck">
     <div class="track-info">TARGET: <span id="trkName">The_Glass_Perimeter</span><br>STATUS: <span id="trkStatus">STANDBY</span><br>MISSION: <span id="gTrk">Iron Skyline Pursuit</span> <small>150 BPM [HIGH_TENSION]</small></div>
@@ -600,7 +606,7 @@ body.lite .desk::before{display:none!important}
     <div class="deck-btns"><button type="button" id="dBgm">BGM: ON</button><button type="button" id="dSe">SE: ON</button><button type="button" id="dVo">VOICE: ON</button><button type="button" id="dLoad">LOAD TRACK</button><button type="button" id="dLoadG">LOAD MISSION</button></div>
     <input type="file" id="trkFile" accept="audio/*" hidden><input type="file" id="gTrkFile" accept="audio/*" hidden>
   </div>
-</div>
+</div></div>
 <div id="alert" hidden>
   <div class="box">
     <div class="hd"><i></i>SECURITY ALERT</div>
@@ -627,6 +633,7 @@ body.lite .desk::before{display:none!important}
     <span>Miss <b id="sM">0</b></span>
     <span>Combo <b id="sC">0</b> (Max <b id="sX">0</b>)</span>
     <span>Firewall <b id="sFw">100%</b></span>
+    <span>Reveal <b id="sRv">0.5s</b></span>
   </div>
 </div>
 
@@ -2006,7 +2013,15 @@ function powerOn(){
   later(toMenu,800);
 }
 // 開始前の画面: 難易度と問題数を選ぶ
-let mRow=3;
+let mRow=4;
+// 音声が流れてから文字が出るまでの遅れ（ms）。0 = 音声と同時。調整用: メニューで選ぶ / プレイ中は [ ] で0.1秒ずつ増減（記憶する）
+const RV_PRESETS=[0,300,500,800,1200,2000];
+let revealMs=500; try{ const v=localStorage.getItem('cmdTyping.revealMs'); if(v!==null&&!isNaN(+v)) revealMs=Math.max(0,Math.min(3000,+v)); }catch(e){}
+function setReveal(v){ revealMs=Math.max(0,Math.min(3000,Math.round(v/100)*100)); try{ localStorage.setItem('cmdTyping.revealMs',revealMs); }catch(e){} const e=$('sRv'); if(e) e.textContent=(revealMs/1000).toFixed(1)+'s'; }
+setReveal(revealMs);
+function fitMenu(){ const m=$('menu'), n=$('menuIn'); if(!m||!n||m.hidden) return; n.style.transform='none';
+  const k=Math.min(1,(m.clientHeight-8)/n.offsetHeight,(m.clientWidth-8)/n.offsetWidth); n.style.transform=k<1?'scale('+k.toFixed(3)+')':'none'; }
+window.addEventListener('resize',fitMenu);
 function renderMenu(){
   const ol=$('optLv'); ol.textContent='';
   LEVELS.forEach((L,i)=>{ const b=document.createElement('button'); b.type='button'; b.textContent=L.label; if(i===lv) b.className='on';
@@ -2020,21 +2035,27 @@ function renderMenu(){
   COUNTS.forEach(n=>{ const b=document.createElement('button'); b.type='button'; b.textContent=n+' WORDS'; if(n===TOTAL) b.className='on';
     b.addEventListener('click',()=>{ setCount(n); mRow=2; playTick(); renderMenu(); }); oc.appendChild(b); });
   const per=[BOUNDS[1],BOUNDS[2]-BOUNDS[1],BOUNDS[3]-BOUNDS[2]];
+  const orv=$('optRv'); orv.textContent='';
+  RV_PRESETS.forEach(n=>{ const b=document.createElement('button'); b.type='button'; b.textContent=(n/1000).toFixed(1)+'s'; if(n===revealMs) b.className='on';
+    b.addEventListener('click',()=>{ setReveal(n); mRow=3; playKey(false); renderMenu(); }); orv.appendChild(b); });
+  $('rvDesc').textContent='音声が流れてから文字が出るまで '+(revealMs/1000).toFixed(1)+'秒（音声OFFのときは即表示）。聞き取れれば文字を待たずに打てる';
   $('countDesc').textContent='防御 '+per[0]+'語 → 追跡 '+per[1]+'語 → 反撃 '+per[2]+'語';
   document.querySelectorAll('#menu [data-row]').forEach(el=>el.classList.toggle('sel',+el.dataset.row===mRow));
+  fitMenu();
 }
 function toMenu(){
   speakStop();
   if(naming) finishNaming(); clearOver(); setTension(0); mqList=''; token++; state='menu'; sirenStop(); bgmStop(); clockStop(); mqClear();
   WINS.forEach(id=>$(id).hidden=true); $('alert').hidden=true; $('ov').hidden=true; $('power').hidden=true; $('idle').hidden=true;
-  document.body.classList.remove('alert'); $('menu').hidden=false; mRow=3; renderMenu(); menuMusicStart();
+  document.body.classList.remove('alert'); $('menu').hidden=false; mRow=4; renderMenu(); menuMusicStart();
 }
 function menuKey(e){
   const k=e.key;
-  if(k==='ArrowUp'||k==='ArrowDown'){ e.preventDefault(); mRow=(mRow+(k==='ArrowUp'?3:1))%4; playTick(); renderMenu(); return; }
+  if(k==='ArrowUp'||k==='ArrowDown'){ e.preventDefault(); mRow=(mRow+(k==='ArrowUp'?4:1))%5; playTick(); renderMenu(); return; }
   if(k==='ArrowLeft'||k==='ArrowRight'){ e.preventDefault(); const d=k==='ArrowLeft'?-1:1;
     if(mRow===0){ lv=(lv+d+LEVELS.length)%LEVELS.length; }
     else if(mRow===1){ const ks=Object.keys(DIFF); diff=ks[(ks.indexOf(diff)+d+ks.length)%ks.length]; }
+    else if(mRow===3){ const i=Math.max(0,RV_PRESETS.indexOf(revealMs)); setReveal(RV_PRESETS[(i+d+RV_PRESETS.length)%RV_PRESETS.length]); }
     else if(mRow===2){ const i=COUNTS.indexOf(TOTAL); setCount(COUNTS[(i+d+COUNTS.length)%COUNTS.length]); }
     playTick(); renderMenu(); return; }
   if(k==='Enter'){ e.preventDefault(); startMission(); }
@@ -2151,6 +2172,8 @@ function speakElem(w,gate){
   try{ a.currentTime=0; }catch(e){}
   const pr=a.play(); if(pr&&pr.catch) pr.catch(err=>{ const n=err&&err.name; voiceWarn(n==='NotAllowedError'?'ブラウザが自動再生を止めました（NotAllowedError）':n==='NotSupportedError'?'音声ファイル voice/'+w+'.mp3 が見つかりません（NotSupportedError）':(n||'再生が拒否されました')); end(); });
 }
+let revealT=null;
+function reveal(d){ clearTimeout(revealT); revealT=null; if(d) d.classList.remove('hid'); }
 function newWord(){
   const [w,ja]=words[wi]; const d=document.createElement('div'); d.className='wl';
   const pr=document.createElement('span'); pr.className='pr'; pr.textContent=PH[phase].prompt; d.appendChild(pr);
@@ -2159,7 +2182,10 @@ function newWord(){
   con.querySelectorAll('.wl.now').forEach(x=>x.classList.remove('now')); d.classList.add('now');
   con.appendChild(d); ci=0; cur[0].className='c'; body.scrollTop=body.scrollHeight; d.classList.add('appear');
   newWord.line=d;
-  speakWord(w,true);   // 単語が出たら読み上げ、終わってから入力できる
+  // 読み上げを先に流し、文字は revealMs だけ遅れて出す。入力は音声の間も受け付ける（聞き取れる人は文字を待たずに打てる）
+  clearTimeout(revealT);
+  if(voiceOn&&revealMs>0){ d.classList.add('hid'); const tk=token; revealT=setTimeout(()=>{ if(tk===token) reveal(d); },revealMs); }
+  speakWord(w,false);
 }
 // 時計は入力している間だけ進める（フェーズの切り替えや演出の時間は、タイムと速さに数えない）
 function elapsed(){ return (tAcc+(tRun!=null?performance.now()-tRun:0))/1000; }
@@ -2194,6 +2220,7 @@ function key(ch){
     setTension(ti/N);
     if(ci>=cur.length) wordDone(); else cur[ci].className='c'+(cur[ci]._ch==='\n'?' ent':'');
   } else {
+    reveal(newWord.line);   // ミスしたら文字を見せる
     miss++; phMiss++; streak=0; missHere=true; cur[ci].className='c miss'+(cur[ci]._ch==='\n'?' ent':'');
     const before=xfer; xfer=Math.max(0,xfer-2); drawXfer(xfer-before);
     playMiss(); dummiesMiss(); fwMiss(); lightMiss();
@@ -2208,6 +2235,7 @@ function phaseBreak(){
   later(()=>{ musicSuccess(); typeLines(PH[phase].end,()=>later(()=>startPhase(phase+1),400),{n:2,ms:22,gap:240}); },250);
 }
 function wordDone(){
+  reveal(newWord.line);
   const [w,ja,ms]=words[wi]; playChord(w.length);
   // 訳が複数ある語（多義語）は、すべての訳を1本の帯にして高速で流す
   mqTop('<span class="en">'+esc(w.toUpperCase())+'</span>'+ms.map(esc).join('<span class="sep">／</span>'),ms.length>1?'gold':'',ms.length>1?MQ_FAST:0);
@@ -2349,7 +2377,7 @@ window.addEventListener('keydown',e=>{
   if(state!=='play') return;
   if(e.key==='Process'||e.isComposing||e.keyCode===229){ $('ime').hidden=false; return; }
   if(e.key==='Tab'){ e.preventDefault(); if(!e.repeat&&words[wi]) speakWord(words[wi][0],false); return; }
-  if(hearing){ e.preventDefault(); return; }   // 読み上げ中は入力を受けない
+  if(e.key==='['||e.key===']'){ e.preventDefault(); if(!e.repeat){ setReveal(revealMs+(e.key==='['?-100:100)); banner('REVEAL DELAY '+(revealMs/1000).toFixed(1)+'s'); } return; }
   if(e.key==='Enter'){ e.preventDefault(); if(!e.repeat){ playEnter(); key('\n'); } return; }
   if(e.key.length===1){ e.preventDefault(); $('ime').hidden=true; if(!e.repeat) playKey(e.key===' '); key(e.key); }
 });
