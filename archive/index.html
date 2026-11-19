@@ -154,7 +154,7 @@
       if (e.kind === 'pub') {
         html += '<li class="ev"><time datetime="' + e.d + '">' + md + '<small>' + wd(e.d) + '</small></time><div>' +
           '<span class="k pub">公開</span>' + wlink(w) + ' <span class="b cat ' + IZ.CATS[w.category].cls + '">' + IZ.CATS[w.category].ja + '</span>' +
-          '<div class="sub">最終更新 ' + IZ.dot(h.last.date) + '</div></div></li>';
+          '<div class="sub">最終更新 ' + IZ.dot(h.last.date) + '　改修 ' + h.commits + '回</div></div></li>';
       } else {
         html += '<li class="ev update"><time datetime="' + e.d + '">' + md + '<small>' + wd(e.d) + '</small></time><div><span class="k up">更新</span>' + wlink(w) + '</div></li>';
       }
@@ -169,6 +169,7 @@
       var x, y;
       if (k === 'name') { return dir * a.title.localeCompare(b.title, 'ja'); }
       if (k === 'cat') { x = a.category; y = b.category; }
+      else if (k === 'commits') { x = a.history ? a.history.commits : -1; y = b.history ? b.history.commits : -1; }
       else { x = (a[k] || '') + (a.history && a.history[k] ? a.history[k].time : ''); y = (b[k] || '') + (b.history && b.history[k] ? b.history[k].time : ''); if (!x && y) return 1; if (x && !y) return -1; }
       return x < y ? -dir : x > y ? dir : a.order - b.order;
     });
@@ -181,9 +182,10 @@
       return '<tr><td class="name"><a href="' + IZ.esc(w.url) + '">' + IZ.esc(w.title) + '</a>' + (w.gallery ? '' : ' <span class="b">一覧に出さない作品</span>') + '</td>' +
         '<td data-l="種類"><span class="b cat ' + IZ.CATS[w.category].cls + '">' + IZ.CATS[w.category].ja + '</span></td>' +
         '<td class="d" data-l="公開日">' + IZ.dateLabel(w, 'first') + '</td>' +
-        '<td class="d" data-l="最終更新日">' + IZ.dateLabel(w, 'last') + '</td></tr>';
+        '<td class="d" data-l="最終更新日">' + IZ.dateLabel(w, 'last') + '</td>' +
+        '<td class="num" data-l="改修回数">' + (h.commits != null ? h.commits + '回' : '—') + '</td></tr>';
     }).join('');
-    return '<table class="tbl"><caption class="sr">作品ごとの公開日と最終更新日</caption><thead><tr>' + th('name', '作品') + th('cat', '種類') + th('first', '公開日') + th('last', '最終更新日') + '</tr></thead><tbody>' + rows + '</tbody></table>';
+    return '<table class="tbl"><caption class="sr">作品ごとの公開日と最終更新日</caption><thead><tr>' + th('name', '作品') + th('cat', '種類') + th('first', '公開日') + th('last', '最終更新日') + th('commits', '改修回数') + '</tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
   function calendar() {
