@@ -38,7 +38,7 @@ log('2. 乱数入力 3000本');
   for (let seed = 1; seed <= 3000; seed++) {
     const rnd = mulberry32(seed), c = CORE.create(CONFIG, { seed });
     try {
-      let t = 0; const dt = 1 / 30; let started = false;
+      let t = 0; const dt = 1 / 30; let started = false, crashed = false;
       for (; t < 900 && c.state.sub !== 'END'; t += dt) {
         const r = rnd(), inp = NONE();
         if (!started) { inp.button = 'start'; started = true; }
@@ -47,9 +47,10 @@ log('2. 乱数入力 3000本');
         else if (r < 0.42) inp.voice = true;                                   // 声（5s以内に必ず入る確率）
         const e = c.step(dt, inp);
         if (e.some(x => x.type === 'stuck')) { bad++; break; }
-        if (c.state.sub === 'TITLE' && t > 0.5) { bad++; break; }
+        if (c.state.sub === 'CRASH') crashed = true;                       // サイレン／ライトを切ると交差点で衝突してゲームオーバー（仕様）
+        if (c.state.sub === 'TITLE' && t > 0.5) { if (crashed) break; bad++; break; }
       }
-      if (c.state.sub !== 'END') notEnd++;
+      if (c.state.sub !== 'END' && !crashed) notEnd++;
     } catch (err) { bad++; console.log('  例外 seed', seed, err.message); }
   }
   log('   異常 ' + bad + ' / ENDに届かない ' + notEnd); ok(bad === 0, '例外・stuckなし'); ok(notEnd === 0, '全てENDに届く');
@@ -177,6 +178,27 @@ log('8. warp');
 
 // 9. 凍結（定数）
 ok(Object.isFrozen(CONFIG), 'CONFIGは凍結されている');
+
+// 12. 交差点：サイレンかライトが消えていると、横から来る車と衝突してゲームオーバー
+log('12. 交差点の衝突');
+{
+  const run = (mode) => {
+    const c = CORE.create(CONFIG, { seed: 3 }); let st = false, pressed = false, crashed = false, passedIntro = false;
+    for (let t = 0; t < 60 && c.state.sub !== 'INTRO' && !crashed; t += 1 / 60) {
+      let inp = NONE();
+      if (!st) { st = true; inp = { button: 'start' }; }
+      else if (c.state.sub === 'OPEN_SIREN' && c.state.t > 0.6 && !pressed) { pressed = true; inp = { button: 'siren' }; }
+      else if (c.state.sub === 'OPEN_CATCH' && c.state.t > 1 && mode === 'siren' && c.state.siren !== 'OFF') inp = { button: 'siren' };      // サイレンを切り替えてOFFに
+      else if (c.state.sub === 'OPEN_CATCH' && c.state.t > 1 && mode === 'lights' && c.state.lights) inp = { button: 'lights' };
+      for (const e of c.step(1 / 60, inp)) if (e.type === 'crash') crashed = true;
+    }
+    return { crashed, sub: c.state.sub };
+  };
+  ok(!run('safe').crashed, 'サイレンもライトもあれば衝突しない');
+  ok(run('siren').crashed, 'サイレンを切ると交差点で衝突');
+  ok(run('lights').crashed, 'ライトを消すと交差点で衝突');
+}
+
 console.log(fail === 0 ? '\n全 ' + total + ' 項目 OK' : '\n失敗 ' + fail + ' / ' + total); process.exit(fail ? 1 : 0);
 
 // 開始演出：サイレンを押さなくても先へ進む／押すと追いつきへ
