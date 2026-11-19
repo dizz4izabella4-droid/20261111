@@ -33,7 +33,9 @@ svg#sv{position:absolute;left:6px;top:6px;width:calc(100% - 12px);height:calc(10
 #dots i.done{background:#b3261e;border-color:#6e140f}
 #dots i.cur{outline:2px solid #333;outline-offset:1px}
 #title{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;
- background:radial-gradient(ellipse at 50% 40%,#3a2f27 0%,#120e0b 75%);color:#eadfce;cursor:pointer}
+ background:radial-gradient(ellipse at 50% 40%,#3a2f27 0%,#120e0b 75%) center/cover no-repeat;color:#eadfce;cursor:pointer}
+#title.hasbg{background-size:cover;background-position:62% 50%;background-repeat:no-repeat}
+#title.hasbg h1,#title.hasbg .sub,#title.hasbg p{text-shadow:0 2px 14px rgba(0,0,0,.85),0 0 3px rgba(0,0,0,.7)}
 #title h1{margin:0;font-size:54px;letter-spacing:.32em;font-weight:800;color:#f1e8da}
 #title h1 b{color:#c3271d}
 #title p{margin:18px 0 0;font-size:13px;letter-spacing:.3em;opacity:.75;animation:bl 1.6s infinite}
@@ -294,6 +296,7 @@ svg#sv{position:absolute;left:6px;top:6px;width:calc(100% - 12px);height:calc(10
 <script>
 const IMG=/*ASSETS*/{};
 const END_IMG='/*ENDIMG*/';
+const TITLE_IMG='/*TITLEIMG*/';
 const BGM='/*BGM*/';
 const NS='http://www.w3.org/2000/svg';
 const sv=document.getElementById('sv');
@@ -612,6 +615,7 @@ bS.onclick=()=>{ sndOn=!sndOn; try{localStorage.setItem('redline_snd',sndOn?'1':
 sndLabel();
 if(IMG.board){const w=document.getElementById('wb');w.style.backgroundImage=`linear-gradient(rgba(255,255,255,.18),rgba(255,255,255,.18)),url(${IMG.board})`;}
 if(IMG.desk) document.getElementById('desk').style.backgroundImage=`url(${IMG.desk})`;
+(function(){ if(TITLE_IMG.length>100){ const el=document.getElementById('title'); el.style.backgroundImage='linear-gradient(rgba(8,6,4,.38),rgba(8,6,4,.58)),url('+TITLE_IMG+')'; el.classList.add('hasbg'); } })();
 document.getElementById('title').addEventListener('click',function(){ initAudio(); this.style.display='none'; });
 let rt; window.addEventListener('resize',()=>{clearTimeout(rt); rt=setTimeout(build,120);});
 si=save.cur||0; build();
