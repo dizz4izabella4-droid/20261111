@@ -435,6 +435,30 @@ body.ph-intro #skip-btn,body.ph-sleep #skip-btn{display:block}
 .sheet-foot .btn-s{background:var(--lavS)}
 
 
+/* タイトル画面 */
+#ttl{z-index:90;background:radial-gradient(ellipse at 50% 40%,#2f355e 0%,#1f2440 55%,#12162b 100%);cursor:pointer;transition:opacity .8s ease}
+#ttl.out{opacity:0;pointer-events:none}
+.ttl-box{display:flex;flex-direction:column;align-items:center;gap:18px;padding:0 20px;color:var(--parch,#f8f2e2)}
+.ttl-stage{display:grid;place-items:center}
+.ttl-stage>*{grid-area:1/1}
+.ttl-witch{position:relative;font-size:clamp(40px,12vw,64px);font-weight:900;letter-spacing:.06em;opacity:0;transition:opacity 1s ease}
+.ttl-witch svg{position:absolute;left:-6%;top:-6%;width:112%;height:112%;overflow:visible;pointer-events:none}
+.ttl-witch path{fill:none;stroke:#d9534f;stroke-width:5;stroke-linecap:round;vector-effect:non-scaling-stroke;stroke-dasharray:110;stroke-dashoffset:110}
+.ttl-main{margin:0;font-size:clamp(34px,10.5vw,58px);font-weight:900;letter-spacing:.06em;opacity:0;transform:scale(.96);transition:opacity 1.2s ease,transform 1.6s ease;text-shadow:0 2px 0 rgba(0,0,0,.3)}
+.ttl-main b{color:var(--gold,#d4b25e)}
+.ttl-sub{margin:0;font-size:clamp(15px,4.4vw,20px);font-weight:700;letter-spacing:.18em;color:rgba(248,242,226,.82);opacity:0;transition:opacity 1.4s ease}
+.ttl-tap{margin:18px 0 0;font-size:13px;font-weight:700;letter-spacing:.2em;color:rgba(248,242,226,.6);opacity:0;transition:opacity .8s ease}
+#ttl.s1 .ttl-witch{opacity:1}
+#ttl.s2 .ttl-witch path{stroke-dashoffset:0;transition:stroke-dashoffset .35s ease}
+#ttl.s2 .ttl-witch path+path{transition-delay:.3s}
+#ttl.s3 .ttl-witch{opacity:0;transition:opacity .7s ease}
+#ttl.s3 .ttl-main{opacity:1;transform:none}
+#ttl.s4 .ttl-sub{opacity:1}
+#ttl.s5 .ttl-tap{opacity:1;animation:ttlBlink 2.2s ease-in-out infinite}
+@keyframes ttlBlink{0%,100%{opacity:.85}50%{opacity:.25}}
+#ttl.fast *{transition-duration:.01s!important;transition-delay:0s!important}
+@media (prefers-reduced-motion:reduce){#ttl *{transition-duration:.01s!important}}
+
 /* ===================== UI v2（2026-11-19）：森の えほん ふう ===================== */
 /* 森の絵と エルフ（紺・金の ローブ）に あわせる。紺＝わく、金＝ふち、ようひし色＝パネル。文字は 標準の 日本語ゴシックの まま */
 :root{
@@ -912,6 +936,17 @@ header{min-width:0}
   </section>
 </div>
 
+<!-- タイトル画面：Witch → ばつ → WHERE WHICH → サブタイトル -->
+<div id="ttl" class="ov" role="button" tabindex="0" aria-label="タイトル。タップではじめる">
+  <div class="ttl-box">
+    <div class="ttl-stage">
+      <div class="ttl-witch"><span>Witch</span><svg viewBox="0 0 100 50" preserveAspectRatio="none" aria-hidden="true"><path d="M4 4 L96 46"/><path d="M96 4 L4 46"/></svg></div>
+      <h1 class="ttl-main">WHERE <b>WHICH</b></h1>
+    </div>
+    <p class="ttl-sub">〜どこ い◯〜</p>
+    <p class="ttl-tap">タップではじめる</p>
+  </div>
+</div>
 <!-- はじまり -->
 <div id="setup" class="ov hidden">
   <div class="setup-card" id="setup-step2">
@@ -5425,12 +5460,38 @@ header{min-width:0}
         startIdleLoop();
         bindStartEvents();
         loadPhase();
-        startPhaseFlow();
+        showTitle(afterTitle);
+      }
 
+      function afterTitle() {
+        startPhaseFlow();
         if (state.phase === 'talk') ensureSeeds();
         if (state.phase === 'talk') speakGreeting();
         scheduleArtChecks();
         if (state.phase === 'talk' && Math.random() < 0.3) setTimeout(showArt, 14000);
+      }
+
+      // タイトル画面：Witch → ばつ → WHERE WHICH → サブタイトル。タップで早送り、そろったあとのタップで はじまる
+      function showTitle(done) {
+        const el = document.getElementById('ttl');
+        if (!el) { done(); return; }
+        const steps = [['s1', 500], ['s2', 2000], ['s3', 3000], ['s4', 5000], ['s5', 6500]];
+        const timers = steps.map((st) => setTimeout(() => el.classList.add(st[0]), st[1]));
+        let finished = false;
+        function finish() { finished = true; el.classList.add('fast', 's1', 's2', 's3', 's4', 's5'); }
+        if (matchMedia('(prefers-reduced-motion: reduce)').matches) { timers.forEach(clearTimeout); finish(); }
+        timers.push(setTimeout(() => { finished = true; }, 7300));
+        function go() {
+          if (!finished) { timers.forEach(clearTimeout); finish(); return; }
+          el.removeEventListener('click', go);
+          document.removeEventListener('keydown', onKey);
+          el.classList.add('out');
+          setTimeout(() => { el.classList.add('hidden'); }, 850);
+          done();
+        }
+        function onKey(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } }
+        el.addEventListener('click', go);
+        document.addEventListener('keydown', onKey);
       }
 
       window.addEventListener('DOMContentLoaded', initApp);
