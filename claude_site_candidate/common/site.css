@@ -114,9 +114,6 @@ mark{background:#fff0a8;color:inherit;border-radius:2px}
 }
 
 /* ---- 姉妹サイト（あそびば） ---- */
-.sister-top{display:flex;align-items:center;gap:7px;min-height:44px;padding:0 12px;text-decoration:none;font-size:13px;font-weight:700;color:#8a5a00;background:#fff6dd;border-radius:999px;white-space:nowrap}
-.sister-top span{font-size:10px;font-weight:600;letter-spacing:.08em;color:#a77a1e}
-.sister-top:hover{background:#ffeebb}
 .sister{display:flex;align-items:center;gap:16px;margin:26px 0 0;padding:18px 18px;border:2px solid #f0d68a;border-radius:var(--radius);background:linear-gradient(135deg,#fffaf0,#fff2cc);text-decoration:none;transition:box-shadow .15s,transform .15s}
 .sister:hover{box-shadow:0 6px 18px rgba(160,110,0,.16)}
 .sister:active{transform:scale(.99)}
@@ -127,6 +124,11 @@ mark{background:#fff0a8;color:inherit;border-radius:2px}
 .sister-go{flex:none;font-size:24px;color:#a77a1e}
 @media(max-width:560px){
   .site-in{position:relative}
-  .sister-top{width:100%;justify-content:center;margin:6px 0 8px;min-height:40px}
   .sister{padding:15px 14px;gap:13px}
 }
+
+/* 右端のタブ「あそびば」（姉妹サイトへ。別のサイトで開く） */
+.tabs a.ext{font:600 12px/1 var(--jp);letter-spacing:.08em;color:#8a5a00;margin-left:6px;padding-left:10px;padding-right:10px;border-bottom-color:#e9a825;background:#fff6dd;border-radius:8px 8px 0 0}
+.tabs a.ext:hover{color:#5c3b00;background:#ffeebb}
+.tabs a.ext span[aria-hidden]{font-size:11px;margin-left:2px}
+@media(max-width:560px){.tabs a.ext{margin-left:2px;padding-left:4px;padding-right:4px;letter-spacing:.02em}}
