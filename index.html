@@ -48,8 +48,8 @@
       </div>
       <label class="sort"><span class="lbl">並び順</span>
         <select id="sort">
+          <option value="new">新しい順</option>
           <option value="upd">更新が新しい順</option>
-          <option value="new">公開が新しい順</option>
           <option value="old">古い順</option>
           <option value="name">名前順</option>
         </select>
@@ -86,7 +86,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var grid = $('grid'), q = $('q'), sortSel = $('sort');
   var DEFAULT_CAT = 'game'; // 最初に見せるのはゲームだけ
-  var state = { cat: DEFAULT_CAT, dev: '', q: '', sort: 'upd' };
+  var state = { cat: DEFAULT_CAT, dev: '', q: '', sort: 'new' };
   var all = [], repo = '';
 
   // URL（?cat=game&q=…&sort=…）から状態を戻す。旧「部屋」からの転送にも使う
@@ -190,7 +190,7 @@
     if (state.cat !== DEFAULT_CAT) u.set('cat', state.cat || 'all');
     if (state.dev) u.set('dev', state.dev);
     if (state.q) u.set('q', state.q);
-    if (sp.get('sort') || state.sort !== 'upd') u.set('sort', state.sort);
+    if (sp.get('sort') || state.sort !== 'new') u.set('sort', state.sort);
     var qs = u.toString();
     try { history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '')); } catch (e) {}
   }
