@@ -347,7 +347,7 @@ const CONFIG = Object.freeze({
   RECOVER: 1.2, RECOVER_GAP: 24, MISS: 0.8, MISS_GAP: 20, FINISH: 0.6, SLOWMO: 0.4,
   WOBBLE: 0.4, SWIPE_LOCK: 0.6, LOCK: 0.4,
   RESCUE: { misses: 2, idle: 25, widen: 3, auto: 150 },
-  PULLOVER: 4.0, EVENT: 6.0, ARREST: 3.0, CMD_PREVIEW_AUTO: 20, YOURTURN: 7.0, MORE_EXTRA: 2.0, MORE_MAX: 2, DEAD: 4.0, DEAD_SKIP: 2.0,
+  PULLOVER: 4.0, EVENT: 6.0, ARREST: 3.0, CMD_PREVIEW_AUTO: 600, YOURTURN: 7.0, MORE_EXTRA: 2.0, MORE_MAX: 2, DEAD: 4.0, DEAD_SKIP: 2.0,
   SNAKE: { a1: 1.2, p1: 3.1, a2: 0.35, p2: 1.3 }, LAG: 0.6,
   RADIO: [],                                                         // 追跡中の無線は無し（無線はゲーム開始前の指令だけ）
   BRIEF: 'Dispatch to Unit 12. Suspect vehicle fleeing northbound. Pursue and stop him.',
@@ -400,10 +400,10 @@ const CORE = (function () {
     return pts[pts.length - 1][1];
   }
   const PHASE_OF = { TITLE: 'TITLE', OPEN_PARK: 'CHASE', OPEN_GO: 'CHASE', OPEN_SIREN: 'CHASE', OPEN_CATCH: 'CHASE', INTRO: 'CHASE', APPROACH: 'CHASE', WINDOW: 'CHASE', LUNGE: 'CHASE', HIT: 'CHASE', RECOVER: 'CHASE', MISS: 'CHASE', FINISH: 'CHASE',
-    PULLOVER: 'PULLOVER', EVENT: 'EVENT', PREVIEW: 'CMD', SPEAK: 'CMD', YOURTURN: 'CMD', REACT: 'CMD', ARREST: 'ARREST', END: 'END', DEAD: 'DEAD' };
-  const MAX_DWELL = { OPEN_PARK: 6, OPEN_GO: 6, OPEN_SIREN: 30, OPEN_CATCH: 20, INTRO: 6, APPROACH: 8, WINDOW: 200, LUNGE: 1, HIT: 1, RECOVER: 3, MISS: 2, FINISH: 2, PULLOVER: 6, EVENT: 10, SPEAK: 6, YOURTURN: 14, REACT: 6, ARREST: 5, DEAD: 8 };
+    PULLOVER: 'PULLOVER', EVENT: 'EVENT', COACH: 'CMD', PREVIEW: 'CMD', SPEAK: 'CMD', YOURTURN: 'CMD', REACT: 'CMD', ARREST: 'ARREST', END: 'END', DEAD: 'DEAD' };
+  const MAX_DWELL = { OPEN_PARK: 6, OPEN_GO: 6, OPEN_SIREN: 30, OPEN_CATCH: 20, INTRO: 6, APPROACH: 8, WINDOW: 200, LUNGE: 1, HIT: 1, RECOVER: 3, MISS: 2, FINISH: 2, PULLOVER: 6, EVENT: 10, COACH: 16, SPEAK: 20, YOURTURN: 14, REACT: 6, ARREST: 5, DEAD: 8 };
   const FORCE_NEXT = { OPEN_PARK: 'OPEN_GO', OPEN_GO: 'OPEN_SIREN', OPEN_SIREN: 'OPEN_CATCH', OPEN_CATCH: 'INTRO', INTRO: 'APPROACH', APPROACH: 'WINDOW', WINDOW: 'MISS', LUNGE: 'HIT', HIT: 'RECOVER', RECOVER: 'APPROACH', MISS: 'APPROACH', FINISH: 'PULLOVER',
-    PULLOVER: 'EVENT', EVENT: 'PREVIEW', SPEAK: 'YOURTURN', YOURTURN: 'REACT', REACT: 'PREVIEW', ARREST: 'END', DEAD: 'TITLE' };
+    PULLOVER: 'EVENT', EVENT: 'COACH', COACH: 'PREVIEW', SPEAK: 'YOURTURN', YOURTURN: 'REACT', REACT: 'PREVIEW', ARREST: 'END', DEAD: 'TITLE' };
 
   function create(C, opt) {
     opt = opt || {};
@@ -415,7 +415,7 @@ const CORE = (function () {
     let ev = [], n = 0, simT = 0, acc = 0, wentAt = -1, lock = 0, swipeLock = 0, wobble = 0;
     let gapE = 0, sxE = 0, pxE = 0, tiltE = 0, beatSide = C.SIDES[0], afterMiss = false, buffered = false, radioIdx = 0, pxF = 0, speakAuto = false, stuckSent = false, lungeMiss = false;
     let flags = {}, sirenIdx = 0, ytLimit = 5, ytMore = 0;
-    let pend = { swipe: null, tap: false, button: null, voice: false, more: false };
+    let pend = { swipe: null, tap: false, button: null, voice: false, more: false, said: false };
 
     const emit = (type, o) => { ev.push(Object.assign({ type: type, at: n * C.STEP }, o || {})); };
     const snake = ct => C.SNAKE.a1 * Math.sin(6.2832 * ct / C.SNAKE.p1) + C.SNAKE.a2 * Math.sin(6.2832 * ct / C.SNAKE.p2 + phi);
@@ -574,7 +574,17 @@ const CORE = (function () {
           S.fade = 1 - ss(S.t / 0.5);
           if (S.t >= 1.5 && !flags.spot) { flags.spot = true; emit('spot'); }
           if (S.t >= 3.0 && !flags.door) { flags.door = true; emit('door'); }
-          if (((i.tap || i.button === 'next') && !locked) || S.t >= C.EVENT) go('PREVIEW');
+          if (((i.tap || i.button === 'next') && !locked) || S.t >= C.EVENT) go('COACH');
+        }
+      },
+      COACH: {                                               // 停車後、相棒が「Good job, kid.」（親指を立てる）→「Repeat after me.」（被疑者のほうを向く）。声が終わったのを確認して次へ
+        enter() { S.cmd.step = 'coach'; S.coachN = 0; S.coachT = 0; S.coachSaid = false; S.coachGo = false; emit('coach', { n: 0 }); },
+        upd(h, i, locked) {
+          S.coachT += h; if (i.said) S.coachSaid = true;
+          if (!S.coachGo) { if ((S.coachSaid && S.coachT >= 0.4) || S.coachT >= 5) { S.coachGo = true; S.coachT = 0; } }
+          else if (S.coachT >= (S.coachN === 0 ? 0.5 : 0.7)) {
+            if (S.coachN === 0) { S.coachN = 1; S.coachT = 0; S.coachSaid = false; S.coachGo = false; emit('coach', { n: 1 }); } else go('PREVIEW');
+          }
         }
       },
       PREVIEW: {
@@ -585,8 +595,11 @@ const CORE = (function () {
         }
       },
       SPEAK: {
-        enter() { const t = C.CMDS[S.cmd.i].text; S.dur = t.length * 0.07 + 0.6; S.cmd.step = 'speak'; emit('cmd', { i: S.cmd.i, step: 'speak', text: t, auto: speakAuto, dur: S.dur }); },
-        upd(h) { if (S.t >= S.dur) go('YOURTURN'); }
+        enter() { const t = C.CMDS[S.cmd.i].text; S.dur = t.length * 0.07 + 0.6; S.cmd.step = 'speak'; S.saidFlag = false; S.saidT = 0; emit('cmd', { i: S.cmd.i, step: 'speak', text: t, auto: speakAuto, dur: S.dur }); },
+        upd(h, i) {                                          // お手本の声が実際に終わった（said）のを確認し、少し間をおいてから自分の番へ
+          if (i.said) S.saidFlag = true; if (S.saidFlag) S.saidT += h;
+          if ((S.saidFlag && S.saidT >= 0.8 && S.t >= 0.5) || S.t >= S.dur + 8) go('YOURTURN');
+        }
       },
       YOURTURN: {
         enter() { ytLimit = C.YOURTURN; ytMore = 0; S.ytLimit = ytLimit; S.cmd.step = 'yourturn'; emit('cmd', { i: S.cmd.i, step: 'yourturn' });  },
@@ -658,12 +671,13 @@ const CORE = (function () {
         if (input.button) pend.button = input.button;
         if (input.voice) pend.voice = true;
         if (input.more) pend.more = true;
+        if (input.said) pend.said = true;
       }
       acc += Math.min(Math.max(dt, 0), C.DT_MAX);
       ev = [];
       while (acc >= C.STEP - 1e-9) {
         acc -= C.STEP;
-        const inp = pend; pend = { swipe: null, tap: false, button: null, voice: false, more: false };
+        const inp = pend; pend = { swipe: null, tap: false, button: null, voice: false, more: false, said: false };
         tick(C.STEP, inp);
       }
       const r = ev; ev = []; return r;
@@ -676,6 +690,7 @@ const CORE = (function () {
       else if (s.sub === 'OPEN_SIREN' && s.t >= 0.6) i.button = 'siren';
       else if (s.sub === 'WINDOW' && s.window && s.window.t >= (o.delay || 0.3) && !o.noSwipe && Math.abs(s.sx - s.px) <= 0.25) i.tap = true;   // 真正面に来たらタップ
       else if (s.sub === 'PREVIEW') i.tap = true;
+      else if (s.sub === 'COACH' || s.sub === 'SPEAK') i.said = true;
       else if (s.sub === 'YOURTURN') i.voice = !o.noVoice;
       else if (s.sub === 'EVENT' && o.skip) i.tap = true;
       else if (s.sub === 'END' && o.replay) i.button = 'replay';
@@ -833,6 +848,7 @@ const CORE = (function () {
       if (a && typeof a === 'object') a = a.stage || a.i;
       if (!this.on()) return;
       switch (name) {
+        case 'turn': this.beep(880, 0.16, 'triangle', 0.13); setTimeout(() => this.beep(1320, 0.34, 'triangle', 0.13), 130); break;
         case 'boost': this.noise(0.9, 500, 3400, 'bandpass', 0.13); this.beep(95, 0.8, 'sawtooth', 0.07, 420); this.noise(0.35, 2400, 600, 'highpass', 0.05, 0.1); break;
         case 'pass': this.noise(1.5, 220, 520, 'lowpass', 0.07); this.beep(62, 1.4, 'sawtooth', 0.03, 90); break;
         case 'horn': this.beep(430, 0.4, 'sawtooth', 0.07); this.beep(340, 0.4, 'sawtooth', 0.06); break;
@@ -985,12 +1001,20 @@ const CORE = (function () {
     }
   };
   let SAY = { text: '', t0: -9, dur: 0 }, PR = null;
+  // 声で言って、実際に声が終わった（または終わったと確認できた）ら、コアに said を渡す。他の声の終了通知は無視する
+  let sayTok = 0;
+  function sayLine(text, style) {
+    const tok = ++sayTok, t0 = performance.now(); let fired = false;
+    const fin = () => { if (fired || tok !== sayTok) return; fired = true; SAY = { text: '', t0: -9, dur: 0 }; pend.said = true; };
+    if (VOICE.ok && VOICE.on) VOICE.speak(text, style, fin);
+    else setTimeout(fin, text.length * 70 + 700);      // 音声なし設定：文字を読める時間だけ待つ
+  }
   function reyesSay(text, dur, style) { SAY = { text: text, t0: tNow, dur: dur }; VOICE.speak(text, style); }
 
 
   /* ================= INPUT ================= */
   const hit = $('hit');
-  let pend = { swipe: null, tap: false, button: null, voice: false, more: false }, trk = null, paused = false;
+  let pend = { swipe: null, tap: false, button: null, voice: false, more: false, said: false }, trk = null, paused = false;
   hit.addEventListener('pointerdown', e => {
     if (trk || paused) return;
     trk = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), done: false };
@@ -1012,7 +1036,7 @@ const CORE = (function () {
   function pickCmds() { CONFIG.CMD_ALTS.forEach((alts, i) => { const a = alts[Math.floor(Math.random() * alts.length)]; CONFIG.CMDS[i].text = a[0]; CONFIG.CMDS_JA[i] = a[1]; }); }
   pickCmds();
   function speakIfPreview() {
-    if (S.phase === 'CMD' && S.sub === 'PREVIEW' && S.lock <= 0) VOICE.speak(CONFIG.CMDS[S.cmd.i].text);   // iOS：操作の中でしか話せない
+    if (S.phase === 'CMD' && S.sub === 'PREVIEW' && S.lock <= 0) sayLine(CONFIG.CMDS[S.cmd.i].text);   // iOS：操作の中でしか話せない
   }
   function onTap() { if (paused) return; wake(); speakIfPreview(); pend.tap = true; }
   function beginGame() { pend.button = 'start'; }
@@ -1078,7 +1102,7 @@ const CORE = (function () {
     };
     const items = [['SCENES'], ['Emergency radio screen', () => { dp.classList.remove('on'); VOICE.cancel(); ALERT = true; alertStep = 0; const A = $('alert'); A.classList.remove('hide', 'mic'); $('alertt1').textContent = '緊急無線'; $('alertt2').textContent = '強盗事件発生中'; $('alertt2').style.visibility = 'hidden'; $('alerttx').textContent = ''; $('alerttx').style.visibility = 'hidden'; $('alertt4').textContent = 'タップして受信'; $('alertt4').style.display = ''; $('alertgo').style.display = 'none'; }],
       ['Opening (parked)', () => jump('OPEN_PARK')], ['Opening: siren!', () => jump('OPEN_SIREN')], ['Chase (start)', () => jump('INTRO')], ['Hit window', () => jump('WINDOW')],
-      ['Cmd 1 listen', () => jump('PREVIEW0')], ['Cmd 2 listen', () => jump('PREVIEW1')], ['Cmd 3 listen', () => jump('PREVIEW2')], ['Cmd 4 listen', () => jump('PREVIEW3')],
+      ['Coach (Good job, kid)', () => jump('COACH')], ['Cmd 1 listen', () => jump('PREVIEW0')], ['Cmd 2 listen', () => jump('PREVIEW1')], ['Cmd 3 listen', () => jump('PREVIEW2')], ['Cmd 4 listen', () => jump('PREVIEW3')],
       ['SAY IT (cmd 1)', () => jump('YOURTURN0')], ['SAY IT (cmd 4)', () => jump('YOURTURN3')], ['Praise (cmd 1)', () => jump('REACT0')], ['Dead (shot)', () => jump('DEAD')], ['Arrest', () => jump('ARREST')],
       ['VOICE TEST'], ['Radio (dispatch JA)', () => { AUDIO.init(); VOICE.speak(CONFIG.ALERT_RADIO_JA, 'quietja'); }], ['Model EN (Police!...)', () => { AUDIO.init(); VOICE.speak(CONFIG.CMDS[0].text); }],
       ['Praise EN', () => { AUDIO.init(); VOICE.speak('Perfect! That\'s how it\'s done!', 'praise'); }], ['REYES guide EN', () => { AUDIO.init(); VOICE.speak(CONFIG.JP.INTRO.en); }],
@@ -1139,7 +1163,7 @@ const CORE = (function () {
     setUI('end', ph === 'END', v => el.end.classList.toggle('hide', !v));
     setUI('cmdp', ph === 'CMD', v => el.cmdp.classList.toggle('hide', !v));
     setUI('vmicbtn', S.sub === 'YOURTURN' && !AUTO, v => { $('vmicbtn').classList.toggle('hide', !v); if (!v) { MICV.press = false; $('vmicbtn').classList.remove('down'); } });
-    setUI('cmdbtn', S.sub !== 'YOURTURN', v => { $('cmdbtn').style.visibility = v ? 'visible' : 'hidden'; });
+    setUI('cmdbtn', S.sub === 'PREVIEW', v => { $('cmdbtn').style.visibility = v ? 'visible' : 'hidden'; });
     setUI('hud', ph !== 'TITLE' && ph !== 'DEAD', v => { el.unit.classList.toggle('hide', !v); el.gaugeBox.classList.toggle('hide', !v); });
     setUI('btns', ph !== 'TITLE' && ph !== 'END' && ph !== 'CMD' && ph !== 'DEAD', v => { el.siren.classList.toggle('hide', !v); el.lights.classList.toggle('hide', !v); });
     setUI('boost', ph === 'CHASE' && (S.sub === 'INTRO' || S.sub === 'APPROACH' || S.sub === 'WINDOW' || S.sub === 'RECOVER'), v => $('boost').classList.toggle('hide', !v));
@@ -1149,9 +1173,9 @@ const CORE = (function () {
     setUI('sirenm', S.siren, v => { el.sirenm.textContent = v; });
     setUI('dmg', S.damage, v => { for (let i = 0; i < 3; i++) el.gauge[i].classList.toggle('on', i < v); });
     if (ph === 'CMD') {
-      const t = CONFIG.CMDS[Math.min(S.cmd.i, CONFIG.CMDS.length - 1)].text;
+      const t = (S.sub === 'COACH' || S.sub === 'PREVIEW') ? '' : CONFIG.CMDS[Math.min(S.cmd.i, CONFIG.CMDS.length - 1)].text;      // お手本のセリフは LISTEN を押して声が出るまで見せない
       setUI('cmdtext', t, v => { el.cmdtext.textContent = v; });
-      const hint = S.sub === 'PREVIEW' ? 'PRESS LISTEN: REYES SHOWS HOW' : S.sub === 'SPEAK' ? 'LISTEN...' : S.sub === 'YOURTURN' ? 'マイクを押しながら、英語で言え！' : '';
+      const hint = S.sub === 'COACH' ? (S.coachN === 0 ? 'よくやった、ボウズ。' : 'リピート・アフター・ミー（私のあとに続けて言え）') : S.sub === 'PREVIEW' ? 'PRESS LISTEN: REYES SHOWS HOW' : S.sub === 'SPEAK' ? 'LISTEN...' : S.sub === 'YOURTURN' ? 'マイクを押しながら、英語で言え！' : '';
       setUI('cmdhint', hint, v => { el.cmdhint.textContent = v; });
     }
     // 日本語のセリフ（相棒 REYES）：場面が変わるたびに出す
@@ -1184,7 +1208,11 @@ const CORE = (function () {
         case 'hit': AUDIO.sfx('hit', e); FX.hit(e); GLASS.hit(e.stage, e.side, true); break;
         case 'radio': el.radio.textContent = e.text; el.radio.classList.add('on'); radioT = 3; AUDIO.sfx('radio'); break;
         case 'sub': if (e.sub === 'EVENT') pickCmds(); if (e.sub === 'OPEN_PARK') setTimeout(() => { if (S.sub === 'OPEN_PARK') AUDIO.sfx('pass'); }, 1100); break;
-        case 'cmd': if (e.step === 'speak') { SAY = { text: e.text, t0: tNow, dur: e.dur || 2.4 }; showSub(e.text, CONFIG.CMDS_JA[e.i], 3.4); } break;
+        case 'cmd':
+          if (e.step === 'speak') { SAY = { text: e.text, t0: tNow, dur: e.dur || 2.4 }; showSub(e.text, CONFIG.CMDS_JA[e.i], 3.4); if (e.auto) { const tk = ++sayTok; setTimeout(() => { if (tk === sayTok) { pend.said = true; SAY = { text: '', t0: -9, dur: 0 }; } }, (e.dur || 2.4) * 1000); } }
+          if (e.step === 'yourturn') AUDIO.sfx('turn');          // 「自分の番」の合図
+          break;
+        case 'coach': { const L = e.n === 0 ? 'Good job, kid.' : 'Repeat after me.'; SAY = { text: L, t0: tNow, dur: 3 }; sayLine(L); SAY = { text: L, t0: tNow, dur: 3 }; break; }
         case 'more': SAY = { text: CONFIG.ONE_MORE, t0: tNow, dur: 1.8 }; showSub(CONFIG.ONE_MORE, CONFIG.ONE_MORE_JA, 2.2); AUDIO.sfx('more'); break;          // マイクを閉じないよう文字だけ
         case 'react': { const pr = CONFIG.CMDS[e.i].praise; PR = { t0: tNow, i: e.i }; reyesSay(pr.say, 1.6, 'praise'); showSub(pr.say, CONFIG.PRAISE_JA[e.i], 2.6); FX.praise(); AUDIO.sfx('praise', e.i); if (e.sfx && e.sfx !== 'none' && e.sfx !== 'door' && e.sfx !== 'cuffs') AUDIO.sfx(e.sfx); break; }
         case 'draw': AUDIO.sfx('draw'); VOICE.cancel(); SAY = { text: '', t0: -9, dur: 0 }; PR = null; break;
@@ -1609,6 +1637,8 @@ const CORE = (function () {
     praise() {
       const c = praisePos(), cx = c[0], cy = c[1], cols = ['#ffe14a', '#ff5a50', '#6cff9a', '#6ab0ff', '#ffffff', '#ff9a3a'];
       this.flash = Math.max(this.flash, 0.35); this.shake = Math.max(this.shake, 7);
+      const lv = (S.cmd ? S.cmd.i : 0) + 1;      // 紙吹雪：画面の上から全体にひらひら降る（段階が進むほど多い）
+      for (let i = 0; i < 90 + lv * 40; i++) this.parts.push({ k: 'cf', x: rr(0, V.W), y: rr(-120, -4), vx: 0, vy: rr(70, 170), t: 0, life: rr(2.4, 3.6), sz: rr(3, 6.5), rot: rr(0, 6), vr: rr(-12, 12), col: cols[(Math.random() * cols.length) | 0], sw: rr(25, 70), fr: rr(3, 7), ph: rr(0, 6.3) });
       for (let i = 0; i < 80; i++) { const a = -Math.PI / 2 + rr(-1.2, 1.2), sp = rr(180, 520); this.parts.push({ k: 'c', x: cx + rr(-20, 20), y: cy + rr(-10, 20), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 60, t: 0, life: rr(1.1, 1.9), sz: rr(3, 6.5), rot: rr(0, 6), vr: rr(-14, 14), col: cols[(Math.random() * cols.length) | 0] }); }
     },
     glint() { if (probe.cuffs) this.glints.push({ x: probe.cuffs.x, y: probe.cuffs.y, t: 0 }); },
@@ -1617,7 +1647,7 @@ const CORE = (function () {
       if (this.spin) { this.spin.t += dt; if (this.spin.t >= this.spin.dur) this.spin = null; }
       this.flash = Math.max(0, this.flash - dt * 2.4); this.boost = Math.max(0, this.boost - dt * 1.5);
       for (const p of this.parts) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.k === 's' || p.k === 'd' || p.k === 'c') p.vy += 520 * dt; if (p.k === 'c') { p.rot += p.vr * dt; p.vx *= 0.99; } if (p.k === 'g') { p.rot += p.vr * dt; if (p.zoom <= 1.7) p.vy += 700 * dt; } if (p.k === 'd') p.rot += p.vr * dt; if (p.k === 'u') { p.vx *= 0.98; p.sz += dt * 10; } }
-      for (const p of this.parts) { if (p.k === 'sp') p.vy += 650 * dt; else if (p.k === 'sm') { p.sz += p.gr * dt; p.vx *= Math.exp(-dt * 1.2); } }
+      for (const p of this.parts) { if (p.k === 'sp') p.vy += 650 * dt; else if (p.k === 'sm') { p.sz += p.gr * dt; p.vx *= Math.exp(-dt * 1.2); } else if (p.k === 'cf') { p.vx = Math.sin(p.t * p.fr + p.ph) * p.sw; p.vy = Math.min(p.vy + 110 * dt, 200); p.rot += p.vr * dt; } }
       if (this.em) {
         const e = this.em, sbx = probe.suspect; e.t += dt;
         if (e.t >= e.dur) this.em = null;
@@ -1639,7 +1669,7 @@ const CORE = (function () {
       for (const p of this.parts) {
         const a = 1 - p.t / p.life;
         if (p.k === 's') { ctx.strokeStyle = 'rgba(255,' + (150 + 100 * a | 0) + ',60,' + a.toFixed(2) + ')'; ctx.lineWidth = p.sz; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * 0.04, p.y - p.vy * 0.04); ctx.stroke(); }
-        else if (p.k === 'c') { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.scale(1, Math.abs(Math.cos(p.rot * 1.7)) * 0.8 + 0.2); ctx.globalAlpha = Math.min(1, a * 1.6); ctx.fillStyle = p.col; ctx.fillRect(-p.sz, -p.sz / 2, p.sz * 2, p.sz); ctx.restore(); }
+        else if (p.k === 'c' || p.k === 'cf') { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.scale(1, Math.abs(Math.cos(p.rot * 1.7)) * 0.8 + 0.2); ctx.globalAlpha = Math.min(1, a * 1.6); ctx.fillStyle = p.col; ctx.fillRect(-p.sz, -p.sz / 2, p.sz * 2, p.sz); ctx.restore(); }
         else if (p.k === 'g') {
           const lf = p.t / p.life, fade = lf > 0.7 ? (1 - lf) / 0.3 : 1, sc = 1 + (p.zoom - 1) * Math.pow(lf, 1.4);
           ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.scale(sc, sc); ctx.beginPath(); ctx.moveTo(p.verts[0], p.verts[1]); for (let i = 2; i < p.verts.length; i += 2) ctx.lineTo(p.verts[i], p.verts[i + 1]); ctx.closePath();
@@ -1689,8 +1719,17 @@ const CORE = (function () {
   function star(cx, cy, r, rot) { ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = rot + i * Math.PI / 5 - Math.PI / 2, rad = i % 2 ? r * 0.45 : r; ctx[i ? 'lineTo' : 'moveTo'](cx + Math.cos(a) * rad, cy + Math.sin(a) * rad); } ctx.closePath(); }
 
   // YOURTURN：「SAY IT!」をしつこく出す（脈打つ本体＋広がる残像＋残り時間の棒＋マイクの声ゲージ）
+  function drawListen(W, H, land) {         // お手本の声が流れている間：LISTEN（音の波）。終わると「YOUR TURN!」に切り替わる
+    const cx = land ? W * 0.3 : W / 2, cy = land ? H * 0.34 : H * 0.26, base = land ? 38 : 44, mono = 'ui-monospace,Menlo,monospace', word = 'LISTEN';
+    ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+    for (let i = 0; i < 3; i++) { const ph = (tNow * 1.4 + i / 3) % 1; ctx.globalAlpha = (1 - ph) * 0.6; ctx.strokeStyle = '#6ab0ff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy + base * 1.25, 14 + ph * 46, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke(); }
+    ctx.globalAlpha = 1; ctx.font = '800 ' + base + 'px ' + mono; ctx.shadowColor = '#3a7aff'; ctx.shadowBlur = 16; ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.strokeText(word, cx, cy);
+    ctx.fillStyle = '#bcd8ff'; ctx.fillText(word, cx, cy); ctx.shadowBlur = 0;
+    ctx.font = '700 13px ' + mono; ctx.fillStyle = '#fff'; ctx.fillText('REYES SAYS IT FIRST', cx, cy + base * 0.85);
+    ctx.restore();
+  }
   function drawSayIt(W, H, land) {
-    const cx = land ? W * 0.3 : W / 2, cy = land ? H * 0.34 : H * 0.26, base = land ? 40 : 46, word = 'SAY IT!', mono = 'ui-monospace,Menlo,monospace';
+    const cx = land ? W * 0.3 : W / 2, cy = land ? H * 0.34 : H * 0.26, base = land ? 40 : 46, word = S.t < 1.2 ? 'YOUR TURN!' : 'SAY IT!', mono = 'ui-monospace,Menlo,monospace';
     const lim = S.ytLimit || CONFIG.YOURTURN, left = clamp01(1 - S.t / lim), micOff = false;
     if (left < 0.4) { const pa = (0.4 - left) / 0.4 * (0.25 + 0.2 * Math.sin(tNow * 18)), vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.8); vg.addColorStop(0, 'rgba(255,0,0,0)'); vg.addColorStop(1, 'rgba(255,0,0,' + Math.max(0, pa).toFixed(3) + ')'); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H); }
     ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
@@ -1716,14 +1755,14 @@ const CORE = (function () {
   function listening() { return S.sub === 'YOURTURN' && (MICV.gauge > 0.12 || (NOMIC && S.t > 1.0)); }
   function partnerLine() {
     if (SAY.text && tNow - SAY.t0 < SAY.dur) return SAY.text;
-    if (S.sub === 'PREVIEW') return S.cmd.i === 0 ? 'Ready, rookie? Watch me.' : 'Next one. Watch me.';
     if (S.sub === 'YOURTURN') return listening() ? (Math.floor(tNow * 2.2) % 2 ? 'Good!' : 'Good... good!') : 'Now you!';
     if (S.phase === 'ARREST') return 'Nice work, partner.';
     return '';
   }
   function drawPartner(W, H, land, flash) {
     const bw = 96, bh = 96, bx = 10, by = land ? H - bh - 12 : Math.round(H * 0.67) - bh - 10, cx = bx + bw / 2;
-    const line = partnerLine(), praise = !!(PR && tNow - PR.t0 < 1.6), talk = S.sub === 'SPEAK' || !!(SAY.text && tNow - SAY.t0 < SAY.dur);
+    const line = partnerLine(), praise0 = !!(PR && tNow - PR.t0 < 1.6), praise = praise0 || S.sub === 'COACH' && S.coachN === 0, talk = S.sub === 'SPEAK' || !!(SAY.text && tNow - SAY.t0 < SAY.dur);
+    const cn = S.sub === 'COACH' ? S.coachN : -1, thumb = cn === 0, profile = cn === 1 || S.sub === 'PREVIEW' || S.sub === 'SPEAK' || S.sub === 'YOURTURN', pk = praise || thumb;
     const aim = S.sub === 'YOURTURN', nodSp = listening() ? 9 : 4, bob = aim ? Math.sin(tNow * nodSp) * 2.6 : praise ? Math.abs(Math.sin(tNow * 12)) * -4 : talk ? Math.sin(tNow * 16) * 1.2 : Math.sin(tNow * 2) * 0.6, hy = by + bh * 0.43 + bob;
     ctx.save(); rrect(bx, by, bw, bh, 10); ctx.clip();
     const g = ctx.createLinearGradient(0, by, 0, by + bh); g.addColorStop(0, '#0e1424'); g.addColorStop(1, '#1c2a50'); ctx.fillStyle = g; ctx.fillRect(bx, by, bw, bh);
@@ -1732,6 +1771,22 @@ const CORE = (function () {
     ctx.fillStyle = '#243d7c'; ctx.beginPath(); ctx.moveTo(cx - 36, by + bh); ctx.quadraticCurveTo(cx - 36, by + bh * 0.7, cx - 15, by + bh * 0.64); ctx.lineTo(cx + 15, by + bh * 0.64); ctx.quadraticCurveTo(cx + 36, by + bh * 0.7, cx + 36, by + bh); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#e6c04a'; ctx.beginPath(); ctx.arc(cx - 17, by + bh * 0.8, 3.2, 0, 6.2832); ctx.fill();
     ctx.fillStyle = '#c99a74'; ctx.fillRect(cx - 6, hy + 12, 12, 12);
+    if (profile && !praise) {                                                      // 顔を横に（被疑者のほうを向く）。話す間は「うんうん」と頷く
+      const na = aim ? Math.sin(tNow * (listening() ? 10 : 5)) * 0.14 : Math.sin(tNow * 2) * 0.02, px0 = cx + 2, py0 = hy + 9;
+      ctx.save(); ctx.translate(px0, py0); ctx.rotate(na); ctx.translate(-px0, -py0);
+      ctx.fillStyle = '#dcae86'; ctx.beginPath(); ctx.ellipse(cx + 2, hy, 13, 18, 0, 0, 6.2832); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(cx + 13.5, hy - 2); ctx.lineTo(cx + 19.5, hy + 4); ctx.lineTo(cx + 13, hy + 5.5); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#c99a74'; ctx.beginPath(); ctx.ellipse(cx - 3, hy + 2, 3, 5, 0, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = '#10182e'; ctx.beginPath(); ctx.ellipse(cx + 1, hy - 9, 15, 11, 0, Math.PI, 0); ctx.fill(); ctx.fillRect(cx - 14, hy - 10, 28, 5); ctx.fillRect(cx + 8, hy - 11, 15, 4);
+      ctx.fillStyle = '#e6c04a'; ctx.fillRect(cx + 7, hy - 16, 5, 5);
+      ctx.fillStyle = '#1a1410'; ctx.strokeStyle = '#1a1410'; ctx.lineWidth = 1.6;
+      const bl2 = Math.floor(tNow * 1.3) % 4 === 0 && (tNow * 1.3) % 1 < 0.12; if (bl2) ctx.fillRect(cx + 7, hy - 1, 4, 1.5); else { ctx.beginPath(); ctx.arc(cx + 9, hy - 1, 1.9, 0, 6.2832); ctx.fill(); }
+      ctx.beginPath(); ctx.moveTo(cx + 5, hy - 4.5); ctx.lineTo(cx + 12, hy - 5.5); ctx.stroke();
+      if (talk) { ctx.fillStyle = '#3a1410'; ctx.beginPath(); ctx.ellipse(cx + 12, hy + 10, 3.4, 1.4 + 3.4 * Math.abs(Math.sin(tNow * 18)), 0, 0, 6.2832); ctx.fill(); }
+      else if (listening()) { ctx.strokeStyle = '#5a2a20'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(cx + 11, hy + 8, 4, 0.15 * Math.PI, 0.75 * Math.PI); ctx.stroke(); }
+      else { ctx.strokeStyle = '#5a2a20'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(cx + 8, hy + 10); ctx.lineTo(cx + 15, hy + 10); ctx.stroke(); }
+      ctx.restore();
+    } else {
     ctx.fillStyle = '#dcae86'; ctx.beginPath(); ctx.ellipse(cx, hy, 16, 18, 0, 0, 6.2832); ctx.fill();
     ctx.fillStyle = '#10182e'; ctx.beginPath(); ctx.ellipse(cx, hy - 9, 18, 11, 0, Math.PI, 0); ctx.fill(); ctx.fillRect(cx - 19, hy - 10, 38, 5);
     ctx.fillStyle = '#e6c04a'; ctx.fillRect(cx - 3, hy - 15, 6, 5);
@@ -1741,13 +1796,14 @@ const CORE = (function () {
     if (praise) { ctx.fillStyle = '#fff'; ctx.strokeStyle = '#5a2a20'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, hy + 7, 7, 0.1 * Math.PI, 0.9 * Math.PI); ctx.closePath(); ctx.fill(); ctx.stroke(); }
     else if (talk) { ctx.fillStyle = '#3a1410'; ctx.beginPath(); ctx.ellipse(cx, hy + 9, 4.5, 1.5 + 4 * Math.abs(Math.sin(tNow * 18)), 0, 0, 6.2832); ctx.fill(); }
     else { ctx.strokeStyle = '#5a2a20'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(cx - 4, hy + 9); ctx.lineTo(cx + 4, hy + 9); ctx.stroke(); }
+    }
     if (praise) { const ty = by + bh * 0.72 + bob; ctx.fillStyle = '#dcae86'; ctx.strokeStyle = '#6a4630'; ctx.lineWidth = 1; rrect(cx + 24, ty, 16, 13, 4); ctx.fill(); ctx.stroke(); rrect(cx + 27, ty - 10, 6, 12, 3); ctx.fill(); ctx.stroke(); }
     if (aim) {                                                          // 拳銃を構えて、聞き耳を立てる
       const ay = by + bh * 0.74; ctx.strokeStyle = '#243d7c'; ctx.lineWidth = 9; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(cx + 20, ay + 10); ctx.lineTo(cx + 36, ay - 1); ctx.stroke();
       ctx.fillStyle = '#dcae86'; ctx.beginPath(); ctx.arc(cx + 38, ay - 2, 4.2, 0, 6.2832); ctx.fill();
       ctx.fillStyle = '#0c0c10'; ctx.fillRect(cx + 38, ay - 8, 22, 6); ctx.fillRect(cx + 36, ay - 4, 6, 11);
       ctx.strokeStyle = '#6a6a74'; ctx.lineWidth = 1; ctx.strokeRect(cx + 38.5, ay - 7.5, 21, 5);
-      if (listening()) { ctx.fillStyle = '#fff'; ctx.strokeStyle = '#5a2a20'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, hy + 7, 6, 0.1 * Math.PI, 0.9 * Math.PI); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+      if (listening() && !profile) { ctx.fillStyle = '#fff'; ctx.strokeStyle = '#5a2a20'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, hy + 7, 6, 0.1 * Math.PI, 0.9 * Math.PI); ctx.closePath(); ctx.fill(); ctx.stroke(); }
     }
     ctx.restore();
     ctx.strokeStyle = 'rgba(143,180,255,.9)'; ctx.lineWidth = 1.5; rrect(bx, by, bw, bh, 10); ctx.stroke();
@@ -2014,6 +2070,7 @@ const CORE = (function () {
     FX.draw();
     ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
     if (S.phase === 'CMD' || S.phase === 'ARREST') drawPartner(W, H, land, flash);
+    if (S.sub === 'SPEAK') drawListen(W, H, land);
     if (S.sub === 'YOURTURN') drawSayIt(W, H, land);
     drawPraise(W, H, land);
     ctx.textAlign = 'center';
@@ -2053,8 +2110,8 @@ const CORE = (function () {
   // 入力は core.step に1フレーム分まとめて渡す
   const _step = core.step;
   core.step = function (dt, input) {
-    const merged = { swipe: pend.swipe, tap: pend.tap, button: pend.button, voice: pend.voice, more: pend.more };
-    pend = { swipe: null, tap: false, button: null, voice: false, more: false };
+    const merged = { swipe: pend.swipe, tap: pend.tap, button: pend.button, voice: pend.voice, more: pend.more, said: pend.said };
+    pend = { swipe: null, tap: false, button: null, voice: false, more: false, said: false };
     if (input) { merged.swipe = merged.swipe || input.swipe; merged.tap = merged.tap || input.tap; merged.button = merged.button || input.button; }
     return _step(dt, merged);
   };

@@ -73,7 +73,7 @@ log('3. 入力なし（startだけ）');
 // 3b. 声が入れば進み、入らなければ5秒で撃たれる。DEADはタップで早く戻れる
 log('3b. YOURTURN と DEAD');
 {
-  const toYT = () => { const c = CORE.create(CONFIG, { seed: 1 }); c.warp('PREVIEW0'); let n = 0; while (c.state.sub !== 'YOURTURN' && n++ < 3000) c.step(1 / 60, { tap: c.state.sub === 'PREVIEW' }); return c; };
+  const toYT = () => { const c = CORE.create(CONFIG, { seed: 1 }); c.warp('PREVIEW0'); let n = 0; while (c.state.sub !== 'YOURTURN' && n++ < 3000) c.step(1 / 60, { tap: c.state.sub === 'PREVIEW', said: c.state.sub === 'SPEAK' }); return c; };
   let c = toYT(); let d = 0; while (c.state.sub === 'YOURTURN' && d < 10) { c.step(1 / 60, { tap: true, button: 'next' }); d += 1 / 60; }
   ok(c.state.sub === 'DEAD' && Math.abs(d - CONFIG.YOURTURN) < 0.1, 'タップ・NEXTでは進まず' + CONFIG.YOURTURN + 's後にDEAD: ' + d.toFixed(2) + ' ' + c.state.sub);
   c = toYT(); for (let k = 0; k < 30; k++) c.step(1 / 60, NONE()); c.step(1 / 60, { voice: true }); ok(c.state.sub === 'REACT', '声が入ればREACTへ: ' + c.state.sub);
@@ -150,8 +150,8 @@ log('6. 遷移直後の連打');
   ok(s.sub === 'EVENT', 'EVENT直後0.4sは連打が無視される: ' + s.sub);
   for (let k = 0; k < 40; k++) c.step(1 / 60, NONE());                                  // 0.4s経過
   c.step(1 / 60, { tap: true });
-  ok(s.sub === 'PREVIEW', '0.4s経過後はタップが通る: ' + s.sub);
-  c.step(1 / 60, { tap: true }); ok(s.sub === 'PREVIEW', 'PREVIEW直後(CMDは同一フェーズ)でも状態が飛ばない or 次へ進む: ' + s.sub);
+  ok(s.sub === 'COACH', '0.4s経過後はタップが通る（停車後はまず相棒のひと言 COACH）: ' + s.sub);
+  c.step(1 / 60, { tap: true }); ok(s.sub === 'COACH', 'COACH中のタップでは飛ばない（声が終わるまで待つ）: ' + s.sub);
 }
 
 // 7. dt違いでも同じ結果（入力なし）
