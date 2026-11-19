@@ -334,7 +334,7 @@ const CONFIG = Object.freeze({
   STEP: 1 / 120, DT_MAX: 0.1,
   HITS_TO_STOP: 3, SIDES: [1, -1, 1],            // 1=右 -1=左。ミスしたときは同じ側をもう一度出す
   INTRO: 4.0, INTRO_GAP: [40, 26],
-  OPEN: { PARK: 2.4, GO: 2.8, SIREN_WAIT: 14, CATCH: 14, SWING: 14, GAP_GO: 62 },      // 開始演出：駐車中に赤い車が通る→追跡開始→サイレンを鳴らす→追いつく
+  OPEN: { PARK: 3.0, GO: 2.8, SIREN_WAIT: 14, CATCH: 14, SWING: 14, GAP_GO: 62, TC: 6, PX: 4.4 },      // 開始演出：駐車中に赤い車が通る→追跡開始→サイレンを鳴らす→追いつく
   APPROACH: 5.5, APPROACH_AFTER_MISS: 2.7, GAP_WINDOW: 3,
   WINDOW: 3.2, WINDOW_RESCUE: 4.6, ALIGN: 0.5, ALIGN_RESCUE: 0.85,        // フラつく車が真正面（横ズレ ALIGN 以内）に来た間にタップで突撃
   LUNGE: 0.18, HITSTOP: [0.08, 0.08, 0.12], TILT: [3, 4, 6],
@@ -445,15 +445,19 @@ const CORE = (function () {
     const subs = {
       TITLE: { enter() { reset(); }, upd(h, i, locked) { if (i.button === 'start' && !locked) { reset(); sirenIdx = 0; S.siren = C.SIRENS[0]; go('OPEN_PARK'); } } },
       OPEN_PARK: {                                           // 駐車中。目の前を赤いセダンが右から入ってきて通る
-        enter() { S.speed = 0; S.gap = 10; S.sx = 7; pxF = 0; S.px = 0; S.lights = false; },      // パトライトは赤い車を見つけるまで消灯
-        upd(h) { const p = ss(S.t / C.OPEN.PARK); S.speed = 0; S.gap = 10; S.sx = lerp(7, 0, p); pxF = 0; S.px = 0; if (S.t >= C.OPEN.PARK) go('OPEN_GO'); }
+        // 道路脇（右側）に斜めに駐車。目の前を逃走車が左から右へ走り抜ける。道は斜め（右奥）に見える（S.yaw=1）
+        enter() { S.speed = 0; S.gap = 10; S.sx = -9; pxF = C.OPEN.PX; S.px = C.OPEN.PX; S.yaw = 1; S.lights = false; },      // パトライトは赤い車を見つけるまで消灯
+        upd(h) { const p = ss(S.t / C.OPEN.PARK); S.speed = 0; S.gap = 10; S.sx = lerp(-9, 9, p); pxF = C.OPEN.PX; S.px = C.OPEN.PX; S.yaw = 1; if (S.t >= C.OPEN.PARK) go('OPEN_GO'); }
       },
       OPEN_GO: {                                             // 「赤い車だ！ 追うぞ！」発進。赤い車は加速して遠ざかる
         enter() { if (!S.lights) { S.lights = true; emit('lights', { on: true }); } },      // 赤い車を見つけてパトライト点灯
-        upd(h) { const p = ss(S.t / C.OPEN.GO); S.speed = lerp(0, 30, p); S.gap = lerp(10, C.OPEN.GAP_GO, p); S.sx = 0; if (S.t >= C.OPEN.GO) go('OPEN_SIREN'); }
+        upd(h) {        // 路肩から車線に出て、視点も正面に戻りながら追いかける。逃走車は右から道に戻って遠ざかる
+          const p = ss(S.t / C.OPEN.GO); S.speed = lerp(0, 30, p); S.gap = lerp(10, C.OPEN.GAP_GO, p); S.sx = lerp(9, 0, ss(S.t / (C.OPEN.GO * 0.6)));
+          S.px = lerp(C.OPEN.PX, 0, p); pxF = S.px; S.yaw = 1 - p; if (S.t >= C.OPEN.GO) { S.yaw = 0; S.px = 0; pxF = 0; go('OPEN_SIREN'); }
+        }
       },
       OPEN_SIREN: {                                          // 「サイレンを鳴らせ！」プレイヤーがサイレンを押すまで待つ
-        enter() { S.speed = 30; S.lights = true; },
+        enter() { S.speed = 30; S.lights = true; S.yaw = 0; },
         upd(h, i, locked) {
           S.speed = 30; S.sx = 0; S.gap = C.OPEN.GAP_GO + 2 * ss(S.t / 6);
           if (i.button === 'siren' && S.siren !== 'OFF' && !locked) go('OPEN_CATCH');
@@ -464,7 +468,9 @@ const CORE = (function () {
         enter() { S.speed = 30; },
         upd(h) {   // しばらくサイレンで遊べるよう、追いつきそうになったり離されたりしながら、最後に追いつく
           const u = Math.min(1, S.t / C.OPEN.CATCH), env = Math.sin(Math.PI * u);
-          S.sx = 0; S.gap = lerp(gapE, C.INTRO_GAP[0], ss(u)) + C.OPEN.SWING * env * Math.sin(S.t * 1.3); if (S.t >= C.OPEN.CATCH) go('INTRO');
+          const dg = (t0, a) => a * Math.exp(-Math.pow((S.t - t0) / 0.16, 2));      // 交差点で、横から来る車を避けて何度も鋭く切る
+          S.sx = dg(C.OPEN.TC - 0.5, 0.8) + dg(C.OPEN.TC - 0.05, -0.9) + dg(C.OPEN.TC + 0.4, 0.8);
+          S.gap = lerp(gapE, C.INTRO_GAP[0], ss(u)) + C.OPEN.SWING * env * Math.sin(S.t * 1.3); if (S.t >= C.OPEN.CATCH) go('INTRO');
         }
       },
       INTRO: {
@@ -625,7 +631,7 @@ const CORE = (function () {
         if (S.sub !== 'INTRO' && !inOpen) S.sinceHit += h;
         if (radioIdx < C.RADIO.length && S.ct >= C.RADIO[radioIdx].t) { emit('radio', { text: C.RADIO[radioIdx].text }); radioIdx++; }
         if (S.sinceHit >= C.RESCUE.idle && !S.ram) { S.ram = true; emit('ram', { on: true }); }
-        if (S.sub !== 'OPEN_PARK') pxF += (S.sx - pxF) * (1 - Math.exp(-h / C.LAG));
+        if (S.sub !== 'OPEN_PARK' && S.sub !== 'OPEN_GO') pxF += (S.sx - pxF) * (1 - Math.exp(-h / C.LAG));
         S.px = pxF + S.pxKick;
       }
       const sub = subs[S.sub];
@@ -818,6 +824,8 @@ const CORE = (function () {
       if (a && typeof a === 'object') a = a.stage || a.i;
       if (!this.on()) return;
       switch (name) {
+        case 'horn': this.beep(430, 0.4, 'sawtooth', 0.07); this.beep(340, 0.4, 'sawtooth', 0.06); break;
+        case 'skid': this.noise(0.5, 3200, 900, 'highpass', 0.1); break;
         case 'window': this.beep(740, 0.07, 'square', 0.08); this.beep(1100, 0.09, 'square', 0.08); break;
         case 'hit': {
           const st = (a | 0) || 1;
@@ -1140,7 +1148,7 @@ const CORE = (function () {
       }
     }
     if (jpT > 0) { jpT -= dt; if (jpT <= 0) $('jpsub').classList.remove('on'); }
-    if (ph === 'TITLE' || ph === 'END' || ph === 'DEAD') $('jpsub').classList.remove('on');
+    if (ph === 'TITLE' || ph === 'END' || ph === 'DEAD' || EVPH[ph]) $('jpsub').classList.remove('on');      // 命令の場面は手前の表示にセリフがあるので、相棒の吹き出しは出さない
     if (radioT > 0) { radioT -= dt; if (radioT <= 0) el.radio.classList.remove('on'); }
     if (DEBUG) {
       el.dbg.classList.remove('hide');
@@ -1174,6 +1182,7 @@ const CORE = (function () {
 
   /* ================= DRAW（B1：道路・景色・車・窓HUD） ================= */
   let scroll = 0, tNow = 0;
+  let ISEC = null;      // 開始演出の交差点：{ zi: 交差点の中心（世界のz）, s0: 開始時の scroll, fired: 効果音の済み }
   const probe = window.__probe = {};
   const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
   function praisePos() { return V.W > V.H ? [V.W * 0.3, V.H * 0.34] : [V.W / 2, V.H * 0.30]; }
@@ -1188,7 +1197,7 @@ const CORE = (function () {
   function drawSky(W, camX) {
     const hor = V.hor, g = ctx.createLinearGradient(0, 0, 0, hor);
     g.addColorStop(0, '#060a18'); g.addColorStop(0.7, '#1c1838'); g.addColorStop(1, '#4a2f55');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, hor + 1);
+    ctx.fillStyle = g; ctx.fillRect(-W * 0.5, 0, W * 2, hor + 1);
     ctx.fillStyle = '#fff';
     for (const s of SKY.stars) { ctx.globalAlpha = 0.35 + 0.45 * hash(((s.x * 997) | 0) + ((tNow * 1.3) | 0) % 5); ctx.fillRect(s.x * W, s.y * hor * 0.8, s.r, s.r); }
     ctx.globalAlpha = 1;
@@ -1201,16 +1210,16 @@ const CORE = (function () {
     const par = -camX * 0.6, k = hor / 230;
     ctx.fillStyle = '#120f26';
     for (let rep = -1; rep < 3; rep++) for (const b of SKY.bld) {
-      const bx = b.x + rep * SKY.span + par; if (bx > W + 40 || bx + b.w < -40) continue;
+      const bx = b.x + rep * SKY.span + par; if (bx > W * 1.5 + 40 || bx + b.w < -W * 0.5 - 40) continue;
       ctx.fillRect(bx, hor - b.h * k, b.w, b.h * k + 1);
     }
     ctx.fillStyle = 'rgba(255,214,120,.55)';
     for (let rep = -1; rep < 3; rep++) for (const b of SKY.bld) {
-      const bx = b.x + rep * SKY.span + par; if (bx > W + 40 || bx + b.w < -40) continue;
+      const bx = b.x + rep * SKY.span + par; if (bx > W * 1.5 + 40 || bx + b.w < -W * 0.5 - 40) continue;
       for (let wy = 5; wy < b.h * k - 3; wy += 7) for (let wx = 3; wx < b.w - 3; wx += 6) if (hash(b.s * 131 + wy * 7 + wx) > 0.62) ctx.fillRect(bx + wx, hor - wy - 3, 2, 3);
     }
     const hz = ctx.createLinearGradient(0, hor - 36 * k, 0, hor); hz.addColorStop(0, 'rgba(120,70,120,0)'); hz.addColorStop(1, 'rgba(150,90,130,.45)');
-    ctx.fillStyle = hz; ctx.fillRect(0, hor - 36 * k, W, 36 * k);
+    ctx.fillStyle = hz; ctx.fillRect(-W * 0.5, hor - 36 * k, W * 2, 36 * k);
   }
 
   function drawRoad(W, H, camX) {
@@ -1219,7 +1228,7 @@ const CORE = (function () {
       const kk = (y - hor) / CAM_H, z = V.F / kk, d = clamp01((z - 6) / 240);
       const seg = Math.floor((z + scroll) / 7) & 1;
       // 路外（草と土）
-      ctx.fillStyle = seg ? '#0f2a1a' : '#12301d'; ctx.fillRect(0, y, W, 2);
+      ctx.fillStyle = seg ? '#0f2a1a' : '#12301d'; ctx.fillRect(-W * 0.5, y, W * 2, 2);
       const cx = W / 2 - camX * kk;
       const xs = v => cx + v * kk;
       // 路肩（舗装の外側）
@@ -1233,7 +1242,7 @@ const CORE = (function () {
       ctx.fillRect(xs(-5.6) - kw, y, kw, 2); ctx.fillRect(xs(5.6), y, kw, 2);
       // 中央線（黄の破線）
       if (((z + scroll) % 12) < 5) { ctx.fillStyle = '#e8d44a'; const mw = Math.max(1, 0.16 * kk); ctx.fillRect(cx - mw / 2, y, mw, 2); }
-      if (d > 0) { ctx.fillStyle = 'rgba(80,50,90,' + (d * 0.55).toFixed(3) + ')'; ctx.fillRect(0, y, W, 2); }   // 遠くは霞む
+      if (d > 0) { ctx.fillStyle = 'rgba(80,50,90,' + (d * 0.55).toFixed(3) + ')'; ctx.fillRect(-W * 0.5, y, W * 2, 2); }   // 遠くは霞む
     }
   }
 
@@ -1248,6 +1257,7 @@ const CORE = (function () {
     const base = Math.floor(scroll / SP), off = scroll - base * SP;
     for (let j = 10; j >= 1; j--) {
       const z = j * SP - off, id = base + j; if (z < 3.2) continue;
+      if (ISEC && Math.abs(z - (ISEC.zi - scroll)) < 10) continue;      // 交差点の上には街灯や木を置かない
       const p0 = proj(0, z, camX), k = p0.k, gy = p0.y, a = clamp01(1.15 - z / 230);
       for (const side of [-1, 1]) {
         const sid = id * 2 + (side > 0 ? 1 : 0);
@@ -1281,6 +1291,72 @@ const CORE = (function () {
     }
   }
 
+  /* ================= 交差点（開始演出：サイレンで遊んでいる間に、赤い車が赤信号を突っ切る。横の信号は青で、横から車が来て何度もぶつかりそうになる） ================= */
+  const XC = {
+    v: 18,
+    // 横から来る車：[レーン(奥行きのずれ m), 向き, 逃走車が通る時刻 TC からのずれ(s)（x=0を車の中心が通る時刻）, 色]。逃走車ぎりぎりをかすめる
+    pass: [[-4.2, 1, -0.42, '#2d6bd6'], [-1.4, 1, 0.28, '#d8c12d'], [1.4, -1, 0.38, '#e8e8ea'], [4.2, -1, -0.2, '#3aa05a'], [-1.4, 1, -1.5, '#c9b79a'], [4.2, -1, -1.2, '#b04a8a'], [1.4, -1, 1.2, '#2d6bd6']],
+    // 後から来る車：パトカー（サイレン）に気づいて手前で止まる：[レーン, 向き, 出現時刻のずれ, 色]
+    stop: [[-1.4, 1, 0.1, '#e8e8ea'], [1.4, -1, 0.3, '#d8c12d']]
+  };
+  function iTime() { return ISEC ? (scroll - ISEC.s0) / 30 : 0; }
+  function xcars() {
+    const out = [], tc = CONFIG.OPEN.TC, t = iTime();
+    for (const c of XC.pass) { const x = c[1] * XC.v * (t - (tc + c[2])); if (Math.abs(x) < 80) out.push({ x: x, lane: c[0], dir: c[1], col: c[3] }); }
+    for (const c of XC.stop) {
+      const tt = t - (tc + c[2]); if (tt < 0) continue; const v = XC.v, L = 22, a = v * v / (2 * L), ts = v / a, d = tt < ts ? v * tt - 0.5 * a * tt * tt : L;
+      out.push({ x: -c[1] * 30 + c[1] * d, lane: c[0], dir: c[1], col: c[3], stopped: tt >= ts });
+    }
+    return out;
+  }
+  function drawCarSide(x, z, dir, col, camX, stopped) {
+    const p = proj(x, z, camX), k = p.k, cx = p.x, gy = p.y, s = dir; if (k < 1) return;
+    ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.ellipse(cx, gy, 2.4 * k, 0.35 * k, 0, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = col; rrect(cx - 2.2 * k, gy - 1.0 * k, 4.4 * k, 0.65 * k, 0.15 * k); ctx.fill();                                                    // ボディ
+    ctx.beginPath(); ctx.moveTo(cx - 1.35 * k, gy - 1.0 * k); ctx.lineTo(cx - 0.8 * k, gy - 1.55 * k); ctx.lineTo(cx + 0.75 * k, gy - 1.55 * k); ctx.lineTo(cx + 1.3 * k, gy - 1.0 * k); ctx.closePath(); ctx.fill();   // キャビン
+    ctx.fillStyle = 'rgba(20,28,48,.85)'; ctx.beginPath(); ctx.moveTo(cx - 1.12 * k, gy - 1.04 * k); ctx.lineTo(cx - 0.7 * k, gy - 1.48 * k); ctx.lineTo(cx + 0.65 * k, gy - 1.48 * k); ctx.lineTo(cx + 1.08 * k, gy - 1.04 * k); ctx.closePath(); ctx.fill();   // 窓
+    ctx.fillStyle = '#0b0b0e'; for (const wx of [-1.4, 1.4]) { ctx.beginPath(); ctx.arc(cx + wx * k, gy - 0.34 * k, 0.36 * k, 0, 6.2832); ctx.fill(); }   // タイヤ
+    ctx.fillStyle = '#ff2a2a'; ctx.fillRect(cx - s * 2.2 * k - (s > 0 ? 0 : -0.0), gy - 0.9 * k, 0.12 * k * -s, 0.2 * k);      // テールランプ（後ろ側）
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    const hx = cx + s * 2.2 * k, hy = gy - 0.8 * k, hr = 1.8 * k, hg = ctx.createRadialGradient(hx, hy, 0, hx + s * 1.5 * k, hy + 0.3 * k, hr);
+    hg.addColorStop(0, 'rgba(255,245,200,.85)'); hg.addColorStop(1, 'rgba(255,245,200,0)'); ctx.fillStyle = hg; ctx.fillRect(hx - hr + s * 1.5 * k, hy - hr, hr * 2, hr * 2);      // ヘッドライト
+    if (stopped) { ctx.fillStyle = 'rgba(255,40,40,.7)'; ctx.beginPath(); ctx.arc(cx - s * 2.2 * k, gy - 0.8 * k, 0.5 * k, 0, 6.2832); ctx.fill(); }   // ブレーキ灯
+    ctx.restore();
+  }
+  function drawCross(camX, sz, nearer) {
+    if (!ISEC) return; const zr = ISEC.zi - scroll; if (zr < -9 || zr > 230) return;
+    for (const c of xcars()) { const z = zr + c.lane; if (z < 2.5) continue; if ((z <= sz) === nearer) drawCarSide(c.x, z, c.dir, c.col, camX, c.stopped); }
+  }
+  function drawIsec(W, camX) {
+    if (!ISEC) return; const zr = ISEC.zi - scroll; if (zr < -9 || zr > 230) return;
+    const P = (x, z) => proj(x, z, camX), z0 = Math.max(2.5, zr - 6.5), z1 = zr + 6.5; if (z1 <= 2.5) return;
+    const quad = (x0, x1, za, zb, fill) => { za = Math.max(2.5, za); if (zb <= za) return; const a = P(x0, za), b = P(x1, za), c = P(x1, zb), d = P(x0, zb); ctx.fillStyle = fill; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.lineTo(c.x, c.y); ctx.lineTo(d.x, d.y); ctx.closePath(); ctx.fill(); };
+    quad(-80, 80, z0, z1, '#2b2b33');                                                     // 横断する道路
+    for (let x = -34; x < 34; x += 3) quad(x, x + 1.4, zr - 0.09, zr + 0.09, '#e8d44a');    // 道路の中央線（黄の破線）
+    quad(-80, 80, zr - 6.4, zr - 6.25, 'rgba(230,230,235,.75)'); quad(-80, 80, zr + 6.25, zr + 6.4, 'rgba(230,230,235,.75)');   // 路肩の白線
+    for (const sd of [-1, 1]) for (let i = -6; i <= 6; i++) quad(i * 0.56 - 0.2, i * 0.56 + 0.2, sd < 0 ? zr - 9.6 : zr + 7.4, sd < 0 ? zr - 7.4 : zr + 9.6, 'rgba(232,232,236,.88)');   // 横断歩道
+    quad(-3.6, 3.6, zr - 10.4, zr - 10.0, 'rgba(240,240,244,.9)');                          // 停止線
+    const hz = clamp01((zr - 6) / 240) * 0.55; if (hz > 0) quad(-80, 80, z0, z1, 'rgba(80,50,90,' + hz.toFixed(3) + ')');
+  }
+  function drawSig(x, z, camX, front) {
+    const p = proj(x, z, camX), k = p.k; if (k < 1.2 || z < 3) return; const a = clamp01(1.15 - z / 230);
+    ctx.globalAlpha = a; ctx.fillStyle = '#1b1a26'; ctx.fillRect(p.x - 0.09 * k, p.y - 5.2 * k, 0.18 * k, 5.2 * k);
+    const hw = (front ? 0.5 : 0.3) * k, hh = 1.35 * k, hx = p.x - hw / 2, hy = p.y - 5.2 * k - hh;
+    ctx.fillStyle = '#12121a'; ctx.fillRect(hx, hy, hw, hh);
+    const lamp = (i, col, on) => { const ly = hy + hh * (0.2 + 0.3 * i), r = 0.17 * k; ctx.fillStyle = on ? col : 'rgba(60,60,70,.9)'; ctx.beginPath(); if (front) ctx.arc(p.x, ly, r, 0, 6.2832); else ctx.ellipse(p.x, ly, r * 0.55, r, 0, 0, 6.2832); ctx.fill();
+      if (on) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(p.x, ly, 0, p.x, ly, r * 5); g.addColorStop(0, col.replace(')', ',.7)').replace('rgb', 'rgba')); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(p.x - r * 5, ly - r * 5, r * 10, r * 10); ctx.restore(); } };
+    if (front) { lamp(0, 'rgb(255,40,40)', true); lamp(1, 'rgb(255,200,40)', false); lamp(2, 'rgb(40,230,120)', false); }     // こちらは赤
+    else { lamp(0, 'rgb(255,40,40)', false); lamp(1, 'rgb(255,200,40)', false); lamp(2, 'rgb(40,230,120)', true); }          // 横は青
+    ctx.globalAlpha = 1;
+  }
+  function drawSignals(camX) {
+    if (!ISEC) return; const zr = ISEC.zi - scroll; if (zr < -9 || zr > 200) return;
+    for (const sd of [-1, 1]) { drawSig(sd * 4.9, zr + 7.6, camX, true); drawSig(sd * 7.6, zr + 7.6, camX, false); drawSig(sd * 7.6, zr - 7.6, camX, false); }
+  }
+  function xsfx() {    // 逃走車が突っ切る瞬間のクラクションとブレーキ音
+    if (!ISEC) return; const t = iTime(), tc = CONFIG.OPEN.TC;
+    [[-0.55, 'horn'], [-0.25, 'skid'], [0.0, 'horn'], [0.3, 'skid'], [0.45, 'horn']].forEach((e, i) => { if (!ISEC.fired[i] && t >= tc + e[0]) { ISEC.fired[i] = true; if (t - (tc + e[0]) < 1.0) AUDIO.sfx(e[1]); } });
+  }
   /* ================= GLASS（逃走車のガラス。ぶつかるたびにどこかが割れて、GLASS BREAKER のように飛び散る） ================= */
   const GP = {   // 車体ローカル座標（メートル。原点は下辺中央、上がマイナス）
     rear: [[-.65, -.9135], [-.511, -1.3775], [.511, -1.3775], [.65, -.9135]],
@@ -1694,15 +1770,26 @@ const CORE = (function () {
     const zoom = S.phase === 'ARREST' ? 1 + 0.08 * clamp01(S.t / 3) : S.phase === 'END' ? 1.08 : 1;
     ctx.setTransform(scale * dpr, 0, 0, scale * dpr, so[0] * scale * dpr, so[1] * scale * dpr);
     if (zoom !== 1) { ctx.translate(sb.cx, sb.top); ctx.scale(zoom, zoom); ctx.translate(-sb.cx, -sb.top); }
+    // 交差点の準備：OPEN_CATCH の最初のフレームで位置を決める（逃走車が TC 秒後に交差点の中心を通るように）
+    if (S.sub === 'OPEN_CATCH' && !ISEC) {
+      const O = CONFIG.OPEN, gE = S.gap, s0 = scroll - 30 * S.t, u = O.TC / O.CATCH, gapTc = gE + (CONFIG.INTRO_GAP[0] - gE) * ss01(u) + O.SWING * Math.sin(Math.PI * u) * Math.sin(1.3 * O.TC);
+      ISEC = { zi: s0 + 30 * O.TC + ZP + CAR.l + gapTc, s0: s0, fired: [] };
+    } else if (S.phase === 'TITLE' || S.sub === 'OPEN_PARK') ISEC = null;
+    xsfx();
+    const yaw = S.yaw || 0; ctx.save(); if (yaw) ctx.translate(yaw * W * 0.3, 0);      // 駐車中は視点が斜め（画面全体を横にずらして、道が右奥へ向かうように見せる）
     drawSky(W, camX);
     drawRoad(W, H, camX);
+    drawIsec(W, camX);
     drawScenery(W, camX);
+    drawSignals(camX);
+    drawCross(camX, sz, false);
     if (S.phase === 'CHASE' && S.speed > 25) {
       ctx.strokeStyle = 'rgba(255,255,255,.07)'; ctx.lineWidth = 1;
       for (let i = 0; i < 16; i++) { const a = hash(i + 900) * 6.2832, r0 = 90 + ((tNow * 260 + i * 53) % 260), x0 = W / 2 + Math.cos(a) * r0 * 1.1, y0 = V.hor + 40 + Math.sin(a) * r0 * 0.7; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + Math.cos(a) * 18, y0 + Math.sin(a) * 14); ctx.stroke(); }
     }
     const doorK = S.phase === 'EVENT' ? ss01((S.t - 3) / 0.4) : (S.phase === 'CMD' || S.phase === 'ARREST' || S.phase === 'END' || S.phase === 'DEAD') ? 1 : 0;
     drawCarRear(sb.cx, sb.bot, sb.w, sb.h, { body: '#a82b2b', bodyLow: '#6e1c1c', roof: '#8c2424', bumper: '#2a2a30', tail: '#ff3030', tilt: S.tilt, spin: FX.spinA(), hop: FX.spinHop(sb.h), damage: S.damage, glass: GLASS, hazard: inEv ? (Math.floor(tNow * 2.6) % 2 === 0) : null, door: doorK });
+    drawCross(camX, sz, true);
     probe.cuffs = null;
     if (inEv && !(S.phase === 'EVENT' && S.t < 0.3)) {
       const J = poseJoints(S.pose), wIn = (INCAR[S.pose.from] ? 1 - S.pose.k : 0) + (INCAR[S.pose.to] ? S.pose.k : 0);
@@ -1719,9 +1806,12 @@ const CORE = (function () {
       if (S.pose.to === 'prone' && S.pose.k > 0.9) probe.cuffs = { x: (hs.hL[0] + hs.hR[0]) / 2, y: (hs.hL[1] + hs.hR[1]) / 2 };
       if (S.phase === 'ARREST' || S.phase === 'END') drawFigure(OFFICER, ks * 1.04, sb.cx, sb.bot + 3, '#2a4585', '#c9a27e', '#10182e');
     }
+    ctx.restore();
     const sway = S.wobble > 0 ? Math.sin(tNow * 42) * 2.6 * S.wobble : 0;
     const talking = S.sub === 'SPEAK' || !!(SAY.text && tNow - SAY.t0 < SAY.dur);
+    ctx.save(); if (yaw) { ctx.translate(pb.cx, pb.bot); ctx.transform(1, 0, -0.22 * yaw, 1, 0, 0); ctx.translate(-pb.cx, -pb.bot); }      // 右斜めに駐車（車体を斜めに）
     drawCarRear(pb.cx, pb.bot, pb.w, pb.h, { body: '#1b2440', bodyLow: '#0e1426', roof: '#141b32', bumper: '#0a0d18', tail: '#ff2a2a', police: true, lights: S.lights, flash: flash, tilt: sway, talk: talking });
+    ctx.restore();
     if (inEv && S.phase !== 'DEAD' && !(S.phase === 'EVENT' && S.t < 1.5)) {
       const a0 = ctx.globalCompositeOperation; ctx.globalCompositeOperation = 'lighter';
       const sx0 = pb.cx + pb.w * 0.1, sy0 = pb.top + pb.h * 0.02, tx = sb.cx - sb.w * 0.9, ty = sb.top + sb.h * 0.4, spread = sb.w * 1.5;
