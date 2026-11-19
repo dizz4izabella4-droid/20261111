@@ -1963,7 +1963,7 @@
     document.getElementById('result-stats').innerHTML =
       `難易度: ${diffName}<br>踏破 ${state.clears} 回目<br>到達LV: ${state.hero.lv}<br>歩数: ${state.steps}歩<br>撃破: ${state.kills || 0}体<br>HP 全回復<br>周回: 今回 ${state.clears} 周目 ／ 通算 ${totalNo} 周<br>称号: ${titleOf(totalNo)}<br>入手: ${gain}<br>仲間: ${joinTxt}`;
     // 先にエンディング（スタッフロール → fin.）。終わったらリザルトを出す
-    setTimeout(() => startEnding(() => { document.getElementById('result-screen').style.display = 'flex'; }), 900);
+    setTimeout(() => startEnding(() => playClearDeath(() => { document.getElementById('result-screen').style.display = 'flex'; })), 900);
   }
 
   // === エンディング：スタッフロール（曲が終わるまで流れ、最後に fin.） ===
@@ -2062,12 +2062,12 @@
     addLog('輪廻——入口の通路で目を覚ました。もう一度、奥を目指せる。');
     updateUI();
   }
-  // クリアのあと：一度死んで、最初（入口の通路）から生まれ直す。記録・装備・仲間の女神は持ち越し
+  // クリアのあとの流れ：クリア → デッド → リザルト → 復活 → 再開（入口の通路）。記録・装備・仲間の女神は持ち越し
   let rebirthBusy = false;
-  function startRebirth() {
+  // デッド演出：力尽きる→血→「Death」→暗転して終了。終わったら cb（リザルト表示）
+  function playClearDeath(cb) {
     if (rebirthBusy) return;
     rebirthBusy = true;
-    document.getElementById('result-screen').style.display = 'none';
     const T = (fn, ms) => deathTimers.push(setTimeout(fn, ms));
     const ds = document.getElementById('death-screen'), dt = document.getElementById('death-text'), blood = document.getElementById('death-blood');
     addLog('廊下の果てで、あなたは静かに力尽きた。');
@@ -2090,14 +2090,38 @@
       dt.textContent = 'Death';
       ds.style.display = 'block'; void ds.offsetWidth; ds.classList.add('go');
     }, 600);
-    T(() => {
-      dt.textContent = '輪廻'; dt.classList.add('bless');
-      dt.style.animation = 'none'; void dt.offsetWidth; dt.style.animation = 'deathText 1.4s ease-out both';
-      SFX.summon();
-      addLog('——魂は、はじまりへ還る。');
-    }, 3200);
-    T(() => { ds.style.transition = 'opacity 1.2s'; ds.style.opacity = 0; }, 5400);
-    T(() => { clearDeath(); rebirthBusy = false; closeResult(); }, 6700);
+    T(() => { ds.style.transition = 'opacity 1.2s'; ds.style.opacity = 0; }, 3800);
+    T(() => { clearDeath(); rebirthBusy = false; if (cb) cb(); }, 5100);
+  }
+  // 復活：リザルトの「輪廻へ」から。光が降りて蘇り、入口の通路から再開
+  function startRebirth() {
+    if (rebirthBusy) return;
+    rebirthBusy = true;
+    document.getElementById('result-screen').style.display = 'none';
+    const rv = document.getElementById('revive-screen');
+    const rvMain = rv.querySelector('.rv-main');
+    const mainOrig = rvMain.textContent;
+    rvMain.textContent = '輪廻により、蘇る';
+    document.getElementById('rv-sub').textContent = '——はじまりへ還る';
+    const parts = document.getElementById('rv-parts');
+    parts.innerHTML = '';
+    for (let i = 0; i < 30; i++) {
+      const pt = document.createElement('i');
+      pt.style.left = (Math.random() * 100) + '%';
+      pt.style.animationDelay = (Math.random() * 2) + 's';
+      pt.style.animationDuration = (2.2 + Math.random() * 2) + 's';
+      pt.style.setProperty('--sz', (3 + Math.random() * 6) + 'px');
+      parts.appendChild(pt);
+    }
+    rv.classList.remove('on'); void rv.offsetWidth; rv.classList.add('on');
+    addLog('——光が降りてくる。');
+    SFX.summon(); setTimeout(SFX.clear, 600);
+    setTimeout(() => {
+      rv.classList.remove('on');
+      rvMain.textContent = mainOrig;
+      rebirthBusy = false;
+      closeResult();
+    }, 3600);
   }
   document.getElementById('btn-result-back').onclick = startRebirth;
 
