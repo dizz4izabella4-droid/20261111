@@ -356,11 +356,6 @@ const CONFIG = Object.freeze({
     OPEN_SIREN: { en: 'Hit the siren!', ja: 'サイレンを鳴らせ！', say: true },
     OPEN_CATCH: { en: 'The sound changes every press!', ja: '押す度に音が変わるぞ', say: true },
     INTRO: { en: 'You can ram him to stop him!', ja: 'ぶつけて止めてもいいぞ', say: true },
-    HIT1: { en: 'Good hit! Two more!', ja: 'いいぞ！ あと2回！', say: true },
-    HIT2: { en: 'One more! Stop him!', ja: 'あと1回！ 止めるぞ！', say: true },
-    HIT3: { en: "That's it! He's stopping!", ja: 'やった、止まるぞ！', say: true },
-    PULLOVER: { en: 'He pulled over!', ja: '停車させた！', say: true },
-    EVENT: { en: "Now give the orders in English. I'll show you first.", ja: 'ここからは英語で命令だ。まず俺がお手本を言う。', say: true },
     PREVIEW: { en: 'Press LISTEN to hear my example.', ja: 'ボタンを押して、俺のお手本を聞け。', say: 'first' },
     YOURTURN: { en: 'Hold the mic and say it!', ja: 'マイクボタンを押しながら、英語で命令しろ！' },
     ARREST: { en: 'Got him! Nice work, partner.', ja: '確保！ よくやった、相棒。', say: true }
@@ -373,6 +368,13 @@ const CONFIG = Object.freeze({
     { text: 'Turn off the engine!', pose: 'handsUpInCar', dur: 2.0, sfx: 'engineOff', praise: { word: 'GREAT!', say: 'Nice! Keep it up!' } },
     { text: 'Step out of the vehicle!', pose: 'standing', dur: 2.4, sfx: 'door', praise: { word: 'EXCELLENT!', say: 'Excellent! Textbook!' } },
     { text: 'Get on the ground!', pose: 'prone', dur: 2.4, sfx: 'cuffs', praise: { word: 'PERFECT!', say: "Perfect! That's how it's done!" } }
+  ],
+  // 命令のセリフはプレイのたびにランダム（[英語, 日本語字幕]）。順番（手を見せろ→エンジン→降車→伏せ）は同じ
+  CMD_ALTS: [
+    [['Police! Show me your hands!', '警察だ！ 手を見せろ！'], ['Hands where I can see them!', '手が見えるようにしろ！'], ['Let me see your hands! Now!', '手を見せろ！ 今すぐだ！'], ['Police! Put your hands up!', '警察だ！ 手を上げろ！']],
+    [['Turn off the engine!', 'エンジンを切れ！'], ['Kill the engine! Now!', 'エンジンを止めろ！ 今すぐだ！'], ['Shut it off and drop the keys!', 'エンジンを切って、鍵を捨てろ！'], ['Turn it off! Right now!', '切れ！ 今すぐだ！']],
+    [['Step out of the vehicle!', '車から降りろ！'], ['Get out of the car! Slowly!', 'ゆっくり車から降りろ！'], ['Out of the car! Hands up!', '車から降りろ！ 手は上げたままだ！'], ['Exit the vehicle now!', '今すぐ車から降りろ！']],
+    [['Get on the ground!', '地面に伏せろ！'], ['Down on the ground! Now!', '今すぐ地面に伏せろ！'], ['Face down on the ground!', '地面にうつ伏せになれ！'], ['Get down! Hands behind your back!', '伏せろ！ 手は背中に回せ！']]
   ],
   ONE_MORE: 'One more, please!',
   SIRENS: ['OFF', 'WAIL', 'YELP', 'PHASER']
@@ -562,7 +564,7 @@ const CORE = (function () {
         }
       },
       EVENT: {
-        enter() { S.speed = 0; S.fade = 1; S.cmd = { i: 0, step: '' }; emit('radio', { text: C.EVENT_RADIO }); },
+        enter() { S.speed = 0; S.fade = 1; S.cmd = { i: 0, step: '' }; },      // 停車したら無言（無線も相棒のセリフもなし）
         upd(h, i, locked) {
           S.fade = 1 - ss(S.t / 0.5);
           if (S.t >= 1.5 && !flags.spot) { flags.spot = true; emit('spot'); }
@@ -999,6 +1001,9 @@ const CORE = (function () {
   function wake() { if (AUDIO.ctx && AUDIO.ctx.state !== 'running') AUDIO.kick(); }
   document.addEventListener('pointerdown', () => { if (!paused) wake(); }, true);
   setInterval(() => { if (!paused && !document.hidden && AUDIO.ctx && AUDIO.ctx.state !== 'running') AUDIO.kick(); }, 1000);
+  // 命令のセリフをランダムに決める（停車して EVENT に入るたび。デバッグのジャンプ用に最初にも1回）
+  function pickCmds() { CONFIG.CMD_ALTS.forEach((alts, i) => { const a = alts[Math.floor(Math.random() * alts.length)]; CONFIG.CMDS[i].text = a[0]; CONFIG.CMDS_JA[i] = a[1]; }); }
+  pickCmds();
   function speakIfPreview() {
     if (S.phase === 'CMD' && S.sub === 'PREVIEW' && S.lock <= 0) VOICE.speak(CONFIG.CMDS[S.cmd.i].text);   // iOS：操作の中でしか話せない
   }
@@ -1169,6 +1174,7 @@ const CORE = (function () {
         case 'window': case 'miss': case 'whiff': case 'ramArm': case 'spot': case 'door': case 'arrest': AUDIO.sfx(e.type, e); break;
         case 'hit': AUDIO.sfx('hit', e); FX.hit(e); GLASS.hit(e.stage, e.side, true); break;
         case 'radio': el.radio.textContent = e.text; el.radio.classList.add('on'); radioT = 3; AUDIO.sfx('radio'); break;
+        case 'sub': if (e.sub === 'EVENT') pickCmds(); break;
         case 'cmd': if (e.step === 'speak') { SAY = { text: e.text, t0: tNow, dur: e.dur || 2.4 }; showSub(e.text, CONFIG.CMDS_JA[e.i], 3.4); } break;
         case 'more': SAY = { text: CONFIG.ONE_MORE, t0: tNow, dur: 1.8 }; showSub(CONFIG.ONE_MORE, CONFIG.ONE_MORE_JA, 2.2); AUDIO.sfx('more'); break;          // マイクを閉じないよう文字だけ
         case 'react': { const pr = CONFIG.CMDS[e.i].praise; PR = { t0: tNow, i: e.i }; reyesSay(pr.say, 1.6, 'praise'); showSub(pr.say, CONFIG.PRAISE_JA[e.i], 2.6); FX.praise(); AUDIO.sfx('praise', e.i); if (e.sfx && e.sfx !== 'none' && e.sfx !== 'door' && e.sfx !== 'cuffs') AUDIO.sfx(e.sfx); break; }
