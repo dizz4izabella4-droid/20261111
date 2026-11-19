@@ -62,6 +62,11 @@ a{color:inherit}
 .origin{fill:#6b737b}
 #fog{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 72% 62% at 50% 50%,rgba(255,255,255,0) 55%,rgba(255,255,255,.55) 100%)}
 
+.top a{white-space:nowrap}
+@media(max-width:520px){.top .home{display:none}.top{justify-content:center;gap:2px}.top a:nth-of-type(n+3){padding-left:6px;padding-right:6px;letter-spacing:.08em}}
+#concept{position:fixed;z-index:3;left:90px;right:60px;bottom:max(16px,calc(env(safe-area-inset-bottom,0px) + 14px));margin:0;text-align:center;font-size:12px;line-height:1.6;letter-spacing:.14em;color:#7b838b;pointer-events:none}
+.top a:nth-of-type(2){font-size:14px;font-weight:700;letter-spacing:.12em;color:var(--ink)}
+.top a:nth-of-type(n+3){font-size:10px;letter-spacing:.14em}
 #snd{position:fixed;z-index:40;right:max(10px,env(safe-area-inset-right,0px));bottom:max(10px,env(safe-area-inset-bottom,0px));width:38px;height:38px;border-radius:50%;border:1px solid #c9ced3;background:rgba(255,255,255,.9);color:#6b737b;display:grid;place-items:center;padding:0;cursor:pointer}
 #snd svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 #snd .x{display:block}#snd .w{display:none}#snd.on .x{display:none}#snd.on .w{display:block}
@@ -73,7 +78,7 @@ body.still .ghost,body.still .node.new .pulse{animation:none!important}
 <body>
 <nav class="top" aria-label="サイト">
   <a class="home" href="../">izのおもちゃ箱</a>
-  <a href="../">GALLERY</a>
+  <a href="../">おもちゃ箱</a>
   <a href="../archive/">ARCHIVE</a>
   <a href="https://iz3ico.github.io/app/" target="_blank" rel="noopener noreferrer" title="あそびば（姉妹サイト）">OTHER WORLD ↗<span class="sr">（あそびば・姉妹サイト・別のサイトで開きます）</span></a>
 </nav>
@@ -85,6 +90,7 @@ body.still .ghost,body.still .node.new .pulse{animation:none!important}
 </main>
 
 
+<p id="concept">好きなものを好きなように好きなだけつくる</p>
 <button id="motion" type="button" aria-pressed="false" title="動きを止める">STILL</button>
 <button id="snd" type="button" aria-pressed="false" aria-label="音を鳴らす"><svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><g class="w"><path d="M15.5 9a4.2 4.2 0 0 1 0 6"/><path d="M18 6.6a7.6 7.6 0 0 1 0 10.8"/></g><path class="x" d="M16 9.5l5 5M21 9.5l-5 5"/></svg></button>
 
