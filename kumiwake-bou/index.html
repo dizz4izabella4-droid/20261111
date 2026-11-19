@@ -38,6 +38,7 @@ button{font:inherit;color:inherit}
 /* 問題をえらぶ画面 */
 .lead{margin:6px 0 0;text-align:center;font-size:14px;color:var(--ink2);letter-spacing:.04em;text-wrap:balance}
 .lead b{color:var(--ink)}
+.note{margin:0;text-align:center;padding:10px 14px;border-radius:12px;background:var(--card);border:1px solid var(--rule);font-size:14px;font-weight:700;color:var(--ink);letter-spacing:.06em;line-height:1.7}
 .homebar{display:flex;justify-content:center;align-items:center;gap:12px;flex-wrap:wrap}
 .pill{height:38px;padding:0 18px;border-radius:999px;border:1px solid var(--rule);background:var(--btn);font-size:14px;font-weight:700;letter-spacing:.06em;cursor:pointer}
 .total{font-size:13px;font-weight:700;color:var(--ink2);letter-spacing:.06em;font-variant-numeric:tabular-nums}
@@ -349,6 +350,7 @@ dialog .row button{flex:1}
   </header>
 
   <main id="home" class="col">
+    <p class="note">有名パズル<br>気に入ったら本物をやってください</p>
     <p class="lead">数字をたよりに<b>1本の輪</b>を引いて、<br>マスを「内」と「外」に組み分けるパズル</p>
     <div class="homebar"><button type="button" class="pill" id="bHow">あそびかた</button><span class="total" id="total"></span></div>
     <div id="levels" class="col"></div>
