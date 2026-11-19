@@ -280,6 +280,12 @@ body.real .hero-pic[data-talk="1"] img{animation:realTalk .34s ease-in-out infin
 .setup-style button{border:2px solid var(--gold,#c9a46a);border-radius:999px;padding:7px 20px;background:transparent;color:var(--parch,#f8f2e2);font-size:14px;font-weight:900;letter-spacing:.08em}
 .setup-style button[aria-pressed="true"]{background:var(--gold,#c9a46a);color:var(--nvD,#1b2440)}
 .setup-prev.real{width:110px;height:170px}
+.ncx-layer{position:fixed;inset:0;z-index:30;pointer-events:none;overflow:hidden}
+.ncx{position:absolute;left:0;top:0;will-change:transform}
+.ncx-s{transform-origin:50% 100%}
+.ncx-s svg{display:block;width:100%;height:100%;filter:drop-shadow(0 2px 2px rgba(0,0,0,.2))}
+.ncx-z{position:absolute;left:62%;top:-4px;font:900 11px/1 sans-serif;color:#f8f2e2;text-shadow:0 1px 2px rgba(0,0,0,.5);opacity:0;animation:ncxZ 2.2s ease-out forwards}
+@keyframes ncxZ{0%{opacity:0;transform:translate(0,4px) scale(.7)}25%{opacity:.95}100%{opacity:0;transform:translate(8px,-18px) scale(1.15)}}
 .chibi{position:absolute;left:0;bottom:0;z-index:1;pointer-events:none;user-select:none;opacity:0;transition:opacity .6s ease;will-change:transform}
 .chibi.on{opacity:1}
 #chibi-inner{position:relative;display:flex;justify-content:center}
@@ -3490,7 +3496,135 @@ header{min-width:0}
       }
 
       // まばたき と おしゃべり（くちパク）
+      // ===== んちょの ぶんしん と おさんぽ =====
+      // ・ときどき かずが ふえる（へやの なかを あるく ぶんしん）
+      // ・ときどき ウィンドウの そとに でてきて、うえの ふちを おさんぽ → ねる → へやに もどる
+      // ・ボタンや せんたくの うえには のらない（めに みえる ボタンの ばしょを よけて、あいている ところだけ つかう）
+      const NCX = { layer: null, list: [], raf: 0, last: 0 };
+      function ncxLayerEl() {
+        if (!NCX.layer) { NCX.layer = document.createElement('div'); NCX.layer.className = 'ncx-layer'; NCX.layer.setAttribute('aria-hidden', 'true'); document.body.appendChild(NCX.layer); }
+        return NCX.layer;
+      }
+      function ncxSize() { return parseFloat(getComputedStyle(dom.characterStage).getPropertyValue('--chsize')) || 34; }
+      function ncxCan() {
+        if (state.phase !== 'talk' || document.hidden || opts.move === 'none') return false;
+        if (document.body.classList.contains('kb')) return false;
+        if (matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+        if ([].some.call(document.querySelectorAll('.modal'), (m) => getComputedStyle(m).display !== 'none')) return false;
+        if (dom.artov.classList.contains('on') || dom.intro.classList.contains('on')) return false;
+        const t = document.getElementById('ttl'); if (t && !t.classList.contains('hidden')) return false;
+        return true;
+      }
+      function ncxObstacles() {
+        const out = [], layer = NCX.layer;
+        document.querySelectorAll('button,a[href],select,input,textarea,[role="button"]').forEach((el) => {
+          if (el === dom.characterStage || dom.characterStage.contains(el) || (layer && layer.contains(el))) return;
+          const r = el.getBoundingClientRect();
+          if (r.width > 0 && r.height > 0) out.push(r);
+        });
+        return out;
+      }
+      // ウィンドウの うえの ふちで、ボタンが かぶらない いちばん ひろい あき
+      function ncxLedge(size) {
+        const r = dom.characterStage.getBoundingClientRect();
+        if (r.top < size + 8) return null;
+        const y0 = r.top - size - 3, y1 = r.top + 3;
+        let segs = [[r.left + 18, r.right - 18]];
+        ncxObstacles().forEach((o) => {
+          if (o.bottom <= y0 || o.top >= y1) return;
+          const a = o.left - 8, b = o.right + 8, next = [];
+          segs.forEach((g) => {
+            if (b <= g[0] || a >= g[1]) { next.push(g); return; }
+            if (a - g[0] > 1) next.push([g[0], a]);
+            if (g[1] - b > 1) next.push([b, g[1]]);
+          });
+          segs = next;
+        });
+        segs.sort((p, q) => (q[1] - q[0]) - (p[1] - p[0]));
+        const g = segs[0];
+        return g && g[1] - g[0] >= size * 3 ? { x0: g[0], x1: g[1] - size, feet: r.top + 3 } : null;
+      }
+      function ncxMake(kind, plan) {
+        const size = ncxSize();
+        const el = document.createElement('div'); el.className = 'ncx';
+        el.style.width = el.style.height = size + 'px';
+        const sc = document.createElement('div'); sc.className = 'ncx-s'; sc.style.cssText = 'width:100%;height:100%';
+        sc.innerHTML = NC_SVG; el.appendChild(sc);
+        ncxLayerEl().appendChild(el);
+        const a = { kind, el, sc, size, x: 0, feet: 0, tx: 0, face: Math.random() < 0.5 ? 1 : -1, pause: 0.3 + Math.random(), st: 'in', t: 0, sc0: 0, plan: plan.slice(), zt: 0, seg: null, segT: 0, ph: Math.random() * 6, lane: Math.random() * 8 };
+        a.cur = a.plan.shift();
+        NCX.list.push(a);
+        if (!NCX.raf) { NCX.last = performance.now(); NCX.raf = requestAnimationFrame(ncxTick); }
+        return a;
+      }
+      function ncxBounds(a) {
+        const r = dom.characterStage.getBoundingClientRect();
+        if (a.kind === 'room') return { x0: r.left + 10, x1: r.right - 10 - a.size, feet: r.bottom - 12 - a.lane };
+        if (!a.seg || performance.now() - a.segT > 700) { a.seg = ncxLedge(a.size); a.segT = performance.now(); }
+        return a.seg;
+      }
+      function ncxTick(now) {
+        const dt = Math.min(0.1, (now - NCX.last) / 1000); NCX.last = now;
+        const can = ncxCan();
+        NCX.list.slice().forEach((a) => {
+          const b = ncxBounds(a);
+          if ((!can || !b) && a.st !== 'out') { a.st = 'out'; a.t = 0; }
+          if (b) { a.x = Math.min(Math.max(a.x || b.x0, b.x0), b.x1); a.feet = b.feet; }
+          let sq = 1, bob = 0;
+          if (a.st === 'in') {
+            if (a.t === 0 && !a.placed && b) { a.x = a.kind === 'ledge' ? b.x0 + Math.random() * (b.x1 - b.x0) : b.x0 + Math.random() * (b.x1 - b.x0); a.placed = true; a.tx = a.x; }
+            a.t += dt; a.sc0 = Math.min(1, a.t / 0.5);
+            if (a.t >= 0.5) { a.st = a.cur ? a.cur[0] : 'walk'; a.t = 0; a.left = a.cur ? a.cur[1] : 30; }
+          } else if (a.st === 'out') {
+            a.t += dt; a.sc0 = Math.max(0, 1 - a.t / 0.5);
+            if (a.t >= 0.5) { a.el.remove(); NCX.list.splice(NCX.list.indexOf(a), 1); return; }
+          } else {
+            a.left -= dt;
+            if (a.st === 'walk') {
+              if (a.pause > 0) a.pause -= dt;
+              else if (b) {
+                const d = a.tx - a.x, sp = 24 * dt;
+                if (Math.abs(d) <= sp) { a.x = a.tx; a.pause = 0.8 + Math.random() * 2.4; a.tx = b.x0 + Math.random() * (b.x1 - b.x0); }
+                else { a.x += Math.sign(d) * sp; a.face = d > 0 ? 1 : -1; a.ph += dt * 9; bob = Math.abs(Math.sin(a.ph)) * 2.2; }
+              }
+            } else if (a.st === 'sleep') {
+              sq = 0.9 + Math.sin(a.t * 2) * 0.02; a.t += dt;
+              a.zt -= dt;
+              if (a.zt <= 0) { a.zt = 1.8; const z = document.createElement('span'); z.className = 'ncx-z'; z.textContent = Math.random() < 0.5 ? 'z' : 'Z'; a.el.appendChild(z); setTimeout(() => z.remove(), 2300); }
+            }
+            if (a.left <= 0) {
+              a.cur = a.plan.shift();
+              if (!a.cur) { a.st = 'out'; a.t = 0; }
+              else { a.st = a.cur[0]; a.left = a.cur[1]; a.t = 0; a.pause = 0.2; a.sc.querySelector('svg').dataset.face = a.st === 'sleep' ? 'sleepy' : 'normal'; a.sc.querySelector('svg').dataset.blink = '0'; }
+            }
+          }
+          const top = a.feet - a.size * 0.92 - bob;
+          a.el.style.transform = 'translate3d(' + a.x.toFixed(1) + 'px,' + top.toFixed(1) + 'px,0)';
+          a.sc.style.transform = 'scale(' + (a.sc0 * a.face).toFixed(3) + ',' + (a.sc0 * sq).toFixed(3) + ')';
+        });
+        NCX.raf = NCX.list.length ? requestAnimationFrame(ncxTick) : 0;
+      }
+      function ncxSpawnExtras() {
+        if (!ncxCan()) return;
+        const room = NCX.list.filter((a) => a.kind === 'room').length;
+        const n = Math.min(3 - room, 1 + (Math.random() < 0.4 ? 1 : 0));
+        for (let i = 0; i < n; i++) setTimeout(() => { if (ncxCan()) ncxMake('room', [['walk', 25 + Math.random() * 25]]); }, i * 700);
+      }
+      function ncxSpawnVisitor() {
+        if (!ncxCan() || NCX.list.some((a) => a.kind === 'ledge')) return;
+        if (!ncxLedge(ncxSize())) return;
+        const sleep = 12 + Math.random() * 14;
+        ncxMake('ledge', Math.random() < 0.75 ? [['walk', 7 + Math.random() * 7], ['sleep', sleep], ['walk', 4 + Math.random() * 4]] : [['walk', 10 + Math.random() * 8]]);
+      }
+      function ncxSchedule() {
+        const mul = opts.move === 'many' ? 0.6 : 1;
+        const loop = (fn, min, span) => { const go = () => { fn(); setTimeout(go, (min + Math.random() * span) * 1000 * (opts.move === 'many' ? 0.6 : 1)); }; setTimeout(go, (min * 0.5 + Math.random() * 15) * 1000 * mul); };
+        loop(ncxSpawnExtras, 45, 65);
+        loop(ncxSpawnVisitor, 80, 90);
+      }
+
       function startNcLoops() {
+        ncxSchedule();
         const grow = () => {
           const mv = document.getElementById('character-mover');
           if (mv && state.phase === 'talk' && opts.move !== 'none') {
