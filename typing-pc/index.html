@@ -366,6 +366,7 @@ body.lite .neon,body.lite .mqb .mq{filter:none!important}
 body.lite .area .win{box-shadow:0 0 0 1px rgba(var(--ncB),.2)!important}
 body.lite .desk::after{animation:none!important}
 body.lite .desk::before{display:none!important}
+#vo,#dVo{display:none!important}
 </style>
 <style>html,body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
 <!--IZ-GAME-BASE:START-->
@@ -596,8 +597,7 @@ body.lite .desk::before{display:none!important}
     <div class="opt" data-row="0"><span class="ol">LEVEL</span><span class="oc" id="optLv"></span><span class="od" id="lvDesc"></span></div>
     <div class="opt" data-row="1"><span class="ol">DIFFICULTY</span><span class="oc" id="optDiff"></span><span class="od" id="diffDesc"></span></div>
     <div class="opt" data-row="2"><span class="ol">QUESTIONS</span><span class="oc" id="optCount"></span><span class="od" id="countDesc"></span></div>
-    <div class="opt" data-row="3"><span class="ol">REVEAL DELAY</span><span class="oc" id="optRv"></span><span class="od" id="rvDesc"></span></div>
-    <button type="button" class="start" id="mStart" data-row="4">START MISSION</button>
+    <button type="button" class="start" id="mStart" data-row="3">START MISSION</button>
     <div class="mh">&uarr;&darr; select &nbsp; &larr;&rarr; change &nbsp; ENTER start &nbsp; (in play: [ ] adjust delay)</div>
   </div>
   <div class="cyber-deck">
@@ -2013,10 +2013,10 @@ function powerOn(){
   later(toMenu,800);
 }
 // 開始前の画面: 難易度と問題数を選ぶ
-let mRow=4;
+let mRow=3;
 // 音声が流れてから文字が出るまでの遅れ（ms）。0 = 音声と同時。調整用: メニューで選ぶ / プレイ中は [ ] で0.1秒ずつ増減（記憶する）
 const RV_PRESETS=[0,300,500,800,1200,2000];
-let revealMs=500; try{ const v=localStorage.getItem('cmdTyping.revealMs'); if(v!==null&&!isNaN(+v)) revealMs=Math.max(0,Math.min(3000,+v)); }catch(e){}
+let revealMs=0;
 function setReveal(v){ revealMs=Math.max(0,Math.min(3000,Math.round(v/100)*100)); try{ localStorage.setItem('cmdTyping.revealMs',revealMs); }catch(e){} const e=$('sRv'); if(e) e.textContent=(revealMs/1000).toFixed(1)+'s'; }
 setReveal(revealMs);
 function fitMenu(){ const m=$('menu'), n=$('menuIn'); if(!m||!n||m.hidden) return; n.style.transform='none';
@@ -2035,10 +2035,6 @@ function renderMenu(){
   COUNTS.forEach(n=>{ const b=document.createElement('button'); b.type='button'; b.textContent=n+' WORDS'; if(n===TOTAL) b.className='on';
     b.addEventListener('click',()=>{ setCount(n); mRow=2; playTick(); renderMenu(); }); oc.appendChild(b); });
   const per=[BOUNDS[1],BOUNDS[2]-BOUNDS[1],BOUNDS[3]-BOUNDS[2]];
-  const orv=$('optRv'); orv.textContent='';
-  RV_PRESETS.forEach(n=>{ const b=document.createElement('button'); b.type='button'; b.textContent=(n/1000).toFixed(1)+'s'; if(n===revealMs) b.className='on';
-    b.addEventListener('click',()=>{ setReveal(n); mRow=3; playKey(false); renderMenu(); }); orv.appendChild(b); });
-  $('rvDesc').textContent='音声が流れてから文字が出るまで '+(revealMs/1000).toFixed(1)+'秒（音声OFFのときは即表示）。聞き取れれば文字を待たずに打てる';
   $('countDesc').textContent='防御 '+per[0]+'語 → 追跡 '+per[1]+'語 → 反撃 '+per[2]+'語';
   document.querySelectorAll('#menu [data-row]').forEach(el=>el.classList.toggle('sel',+el.dataset.row===mRow));
   fitMenu();
@@ -2047,15 +2043,14 @@ function toMenu(){
   speakStop();
   if(naming) finishNaming(); clearOver(); setTension(0); mqList=''; token++; state='menu'; sirenStop(); bgmStop(); clockStop(); mqClear();
   WINS.forEach(id=>$(id).hidden=true); $('alert').hidden=true; $('ov').hidden=true; $('power').hidden=true; $('idle').hidden=true;
-  document.body.classList.remove('alert'); $('menu').hidden=false; mRow=4; renderMenu(); menuMusicStart();
+  document.body.classList.remove('alert'); $('menu').hidden=false; mRow=3; renderMenu(); menuMusicStart();
 }
 function menuKey(e){
   const k=e.key;
-  if(k==='ArrowUp'||k==='ArrowDown'){ e.preventDefault(); mRow=(mRow+(k==='ArrowUp'?4:1))%5; playTick(); renderMenu(); return; }
+  if(k==='ArrowUp'||k==='ArrowDown'){ e.preventDefault(); mRow=(mRow+(k==='ArrowUp'?3:1))%4; playTick(); renderMenu(); return; }
   if(k==='ArrowLeft'||k==='ArrowRight'){ e.preventDefault(); const d=k==='ArrowLeft'?-1:1;
     if(mRow===0){ lv=(lv+d+LEVELS.length)%LEVELS.length; }
     else if(mRow===1){ const ks=Object.keys(DIFF); diff=ks[(ks.indexOf(diff)+d+ks.length)%ks.length]; }
-    else if(mRow===3){ const i=Math.max(0,RV_PRESETS.indexOf(revealMs)); setReveal(RV_PRESETS[(i+d+RV_PRESETS.length)%RV_PRESETS.length]); }
     else if(mRow===2){ const i=COUNTS.indexOf(TOTAL); setCount(COUNTS[(i+d+COUNTS.length)%COUNTS.length]); }
     playTick(); renderMenu(); return; }
   if(k==='Enter'){ e.preventDefault(); startMission(); }
@@ -2113,7 +2108,7 @@ function startPhase(p){
 // ---- 読み上げ: 事前に作った音声ファイル（voice/<単語>.mp3。espeak-ng のロボット風の声。作り方は tools/gen_voice.py）を再生する ----
 // 端末の音声合成は使わないので、どの環境でも同じ声になる。単語が出たら、まず読み上げを聞かせ、終わってから入力できる
 // （読み上げ中のキーは無視する。タイムは入力している間だけ数えるので、聞いている時間は入らない）。Tab で、もう一度読む（このときは入力を止めない）
-let voiceOn=true, hearing=false, hearT=null, vNow=null, voiceWarned=false; const VC={};
+let voiceOn=false, hearing=false, hearT=null, vNow=null, voiceWarned=false; const VC={};
 // 再生できなかったとき、理由を画面に1回だけ出す（音が出ない原因をつかむため）
 function voiceWarn(why){ if(voiceWarned) return; voiceWarned=true; try{ addLine('warn','[!] 読み上げ音声を再生できません: '+why); }catch(e){} }
 // 音声はあらかじめ取り込んで、デコード済みの形でメモリに持つ（再生の遅れをなくす）。
@@ -2377,7 +2372,6 @@ window.addEventListener('keydown',e=>{
   if(state!=='play') return;
   if(e.key==='Process'||e.isComposing||e.keyCode===229){ $('ime').hidden=false; return; }
   if(e.key==='Tab'){ e.preventDefault(); if(!e.repeat&&words[wi]) speakWord(words[wi][0],false); return; }
-  if(e.key==='['||e.key===']'){ e.preventDefault(); if(!e.repeat){ setReveal(revealMs+(e.key==='['?-100:100)); banner('REVEAL DELAY '+(revealMs/1000).toFixed(1)+'s'); } return; }
   if(e.key==='Enter'){ e.preventDefault(); if(!e.repeat){ playEnter(); key('\n'); } return; }
   if(e.key.length===1){ e.preventDefault(); $('ime').hidden=true; if(!e.repeat) playKey(e.key===' '); key(e.key); }
 });
