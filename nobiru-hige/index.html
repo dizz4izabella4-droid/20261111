@@ -516,7 +516,7 @@ function resetGame() {
   if (!started) return;
   score = 0;
   items.length = 0; enemies.length = 0; spores.length = 0; mycs.length = 0; blocks.length = 0; blockTimer = 0;
-  splats.length = 0; rings.length = 0; particles.length = 0;
+  splats.length = 0; rings.length = 0; particles.length = 0; backs.length = 0; fronts.length = 0; leakTimer = 240;
   player.scaleX = 1; player.scaleY = 1;
   player.x = 240; player.y = GROUND_Y - player.h;
   player.vx = 0; player.vy = 0; player.onGround = false;
@@ -1544,7 +1544,7 @@ function renderShroom(nb) {
 }
 function enterShroom() {
   setPhase('shroom');
-  items.length = 0; enemies.length = 0; spores.length = 0; mycs.length = 0; blocks.length = 0; blockTimer = 0; splats.length = 0; rings.length = 0; particles.length = 0;
+  items.length = 0; backs.length = 0; fronts.length = 0; enemies.length = 0; spores.length = 0; mycs.length = 0; blocks.length = 0; blockTimer = 0; splats.length = 0; rings.length = 0; particles.length = 0;
   pendingLand = null; flash = 1;
   player.scaleX = player.scaleY = 1; player.x = 90; player.y = GROUND_Y - player.h;
   player.vx = player.vy = 0; player.dir = 1; player.onGround = true; player.walkFrame = 0; player.invuln = 0;
@@ -2351,6 +2351,140 @@ function drawBlocks() {
   }
 }
 
+
+// ================= 奥行きキノコ（見た目だけ。当たり判定なし） =================
+// 2Dの画面の奥側にもキノコが密集していて、数は手前の敵の数に応じて増える。
+// ときどき奥から数匹が手前へ飛び出して（漏れて）歩き回り、また奥へ戻る。
+const MAX_BACK = 180;      // 奥のキノコの上限
+const BACK_DEPTH_PX = 46;  // 最も奥の列が、地面の線からどれだけ上に見えるか
+let backs = [];            // 奥のキノコ（d が大きいほど奥。奥から先に描く）
+let fronts = [];           // 手前へ漏れたキノコ
+let leakTimer = 240;
+function backLook(d, hue, light) {
+  return {
+    cap: `hsl(${hue},${Math.round(70 - 28 * d)}%,${Math.round(light * (1 - 0.42 * d))}%)`,
+    dark: `hsl(${hue},${Math.round(55 - 22 * d)}%,${Math.max(8, Math.round(light * (1 - 0.42 * d)) - 16)}%)`,
+    stem: `hsl(12,${Math.round(60 - 30 * d)}%,${Math.round(82 - 38 * d)}%)`
+  };
+}
+function addBack(x) {
+  const src = enemies.length ? enemies[(Math.random() * enemies.length) | 0] : null;
+  const hue = src ? src.hue + (Math.random() - 0.5) * 30 : 18, light = src ? src.light : 41;
+  const d = Math.pow(Math.random(), 0.8);          // 0（手前寄り）〜1（最奥）
+  const b = { x, d, hue, light, size: 15 + Math.random() * 12, ph: Math.random() * 6.28,
+    vx: (Math.random() - 0.5) * 0.5, frame: Math.random() * 4, born: 0 };
+  Object.assign(b, backLook(d, hue, light));
+  let i = backs.length; while (i > 0 && backs[i - 1].d < d) i--;   // 奥(d大)から並べる
+  backs.splice(i, 0, b);
+}
+function backBaseY(d) { return GROUND_Y - 2 - d * BACK_DEPTH_PX; }
+function backScale(b) { return (b.size / ENEMY_BASE) * (1 - 0.5 * b.d); }
+function sfxLeak() { if (audioCtx) playTone(240 + Math.random() * 160, 'triangle', 0.07, 0.035, 520); }
+function updateDepth() {
+  if (phase !== 'play' && phase !== 'flower' && phase !== 'fire') return;
+  // 数を手前の敵に合わせる（密集：敵の1.6倍）
+  const target = Math.min(MAX_BACK, Math.floor(enemies.length * 1.6));
+  if (tick % 2 === 0) {
+    for (let k = 0; k < 3 && backs.length < target; k++) {
+      let x;
+      if (backs.length > 6 && Math.random() < 0.7) x = backs[(Math.random() * backs.length) | 0].x + (Math.random() - 0.5) * 44;
+      else if (enemies.length) x = enemies[(Math.random() * enemies.length) | 0].x;
+      else x = Math.random() * canvas.width;
+      addBack(Math.max(4, Math.min(canvas.width - 4, x)));
+    }
+    for (let k = 0; k < 3 && backs.length > target; k++) backs.splice((Math.random() * backs.length) | 0, 1);
+  }
+  for (const b of backs) {
+    if (b.born < 1) b.born = Math.min(1, b.born + 0.05);
+    b.frame += 0.08;
+    b.x += b.vx + Math.sin(tick * 0.025 + b.x * 0.02) * 0.35;      // 手前と同じ波
+    if (b.x < 2) { b.x = 2; b.vx = Math.abs(b.vx); }
+    if (b.x > canvas.width - 2) { b.x = canvas.width - 2; b.vx = -Math.abs(b.vx); }
+  }
+  // たまに手前へ漏れる
+  if (phase !== 'fire' && backs.length >= 12 && fronts.length < 6 && --leakTimer <= 0) {
+    leakTimer = 150 + Math.random() * 260 - Math.min(100, backs.length);
+    const n = 1 + (Math.random() < 0.5 ? 1 : 0) + (backs.length > 80 && Math.random() < 0.4 ? 1 : 0);
+    const bx = backs[(Math.random() * backs.length) | 0].x;
+    for (let k = 0; k < n; k++) {
+      const i = backs.length - 1 - ((Math.random() * Math.min(backs.length, 30)) | 0); // 手前寄りの列から
+      const b = backs.splice(Math.max(0, i), 1)[0];
+      if (!b) break;
+      b.x = bx + (k - (n - 1) / 2) * 20 + (Math.random() - 0.5) * 12;
+      fronts.push({ b, t: 0, jump: 34 + k * 5, stay: 140 + Math.random() * 160,
+        fy: GROUND_Y + 12 + Math.random() * 26, fsz: 22 + Math.random() * 8,
+        vx: (Math.random() < 0.5 ? -1 : 1) * (0.4 + Math.random() * 0.6), mode: 0 });
+    }
+    sfxLeak();
+  }
+  for (let i = fronts.length - 1; i >= 0; i--) {
+    const f = fronts[i], b = f.b;
+    f.t++;
+    if (f.mode === 0) {                        // 奥→手前へ飛び出す
+      if (f.t >= f.jump) { f.mode = 1; f.t = 0; }
+    } else if (f.mode === 1) {                 // 手前を歩き回る
+      b.x += f.vx + Math.sin(tick * 0.05 + b.ph) * 0.3;
+      if (b.x < 6 || b.x > canvas.width - 6) f.vx *= -1;
+      if (f.t > f.stay || phase === 'fire') { f.mode = 2; f.t = 0; }
+    } else {                                   // 奥へ戻る
+      if (f.t >= f.jump) {
+        if (backs.length < MAX_BACK) { b.born = 1; let j = backs.length; while (j > 0 && backs[j - 1].d < b.d) j--; backs.splice(j, 0, b); }
+        fronts.splice(i, 1);
+      }
+    }
+  }
+}
+// 24x24 のキノコ絵を、足元(x, baseY)・倍率 sc で描く
+function drawMini(x, baseY, sc, cap, dark, stem, fr, small) {
+  ctx.save();
+  ctx.translate(Math.round(x - 12 * sc), Math.round(baseY - 24 * sc));
+  ctx.scale(sc, sc);
+  const walk = Math.floor(fr) % 2 === 0 ? -1 : 1;
+  ctx.fillStyle = cap; ctx.fillRect(4, 0, 16, 6); ctx.fillRect(1, 5, 22, 9);
+  ctx.fillStyle = '#fff'; ctx.fillRect(5, 7, 4, 5); ctx.fillRect(15, 7, 4, 5);
+  ctx.fillStyle = '#000';
+  if (small) { ctx.fillRect(6, 9, 3, 3); ctx.fillRect(15, 9, 3, 3); }
+  else { ctx.fillRect(7, 8, 2, 4); ctx.fillRect(15, 8, 2, 4); ctx.fillRect(5, 6, 5, 2); ctx.fillRect(14, 6, 5, 2); }
+  ctx.fillStyle = stem; ctx.fillRect(7, 14, 10, 6);
+  ctx.fillStyle = dark; ctx.fillRect(3 + walk, 19, 7, 5); ctx.fillRect(14 - walk, 19, 7, 5);
+  ctx.restore();
+}
+function backPos(b) {
+  const hop = Math.max(0, Math.sin(tick * 0.09 - b.x * 0.03 + b.ph)) > 0.9 ? 2 : 0;  // ぴょこぴょこの波
+  return backBaseY(b.d) - hop;
+}
+// 奥のキノコ（背景の直後。地面の線より奥）
+function drawBacks() {
+  if (!(phase === 'play' || phase === 'flower' || phase === 'fire')) return;
+  for (const b of backs) {
+    const bk = b.born < 1 ? 1 - Math.pow(1 - b.born, 2) : 1;
+    const sc = backScale(b);
+    drawMini(b.x, backPos(b) + 24 * sc * (1 - bk), sc, b.cap, b.dark, b.stem, b.frame, true);
+  }
+  if (dusk > 0.01) {          // 夕闇を奥の列にもかける
+    ctx.fillStyle = `rgba(8,6,40,${dusk})`;
+    ctx.fillRect(0, GROUND_Y - BACK_DEPTH_PX - 30, canvas.width, BACK_DEPTH_PX + 32);
+  }
+}
+// 手前へ漏れたキノコ（プレイヤーより前。地面のレンガの上）
+function drawFronts() {
+  for (const f of fronts) {
+    const b = f.b, sc0 = backScale(b), sc1 = f.fsz / ENEMY_BASE;
+    const by0 = backBaseY(b.d), by1 = f.fy;
+    let k, arc = 0;
+    if (f.mode === 0) { k = f.t / f.jump; arc = Math.sin(Math.PI * k) * 46; }
+    else if (f.mode === 1) { k = 1; arc = Math.max(0, Math.sin(f.t * 0.2 + b.ph)) * 5; }
+    else { k = 1 - f.t / f.jump; arc = Math.sin(Math.PI * (1 - k)) * 46; }
+    const e = k * k * (3 - 2 * k);
+    const sc = sc0 + (sc1 - sc0) * e, by = by0 + (by1 - by0) * e - arc;
+    // 手前の色（くすまない）
+    const cap = `hsl(${b.hue},82%,${Math.round(b.light)}%)`, dark = `hsl(${b.hue},68%,${Math.max(10, Math.round(b.light) - 18)}%)`;
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.fillRect(Math.round(b.x - 10 * sc), Math.round(by1 + 1), Math.round(20 * sc), 3);
+    drawMini(b.x, by, sc, cap, dark, '#fcbcb0', f.t * 0.15 + b.frame, false);
+  }
+}
+
 // キノコの積み重なり：近い位置のキノコは上下に重なる。数が多いと波のようにうねる
 function restack() {
   const cnt = new Uint16Array(60);
@@ -2482,6 +2616,7 @@ function update() {
 
   // 敵更新
   if (tick % 5 === 0) restack();
+  updateDepth();
   for (let i = enemies.length - 1; i >= 0; i--) {
     const e = enemies[i];
     if (e.safeTimer > 0) e.safeTimer--;
@@ -2809,6 +2944,7 @@ function loop() {
     drawNight();
   } else {
   drawBackground();
+  drawBacks();
   drawBad();
   drawSplats();
   drawMycs();
@@ -2819,6 +2955,7 @@ function loop() {
   drawRings();
   drawPrincess();
   drawPlayer();
+  if (phase === 'play' || phase === 'flower' || phase === 'fire') drawFronts();
   drawFlower();
   drawGiantShroom();
   drawTrip();
