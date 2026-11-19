@@ -1,0 +1,1118 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<title>損益通算・繰越控除 研修（令和8年分）</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;}
+body{background:#fff;color:#000;font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic UI","Yu Gothic",Meiryo,"Noto Sans JP",sans-serif;font-size:15px;line-height:1.8;-webkit-text-size-adjust:100%;padding-bottom:76px;}
+.wrap{max-width:560px;margin:0 auto;}
+h1{font-size:15px;margin:0;padding:10px 12px;border-bottom:2px solid #000;font-weight:bold;}
+.modebar{display:flex;border-bottom:1px solid #000;}
+.modebar button{flex:1;border:0;border-right:1px solid #000;background:#fff;padding:11px 4px;font-size:14px;font-family:inherit;}
+.modebar button:last-child{border-right:0;}
+.modebar button.on{background:#000;color:#fff;font-weight:bold;}
+.prog{border-bottom:1px solid #000;padding:8px 12px;}
+.prog .pnow{font-weight:bold;font-size:14px;}
+.prog .paim{font-size:13px;}
+.dots{margin-top:5px;letter-spacing:3px;font-size:14px;}
+.main{padding:12px;}
+.sec{margin-bottom:14px;}
+.st{font-size:15px;font-weight:bold;border-bottom:1px solid #000;padding-bottom:3px;margin-bottom:8px;}
+.sub2{font-size:14px;font-weight:bold;margin:12px 0 4px;}
+.box{border:1px solid #000;padding:10px;margin-bottom:10px;}
+.box2{border:2px solid #000;padding:10px;margin-bottom:10px;}
+.boxt{font-size:14px;font-weight:bold;border-bottom:1px solid #000;padding-bottom:3px;margin-bottom:6px;}
+p{margin:6px 0;}
+.note{border:1px solid #000;padding:9px;font-size:13.5px;margin-bottom:10px;}
+.skip{border:1px solid #888;padding:9px;font-size:13.5px;margin-bottom:10px;color:#333;}
+.small{font-size:12.5px;}
+button{border:1px solid #000;background:#fff;font-family:inherit;font-size:15px;cursor:pointer;}
+.btn{display:block;width:100%;text-align:left;padding:13px 11px;margin-bottom:6px;min-height:48px;}
+.btn.on{background:#000;color:#fff;}
+.btn.ctr{text-align:center;font-weight:bold;}
+.btnS{padding:9px 12px;font-size:14px;min-height:42px;}
+/* 縦積みデータ行 */
+.dl{border:1px solid #000;margin-bottom:8px;}
+.dl .dh{background:#f0f0f0;padding:7px 10px;font-size:14px;font-weight:bold;border-bottom:1px solid #000;}
+.dl .dr{display:flex;justify-content:space-between;align-items:baseline;padding:6px 10px;border-bottom:1px dotted #999;font-size:14px;gap:8px;}
+.dl .dr:last-child{border-bottom:0;}
+.dl .dr .dk{flex:1 1 auto;}
+.dl .dr .dv{text-align:right;white-space:nowrap;font-weight:bold;}
+.dl .dr .dv.nb{font-weight:normal;}
+.dl .dr.hi{background:#f6f6f6;}
+/* 縦図 */
+.fig{border:1px solid #000;padding:10px;margin:8px 0;font-size:13.5px;}
+.fig .fgt{font-weight:bold;border-bottom:1px solid #000;padding-bottom:3px;margin-bottom:5px;}
+.fig .fgi{padding-left:10px;}
+.fig .fgs{border-top:1px dotted #888;margin-top:5px;padding-top:5px;}
+.arrow{text-align:center;font-size:17px;margin:4px 0;}
+.wall{text-align:center;font-size:13px;border-top:2px dashed #000;border-bottom:2px dashed #000;padding:5px 0;margin:8px 0;}
+.flow{border:1px solid #000;padding:9px;margin:8px 0;font-size:13.5px;}
+.flow .fs{border-bottom:1px dotted #999;padding:5px 0;}
+.flow .fs:last-child{border-bottom:0;}
+.flow .fsn{font-weight:bold;}
+/* 入力 */
+.inpanel{border:1px solid #000;margin-bottom:10px;}
+.inpanel .ih{padding:12px 11px;font-size:14px;font-weight:bold;}
+.inpanel .ih:before{content:"[＋] ";}
+.inpanel.open .ih:before{content:"[－] ";}
+.inpanel .ib{display:none;padding:0 11px 11px;}
+.inpanel.open .ib{display:block;}
+.insub{font-size:14px;font-weight:bold;margin:12px 0 5px;border-bottom:1px solid #000;padding-bottom:2px;}
+.fld{margin-bottom:9px;}
+.fld .fn{font-size:14px;}
+.fld .fi{font-size:11.5px;color:#555;}
+.fld .fr{display:flex;align-items:center;gap:7px;margin-top:3px;}
+input[type=number]{flex:1 1 auto;width:100%;border:1px solid #000;padding:10px;text-align:right;font-size:16px;font-family:inherit;min-height:46px;}
+select{width:100%;border:1px solid #000;padding:10px;font-size:16px;font-family:inherit;min-height:46px;background:#fff;}
+.fu{font-size:13px;white-space:nowrap;}
+/* 折りたたみ */
+.fold{border:1px solid #888;margin-top:8px;}
+.fold .fh{padding:11px 10px;font-size:13.5px;font-weight:bold;}
+.fold .fh:before{content:"[＋] ";}
+.fold.open .fh:before{content:"[－] ";}
+.fold .fb{display:none;padding:0 10px 10px;font-size:13.5px;}
+.fold.open .fb{display:block;}
+/* 判定 */
+.jd{border:1px solid #000;padding:10px;margin-bottom:10px;}
+.jd .jt{font-size:15px;font-weight:bold;}
+.jd .jy{font-size:11.5px;}
+.jd .ja{font-size:14px;margin-top:4px;}
+.res{font-weight:bold;text-decoration:underline;}
+.calc{border:1px solid #888;background:#fafafa;padding:8px;margin:6px 0;font-size:13px;font-family:"SF Mono",monospace;line-height:1.7;word-break:break-all;}
+.mis{border-left:4px solid #000;padding-left:9px;margin-top:8px;font-size:13.5px;}
+.mis .mt{font-weight:bold;}
+.order{border:2px solid #000;padding:9px;margin-bottom:10px;font-size:13.5px;}
+.order .ot{font-size:13px;font-weight:bold;margin-bottom:3px;}
+.amd{border:1px dashed #000;padding:8px;margin-top:8px;font-size:13px;}
+.amd .at{font-weight:bold;}
+.unused{border:1px solid #888;padding:8px;font-size:12.5px;color:#333;margin-top:10px;}
+/* 問題 */
+.quiz{border:2px solid #000;padding:10px;margin-bottom:10px;}
+.quiz .qt{font-size:13px;font-weight:bold;margin-bottom:4px;}
+.quiz .qq{font-size:15px;margin-bottom:8px;}
+.quiz .qr{border-top:1px solid #000;margin-top:9px;padding-top:8px;font-size:13.5px;}
+.quiz .qj{font-weight:bold;margin-bottom:4px;}
+/* 用語 */
+.term{border-bottom:2px dotted #000;}
+.sheetbg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:90;display:none;}
+.sheet{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:2px solid #000;z-index:91;display:none;max-height:72vh;overflow-y:auto;padding:12px 14px 20px;}
+.sheet .sh{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #000;padding-bottom:6px;margin-bottom:7px;}
+.sheet .shw{font-size:16px;font-weight:bold;}
+.sheet .shx{border:1px solid #000;padding:5px 12px;font-size:15px;}
+.sheet .sx{font-size:14.5px;}
+/* 固定ナビ */
+.nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:2px solid #000;display:flex;gap:7px;padding:9px 12px;z-index:50;max-width:560px;margin:0 auto;}
+.nav button{min-height:50px;font-size:15px;}
+.nav .nb1{flex:0 0 32%;}
+.nav .nb2{flex:1 1 auto;font-weight:bold;}
+.nav .nb3{flex:0 0 28%;font-size:13.5px;}
+/* メモ・リスト */
+.memo{border:1px solid #000;padding:10px;font-size:14px;white-space:pre-wrap;line-height:1.95;}
+.cl{list-style:none;padding:0;margin:0;}
+.cl li{border-bottom:1px dotted #999;padding:8px 0 8px 22px;position:relative;font-size:14px;}
+.cl li:before{content:"□";position:absolute;left:0;}
+.cl li:last-child{border-bottom:0;}
+.log{border:1px solid #000;padding:9px;font-size:12px;font-family:monospace;white-space:pre-wrap;line-height:1.6;max-height:200px;overflow-y:auto;}
+.foot{padding:12px;font-size:12.5px;border-top:1px solid #000;margin-top:14px;}
+.foot a{display:block;margin:4px 0;}
+.score{border:2px solid #000;padding:10px;font-size:14px;}
+.lrel{border:1px solid #000;padding:9px;margin-bottom:10px;}
+
+/* ===== 見た目の整え（v2） ===== */
+:root{--ink:#1f2937;--sub:#6b7280;--line:#cbd5e1;--acc:#1d4ed8;--accbg:#eff6ff;--bg:#f4f5f7;--ng:#b91c1c;--ngbg:#fef2f2;--ok:#047857;--okbg:#ecfdf5}
+html{background:var(--bg)}
+body{background:var(--bg);color:var(--ink);padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+.wrap{max-width:640px;background:#fff;min-height:100vh;box-shadow:0 0 0 1px #e5e7eb}
+h1{background:#111827;color:#fff;border-bottom:0;padding:12px 14px;font-size:16px;letter-spacing:.5px}
+.modebar{border-bottom:1px solid var(--line);background:#fff}
+.modebar button{border-right:1px solid var(--line);color:var(--sub);padding:12px 4px;font-weight:700}
+.modebar button.on{background:var(--accbg);color:var(--acc);box-shadow:inset 0 -3px 0 var(--acc)}
+.prog{background:#f8fafc;border-bottom:1px solid var(--line)}
+.prog .pnow{color:var(--ink)}
+.dots{color:var(--acc)}
+.main{padding:14px}
+.st{border-bottom:2px solid var(--acc);color:var(--ink);font-size:15.5px}
+.sub2{color:var(--acc)}
+.box,.box2,.note,.skip,.fig,.flow,.dl,.order,.quiz,.jd,.score,.lrel,.fold,.memo,.calc,.unused,.amd,.inpanel,.log{border-radius:8px}
+.box{border-color:var(--line)}
+.box2{border:2px solid var(--acc)}
+.boxt{border-bottom-color:var(--line)}
+.note{background:var(--accbg);border:1px solid #bfdbfe}
+.skip{background:#f8fafc;border-color:var(--line)}
+.fig,.flow,.dl,.inpanel{border-color:var(--line)}
+.dl .dh{background:#f1f5f9;border-bottom-color:var(--line)}
+.dl .dr{border-bottom-color:#e2e8f0;flex-wrap:wrap}
+.dl .dr .dk{min-width:0}
+.dl .dr .dv{white-space:normal;max-width:100%}
+.dl .dr.hi{background:var(--accbg)}
+.fig .fgt{border-bottom-color:var(--line)}
+.order{border:1px solid #f59e0b;border-left:5px solid #f59e0b;background:#fffbeb}
+.order .ot{color:#92400e}
+.jd{border-color:var(--line);border-left:5px solid var(--acc)}
+.res{text-decoration:none;color:var(--acc);background:var(--accbg);padding:1px 6px;border-radius:4px}
+.calc{background:#f8fafc;border-color:var(--line)}
+.mis{border-left:4px solid var(--ng);background:var(--ngbg);padding:8px 10px;border-radius:0 6px 6px 0}
+.mis .mt{color:var(--ng)}
+.quiz{border:2px solid var(--acc);background:#fff}
+.quiz .qt{color:var(--acc)}
+.quiz .qr{border-top-color:var(--line)}
+.btn{border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+.btn:hover{border-color:var(--acc)}
+.btn.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn.on .small{color:#dbeafe}
+.fold{border-color:var(--line)}
+.fold .fh{color:var(--acc)}
+.term{border-bottom:2px dotted var(--acc);color:var(--acc)}
+.sheet{border-top:3px solid var(--acc);border-radius:14px 14px 0 0}
+.sheet .shx{border:1px solid var(--line);border-radius:7px;background:#fff}
+.nav{border-top:1px solid var(--line);box-shadow:0 -4px 14px rgba(0,0,0,.08);padding:9px 12px calc(9px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:100%;max-width:640px;margin:0}
+.nav button{border:1px solid var(--line);border-radius:9px;background:#fff}
+.nav .nb2{background:var(--acc);border-color:var(--acc);color:#fff}
+.nav .nb2:disabled{background:#e5e7eb;border-color:#e5e7eb;color:#9ca3af}
+.foot{background:#f8fafc;color:var(--sub);border-top:1px solid var(--line)}
+.foot a{color:var(--acc)}
+input[type=number],select{border:1px solid var(--line);border-radius:8px}
+input[type=number]:focus,select:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px #dbeafe}
+.cl li:before{color:var(--acc)}
+button:focus-visible,.fh:focus-visible,.ih:focus-visible{outline:3px solid #93c5fd;outline-offset:1px}
+@media(max-width:380px){.nav .nb3{flex-basis:26%;font-size:12.5px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>損益通算・繰越控除 研修</h1>
+<div class="modebar">
+  <button id="mdCase" class="on" onclick="setMode('case')">案件で学ぶ</button>
+  <button id="mdLec" onclick="setMode('lec')">考え方を学ぶ</button>
+</div>
+<div class="prog" id="prog"></div>
+<div class="main">
+<div id="scr0"></div>
+<div id="scrStep" style="display:none;">
+  <div id="clientbox"></div>
+  <div class="inpanel" id="inpanel">
+    <div class="ih" onclick="$('inpanel').classList.toggle('open')">数値を変更する</div>
+    <div class="ib" id="inbody"></div>
+  </div>
+  <div id="stepbody"></div>
+</div>
+<div id="scr7" style="display:none;"><div id="sumbody"></div></div>
+<div id="scrLecIdx" style="display:none;"><div id="lecidxbody"></div></div>
+<div id="scrLec" style="display:none;"><div id="lecbody"></div></div>
+</div>
+<div class="foot">
+研修用の簡易モデルです。実際の申告判断は原典および担当税理士の指示によりご確認ください。<br>
+判定は令和8年分の取扱いに基づきます。<br>
+<b>出典</b>
+<a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2250.htm" target="_blank">No.2250 損益通算</a>
+<a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1480.htm" target="_blank">No.1480 山林所得</a>
+<a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1490.htm" target="_blank">No.1490 一時所得</a>
+<a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1474.htm" target="_blank">No.1474 上場株式等の譲渡損失</a>
+<a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1391.htm" target="_blank">No.1391 不動産所得が赤字のとき</a>
+<a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1330.htm" target="_blank">No.1330 配当金を受け取ったとき</a>
+<a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1300.htm" target="_blank">No.1300 所得の区分のあらまし</a>
+<a href="https://www.nta.go.jp/law/tsutatsu/kobetsu/shotoku/shinkoku/001115/pdf/06/06_007.pdf" target="_blank">損益の通算の計算書</a>
+</div>
+</div>
+<div class="sheetbg" id="shbg" onclick="closeTerm()"></div>
+<div class="sheet" id="sheet">
+  <div class="sh"><span class="shw" id="shw"></span><button class="shx" onclick="closeTerm()">閉じる</button></div>
+  <div class="sx" id="shx"></div>
+</div>
+<div class="nav" id="nav"></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const v=id=>{const e=$(id);return e?(parseFloat(e.value)||0):0;};
+const sv=id=>{const e=$(id);return e?e.value:"";};
+const yen=n=>(n<0?"△":"")+Math.abs(Math.round(n*10)/10).toLocaleString()+"万円";
+let LOG=[],USED=new Set(),YEAR=8,CURCASE=null,SCR=0,R=null,QA={},FSEQ=0,MODE="case",LA={},LD=new Set(),CMP=false,GRPOPEN={"基本":true};
+
+const FIELDS={i_salary:"給与所得",i_biz:"事業所得",i_realty:"不動産所得",i_landint:"土地取得借入金利子",i_villa:"別荘等の赤字",i_misc:"雑所得",i_misc_a:"雑所得の内訳A（益）",i_misc_b:"雑所得の内訳B（損）",i_int:"利子所得",i_cshort:"総合譲渡（短期）",i_clong:"総合譲渡（長期）",i_golf:"ゴルフ会員権等の赤字",i_onetime:"一時所得",i_forest:"山林所得",i_retire:"退職所得",s_listed:"上場株式等 譲渡損益",s_listed_a:"内訳A 銘柄甲",s_listed_b:"内訳B 銘柄乙",s_div:"上場株式等 配当",s_divmode:"配当の課税方式",s_account:"口座種別",s_file:"確定申告",s_unlisted:"非上場株式等 譲渡損益",s_unldiv:"非上場株式の配当",s_major:"大口株主",r_long:"土地建物 長期譲渡",r_short:"土地建物 短期譲渡",r_home:"居住用財産の特例",f_fut:"先物取引",c_stock:"繰越（上場株式等）",c_fut:"繰越（先物）",c_pure:"繰越（純損失）",c_blue:"申告の種類",c_cont:"連続申告",d_ded:"所得控除合計"};
+const DISP={s_divmode:{separate:"申告分離課税",total:"総合課税",none:"申告不要"},s_account:{tokutei_gen:"特定口座（源泉あり）",tokutei_nogen:"特定口座（源泉なし）",ippan:"一般口座",nisa:"NISA口座"},s_file:{y:"する",n:"しない"},s_major:{n:"いいえ",y:"はい"},r_home:{none:"該当しない",yes:"該当する"},c_blue:{y:"青色申告",n:"白色申告"},c_cont:{y:"継続",n:"欠年あり"}};
+const DEF={i_salary:0,i_biz:0,i_realty:0,i_landint:0,i_villa:0,i_misc:0,i_misc_a:0,i_misc_b:0,i_int:0,i_cshort:0,i_clong:0,i_golf:0,i_onetime:0,i_forest:0,i_retire:0,s_listed:0,s_listed_a:0,s_listed_b:0,s_div:0,s_divmode:"separate",s_account:"tokutei_gen",s_file:"y",s_unlisted:0,s_unldiv:0,s_major:"n",r_long:0,r_short:0,r_home:"none",f_fut:0,c_stock:0,c_fut:0,c_pure:0,c_blue:"y",c_cont:"y",d_ded:100};
+const INGRP=[
+{t:"経常所得グループ",f:["i_salary","i_biz","i_realty","i_landint","i_villa","i_misc","i_misc_a","i_misc_b","i_int"]},
+{t:"譲渡・一時グループ（2分の1前）",f:["i_cshort","i_clong","i_golf","i_onetime"]},
+{t:"分離課税（山林・退職）",f:["i_forest","i_retire"]},
+{t:"上場株式等・配当",f:["s_listed","s_listed_a","s_listed_b","s_div","s_divmode","s_account","s_file","s_unlisted","s_unldiv","s_major"]},
+{t:"土地建物・先物",f:["r_long","r_short","r_home","f_fut"]},
+{t:"繰越損失・申告要件",f:["c_stock","c_fut","c_pure","c_blue","c_cont","d_ded"]}];
+const SELF=["s_divmode","s_account","s_file","s_major","r_home","c_blue","c_cont"];
+
+/* 改正情報レジストリ（令和9年分）。資料の裏付けを得た項目のみ追記する。現時点では空。
+   書式 キー:{title,conf,before,after,reason,src,logic:null} */
+const AMENDMENTS={};
+const AKEY={major:"大口株主",file:"申告要件",account:"口座種別",divmode:"配当の課税方式",realty_loss:"不動産損失の制限",biz_loss:"事業の損失",cgen_loss:"総合譲渡の損失",golf:"生活に通常必要でない資産",misc_loss:"雑所得の損失",onetime_loss:"一時所得の損失",stock_div_offset:"株式損と配当の通算",stock_total_offset:"株式損と総合課税",stock_internal:"上場株式等の内部通算",unlisted_group:"上場・一般の区分",unldiv:"非上場株式の配当",realestate_group:"土地建物の譲渡損",home_special:"居住用財産の特例",futures:"先物取引",order1:"第1次通算",order2:"第2次通算",order3:"第3次通算",half:"2分の1算入",forest_tax:"山林所得の課税",carry_stock:"株式の繰越控除",carry_fut:"先物の繰越控除",carry_pure:"純損失の繰越",carry_period:"繰越期間",deduction:"所得控除の順序",dividend_credit:"配当控除"};
+
+const TERMS={
+総合課税:"いくつかの所得を合計し、その合計額に税率をかける方式です。所得が多いほど税率が上がる累進税率が適用されます。給与・事業・不動産・雑・利子・配当（総合課税を選んだもの）・総合譲渡・一時所得が対象です。",
+分離課税:"他の所得と合計せず、その所得だけで別に税額を計算する方式です。山林所得、退職所得、株式等の譲渡、土地建物の譲渡、先物取引などが対象です。",
+総所得金額:"総合課税の対象となる所得を合計した金額です。山林所得と退職所得は含まれません。",
+申告分離課税:"配当などについて確定申告をして分離課税で税額を計算する方式です。株式の譲渡損失と相殺できますが、配当控除は使えません。",
+申告不要:"源泉徴収されたままで確定申告をしない方式です。損失との相殺・くり越し・配当控除はいずれも使えません。一方で合計所得金額に含まれないため、扶養の判定などに影響しません。",
+損益通算:"赤字の所得を他の黒字の所得から差し引くことです。差し引ける赤字は原則として不動産・事業・譲渡・山林の4つに限られます。",
+内部通算:"同じ種類の所得の中で益と損を差し引きすることです。損益通算の前の段階で行います。複数銘柄の株式、雑所得の中の益と損がこれにあたります。",
+第1次通算:"同じグループの中での通算です。不動産・事業の赤字は経常所得グループの中で、譲渡の赤字は一時所得から差し引きます。",
+第2次通算:"第1次通算で引ききれなかった赤字を、別のグループの黒字から差し引くことです。経常グループと譲渡・一時グループの間で行います。",
+第3次通算:"第2次通算でもなお残る赤字を、山林所得、次に退職所得から差し引くことです。通算の最後の段階になります。",
+経常所得:"毎年くり返し発生する性質の所得をまとめた呼び方です。利子・配当・不動産・事業・給与・雑が含まれます。",
+繰越控除:"その年に引ききれなかった損失を翌年以後の所得から差し引くことです。期間は原則3年で、毎年続けて確定申告をすることが条件です。",
+純損失:"損益通算をしても引ききれずに残った赤字です。青色申告であれば翌年以後3年間くり越せます。",
+青色申告:"一定の帳簿を備えて税務署の承認を受けて行う申告です。純損失のくり越しなどの特典が使えます。",
+山林所得:"山林を取得してから5年を超えて伐採または譲渡したことによる所得です。分離課税で、税額は課税山林所得金額を5で割って税率をかけ、算出した税額を5倍する五分五乗方式で計算します。",
+五分五乗方式:"課税山林所得金額を5で割って税率を適用し、算出した税額を5倍する計算方法です。長期間かけて育てた山林の所得に累進税率が一度にかかることを緩和する趣旨のものです。",
+大口株主:"上場会社の発行済株式のうち一定割合以上を保有する株主です。受け取る配当について申告分離課税を選べません。",
+上場株式等:"証券取引所に上場されている株式や公募の投資信託などです。非上場の株式とは別の区分として扱われます。",
+一般株式等:"上場されていない株式などです。上場株式等とは別の区分で、互いに損益を相殺できません。",
+課税標準:"税率をかける前の金額です。所得から所得控除を差し引いて求めます。",
+所得控除:"基礎控除・社会保険料控除・配偶者控除などの総称です。所得から差し引いて課税標準を求めます。",
+配当控除:"総合課税を選んだ配当について税額から一定額を差し引く制度です。法人税との二重課税を調整する趣旨のものです。",
+居住用財産:"自分が住んでいた家屋とその敷地です。売却して損失が出た場合、一定の要件のもとで他の所得と相殺できる特例があります。",
+生活に通常必要でない資産:"ゴルフ会員権、貴金属、書画骨とう、別荘などです。売却して損失が出ても他の所得から差し引けません。",
+NISA口座:"一定の投資について利益が非課税となる口座です。利益が課税されない代わりに、損失も税務上なかったものとして扱われます。",
+特定口座:"証券会社が年間の損益を計算してくれる口座です。源泉徴収ありを選ぶと申告せずに課税関係を終えることもできます。",
+先物取引:"将来の価格を決めて売買する取引です。申告分離課税の対象で、損失は先物取引の所得からのみ差し引けます。",
+連続申告:"繰越控除を使うために、損失が出た年に申告し、その後も毎年続けて確定申告書を出すことです。利益がない年も出す必要があります。",
+総合譲渡:"土地建物や株式等以外の資産の譲渡による所得です。所有期間5年以内が短期、5年超が長期で、長期は2分の1を総所得金額に算入します。",
+一時所得:"営利を目的としない行為から生じた、労務や資産の譲渡の対価でない一時的な所得です。満期保険金、懸賞金などが含まれます。特別控除50万円を差し引いた後の金額の2分の1を総所得金額に算入します。"};
+
+const MIS={
+stock_total_offset:{q:"株で損をしたのだから、給与から引かれた税金が戻るはず",a:"株式の譲渡損失は分離課税のグループに属するため、総合課税の給与所得からは差し引けません。相殺できるのは同じグループの株式の譲渡益と、申告分離課税を選んだ配当だけです。日常感覚としては自然な誤解ですが、所得税はグループごとに計算する仕組みのため、この感覚のままでは誤った申告につながります。"},
+divmode:{q:"同じ株の話なのだから、配当と譲渡損はどの方式でも相殺できるはず",a:"相殺できるのは配当について申告分離課税を選んだ場合だけです。総合課税を選ぶと配当は総合課税のグループに移るため、分離課税の譲渡損失とは相殺できません。「同じ株だから」ではなく「同じ課税方式かどうか」で判断します。"},
+account:{q:"NISAで損をしたのだから、申告すれば還付を受けられるはず",a:"NISA口座内の損失は税務上なかったものとして扱われます。他の口座の利益との相殺も、翌年以後へのくり越しもできません。利益が出たときに課税されない仕組みの裏返しです。顧客が期待を持ちやすいため、最初に説明が必要な論点です。"},
+realty_loss:{q:"不動産が赤字なのだから、赤字の全額を給与から引けるはず",a:"不動産所得の赤字のうち、土地等を取得するための借入金の利子に相当する部分は差し引けません。別荘など趣味・保養目的の不動産の赤字も対象外です。借入金の利子が赤字額を上回る場合は赤字の全額が差し引けなくなります。建物の取得のための利子は除かれないため、借入金の使途が土地分か建物分かで結論が変わります。"},
+misc_loss:{q:"雑所得で損をしたのだから、他の所得から引けるはず",a:"雑所得の赤字は損益通算の対象外です。同じ雑所得の中での益と損の相殺はできますが、引ききれずに残った赤字は給与などから差し引けず、その年で切り捨てられます。暗号資産や副業の損失でこの誤解が生じやすい論点です。"},
+onetime_loss:{q:"一時所得が赤字なら他の所得から引けるはず",a:"一時所得の赤字も損益通算の対象外です。収入から支出を差し引いてなお赤字となる場合、その赤字は他の所得と相殺できません。"},
+golf:{q:"資産を売って損をしたのだから、譲渡損として引けるはず",a:"ゴルフ会員権・貴金属・書画骨とうなどは生活に通常必要でない資産とされ、売却損を他の所得から差し引けません。生活に必要な資産の損失を救済するという損益通算の趣旨から外れるためです。「譲渡損だから引ける」と考えず、何を売ったのかを確認します。"},
+realestate_group:{q:"土地を売って損をしたのだから、給与から引けるはず",a:"土地建物の譲渡損失は、土地建物の譲渡所得（長期・短期）の中でのみ相殺できます。他の所得とは相殺できず、引ききれない分は切り捨てられます。例外は居住用財産の譲渡損失の特例に該当する場合だけです。"},
+home_special:{q:"自宅を売って損をしたのだから、当然に給与から引けるはず",a:"居住用財産の譲渡損失の特例は、住宅ローンの残高や居住期間などの要件を満たす場合に限り適用されます。自宅の売却損であれば自動的に適用されるものではありません。さらに適用期限が定められている特例のため、申告する年分で措置が継続しているかの確認も必要です。"},
+unlisted_group:{q:"どちらも株式なのだから、上場株の損と非上場株の益は相殺できるはず",a:"上場株式等と一般株式等（非上場）は別の区分として、それぞれ独立に分離課税が行われます。区分が違うため、一方の損失を他方の利益から差し引けません。「株式どうしだから」ではなく「上場か非上場か」で分けて考えます。"},
+futures:{q:"先物の損失も投資の損失なのだから、株の利益と相殺できるはず",a:"先物取引の損失は先物取引に係る所得からのみ差し引けます。株式等の譲渡損益とは別のグループであり、相互に相殺できません。くり越しも先物取引の所得からの控除に限られます。"},
+order1:{q:"赤字は好きな所得から引いてよいはず",a:"通算には定められた段階があります。まず同じグループの中で引き（第1次通算）、引ききれない場合に別のグループへ移り（第2次通算）、なお残る場合に山林所得・退職所得へ進みます（第3次通算）。順序は選べません。"},
+order2:{q:"グループが違えばもう引けないはず",a:"第1次通算で引ききれなかった赤字は、第2次通算で別のグループの黒字から差し引けます。壁があるのは総合課税と分離課税の間であり、総合課税の中の2つのグループの間は第2次通算でつながります。"},
+order3:{q:"山林所得も退職所得も総合課税のはず",a:"山林所得・退職所得はいずれも分離課税で、総所得金額には含まれません。しかし損益通算の最後の受け皿として、第3次通算で赤字を差し引く対象になります。総所得金額に含まれないことと、通算の対象になることは別の話です。"},
+half:{q:"長期譲渡と一時所得は、2分の1にした後の金額で通算するはず",a:"損益通算の段階では2分の1にする前の金額を用い、通算を終えた後の金額について2分の1を総所得金額に算入します。順序を逆にすると通算額が変わり、結果に差が生じます。"},
+forest_tax:{q:"山林所得も他の所得と合算して累進税率がかかるはず",a:"山林所得は分離課税で、課税山林所得金額を5で割って税率を適用し、算出した税額を5倍する五分五乗方式で計算します。長期間かけて育てた山林の所得に累進税率が一度にかかることを緩和する趣旨のものです。"},
+stock_internal:{q:"損が出た銘柄だけを申告すれば、損失を大きくくり越せるはず",a:"同じ年の上場株式等の譲渡益と譲渡損は、まず内部通算して合計額を出します。損の出た銘柄だけを選んで申告することはできません。内部通算をした後の金額が、配当との相殺やくり越しの対象になります。"},
+carry_stock:{q:"過去の損失は、まず当年の所得から先に引いてよいはず",a:"繰越控除は当年の損益通算をすべて終えた後に行います。順序を逆にすると、当年の損失を使い切る前に過去の損失を消費してしまい、くり越せる額が減るおそれがあります。また控除先は上場株式等の譲渡益と申告分離を選んだ配当に限られ、給与などからは引けません。"},
+carry_period:{q:"損失は申告しておけば、利益が出るまでいつまでも持っていられるはず",a:"くり越せる期間は3年です。さらに損失が出た年に申告し、その後も毎年続けて確定申告書を出すことが条件になります。取引がなく利益もない年に申告を省くと、以後の控除が認められません。顧客に「来年以降も毎年申告が必要です」と伝えることが実務上の要点です。"},
+carry_pure:{q:"事業の赤字は、青色でも白色でも翌年にくり越せるはず",a:"純損失のくり越しは原則として青色申告をしている場合に限られます。白色申告では変動所得の損失や被災事業用資産の損失など限られた場合のみです。青色申告の承認を受けているかどうかで結論が大きく変わるため必ず確認します。"},
+deduction:{q:"所得控除は分離課税の所得から引いた方が有利なはず",a:"所得控除はまず総所得金額から差し引き、引ききれない金額があるときに分離課税の所得から差し引きます。累進税率が適用される総合課税から先に引く方が納税者に有利となる場合が多いという考え方によるものです。順序を自分で選ぶことはできません。"},
+dividend_credit:{q:"配当控除と損益通算は両方使えるはず",a:"配当控除は総合課税を選んだ場合のみ、損益通算は申告分離課税を選んだ場合のみです。両方を同時に使うことはできません。どちらが有利かは配当の額や他の所得の状況で変わるため、両方を試算して比較します。"},
+major:{q:"上場株式の配当なら、誰でも申告分離課税を選べるはず",a:"発行済株式の一定割合以上を保有する大口株主が受ける配当は申告分離課税を選べず総合課税になります。結果として株式の譲渡損失とも相殺できません。保有割合の確認が必要な論点です。"},
+unldiv:{q:"配当なのだから、非上場株式の配当も分離課税を選べるはず",a:"非上場株式の配当は申告分離課税を選べず総合課税の対象です（少額配当の申告不要を選ぶ場合を除きます）。そのため株式の譲渡損失との相殺の対象にもなりません。"},
+file:{q:"源泉徴収されているのだから、申告しなくても損失はくり越せるはず",a:"損失のくり越しや譲渡損と配当の相殺は、確定申告書に記載して提出することが条件です。申告をしなければ制度そのものが使えません。特定口座（源泉徴収あり）で申告が不要であっても、損失を使いたい場合は申告が必要になります。"}};
+
+const FORMS=[
+{i:"総所得金額",f:"確定申告書 第一表",n:"山林所得・退職所得は含めません。"},
+{i:"分離課税の所得",f:"確定申告書 第三表",n:"区分ごとに欄が分かれています。総合課税の欄に混ぜないよう注意します。"},
+{i:"損益通算の過程",f:"損益の通算の計算書",n:"通算前・第1次・第2次・第3次の各段階を記載します。"},
+{i:"株式等の譲渡",f:"株式等に係る譲渡所得等の金額の計算明細書",n:"上場と一般（非上場）は別の欄になります。"},
+{i:"上場株式等の繰越損失",f:"上場株式等に係る譲渡損失の損益通算及び繰越控除用の付表",n:"毎年の添付が必要です。"},
+{i:"先物取引の繰越損失",f:"先物取引に係る雑所得等の計算明細書・繰越用の付表",n:"株式等とは別に管理します。"},
+{i:"純損失の繰越（青色）",f:"確定申告書 第四表（損失申告用）",n:"翌年以後にくり越す金額を記載します。"},
+{i:"居住用財産の譲渡損失",f:"譲渡所得の内訳書・特例適用の計算明細書",n:"要件を満たすことを示す書類の添付が必要です。"}];
+
+const STEPDEF=[{nm:"前提の確認",aim:"課税方式・申告・口座を確かめます"},{nm:"赤字の仕分け",aim:"引ける赤字かを見分けます"},{nm:"分離課税の通算",aim:"同じグループの中だけで相殺します"},{nm:"総合課税の通算",aim:"第1次・第2次・第3次の順に進めます"},{nm:"繰越控除",aim:"当年の通算を終えた後に引きます"},{nm:"課税標準の確定",aim:"所得控除を引いて確定します"}];
+
+const QUIZ={
+1:{q:"この案件の配当は、株式の譲渡損失と相殺できるでしょうか。",o:[["y","相殺できる"],["n","相殺できない"],["?","わからない"]],a:()=>(R.dm==="separate"&&R.g.file&&!R.nisa&&R.g.div>0&&R.listed<0)?"y":"n",sk:g=>(g.div===0&&g.listed===0)},
+2:{q:"この案件の赤字は、他の所得から差し引ける種類の赤字でしょうか。",o:[["y","差し引ける"],["p","一部だけ差し引ける"],["n","差し引けない"],["?","わからない"]],a:()=>{const g=R.g;const ex=(g.realty<0&&(g.landint+g.villa)>0)||((g.cshort+g.clong)<0&&g.golf>0);const ng=(g.misc<0)||(g.onetime<0);const ok=(g.biz<0)||(g.realty<0)||((g.cshort+g.clong)<0)||(g.forest<0);if(ex)return"p";if(ng&&!ok)return"n";if(ok)return"y";return"n";},sk:g=>!(g.biz<0||g.realty<0||(g.cshort+g.clong)<0||g.forest<0||g.misc<0||g.onetime<0)},
+3:{q:"分離課税の所得は、グループをまたいで相殺できるでしょうか。",o:[["y","できる"],["n","できない"],["?","わからない"]],a:()=>"n",sk:g=>!(g.listed!==0||g.unlisted!==0||g.rlong!==0||g.rshort!==0||g.fut!==0)},
+4:{q:"総合譲渡の赤字は、第1次通算でどの所得から差し引くでしょうか。",o:[["k","経常所得（給与・事業など）"],["i","一時所得"],["?","わからない"]],a:()=>"i",sk:g=>!((g.cshort+g.clong)<0)},
+5:{q:"過去の繰越損失は、当年の通算の前と後、どちらで引くでしょうか。",o:[["b","通算の前"],["a","通算の後"],["?","わからない"]],a:()=>"a",sk:g=>!(g.cstock>0||g.cfut>0||g.cpure>0)},
+6:{q:"所得控除は、総合課税と分離課税のどちらから先に引くでしょうか。",o:[["t","総合課税から先"],["s","分離課税から先"],["?","わからない"]],a:()=>"t",sk:()=>false}};
+const QEXP={
+1:"配当が株式の譲渡損失と相殺できるのは、申告分離課税を選び、かつ確定申告をする場合だけです。総合課税や申告不要を選ぶと相殺できません。NISA口座の損失はそもそも税務上なかったものとして扱われます。",
+2:"差し引ける赤字は原則として不動産・事業・譲渡・山林の4つです。雑所得や一時所得の赤字は対象外です。また不動産の赤字のうち土地等取得の借入金利子に相当する部分、総合譲渡の赤字のうち生活に通常必要でない資産に係る部分は差し引けません。",
+3:"分離課税は区分ごとに独立して計算します。上場株式等、一般株式等、土地建物、先物取引はそれぞれ別のグループで、互いに相殺できません。例外は居住用財産の譲渡損失の特例に該当する場合だけです。",
+4:"譲渡所得の赤字は、同じグループに属する一時所得から先に差し引きます。譲渡所得と一時所得はいずれも臨時的・偶発的な所得であり、同じ性質のもの同士を先に相殺するという考え方によるものです。引ききれない場合に経常所得グループへ移ります。",
+5:"繰越控除は当年の損益通算をすべて終えた後に行います。順序を逆にすると、当年の損失を使い切る前に過去の損失を消費してしまい、くり越せる額が減るおそれがあります。",
+6:"所得控除は総所得金額から先に差し引き、引ききれない分を分離課税の所得から差し引きます。累進税率が適用される総合課税から先に引く方が、納税者に有利となる場合が多いという考え方によるものです。"};
+
+const CASES={
+"01 事業赤字と給与の通算":{grp:"基本",cl:{nm:"Aさん　42歳　会社員（兼業で物販）",fm:"配偶者・子1人",st:"給与のほか副業で物販事業を営み、当年は仕入過多と広告費の増加により事業が赤字となりました。青色申告の承認を受けています。",rs:"事業の赤字を給与から差し引けるか確認したいとのご相談です。",in:"事業所得の赤字が損益通算の対象になるか確認し、第1次通算で経常所得グループから差し引くこと。残額があれば純損失の繰越の可否を判定すること。"},d:{i_salary:500,i_biz:-100,c_blue:"y"}},
+"02 株式譲渡損と配当（分離選択）":{grp:"基本",cmp:"A",cl:{nm:"Bさん　55歳　会社員",fm:"配偶者（パート勤務）",st:"特定口座（源泉徴収あり）で上場株式を売買し、当年は譲渡損失が生じた一方、保有銘柄から配当を受けています。",rs:"損失と配当を相殺できるか確認したいとのご相談です。",in:"配当について申告分離課税を選択し、譲渡損失との損益通算を行うこと。残る損失は繰越の対象として処理すること。"},d:{i_salary:500,s_listed:-100,s_div:30,s_divmode:"separate",s_file:"y"}},
+"03 同一数値で総合課税を選択":{grp:"基本",cmp:"A",cl:{nm:"Bさん／比較用　55歳　会社員",fm:"配偶者（パート勤務）",st:"案件02と同一の数値です。配当について総合課税を選択した場合を比較します。",rs:"配当控除を使った方が有利ではないかとのご質問です。",in:"配当を総合課税として処理した場合の損益通算の可否を判定し、案件02と結果を比較すること。"},d:{i_salary:500,s_listed:-100,s_div:30,s_divmode:"total",s_file:"y"}},
+"04 同一数値で申告不要を選択":{grp:"基本",cmp:"A",cl:{nm:"Bさん／比較用　55歳　会社員",fm:"配偶者（パート勤務）",st:"案件02と同一の数値です。配当について申告不要制度を選択した場合を比較します。",rs:"配偶者の扶養判定への影響を避けたいとのご要望です。",in:"申告不要制度を選択した場合、損益通算・繰越控除・配当控除がいずれも適用できないことを確認すること。"},d:{i_salary:500,s_listed:-100,s_div:30,s_divmode:"none",s_file:"y"}},
+"05 NISA口座内の損失":{grp:"基本",cl:{nm:"Cさん　34歳　会社員",fm:"単身",st:"NISA口座のみで投資信託・上場株式を購入し、当年に一部を売却して損失が生じました。課税口座は保有していません。",rs:"損失が出たので確定申告をすれば税金が戻るのではないかとのご相談です。",in:"NISA口座内の損失の取扱いを確認し、申告による通算・繰越ができない旨をご本人に説明できるよう根拠を整理すること。"},d:{i_salary:500,s_listed:-120,s_div:20,s_account:"nisa",s_file:"y"}},
+"06 不動産赤字と土地取得借入金利子":{grp:"基本",cl:{nm:"Dさん　58歳　会社員・不動産賃貸",fm:"配偶者・子2人",st:"3年前に土地を借入金で取得しアパートを建築、当年は修繕費と空室により不動産所得が赤字です。借入金利子のうち土地取得に対応する部分があります。",rs:"不動産の赤字を給与と通算して還付を受けたいとのご相談です。",in:"不動産所得の赤字のうち土地等取得のための負債利子に相当する部分を除外し、残額のみを通算すること。除外額の計算根拠を明示すること。"},d:{i_salary:600,i_realty:-150,i_landint:60}},
+"07 土地建物の譲渡損（特例非該当）":{grp:"基本",cl:{nm:"Eさん　61歳　会社員",fm:"配偶者",st:"相続で取得した郊外の土地を売却しましたが取得費を下回り譲渡損失が生じました。居住用ではありません。",rs:"売却で損が出たため給与と通算できるかとのご相談です。",in:"土地建物等の譲渡損失は他の所得と通算できないことを確認し、居住用財産の特例に該当しない理由を記録すること。"},d:{i_salary:600,r_long:-300,r_home:"none"}},
+"08 居住用財産の譲渡損失特例":{grp:"基本",cl:{nm:"Fさん　47歳　会社員",fm:"配偶者・子2人",st:"居住していた自宅を住宅ローン残債のある状態で売却し譲渡損失が生じました。居住期間・ローン残高等の要件を満たす見込みです。",rs:"自宅売却の損失を給与と通算できると聞いたため確認したいとのご相談です。",in:"特例の該当を前提に総合課税の所得と通算すること。適用期限があるため対象年分で措置が継続しているか必ず確認すること。"},d:{i_salary:600,r_long:-300,r_home:"yes"}},
+"09 繰越控除の適用":{grp:"基本",cmp:"B",cl:{nm:"Gさん　49歳　自営業（青色）",fm:"配偶者",st:"前年に上場株式の譲渡損失150万円が生じ、申告書に記載して繰越の手続を行いました。当年は譲渡益と配当が生じています。",rs:"前年の損失を当年の利益から差し引けるかとのご相談です。",in:"当年の通算を終えた後に繰越損失を充当すること。連続申告の要件を確認し、控除後の残額を翌年繰越として記録すること。"},d:{i_salary:400,s_listed:60,s_div:40,s_divmode:"separate",c_stock:150,c_cont:"y",s_file:"y"}},
+"10 連続申告に欠年あり":{grp:"基本",cmp:"B",cl:{nm:"Hさん　52歳　会社員",fm:"配偶者・子1人",st:"3年前に上場株式の譲渡損失150万円が生じ申告しましたが、翌年は取引がなく確定申告を行いませんでした。当年は譲渡益と配当が生じています。",rs:"過去の損失を当年の利益から差し引きたいとのご相談です。",in:"繰越控除の連続申告要件を照合すること。要件を欠く場合は控除せず、理由を記録して税理士に報告すること。"},d:{i_salary:400,s_listed:60,s_div:40,s_divmode:"separate",c_stock:150,c_cont:"n",s_file:"y"}},
+"11 ゴルフ会員権の譲渡損":{grp:"応用",cl:{nm:"Iさん　63歳　会社役員",fm:"配偶者",st:"長年保有していたゴルフ会員権を売却し、取得価額を下回ったため譲渡損失が生じました。所有期間は5年を超えています。",rs:"会員権の売却損を役員報酬と通算できるかとのご相談です。",in:"生活に通常必要でない資産の譲渡損失として通算対象外となる部分を除外すること。除外の根拠を説明できるよう整理すること。"},d:{i_salary:500,i_clong:-80,i_golf:80}},
+"12 総合譲渡赤字と一時所得":{grp:"応用",cl:{nm:"Jさん　45歳　会社員",fm:"配偶者・子1人",st:"事業用でない機械（所有期間3年）を売却して譲渡損失が生じた一方、満期保険金により一時所得が生じています。一時所得は特別控除後・2分の1前の金額です。",rs:"損失と一時所得をどう整理するかのご確認依頼です。",in:"第1次通算で総合譲渡の赤字を一時所得から差し引き、引ききれない額を第2次通算で経常所得グループへ回すこと。2分の1の算入は通算の後に行うこと。"},d:{i_salary:500,i_cshort:-120,i_onetime:80}},
+"13 先物取引の損失と繰越":{grp:"応用",cl:{nm:"Kさん　38歳　会社員",fm:"単身",st:"商品先物・株価指数先物の取引を行い当年は損失が生じました。前年にも損失があり繰越の手続を行っています。",rs:"先物の損失を株式の利益や給与と通算できるかとのご相談です。",in:"先物取引の損失は先物グループ内のみの通算であることを確認すること。前年繰越分は当年の先物所得の範囲で控除し、残額は翌年繰越とすること。"},d:{i_salary:500,f_fut:-90,c_fut:50,s_file:"y"}},
+"14 非上場株と上場株の併存":{grp:"応用",cl:{nm:"Lさん　57歳　会社員（同族会社株式を保有）",fm:"配偶者・子2人",st:"上場株式の売却で損失が生じた一方、親族が経営する非上場会社の株式を一部譲渡して利益が生じました。同社から配当も受けています。",rs:"上場株の損失を非上場株の利益と相殺できるかとのご相談です。",in:"上場株式等と一般株式等は別区分であり相互に通算できないことを確認すること。非上場株式の配当の課税方式も併せて整理すること。"},d:{i_salary:500,s_listed:-100,s_unlisted:80,s_unldiv:30,s_file:"y"}},
+"15 大口株主の配当":{grp:"応用",cl:{nm:"Mさん　66歳　会社役員（上場会社の大株主）",fm:"配偶者",st:"上場会社の発行済株式の一定割合以上を保有し多額の配当を受けています。別途、上場株式の売却で損失が生じました。",rs:"配当を申告分離課税として譲渡損失と相殺したいとのご要望です。",in:"大口株主の該当を確認し、申告分離課税を選択できないことを判定すること。ご要望に沿えない理由を説明できるよう根拠を整理すること。"},d:{i_salary:500,s_div:200,s_major:"y",s_divmode:"separate",s_listed:-50,s_file:"y"}},
+"16 事業大幅赤字と純損失繰越（青色）":{grp:"応用",cmp:"C",cl:{nm:"Nさん　41歳　個人事業主（青色）",fm:"配偶者（専従者）",st:"主要取引先の撤退により売上が激減し、設備の処分損も加わって事業が大幅赤字となりました。給与は年途中までの勤務分のみです。",rs:"赤字が大きく当年では引ききれないため来年以降の取扱いを確認したいとのご相談です。",in:"通算しきれない赤字を純損失として繰越処理すること。青色申告の承認状況と翌年以後の連続申告の必要性をご本人に案内すること。"},d:{i_salary:200,i_biz:-500,c_blue:"y"}},
+"17 同一数値で白色申告":{grp:"応用",cmp:"C",cl:{nm:"Nさん／比較用　41歳　個人事業主（白色）",fm:"配偶者",st:"案件16と同一の数値です。青色申告の承認を受けていない場合を比較します。",rs:"青色申告にしておくべきだったかとのご質問です。",in:"白色申告の場合に純損失の繰越が原則認められないことを確認し、案件16との差額を示せるよう整理すること。"},d:{i_salary:200,i_biz:-500,c_blue:"n"}},
+"18 複数銘柄の内部通算":{grp:"追加論点",cl:{nm:"Oさん　50歳　会社員",fm:"配偶者",st:"一般口座で複数銘柄を売買しました。銘柄甲で利益、銘柄乙で損失が生じています。",rs:"損の出た銘柄だけを申告して大きくくり越せないかとのご相談です。",in:"同一年の上場株式等の譲渡益と譲渡損は内部通算が必要であることを確認すること。銘柄を選んで申告することはできない旨を説明できるよう整理すること。"},d:{i_salary:500,s_listed_a:80,s_listed_b:-130,s_listed:-50,s_div:20,s_divmode:"separate",s_account:"ippan",s_file:"y"}},
+"19 雑所得内の内部通算":{grp:"追加論点",cl:{nm:"Pさん　36歳　会社員（副業あり）",fm:"単身",st:"副業のアフィリエイト収入で利益が出た一方、暗号資産の売却で損失が生じました。いずれも雑所得に区分されるものです。",rs:"暗号資産の損失を給与から差し引けるかとのご相談です。",in:"雑所得内の内部通算を行った後、残った赤字が損益通算の対象外であることを確認すること。切り捨てとなる理由を説明できるよう整理すること。"},d:{i_salary:450,i_misc_a:40,i_misc_b:-90,i_misc:-50}},
+"20 所得控除が総合課税を超える場合":{grp:"追加論点",cl:{nm:"Qさん　68歳　年金受給者",fm:"配偶者",st:"公的年金等の雑所得が少額で、医療費控除・社会保険料控除などの所得控除が多額です。当年に上場株式を売却して譲渡益が生じました。",rs:"所得控除が引ききれない場合にどうなるかとのご相談です。",in:"所得控除を総所得金額から先に充当し、引ききれない額を分離課税の所得から控除すること。充当の順序を明示すること。"},d:{i_misc:60,s_listed:200,s_div:10,s_divmode:"separate",s_file:"y",d_ded:150}},
+"21 退職金を受けた年の事業赤字":{grp:"追加論点",cl:{nm:"Rさん　60歳　元会社員・個人事業主（青色）",fm:"配偶者",st:"定年退職により退職金を受け取り、同年に開業した事業が初年度赤字となりました。給与は年途中までの勤務分です。",rs:"事業の赤字を退職金から差し引けるかとのご相談です。",in:"第1次・第2次通算で引ききれない赤字を、第3次通算で退職所得から差し引くこと。退職所得が最後の受け皿となる経路を記録すること。"},d:{i_salary:180,i_biz:-320,i_retire:400,c_blue:"y"}},
+"22 第3次通算で山林・退職へ届く例":{grp:"追加論点",cl:{nm:"Sさん　58歳　元会社員・不動産賃貸・林業",fm:"配偶者",st:"退職金を受け取った年に不動産所得が大幅な赤字となりました。あわせて一時所得と山林所得も生じています。赤字が山林所得・退職所得まで届く規模です。",rs:"赤字が山林所得や退職金にも及ぶのかとのご相談です。",in:"第1次・第2次・第3次の各段階を区分して処理すること。山林所得と退職所得は分離課税で総所得金額には含まれないが、第3次通算の受け皿となる点を確認すること。"},d:{i_salary:150,i_realty:-500,i_onetime:60,i_forest:40,i_retire:300,c_blue:"y"}},
+"23 小規模な株式譲渡損":{grp:"追加論点",cl:{nm:"Tさん　29歳　会社員",fm:"単身",st:"はじめて特定口座を開設し少額で上場株式を売買しました。当年は売却により25万円の損失が生じ、配当を8万円受けています。",rs:"少額でも申告した方がよいのかとのご相談です。",in:"少額であっても通算・繰越の判定手順は同じであることを確認すること。申告した場合の繰越額と、申告しない場合との差を示せるよう整理すること。"},d:{i_salary:380,s_listed:-25,s_div:8,s_divmode:"separate",s_file:"y",d_ded:90}},
+"24 短期・長期の譲渡赤字と充当順序":{grp:"追加論点",cl:{nm:"Uさん　52歳　会社員",fm:"配偶者",st:"所有期間3年の機械（短期）で利益、所有期間8年の資産（長期）で損失が生じました。あわせて不動産所得が赤字です。",rs:"譲渡の短期と長期、不動産の赤字をどう整理するかのご確認依頼です。",in:"総合譲渡の内部通算を行った後、経常所得グループの赤字を譲渡所得から差し引く際は短期から先に充当すること。長期譲渡の2分の1の算入は通算後に行うこと。"},d:{i_salary:300,i_realty:-200,i_cshort:100,i_clong:-40,i_onetime:40}}};
+const CMPGRP={A:{nm:"配当の課税方式による比較",cs:["02 株式譲渡損と配当（分離選択）","03 同一数値で総合課税を選択","04 同一数値で申告不要を選択"]},B:{nm:"連続申告の有無による比較",cs:["09 繰越控除の適用","10 連続申告に欠年あり"]},C:{nm:"青色・白色による比較",cs:["16 事業大幅赤字と純損失繰越（青色）","17 同一数値で白色申告"]}};
+
+const LEC=[
+{t:"全体の地図",aim:"資料を受け取ってから答えを出すまでに、何を何の順に考えるかをつかみます。",
+b:()=>`<div class="note">この研修で学ぶのは知識の暗記ではなく<b>問いを立てる順序</b>です。順序が身についていれば、はじめて見る案件でも自力で答えを出せます。</div>
+${flow([["第1段階","これは何の所得か","10種類のどれに当たるか"],["第2段階","総合課税か分離課税か","どのグループに入るか"],["第3段階","黒字か赤字か","赤字なら次へ進む"],["第4段階","通算できる赤字か","不動産・事業・譲渡・山林の4つか"],["第5段階","除かれる部分はないか","借入金利子・生活に必要でない資産"],["第6段階","どの段階で引くか","第1次 → 第2次 → 第3次"],["第7段階","過去の損失を引く","当年の通算を終えた後"],["第8段階","所得控除を引く","総合課税から先に"],["第9段階","申告書に書く","区分ごとの欄へ"]])}
+<div class="sub2">なぜこの順序なのか</div>
+<p>所得税は、まず所得の種類を決め、次にその種類ごとに定められた計算方法を適用する仕組みです。種類が決まらないと計算方法も決まりません。そのため「これは何の所得か」が必ず最初の問いになります。</p>
+<p>金額の足し引きは第6段階まで来てから行います。初任者がつまずきやすいのは、種類とグループの確認を飛ばして、いきなり金額を足し引きしてしまうことです。</p>`,
+q:[{q:"資料を受け取ったとき、最初に確認すべきことは何でしょうか。",o:[["a","金額の合計"],["b","所得の種類"],["c","税率"]],a:"b",e:"最初に決めるのは所得の種類です。所得税は種類ごとに計算方法が違うため、種類が決まらないと計算を始められません。金額の合計や税率は、種類とグループが決まった後の話です。"},
+{q:"金額の足し引きを始めてよいのは、どの段階でしょうか。",o:[["a","資料を見てすぐ"],["b","種類とグループを確定した後"],["c","申告書に記入しながら"]],a:"b",e:"所得の種類とグループが確定しないと、どの赤字をどこから引けるかが決まりません。グループを確認せずに足し引きすると、通算できないものを通算する誤りにつながります。"},
+{q:"この研修で身につけるべきものは何でしょうか。",o:[["a","税率表の暗記"],["b","判断の順序"],["c","申告書の様式番号"]],a:"b",e:"判断の順序が身についていれば、はじめて見る案件でも同じ手順で答えを出せます。税率や様式は確認すれば足りますが、順序は体に入れておく必要があります。"}],rel:[]},
+
+{t:"これは何の所得か",aim:"資料から所得の種類を決めます。所得税の計算はここから始まります。",
+b:()=>`<div class="note">所得税では所得を<b>10種類</b>に分けます。種類ごとに計算方法・課税方式・損益通算の可否が違うため、まず種類を決めることが出発点になります。</div>
+${dl("10種類の所得",[["利子所得","原則 源泉分離"],["配当所得","総合／申告分離／申告不要"],["不動産所得","総合課税"],["事業所得","総合課税"],["給与所得","総合課税"],["退職所得","分離課税"],["山林所得","分離課税（五分五乗）"],["譲渡所得","資産により総合／分離"],["一時所得","総合課税（2分の1算入）"],["雑所得","総合課税（先物等は分離）"]],1)}
+<div class="sub2">判定で迷いやすい点</div>
+${dl("",[["副業の収入","事業といえる規模・継続性があるかで事業所得と雑所得が分かれます"],["資産を売った","土地建物・株式等は分離課税、それ以外は総合課税です"],["山林を売った","取得後5年以内は事業または雑、5年超なら山林所得です"],["暗号資産の売却","原則として雑所得です。株式の譲渡とは扱いが違います"]],1)}
+<div class="sub2">ここを飛ばすと起きる誤り</div>
+<p>種類を決めずに「損が出た」という事実だけで通算を始めると、通算できない所得を通算してしまいます。暗号資産の損失は雑所得なので通算できませんが、「投資の損失」とまとめて考えると株式と同じ扱いにしてしまう誤りが起きます。</p>
+<div class="sub2">実務ではこう確認する</div>
+<p>源泉徴収票、年間取引報告書、収支内訳書、売買契約書などの資料ごとに、どの所得に当たるかを先に札付けします。資料と所得の種類の対応表を作ってから金額に入ると、取り違えが防げます。</p>`,
+q:[{q:"暗号資産を売却して損失が出ました。どの所得に当たるでしょうか。",o:[["a","譲渡所得"],["b","雑所得"],["c","事業所得"]],a:"b",e:"暗号資産の売買による所得は原則として雑所得です。株式等の譲渡所得とは別の扱いになるため、損失が出ても他の所得と通算できません。「投資の損失」とまとめて考えないことが大切です。"},
+{q:"山林を取得してから3年で伐採して売却しました。山林所得に当たるでしょうか。",o:[["a","当たる"],["b","当たらない"],["c","金額によって変わる"]],a:"b",e:"山林所得は取得してから5年を超えて伐採または譲渡した場合の所得です。5年以内の場合は事業所得または雑所得になります。保有期間の確認が必要です。"},
+{q:"所得の種類はいくつに分かれているでしょうか。",o:[["a","8種類"],["b","10種類"],["c","12種類"]],a:"b",e:"利子・配当・不動産・事業・給与・退職・山林・譲渡・一時・雑の10種類です。種類ごとに計算方法と課税方式が定められています。"}],rel:["19 雑所得内の内部通算","22 第3次通算で山林・退職へ届く例"]},
+
+{t:"どのグループに属するか",aim:"総合課税か分離課税か、分離課税ならどの区分かを決めます。",
+b:()=>`<div class="note">所得の種類が決まったら、次に<b>どのグループに属するか</b>を決めます。通算できるかどうかはグループによって決まります。</div>
+${groupFig()}
+<div class="sub2">総合課税の中に2つのグループがある理由</div>
+<p>総合課税の所得は性質によって2つに分かれます。毎年くり返し生じる<b>経常所得</b>と、臨時的・偶発的に生じる<b>譲渡・一時</b>です。通算はまず同じ性質のもの同士で行うため、この区分が必要になります。</p>
+<div class="sub2">総所得金額に含まれないもの</div>
+<p>山林所得と退職所得は分離課税で、総所得金額には含まれません。ただし損益通算の最後の受け皿にはなります。「総所得金額に含まれない」ことと「通算の対象になる」ことは別の話です。</p>
+<div class="sub2">ここを飛ばすと起きる誤り</div>
+<p>株式の損失を給与から引く、土地の売却損を給与から引くといった誤りは、すべてグループの確認を飛ばしたことから生じます。「損が出た」ではなく「どのグループの損か」で考えます。</p>
+<div class="sub2">実務ではこう確認する</div>
+<p>資料ごとに総合課税か分離課税かを書き込みます。分離課税のものはさらにどの区分かまで特定します。株式等であれば上場か非上場か、土地建物であれば長期か短期かを確認します。</p>`,
+q:[{q:"山林所得は総所得金額に含まれるでしょうか。",o:[["a","含まれる"],["b","含まれない"],["c","金額によって変わる"]],a:"b",e:"山林所得は分離課税で総所得金額には含まれません。税額は五分五乗方式で別に計算します。ただし損益通算では第3次通算の受け皿になるため、通算の対象外というわけではありません。"},
+{q:"上場株式の譲渡損失を給与所得から差し引けるでしょうか。",o:[["a","差し引ける"],["b","差し引けない"],["c","申告すれば差し引ける"]],a:"b",e:"上場株式等の譲渡損失は分離課税のグループに属し、総合課税の給与所得とは相殺できません。確定申告をしても結論は変わりません。相殺できるのは同じグループの譲渡益と、申告分離課税を選んだ配当だけです。"},
+{q:"総合課税の中にある2つのグループは何でしょうか。",o:[["a","黒字と赤字"],["b","経常所得と譲渡・一時"],["c","給与と事業"]],a:"b",e:"毎年くり返し生じる経常所得グループと、臨時的・偶発的に生じる譲渡・一時グループに分かれます。通算はまず同じグループの中で行うため、この区分が重要になります。"}],rel:["02 株式譲渡損と配当（分離選択）","07 土地建物の譲渡損（特例非該当）","14 非上場株と上場株の併存"]},
+
+{t:"赤字は通算できるか",aim:"赤字を見たときに最初に確認する点を身につけます。",
+b:()=>`<div class="note">赤字が出ていても、他の所得から差し引けるものと差し引けないものがあります。差し引けるのは原則として<b>4つの所得</b>だけです。</div>
+<div class="box2"><div class="boxt">通算できる4つの所得</div>
+<div style="font-size:17px;font-weight:bold;text-align:center;letter-spacing:3px;padding:6px 0;">不 ・ 事 ・ 譲 ・ 山</div>
+<div style="font-size:13.5px;">不動産所得／事業所得／譲渡所得／山林所得<br>この4つ以外の赤字は、原則として他の所得から差し引けません。</div></div>
+${dl("通算できない赤字",[["雑所得","雑所得の中では相殺できますが、残った赤字は切り捨て"],["一時所得","赤字は切り捨て"],["配当・給与・利子・退職","そもそも赤字が生じません"]],1)}
+${dl("4つに含まれても通算できない場合（譲渡所得）",[["事業用でない機械など","できる"],["土地建物","できない（居住用の特例を除く）"],["株式等","できない（グループ内の相殺のみ）"],["ゴルフ会員権・貴金属","できない"]],1)}
+<div class="sub2">ここを飛ばすと起きる誤り</div>
+<p>「赤字だから引ける」と考えてしまうことです。雑所得の赤字を給与から引く誤りは、副業や暗号資産の案件で頻発します。4つに当たるかを必ず確認します。</p>
+<div class="sub2">実務ではこう確認する</div>
+<p>赤字が出ている所得を一覧にし、それぞれ「不事譲山のどれか」「それ以外か」を書き分けます。譲渡所得の場合は売った資産の種類まで確認します。</p>`,
+q:[{q:"雑所得が30万円の赤字です。給与所得から差し引けるでしょうか。",o:[["a","差し引ける"],["b","差し引けない"],["c","一部だけ差し引ける"]],a:"b",e:"雑所得は通算できる4つの所得に含まれません。雑所得の中での相殺はできますが、引ききれずに残った赤字は給与所得などから差し引けず、その年で切り捨てられます。"},
+{q:"損益通算できる4つの所得はどれでしょうか。",o:[["a","不動産・事業・譲渡・山林"],["b","不動産・事業・給与・雑"],["c","事業・譲渡・一時・雑"]],a:"a",e:"不動産所得・事業所得・譲渡所得・山林所得の4つです。「不事譲山」と覚えます。この4つ以外の赤字は原則として他の所得から差し引けません。"},
+{q:"ゴルフ会員権を売って損失が出ました。給与所得から差し引けるでしょうか。",o:[["a","譲渡所得だから差し引ける"],["b","生活に通常必要でない資産だから差し引けない"],["c","所有期間によって変わる"]],a:"b",e:"ゴルフ会員権は生活に通常必要でない資産に当たり、その譲渡損失は他の所得から差し引けません。譲渡所得は通算できる4つに含まれますが、資産の種類による例外があります。"}],rel:["01 事業赤字と給与の通算","11 ゴルフ会員権の譲渡損","19 雑所得内の内部通算"]},
+
+{t:"除かれるものはないか",aim:"通算できる赤字の中にも一部が除かれる場合があります。見落としやすい論点です。",
+b:()=>`<div class="note">不事譲山に当たる赤字であっても、<b>その一部が通算から除かれる</b>場合があります。全額を通算してしまう誤りを防ぐため必ず確認します。</div>
+${dl("不動産所得の赤字から除かれるもの",[["土地等を取得するための借入金の利子に相当する部分","金銭消費貸借契約書で使途を確認"],["別荘など趣味・娯楽・保養目的の不動産の貸付けによる損失","使用状況を確認"]],1)}
+<div class="calc">例1　赤字 150万円
+　うち土地取得の借入金利子 60万円
+　→ 通算できるのは 150 − 60 ＝ 90万円
+　→ 60万円は切り捨て
+
+例2　赤字 50万円
+　うち土地取得の借入金利子 80万円
+　→ 利子が赤字額を超えるため
+　→ 赤字の全額が通算できない</div>
+<p>建物の取得のための借入金の利子は除かれません。土地分と建物分の区分が結論を左右します。</p>
+<div class="sub2">譲渡所得の赤字から除かれるもの</div>
+<p>生活に通常必要でない資産の譲渡損失は通算できません。ゴルフ会員権、貴金属、書画骨とう、別荘、競走馬などが該当します。生活に必要な資産の損失を救済するという損益通算の趣旨から外れるためです。</p>
+<div class="sub2">ここを飛ばすと起きる誤り</div>
+<p>不動産所得の赤字を全額通算してしまうことです。借入金で土地を取得して賃貸を始めた案件では、ほぼ必ずこの論点が出てきます。赤字の金額だけを見て通算せず、内訳を確認します。</p>
+<div class="sub2">実務ではこう確認する</div>
+<p>借入金がある不動産の案件では、金銭消費貸借契約書で借入の目的を確認し、土地分と建物分の按分計算を行います。按分の根拠を記録に残しておくと、翌年以降の担当者が引き継げます。</p>`,
+q:[{q:"不動産所得の赤字100万円のうち、土地取得の借入金利子が30万円あります。通算できる金額はいくらでしょうか。",o:[["a","100万円"],["b","70万円"],["c","30万円"]],a:"b",e:"土地等を取得するための借入金の利子に相当する部分は通算から除かれます。100万円から30万円を差し引いた70万円が通算の対象です。除かれた30万円は切り捨てとなります。"},
+{q:"建物を取得するための借入金の利子は、通算から除かれるでしょうか。",o:[["a","除かれる"],["b","除かれない"],["c","金額によって変わる"]],a:"b",e:"除かれるのは土地等を取得するための借入金の利子です。建物分は除かれません。そのため借入金の使途を土地分と建物分に区分する必要があります。"},
+{q:"赤字50万円、土地取得の借入金利子80万円の場合、通算できる金額はいくらでしょうか。",o:[["a","50万円"],["b","30万円"],["c","0円"]],a:"c",e:"借入金利子が赤字額を上回る場合、赤字の全額が通算の対象から除かれます。差し引ける金額は0円となります。"}],rel:["06 不動産赤字と土地取得借入金利子","11 ゴルフ会員権の譲渡損"]},
+
+{t:"どの段階で引くか",aim:"通算の3つの段階と各段階での順序を身につけます。本研修の中心となる論点です。",
+b:()=>`<div class="note">損益通算は<b>段階を踏んで</b>行います。好きな所得から引くことはできません。順序は法令で定められています。</div>
+${flow([["内部通算","同じ所得の中で相殺","複数銘柄の株式、雑所得の中の益と損、総合譲渡の短期と長期"],["第1次通算","同じグループの中で相殺","不動産・事業の赤字 → 経常所得グループ／譲渡の赤字 → 一時所得"],["第2次通算","別のグループの黒字へ","経常の赤字 → 譲渡・一時／譲渡の赤字 → 経常"],["第3次通算","山林 → 退職","なお残る赤字を山林所得、次に退職所得から差し引く"]])}
+<div class="sub2">第1次通算で注意する点</div>
+<p>譲渡所得の赤字は<b>一時所得から先に</b>差し引きます。経常所得から引くのではありません。譲渡所得と一時所得はいずれも臨時的・偶発的な所得であり、同じ性質のもの同士を先に相殺するという考え方によるものです。</p>
+<div class="sub2">第2次通算で注意する点</div>
+<p>経常所得グループの赤字を譲渡所得から差し引く場合、<b>短期譲渡から先に</b>充当します。長期譲渡は2分の1が総所得金額に算入されるため、充当の順序で結果が変わります。</p>
+<div class="sub2">第3次通算で注意する点</div>
+<p>山林所得・退職所得はいずれも分離課税で総所得金額には含まれませんが、通算の最後の受け皿になります。山林所得が先、退職所得が後です。</p>
+<p>不動産・事業の損失と譲渡所得の損失の両方がある場合、山林所得・退職所得から差し引く際は原則として<b>不動産・事業の損失を先に</b>充当します。</p>
+<div class="sub2">2分の1はいつ計算するか</div>
+<p>長期譲渡所得と一時所得は2分の1を総所得金額に算入します。この計算は<b>通算を終えた後</b>に行います。通算の段階では2分の1前の金額を使います。</p>
+<div class="calc">正しい順序
+　一時所得 80万円（2分の1前）
+　－ 譲渡の赤字 50万円
+　＝ 残り 30万円
+　→ 2分の1算入 → 15万円
+
+誤った順序
+　一時所得 80万円 → 2分の1 → 40万円
+　－ 50万円 → 引ききれず 10万円 余る
+　→ 通算額が変わってしまう</div>
+<div class="sub2">ここを飛ばすと起きる誤り</div>
+<p>譲渡の赤字を経常所得から先に引くこと、短期・長期の順序を誤ること、2分の1を先に計算することです。いずれも結果に差が生じます。</p>
+<div class="sub2">実務ではこう確認する</div>
+<p>「損益の通算の計算書」の欄立てに沿って記入します。この計算書は通算前・第1次通算後・第2次通算後・第3次通算後という欄に分かれており、段階を飛ばさない作りになっています。</p>`,
+q:[{q:"総合譲渡の赤字は、第1次通算でどの所得から差し引くでしょうか。",o:[["a","給与所得"],["b","一時所得"],["c","山林所得"]],a:"b",e:"譲渡所得の赤字は同じグループに属する一時所得から先に差し引きます。譲渡所得と一時所得はいずれも臨時的・偶発的な所得であり、同じ性質のもの同士を先に相殺するという考え方によるものです。"},
+{q:"第3次通算の受け皿となる所得は何でしょうか。",o:[["a","給与所得と事業所得"],["b","山林所得と退職所得"],["c","株式等の譲渡所得"]],a:"b",e:"第2次通算でもなお残る赤字は山林所得、次に退職所得から差し引きます。いずれも分離課税で総所得金額には含まれませんが、通算の最後の受け皿になります。"},
+{q:"一時所得の2分の1の計算は、いつ行うでしょうか。",o:[["a","通算の前"],["b","通算の後"],["c","どちらでも同じ"]],a:"b",e:"通算の段階では2分の1前の金額を用い、通算を終えた後の金額について2分の1を総所得金額に算入します。順序を逆にすると通算額が変わり、結果に差が生じます。"}],rel:["12 総合譲渡赤字と一時所得","21 退職金を受けた年の事業赤字","22 第3次通算で山林・退職へ届く例","24 短期・長期の譲渡赤字と充当順序"]},
+
+{t:"過去の損失はいつ引くか",aim:"繰越控除のタイミングと要件を身につけます。要件を欠くと使えなくなる制度です。",
+b:()=>`<div class="note">過去の損失を引くのは<b>当年の通算をすべて終えた後</b>です。順序を逆にすると、くり越せる額が減るおそれがあります。</div>
+${dl("3種類の繰越損失",[["上場株式等の譲渡損失","上場株式等の譲渡益・申告分離の配当から"],["先物取引の損失","先物取引に係る雑所得等から"],["純損失（青色）","翌年以後の総所得金額等から"]],1)}
+<p>いずれも繰越期間は3年です。差し引ける相手が限られているため、種類ごとに分けて管理します。</p>
+<div class="sub2">連続申告とは</div>
+<p>損失が生じた年に申告し、その後も<b>毎年続けて</b>確定申告書を提出することです。取引がなく利益が出ていない年も申告が必要です。1年でも申告しない年があると、それ以降の控除が認められません。</p>
+<div class="calc">3年前　損失150万円　→ 申告済み
+2年前　取引なし　→ 申告せず
+　　　　　　　　↑ ここで要件を欠く
+当年　　譲渡益60万円
+　→ 過去の損失は控除できない</div>
+<div class="sub2">純損失の繰越は青色申告が前提</div>
+<p>通算しきれなかった赤字をくり越せるのは原則として青色申告の場合です。白色申告では変動所得の損失や被災事業用資産の損失など限られた場合のみです。</p>
+<div class="sub2">ここを飛ばすと起きる誤り</div>
+<p>当年の通算より先に繰越損失を引いてしまうことです。また顧客に「毎年申告が必要」と伝え忘れることも実務上の重大な誤りです。</p>
+<div class="sub2">実務ではこう確認する</div>
+<p>過去3年分の申告書控えを受領し、繰越額と提出の有無を年ごとに確認します。欠年がある場合は、その年に申告していない理由も記録します。</p>`,
+q:[{q:"繰越控除は、当年の通算の前と後、どちらで行うでしょうか。",o:[["a","前"],["b","後"],["c","どちらでもよい"]],a:"b",e:"当年の損益通算をすべて終えた後に行います。順序を逆にすると、当年の損失を使い切る前に過去の損失を消費してしまい、くり越せる額が減るおそれがあります。"},
+{q:"損失をくり越した翌年、取引がなく利益も出ませんでした。申告は必要でしょうか。",o:[["a","必要"],["b","不要"],["c","どちらでもよい"]],a:"a",e:"繰越控除を使うには、損失が生じた年に申告し、その後も毎年続けて確定申告書を提出する必要があります。取引がなく利益が出ていない年も申告が必要です。1年でも欠けると以降の控除が認められません。"},
+{q:"白色申告の場合、通算しきれなかった赤字をくり越せるでしょうか。",o:[["a","青色と同じようにくり越せる"],["b","原則としてくり越せない"],["c","金額によって変わる"]],a:"b",e:"純損失の繰越控除は原則として青色申告の場合に限られます。白色申告では変動所得の損失や被災事業用資産の損失など限られた場合のみです。"}],rel:["09 繰越控除の適用","10 連続申告に欠年あり","13 先物取引の損失と繰越","16 事業大幅赤字と純損失繰越（青色）","17 同一数値で白色申告"]},
+
+{t:"課税方式をどう選ぶか",aim:"配当について3つの方式から選ぶ判断を身につけます。",
+b:()=>`<div class="note">上場株式等の配当は<b>3つの方式</b>から選べます。どれを選ぶかで使える制度が変わります。</div>
+${dl("申告分離課税",[["株式譲渡損との相殺","できる"],["配当控除","使えない"],["合計所得金額","含まれる"]],1)}
+${dl("総合課税",[["株式譲渡損との相殺","できない"],["配当控除","使える"],["合計所得金額","含まれる"]],1)}
+${dl("申告不要",[["株式譲渡損との相殺","できない"],["配当控除","使えない"],["合計所得金額","含まれない"]],1)}
+<div class="sub2">選択のポイント</div>
+${dl("",[["株式の譲渡損失がある","申告分離課税を選ぶと相殺できます"],["他の所得が少ない","総合課税で配当控除を使う方が有利な場合があります"],["扶養の判定に影響させたくない","申告不要なら合計所得金額に含まれません"],["国民健康保険の被保険者","申告すると保険料の算定に影響する場合があります"]],1)}
+<p>配当控除と損益通算は<b>両方同時には使えません</b>。どちらが有利かは配当の額と他の所得の状況で変わるため、両方を試算して比較します。</p>
+<div class="sub2">選べない場合</div>
+${dl("",[["大口株主が受ける配当","申告分離課税を選べません"],["非上場株式の配当","申告分離課税を選べません"],["NISA口座内の損失","損失がなかったものとされます"]],1)}
+<div class="sub2">ここを飛ばすと起きる誤り</div>
+<p>「同じ株の話だから相殺できる」と考えてしまうことです。相殺の可否は株かどうかではなく<b>課税方式が同じかどうか</b>で決まります。</p>
+<div class="sub2">実務ではこう確認する</div>
+<p>3つの方式すべてで試算し、税額と合計所得金額の両方を比較します。扶養や保険料への影響もあわせて確認し、顧客に選択肢を示せる資料を作ります。大口株主の該当は株主名簿で確認します。</p>`,
+q:[{q:"配当について総合課税を選びました。株式の譲渡損失と相殺できるでしょうか。",o:[["a","できる"],["b","できない"],["c","金額によって変わる"]],a:"b",e:"総合課税を選ぶと配当は総合課税のグループに移るため、分離課税の譲渡損失とは相殺できません。相殺できるのは申告分離課税を選んだ場合だけです。「同じ株だから」ではなく「同じ課税方式かどうか」で判断します。"},
+{q:"配当控除と損益通算は、両方同時に使えるでしょうか。",o:[["a","両方使える"],["b","どちらか一方のみ"],["c","申告すれば両方使える"]],a:"b",e:"配当控除は総合課税を選んだ場合のみ、損益通算は申告分離課税を選んだ場合のみです。両方を同時に使うことはできません。どちらが有利かは両方を試算して比較します。"},
+{q:"申告不要制度を選んだ配当は、合計所得金額に含まれるでしょうか。",o:[["a","含まれる"],["b","含まれない"],["c","金額によって変わる"]],a:"b",e:"申告不要を選んだ配当は合計所得金額に含まれません。そのため配偶者控除等の判定や保険料の算定に影響しません。一方で損益通算・繰越控除・配当控除はいずれも使えません。"}],rel:["02 株式譲渡損と配当（分離選択）","03 同一数値で総合課税を選択","04 同一数値で申告不要を選択","05 NISA口座内の損失","15 大口株主の配当"]},
+
+{t:"所得控除をどこから引くか",aim:"所得控除の充当順序を身につけます。順序は選べません。",
+b:()=>`<div class="note">所得控除は<b>総所得金額から先に</b>差し引きます。引ききれない金額があるときに分離課税の所得から差し引きます。</div>
+${flow([["まず","総所得金額（総合課税）",""],["引ききれない分","分離課税の所得へ","短期譲渡 → 長期譲渡 → 株式等 → 先物 → 山林 → 退職"]])}
+<div class="sub2">なぜ総合課税から先に引くのか</div>
+<p>総合課税には累進税率が適用されます。所得が多いほど税率が高くなるため、総合課税の所得から先に差し引く方が納税者に有利となる場合が多いという考え方によるものです。</p>
+<div class="sub2">順序は選べない</div>
+<p>「分離課税から引いた方が有利だ」と考えて順序を変えることはできません。法令で定められた順序に従います。</p>
+<div class="calc">総所得金額 60万円
+所得控除 150万円
+株式の譲渡益 200万円
+
+所得控除 150万円
+　→ 総所得金額 60万円 から 60万円
+　　（課税総所得金額 0円）
+　→ 残り 90万円 を株式等から
+　→ 株式等 200 − 90 ＝ 110万円</div>
+<div class="sub2">ここを飛ばすと起きる誤り</div>
+<p>総合課税の所得が少ない案件で、所得控除を全額使い切れていないまま申告してしまうことです。分離課税の所得があれば、そこから差し引けます。</p>
+<div class="sub2">実務ではこう確認する</div>
+<p>所得控除の合計額と総所得金額を比べます。所得控除が総所得金額を上回る場合は、分離課税の所得から差し引く処理が必要になります。</p>`,
+q:[{q:"所得控除は、総合課税と分離課税のどちらから先に差し引くでしょうか。",o:[["a","総合課税から先"],["b","分離課税から先"],["c","有利な方を選べる"]],a:"a",e:"所得控除はまず総所得金額から差し引き、引ききれない金額があるときに分離課税の所得から差し引きます。累進税率が適用される総合課税から先に引く方が納税者に有利となる場合が多いという考え方によるものです。順序は選べません。"},
+{q:"総所得金額50万円、所得控除120万円、株式の譲渡益100万円です。株式等の課税標準はいくらでしょうか。",o:[["a","100万円"],["b","30万円"],["c","0円"]],a:"b",e:"所得控除120万円のうち50万円を総所得金額から差し引き、引ききれない70万円を株式等の譲渡益から差し引きます。100万円から70万円を差し引いた30万円が株式等の課税標準になります。"},
+{q:"所得控除が総所得金額を上回る場合、超えた分はどうなるでしょうか。",o:[["a","切り捨てられる"],["b","分離課税の所得から差し引く"],["c","翌年にくり越す"]],a:"b",e:"引ききれない金額は分離課税の所得から差し引きます。分離課税の所得がない場合は、その年で切り捨てとなります。くり越しはできません。"}],rel:["20 所得控除が総合課税を超える場合"]},
+
+{t:"申告書に何を書くか",aim:"判定結果を申告書のどこに書くかを確認し、翌年への引き継ぎまでを押さえます。",
+b:()=>`<div class="note">判定が終わったら区分ごとに決められた欄へ転記します。総合課税と分離課税の欄を混ぜないことが最も重要です。</div>
+${dl("記載先",FORMS.map(f=>[f.i,f.f]),1)}
+<div class="note">様式名・欄番号は申告年分の様式でご確認ください。様式は年分により変更される場合があります。</div>
+<div class="sub2">「損益の通算の計算書」の使い方</div>
+<p>この計算書は通算前・第1次通算後・第2次通算後・第3次通算後という欄に分かれています。段階を飛ばさずに記入できる作りになっているため、第5講で学んだ順序を確認しながら進められます。</p>
+<div class="sub2">翌年への引き継ぎ</div>
+${dl("",[["繰越損失の種類別の残高","差し引ける相手が種類ごとに違うため分けて管理します"],["連続申告の必要性を伝えたこと","翌年の担当者が案内状況を把握できるようにします"],["按分計算の根拠","翌年も同じ按分を使うため根拠を残します"],["課税方式の選択理由","翌年に再検討する際の材料になります"],["特例の適用期限","年分により措置が変わる可能性があります"]],1)}
+<div class="sub2">ここを飛ばすと起きる誤り</div>
+<p>繰越損失の種類を区別せずに記録してしまうことです。上場株式等・先物取引・純損失は差し引ける相手が違うため、まとめて管理すると翌年に誤った控除をしてしまいます。</p>
+<div class="sub2">実務ではこう確認する</div>
+<p>申告書を作成したら判定の過程を記録に残します。「なぜこの方式を選んだか」「なぜこの金額を除外したか」を書き残すことで、翌年の担当者が同じ判断を再現できます。</p>`,
+q:[{q:"繰越損失はどのように記録・管理すべきでしょうか。",o:[["a","合計額だけ記録する"],["b","種類ごとに分けて記録する"],["c","金額が大きいものだけ"]],a:"b",e:"上場株式等の譲渡損失・先物取引の損失・純損失は差し引ける相手がそれぞれ違います。まとめて管理すると翌年に誤った控除をしてしまうため、種類ごとに分けて記録します。"},
+{q:"総合課税の所得と分離課税の所得は、申告書のどこに書くでしょうか。",o:[["a","同じ欄にまとめて"],["b","別の欄に分けて"],["c","どちらでもよい"]],a:"b",e:"総合課税は第一表、分離課税は第三表に記載します。税率の計算方法が違うため欄が分かれています。混ぜて記載すると税額が正しく計算されません。"},
+{q:"判定の過程を記録に残す理由は何でしょうか。",o:[["a","提出が義務だから"],["b","翌年の担当者が同じ判断を再現できるようにするため"],["c","記録は不要"]],a:"b",e:"按分計算の根拠、課税方式の選択理由、顧客への案内状況などを記録することで、翌年の担当者が引き継げます。特に繰越損失は複数年にわたるため、記録の有無が後年の処理精度を左右します。"}],rel:[]}];
+
+/* ---------- 表示部品（すべて縦積み） ---------- */
+function dl(title,rows,nb){return `<div class="dl">${title?`<div class="dh">${title}</div>`:""}${rows.map(r=>`<div class="dr"><span class="dk">${r[0]}</span><span class="dv${nb?" nb":""}">${r[1]}</span></div>`).join("")}</div>`;}
+function flow(steps){return `<div class="flow">${steps.map((s,i)=>`<div class="fs"><span class="fsn">${s[0]}</span>　${s[1]}${s[2]?`<br><span class="small">${s[2]}</span>`:""}</div>`).join('<div class="arrow">↓</div>')}</div>`;}
+function groupFig(){return `<div class="fig"><div class="fgt">総合課税（合計して累進税率）</div>
+<div class="fgi"><b>経常所得グループ</b><br>利子・配当・不動産・事業・給与・雑</div>
+<div class="fgs fgi"><b>譲渡・一時グループ</b><br>総合譲渡（短期・長期）・一時所得</div></div>
+<div class="wall">↑↓　この壁は越えられない（原則）</div>
+<div class="fig"><div class="fgt">分離課税（それぞれ別に税額を計算）</div>
+<div class="fgi">山林所得（五分五乗方式）</div>
+<div class="fgs fgi">退職所得</div>
+<div class="fgs fgi">上場株式等の譲渡＋分離配当</div>
+<div class="fgs fgi">一般株式等（非上場）の譲渡</div>
+<div class="fgs fgi">土地建物の譲渡（長期・短期）</div>
+<div class="fgs fgi">先物取引</div></div>
+<div class="note small">山林所得・退職所得は総所得金額に含まれませんが、通算の最後の受け皿になります。株式等・土地建物・先物は損益通算の対象外で、各グループの中だけで相殺します。</div>`;}
+function fold(h,b){FSEQ++;const id="fd"+FSEQ;return `<div class="fold" id="${id}"><div class="fh" onclick="$('${id}').classList.toggle('open')">${h}</div><div class="fb">${b}</div></div>`;}
+function tm(w){return TERMS[w]?`<span class="term" onclick="openTerm('${w}')">${w}</span>`:w;}
+function openTerm(w){$("shw").textContent=w;$("shx").textContent=TERMS[w]||"";$("sheet").style.display="block";$("shbg").style.display="block";}
+function closeTerm(){$("sheet").style.display="none";$("shbg").style.display="none";}
+function showv(id){const raw=sv(id);return DISP[id]?DISP[id][raw]:yen(parseFloat(raw)||0);}
+function useref(list){list.forEach(r=>USED.add(r[0]));return dl("使った入力項目",list.map(r=>[FIELDS[r[0]]+'<br><span class="small">'+r[1]+'</span>',showv(r[0])]));}
+function amd(k){if(YEAR!==9||!k)return "";const a=AMENDMENTS[k];if(!a)return `<div class="amd">令和9年分の改正情報は<b>未登録</b>です。上記は令和8年分の取扱いです。改正の有無は税制改正大綱・法令または税理士の指示によりご確認ください。</div>`;return `<div class="amd"><div class="at">令和9年分の改正見込み：${a.title||AKEY[k]||k}（${a.conf||"確度未設定"}）</div>${dl("",[["令和8年分",a.before||"—"],["令和9年分（見込み）",a.after||"—"]],1)}${a.reason?`<div><b>趣旨</b>　${a.reason}</div>`:""}${a.src?`<div><a href="${a.src}" target="_blank">出典</a></div>`:""}<div class="small">${a.logic?"この改正は判定に反映済みです。":"上の判定は令和8年分のロジックによるものです。"}</div></div>`;}
+function jd(t,ans,why,data,k){
+  let b=`<div class="jt">${t}</div><div class="jy">令和${YEAR}年分${YEAR===9?"・見込み":""}</div><div class="ja">${ans}</div>`;
+  if(why)b+=fold("なぜそうなるのか",why+(k&&MIS[k]?`<div class="mis"><div class="mt">よくある誤解</div>「${MIS[k].q}」<br><br>${MIS[k].a}</div>`:""));
+  if(data)b+=fold("使った数値と計算",data);
+  b+=amd(k);
+  return `<div class="jd">${b}</div>`;
+}
+function order(t){return `<div class="order"><div class="ot">税理士からの指示</div>${t}</div>`;}
+function skip(t){return `<div class="skip">${t}</div>`;}
+
+/* ---------- 画面制御 ---------- */
+function hideAll(){["scr0","scrStep","scr7","scrLecIdx","scrLec"].forEach(x=>$(x).style.display="none");}
+function setMode(m){MODE=m;$("mdCase").className=(m==="case"?"on":"");$("mdLec").className=(m==="lec"?"on":"");if(m==="lec")goLecIdx();else goStep(0);}
+function renderProg(){
+  if(MODE==="lec"){
+    if(SCR===-1){$("prog").innerHTML=`<div class="pnow">レクチャー目次</div><div class="paim">全10講。順に進めることをおすすめします。</div>`;return;}
+    const L=LEC_;let d="";for(let i=0;i<10;i++)d+=(i===LECN?"●":"○");
+    $("prog").innerHTML=`<div class="pnow">第${LECN}講　${LEC[LECN].t}</div><div class="paim">${LEC[LECN].aim}</div><div class="dots">${d}</div>`;return;
+  }
+  if(SCR===0){$("prog").innerHTML=`<div class="pnow">案件を選ぶ</div><div class="paim">この後、6つの段階を順に進みます。</div>`;return;}
+  if(SCR===7){$("prog").innerHTML=`<div class="pnow">まとめ</div><div class="paim">全6段階が終了しました。</div>`;return;}
+  const s=STEPDEF[SCR-1];let d="";for(let i=1;i<=6;i++)d+=(i===SCR?"●":"○");
+  $("prog").innerHTML=`<div class="pnow">STEP ${SCR}　${s.nm}</div><div class="paim">${s.aim}</div><div class="dots">${d}</div>`;
+}
+let LECN=0,LEC_=null;
+function renderNav(){
+  const n=$("nav");
+  if(MODE==="lec"){
+    if(SCR===-1){n.innerHTML=`<button class="nb2 ctr" onclick="setMode('case')">案件で学ぶへ</button>`;return;}
+    n.innerHTML=`<button class="nb1" onclick="lecPrev()">前へ</button><button class="nb2" onclick="lecNext()">${LECN===LEC.length-1?"目次へ":"次の講へ"}</button><button class="nb3" onclick="goLecIdx()">目次</button>`;return;
+  }
+  if(SCR===0){n.innerHTML=`<button class="nb2 ctr" id="btnStart" onclick="goStep(1)" ${CURCASE?"":"disabled"}>${CURCASE?"この案件を開始する":"案件を選んでください"}</button>`;return;}
+  if(SCR===7){n.innerHTML=`<button class="nb1" onclick="goStep(6)">戻る</button><button class="nb2 ctr" onclick="goStep(0)">案件選択へ</button>`;return;}
+  n.innerHTML=`<button class="nb1" onclick="navPrev()">戻る</button><button class="nb2" onclick="navNext()">${SCR===6?"まとめ":"次へ"}</button><button class="nb3" onclick="goStep(0)">案件</button>`;
+}
+function goStep(n){MODE="case";SCR=n;hideAll();
+  if(n===0){$("scr0").style.display="block";renderCase0();}
+  if(n>=1&&n<=6){$("scrStep").style.display="block";renderIn();renderClient();renderStep();}
+  if(n===7){$("scr7").style.display="block";renderSum();}
+  renderProg();renderNav();window.scrollTo(0,0);}
+function navNext(){if(SCR<6)goStep(SCR+1);else goStep(7);}
+function navPrev(){if(SCR>1)goStep(SCR-1);else goStep(0);}
+function goLecIdx(){MODE="lec";SCR=-1;hideAll();$("scrLecIdx").style.display="block";renderLecIdx();renderProg();renderNav();window.scrollTo(0,0);}
+function goLec(n){MODE="lec";LECN=n;SCR=-2;hideAll();$("scrLec").style.display="block";renderLec();renderProg();renderNav();window.scrollTo(0,0);}
+function lecNext(){if(LECN<LEC.length-1)goLec(LECN+1);else goLecIdx();}
+function lecPrev(){if(LECN>0)goLec(LECN-1);else goLecIdx();}
+
+/* ---------- 案件選択画面 ---------- */
+function toggleGrp(g){GRPOPEN[g]=!GRPOPEN[g];renderCase0();}
+function renderCase0(){
+  let h=`<div class="sec"><div class="st">案件を選ぶ</div><p class="small" style="margin-top:0">依頼票を読み、6つの段階を順に進めます。まず「基本」から始めるのがおすすめです。</p>`;
+  ["基本","応用","追加論点"].forEach(g=>{
+    const ks=Object.keys(CASES).filter(k=>CASES[k].grp===g);
+    h+=`<button class="btn" onclick="toggleGrp('${g}')"><b>${GRPOPEN[g]?"[－]":"[＋]"} ${g}</b>（${ks.length}件）</button>`;
+    if(GRPOPEN[g])ks.forEach(k=>{h+=`<button class="btn${CURCASE===k?" on":""}" style="padding-left:22px;" onclick="selCase('${k}')">案件${k}${CASES[k].cmp?`<br><span class="small">比較グループ${CASES[k].cmp}</span>`:""}</button>`;});
+  });
+  h+=`</div>`;
+  h+=`<div class="sec"><div class="st">比較表示</div><button class="btn${CMP?" on":""}" onclick="toggleCmp()">同一数値で結論が変わる案件を比べる</button><div id="cmpbox">${CMP?cmpHtml():""}</div></div>`;
+  h+=`<div class="sec">${fold("この研修で追う6つの段階と、2つの考え方",`${flow(STEPDEF.map((s,i)=>["STEP"+(i+1),s.nm,s.aim]))}
+   <div class="note">大事な考え方は2つです。<br>(1) 所得には<b>グループの壁</b>があり、越えられないものがあります。<br>(2) 通算は<b>第1次・第2次・第3次</b>の段階を踏みます。順序は選べません。</div>
+   ${groupFig()}`)}</div>`;
+  $("scr0").innerHTML=h;
+}
+function selCase(k){CURCASE=k;QA={};Object.entries(DEF).forEach(([id,val])=>{const e=$(id);if(e)e.value=val;});Object.entries(CASES[k].d).forEach(([id,val])=>{const e=$(id);if(e)e.value=val;});renderCase0();renderNav();run();}
+function toggleCmp(){CMP=!CMP;renderCase0();}
+function cmpHtml(){
+  let h="";
+  Object.keys(CMPGRP).forEach(key=>{
+    const G=CMPGRP[key];
+    h+=`<div class="sub2">${G.nm}</div>`;
+    G.cs.forEach(cn=>{
+      Object.entries(DEF).forEach(([id,val])=>{const e=$(id);if(e)e.value=val;});
+      Object.entries(CASES[cn].d).forEach(([id,val])=>{const e=$(id);if(e)e.value=val;});
+      const r=calc();
+      h+=dl("案件"+cn,[["配当の課税方式",DISP.s_divmode[r.dm]],["株損との通算",r.canOff?"可":"不可"],["配当控除",r.dm==="total"?"可":"不可"],["課税総所得金額",yen(r.taxTotal)],["分離（上場株式等）",yen(r.sepStock)],["翌年繰越（株式）",yen(-r.nextStock)],["翌年繰越（純損失）",yen(-r.nextPure)]]);
+    });
+  });
+  if(CURCASE){Object.entries(DEF).forEach(([id,val])=>{const e=$(id);if(e)e.value=val;});Object.entries(CASES[CURCASE].d).forEach(([id,val])=>{const e=$(id);if(e)e.value=val;});run();}
+  return h;
+}
+
+/* ---------- 入力パネル（動的生成） ---------- */
+function renderIn(){
+  if($("inbody").dataset.done)return;
+  let h=`<div class="note small">案件を選ぶと数値は自動で入ります。一時所得・長期譲渡は<b>2分の1にする前</b>の金額です。変更後は下のボタンを押してください。</div>`;
+  INGRP.forEach(G=>{
+    h+=`<div class="insub">${G.t}</div>`;
+    G.f.forEach(id=>{
+      h+=`<div class="fld"><div class="fn">${FIELDS[id]}</div><div class="fi">${id}</div><div class="fr">`;
+      if(SELF.includes(id)){h+=`<select id="${id}">${Object.entries(DISP[id]).map(([k2,v2])=>`<option value="${k2}">${v2}</option>`).join("")}</select>`;}
+      else{h+=`<input type="number" id="${id}" value="${DEF[id]}"><span class="fu">万円</span>`;}
+      h+=`</div></div>`;
+    });
+  });
+  h+=`<button class="btn ctr" onclick="recalc()">この条件で再判定する</button>`;
+  $("inbody").innerHTML=h;$("inbody").dataset.done="1";
+  if(CURCASE){Object.entries(DEF).forEach(([id,val])=>{const e=$(id);if(e)e.value=val;});Object.entries(CASES[CURCASE].d).forEach(([id,val])=>{const e=$(id);if(e)e.value=val;});run();}
+}
+function recalc(){QA={};run();renderStep();}
+function renderClient(){
+  if(!CURCASE){$("clientbox").innerHTML="";return;}
+  const c=CASES[CURCASE].cl;
+  $("clientbox").innerHTML=`<div class="box2"><div class="boxt">依頼票　案件${CURCASE}</div>
+   ${dl("",[["依頼者",c.nm],["家族",c.fm]],1)}
+   <div class="sub2">状況</div><p>${c.st}</p>
+   <div class="sub2">ご相談の内容</div><p>${c.rs}</p>
+   <div class="order"><div class="ot">担当税理士からの処理指示</div>${c.in}</div></div>`;
+}
+
+/* ---------- 計算 ---------- */
+function calc(){
+  const g={salary:v("i_salary"),biz:v("i_biz"),realty:v("i_realty"),landint:Math.abs(v("i_landint")),villa:Math.abs(v("i_villa")),
+    misc:v("i_misc"),misca:v("i_misc_a"),miscb:v("i_misc_b"),int:v("i_int"),
+    cshort:v("i_cshort"),clong:v("i_clong"),golf:Math.abs(v("i_golf")),onetime:v("i_onetime"),forest:v("i_forest"),retire:v("i_retire"),
+    listed:v("s_listed"),lista:v("s_listed_a"),listb:v("s_listed_b"),div:v("s_div"),dm:sv("s_divmode"),account:sv("s_account"),file:sv("s_file")==="y",
+    unlisted:v("s_unlisted"),unldiv:v("s_unldiv"),major:sv("s_major")==="y",
+    rlong:v("r_long"),rshort:v("r_short"),rhome:sv("r_home")==="yes",fut:v("f_fut"),
+    cstock:Math.abs(v("c_stock")),cfut:Math.abs(v("c_fut")),cpure:Math.abs(v("c_pure")),
+    blue:sv("c_blue")==="y",cont:sv("c_cont")==="y",ded:Math.abs(v("d_ded"))};
+  let dm=g.dm,majorFix=false;
+  if(g.major&&dm==="separate"){dm="total";majorFix=true;}
+  const nisa=g.account==="nisa",listed=nisa?0:g.listed,canOff=(dm==="separate"&&g.file&&!nisa);
+  let realty=g.realty,rExcl=0;
+  if(realty<0){const L=Math.abs(realty);rExcl=Math.min(L,g.landint+g.villa);realty=-(L-rExcl);}
+  let cshort=g.cshort,clong=g.clong,cExcl=0;
+  if(g.golf>0){let rem=g.golf;
+    if(clong<0){const u=Math.min(Math.abs(clong),rem);clong+=u;rem-=u;cExcl+=u;}
+    if(rem>0&&cshort<0){const u=Math.min(Math.abs(cshort),rem);cshort+=u;rem-=u;cExcl+=u;}}
+  const misc=g.misc<0?0:g.misc,miscCut=g.misc<0?Math.abs(g.misc):0;
+  const onetime=g.onetime<0?0:g.onetime,salary=g.salary<0?0:g.salary;
+  let stockLoss=0,stockNet=0,divSep=canOff?Math.max(0,g.div):0,divUse=0;
+  if(listed<0){stockLoss=Math.abs(listed);if(divSep>0){divUse=Math.min(stockLoss,divSep);stockLoss-=divUse;divSep-=divUse;}}
+  else if(listed>0)stockNet=listed;
+  const realNet=g.rlong+g.rshort,realToTotal=(realNet<0&&g.rhome)?Math.abs(realNet):0;
+  const futNet=g.fut,futLoss=futNet<0?Math.abs(futNet):0;
+  let cshortNet=cshort,clongNet=clong,inAb=null;
+  if(cshortNet<0&&clongNet>0){const u=Math.min(Math.abs(cshortNet),clongNet);cshortNet+=u;clongNet-=u;inAb={f:"短期の赤字",t:"長期の黒字",a:u};}
+  else if(clongNet<0&&cshortNet>0){const u=Math.min(Math.abs(clongNet),cshortNet);clongNet+=u;cshortNet-=u;inAb={f:"長期の赤字",t:"短期の黒字",a:u};}
+  const K={int:Math.max(0,g.int),div:(dm==="total"?Math.max(0,g.div):0)+Math.max(0,g.unldiv),realty:Math.max(0,realty),biz:Math.max(0,g.biz),salary:salary,misc:Math.max(0,misc)};
+  let keijou=K.int+K.div+K.realty+K.biz+K.salary+K.misc;
+  let jS=Math.max(0,cshortNet),jL=Math.max(0,clongNet),ich=Math.max(0,onetime),fo=Math.max(0,g.forest),re=Math.max(0,g.retire);
+  const before={keijou,jS,jL,ich,fo,re};
+  let lK=(g.biz<0?Math.abs(g.biz):0)+(realty<0?Math.abs(realty):0);
+  let lJ=(cshortNet<0?Math.abs(cshortNet):0)+(clongNet<0?Math.abs(clongNet):0);
+  let lF=g.forest<0?Math.abs(g.forest):0;
+  const trace=[];
+  const t1=[];
+  if(lK>0){const u=Math.min(keijou,lK);keijou-=u;lK-=u;t1.push(["不動産・事業の赤字 → 経常所得グループ内",yen(u)+" 充当／残り "+yen(-lK)]);}
+  if(lJ>0){const u=Math.min(ich,lJ);ich-=u;lJ-=u;t1.push(["譲渡の赤字 → 一時所得",yen(u)+" 充当／残り "+yen(-lJ)]);}
+  if(t1.length)trace.push({s:"第1次通算",o:"同じグループの中で相殺",r:t1});
+  const t2=[];
+  if(lK>0){
+    if(jS>0){const u=Math.min(jS,lK);jS-=u;lK-=u;t2.push(["経常の赤字 → 総合譲渡（短期）",yen(u)+" 充当"]);}
+    if(lK>0&&jL>0){const u=Math.min(jL,lK);jL-=u;lK-=u;t2.push(["経常の赤字 → 総合譲渡（長期）",yen(u)+" 充当"]);}
+    if(lK>0&&ich>0){const u=Math.min(ich,lK);ich-=u;lK-=u;t2.push(["経常の赤字 → 一時所得",yen(u)+" 充当"]);}
+    t2.push(["経常の赤字 残り",yen(-lK)]);}
+  if(lJ>0){if(keijou>0){const u=Math.min(keijou,lJ);keijou-=u;lJ-=u;t2.push(["譲渡の赤字 → 経常所得グループ",yen(u)+" 充当"]);}t2.push(["譲渡の赤字 残り",yen(-lJ)]);}
+  if(realToTotal>0){let rem=realToTotal;
+    if(keijou>0){const u=Math.min(keijou,rem);keijou-=u;rem-=u;t2.push(["居住用財産の譲渡損失 → 経常所得グループ",yen(u)+" 充当"]);}
+    if(rem>0&&jS>0){const u=Math.min(jS,rem);jS-=u;rem-=u;t2.push(["居住用財産の譲渡損失 → 短期譲渡",yen(u)+" 充当"]);}
+    if(rem>0&&jL>0){const u=Math.min(jL,rem);jL-=u;rem-=u;t2.push(["居住用財産の譲渡損失 → 長期譲渡",yen(u)+" 充当"]);}
+    if(rem>0&&ich>0){const u=Math.min(ich,rem);ich-=u;rem-=u;t2.push(["居住用財産の譲渡損失 → 一時所得",yen(u)+" 充当"]);}
+    lK+=rem;if(rem>0)t2.push(["居住用財産の譲渡損失 残り",yen(-rem)]);}
+  if(t2.length)trace.push({s:"第2次通算",o:"別のグループの黒字へ（経常の赤字は短期譲渡から先に）",r:t2});
+  const t3=[];
+  if(lK>0&&fo>0){const u=Math.min(fo,lK);fo-=u;lK-=u;t3.push(["不動産・事業の赤字 → 山林所得",yen(u)+" 充当"]);}
+  if(lJ>0&&fo>0){const u=Math.min(fo,lJ);fo-=u;lJ-=u;t3.push(["譲渡の赤字 → 山林所得",yen(u)+" 充当"]);}
+  if(lF>0){
+    if(keijou>0){const u=Math.min(keijou,lF);keijou-=u;lF-=u;t3.push(["山林の赤字 → 経常所得グループ",yen(u)+" 充当"]);}
+    if(lF>0&&jS>0){const u=Math.min(jS,lF);jS-=u;lF-=u;t3.push(["山林の赤字 → 短期譲渡",yen(u)+" 充当"]);}
+    if(lF>0&&jL>0){const u=Math.min(jL,lF);jL-=u;lF-=u;t3.push(["山林の赤字 → 長期譲渡",yen(u)+" 充当"]);}
+    if(lF>0&&ich>0){const u=Math.min(ich,lF);ich-=u;lF-=u;t3.push(["山林の赤字 → 一時所得",yen(u)+" 充当"]);}}
+  if(lK>0&&re>0){const u=Math.min(re,lK);re-=u;lK-=u;t3.push(["不動産・事業の赤字 → 退職所得",yen(u)+" 充当"]);}
+  if(lJ>0&&re>0){const u=Math.min(re,lJ);re-=u;lJ-=u;t3.push(["譲渡の赤字 → 退職所得",yen(u)+" 充当"]);}
+  if(lF>0&&re>0){const u=Math.min(re,lF);re-=u;lF-=u;t3.push(["山林の赤字 → 退職所得",yen(u)+" 充当"]);}
+  if(t3.length)trace.push({s:"第3次通算",o:"山林所得 → 退職所得（不動産・事業の損失を先に）",r:t3});
+  const residual=lK+lJ+lF;
+  const jLh=jL/2,ichh=ich/2,totalIncome=keijou+jS+jLh+ichh;
+  let afterTotal=totalIncome,afterStock=(stockLoss>0?0:stockNet+divSep),afterFut=Math.max(0,futNet);
+  let nextStock=stockLoss,nextFut=futLoss,nextPure=residual,csUse=0,csR="",cfUse=0,cpUse=0;
+  if(g.cstock>0){
+    if(!g.file||!g.cont)csR="要件不充足";
+    else if(afterStock>0){csUse=Math.min(g.cstock,afterStock);afterStock-=csUse;nextStock+=g.cstock-csUse;}
+    else{nextStock+=g.cstock;csR="控除先なし";}}
+  if(g.cfut>0&&g.file&&g.cont){if(afterFut>0){cfUse=Math.min(g.cfut,afterFut);afterFut-=cfUse;nextFut+=g.cfut-cfUse;}else nextFut+=g.cfut;}
+  if(g.cpure>0&&g.blue){cpUse=Math.min(g.cpure,afterTotal);afterTotal-=cpUse;nextPure+=g.cpure-cpUse;}
+  if(residual>0&&!g.blue)nextPure=0;
+  if(stockLoss>0&&(!g.file||nisa))nextStock=0;
+  if(futLoss>0&&!g.file)nextFut=0;
+  const taxTotal=Math.max(0,afterTotal-g.ded);
+  let dedRest=Math.max(0,g.ded-afterTotal),dedSep=0,dedPath=[];
+  let sRS=(realNet>0)?Math.max(0,g.rshort):0,sRL=(realNet>0)?Math.max(0,g.rlong):0;
+  let sStock=Math.max(0,afterStock),sUnl=Math.max(0,g.unlisted),sFut=afterFut,sFo=fo,sRe=re;
+  if(dedRest>0){let r=dedRest;
+    const st=[["土地建物（短期）",()=>sRS,x=>sRS=x],["土地建物（長期）",()=>sRL,x=>sRL=x],["上場株式等",()=>sStock,x=>sStock=x],["一般株式等",()=>sUnl,x=>sUnl=x],["先物取引",()=>sFut,x=>sFut=x],["山林所得",()=>sFo,x=>sFo=x],["退職所得",()=>sRe,x=>sRe=x]];
+    st.forEach(([nm,get,set])=>{const c=get();if(r>0&&c>0){const u=Math.min(c,r);set(c-u);r-=u;dedSep+=u;dedPath.push([nm,yen(u)]);}});}
+  return {g,dm,majorFix,nisa,listed,canOff,realty,rExcl,cshort,clong,cExcl,cshortNet,clongNet,inAb,misc,miscCut,onetime,salary,
+    stockLoss,stockNet,divSep,divUse,realNet,realToTotal,futNet,futLoss,K,before,keijou,jS,jL,jLh,ich,ichh,fo,re,
+    trace,residual,totalIncome,afterTotal,afterStock,afterFut,nextStock,nextFut,nextPure,csUse,csR,cfUse,cpUse,
+    taxTotal,dedRest,dedSep,dedPath,sStock,sUnl,sRS,sRL,sFut,sFo,sRe};
+}
+function run(){LOG=[];USED=new Set();FSEQ=0;R=calc();
+  LOG.push("案件 "+(CURCASE||"個別入力")+"／令和"+YEAR+"年分"+(YEAR===9?"（見込み）":""));
+  LOG.push("構造 内部通算→第1次→第2次→第3次→繰越控除→所得控除");
+  LOG.push("山林・退職は総所得金額に含めず分離課税として表示");
+  LOG.push("長期譲渡・一時所得は通算後に2分の1を算入");
+  LOG.push("改正情報の登録 "+Object.keys(AMENDMENTS).length+"件");}
+
+/* ---------- 予測入力 ---------- */
+function ansQ(n,val){QA[n]=val;renderStep();}
+function renderQuiz(n){
+  const q=QUIZ[n];if(!q||q.sk(R.g))return "";
+  const my=QA[n];
+  let h=`<div class="quiz"><div class="qt">先に考えてみてください</div><div class="qq">${q.q}</div>`;
+  if(my===undefined){h+=q.o.map(o=>`<button class="btn" onclick="ansQ(${n},'${o[0]}')">${o[1]}</button>`).join("")+`<div class="small">回答すると、この下に判定と根拠が出ます。</div>`;}
+  else{const c=q.a(),myT=(q.o.find(o=>o[0]===my)||["",""])[1],cT=(q.o.find(o=>o[0]===c)||["",""])[1];
+    h+=`<div class="qr"><div class="qj">あなたの回答：${myT}<br>${my==="?"?"わからないと回答しました。下の解説で確認してください。":(my===c?"正解です。":"誤りです。正しくは「"+cT+"」です。")}</div>${QEXP[n]}</div>`;}
+  return h+`</div>`;
+}
+function renderStep(){if(!R)run();FSEQ=SCR*100;
+  const f=[null,step1,step2,step3,step4,step5,step6][SCR];
+  $("stepbody").innerHTML=renderQuiz(SCR)+f();}
+
+function step1(){
+  const g=R.g,h=[];
+  h.push(order("まず前提を4点確認してください。(1)確定申告をするか (2)口座の種類 (3)配当の課税方式 (4)大口株主に該当するか。この4点で以降の通算の可否が決まるため、先に数値を足し引きしないこと。"));
+  if(R.majorFix)h.push(jd("大口株主に該当するか","入力は「はい」です。<span class='res'>"+tm("申告分離課税")+"は選べません。</span>指示された申告分離課税から"+tm("総合課税")+"へ切り替えました。",
+    "上場株式の配当でも、発行済株式の一定割合以上を保有する"+tm("大口株主")+"が受けるものは申告分離課税を選べず、総合課税の対象です。分離課税でなくなる結果、株式等の譲渡損失との"+tm("損益通算")+"もできません。",
+    useref([["s_major","申告分離課税を選べるかの判定"],["s_divmode","指示された課税方式の確認"]])+`<div class="calc">s_major ＝ はい
+s_divmode ＝ separate → total へ変更</div>`,"major"));
+  else if(g.major)h.push(jd("大口株主に該当するか","入力は「はい」です。配当は"+tm("総合課税")+"となります。","大口株主が受ける上場株式等の配当は申告分離課税の選択対象外です。",useref([["s_major","課税方式の判定"]]),"major"));
+  else h.push(jd("大口株主に該当するか","入力は「いいえ」です。<span class='res'>課税方式を3つから選べます。</span>","大口株主以外の上場株式等の配当は、総合課税・"+tm("申告分離課税")+"・"+tm("申告不要")+"のいずれかを選べます。",useref([["s_major","課税方式の選択肢の判定"]]),"major"));
+  if(!g.file)h.push(jd("確定申告をするか","入力は「しない」です。<span class='res'>分離課税の選択・損益通算・"+tm("繰越控除")+"はいずれもできません。</span>",
+    "上場株式等の譲渡損失と配当との通算、および繰越控除は、確定申告書に必要事項を記載して提出することが要件です。申告がなければ制度そのものが使えません。",useref([["s_file","申告を前提とする制度が使えるかの判定"]]),"file"));
+  else h.push(jd("確定申告をするか","入力は「する」です。<span class='res'>申告を要する制度を使えます。</span>","上場株式等の譲渡損失と配当との通算、譲渡損失の繰越控除は、いずれも確定申告が要件です。",useref([["s_file","申告を前提とする制度が使えるかの判定"]]),"file"));
+  if(R.nisa)h.push(jd("口座の種類","入力は「"+tm("NISA口座")+"」です。<span class='res'>損失を税務上認識しません。</span>入力値 "+yen(g.listed)+" は以降0として扱います。",
+    "NISA口座内で生じた譲渡損失は、所得税法上「生じなかったもの」とみなされます。そのため他の口座の譲渡益や配当との損益通算、翌年以後への繰越控除はいずれもできません。利益が非課税である代わりに、損失も税務上存在しない扱いになります。",
+    useref([["s_account","損益を認識するかの判定"],["s_listed","認識額の決定"]])+`<div class="calc">s_listed ＝ ${yen(g.listed)}
+　→ 課税上の認識額 0万円</div>`,"account"));
+  else h.push(jd("口座の種類","入力は「"+DISP.s_account[g.account]+"」です。<span class='res'>課税口座として損益を認識します。</span>",
+    tm("特定口座")+"・一般口座はいずれも課税口座で、生じた譲渡損益は損益通算・繰越控除の対象になります（適用には申告が必要です）。",useref([["s_account","損益を認識するかの判定"]]),"account"));
+  h.push(jd("配当の課税方式の確定","確定した方式：<b>"+DISP.s_divmode[R.dm]+"</b><br>株式の譲渡損失との相殺：<span class='res'>"+(R.canOff?"できます":"できません")+"</span>",
+    R.dm==="separate"?"上場株式等の譲渡損失と相殺できる配当は、申告分離課税を選んで申告したものに限られます。分離課税を選ぶと"+tm("配当控除")+"は使えません。"
+    :R.dm==="total"?"総合課税を選ぶと配当控除の対象になりますが、課税のグループが異なるため上場株式等の譲渡損失とは相殺できません。配当控除と損益通算はどちらか一方という関係です。"
+    :"申告不要を選ぶと源泉徴収のみで課税関係が終わります。損益通算・繰越控除・配当控除はいずれも使えませんが、合計所得金額に含まれないため扶養の判定や保険料の算定への影響を避けられます。",
+    useref([["s_divmode","相殺できるかの判定"],["s_div","相殺の相手方となる金額"],["s_file","申告の有無"]])+`<div class="calc">s_divmode ＝ ${R.dm}
+s_file ＝ ${g.file?"する":"しない"}
+　→ 相殺 ${R.canOff?"可":"不可"}</div>`,"divmode"));
+  return h.join("");
+}
+function step2(){
+  const g=R.g,h=[];
+  if(!(g.biz<0||g.realty<0||g.cshort<0||g.clong<0||g.forest<0||g.misc<0||g.onetime<0||g.misca!==0||g.miscb!==0))return skip("この案件では赤字の所得がないため、この段階の処理はありません。「次へ」で進んでください。");
+  h.push(order("各所得の赤字が"+tm("損益通算")+"の対象になるかを仕分けてください。対象は原則として不動産・事業・譲渡・山林の4つだけです。対象外の赤字はこの段階で0として処理し、以降に持ち回らないこと。"));
+  if(g.misca!==0||g.miscb!==0)h.push(jd("雑所得の内部通算","内訳A（益）"+yen(g.misca)+" と内訳B（損）"+yen(g.miscb)+" を"+tm("内部通算")+"し、合計は <b>"+yen(g.misca+g.miscb)+"</b> です。",
+    "同じ雑所得の中では益と損を相殺できます。これは損益通算の前の段階で行う処理です。内部通算の結果が赤字になった場合、その赤字を他の所得から差し引くことはできません。",
+    useref([["i_misc_a","雑所得内の益"],["i_misc_b","雑所得内の損"],["i_misc","内部通算後の金額"]])+`<div class="calc">${g.misca} ＋ (${g.miscb}) ＝ ${g.misca+g.miscb}</div>`,"misc_loss"));
+  if(g.realty<0){
+    if(R.rExcl>0)h.push(jd("不動産所得の赤字","赤字 "+yen(g.realty)+" のうち <span class='res'>"+yen(R.rExcl)+" は対象外</span>として切り捨て、残り "+yen(R.realty)+" を通算の対象とします。",
+      "不動産所得の損失のうち、土地等を取得するために要した負債の利子に相当する部分は損益通算の対象から除かれます。別荘など主に趣味・娯楽・保養の目的で持つ不動産の貸付けに係る損失も対象外です。借入金の利子が赤字額を上回る場合は赤字の全額が対象外になります。建物の取得のための負債の利子は除かれないため、土地分と建物分の区分が必要です。",
+      useref([["i_realty","通算対象かの判定"],["i_landint","対象外額の算出"],["i_villa","対象外額の算出"]])+`<div class="calc">|${g.realty}| − min(${Math.abs(g.realty)}, ${g.landint}＋${g.villa})
+　＝ 通算対象 ${Math.abs(R.realty)}万円</div>`,"realty_loss"));
+    else h.push(jd("不動産所得の赤字","赤字 "+yen(g.realty)+" は <span class='res'>全額が通算の対象</span>です。","不動産所得は損益通算の対象となる4つの所得の一つです。除外対象となる借入金利子・別荘等の入力がないため全額を通算に回します。",useref([["i_realty","通算対象かの判定"]]),"realty_loss"));}
+  if(g.biz<0)h.push(jd("事業所得の赤字","赤字 "+yen(g.biz)+" は <span class='res'>全額が通算の対象</span>です。","事業所得は損益通算の対象となる4つの所得の一つです。",useref([["i_biz","通算対象かの判定"]]),"biz_loss"));
+  if(g.golf>0&&R.cExcl>0)h.push(jd("生活に通常必要でない資産の譲渡損","譲渡の赤字のうち <span class='res'>"+yen(R.cExcl)+" は対象外</span>として切り捨てます。",
+    tm("生活に通常必要でない資産")+"（ゴルフ会員権、貴金属、書画骨とうなど）の譲渡による損失は損益通算の対象になりません。生活に必要な資産の損失を救済するという損益通算の趣旨から外れるためです。",
+    useref([["i_cshort","通算対象かの判定"],["i_clong","通算対象かの判定"],["i_golf","対象外額の算出"]])+`<div class="calc">除外 ${R.cExcl}万円
+除外後　短期 ${R.cshort}／長期 ${R.clong}</div>`,"golf"));
+  if((R.cshort<0||R.clong<0))h.push(jd("総合譲渡の赤字","除外後の赤字（短期 "+yen(Math.min(0,R.cshort))+"／長期 "+yen(Math.min(0,R.clong))+"）は <span class='res'>通算の対象</span>です。",
+    "譲渡所得（総合課税分）は損益通算の対象となる4つの所得の一つです。土地建物・株式等の譲渡は分離課税であり、ここには含まれません。",useref([["i_cshort","通算対象かの判定"],["i_clong","通算対象かの判定"]]),"cgen_loss"));
+  if(g.forest<0)h.push(jd("山林所得の赤字","赤字 "+yen(g.forest)+" は <span class='res'>通算の対象</span>です。",tm("山林所得")+"は損益通算の対象となる4つの所得の一つです。山林所得は分離課税で総所得金額には含まれませんが、通算の対象にはなります。",useref([["i_forest","通算対象かの判定"]]),"forest_tax"));
+  if(g.misc<0)h.push(jd("雑所得の赤字","入力は "+yen(g.misc)+" です。<span class='res'>他の所得から差し引けません。</span>0として処理します。",
+    "雑所得は損益通算の対象となる4つの所得に含まれません。雑所得の中での内部通算はできますが、赤字が残っても給与などから差し引くことはできず、その年で切り捨てられます。",
+    useref([["i_misc","切捨ての判定"]])+`<div class="calc">${g.misc} → 以降 0 として扱う
+切捨て ${R.miscCut}万円</div>`,"misc_loss"));
+  if(g.onetime<0)h.push(jd("一時所得の赤字","入力は "+yen(g.onetime)+" です。<span class='res'>他の所得から差し引けません。</span>0として処理します。",
+    "一時所得も損益通算の対象外です。収入から支出を差し引いてなお赤字となる場合、その赤字は他の所得と相殺できません。",useref([["i_onetime","切捨ての判定"]])+`<div class="calc">${g.onetime} → 以降 0 として扱う</div>`,"onetime_loss"));
+  h.push(jd("仕分けの結果","通算の対象とする赤字と切り捨てる赤字を整理しました。","損益通算の対象となる赤字は不動産・事業・譲渡・山林の4つに限られます。",
+    dl("仕分け後の金額",[["給与所得",yen(R.salary)],["事業所得",yen(g.biz)],["不動産所得",yen(R.realty)],["総合譲渡（短期）",yen(R.cshort)],["総合譲渡（長期）",yen(R.clong)],["山林所得",yen(g.forest)],["雑所得",yen(R.misc)],["一時所得",yen(R.onetime)]])+`<div class="note small">一時所得・長期譲渡は2分の1前の金額です。2分の1の算入は通算後に行います。</div>`,"half"));
+  return h.join("");
+}
+function step3(){
+  const g=R.g,h=[];
+  if(!(g.listed!==0||g.unlisted!==0||g.rlong!==0||g.rshort!==0||g.fut!==0||g.unldiv!==0||g.lista!==0||g.listb!==0))return skip("この案件では株式等・土地建物・先物の所得がないため、この段階の処理はありません。「次へ」で進んでください。");
+  h.push(order(tm("分離課税")+"の所得はグループごとに区分されています。まず同じグループの中だけで通算してください。グループをまたいだ通算や、"+tm("総合課税")+"の所得との通算は行わないこと。"));
+  if(g.lista!==0||g.listb!==0)h.push(jd("上場株式等の内部通算","銘柄甲 "+yen(g.lista)+" と銘柄乙 "+yen(g.listb)+" を"+tm("内部通算")+"し、合計は <b>"+yen(g.lista+g.listb)+"</b> です。",
+    "同じ年の上場株式等の譲渡益と譲渡損は、まず内部通算して合計額を出します。損の出た銘柄だけを選んで申告することはできません。内部通算をした後の金額が、配当との相殺やくり越しの対象になります。",
+    useref([["s_listed_a","内部通算の対象"],["s_listed_b","内部通算の対象"],["s_listed","内部通算後の金額"]])+`<div class="calc">${g.lista} ＋ (${g.listb}) ＝ ${g.lista+g.listb}</div>`,"stock_internal"));
+  if(R.listed<0){
+    if(R.canOff&&R.divUse>0)h.push(jd("譲渡損と配当の相殺","譲渡損と"+tm("申告分離課税")+"を選んだ配当を相殺します。<br>充当額 <span class='res'>"+yen(R.divUse)+"</span>／相殺後の損失残 "+yen(-R.stockLoss),
+      "上場株式等の譲渡損失は、申告分離課税を選んだ上場株式等の配当から差し引けます。両者が同じ分離課税のグループに属するためです。差し引ける額は配当の金額が上限で、超える部分は繰越控除の対象として次の段階へ送ります。",
+      useref([["s_listed","譲渡損失の額"],["s_div","相殺の相手方の額"],["s_divmode","相殺できるかの判定"]])+`<div class="calc">min(${Math.abs(R.listed)}, ${Math.max(0,g.div)}) ＝ 充当 ${R.divUse}
+損失残 ${R.stockLoss}万円</div>`,"stock_div_offset"));
+    else h.push(jd("譲渡損の相手方","<span class='res'>相殺できる配当がありません。</span>全額を繰越控除の判定へ送ります。",
+      R.dm==="separate"&&g.file?"申告分離課税を選んだ配当の入力がないため、相殺の相手方が存在しません。":"配当が申告分離課税以外（"+DISP.s_divmode[R.dm]+"）であるため、譲渡損失との相殺の対象になりません。課税方式の選択が相殺の可否を直接左右します。",
+      useref([["s_listed","譲渡損失の額"],["s_divmode","相殺できるかの判定"]])+`<div class="calc">s_divmode ＝ ${R.dm}${g.file?"":"／s_file ＝ しない"}
+　→ 相殺対象の配当 0万円</div>`,"stock_div_offset"));
+    h.push(jd("総合課税の所得との相殺","上場株式等の譲渡損は <span class='res'>給与所得・事業所得などとは相殺できません。</span>",
+      "上場株式等に係る譲渡所得等は申告分離課税であり、総合課税の所得とは課税のグループが異なります。そのため譲渡損失を給与所得などから差し引くことはできません。差し引けるのは、同じグループの譲渡益と申告分離課税を選んだ配当だけです。",
+      `<div class="calc">総合課税グループへの振替 ＝ 0万円</div>`,"stock_total_offset"));}
+  else if(R.listed>0)h.push(jd("上場株式等のグループ","譲渡益 "+yen(R.listed)+(R.divSep>0?"／申告分離の配当 "+yen(R.divSep):"")+"<br>グループ合計 <b>"+yen(R.stockNet+R.divSep)+"</b>",
+    "黒字のため当年の相殺は不要です。この金額は、次の段階で繰越損失を差し引く際の上限になります。",useref([["s_listed","グループの損益"],["s_div","グループに含める配当"]]),"stock_div_offset"));
+  else if(R.nisa)h.push(jd("上場株式等のグループ",tm("NISA口座")+"のため譲渡損益は0として処理済みです。配当も非課税で課税関係は生じません。","非課税口座内の譲渡損失は生じなかったものとみなされるため、通算・くり越しの対象外です。",useref([["s_account","損益を認識するかの判定"]]),"account"));
+  if(g.unlisted!==0)h.push(jd("非上場株式等と上場株式等","非上場株式等 "+yen(g.unlisted)+" は、上場株式等 "+yen(g.listed)+" とは <span class='res'>相互に相殺できません。</span>",
+    "株式等に係る譲渡所得等は"+tm("上場株式等")+"と"+tm("一般株式等")+"（非上場）の2つの区分に分かれ、それぞれ別に分離課税が行われます。区分が異なるため、一方の損失を他方の利益から差し引くことはできません。",
+    useref([["s_unlisted","非上場グループの損益"],["s_listed","上場グループの損益"]])+`<div class="calc">相互通算 ＝ 0万円</div>`,"unlisted_group"));
+  if(g.unldiv!==0)h.push(jd("非上場株式の配当",yen(g.unldiv)+" は <span class='res'>総合課税</span>として処理します（少額配当の申告不要を除きます）。",
+    "非上場株式の配当は申告分離課税を選べず総合課税の対象です。そのため株式等の譲渡損失との相殺の対象にもなりません。経常所得グループに含めます。",useref([["s_unldiv","課税方式の判定"]]),"unldiv"));
+  if(R.realNet<0){
+    if(g.rhome)h.push(jd(tm("居住用財産")+"の譲渡損失の特例","入力は「該当する」です。譲渡損 "+yen(R.realNet)+" を <span class='res'>総合課税の所得と相殺できる</span>ものとして次へ送ります。",
+      "土地建物等の譲渡損失は原則として他の所得と相殺できませんが、居住用財産の譲渡損失については特例があり、一定の要件を満たす場合に他の所得との相殺および翌年以後3年間の繰越控除が認められます。住宅ローンの残高や居住期間などの要件確認が必要です。適用期限のある特例のため、対象年分で措置が続いているか必ず確認してください。",
+      useref([["r_long","グループの損益"],["r_short","グループの損益"],["r_home","相殺できるかの判定"]])+`<div class="calc">${g.rlong} ＋ ${g.rshort} ＝ ${R.realNet}
+　→ 総合課税へ振替 ${R.realToTotal}万円</div>`,"home_special"));
+    else h.push(jd("土地建物の譲渡損","長期と短期の間では相殺できますが、<span class='res'>給与所得などとは相殺できず切り捨て</span>となります。",
+      "土地建物等の譲渡所得は分離課税で、その損失は土地建物等の譲渡所得の中（長期・短期）でのみ相殺できます。居住用財産の譲渡損失の特例に該当しない限り、他の所得との相殺やくり越しは認められません。",
+      useref([["r_long","グループの損益"],["r_short","グループの損益"],["r_home","特例の該当の判定"]])+`<div class="calc">${g.rlong} ＋ ${g.rshort} ＝ ${R.realNet}
+　→ 総合課税への振替 0万円</div>`,"realestate_group"));}
+  else if(R.realNet>0)h.push(jd("土地建物の譲渡益","譲渡益 "+yen(R.realNet)+"。長期・短期の区分ごとに分離課税で処理します。","土地建物等の譲渡所得は所有期間により長期・短期に分かれ、それぞれ異なる税率で分離課税されます。",useref([["r_long","グループの損益"],["r_short","グループの損益"]]),"realestate_group"));
+  if(R.futNet<0)h.push(jd(tm("先物取引")+"の損失","損失 "+yen(R.futNet)+" は <span class='res'>先物取引のグループの中だけ</span>で相殺できます。",
+    "先物取引に係る雑所得等は申告分離課税で、その損失は同じ先物取引に係る所得からのみ差し引けます。株式等の譲渡損益とは別のグループで、相互に相殺できません。確定申告をすれば翌年以後3年間のくり越しができます。",
+    useref([["f_fut","グループの損益"]])+`<div class="calc">他グループへの振替 ＝ 0万円</div>`,"futures"));
+  else if(R.futNet>0)h.push(jd("先物取引の利益","利益 "+yen(R.futNet)+"。申告分離課税で処理します。","先物取引に係る雑所得等は申告分離課税の対象です。この金額は繰越損失を差し引く際の上限になります。",useref([["f_fut","グループの損益"]]),"futures"));
+  return h.join("");
+}
+function step4(){
+  const h=[];
+  h.push(order("総合課税のグループの通算は、第1次・第2次・第3次の段階を踏んで行ってください。段階を飛ばさないこと。経常所得の赤字を譲渡所得から差し引く場合は短期から先に充当すること。2分の1の算入は通算の後に行うこと。"));
+  h.push(jd("通算前の各枠の残高","赤字を差し引く前の残高を確認します。",
+    tm("経常所得")+"のグループは利子・配当（総合課税分）・不動産・事業・給与・雑の黒字を合計したものです。"+tm("山林所得")+"・退職所得は分離課税で総所得金額には含まれませんが、第3次通算の受け皿になります。",
+    dl("通算前",[["経常所得グループ",yen(R.before.keijou)],["　内訳 利子",yen(R.K.int)],["　内訳 配当",yen(R.K.div)],["　内訳 不動産",yen(R.K.realty)],["　内訳 事業",yen(R.K.biz)],["　内訳 給与",yen(R.K.salary)],["　内訳 雑",yen(R.K.misc)],["総合譲渡（短期）",yen(R.before.jS)],["総合譲渡（長期・2分の1前）",yen(R.before.jL)],["一時所得（2分の1前）",yen(R.before.ich)],["山林所得",yen(R.before.fo)],["退職所得",yen(R.before.re)]]),"order1"));
+  if(R.inAb)h.push(jd("総合譲渡の内部通算",R.inAb.f+" を "+R.inAb.t+" から "+yen(R.inAb.a)+" 相殺しました。",
+    "総合譲渡の短期と長期は、損益通算の前に内部通算を行います。短期・長期を通算した後の金額が以降の通算の対象になります。",
+    `<div class="calc">${R.inAb.f} ${yen(R.inAb.a)} を ${R.inAb.t} から控除
+内部通算後　短期 ${yen(R.cshortNet)}／長期 ${yen(R.clongNet)}</div>`,"order1"));
+  if(R.trace.length===0)h.push(skip("この案件では総合課税のグループに充当する赤字がないため、通算の処理はありません。"));
+  else R.trace.forEach(t=>{
+    const k=(t.s==="第1次通算")?"order1":(t.s==="第2次通算")?"order2":"order3";
+    h.push(jd(t.s,t.o,
+      t.s==="第1次通算"?"第1次通算では同じグループの中で相殺します。不動産・事業の赤字は経常所得グループの黒字から、譲渡の赤字は一時所得から差し引きます。譲渡の赤字をまず一時所得から差し引くのは、譲渡所得と一時所得がいずれも臨時的・偶発的な所得であり、同じ性質のもの同士を先に相殺するという考え方によるものです。"
+      :t.s==="第2次通算"?"第1次通算で引ききれなかった赤字は、別のグループの黒字から差し引きます。経常所得グループの赤字を譲渡所得から差し引く場合は短期譲渡から先に充当します。長期譲渡は2分の1が総所得金額に算入されるため、充当の順序で結果が変わります。"
+      :"第2次通算でもなお残る赤字は、山林所得、次に退職所得から差し引きます。いずれも分離課税で総所得金額には含まれませんが、通算の最後の受け皿になります。不動産・事業の損失と譲渡所得の損失の両方がある場合は、原則として不動産・事業の損失を先に充当します。",
+      dl("充当の経過",t.r,1),k));});
+  if(R.residual>0)h.push(jd("通算しきれない赤字","赤字 "+yen(-R.residual)+" が残りました。次の段階で"+tm("純損失")+"の繰越の可否を判定します。",
+    "第3次通算まで行っても引ききれない赤字は純損失となります。青色申告であれば翌年以後3年間くり越せます。",`<div class="calc">未充当 ${R.residual}万円 → 次の段階へ</div>`,"carry_pure"));
+  h.push(jd("2分の1の算入と総所得金額","通算を終えた後に2分の1を算入します。<br>総所得金額 <b>"+yen(R.totalIncome)+"</b>",
+    "長期譲渡所得と一時所得は、通算を終えた後の金額について2分の1を総所得金額に算入します。通算の段階で2分の1にしてしまうと通算額が変わるため、順序が重要です。山林所得・退職所得は総所得金額には含めず、分離課税として別に計算します。",
+    dl("通算前 → 通算後 → 算入額",[["経常所得グループ",yen(R.before.keijou)+" → "+yen(R.keijou)],["総合譲渡（短期）",yen(R.before.jS)+" → "+yen(R.jS)],["総合譲渡（長期）",yen(R.before.jL)+" → "+yen(R.jL)+" → "+yen(R.jLh)],["一時所得",yen(R.before.ich)+" → "+yen(R.ich)+" → "+yen(R.ichh)],["山林所得",yen(R.before.fo)+" → "+yen(R.fo)+"（総所得金額に含めない）"],["退職所得",yen(R.before.re)+" → "+yen(R.re)+"（総所得金額に含めない）"],["総所得金額",yen(R.totalIncome)]],1),"half"));
+  return h.join("");
+}
+function step5(){
+  const g=R.g,h=[];
+  if(!(g.cstock>0||g.cfut>0||g.cpure>0||R.residual>0||R.stockLoss>0||R.futLoss>0))return skip("この案件ではくり越す損失・過去の繰越損失がないため、この段階の処理はありません。「次へ」で進んでください。");
+  h.push(order("当年の通算が完了しました。"+tm("繰越控除")+"は必ずこの後に行ってください。前年以前の損失は古い年分から順に充当します。要件（損失の年の申告・その後の"+tm("連続申告")+"・"+tm("青色申告")+"の別）を照合し、要件を欠く場合は控除せず理由を記録すること。"));
+  h.push(jd("要件の照合","申告の有無・連続申告・申告の種類を確認します。",
+    "繰越控除は、損失が生じた年分の確定申告書を提出し、その後も続けて確定申告書を提出していることが要件です。差し引く利益がない年も申告を続けないと権利が失われます。"+tm("純損失")+"の繰越控除は原則として青色申告の場合に限られます。",
+    useref([["s_file","申告の要件"],["c_cont","連続申告の要件"],["c_blue","純損失の繰越の可否"]])+dl("判定",[["確定申告書の提出",g.file?"満たす":"満たさない"],["繰越期間中の連続申告",g.cont?"満たす":"満たさない"],["申告の種類",g.blue?"青色（繰越できる）":"白色（原則できない）"]]),"carry_period"));
+  if(g.cstock>0){
+    if(R.csR==="要件不充足")h.push(jd("上場株式等の繰越損失","繰越額 "+yen(-g.cstock)+" について <span class='res'>控除しません。</span>要件を満たしていないためです。",
+      "上場株式等の譲渡損失の繰越控除は、損失が生じた年に申告し、かつその後も続けて確定申告書を提出していることが要件です。欠年があると以後の控除は認められません。",
+      useref([["c_stock","控除額の算定"],["s_file","要件の判定"],["c_cont","要件の判定"]])+`<div class="calc">控除額 0万円</div>`,"carry_stock"));
+    else if(R.csUse>0)h.push(jd("上場株式等の繰越損失","繰越額 "+yen(-g.cstock)+" のうち <span class='res'>"+yen(R.csUse)+" を控除</span>しました。<br>翌年繰越 "+yen(-(g.cstock-R.csUse)),
+      "上場株式等の譲渡損失の繰越控除は、翌年以後3年内の各年分の上場株式等に係る譲渡所得等および申告分離課税を選んだ配当から差し引きます。差し引ける額は当年の所得金額が上限で、古い年分の損失から順に充当します。",
+      useref([["c_stock","控除額の算定"]])+`<div class="calc">min(${g.cstock}, ${R.stockNet+R.divSep}) ＝ 控除 ${R.csUse}
+翌年繰越 ${g.cstock-R.csUse}万円</div>`,"carry_stock"));
+    else h.push(jd("上場株式等の繰越損失","当年に差し引ける所得がないため控除額は0です。<span class='res'>全額 "+yen(-g.cstock)+" を翌年へくり越します。</span>",
+      "差し引く対象となる上場株式等の譲渡益・申告分離の配当がない年は控除できませんが、繰越期間内であれば申告を続けることで権利が維持されます。",
+      useref([["c_stock","控除額の算定"]])+`<div class="calc">当年の上場株式等所得 ${R.stockNet+R.divSep}万円
+　→ 控除額 0／翌年繰越 ${g.cstock}万円</div>`,"carry_stock"));
+    h.push(jd("繰越損失を総合課税の所得から引けるか","<span class='res'>引けません。</span>給与所得などからの控除は行いません。",
+      "上場株式等の譲渡損失の繰越控除は、差し引く先が上場株式等に係る譲渡所得等および申告分離を選んだ配当に限られています。総合課税の所得から差し引くことはできません。",null,"stock_total_offset"));}
+  if(g.cfut>0){
+    if(!g.file||!g.cont)h.push(jd("先物取引の繰越損失","要件を満たしていないため控除しません。","先物取引の差金等決済に係る損失の繰越控除も、損失が生じた年の申告と連続申告が要件です。",useref([["c_fut","控除額の算定"]])+`<div class="calc">控除額 0万円</div>`,"carry_fut"));
+    else if(R.cfUse>0)h.push(jd("先物取引の繰越損失","繰越額 "+yen(-g.cfut)+" のうち <span class='res'>"+yen(R.cfUse)+" を控除</span>しました。<br>翌年繰越 "+yen(-(g.cfut-R.cfUse)),
+      "先物取引の損失は、翌年以後3年内の各年分の先物取引に係る雑所得等からのみ差し引きます。株式等の譲渡益や総合課税の所得からは差し引けません。",
+      useref([["c_fut","控除額の算定"]])+`<div class="calc">min(${g.cfut}, ${Math.max(0,R.futNet)}) ＝ 控除 ${R.cfUse}</div>`,"carry_fut"));
+    else h.push(jd("先物取引の繰越損失","当年に先物取引の利益がないため控除額は0です。全額を翌年へくり越します。","差し引く先が先物取引に係る所得に限られているため、利益がない年は控除できません。",useref([["c_fut","控除額の算定"]])+`<div class="calc">当年の先物所得 ${Math.max(0,R.futNet)}万円 → 控除額 0</div>`,"carry_fut"));}
+  if(g.cpure>0){
+    if(!g.blue)h.push(jd("純損失の繰越控除","白色申告のため <span class='res'>控除しません。</span>",
+      "純損失の繰越控除は原則として青色申告書を提出した年に生じた損失について認められます。白色申告の場合は、変動所得の損失や被災事業用資産の損失など限られた場合のみくり越せます。",
+      useref([["c_pure","控除額の算定"],["c_blue","控除できるかの判定"]])+`<div class="calc">控除額 0万円</div>`,"carry_pure"));
+    else h.push(jd("純損失の繰越控除","繰越額 "+yen(-g.cpure)+" のうち <span class='res'>"+yen(R.cpUse)+" を総所得金額から控除</span>しました。<br>控除後 "+yen(R.afterTotal)+"／翌年繰越 "+yen(-(g.cpure-R.cpUse)),
+      "青色申告の場合、損益通算で差し引ききれなかった純損失は、翌年以後3年間にわたりくり越して各年分の総所得金額等から差し引けます。古い年分の損失から順に差し引きます。",
+      useref([["c_pure","控除額の算定"]])+`<div class="calc">min(${g.cpure}, ${R.totalIncome}) ＝ 控除 ${R.cpUse}</div>`,"carry_pure"));}
+  if(R.residual>0){
+    if(g.blue)h.push(jd("当年の未充当赤字","赤字 "+yen(-R.residual)+" を <span class='res'>純損失として翌年以後3年間くり越します。</span>",
+      "青色申告書を提出している年に生じた純損失は、翌年以後3年間の繰越控除の対象になります。翌年以後も続けて確定申告書を提出する必要があります。",`<div class="calc">第3次通算後の未充当 ${R.residual}万円</div>`,"carry_pure"));
+    else h.push(jd("当年の未充当赤字","赤字 "+yen(-R.residual)+" は <span class='res'>くり越せず当年で切り捨て</span>となります。",
+      "白色申告の場合、純損失の繰越控除は原則として認められません（変動所得・被災事業用資産の損失を除きます）。青色申告の承認を受けているかどうかで結論が大きく変わるため必ず確認が必要です。",useref([["c_blue","くり越せるかの判定"]])+`<div class="calc">繰越額 0万円</div>`,"carry_pure"));}
+  if(R.stockLoss>0){
+    if(g.file&&!R.nisa)h.push(jd("当年の譲渡損失のくり越し","相殺後の損失残 "+yen(-R.stockLoss)+" を <span class='res'>翌年以後3年間くり越します。</span>",
+      "確定申告書に損失の金額を記載して提出することで、翌年以後3年内の上場株式等に係る譲渡所得等・申告分離の配当から差し引けます。繰越期間中は続けて申告書を提出してください。",`<div class="calc">損失残 ${R.stockLoss}万円 → 翌年以後へ</div>`,"carry_stock"));
+    else h.push(jd("当年の譲渡損失のくり越し","損失 "+yen(-R.stockLoss)+" は <span class='res'>くり越せません。</span>",
+      R.nisa?"NISA口座内の損失は生じなかったものとみなされるためくり越しの対象外です。":"損失が生じた年分の確定申告書の提出が繰越控除の要件です。申告しない場合、その年の損失を翌年以後にくり越すことはできません。",`<div class="calc">繰越額 0万円</div>`,R.nisa?"account":"carry_stock"));}
+  if(R.futLoss>0&&g.file)h.push(jd("当年の先物損失のくり越し","損失 "+yen(-R.futLoss)+" を翌年以後3年間くり越します。","確定申告により、翌年以後3年内の先物取引に係る雑所得等から差し引けます。",`<div class="calc">先物損失 ${R.futLoss}万円 → 翌年以後へ</div>`,"carry_fut"));
+  h.push(jd("翌年への繰越額の確定","翌年にくり越す損失を種類ごとに整理しました。","いずれも繰越期間は3年です。差し引く先が限られているため、種類ごとに分けて管理してください。",
+    dl("繰越額と差し引ける相手",[["上場株式等の譲渡損失",yen(-R.nextStock)],["　差し引ける相手","上場株式等の譲渡益・申告分離の配当"],["先物取引の損失",yen(-R.nextFut)],["　差し引ける相手","先物取引に係る雑所得等"],["純損失（青色）",yen(-R.nextPure)],["　差し引ける相手","翌年以後の総所得金額等"]]),"carry_period"));
+  return h.join("");
+}
+function step6(){
+  const g=R.g,h=[];
+  h.push(order(tm("所得控除")+"を差し引いて"+tm("課税標準")+"を確定してください。所得控除は総所得金額から先に差し引き、引ききれない分を分離課税の所得から差し引きます。税額の計算は税理士が行うため、課税標準までで終了すること。"));
+  h.push(jd("所得控除の充当","総所得金額 "+yen(R.afterTotal)+" から "+yen(Math.min(g.ded,R.afterTotal))+" を差し引き、課税総所得金額は <b>"+yen(R.taxTotal)+"</b> です。"+(R.dedSep>0?"<br>引ききれない "+yen(R.dedRest)+" のうち "+yen(R.dedSep)+" を分離課税の所得から差し引きました。":""),
+    "所得控除は、まず総所得金額から差し引き、差し引ききれない金額があるときは分離課税の所得から差し引きます。総合課税を優先するのは、累進税率が適用される所得から差し引く方が納税者に有利となる場合が多いためです。控除額は改正の対象となりやすい項目のため、対象年分の金額を必ず確認してください。",
+    useref([["d_ded","総所得金額→分離課税の順に充当"]])+`<div class="calc">${R.afterTotal} − ${g.ded} ＝ ${R.taxTotal}${R.dedRest>0?`
+控除未済 ${R.dedRest} → 分離課税へ ${R.dedSep}`:""}</div>`+(R.dedPath.length?dl("分離課税への充当内訳",R.dedPath,1):""),"deduction"));
+  h.push(jd("課税標準の確定","区分ごとの課税標準を確定しました。","総合課税は各所得を合算して累進税率を適用し、分離課税は区分ごとに固有の方法で税額を計算します。"+tm("山林所得")+"は"+tm("五分五乗方式")+"で計算します。区分を混ぜないよう、申告書の記載欄も分かれています。",
+    dl("課税標準",[["総所得金額（累進税率）",yen(R.taxTotal)],["山林所得（五分五乗）",yen(R.sFo)],["退職所得",yen(R.sRe)],["上場株式等",yen(R.sStock)],["一般株式等（非上場）",yen(R.sUnl)],["土地建物（短期）",yen(R.sRS)],["土地建物（長期）",yen(R.sRL)],["先物取引",yen(R.sFut)],["申告不要とした配当",R.dm==="none"?yen(Math.max(0,g.div)):yen(0)]]),"forest_tax"));
+  h.push(jd("配当の最終処理（"+DISP.s_divmode[R.dm]+"）",
+    R.dm==="total"?"総合課税のため "+tm("配当控除")+" の対象です。":R.dm==="none"?"申告不要のため、この配当は確定申告に取り込みません。":"申告分離課税のため、譲渡損失との相殺・くり越しの対象です。配当控除は使えません。",
+    R.dm==="total"?"総合課税を選んだ配当については、法人税との二重課税を調整する趣旨で配当控除が認められています。ただし株式等の譲渡損失との相殺はできません。"
+    :R.dm==="none"?"申告不要を選んだ配当は合計所得金額に含まれないため、配偶者控除等の判定や国民健康保険料の算定に影響しません。一方で損益通算・繰越控除・配当控除は使えません。"
+    :"申告分離課税を選んだ配当は、上場株式等の譲渡損失との相殺および繰越控除の対象になります。配当控除との併用はできません。",
+    useref([["s_divmode","配当控除の可否の判定"],["s_div","源泉徴収完結額"]]),"dividend_credit"));
+  return h.join("");
+}
+
+/* ---------- まとめ ---------- */
+function memo(){
+  const g=R.g;let m="";
+  if(R.nisa)m+="【NISA口座の損失について】\nNISA口座でお買い付けいただいた株式等の売却損につきましては、税法上、損失が生じなかったものとして取り扱われます。そのため確定申告をされましても、他の口座の利益との相殺や翌年以降への繰り越しはできません。利益が出た場合に課税されない仕組みの裏返しとなっております。\n\n";
+  if(R.majorFix)m+="【配当の課税方式について】\nお客様は発行済株式の一定割合以上を保有される大口株主に該当いたします。この場合、上場株式の配当につきまして申告分離課税をお選びいただくことができず、総合課税となります。その結果、株式の譲渡損失との相殺もできないこととなります。\n\n";
+  if(R.dm==="separate"&&R.divUse>0)m+="【配当と譲渡損失の相殺について】\n配当につきまして申告分離課税をお選びいただくことで、株式の譲渡損失と相殺いたしました。相殺額は"+yen(R.divUse)+"です。なお、この方式をお選びの場合、配当控除はご利用いただけません。\n\n";
+  if(R.dm==="total")m+="【配当控除について】\n配当につきまして総合課税をお選びいただきましたので、配当控除の対象となります。ただし株式の譲渡損失との相殺はできないこととなります。どちらが有利かは他の所得の状況により変わりますので、両方を試算して比較しております。\n\n";
+  if(R.dm==="none")m+="【申告不要制度について】\n配当につきまして申告不要制度をお選びいただきましたので、源泉徴収のみで課税関係が終了いたします。損失との相殺・繰り越し・配当控除はご利用いただけませんが、合計所得金額に含まれないため扶養の判定や保険料の算定に影響いたしません。\n\n";
+  if(R.nextStock>0||R.nextFut>0||R.nextPure>0){m+="【翌年以降のお手続きについて】\n本年にくり越す損失がございます。";
+    if(R.nextStock>0)m+="上場株式等の譲渡損失 "+yen(R.nextStock)+"、";
+    if(R.nextFut>0)m+="先物取引の損失 "+yen(R.nextFut)+"、";
+    if(R.nextPure>0)m+="純損失 "+yen(R.nextPure)+"、";
+    m+="がくり越しの対象です。\nこの損失をご利用いただくには、来年以降も毎年続けて確定申告をしていただく必要がございます。取引がなく利益が出ていない年も申告が必要です。申告をされない年がありますと、それ以降は控除が認められなくなりますのでご注意ください。くり越せる期間は3年間です。\n\n";}
+  if(!g.cont&&g.cstock>0)m+="【過去の損失について】\n過去にお申告いただいた損失につきまして、その後に確定申告をされていない年がございました。繰越控除は、損失が生じた年に申告し、その後も毎年続けて申告することが条件となっております。そのため本年分では控除を適用できない結果となりました。\n\n";
+  if(!g.blue&&R.residual>0)m+="【申告の種類について】\n本年の赤字は"+yen(R.residual)+"が引ききれずに残りましたが、白色申告のため翌年以降へのくり越しはできません。青色申告の承認をお受けいただいている場合は3年間くり越せる制度がございます。来年以降のご検討材料としてお知らせいたします。\n\n";
+  if(R.rExcl>0)m+="【不動産所得の赤字について】\n不動産所得の赤字のうち、土地を取得するための借入金の利子に相当する部分 "+yen(R.rExcl)+" につきましては、他の所得と相殺することができません。これは税法上の定めによるものです。残りの "+yen(Math.abs(R.realty))+" を他の所得から差し引いております。\n\n";
+  if(R.cExcl>0)m+="【ゴルフ会員権等の売却損について】\nゴルフ会員権など生活に通常必要でない資産の売却損につきましては、他の所得と相殺することができません。生活に必要な資産の損失を救済するという制度の趣旨によるものです。\n\n";
+  if(R.realNet<0&&!g.rhome)m+="【土地建物の売却損について】\n土地建物の売却損につきましては、土地建物の譲渡所得の中でのみ相殺でき、給与所得等とは相殺できません。ご自宅の売却で一定の要件を満たす場合には特例がございますが、本件は該当いたしません。\n\n";
+  if(g.rhome&&R.realToTotal>0)m+="【ご自宅の売却損について】\n居住用財産の譲渡損失の特例に該当いたしますので、他の所得と相殺いたしました。この特例には住宅ローン残高や居住期間などの要件があり、また適用期限が定められております。関係書類のご提出をお願いいたします。\n\n";
+  if(g.misc<0)m+="【雑所得の赤字について】\n雑所得の赤字につきましては、他の所得から差し引くことができません。同じ雑所得の中での相殺はできますが、残った赤字は本年で切り捨てとなり、翌年以降へのくり越しもできません。\n\n";
+  if(R.before.fo>0&&R.fo<R.before.fo)m+="【山林所得について】\n本年の赤字が山林所得にも及びましたため、山林所得から "+yen(R.before.fo-R.fo)+" を差し引いております。山林所得は他の所得と合算せず、五分五乗方式という方法で別に税額を計算いたします。\n\n";
+  if(R.before.re>0&&R.re<R.before.re)m+="【退職所得について】\n本年の赤字が退職所得にも及びましたため、退職所得から "+yen(R.before.re-R.re)+" を差し引いております。退職所得は損益通算の最後の受け皿となる所得です。\n\n";
+  return m||"（この案件では特記すべきご説明事項はありません。通常の申告手順で処理します。）";
+}
+function chk(){
+  const g=R.g,L=[];
+  if(g.cstock>0||g.cfut>0||g.cpure>0)L.push("過去3年分の申告書控えで繰越額と連続申告の状況を確認する");
+  if(g.rhome)L.push("住民票・売買契約書・住宅ローン残高証明書を受領し、特例の適用期限と要件を確認する");
+  if(g.major)L.push("株主名簿または議決権の状況で保有割合を確認する");
+  if(g.landint>0)L.push("借入金の使途内訳（土地分・建物分）を金銭消費貸借契約書で確認する");
+  if(g.villa>0)L.push("当該不動産の使用状況（趣味・保養目的か）を確認する");
+  if(g.golf>0)L.push("売却した資産の種類と取得時期を確認する");
+  if(g.cshort!==0||g.clong!==0)L.push("総合譲渡の資産ごとの取得日・譲渡日を確認し、短期・長期の区分を確定する");
+  if(g.listed!==0||g.div!==0)L.push("年間取引報告書・特定口座年間取引報告書を受領する");
+  if(g.account==="ippan"||g.lista!==0||g.listb!==0)L.push("一般口座分の取得価額を示す資料を確認する");
+  if(g.unlisted!==0)L.push("非上場株式の譲渡価額の算定根拠と同族会社の該当を確認する");
+  if(g.unldiv!==0)L.push("非上場株式の配当について少額配当の申告不要を選択するか確認する");
+  if(g.fut!==0||g.cfut>0)L.push("先物取引の差金等決済に係る損益の明細を受領する");
+  if(g.forest!==0)L.push("山林の取得時期を確認し、取得後5年を超えているかを判定する");
+  if(g.retire>0)L.push("退職所得の源泉徴収票を受領し、勤続年数と退職所得控除額を確認する");
+  if(g.biz<0||g.realty<0)L.push("青色申告決算書・収支内訳書と帳簿の整合を確認する");
+  if(!g.blue)L.push("青色申告の承認申請の可否を検討し、来年以降の方針をご案内する");
+  if(g.onetime>0)L.push("一時所得の計算内容（収入・支出・特別控除50万円）を確認する");
+  if(g.misca!==0||g.miscb!==0)L.push("雑所得の内訳ごとの収入・経費の明細を受領する");
+  if(R.dm==="none")L.push("申告不要とした場合の扶養判定・保険料算定への影響を試算して比較する");
+  if(R.dm==="total")L.push("配当控除と損益通算のいずれが有利か両方を試算して比較する");
+  L.push("所得控除の各証明書の受領状況を確認する");
+  L.push("「損益の通算の計算書」で第1次・第2次・第3次の各段階を記載し計算過程を残す");
+  L.push("本年の判定内容を記録し、翌年の担当者が参照できるよう引き継ぎ資料を残す");
+  return L;
+}
+function renderSum(){
+  const g=R.g,h=[];
+  h.push(`<div class="sec"><div class="st">処理結果（令和${YEAR}年分${YEAR===9?"・見込み":""}）</div>
+   ${dl("課税標準",[["課税総所得金額",yen(R.taxTotal)],["山林所得（五分五乗）",yen(R.sFo)],["退職所得",yen(R.sRe)],["上場株式等",yen(R.sStock)],["一般株式等",yen(R.sUnl)],["土地建物（短期）",yen(R.sRS)],["土地建物（長期）",yen(R.sRL)],["先物取引",yen(R.sFut)]])}
+   ${dl("翌年繰越",[["上場株式等の譲渡損失",yen(-R.nextStock)],["先物取引の損失",yen(-R.nextFut)],["純損失（青色）",yen(-R.nextPure)]])}
+   ${dl("前提の確認",[["配当の課税方式",DISP.s_divmode[R.dm]],["株損との相殺",R.canOff?"できた":"できない"],["申告の種類",DISP.c_blue[sv("c_blue")]],["連続申告",g.cont?"満たす":"満たさない"]],1)}
+   <div class="note small">山林所得・退職所得は総所得金額に含まれません。分離課税として別に税額を計算します。</div></div>`);
+  h.push(`<div class="box"><div class="boxt">顧客説明メモ案</div><div class="memo">${memo()}</div><div class="small">そのまま使える文面ではありません。事実関係を確認し、税理士の確認を受けてからご使用ください。</div></div>`);
+  h.push(`<div class="box"><div class="boxt">確認事項・不足資料</div><ul class="cl">${chk().map(x=>`<li>${x}</li>`).join("")}</ul></div>`);
+  h.push(`<div class="box"><div class="boxt">申告書の記載先</div>${dl("",FORMS.map(f=>[f.i+'<br><span class="small">'+f.n+'</span>',f.f]),1)}<div class="small">様式名・欄番号は申告年分の様式でご確認ください。</div></div>`);
+  const un=Object.keys(FIELDS).filter(id=>!USED.has(id));
+  if(un.length)h.push(`<div class="unused"><b>この案件で参照しなかった入力項目</b><br>${un.map(id=>FIELDS[id]).join("／")}</div>`);
+  h.push(`<div class="sec"><div class="st">適用年分の切替</div><div class="note small">この研修では令和8年分で判定しています。初学者はまず令和8年分で全体を理解してから切り替えることをおすすめします。</div>
+   <button class="btn ctr${YEAR===8?" on":""}" onclick="setYear(8)">令和8年分（確定）</button>
+   <button class="btn ctr${YEAR===9?" on":""}" onclick="setYear(9)">令和9年分（改正見込み）</button>
+   <div class="small">改正情報の登録 ${Object.keys(AMENDMENTS).length}件${Object.keys(AMENDMENTS).length===0?"。未登録のため、令和9年分に切り替えても判定内容は令和8年分のままです。この結果をそのまま令和9年分の申告に用いないでください。":""}</div></div>`);
+  h.push(`<div class="sec"><div class="st">翌年以降の繰越シミュレーション</div>
+   <div class="fld"><div class="fn">翌年の譲渡益</div><div class="fr"><input type="number" id="n_gain" value="40"><span class="fu">万円</span></div></div>
+   <div class="fld"><div class="fn">翌年の配当</div><div class="fr"><input type="number" id="n_div" value="20"><span class="fu">万円</span></div></div>
+   <button class="btn ctr" onclick="runCarry()">3年分を試算する</button><div id="carryout"></div></div>`);
+  h.push(`<div class="sec"><div class="st">処理ログ</div><div class="log">${LOG.join("\n")}</div></div>`);
+  $("sumbody").innerHTML=h.join("");
+}
+function setYear(y){YEAR=y;run();renderSum();}
+function runCarry(){
+  const loss=R.nextStock,gain=v("n_gain"),dv=v("n_div"),g=R.g;
+  if(!g.file||!g.cont){$("carryout").innerHTML=`<div class="note">確定申告または連続申告の要件を満たしていないため、繰越控除の試算は行いません。繰越控除は、損失が生じた年の申告と繰越期間中の連続した申告書の提出が要件です。</div>`;return;}
+  if(loss<=0){$("carryout").innerHTML=`<div class="note">この案件では翌年にくり越す上場株式等の譲渡損失がないため、試算の対象がありません。</div>`;return;}
+  let cur=loss,h=`<div class="small">繰越損失 ${yen(-loss)}／譲渡益 ${yen(gain)}／配当 ${yen(dv)}（${DISP.s_divmode[R.dm]}）</div>`;
+  for(let y=1;y<=3;y++){
+    const us=R.dm==="separate"?dv:0,inc=gain+us,use=Math.min(cur,inc);
+    h+=dl(y+"年目",[["控除前残高",yen(-cur)],["当年の株式等所得",yen(inc)],["控除額",yen(use)],["控除後残高",yen(cur-use)],["配当の扱い",R.dm==="separate"?"分離を選んだため対象に含む":"分離課税以外のため対象外"]]);
+    cur-=use;}
+  h+=`<div class="note">${cur>0?"3年経過後の残高 "+yen(-cur)+" は繰越期間の満了により切り捨てとなります。":"3年以内に全額を控除できました。"}<br>繰越控除の期間は損失が生じた年の翌年以後3年間に限られます。期間内に控除しきれなかった金額は以後の年分から控除できません。</div>`;
+  $("carryout").innerHTML=h;
+}
+
+/* ---------- レクチャー ---------- */
+function renderLecIdx(){
+  let h=`<div class="sec"><div class="st">考え方を学ぶ</div><div class="note">資料を受け取ってから答えを出すまでの<b>問いの順序</b>を学びます。上から順に進めることをおすすめしますが、どの講からでも始められます。各講に練習問題があります。</div></div><div class="sec"><div class="st">目次</div>`;
+  LEC.forEach((L,i)=>{h+=`<button class="btn" onclick="goLec(${i})">第${i}講　${L.t}${LD.has(i)?"　［済］":""}<br><span class="small">${L.aim}</span></button>`;});
+  h+=`</div>`;
+  let tot=0,cor=0;const all=LEC.reduce((s,L)=>s+L.q.length,0);
+  LEC.forEach((L,i)=>L.q.forEach((q,j)=>{const k=i+"-"+j;if(LA[k]!==undefined){tot++;if(LA[k]===q.a)cor++;}}));
+  h+=`<div class="sec"><div class="st">練習問題の状況</div><div class="score">${dl("",[["回答済み",tot+" / "+all+"問"],["正答",cor+"問"],["受講済みの講",LD.size+" / "+LEC.length],["正答率",tot>0?Math.round(cor/tot*100)+"％":"—"]],1)}
+   <div class="small">研修記録として使う場合はこの画面を保存してください。再読み込みすると記録は消えます。</div>
+   <button class="btn ctr" onclick="resetLec()">回答を消してやり直す</button></div></div>`;
+  $("lecidxbody").innerHTML=h;
+}
+const LSK="sonneki_v1";
+function lecSave(){try{localStorage.setItem(LSK,JSON.stringify({LA:LA,LD:Array.from(LD)}))}catch(e){}}
+function lecLoad(){try{const j=JSON.parse(localStorage.getItem(LSK)||"null");if(j){LA=j.LA||{};LD=new Set(j.LD||[]);}}catch(e){}}
+function resetLec(){LA={};LD=new Set();lecSave();renderLecIdx();}
+function ansL(i,j,val){LA[i+"-"+j]=val;const L=LEC[i];if(L.q.every((q,jj)=>LA[i+"-"+jj]!==undefined))LD.add(i);lecSave();renderLec();}
+function renderLec(){
+  const L=LEC[LECN],i=LECN;FSEQ=1000+i*50;
+  let h=`<div class="box2"><div class="boxt">第${i}講　${L.t}</div><div class="sub2">この講で身につけること</div><p>${L.aim}</p></div>`;
+  h+=`<div class="sec">${L.b()}</div>`;
+  h+=`<div class="sec"><div class="st">練習問題（${L.q.length}問）</div>`;
+  L.q.forEach((q,j)=>{
+    const my=LA[i+"-"+j];
+    h+=`<div class="quiz"><div class="qt">練習 ${i}-${j+1}</div><div class="qq">${q.q}</div>`;
+    if(my===undefined)h+=q.o.map(o=>`<button class="btn" onclick="ansL(${i},${j},'${o[0]}')">${o[1]}</button>`).join("");
+    else{const myT=(q.o.find(o=>o[0]===my)||["",""])[1],cT=(q.o.find(o=>o[0]===q.a)||["",""])[1];
+      h+=`<div class="qr"><div class="qj">あなたの回答：${myT}<br>${my===q.a?"正解です。":"誤りです。正しくは「"+cT+"」です。"}</div>${q.e}</div>`;}
+    h+=`</div>`;});
+  h+=`</div>`;
+  if(L.rel.length){h+=`<div class="sec"><div class="st">この講に対応する案件</div><div class="lrel"><div class="small">実際の案件で確認すると理解が定着します。</div>`;
+    L.rel.forEach(cn=>{if(CASES[cn])h+=`<button class="btn" onclick="jumpCase('${cn}')">案件${cn}</button>`;});
+    h+=`</div></div>`;}
+  $("lecbody").innerHTML=h;
+}
+function jumpCase(cn){MODE="case";$("mdCase").className="on";$("mdLec").className="";hideAll();$("scrStep").style.display="block";SCR=1;renderIn();selCase(cn);renderClient();renderStep();renderProg();renderNav();window.scrollTo(0,0);}
+
+/* ---------- 初期化 ---------- */
+lecLoad();renderIn();goStep(0);
+</script>
+</body>
+</html>

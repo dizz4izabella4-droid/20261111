@@ -1,0 +1,2011 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0B6E4F">
+<title>消費税を学ぶ｜自治体職員向け入門講義</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --primary:#0B6E4F;--primary-l:#E8F3EF;--primary-d:#085239;
+  --text:#1C1C1E;--sub:#6E6E73;--line:#E3E3E8;
+  --bg:#FFFFFF;--gray-bg:#F5F5F7;
+  --ok:#0B6E4F;--ng:#8E8E93;--warn:#C0392B;
+  --law:#5B4B8A;--law-bg:#F3F1F8;
+  --c1:#0B6E4F;--c2:#1A6AAD;--c3:#B5663D;--c4:#7A4B8A;--c5:#2B7A78;--c6:#A83F3F;
+  --W:390px;--H:844px;
+}
+html,body{height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+  color:var(--text);font-size:17px;line-height:1.9;-webkit-font-smoothing:antialiased;background:var(--bg)}
+#stage{min-height:100%}
+#device{width:100%;max-width:var(--W);margin:0 auto;background:var(--bg);
+  position:relative;min-height:100vh;overflow:hidden}
+#scrollArea{position:relative;min-height:100vh}
+@media (min-width:640px){
+  body{background:#2B3137;display:flex;justify-content:center;padding:30px 20px 44px}
+  #stage{display:flex;gap:28px;align-items:flex-start}
+  #device{width:var(--W);height:var(--H);min-height:var(--H);border-radius:42px;
+    border:11px solid #0E1114;box-shadow:0 26px 60px rgba(0,0,0,.5);margin:0}
+  #device::before{content:"";position:absolute;top:7px;left:50%;transform:translateX(-50%);
+    width:108px;height:24px;background:#0E1114;border-radius:14px;z-index:999;pointer-events:none}
+  #scrollArea{height:100%;min-height:0;overflow-y:auto;overflow-x:hidden;
+    overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  .ft{position:absolute!important;max-width:100%!important}
+  #guide{display:block}
+}
+#guide{display:none;width:272px;color:#C8CDD2;font-size:13px;line-height:1.95;padding-top:16px;flex-shrink:0}
+#guide h3{font-size:15px;color:#fff;font-weight:700;margin-bottom:13px}
+#guide .box{background:#363D45;border-radius:12px;padding:14px 15px;margin-bottom:12px}
+#guide .box b{color:#8FD9BB;display:block;margin-bottom:6px;font-size:12.5px}
+#guide ul{margin:0;padding-left:16px}#guide li{margin-bottom:4px}
+#guide .k{display:inline-block;background:#1F242A;border:1px solid #4A535C;border-radius:5px;
+  padding:1px 6px;font-size:11.5px;font-family:ui-monospace,monospace;color:#E8EDF2;margin-right:2px}
+#guide .fine{font-size:11.5px;color:#8A939C;line-height:1.8;padding:0 3px}
+
+.hd{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.97);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);padding:calc(env(safe-area-inset-top) + 12px) 16px 10px}
+@media (min-width:640px){.hd{padding-top:38px}}
+.hd-row{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.hd-btn{width:34px;height:34px;border:none;background:var(--gray-bg);border-radius:9px;
+  font-size:16px;color:var(--text);flex-shrink:0;cursor:pointer;transition:.12s}
+.hd-btn:hover{background:var(--line)}
+.hd-ttl{font-size:13px;font-weight:600;color:var(--sub);flex:1;text-align:center;line-height:1.4}
+.bar{height:5px;background:var(--line);border-radius:3px;overflow:hidden}
+.bar-in{height:100%;border-radius:3px;transition:width .35s cubic-bezier(.4,0,.2,1)}
+
+.body{padding:26px 20px 162px}
+.scr{animation:in .3s cubic-bezier(.2,0,.2,1)}
+@keyframes in{from{opacity:0;transform:translateX(22px)}to{opacity:1;transform:none}}
+.scr.back{animation:inb .3s cubic-bezier(.2,0,.2,1)}
+@keyframes inb{from{opacity:0;transform:translateX(-22px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.scr,.scr.back{animation:none}}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.1em;margin-bottom:10px}
+h1{font-size:25px;line-height:1.45;font-weight:800;margin-bottom:18px;letter-spacing:-.01em}
+h2{font-size:21px;line-height:1.5;font-weight:700;margin-bottom:16px}
+p{margin-bottom:15px}p:last-child{margin-bottom:0}
+.lead{font-size:18px}
+.note{font-size:14px;color:var(--sub);line-height:1.8}
+.hr{height:1px;background:var(--line);margin:22px 0}
+.mk{background:linear-gradient(transparent 62%,#FFE9A8 62%);font-weight:700;padding:0 1px}
+
+.flow{margin:22px 0}
+.fl-box{background:var(--primary-l);border:2px solid var(--primary);border-radius:13px;
+  padding:15px;text-align:center;font-weight:700;font-size:16px;line-height:1.5}
+.fl-box.gy{background:var(--gray-bg);border-color:var(--line);color:var(--sub);font-weight:600}
+.fl-box.wh{background:#fff;border-color:var(--line)}
+.fl-sub{display:block;font-size:12.5px;font-weight:500;color:var(--sub);margin-top:4px;line-height:1.5}
+.fl-ar{text-align:center;color:var(--primary);font-size:21px;line-height:1.1;margin:7px 0;font-weight:700}
+.fl-ar small{display:block;font-size:12px;color:var(--sub);font-weight:600;margin-top:1px}
+.cond{margin:20px 0}
+.cond-i{display:flex;gap:12px;align-items:center;background:var(--gray-bg);
+  border-radius:12px;padding:14px 15px;margin-bottom:9px}
+.cond-n{width:29px;height:29px;background:var(--primary);color:#fff;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0}
+.cond-t{font-weight:700;font-size:16px;line-height:1.4}
+.cond-t small{display:block;font-weight:500;font-size:12.5px;color:var(--sub);margin-top:2px}
+.cond-plus{text-align:center;color:var(--primary);font-weight:800;font-size:17px;margin:3px 0}
+.cond-res{background:var(--primary);color:#fff;border-radius:12px;padding:15px;
+  text-align:center;font-weight:800;font-size:17px;margin-top:13px}
+
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:20px 0}
+.cmp-c{border:2px solid var(--line);border-radius:13px;padding:14px 12px;background:#fff;
+  display:flex;flex-direction:column}
+.cmp-c.ok{border-color:var(--ok);background:var(--primary-l)}
+.cmp-c.ng{border-color:var(--ng);background:var(--gray-bg)}
+.cmp-h{font-weight:800;font-size:14.5px;margin-bottom:9px;line-height:1.4}
+.cmp-c.ok .cmp-h{color:var(--primary-d)}.cmp-c.ng .cmp-h{color:#5A5A5F}
+.cmp-l{font-size:13.5px;line-height:1.85;flex:1}
+.cmp-l div{margin-bottom:2px;min-height:25px}
+.cmp-r{margin-top:9px;padding-top:9px;border-top:1px dashed rgba(0,0,0,.14);font-weight:800;font-size:14px}
+.cmp-c.ok .cmp-r{color:var(--ok)}.cmp-c.ng .cmp-r{color:var(--ng)}
+.big{font-size:23px;font-weight:800;min-height:34px!important}
+
+.tbl{width:100%;border-collapse:collapse;margin:20px 0;font-size:14px}
+.tbl th{background:var(--primary);color:#fff;padding:11px 9px;text-align:left;font-weight:700;font-size:13px}
+.tbl td{border-bottom:1px solid var(--line);padding:11px 9px;line-height:1.6}
+.tbl tr:last-child td{border-bottom:none}
+.tbl .r{text-align:right;font-weight:700;white-space:nowrap}
+.tbl-w{background:var(--gray-bg);border-radius:12px;padding:3px 10px;margin:20px 0}
+
+.term{background:var(--primary-l);border-radius:15px;padding:20px 17px;margin:20px 0}
+.term-lb{font-size:11.5px;font-weight:800;color:var(--primary);letter-spacing:.1em;margin-bottom:7px}
+.term-w{font-size:25px;font-weight:800;line-height:1.3;color:var(--primary-d)}
+.term-rd{font-size:12.5px;color:var(--sub);margin:4px 0 13px;font-weight:500}
+.term-d{font-size:16px;line-height:1.85}
+.term-ls{margin-top:13px}
+.term-ls li{list-style:none;background:#fff;border-radius:9px;padding:11px 14px;margin-bottom:7px;
+  font-size:15.5px;font-weight:600;display:flex;gap:9px;align-items:flex-start}
+.term-ls li:before{content:"●";color:var(--primary);font-size:9px;line-height:1.9;flex-shrink:0}
+
+.q{margin:18px 0;box-sizing:border-box;max-width:100%}
+.q-h{font-weight:800;font-size:18px;margin-bottom:16px;line-height:1.55}
+.opt{width:100%;text-align:left;background:#fff;border:2px solid var(--line);border-radius:13px;
+  padding:16px;margin-bottom:11px;font-size:16px;font-weight:600;color:var(--text);cursor:pointer;
+  display:flex;gap:12px;align-items:center;line-height:1.55;transition:.12s;font-family:inherit}
+.opt:hover:not(:disabled){border-color:var(--primary)}
+.opt:active:not(:disabled){transform:scale(.985)}
+.opt-k{width:27px;height:27px;border:2px solid var(--line);border-radius:50%;display:flex;
+  align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--sub);flex-shrink:0}
+.opt.sel-ok{border-color:var(--ok);background:var(--primary-l)}
+.opt.sel-ok .opt-k{background:var(--ok);border-color:var(--ok);color:#fff}
+.opt.sel-ng{border-color:var(--warn);background:#FDEDEB}
+.opt.sel-ng .opt-k{background:var(--warn);border-color:var(--warn);color:#fff}
+.opt.dim{opacity:.42}.opt:disabled{cursor:default}
+.fb{border-radius:13px;padding:15px;margin-top:5px;font-size:15px;line-height:1.8;animation:in .25s}
+.fb.ok{background:var(--primary-l);border-left:4px solid var(--ok)}
+.fb.ng{background:#FDEDEB;border-left:4px solid var(--warn)}
+.fb-t{font-weight:800;margin-bottom:5px;font-size:15.5px}
+.fb.ok .fb-t{color:var(--primary-d)}.fb.ng .fb-t{color:var(--warn)}
+
+.law{background:var(--law-bg);border-radius:15px;padding:19px 17px;margin:20px 0}
+.law-lb{font-size:11.5px;font-weight:800;color:var(--law);letter-spacing:.1em;margin-bottom:9px}
+.law-n{font-weight:800;font-size:16.5px;color:var(--law);line-height:1.5}
+.law-sub{font-size:13px;color:var(--sub);margin:3px 0 13px}
+.law-q{background:#fff;border-radius:10px;padding:15px;font-size:14.5px;line-height:2.05;
+  border-left:3px solid var(--law);margin-bottom:13px}
+.law-lk{display:inline-flex;align-items:center;gap:6px;background:var(--law);color:#fff;
+  padding:11px 17px;border-radius:999px;font-size:13.5px;font-weight:700;text-decoration:none;transition:.12s}
+.law-lk:hover{background:#4A3D73}
+.law-src{font-size:11.5px;color:var(--sub);margin-top:11px;line-height:1.7}
+.law-map{margin:13px 0}
+.law-map-r{display:flex;gap:11px;background:#fff;border-radius:9px;padding:11px 13px;
+  margin-bottom:7px;font-size:14.5px}
+.law-map-k{font-weight:800;color:var(--law);flex-shrink:0;width:70px}
+
+.warn{background:#FFF8EC;border-left:4px solid #E8A33D;border-radius:11px;padding:15px;
+  margin:19px 0;font-size:15px;line-height:1.85}
+.warn-t{font-weight:800;color:#A8681C;margin-bottom:5px;font-size:15.5px}
+.muni{background:#FBEDED;border-left:4px solid var(--c6);border-radius:11px;padding:15px;
+  margin:19px 0;font-size:15px;line-height:1.85}
+.muni-t{font-weight:800;color:var(--c6);margin-bottom:5px;font-size:15.5px}
+
+.sum{background:var(--primary-l);border-radius:15px;padding:21px 18px;margin:20px 0}
+.sum-t{font-weight:800;font-size:17px;color:var(--primary-d);margin-bottom:14px}
+.sum-l li{list-style:none;display:flex;gap:11px;margin-bottom:11px;font-size:15.5px;
+  line-height:1.8;font-weight:600;align-items:flex-start}
+.sum-l li:last-child{margin-bottom:0}
+.sum-l li:before{content:"✓";color:var(--primary);font-weight:800;flex-shrink:0;font-size:16px}
+.done{text-align:center;padding:14px 0 4px}
+.done-i{font-size:50px;line-height:1;margin-bottom:11px}
+.done-t{font-size:21px;font-weight:800;margin-bottom:7px}
+.done-s{font-size:14.5px;color:var(--sub);line-height:1.8}
+
+.ft{position:fixed;bottom:0;left:0;right:0;z-index:50;max-width:var(--W);margin:0 auto;
+  background:linear-gradient(to bottom,rgba(255,255,255,0) 0%,#fff 32%);
+  padding:26px 20px calc(env(safe-area-inset-bottom) + 18px);display:flex;gap:11px}
+.btn{flex:1;padding:17px;border:none;border-radius:14px;font-size:17px;font-weight:800;
+  font-family:inherit;cursor:pointer;line-height:1.3;transition:.12s}
+.btn:active:not(:disabled){transform:scale(.98)}
+.btn-p{background:var(--primary);color:#fff;box-shadow:0 3px 14px rgba(11,110,79,.3)}
+.btn-p:hover:not(:disabled){filter:brightness(.92)}
+.btn-s{flex:0 0 94px;background:var(--gray-bg);color:var(--sub)}
+.btn-s:hover{background:var(--line)}
+.btn:disabled{background:var(--line);color:#A8A8AD;box-shadow:none;cursor:default}
+
+.home{padding:30px 20px calc(env(safe-area-inset-bottom) + 34px)}
+@media (min-width:640px){.home{padding-top:48px}}
+.home-k{font-size:12px;font-weight:800;color:var(--primary);letter-spacing:.11em;margin-bottom:8px}
+.home-t{font-size:27px;font-weight:800;line-height:1.35;margin-bottom:11px}
+.home-d{font-size:15px;color:var(--sub);line-height:1.85;margin-bottom:22px}
+.prog{background:var(--primary-l);border-radius:15px;padding:18px;margin-bottom:24px}
+.prog-r{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:11px}
+.prog-l{font-size:13.5px;font-weight:700;color:var(--primary-d)}
+.prog-v{font-size:21px;font-weight:800;color:var(--primary-d)}
+.prog-b{height:9px;background:#fff;border-radius:5px;overflow:hidden}
+.prog-i{height:100%;background:var(--primary);border-radius:5px;transition:width .5s}
+.sec-t{font-size:13px;font-weight:800;color:var(--sub);letter-spacing:.07em;margin-bottom:12px}
+.cc{width:100%;background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:16px;
+  margin-bottom:11px;text-align:left;cursor:pointer;font-family:inherit;transition:.12s;display:block}
+.cc:hover{border-color:var(--sub)}
+.cc:active{transform:scale(.99)}
+.cc-top{display:flex;gap:13px;align-items:center;margin-bottom:11px}
+.cc-n{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;
+  justify-content:center;font-weight:800;font-size:17px;color:#fff;flex-shrink:0}
+.cc-b{flex:1;min-width:0}
+.cc-t{font-weight:700;font-size:16.5px;line-height:1.4;margin-bottom:3px}
+.cc-s{font-size:12.5px;color:var(--sub);line-height:1.6}
+.cc-a{color:var(--line);font-size:19px;flex-shrink:0;font-weight:700}
+.cc-bar{height:6px;background:var(--gray-bg);border-radius:4px;overflow:hidden}
+.cc-bar-i{height:100%;border-radius:4px;transition:width .4s}
+.cc.fin{background:var(--primary-l);border-color:var(--primary)}
+.lc{width:100%;background:#fff;border:1.5px solid var(--line);border-radius:15px;padding:16px;
+  margin-bottom:10px;text-align:left;cursor:pointer;display:flex;gap:13px;align-items:center;
+  font-family:inherit;transition:.12s}
+.lc:hover{border-color:var(--primary)}
+.lc:active{transform:scale(.99)}
+.lc.fin{border-color:var(--primary);background:var(--primary-l)}
+.lc-n{width:36px;height:36px;border-radius:11px;background:var(--gray-bg);color:var(--sub);
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
+.lc.fin .lc-n{background:var(--primary);color:#fff}
+.lc-b{flex:1;min-width:0}
+.lc-t{font-weight:700;font-size:15.5px;line-height:1.45;margin-bottom:3px}
+.lc-s{font-size:12px;color:var(--sub);line-height:1.6}
+.lc-a{color:var(--line);font-size:18px;flex-shrink:0;font-weight:700}
+.lc.fin .lc-a{color:var(--primary)}
+.sub-btns{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+.sbtn{flex:1;min-width:120px;padding:14px;background:none;border:1.5px solid var(--line);
+  border-radius:12px;color:var(--sub);font-size:14px;font-weight:600;font-family:inherit;
+  cursor:pointer;transition:.12s}
+.sbtn:hover{border-color:var(--sub);color:var(--text)}
+.foot-n{margin-top:22px;padding:16px;background:var(--gray-bg);border-radius:12px;
+  font-size:12.5px;color:var(--sub);line-height:1.85}
+.foot-n b{color:var(--text)}
+
+.idx-sec{margin-bottom:26px}
+.idx-h{font-size:13px;font-weight:800;color:var(--sub);letter-spacing:.07em;margin-bottom:12px}
+.idx-i{background:var(--gray-bg);border-radius:12px;padding:13px 14px;margin-bottom:8px}
+.idx-w{font-weight:800;font-size:16px;line-height:1.4}
+.idx-rd{font-size:11.5px;color:var(--sub);margin-top:2px}
+.idx-d{font-size:13.5px;line-height:1.7;margin-top:6px}
+.idx-src{font-size:11.5px;color:var(--primary);font-weight:700;margin-top:6px}
+.idx-law{display:flex;gap:10px;background:var(--law-bg);border-radius:11px;padding:12px 13px;
+  margin-bottom:7px;align-items:flex-start;text-decoration:none;color:var(--text)}
+.idx-law-n{font-weight:800;color:var(--law);font-size:13.5px;flex-shrink:0;width:96px;line-height:1.5}
+.idx-law-b{flex:1;min-width:0}
+.idx-law-t{font-size:13.5px;font-weight:700;line-height:1.5}
+.idx-law-s{font-size:11.5px;color:var(--sub);margin-top:2px}
+.tabs{display:flex;gap:7px;margin-bottom:16px;overflow-x:auto;padding-bottom:3px}
+.tab{padding:9px 15px;border:1.5px solid var(--line);background:#fff;border-radius:999px;
+  font-size:13.5px;font-weight:700;color:var(--sub);cursor:pointer;font-family:inherit;
+  white-space:nowrap;flex-shrink:0;transition:.12s}
+.tab.on{background:var(--primary);border-color:var(--primary);color:#fff}
+
+.toast{position:absolute;left:50%;transform:translateX(-50%);bottom:112px;z-index:200;
+  background:rgba(28,28,30,.94);color:#fff;padding:13px 22px;border-radius:999px;
+  font-size:14.5px;font-weight:700;animation:tin .3s;white-space:nowrap;
+  box-shadow:0 4px 18px rgba(0,0,0,.25)}
+@keyframes tin{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translate(-50%,0)}}
+@media print{
+  body{background:#fff;display:block;padding:0}
+  #device{width:100%;max-width:100%;height:auto;min-height:0;border:none;box-shadow:none;border-radius:0}
+  #device::before,#guide,.ft,.hd{display:none}
+  #scrollArea{height:auto;overflow:visible}.body{padding:0}
+}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="device"><div id="scrollArea"><div id="app"></div></div></div>
+  <aside id="guide">
+    <h3>消費税を学ぶ</h3>
+    <div class="box"><b>この画面について</b>枠内はスマートフォンの実寸表示です。スマートフォンで同じファイルを開くと全画面になります。</div>
+    <div class="box"><b>キーボード操作</b>
+      <ul><li><span class="k">→</span><span class="k">Space</span> 次へ</li>
+      <li><span class="k">←</span> 戻る</li>
+      <li><span class="k">1</span><span class="k">2</span><span class="k">3</span> 選択肢</li>
+      <li><span class="k">Esc</span> 戻る</li></ul></div>
+    <div class="box"><b>全6コース・46レッスン</b>
+      <ul><li>1 消費税のしくみ（8）</li><li>2 だれが納めるのか（8）</li>
+      <li>3 税額計算の骨組み（8）</li><li>4 インボイス制度（8）</li>
+      <li>5 申告と納付（7）</li><li>6 国・地方公共団体の特例（7）</li></ul></div>
+    <div class="box"><b>全国共通の内容です</b>特定の自治体に固有の記載は含みません。法令に定められた一般的な規定のみを扱います。</div>
+    <div class="fine">条文は要旨を載せています。原文はe-Gov法令検索で確認してください<br>消費税法／同施行令／国税通則法／地方税法</div>
+  </aside>
+</div>
+
+<script>
+"use strict";
+/* ====================================================================
+   消費税を学ぶ｜自治体職員向け入門講義アプリ 完全版 v2.1
+   全6コース・46レッスン／全国共通（特定自治体の固有記載なし）
+
+   条文はすべて e-Gov法令検索で取得した原文を使用
+==================================================================== */
+const EG="https://laws.e-gov.go.jp/law/";
+const L_SHO=EG+"363AC0000000108";      // 消費税法
+const L_SREI=EG+"363CO0000000360";     // 消費税法施行令
+const L_TSU=EG+"337AC0000000066";      // 国税通則法
+const L_CHI=EG+"325AC0000000226";      // 地方税法
+
+const COURSES=[
+/* ============================================================
+   コース1　消費税のしくみ
+============================================================ */
+{id:"C1",no:1,color:"var(--c1)",title:"消費税のしくみ",
+ desc:"誰が納めるのか、何にかかるのか、いくらに対してかかるのか、何%か。消費税の土台を8レッスンで理解します。",
+ lessons:[
+ {id:"C1L1",no:"1-1",title:"税を負担する人と納める人",goal:"払う人と納める人が違うと説明できる",screens:[
+  {t:"cover",eb:"レッスン 1-1",h:"税を負担する人と<br>納める人",
+   body:`<p class="lead">コンビニで110円のお茶を買いました。</p><p class="lead">このうち10円が消費税です。</p>
+   <div class="hr"></div><p>この10円を<b>国に納めているのは誰</b>でしょうか。</p>`},
+  {t:"quiz",qh:"10円を国に納めているのは、どちらですか？",opts:[
+   {k:"A",txt:"お茶を買った自分",ok:false,fb:"お金を<b>負担</b>したのは自分ですが、国に納める手続きをするのはお店です。"},
+   {k:"B",txt:"お茶を売ったお店",ok:true,fb:"そのとおりです。お店が消費税を預かり、まとめて国に納めます。"}]},
+  {t:"text",h:"負担する人と納める人は別",
+   body:`<p>消費税では、この2つの役割が<span class="mk">別の人</span>になっています。</p>
+   <div class="flow"><div class="fl-box wh">お金を負担する人<span class="fl-sub">買い物をした消費者</span></div>
+   <div class="fl-ar">↓</div><div class="fl-box">国に納める人<span class="fl-sub">売った事業者（お店）</span></div></div>
+   <p class="note">所得税や住民税は「負担する人＝納める人」ですが、消費税はここが違います。</p>`},
+  {t:"term",lb:"この章の用語",w:"間接税",rd:"かんせつぜい",
+   d:"税を負担する人と、国に納める人が<b>違う</b>税金のこと。",ls:["消費税は間接税","住民税や所得税は直接税"]},
+  {t:"text",h:"お金の流れを見てみる",
+   body:`<div class="flow"><div class="fl-box wh">消費者<span class="fl-sub">110円を支払う</span></div>
+   <div class="fl-ar">↓<small>うち10円が消費税</small></div>
+   <div class="fl-box">お店<span class="fl-sub">10円を預かる</span></div>
+   <div class="fl-ar">↓<small>申告して納付</small></div>
+   <div class="fl-box gy">国<span class="fl-sub">10円を受け取る</span></div></div>
+   <p>お店は10円を<b>自分の利益にはできません</b>。</p>`},
+  {t:"sum",items:["消費税は負担する人と納める人が違う","これを「間接税」という","お店は税を預かって国に納める"],next:"1-2 税は誰が国に渡すのか"}]},
+
+ {id:"C1L2",no:"1-2",title:"税は誰が国に渡すのか",goal:"納税義務者が事業者だと説明できる",screens:[
+  {t:"cover",eb:"レッスン 1-2",h:"税は誰が<br>国に渡すのか",
+   body:`<p class="lead">前回、納めるのは「お店」だと分かりました。</p><div class="hr"></div>
+   <p>では、法律では<b>何と呼ばれている</b>のでしょうか。</p>`},
+  {t:"term",lb:"この章の用語",w:"納税義務者",rd:"のうぜいぎむしゃ",
+   d:"国に税金を納める<b>義務がある人</b>のこと。",ls:["消費税では「事業者」がこれにあたる"]},
+  {t:"text",h:"「事業者」とは誰か",
+   body:`<p>事業者には、次の2つが含まれます。</p><div class="cond">
+   <div class="cond-i"><div class="cond-n">1</div><div class="cond-t">個人事業者<small>お店を営む個人、農家など</small></div></div>
+   <div class="cond-i"><div class="cond-n">2</div><div class="cond-t">法人<small>会社、組合、地方公共団体など</small></div></div></div>
+   <p class="note">国や地方公共団体も「法人」として消費税の世界に登場します。コース6で詳しく扱います。</p>`},
+  {t:"quiz",qh:"次のうち「事業者」にあたらないのは？",opts:[
+   {k:"A",txt:"パンの製造販売を営む個人",ok:false,fb:"個人事業者として事業者にあたります。"},
+   {k:"B",txt:"フリマアプリで私物の服を1着売った人",ok:true,fb:"そのとおりです。事業として反復・継続して行っていないため、事業者にはあたりません。"},
+   {k:"C",txt:"地方公共団体",ok:false,fb:"法人として事業者にあたります。"}]},
+  {t:"law",name:"消費税法 第5条第1項",sub:"（納税義務者）",
+   quote:`事業者は、国内において行つた課税資産の譲渡等（特定資産の譲渡等に該当するものを除く。<span style="color:#8E8E93">…</span>）及び特定課税仕入れ<span style="color:#8E8E93">…</span>につき、この法律により、消費税を納める義務がある。`,
+   map:[["誰が","事業者"],["何に","国内で行った売上など"],["どうする","消費税を納める義務がある"]],
+   url:L_SHO+"#Mp-At_5",note:"条文の冒頭が「事業者は」で始まっています。ここが納税義務者です。"},
+  {t:"sum",items:["納める義務がある人を納税義務者という","消費税では「事業者」が納税義務者","個人事業者と法人（国・地方公共団体を含む）がある"],next:"1-3 何に税がかかるのか"}]},
+
+ {id:"C1L3",no:"1-3",title:"何に税がかかるのか",goal:"課税の3条件を自分で挙げられる",screens:[
+  {t:"cover",eb:"レッスン 1-3",h:"何に税が<br>かかるのか",
+   body:`<p class="lead">世の中のすべての取引に消費税がかかるわけではありません。</p><div class="hr"></div>
+   <p>では、<b>どんな取引</b>にかかるのでしょうか。</p>`},
+  {t:"quiz",qh:"消費税がかかりそうなのは、どちらですか？",opts:[
+   {k:"A",txt:"コンビニでお茶を買った",ok:true,fb:"そのとおりです。この後、3つの条件で確認します。"},
+   {k:"B",txt:"友人に自分の本をあげた",ok:false,fb:"かかりません。理由はこの後の3条件で分かります。"}]},
+  {t:"cond",h:"3つそろって初めて課税",conds:[
+   {n:"1",t:"国内で行われた",s:"日本国内での取引であること"},
+   {n:"2",t:"事業者が行った",s:"個人事業者または法人であること"},
+   {n:"3",t:"資産の譲渡等である",s:"物を売る・貸す・サービスを提供する"}],res:"3つそろうと → 課税"},
+  {t:"term",lb:"この章の用語",w:"資産の譲渡等",rd:"しさんのじょうとと",
+   d:"かたい言葉ですが、中身はシンプルです。次の3つをまとめた言い方です。",ls:["物を売る","物を貸す","サービスを提供する"]},
+  {t:"cmp",h:"さきほどの答え合わせ",cards:[
+   {cls:"ok",h:"A コンビニ",lines:["① 国内 … ○","② 事業者 … ○","③ 物を売る … ○"],r:"課税される"},
+   {cls:"ng",h:"B 友人に本",lines:["① 国内 … ○","② 事業者 … ✕","③ 物を渡す … ○"],r:"課税されない"}],
+   after:`<p>Bは<b>事業者ではない</b>ため条件がそろいません。1つでも欠けると課税されません。</p>`},
+  {t:"law",name:"消費税法 第4条第1項",sub:"（課税の対象）",
+   quote:`国内において事業者が行つた資産の譲渡等（特定資産の譲渡等に該当するものを除く。<span style="color:#8E8E93">…</span>）及び特定仕入れ<span style="color:#8E8E93">…</span>には、この法律により、消費税を課する。`,
+   map:[["① 国内","「国内において」"],["② 事業者","「事業者が行つた」"],["③ 譲渡等","「資産の譲渡等」"]],
+   url:L_SHO+"#Mp-At_4",note:"3つの条件が、そのまま条文に書かれています。"},
+  {t:"sum",items:["課税には3条件（国内・事業者・資産の譲渡等）","1つでも欠けると課税されない","根拠は消費税法第4条第1項"],next:"1-4 税がかからない取引"}]},
+
+ {id:"C1L4",no:"1-4",title:"税がかからない取引",goal:"3条件を満たしても課税されない場合を説明できる",screens:[
+  {t:"cover",eb:"レッスン 1-4",h:"税がかからない<br>取引",
+   body:`<p class="lead">3つの条件がそろえば課税される——</p><p class="lead">はずですが、例外があります。</p>
+   <div class="hr"></div><p>政策的な理由で、<b>あえて課税しない</b>取引が決められています。</p>`},
+  {t:"text",h:"3条件を満たしても課税しない",
+   body:`<div class="flow"><div class="fl-box wh">3条件を満たす取引<span class="fl-sub">国内・事業者・資産の譲渡等</span></div>
+   <div class="fl-ar">↓</div><div class="fl-box gy">別表第二に載っている？<span class="fl-sub">載っていれば課税しない</span></div></div>
+   <p>法律の本文ではなく、<b>別表</b>という一覧表で定められています。</p>`},
+  {t:"term",lb:"この章の用語",w:"非課税",rd:"ひかぜい",
+   d:"3つの条件を満たしていても、法律で<b>あえて課税しない</b>と決められている取引のこと。",ls:["消費税法の別表第二に一覧がある"]},
+  {t:"law",name:"消費税法 第6条",sub:"（非課税）",
+   quote:`国内において行われる資産の譲渡等のうち、別表第二に掲げるものには、消費税を課さない。<br><br>２　保税地域から引き取られる外国貨物のうち、別表第二の二に掲げるものには、消費税を課さない。`,
+   map:[["第1項","国内取引 → 別表第二"],["第2項","輸入 → 別表第二の二"]],
+   url:L_SHO+"#Mp-At_6",note:"条文は「別表第二に掲げるもの」と書くだけで、具体的な内容は別表にあります。"},
+  {t:"text",h:"このアプリで扱える範囲",
+   body:`<div class="warn"><div class="warn-t">⚠ 別表の中身は収録していません</div>
+   非課税となる取引の<b>具体的な一覧（別表第二の内容）</b>は収録していません。該当判断はe-Gov法令検索の別表第二をご確認ください。</div>
+   <p class="note">「非課税という仕組みがある」「根拠は第6条」の2点を押さえてください。</p>`},
+  {t:"quiz",qh:"非課税について、正しいのはどちらですか？",opts:[
+   {k:"A",txt:"3条件を満たさないから課税されない",ok:false,fb:"3条件は満たしています。その上で、法律があえて課税しないと定めています。"},
+   {k:"B",txt:"3条件は満たすが、法律で課税しないと決めている",ok:true,fb:"そのとおりです。ここが「条件を満たさない場合」との違いです。"}]},
+  {t:"sum",items:["3条件を満たしても課税されない取引がある","これを非課税といい、根拠は第6条","具体的な範囲は別表第二に定められている"],next:"1-5 輸出には税がかからない"}]},
+
+ {id:"C1L5",no:"1-5",title:"輸出には税がかからない",goal:"輸出免税と非課税の違いを説明できる",screens:[
+  {t:"cover",eb:"レッスン 1-5",h:"輸出には<br>税がかからない",
+   body:`<p class="lead">海外に商品を売った場合はどうなるでしょうか。</p><div class="hr"></div>
+   <p>日本の消費税は、<b>日本国内で消費されるもの</b>にかける税です。</p>`},
+  {t:"text",h:"海外で消費されるなら課税しない",
+   body:`<div class="flow"><div class="fl-box wh">日本の事業者が売る<span class="fl-sub">3条件はすべて○</span></div>
+   <div class="fl-ar">↓</div><div class="fl-box gy">商品は海外へ<span class="fl-sub">消費されるのは日本国外</span></div>
+   <div class="fl-ar">↓</div><div class="fl-box">消費税を免除<span class="fl-sub">これを輸出免税という</span></div></div>`},
+  {t:"term",lb:"この章の用語",w:"輸出免税",rd:"ゆしゅつめんぜい",
+   d:"輸出として行われる取引について、消費税を<b>免除する</b>こと。",ls:["対象は第7条第1項の各号","証明がなければ適用されない"]},
+  {t:"text",h:"免除される取引",
+   body:`<div class="cond">
+   <div class="cond-i"><div class="cond-n">1</div><div class="cond-t">輸出として行う譲渡・貸付け</div></div>
+   <div class="cond-i"><div class="cond-n">2</div><div class="cond-t">外国貨物の譲渡・貸付け</div></div>
+   <div class="cond-i"><div class="cond-n">3</div><div class="cond-t">国際輸送・国際通信</div></div></div>
+   <p class="note">このほか国際輸送用の船舶・航空機の譲渡等（第4号）、類するもの（第5号）があります。</p>`},
+  {t:"text",h:"証明が必要です",
+   body:`<div class="warn"><div class="warn-t">⚠ 第7条第2項</div>
+   輸出免税は、<b>輸出であることを財務省令の定めにより証明しなければ適用されません</b>。輸出許可書などの保存が前提になります。</div>`},
+  {t:"law",name:"消費税法 第7条",sub:"（輸出免税等）",
+   quote:`事業者（<span style="color:#8E8E93">…</span>）が国内において行う課税資産の譲渡等のうち、次に掲げるものに該当するものについては、<b>消費税を免除する</b>。<br><br>一　本邦からの輸出として行われる資産の譲渡又は貸付け<br>二　外国貨物の譲渡又は貸付け<span style="color:#8E8E93">…</span><br>三　国内及び国内以外の地域にわたつて行われる旅客若しくは貨物の輸送又は通信`,
+   map:[["効果","消費税を免除する"],["対象","第1項第1号〜第5号"],["条件","証明がされたもの（第2項）"]],
+   url:L_SHO+"#Mp-At_7",note:"第6条の非課税は「課さない」、第7条の免税は「免除する」。言葉が違います。"},
+  {t:"cmp",h:"非課税と免税のちがい",cards:[
+   {cls:"ng",h:"非課税（第6条）",lines:["別表第二に","該当するもの","条文の言葉は","「課さない」"],r:"政策的な理由"},
+   {cls:"ok",h:"免税（第7条）",lines:["輸出として","行われるもの","条文の言葉は","「免除する」"],r:"国外で消費"}],
+   after:`<p class="note">最も混同しやすい箇所です。<b>条文の言葉づかいの違い</b>で区別すると覚えやすくなります。</p>`},
+  {t:"sum",items:["輸出として行う取引は消費税が免除される","適用には輸出の証明が必要（第7条第2項）","非課税は「課さない」、免税は「免除する」"],next:"1-6 輸入にもかかる"}]},
+
+ {id:"C1L6",no:"1-6",title:"輸入にもかかる",goal:"国内取引以外に輸入も課税対象だと説明できる",screens:[
+  {t:"cover",eb:"レッスン 1-6",h:"輸入にも<br>かかる",
+   body:`<p class="lead">前回は「海外へ売る」場合を見ました。</p><div class="hr"></div>
+   <p>では逆に、海外から<b>商品を輸入した</b>場合はどうなるでしょうか。</p>`},
+  {t:"text",h:"課税の対象は2種類ある",
+   body:`<div class="cond">
+   <div class="cond-i"><div class="cond-n">1</div><div class="cond-t">国内取引<small>国内で事業者が行う資産の譲渡等</small></div></div>
+   <div class="cond-i"><div class="cond-n">2</div><div class="cond-t">輸入取引<small>保税地域から引き取る外国貨物</small></div></div></div>
+   <p>消費税法第4条は、この<b>2本立て</b>で課税対象を定めています。</p>`},
+  {t:"term",lb:"この章の用語",w:"保税地域",rd:"ほぜいちいき",
+   d:"輸入された貨物が、<b>通関手続を終える前</b>に置かれる場所のこと。",ls:["ここから「引き取る」ときに課税される"]},
+  {t:"text",h:"輸入の場合の流れ",
+   body:`<div class="flow"><div class="fl-box gy">海外から到着<span class="fl-sub">外国貨物</span></div>
+   <div class="fl-ar">↓</div><div class="fl-box wh">保税地域<span class="fl-sub">通関前の保管場所</span></div>
+   <div class="fl-ar">↓<small>ここで課税</small></div>
+   <div class="fl-box">引き取る<span class="fl-sub">消費税がかかる</span></div></div>
+   <p class="note">国内取引と違い、<b>「事業者が」という条件がありません</b>。</p>`},
+  {t:"law",name:"消費税法 第4条第2項",sub:"（課税の対象）",
+   quote:`保税地域から引き取られる外国貨物には、この法律により、消費税を課する。`,
+   map:[["対象","保税地域から引き取られる外国貨物"],["誰が","限定なし（事業者でなくてもよい）"]],
+   url:L_SHO+"#Mp-At_4",note:"第1項（国内取引）と比べると、非常に短い条文です。"},
+  {t:"quiz",qh:"輸入取引の課税について、正しいのは？",opts:[
+   {k:"A",txt:"事業者が輸入したときだけ課税される",ok:false,fb:"第4条第2項には「事業者が」という限定がありません。個人の輸入も課税対象です。"},
+   {k:"B",txt:"誰が輸入しても課税される",ok:true,fb:"そのとおりです。ここが国内取引との大きな違いです。"}]},
+  {t:"sum",items:["課税対象は「国内取引」と「輸入取引」の2種類","輸入は保税地域から引き取るときに課税","輸入は事業者でなくても課税される"],next:"1-7 税の計算の土台になる金額"}]},
+
+ {id:"C1L7",no:"1-7",title:"税の計算の土台になる金額",goal:"課税標準が税抜きの対価の額だと説明できる",screens:[
+  {t:"cover",eb:"レッスン 1-7",h:"税の計算の<br>土台になる金額",
+   body:`<p class="lead">課税される取引が分かりました。</p><div class="hr"></div>
+   <p>では、<b>いくらに対して</b>税率をかけるのでしょうか。</p>`},
+  {t:"term",lb:"この章の用語",w:"課税標準",rd:"かぜいひょうじゅん",
+   d:"税率をかける<b>土台になる金額</b>のこと。",ls:["消費税では「対価の額」がこれにあたる"]},
+  {t:"text",h:"対価の額には消費税を含めない",
+   body:`<div class="flow"><div class="fl-box wh">お客様が払った 110円<span class="fl-sub">税込価格</span></div>
+   <div class="fl-ar">↓<small>消費税分を除く</small></div>
+   <div class="fl-box">課税標準は 100円<span class="fl-sub">これに税率をかける</span></div></div>
+   <p>条文では、消費税額と地方消費税額に相当する額を<b>含まない</b>と定められています。</p>`},
+  {t:"quiz",qh:"税込110円の売上の場合、課税標準はいくらですか？",opts:[
+   {k:"A",txt:"110円",ok:false,fb:"消費税額を含まないのが課税標準です。110円は税込の金額です。"},
+   {k:"B",txt:"100円",ok:true,fb:"そのとおりです。消費税額・地方消費税額に相当する額を含まない金額が課税標準です。"}]},
+  {t:"law",name:"消費税法 第28条第1項",sub:"（課税標準）",
+   quote:`課税資産の譲渡等に係る消費税の課税標準は、課税資産の譲渡等の<b>対価の額</b>（対価として収受し、又は収受すべき一切の金銭<span style="color:#8E8E93">…</span>の額とし、課税資産の譲渡等につき課されるべき<b>消費税額</b>及び当該消費税額を課税標準として課されるべき<b>地方消費税額に相当する額を含まない</b>ものとする。<span style="color:#8E8E93">…</span>）とする。`,
+   map:[["課税標準","対価の額"],["含めない","消費税額・地方消費税額"],["形態","金銭以外の物・権利も含む"]],
+   url:L_SHO+"#Mp-At_28",note:"「金銭以外の物若しくは権利その他経済的な利益」も対価に含まれる点も重要です。"},
+  {t:"text",h:"輸入の場合は計算方法が違う",
+   body:`<p>保税地域から引き取る課税貨物の課税標準は、次を合計した金額です（第28条第4項）。</p><div class="cond">
+   <div class="cond-i"><div class="cond-n">1</div><div class="cond-t">関税定率法に準じて算出した価格</div></div>
+   <div class="cond-i"><div class="cond-n">2</div><div class="cond-t">消費税以外の消費税等の額</div></div>
+   <div class="cond-i"><div class="cond-n">3</div><div class="cond-t">関税の額</div></div></div>
+   <p class="note">国内取引とは計算の組み立てが異なります。</p>`},
+  {t:"sum",items:["税率をかける土台を課税標準という","国内取引は税抜きの対価の額","根拠は消費税法第28条"],next:"1-8 税率は2つある"}]},
+
+ {id:"C1L8",no:"1-8",title:"税率は2つある",goal:"標準税率と軽減税率の2本立てだと説明できる",screens:[
+  {t:"cover",eb:"レッスン 1-8",h:"税率は<br>2つある",
+   body:`<p class="lead">レシートを見ると「10%」と「8%」が並んでいることがあります。</p><div class="hr"></div>
+   <p>なぜ<b>2つの税率</b>があるのでしょうか。</p>`},
+  {t:"text",h:"消費税法に書かれている税率",
+   body:`<p>条文に書かれている数字は、実は10%や8%ではありません。</p><div class="cmp">
+   <div class="cmp-c ok"><div class="cmp-h">標準税率</div><div class="cmp-l"><div class="big">7.8%</div></div></div>
+   <div class="cmp-c ok"><div class="cmp-h">軽減税率</div><div class="cmp-l"><div class="big">6.24%</div></div></div></div>
+   <p>この「ずれ」の理由を、次の画面で見ます。</p>`},
+  {t:"text",h:"10%の中身は2つの税",
+   body:`<div class="flow"><div class="fl-box wh">レシートの「10%」</div>
+   <div class="fl-ar">↓<small>内訳</small></div>
+   <div class="fl-box">消費税（国税）<span class="fl-sub">7.8%</span></div>
+   <div class="fl-ar">＋</div><div class="fl-box gy">地方消費税（道府県税）<span class="fl-sub">2.2%</span></div></div>
+   <p>消費税法に書かれているのは<b>国税部分だけ</b>です。</p>`},
+  {t:"term",lb:"この章の用語",w:"軽減税率",rd:"けいげんぜいりつ",
+   d:"生活への影響を抑えるため、一部の品目に適用される<b>低い税率</b>のこと。",
+   ls:["条文上は6.24%（合計8%）","対象は「軽減対象課税資産の譲渡等」"]},
+  {t:"law",name:"消費税法 第29条",sub:"（税率）",
+   quote:`消費税の税率は、次の各号に掲げる区分に応じ、当該各号に定める率とする。<br><br>一　課税資産の譲渡等（軽減対象課税資産の譲渡等を除く。）<span style="color:#8E8E93">…</span>　<b>百分の七・八</b><br><br>二　軽減対象課税資産の譲渡等<span style="color:#8E8E93">…</span>　<b>百分の六・二四</b>`,
+   map:[["第1号","7.8%（標準）"],["第2号","6.24%（軽減）"]],
+   url:L_SHO+"#Mp-At_29",note:"「百分の七・八」＝7.8%です。10%ではないことを確認してください。"},
+  {t:"text",h:"地方消費税の根拠",
+   body:`<p>地方消費税は、消費税額の<b>78分の22</b>と定められています。</p>
+   <div class="law" style="margin-top:16px"><div class="law-n">地方税法 第72条の83</div>
+   <div class="law-sub">（地方消費税の税率）</div>
+   <div class="law-q">地方消費税の税率は、七十八分の二十二とする。</div>
+   <a class="law-lk" href="${L_CHI}#Mp-At_72_83" target="_blank" rel="noopener">e-Govで原文を確認する ↗</a></div>
+   <p class="note">7.8% × 22/78 = 2.2% となり、合計10%になります。</p>`},
+  {t:"quiz",qh:"消費税法第29条に書かれている標準税率は？",opts:[
+   {k:"A",txt:"10%",ok:false,fb:"10%は消費税と地方消費税の合計です。消費税法には7.8%と書かれています。"},
+   {k:"B",txt:"7.8%",ok:true,fb:"そのとおりです。残る2.2%は地方消費税で、地方税法に定められています。"}]},
+  {t:"sum",items:["税率は標準7.8%と軽減6.24%の2本立て","レシートの10%は国税7.8%＋地方税2.2%","地方消費税は消費税額の78分の22"],next:null,finalC:true}]}
+]},
+
+/* ============================================================
+   コース2　だれが納めるのか
+============================================================ */
+{id:"C2",no:2,color:"var(--c2)",title:"だれが納めるのか",
+ desc:"事業者のうち、実際に申告・納付が必要なのは誰か。免税事業者の判定を8レッスンで理解します。",
+ lessons:[
+ {id:"C2L1",no:"2-1",title:"小さな事業者は免除される",goal:"免税事業者という仕組みを説明できる",screens:[
+  {t:"cover",eb:"レッスン 2-1",h:"小さな事業者は<br>免除される",
+   body:`<p class="lead">事業者はみな消費税を納める——</p><p class="lead">わけではありません。</p>
+   <div class="hr"></div><p>規模の小さい事業者には、<b>納税義務を免除する</b>仕組みがあります。</p>`},
+  {t:"term",lb:"この章の用語",w:"免税事業者",rd:"めんぜいじぎょうしゃ",
+   d:"消費税を納める義務が<b>免除されている</b>事業者のこと。",ls:["事務負担への配慮から設けられた制度"]},
+  {t:"text",h:"判定の基準は1,000万円",
+   body:`<div class="flow"><div class="fl-box wh">基準期間の課税売上高<span class="fl-sub">原則2年前の売上</span></div>
+   <div class="fl-ar">↓<small>1,000万円以下なら</small></div>
+   <div class="fl-box gy">納税義務が免除<span class="fl-sub">申告・納付が不要</span></div></div>
+   <p>条文では「千万円以下である者」と定められています。</p>`},
+  {t:"law",name:"消費税法 第9条第1項",sub:"（小規模事業者に係る納税義務の免除）",
+   quote:`事業者のうち、その課税期間に係る基準期間における課税売上高が<b>千万円以下</b>である者（適格請求書発行事業者を除く。）については、第五条第一項の規定にかかわらず、その課税期間中に国内において行つた課税資産の譲渡等<span style="color:#8E8E93">…</span>及び特定課税仕入れにつき、消費税を納める義務を免除する。`,
+   map:[["基準","基準期間の課税売上高 1,000万円以下"],["除外","適格請求書発行事業者"],["効果","納税義務を免除"]],
+   url:L_SHO+"#Mp-At_9",note:"インボイス登録をしている場合は、売上が少なくても免税になりません。"},
+  {t:"text",h:"注意：登録すると免税にならない",
+   body:`<div class="warn"><div class="warn-t">⚠ 括弧書きが重要です</div>
+   条文には<b>「適格請求書発行事業者を除く」</b>と書かれています。インボイスの登録をすると、課税売上高が1,000万円以下でも課税事業者になります。</div>
+   <p class="note">この点はコース4で詳しく扱います。</p>`},
+  {t:"quiz",qh:"インボイス登録をしている事業者の課税売上高が800万円の場合は？",opts:[
+   {k:"A",txt:"免税事業者になる",ok:false,fb:"第9条第1項の括弧書きで「適格請求書発行事業者を除く」とされています。"},
+   {k:"B",txt:"課税事業者になる",ok:true,fb:"そのとおりです。登録している間は免税の適用がありません。"}]},
+  {t:"sum",items:["基準期間の課税売上高1,000万円以下なら免税","インボイス登録者は除外される","根拠は消費税法第9条第1項"],next:"2-2 2年前で判定する理由"}]},
+
+ {id:"C2L2",no:"2-2",title:"2年前で判定する理由",goal:"基準期間がいつを指すか説明できる",screens:[
+  {t:"cover",eb:"レッスン 2-2",h:"2年前で<br>判定する理由",
+   body:`<p class="lead">「基準期間」という言葉が出てきました。</p><div class="hr"></div>
+   <p>これは<b>いつのこと</b>でしょうか。</p>`},
+  {t:"term",lb:"この章の用語",w:"基準期間",rd:"きじゅんきかん",
+   d:"納税義務があるかどうかを判定するための<b>過去の期間</b>のこと。",ls:["個人は前々年","法人は前々事業年度"]},
+  {t:"text",h:"なぜ2年前なのか",
+   body:`<div class="flow"><div class="fl-box gy">今年の売上<span class="fl-sub">年末まで確定しない</span></div>
+   <div class="fl-ar">↓<small>これでは判定できない</small></div>
+   <div class="fl-box">2年前の売上<span class="fl-sub">すでに確定している</span></div></div>
+   <p>年の初めに<b>課税事業者かどうかが分かる</b>ようにするためです。</p>`},
+  {t:"text",h:"課税売上高の計算",
+   body:`<p>基準期間の課税売上高は、次のように計算します。</p>
+   <div class="tbl-w"><table class="tbl"><tr><th>項目</th><th class="r">扱い</th></tr>
+   <tr><td>課税資産の譲渡等の対価の額</td><td class="r">合計</td></tr>
+   <tr><td>売上げに係る税抜対価の返還等</td><td class="r">差し引く</td></tr></table></div>
+   <p class="note">返品・値引き・割戻しは差し引きます（第9条第2項）。</p>`},
+  {t:"law",name:"消費税法 第9条第2項",sub:"（基準期間における課税売上高）",
+   quote:`前項に規定する基準期間における課税売上高とは、次に掲げる場合に応じ、それぞれ次に定める金額をいう。<br><br>一　個人事業者及び基準期間が一年である法人<span style="color:#8E8E93">…</span>課税資産の譲渡等<span style="color:#8E8E93">…</span>の対価の額の合計額から<span style="color:#8E8E93">…</span>売上げに係る税抜対価の返還等の金額<span style="color:#8E8E93">…</span>の合計額を控除した残額`,
+   map:[["第1号","個人・1年の法人は単純合計"],["第2号","1年でない法人は年換算"]],
+   url:L_SHO+"#Mp-At_9",note:"法人で基準期間が1年でない場合は、月数で割って12を掛けます（年換算）。"},
+  {t:"quiz",qh:"個人事業者の基準期間は、いつを指しますか？",opts:[
+   {k:"A",txt:"前年",ok:false,fb:"それは「特定期間」の考え方に近いものです。基準期間は前々年です。"},
+   {k:"B",txt:"前々年",ok:true,fb:"そのとおりです。個人事業者の基準期間は前々年です。"}]},
+  {t:"sum",items:["基準期間は個人なら前々年、法人なら前々事業年度","確定済みの数字で判定できるようにするため","返品・値引きは差し引いて計算する"],next:"2-3 去年の前半でも判定"}]},
+
+ {id:"C2L3",no:"2-3",title:"去年の前半でも判定",goal:"特定期間による判定を説明できる",screens:[
+  {t:"cover",eb:"レッスン 2-3",h:"去年の前半<br>でも判定",
+   body:`<p class="lead">基準期間が1,000万円以下でも、課税事業者になる場合があります。</p>
+   <div class="hr"></div><p>もう1つの判定基準、<b>特定期間</b>です。</p>`},
+  {t:"term",lb:"この章の用語",w:"特定期間",rd:"とくていきかん",
+   d:"基準期間とは別に判定に使う<b>直近の期間</b>のこと。",ls:["個人は前年1月1日〜6月30日","法人は前事業年度開始後6月"]},
+  {t:"text",h:"2つの判定を順に行う",
+   body:`<div class="flow"><div class="fl-box wh">① 基準期間<span class="fl-sub">1,000万円超？</span></div>
+   <div class="fl-ar">↓<small>以下なら次へ</small></div>
+   <div class="fl-box wh">② 特定期間<span class="fl-sub">1,000万円超？</span></div>
+   <div class="fl-ar">↓<small>以下なら</small></div>
+   <div class="fl-box gy">免税事業者</div></div>`},
+  {t:"cmp",h:"混同に注意",cards:[
+   {cls:"ng",h:"基準期間",lines:["個人：","前々年","法人：","前々事業年度"],r:"原則の判定"},
+   {cls:"ok",h:"特定期間",lines:["個人：","前年1〜6月","法人：","前期開始後6月"],r:"追加の判定"}],
+   after:`<p class="note">どちらも<b>1,000万円</b>で判定します。期間が違うだけです。</p>`},
+  {t:"text",h:"給与でも判定できる",
+   body:`<p>特定期間の判定は、売上に代えて<b>給与等の支払額</b>で行うこともできます。</p>
+   <div class="cond"><div class="cond-i"><div class="cond-n">A</div>
+   <div class="cond-t">課税売上高で判定<small>特定期間の課税売上高</small></div></div>
+   <div class="cond-i"><div class="cond-n">B</div>
+   <div class="cond-t">給与等支払額で判定<small>支払明細書に記載すべき給与等</small></div></div></div>
+   <p class="note">国外事業者以外の事業者が選択できます（第9条の2第3項）。</p>`},
+  {t:"law",name:"消費税法 第9条の2第1項・第4項",sub:"（前年等における課税売上高による納税義務の免除の特例）",
+   quote:`個人事業者のその年又は法人のその事業年度の基準期間における課税売上高が千万円以下である場合において、当該個人事業者又は法人<span style="color:#8E8E93">…</span>のうち、当該個人事業者のその年又は法人のその事業年度に係る<b>特定期間における課税売上高が千万円を超えるとき</b>は、当該個人事業者のその年又は法人のその事業年度における課税資産の譲渡等<span style="color:#8E8E93">…</span>については、第九条第一項本文の規定は、適用しない。`,
+   map:[["第4項第1号","個人：前年1月1日〜6月30日"],["第4項第2号","法人：前事業年度開始後6月"],["第3項","給与等支払額で代替可"]],
+   url:L_SHO+"#Mp-At_9_2",note:"条文の構造は「基準期間が1,000万円以下の場合において、特定期間が1,000万円を超えるとき」です。"},
+  {t:"quiz",qh:"基準期間900万円、特定期間1,200万円の個人事業者は？",opts:[
+   {k:"A",txt:"免税事業者",ok:false,fb:"特定期間が1,000万円を超えているため、第9条第1項本文が適用されません。"},
+   {k:"B",txt:"課税事業者",ok:true,fb:"そのとおりです。特定期間による判定で課税事業者になります。"}]},
+  {t:"sum",items:["基準期間が1,000万円以下でも特定期間で判定する","個人は前年1〜6月、法人は前期開始後6月","給与等支払額で判定することもできる"],next:"2-4 自分から課税事業者になる"}]},
+
+ {id:"C2L4",no:"2-4",title:"自分から課税事業者になる",goal:"課税事業者選択の意味と縛りを説明できる",screens:[
+  {t:"cover",eb:"レッスン 2-4",h:"自分から<br>課税事業者になる",
+   body:`<p class="lead">免税事業者でも、<b>あえて課税事業者になる</b>ことができます。</p>
+   <div class="hr"></div><p>なぜそんなことをするのでしょうか。</p>`},
+  {t:"text",h:"還付を受けられる場合がある",
+   body:`<div class="flow"><div class="fl-box wh">預かった税<span class="fl-sub">売上が少ない</span></div>
+   <div class="fl-ar">－</div><div class="fl-box wh">払った税<span class="fl-sub">設備投資が大きい</span></div>
+   <div class="fl-ar">↓</div><div class="fl-box">マイナス<span class="fl-sub">還付を受けられる</span></div></div>
+   <p>免税事業者のままでは、この還付を受けられません。</p>`},
+  {t:"term",lb:"この章の用語",w:"課税事業者選択",rd:"かぜいじぎょうしゃせんたく",
+   d:"届出書を出して、<b>自ら課税事業者になる</b>こと。",ls:["効力は原則翌課税期間から","やめるには2年の縛りがある"]},
+  {t:"text",h:"効力が生じる時期",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>場面</th><th class="r">効力発生</th></tr>
+   <tr><td>通常の場合</td><td class="r">翌課税期間</td></tr>
+   <tr><td>事業開始の課税期間</td><td class="r">その課税期間</td></tr></table></div>
+   <p class="note">届出書を出した課税期間の<b>次</b>から適用されるのが原則です（第9条第4項）。</p>`},
+  {t:"text",h:"2年は戻れない",
+   body:`<div class="warn"><div class="warn-t">⚠ 2年縛り（第9条第6項）</div>
+   課税事業者選択をやめる届出は、効力が生じた課税期間の初日から<b>2年を経過する日の属する課税期間の初日以後</b>でなければ提出できません。</div>
+   <p class="note">さらに、その期間中に調整対象固定資産を取得すると<b>3年</b>に延びます（第9条第7項）。</p>`},
+  {t:"quiz",qh:"課税事業者選択をやめたい場合、最短でいつから可能ですか？",opts:[
+   {k:"A",txt:"いつでも可能",ok:false,fb:"第9条第6項により、2年を経過する日の属する課税期間の初日以後でなければ提出できません。"},
+   {k:"B",txt:"2年経過後",ok:true,fb:"そのとおりです。これを「2年縛り」と呼びます。"}]},
+  {t:"law",name:"消費税法 第9条第6項",sub:"（小規模事業者に係る納税義務の免除）",
+   quote:`第四項の規定による届出書を提出した事業者は、<span style="color:#8E8E93">…</span>当該届出書の提出をした日の属する課税期間の翌課税期間の初日から<b>二年を経過する日の属する課税期間の初日以後</b>でなければ、前項の規定による届出書を提出することができない。`,
+   map:[["原則","2年を経過する日の属する課税期間の初日以後"],["例外","事業廃止の場合"]],
+   url:L_SHO+"#Mp-At_9",note:"第7項では、調整対象固定資産を取得した場合に3年に延長されます。"},
+  {t:"sum",items:["届出で自ら課税事業者になれる","還付を受けたい場合に使う","やめるには2年（場合により3年）の縛りがある"],next:"2-5 相続・合併があったとき"}]},
+
+ {id:"C2L5",no:"2-5",title:"相続・合併があったとき",goal:"事業承継時の判定の考え方を説明できる",screens:[
+  {t:"cover",eb:"レッスン 2-5",h:"相続・合併<br>があったとき",
+   body:`<p class="lead">事業を引き継いだ場合、判定はどうなるでしょうか。</p>
+   <div class="hr"></div><p>自分の売上だけでは判定しません。</p>`},
+  {t:"text",h:"引き継いだ分も合わせて判定",
+   body:`<div class="flow"><div class="fl-box wh">自分の基準期間<span class="fl-sub">600万円</span></div>
+   <div class="fl-ar">＋</div><div class="fl-box wh">被相続人の基準期間<span class="fl-sub">700万円</span></div>
+   <div class="fl-ar">↓<small>合計1,300万円</small></div>
+   <div class="fl-box">課税事業者</div></div>
+   <p class="note">相続・合併で免税の判定を回避できないようにする仕組みです。</p>`},
+  {t:"text",h:"相続の場合の2段階",
+   body:`<div class="cond"><div class="cond-i"><div class="cond-n">1</div>
+   <div class="cond-t">相続があった年<small>被相続人の基準期間の課税売上高で判定</small></div></div>
+   <div class="cond-i"><div class="cond-n">2</div>
+   <div class="cond-t">翌年・翌々年<small>相続人と被相続人の合計で判定</small></div></div></div>
+   <p class="note">相続があった年は、相続の日の翌日から12月31日までが対象です。</p>`},
+  {t:"law",name:"消費税法 第10条第1項",sub:"（相続があつた場合の納税義務の免除の特例）",
+   quote:`その年において相続があつた場合において、その年の基準期間における課税売上高が千万円以下である相続人<span style="color:#8E8E93">…</span>が、当該基準期間における課税売上高が千万円を超える被相続人の事業を承継したときは、当該相続人の<b>当該相続のあつた日の翌日からその年十二月三十一日までの間</b>における課税資産の譲渡等<span style="color:#8E8E93">…</span>については、第九条第一項本文の規定は、適用しない。`,
+   map:[["対象期間","相続の日の翌日〜12月31日"],["判定","被相続人の基準期間が1,000万円超"]],
+   url:L_SHO+"#Mp-At_10",note:"第2項では、翌年・翌々年について相続人と被相続人の合計で判定します。"},
+  {t:"text",h:"合併・分割にも同様の規定",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>場面</th><th class="r">条文</th></tr>
+   <tr><td>相続</td><td class="r">第10条</td></tr>
+   <tr><td>合併</td><td class="r">第11条</td></tr>
+   <tr><td>分割等</td><td class="r">第12条</td></tr></table></div>
+   <p class="note">いずれも「承継前の事業者の売上を加味して判定する」考え方です。</p>`},
+  {t:"quiz",qh:"相続の特例の考え方として正しいのは？",opts:[
+   {k:"A",txt:"相続人自身の売上だけで判定する",ok:false,fb:"被相続人の課税売上高も判定に用います。"},
+   {k:"B",txt:"被相続人の売上も判定に用いる",ok:true,fb:"そのとおりです。事業承継による免税判定の回避を防ぐ仕組みです。"}]},
+  {t:"sum",items:["相続・合併・分割では承継前の売上も判定に用いる","相続は相続年と翌年以降で判定方法が異なる","根拠は第10条〜第12条"],next:"2-6 新しく作った法人"}]},
+
+ {id:"C2L6",no:"2-6",title:"新しく作った法人",goal:"新設法人の特例を説明できる",screens:[
+  {t:"cover",eb:"レッスン 2-6",h:"新しく<br>作った法人",
+   body:`<p class="lead">設立したばかりの法人には、基準期間がありません。</p>
+   <div class="hr"></div><p>この場合、<b>何で判定する</b>のでしょうか。</p>`},
+  {t:"text",h:"資本金1,000万円で判定",
+   body:`<div class="flow"><div class="fl-box wh">基準期間がない法人<span class="fl-sub">設立1期目・2期目</span></div>
+   <div class="fl-ar">↓<small>資本金等の額を見る</small></div>
+   <div class="fl-box">1,000万円以上なら<span class="fl-sub">課税事業者</span></div></div>
+   <p>判定時点は<b>その事業年度開始の日</b>です。</p>`},
+  {t:"term",lb:"この章の用語",w:"新設法人",rd:"しんせつほうじん",
+   d:"基準期間がない法人のうち、事業年度開始の日の資本金等の額が<b>1,000万円以上</b>のもの。",
+   ls:["社会福祉法人等は除かれる"]},
+  {t:"law",name:"消費税法 第12条の2第1項",sub:"（新設法人の納税義務の免除の特例）",
+   quote:`その事業年度の基準期間がない法人（<span style="color:#8E8E93">…</span>社会福祉法第二十二条に規定する社会福祉法人<span style="color:#8E8E93">…</span>を除く。）のうち、当該事業年度開始の日における<b>資本金の額又は出資の金額が千万円以上である法人</b>（以下「新設法人」という。）<span style="color:#8E8E93">…</span>については、第九条第一項本文の規定は、適用しない。`,
+   map:[["対象","基準期間がない法人"],["基準","資本金等 1,000万円以上"],["時点","事業年度開始の日"]],
+   url:L_SHO+"#Mp-At_12_2",note:"社会福祉法人等は条文で除外されています。"},
+  {t:"text",h:"大規模法人の子会社はさらに厳しい",
+   body:`<p>資本金が1,000万円未満でも、<b>大きな法人に支配されている</b>場合は課税事業者になります。</p>
+   <div class="cond"><div class="cond-i"><div class="cond-n">1</div>
+   <div class="cond-t">特定要件<small>50%超を直接・間接に保有される</small></div></div>
+   <div class="cond-i"><div class="cond-n">2</div>
+   <div class="cond-t">判定基礎者の売上<small>課税売上高5億円超</small></div></div></div>
+   <p class="note">これを「特定新規設立法人」といいます（第12条の3第1項）。</p>`},
+  {t:"quiz",qh:"資本金900万円で設立した法人（大規模法人の子会社ではない）は？",opts:[
+   {k:"A",txt:"課税事業者になる",ok:false,fb:"1,000万円未満なので新設法人には該当しません。"},
+   {k:"B",txt:"免税事業者になりうる",ok:true,fb:"そのとおりです。ただし特定新規設立法人に該当しないことが前提です。"}]},
+  {t:"sum",items:["基準期間がない法人は資本金等で判定","1,000万円以上なら課税事業者（第12条の2）","大規模法人の子会社は別の基準がある（第12条の3）"],next:"2-7 高額な資産を買ったとき"}]},
+
+ {id:"C2L7",no:"2-7",title:"高額な資産を買ったとき",goal:"高額特定資産の3年縛りを説明できる",screens:[
+  {t:"cover",eb:"レッスン 2-7",h:"高額な資産を<br>買ったとき",
+   body:`<p class="lead">課税事業者のうちに高額な資産を買って還付を受け、</p>
+   <p class="lead">その後すぐ免税事業者に戻る——</p>
+   <div class="hr"></div><p>これを防ぐ仕組みがあります。</p>`},
+  {t:"text",h:"3年間は免税に戻れない",
+   body:`<div class="flow"><div class="fl-box wh">高額特定資産を取得<span class="fl-sub">課税事業者のとき</span></div>
+   <div class="fl-ar">↓</div><div class="fl-box">3年間は課税事業者<span class="fl-sub">免税に戻れない</span></div></div>
+   <p>正確には、取得した課税期間の初日から<b>3年を経過する日の属する課税期間</b>までです。</p>`},
+  {t:"law",name:"消費税法 第12条の4第1項",sub:"（高額特定資産を取得した場合等の納税義務の免除の特例）",
+   quote:`事業者（<span style="color:#8E8E93">…</span>）が、第三十七条第一項の規定の適用を受けない課税期間中に<b>高額特定資産</b><span style="color:#8E8E93">…</span>の仕入れ等を行つた場合<span style="color:#8E8E93">…</span>には、当該高額特定資産の仕入れ等の日の属する課税期間の翌課税期間から当該高額特定資産の仕入れ等の日の属する課税期間の<b>初日以後三年を経過する日の属する課税期間</b>までの各課税期間においては、第九条第一項本文の規定は、適用しない。`,
+   map:[["対象","高額特定資産の仕入れ等"],["条件","簡易課税の適用を受けない課税期間"],["期間","初日以後3年を経過する日の属する課税期間まで"]],
+   url:L_SHO+"#Mp-At_12_4",note:"高額特定資産の具体的な金額基準は政令で定められています（本アプリでは未収録）。"},
+  {t:"text",h:"同じ趣旨の規定が3つある",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>対象</th><th class="r">条項</th></tr>
+   <tr><td>高額特定資産</td><td class="r">第1項</td></tr>
+   <tr><td>調整対象自己建設高額資産</td><td class="r">第2項</td></tr>
+   <tr><td>金地金等</td><td class="r">第3項</td></tr></table></div>
+   <p class="note">いずれも3年間、免税事業者に戻れません。</p>`},
+  {t:"text",h:"このアプリで扱える範囲",
+   body:`<div class="warn"><div class="warn-t">⚠ 金額基準は収録していません</div>
+   「高額特定資産」の具体的な金額基準は<b>政令</b>で定められていますが、本アプリでは条文を収録していません。実務での判定は原文をご確認ください。</div>`},
+  {t:"quiz",qh:"高額特定資産を取得した場合の制限期間は？",opts:[
+   {k:"A",txt:"2年間",ok:false,fb:"第12条の4第1項では「初日以後三年を経過する日の属する課税期間まで」とされています。"},
+   {k:"B",txt:"3年間",ok:true,fb:"そのとおりです。これを「3年縛り」と呼びます。"}]},
+  {t:"sum",items:["高額特定資産を取得すると3年間免税に戻れない","簡易課税の適用を受けない課税期間が対象","根拠は第12条の4"],next:"2-8 判定の流れを整理する"}]},
+
+ {id:"C2L8",no:"2-8",title:"判定の流れを整理する",goal:"納税義務の判定手順を順番に説明できる",screens:[
+  {t:"cover",eb:"レッスン 2-8",h:"判定の流れを<br>整理する",
+   body:`<p class="lead">ここまで学んだ判定基準を、</p><p class="lead">1つの流れにまとめます。</p>
+   <div class="hr"></div><p>この順番で確認すれば、判定ができます。</p>`},
+  {t:"text",h:"判定の5ステップ",
+   body:`<div class="cond">
+   <div class="cond-i"><div class="cond-n">1</div><div class="cond-t">インボイス登録している？<small>→ 課税事業者</small></div></div>
+   <div class="cond-i"><div class="cond-n">2</div><div class="cond-t">基準期間 1,000万円超？<small>→ 課税事業者</small></div></div>
+   <div class="cond-i"><div class="cond-n">3</div><div class="cond-t">特定期間 1,000万円超？<small>→ 課税事業者</small></div></div></div>`},
+  {t:"text",h:"続きの2ステップ",
+   body:`<div class="cond">
+   <div class="cond-i"><div class="cond-n">4</div><div class="cond-t">選択届出を出した？<small>→ 課税事業者</small></div></div>
+   <div class="cond-i"><div class="cond-n">5</div><div class="cond-t">特例に該当する？<small>相続・合併・新設・高額資産</small></div></div>
+   <div class="cond-res">すべて該当しなければ 免税事業者</div></div>`},
+  {t:"text",h:"特例の一覧",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>特例</th><th class="r">条文</th></tr>
+   <tr><td>相続</td><td class="r">第10条</td></tr>
+   <tr><td>合併</td><td class="r">第11条</td></tr>
+   <tr><td>分割等</td><td class="r">第12条</td></tr>
+   <tr><td>新設法人</td><td class="r">第12条の2</td></tr>
+   <tr><td>特定新規設立法人</td><td class="r">第12条の3</td></tr>
+   <tr><td>高額特定資産等</td><td class="r">第12条の4</td></tr></table></div>`},
+  {t:"quiz",qh:"判定の最初に確認すべきことは？",opts:[
+   {k:"A",txt:"基準期間の課税売上高",ok:false,fb:"その前に、インボイス登録の有無を確認します。登録していれば第9条第1項の括弧書きで免税の対象外です。"},
+   {k:"B",txt:"インボイス登録の有無",ok:true,fb:"そのとおりです。登録していれば売上に関係なく課税事業者です。"}]},
+  {t:"text",h:"届出書の一覧",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>届出</th><th class="r">条文</th></tr>
+   <tr><td>課税事業者選択</td><td class="r">第9条第4項</td></tr>
+   <tr><td>同 不適用</td><td class="r">第9条第5項</td></tr>
+   <tr><td>1,000万円超となった旨</td><td class="r">第57条第1項第1号</td></tr>
+   <tr><td>1,000万円以下となった旨</td><td class="r">第57条第1項第2号</td></tr></table></div>
+   <p class="note">第57条では、ほかに事業廃止・死亡・合併消滅の届出も定められています。</p>`},
+  {t:"sum",items:["判定は①登録→②基準期間→③特定期間→④選択→⑤特例の順","特例は第10条〜第12条の4の6種類","届出は第9条・第57条に定めがある"],next:null,finalC:true}]}
+]},
+
+/* ============================================================
+   コース3　税額計算の骨組み
+============================================================ */
+{id:"C3",no:3,color:"var(--c3)",title:"税額計算の骨組み",
+ desc:"預かった税から払った税を差し引く。消費税の計算構造と、計算を簡単にする制度を8レッスンで理解します。",
+ lessons:[
+ {id:"C3L1",no:"3-1",title:"二重課税を防ぐ仕組み",goal:"仕入税額控除の必要性を説明できる",screens:[
+  {t:"cover",eb:"レッスン 3-1",h:"二重課税を<br>防ぐ仕組み",
+   body:`<p class="lead">商品は、生産者→卸→小売→消費者と流れます。</p>
+   <div class="hr"></div><p>各段階で全額に課税すると、<b>税が重なってしまいます</b>。</p>`},
+  {t:"text",h:"もし全額に課税したら",
+   body:`<div class="flow"><div class="fl-box gy">生産者 1,000円<span class="fl-sub">税100円</span></div>
+   <div class="fl-ar">↓</div><div class="fl-box gy">卸 2,000円<span class="fl-sub">税200円</span></div>
+   <div class="fl-ar">↓</div><div class="fl-box gy">小売 3,000円<span class="fl-sub">税300円</span></div></div>
+   <p>合計600円の税。しかし最終価格3,000円の10%は<b>300円</b>のはずです。</p>`},
+  {t:"term",lb:"この章の用語",w:"仕入税額控除",rd:"しいれぜいがくこうじょ",
+   d:"仕入れのときに<b>払った消費税</b>を、売上のときに<b>預かった消費税</b>から差し引くこと。",
+   ls:["これにより税の重複を防ぐ"]},
+  {t:"text",h:"差し引きで解決する",
+   body:`<div class="flow"><div class="fl-box wh">預かった税<span class="fl-sub">売上にかかる消費税</span></div>
+   <div class="fl-ar">－</div><div class="fl-box wh">払った税<span class="fl-sub">仕入れにかかる消費税</span></div>
+   <div class="fl-ar">＝</div><div class="fl-box">納める税</div></div>
+   <p class="note">各段階で「自分が付けた価値の分」だけを納める構造になります。</p>`},
+  {t:"law",name:"消費税法 第30条第1項",sub:"（仕入れに係る消費税額の控除）",
+   quote:`事業者（第九条第一項本文の規定により消費税を納める義務が免除される事業者を除く。）が、国内において行う課税仕入れ<span style="color:#8E8E93">…</span>については、<span style="color:#8E8E93">…</span>課税標準額に対する消費税額<span style="color:#8E8E93">…</span>から、<b>当該課税期間中に国内において行つた課税仕入れに係る消費税額</b><span style="color:#8E8E93">…</span>を控除する。`,
+   map:[["対象","課税事業者のみ"],["控除する","課税仕入れに係る消費税額"],["控除元","課税標準額に対する消費税額"]],
+   url:L_SHO+"#Mp-At_30",note:"免税事業者は条文の括弧書きで除外されています。"},
+  {t:"quiz",qh:"仕入税額控除ができるのは？",opts:[
+   {k:"A",txt:"すべての事業者",ok:false,fb:"第30条第1項の括弧書きで、免税事業者は除外されています。"},
+   {k:"B",txt:"課税事業者のみ",ok:true,fb:"そのとおりです。免税事業者は控除も還付もありません。"}]},
+  {t:"sum",items:["仕入れで払った税を売上の税から差し引く","これを仕入税額控除という","免税事業者は控除できない"],next:"3-2 控除する時期"}]},
+
+ {id:"C3L2",no:"3-2",title:"控除する時期",goal:"いつの課税期間で控除するか説明できる",screens:[
+  {t:"cover",eb:"レッスン 3-2",h:"控除する<br>時期",
+   body:`<p class="lead">払った税は、<b>いつの申告</b>で差し引くのでしょうか。</p>
+   <div class="hr"></div><p>条文では4つの場合に分けて定められています。</p>`},
+  {t:"text",h:"4つの場合",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>場合</th><th class="r">控除する時期</th></tr>
+   <tr><td>国内の課税仕入れ</td><td class="r">行った日</td></tr>
+   <tr><td>特定課税仕入れ</td><td class="r">行った日</td></tr>
+   <tr><td>課税貨物（通常）</td><td class="r">引き取った日</td></tr>
+   <tr><td>課税貨物（特例申告）</td><td class="r">申告書提出日等</td></tr></table></div>
+   <p class="note">第30条第1項第1号〜第4号に定められています。</p>`},
+  {t:"term",lb:"この章の用語",w:"課税仕入れ",rd:"かぜいしいれ",
+   d:"事業として他の者から資産を譲り受け、借り受け、または役務の提供を受けること。",
+   ls:["相手方にとって課税売上になる取引"]},
+  {t:"text",h:"全額引けるかどうかの分かれ道",
+   body:`<div class="flow"><div class="fl-box wh">課税売上高 5億円以下<span class="fl-sub">かつ</span></div>
+   <div class="fl-ar">＋</div><div class="fl-box wh">課税売上割合 95%以上</div>
+   <div class="fl-ar">↓</div><div class="fl-box">全額控除できる</div></div>
+   <p>どちらかを満たさない場合は、按分計算が必要です。</p>`},
+  {t:"law",name:"消費税法 第30条第2項",sub:"（仕入れに係る消費税額の控除）",
+   quote:`前項の場合において、同項に規定する課税期間における課税売上高が<b>五億円を超えるとき</b>、又は当該課税期間における<b>課税売上割合が百分の九十五に満たないとき</b>は、同項の規定により控除する課税仕入れ等の税額の合計額は、<span style="color:#8E8E93">…</span>次の各号に掲げる場合の区分に応じ当該各号に定める方法により計算した金額とする。`,
+   map:[["第1号","個別対応方式"],["第2号","一括比例配分方式"]],
+   url:L_SHO+"#Mp-At_30",note:"5億円超または95%未満の場合に按分計算が必要になります。"},
+  {t:"quiz",qh:"課税売上高6億円・課税売上割合99%の場合は？",opts:[
+   {k:"A",txt:"全額控除できる",ok:false,fb:"課税売上高が5億円を超えているため、按分計算が必要です。"},
+   {k:"B",txt:"按分計算が必要",ok:true,fb:"そのとおりです。2つの要件は「かつ」で結ばれています。"}]},
+  {t:"sum",items:["控除は課税仕入れを行った日の課税期間","5億円以下かつ95%以上なら全額控除","どちらか欠けると按分計算が必要"],next:"3-3 按分の2つの方法"}]},
+
+ {id:"C3L3",no:"3-3",title:"按分の2つの方法",goal:"個別対応方式と一括比例配分方式の違いを説明できる",screens:[
+  {t:"cover",eb:"レッスン 3-3",h:"按分の<br>2つの方法",
+   body:`<p class="lead">全額控除できない場合、2つの方法から選びます。</p>
+   <div class="hr"></div><p>それぞれの考え方を見ていきます。</p>`},
+  {t:"term",lb:"この章の用語",w:"課税売上割合",rd:"かぜいうりあげわりあい",
+   d:"売上全体のうち、<b>課税売上が占める割合</b>のこと。",ls:["按分計算のときに使う"]},
+  {t:"cmp",h:"2つの方法",cards:[
+   {cls:"ok",h:"個別対応方式",lines:["仕入れを","3つに区分","区分ごとに","計算する"],r:"手間はかかる"},
+   {cls:"ng",h:"一括比例配分",lines:["区分せず","全体に","割合を","掛ける"],r:"簡単だが2年継続"}]},
+  {t:"text",h:"個別対応方式の3区分",
+   body:`<div class="cond">
+   <div class="cond-i"><div class="cond-n">1</div><div class="cond-t">課税売上にのみ要するもの<small>全額控除できる</small></div></div>
+   <div class="cond-i"><div class="cond-n">2</div><div class="cond-t">非課税売上にのみ要するもの<small>控除できない</small></div></div>
+   <div class="cond-i"><div class="cond-n">3</div><div class="cond-t">共通して要するもの<small>割合で按分</small></div></div></div>`},
+  {t:"text",h:"一括比例配分方式は2年継続",
+   body:`<div class="warn"><div class="warn-t">⚠ 第30条第5項</div>
+   一括比例配分方式を選択すると、<b>2年間は個別対応方式に変更できません</b>。</div>
+   <p class="note">有利・不利を試算してから選ぶ必要があります。</p>`},
+  {t:"text",h:"控除できない仕入れもある",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>対象</th><th class="r">条項</th></tr>
+   <tr><td>居住用賃貸建物</td><td class="r">第30条第10項</td></tr>
+   <tr><td>無申告引取貨物等</td><td class="r">第30条第12項</td></tr></table></div>
+   <p class="note">金・白金の地金は本人確認書類の保存が必要です（第11項）。</p>`},
+  {t:"quiz",qh:"一括比例配分方式を選んだ場合の制限は？",opts:[
+   {k:"A",txt:"翌期から変更できる",ok:false,fb:"第30条第5項により2年間の継続適用が求められます。"},
+   {k:"B",txt:"2年間変更できない",ok:true,fb:"そのとおりです。選択は慎重に行う必要があります。"}]},
+  {t:"sum",items:["按分方法は個別対応方式と一括比例配分方式","個別対応方式は仕入れを3区分する","一括比例配分方式は2年継続適用"],next:"3-4 計算を簡単にする制度"}]},
+
+ {id:"C3L4",no:"3-4",title:"計算を簡単にする制度",goal:"簡易課税の仕組みを説明できる",screens:[
+  {t:"cover",eb:"レッスン 3-4",h:"計算を<br>簡単にする制度",
+   body:`<p class="lead">仕入れを1件ずつ集計するのは大変です。</p>
+   <div class="hr"></div><p>小規模な事業者向けに、<b>簡単な計算方法</b>が用意されています。</p>`},
+  {t:"term",lb:"この章の用語",w:"簡易課税",rd:"かんいかぜい",
+   d:"売上の消費税額に<b>一定の率</b>を掛けて、仕入れの消費税額とみなす制度。",
+   ls:["仕入れの集計が不要になる"]},
+  {t:"text",h:"売上だけで計算できる",
+   body:`<div class="flow"><div class="fl-box wh">売上の消費税額<span class="fl-sub">これだけ分かればよい</span></div>
+   <div class="fl-ar">×<small>みなし仕入率</small></div>
+   <div class="fl-box">仕入れの消費税額<span class="fl-sub">とみなす</span></div></div>
+   <p class="note">実際の仕入れ金額を集計する必要がありません。</p>`},
+  {t:"text",h:"適用できる条件",
+   body:`<div class="cond">
+   <div class="cond-i"><div class="cond-n">1</div><div class="cond-t">基準期間の課税売上高<small>5,000万円以下</small></div></div>
+   <div class="cond-i"><div class="cond-n">2</div><div class="cond-t">届出書の提出<small>適用を受ける旨を記載</small></div></div>
+   <div class="cond-i"><div class="cond-n">3</div><div class="cond-t">分割等に係る課税期間でない</div></div></div>`},
+  {t:"law",name:"消費税法 第37条第1項",sub:"（中小事業者の仕入れに係る消費税額の控除の特例）",
+   quote:`事業者（<span style="color:#8E8E93">…</span>）が、<span style="color:#8E8E93">…</span>その基準期間における課税売上高が<b>五千万円以下</b>である課税期間<span style="color:#8E8E93">…</span>について<span style="color:#8E8E93">…</span>届出書を提出した場合には、当該届出書の提出があつた日の属する課税期間の翌課税期間以後の課税期間<span style="color:#8E8E93">…</span>については、<span style="color:#8E8E93">…</span>次に掲げる金額の合計額を<span style="color:#8E8E93">…</span>仕入れに係る消費税額とみなす。`,
+   map:[["基準","基準期間 5,000万円以下"],["手続","届出書の提出"],["効果","みなし仕入率で計算"]],
+   url:L_SHO+"#Mp-At_37",note:"事業の種類ごとの率は政令で定められています。"},
+  {t:"quiz",qh:"簡易課税の基準となる課税売上高は？",opts:[
+   {k:"A",txt:"1,000万円以下",ok:false,fb:"1,000万円は免税事業者の判定基準です。簡易課税は5,000万円以下です。"},
+   {k:"B",txt:"5,000万円以下",ok:true,fb:"そのとおりです。基準期間の課税売上高で判定します。"}]},
+  {t:"sum",items:["簡易課税は売上だけで仕入税額を計算する","基準期間5,000万円以下＋届出が必要","根拠は消費税法第37条第1項"],next:"3-5 みなし仕入率の一覧"}]},
+
+ {id:"C3L5",no:"3-5",title:"みなし仕入率の一覧",goal:"事業区分ごとの率を確認できる",screens:[
+  {t:"cover",eb:"レッスン 3-5",h:"みなし仕入率<br>の一覧",
+   body:`<p class="lead">簡易課税で使う「率」は、</p><p class="lead">事業の種類によって違います。</p>
+   <div class="hr"></div><p>6つの区分が定められています。</p>`},
+  {t:"text",h:"6つの事業区分と率",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>区分</th><th class="r">率</th></tr>
+   <tr><td>第一種事業</td><td class="r">90%</td></tr>
+   <tr><td>第二種事業</td><td class="r">80%</td></tr>
+   <tr><td>第三種事業</td><td class="r">70%</td></tr>
+   <tr><td>第四種事業</td><td class="r">60%</td></tr>
+   <tr><td>第五種事業</td><td class="r">50%</td></tr>
+   <tr><td>第六種事業</td><td class="r">40%</td></tr></table></div>
+   <p class="note">施行令第57条第1項・第2項に定められています。</p>`},
+  {t:"text",h:"どの事業がどの区分か（1）",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>区分</th><th class="r">事業</th></tr>
+   <tr><td>第一種</td><td class="r">卸売業</td></tr>
+   <tr><td>第二種</td><td class="r">小売業、農林水産業<br>（飲食料品の譲渡部分）</td></tr>
+   <tr><td>第三種</td><td class="r">農林水産業、鉱業<br>建設業、製造業<br>電気・ガス・水道業</td></tr></table></div>`},
+  {t:"text",h:"どの事業がどの区分か（2）",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>区分</th><th class="r">事業</th></tr>
+   <tr><td>第四種</td><td class="r">他の区分以外<br>（飲食店業など）</td></tr>
+   <tr><td>第五種</td><td class="r">運輸通信業、金融・保険業<br>サービス業（飲食店業を除く）</td></tr>
+   <tr><td>第六種</td><td class="r">不動産業</td></tr></table></div>
+   <p class="note">施行令第57条第5項の定義によります。</p>`},
+  {t:"law",name:"消費税法施行令 第57条第1項",sub:"（中小事業者の仕入れに係る消費税額の控除の特例）",
+   quote:`事業の区分ごとに、みなし仕入率が政令で定められています（第一種90％・第二種80％・第三種70％・第四種60％・第五種50％・第六種40％）。`,
+   map:[["第一種","卸売業"],["第二種","小売業・農林水産（飲食料品）"],["第六種","不動産業"]],
+   url:L_SREI+"#Mp-At_57"},
+  {t:"text",h:"区分していない場合",
+   body:`<div class="warn"><div class="warn-t">⚠ 施行令第57条第4項</div>
+   複数の事業を営んでいて<b>区分していない売上</b>がある場合は、<b>低い率の区分</b>に含めて計算します。</div>
+   <p class="note">例：第一種と第二種を区分していない場合は第二種（80%）になります。</p>`},
+  {t:"quiz",qh:"卸売業のみなし仕入率は？",opts:[
+   {k:"A",txt:"80%",ok:false,fb:"80%は第二種事業（小売業など）です。卸売業は第一種事業です。"},
+   {k:"B",txt:"90%",ok:true,fb:"そのとおりです。卸売業は第一種事業で90%です。"}]},
+  {t:"sum",items:["みなし仕入率は6区分（90%〜40%）","卸売90%・小売80%・不動産40%","区分していない売上は低い率になる"],next:"3-6 簡易課税の縛り"}]},
+
+ {id:"C3L6",no:"3-6",title:"簡易課税の縛り",goal:"簡易課税の2年・3年の制限を説明できる",screens:[
+  {t:"cover",eb:"レッスン 3-6",h:"簡易課税の<br>縛り",
+   body:`<p class="lead">簡易課税も、自由に出入りできるわけではありません。</p>
+   <div class="hr"></div><p>2つの縛りがあります。</p>`},
+  {t:"text",h:"やめるには2年",
+   body:`<div class="warn"><div class="warn-t">⚠ 2年縛り（第37条第6項）</div>
+   簡易課税をやめる届出は、適用開始した課税期間の初日から<b>2年を経過する日の属する課税期間の初日以後</b>でなければ提出できません。</div>`},
+  {t:"text",h:"始めるにも制限がある",
+   body:`<p>次の場合は、3年間簡易課税の届出ができません。</p>
+   <div class="tbl-w"><table class="tbl"><tr><th>事由</th><th class="r">条項</th></tr>
+   <tr><td>課税事業者選択＋調整対象固定資産</td><td class="r">第3項第1号</td></tr>
+   <tr><td>新設法人等＋調整対象固定資産</td><td class="r">第3項第2号</td></tr>
+   <tr><td>高額特定資産の取得</td><td class="r">第3項第3号</td></tr></table></div>
+   <p class="note">このほか第4号・第5号もあります。</p>`},
+  {t:"law",name:"消費税法 第37条第3項",sub:"（中小事業者の仕入れに係る消費税額の控除の特例）",
+   quote:`<span style="color:#8E8E93">…</span>事業者が次の各号に掲げる場合に該当するときは、当該各号に定める期間は、第一項の規定による届出書を提出することができない。<span style="color:#8E8E93">…</span><br><br>三　第十二条の四第一項の規定の適用を受ける場合<span style="color:#8E8E93">…</span>当該高額特定資産の仕入れ等の日の属する課税期間の<b>初日から同日以後三年を経過する日の属する課税期間の初日の前日まで</b>の期間`,
+   map:[["趣旨","還付後すぐ簡易課税に移ることの防止"],["期間","3年"]],
+   url:L_SHO+"#Mp-At_37",note:"コース2で学んだ第12条の4と連動しています。"},
+  {t:"text",h:"災害時の特例",
+   body:`<p>災害等により簡易課税の選択・取りやめが必要になった場合、<b>税務署長の承認</b>で特例が認められます。</p>
+   <div class="cond"><div class="cond-i"><div class="cond-n">1</div>
+   <div class="cond-t">申請期限<small>災害等のやんだ日から2月以内</small></div></div>
+   <div class="cond-i"><div class="cond-n">2</div>
+   <div class="cond-t">効果<small>2年・3年の縛りを適用しない</small></div></div></div>
+   <p class="note">根拠は第37条の2です。</p>`},
+  {t:"quiz",qh:"簡易課税をやめる届出の制限は？",opts:[
+   {k:"A",txt:"いつでも提出できる",ok:false,fb:"第37条第6項により2年の継続適用が求められます。"},
+   {k:"B",txt:"2年経過後でなければ提出できない",ok:true,fb:"そのとおりです。課税事業者選択と同じく2年縛りがあります。"}]},
+  {t:"sum",items:["やめるには2年の継続適用が必要","高額特定資産を取得すると3年間届出できない","災害時は承認で縛りが外れる（第37条の2）"],next:"3-7 税額の組み立て"}]},
+
+ {id:"C3L7",no:"3-7",title:"税額の組み立て",goal:"納付税額の計算構造を説明できる",screens:[
+  {t:"cover",eb:"レッスン 3-7",h:"税額の<br>組み立て",
+   body:`<p class="lead">ここまでの内容をつなげると、</p><p class="lead">納める税額が計算できます。</p>
+   <div class="hr"></div><p>申告書の構造を見てみましょう。</p>`},
+  {t:"text",h:"申告書の計算の流れ",
+   body:`<div class="flow"><div class="fl-box wh">① 課税標準額<span class="fl-sub">税抜きの売上</span></div>
+   <div class="fl-ar">↓<small>税率を掛ける</small></div>
+   <div class="fl-box wh">② 課税標準額に対する消費税額</div>
+   <div class="fl-ar">－</div><div class="fl-box wh">③ 控除される消費税額</div>
+   <div class="fl-ar">＝</div><div class="fl-box">④ 納付する消費税額</div></div>`},
+  {t:"text",h:"③に含まれる4つ",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>控除項目</th><th class="r">根拠</th></tr>
+   <tr><td>仕入れに係る消費税額</td><td class="r">イ</td></tr>
+   <tr><td>売上げに係る対価の返還等</td><td class="r">ロ</td></tr>
+   <tr><td>特定課税仕入れの返還等</td><td class="r">ハ</td></tr>
+   <tr><td>貸倒れ</td><td class="r">ニ</td></tr></table></div>
+   <p class="note">第45条第1項第3号イ〜ニに定められています。</p>`},
+  {t:"law",name:"消費税法 第45条第1項",sub:"（課税資産の譲渡等及び特定課税仕入れについての確定申告）",
+   quote:`<span style="color:#8E8E93">…</span>次に掲げる事項を記載した申告書を提出しなければならない。<br>　一　<span style="color:#8E8E93">…</span>課税標準額<br>　二　<span style="color:#8E8E93">…</span>課税標準額に対する消費税額<br>　三　<span style="color:#8E8E93">…</span>控除をされるべき消費税額の合計額<br>　四　第二号に掲げる消費税額から前号に掲げる消費税額の合計額を控除した<b>残額に相当する消費税額</b>`,
+   map:[["第1号","課税標準額"],["第2号","課税標準額に対する消費税額"],["第3号","控除額の合計"],["第4号","納付税額"]],
+   url:L_SHO+"#Mp-At_45",note:"第5号は控除不足額（還付）、第6号・第7号は中間納付額との精算です。"},
+  {t:"text",h:"マイナスになったら還付",
+   body:`<div class="cmp">
+   <div class="cmp-c ok"><div class="cmp-h">②＞③</div><div class="cmp-l"><div>第4号</div><div>納付する</div></div><div class="cmp-r">納付</div></div>
+   <div class="cmp-c ng"><div class="cmp-h">②＜③</div><div class="cmp-l"><div>第5号</div><div>不足額</div></div><div class="cmp-r">還付</div></div></div>
+   <p class="note">還付は第52条に定められています。</p>`},
+  {t:"quiz",qh:"控除額が課税標準額に対する消費税額を上回った場合は？",opts:[
+   {k:"A",txt:"0円として申告する",ok:false,fb:"第45条第1項第5号に不足額を記載し、第52条により還付を受けます。"},
+   {k:"B",txt:"還付を受ける",ok:true,fb:"そのとおりです。第5号の不足額として記載します。"}]},
+  {t:"sum",items:["課税標準額→消費税額→控除→納付税額の順","控除は仕入れ・返還等・貸倒れの4種類","控除が上回れば還付になる"],next:"3-8 インボイス積上げ計算"}]},
+
+ {id:"C3L8",no:"3-8",title:"インボイス積上げ計算",goal:"積上げ計算の特例を説明できる",screens:[
+  {t:"cover",eb:"レッスン 3-8",h:"インボイス<br>積上げ計算",
+   body:`<p class="lead">消費税額の計算には、2つの方法があります。</p>
+   <div class="hr"></div><p>インボイスを使った特例を見ます。</p>`},
+  {t:"text",h:"2つの計算方法",
+   body:`<div class="cmp">
+   <div class="cmp-c ok"><div class="cmp-h">割戻し計算</div><div class="cmp-l"><div>課税標準額</div><div>× 税率</div><div>原則の方法</div></div><div class="cmp-r">第45条第1項</div></div>
+   <div class="cmp-c ok"><div class="cmp-h">積上げ計算</div><div class="cmp-l"><div>インボイスの</div><div>消費税額を</div><div>合計する</div></div><div class="cmp-r">第45条第5項</div></div></div>`},
+  {t:"text",h:"積上げ計算の条件",
+   body:`<div class="cond"><div class="cond-i"><div class="cond-n">1</div>
+   <div class="cond-t">適格請求書等を交付した<small>適格簡易請求書を含む</small></div></div>
+   <div class="cond-i"><div class="cond-n">2</div>
+   <div class="cond-t">その写しを保存している<small>第57条の4第6項による保存</small></div></div></div>
+   <p class="note">電磁的記録を保存している場合も含まれます。</p>`},
+  {t:"law",name:"消費税法 第45条第5項",sub:"（確定申告）",
+   quote:`<span style="color:#8E8E93">…</span>適格請求書<span style="color:#8E8E93">…</span>の写しを第五十七条の四第六項の規定により保存している場合<span style="color:#8E8E93">…</span>には、第一項第二号に掲げる消費税額は、<span style="color:#8E8E93">…</span>当該適格請求書<span style="color:#8E8E93">…</span>に記載した同条第一項第五号<span style="color:#8E8E93">…</span>に掲げる<b>消費税額等</b><span style="color:#8E8E93">…</span>を基礎として計算した金額とすることができる。`,
+   map:[["条件","適格請求書等の写しの保存"],["効果","記載した消費税額等を基礎に計算"]],
+   url:L_SHO+"#Mp-At_45",note:"延払基準・工事進行基準・現金主義の適用を受ける場合は適用除外です。"},
+  {t:"text",h:"中間申告でも使える",
+   body:`<p>仮決算による中間申告でも、同様に積上げ計算が可能です。</p>
+   <div class="law" style="margin-top:14px"><div class="law-n">消費税法 第43条第3項</div>
+   <div class="law-q">適格請求書<span style="color:#8E8E93">…</span>の写しを<span style="color:#8E8E93">…</span>保存している場合<span style="color:#8E8E93">…</span>第四十五条第五項の規定の例による。</div>
+   <a class="law-lk" href="${L_SHO}#Mp-At_43" target="_blank" rel="noopener">e-Govで原文を確認する ↗</a></div>`},
+  {t:"quiz",qh:"積上げ計算を使うための条件は？",opts:[
+   {k:"A",txt:"届出書の提出",ok:false,fb:"届出は不要です。適格請求書等の写しの保存が条件です。"},
+   {k:"B",txt:"適格請求書等の写しの保存",ok:true,fb:"そのとおりです。第57条の4第6項による保存が前提です。"}]},
+  {t:"sum",items:["計算方法は割戻し計算と積上げ計算の2つ","積上げ計算はインボイスの写しの保存が条件","中間申告（仮決算）でも使える"],next:null,finalC:true}]}
+]},
+
+/* ============================================================
+   コース4　インボイス制度
+============================================================ */
+{id:"C4",no:4,color:"var(--c4)",title:"インボイス制度",
+ desc:"仕入税額控除に必要な適格請求書。登録手続から記載事項、保存義務までを8レッスンで理解します。",
+ lessons:[
+ {id:"C4L1",no:"4-1",title:"なぜインボイスが必要か",goal:"適格請求書が控除の要件だと説明できる",screens:[
+  {t:"cover",eb:"レッスン 4-1",h:"なぜインボイスが<br>必要か",
+   body:`<p class="lead">仕入税額控除を受けるには、</p><p class="lead">証拠書類が必要です。</p>
+   <div class="hr"></div><p>その書類が<b>適格請求書</b>です。</p>`},
+  {t:"text",h:"控除には2つの保存が必要",
+   body:`<div class="cond"><div class="cond-i"><div class="cond-n">1</div>
+   <div class="cond-t">帳簿<small>取引を記録したもの</small></div></div>
+   <div class="cond-i"><div class="cond-n">2</div>
+   <div class="cond-t">請求書等<small>適格請求書など</small></div></div>
+   <div class="cond-res">両方そろって控除できる</div></div>`},
+  {t:"law",name:"消費税法 第30条第7項",sub:"（仕入れに係る消費税額の控除）",
+   quote:`第一項の規定は、事業者が当該課税期間の<span style="color:#8E8E93">…</span>課税仕入れ等の税額の控除に係る<b>帳簿及び請求書等</b>（<span style="color:#8E8E93">…</span>政令で定める場合に該当する場合には、帳簿）を保存しない場合には、<span style="color:#8E8E93">…</span>適用しない。`,
+   map:[["原則","帳簿 ＋ 請求書等"],["例外","政令で定める場合は帳簿のみ"],["ただし書","災害等やむを得ない事情"]],
+   url:L_SHO+"#Mp-At_30",note:"保存がないと控除できないという強い規定です。"},
+  {t:"term",lb:"この章の用語",w:"適格請求書",rd:"てきかくせいきゅうしょ",
+   d:"登録番号などの定められた事項が記載された<b>請求書等</b>のこと。",
+   ls:["登録した事業者だけが発行できる"]},
+  {t:"text",h:"請求書等の範囲",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>書類</th><th class="r">号</th></tr>
+   <tr><td>適格請求書・適格簡易請求書</td><td class="r">1号</td></tr>
+   <tr><td>電磁的記録</td><td class="r">2号</td></tr>
+   <tr><td>仕入明細書等</td><td class="r">3号</td></tr>
+   <tr><td>卸売市場等の書類</td><td class="r">4号</td></tr>
+   <tr><td>輸入許可書等</td><td class="r">5号</td></tr></table></div>
+   <p class="note">第30条第9項に定められています。</p>`},
+  {t:"quiz",qh:"仕入税額控除の要件として正しいのは？",opts:[
+   {k:"A",txt:"帳簿があればよい",ok:false,fb:"第30条第7項では原則「帳簿及び請求書等」の保存が必要です。"},
+   {k:"B",txt:"帳簿と請求書等の両方が必要",ok:true,fb:"そのとおりです。政令で定める場合のみ帳簿だけで足ります。"}]},
+  {t:"sum",items:["控除には帳簿と請求書等の保存が必要","適格請求書は登録事業者だけが発行できる","請求書等の範囲は第30条第9項に5種類"],next:"4-2 登録しないと発行できない"}]},
+
+ {id:"C4L2",no:"4-2",title:"登録しないと発行できない",goal:"登録制度の仕組みを説明できる",screens:[
+  {t:"cover",eb:"レッスン 4-2",h:"登録しないと<br>発行できない",
+   body:`<p class="lead">適格請求書は、誰でも出せるわけではありません。</p>
+   <div class="hr"></div><p><b>登録を受けた事業者</b>だけが発行できます。</p>`},
+  {t:"term",lb:"この章の用語",w:"適格請求書発行事業者",rd:"てきかくせいきゅうしょはっこうじぎょうしゃ",
+   d:"税務署長の<b>登録を受けた事業者</b>のこと。",ls:["登録番号が付与される","登録簿で公表される"]},
+  {t:"text",h:"登録の流れ",
+   body:`<div class="flow"><div class="fl-box wh">申請書を提出<span class="fl-sub">納税地所轄税務署長へ</span></div>
+   <div class="fl-ar">↓</div><div class="fl-box wh">審査</div>
+   <div class="fl-ar">↓</div><div class="fl-box">登録簿に登載<span class="fl-sub">登録番号が付与される</span></div></div>`},
+  {t:"law",name:"消費税法 第57条の2第1項・第2項",sub:"（適格請求書発行事業者の登録等）",
+   quote:`国内において課税資産の譲渡等を行い、又は行おうとする事業者（<span style="color:#8E8E93">…</span>第九条第一項本文の規定により消費税を納める義務が免除される事業者を除く。）であつて、第五十七条の四第一項に規定する適格請求書の交付をしようとする事業者<span style="color:#8E8E93">…</span>は、税務署長の登録を受けることができる。<br><br>２　前項の登録を受けようとする事業者は、<span style="color:#8E8E93">…</span>申請書を<span style="color:#8E8E93">…</span>税務署長に提出しなければならない。`,
+   map:[["対象","国内で課税資産の譲渡等を行う事業者"],["手続","申請書を納税地所轄税務署長へ"]],
+   url:L_SHO+"#Mp-At_57_2",note:"免税事業者は括弧書きで除外されていますが、課税事業者選択により登録できます。"},
+  {t:"text",h:"申請の期限",
+   body:`<div class="warn"><div class="warn-t">⚠ 15日前ルール</div>
+   免税事業者が課税期間の初日から登録を受けようとする場合、申請書は<b>その課税期間の初日から起算して15日前の日</b>までに提出します。</div>
+   <p class="note">期限内に提出すれば、初日後の登録でも初日に遡って登録を受けたものとみなされます（施行令第70条の2）。</p>`},
+  {t:"text",h:"公表の方法",
+   body:`<p>登録事項は、インターネットで公表されます。</p>
+   <div class="tbl-w"><table class="tbl"><tr><th>登載事項</th><th class="r">号</th></tr>
+   <tr><td>氏名または名称、登録番号</td><td class="r">1号</td></tr>
+   <tr><td>登録年月日</td><td class="r">2号</td></tr>
+   <tr><td>法人の本店所在地</td><td class="r">3号</td></tr></table></div>
+   <p class="note">施行令第70条の5に定められています。</p>`},
+  {t:"quiz",qh:"免税事業者が課税期間の初日から登録を受ける場合の申請期限は？",opts:[
+   {k:"A",txt:"課税期間の初日まで",ok:false,fb:"施行令第70条の2第1項により、初日から起算して15日前の日までです。"},
+   {k:"B",txt:"初日から起算して15日前の日まで",ok:true,fb:"そのとおりです。これを「15日前ルール」と呼びます。"}]},
+  {t:"sum",items:["適格請求書は登録事業者だけが発行できる","申請書を納税地所轄税務署長に提出する","課税期間初日からの登録は15日前までに申請"],next:"4-3 書くべき6項目"}]},
+
+ {id:"C4L3",no:"4-3",title:"書くべき6項目",goal:"適格請求書の記載事項を確認できる",screens:[
+  {t:"cover",eb:"レッスン 4-3",h:"書くべき<br>6項目",
+   body:`<p class="lead">適格請求書には、</p><p class="lead">決められた事項を記載します。</p>
+   <div class="hr"></div><p>6つの項目を確認します。</p>`},
+  {t:"text",h:"記載事項（1〜3）",
+   body:`<div class="cond">
+   <div class="cond-i"><div class="cond-n">1</div><div class="cond-t">氏名・名称と登録番号</div></div>
+   <div class="cond-i"><div class="cond-n">2</div><div class="cond-t">年月日<small>課税資産の譲渡等を行った日</small></div></div>
+   <div class="cond-i"><div class="cond-n">3</div><div class="cond-t">資産・役務の内容<small>軽減対象ならその旨</small></div></div></div>`},
+  {t:"text",h:"記載事項（4〜6）",
+   body:`<div class="cond">
+   <div class="cond-i"><div class="cond-n">4</div><div class="cond-t">税率ごとの対価の額と適用税率</div></div>
+   <div class="cond-i"><div class="cond-n">5</div><div class="cond-t">消費税額等</div></div>
+   <div class="cond-i"><div class="cond-n">6</div><div class="cond-t">交付を受ける事業者の氏名・名称</div></div></div>`},
+  {t:"law",name:"消費税法 第57条の4第1項",sub:"（適格請求書発行事業者の義務）",
+   quote:`<span style="color:#8E8E93">…</span>次に掲げる事項を記載した請求書、納品書その他これらに類する書類<span style="color:#8E8E93">…</span>を交付しなければならない。<br>　一　適格請求書発行事業者の氏名又は名称及び<b>登録番号</b><br>　二　課税資産の譲渡等を行つた年月日<br>　三　課税資産の譲渡等に係る資産又は役務の内容<br>　四　<span style="color:#8E8E93">…</span>税率ごとに区分して合計した金額及び<b>適用税率</b><br>　五　<b>消費税額等</b><br>　六　書類の交付を受ける事業者の氏名又は名称`,
+   map:[["最重要","第1号の登録番号"],["税率ごと","第4号・第5号"]],
+   url:L_SHO+"#Mp-At_57_4",note:"交付義務があるのは「他の事業者から求められたとき」です。"},
+  {t:"text",h:"消費税額等の計算",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>基準</th><th class="r">計算</th></tr>
+   <tr><td>税抜価額から</td><td class="r">× 10/100<br>（軽減 8/100）</td></tr>
+   <tr><td>税込価額から</td><td class="r">× 10/110<br>（軽減 8/108）</td></tr></table></div>
+   <p class="note">端数処理は税率ごとに1回のみ（施行令第70条の10）。</p>`},
+  {t:"quiz",qh:"適格請求書の記載事項で最も特徴的なものは？",opts:[
+   {k:"A",txt:"取引年月日",ok:false,fb:"従来の請求書にも記載されていた事項です。"},
+   {k:"B",txt:"登録番号",ok:true,fb:"そのとおりです。第1号の登録番号がインボイスの核心です。"}]},
+  {t:"sum",items:["記載事項は6項目（第57条の4第1項）","登録番号と税率ごとの区分が特徴","端数処理は税率ごとに1回のみ"],next:"4-4 小売業は簡易版でよい"}]},
+
+ {id:"C4L4",no:"4-4",title:"小売業は簡易版でよい",goal:"適格簡易請求書との違いを説明できる",screens:[
+  {t:"cover",eb:"レッスン 4-4",h:"小売業は<br>簡易版でよい",
+   body:`<p class="lead">スーパーのレシートに、</p><p class="lead">お客様の名前は書かれていません。</p>
+   <div class="hr"></div><p>一定の業種には<b>簡易版</b>が認められています。</p>`},
+  {t:"cmp",h:"2つの違い",cards:[
+   {cls:"ok",h:"適格請求書",lines:["記載6項目","交付先の","名称が","必要"],r:"原則"},
+   {cls:"ng",h:"適格簡易請求書",lines:["記載5項目","交付先の","名称は","不要"],r:"小売等"}],
+   after:`<p class="note">もう1つの違いは、<b>税率と消費税額のどちらか</b>でよい点です。</p>`},
+  {t:"text",h:"対象となる事業",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>事業</th></tr>
+   <tr><td>小売業</td></tr><tr><td>飲食店業</td></tr>
+   <tr><td>写真業・旅行業</td></tr>
+   <tr><td>タクシー業</td></tr>
+   <tr><td>駐車場業（不特定多数向け）</td></tr></table></div>
+   <p class="note">第57条の4第2項に定められています。</p>`},
+  {t:"law",name:"消費税法 第57条の4第2項",sub:"（適格請求書発行事業者の義務）",
+   quote:`<span style="color:#8E8E93">…</span>小売業、飲食店業、写真業及び旅行業<span style="color:#8E8E93">…</span>に係る課税資産の譲渡等<span style="color:#8E8E93">…</span>を行う場合<span style="color:#8E8E93">…</span>には、前項の規定による適格請求書に代えて、次に掲げる事項を記載した請求書<span style="color:#8E8E93">…</span>（以下「<b>適格簡易請求書</b>」という。）を交付することができる。<span style="color:#8E8E93">…</span><br>　五　<span style="color:#8E8E93">…</span>消費税額等<b>又は</b>適用税率`,
+   map:[["対象","小売業・飲食店業など"],["特徴","交付先の名称が不要"],["第5号","消費税額等または適用税率"]],
+   url:L_SHO+"#Mp-At_57_4",note:"「又は」なので、どちらか一方の記載で足ります。"},
+  {t:"text",h:"返品のときの書類",
+   body:`<p>売上の返還等があった場合は<b>適格返還請求書</b>を交付します。</p>
+   <div class="cond"><div class="cond-i"><div class="cond-n">1</div>
+   <div class="cond-t">返還等を行う年月日</div></div>
+   <div class="cond-i"><div class="cond-n">2</div>
+   <div class="cond-t">元の譲渡等を行った年月日</div></div></div>
+   <p class="note">税込1万円未満の返還等は交付義務が免除されます（施行令第70条の9第3項）。</p>`},
+  {t:"quiz",qh:"適格簡易請求書で省略できるのは？",opts:[
+   {k:"A",txt:"登録番号",ok:false,fb:"登録番号は省略できません。インボイスの核心部分です。"},
+   {k:"B",txt:"交付を受ける事業者の氏名・名称",ok:true,fb:"そのとおりです。不特定多数の顧客を相手にする業種への配慮です。"}]},
+  {t:"sum",items:["小売業等は適格簡易請求書でよい","交付先の名称が不要で、税率か税額の一方でよい","返品時は適格返還請求書を交付する"],next:"4-5 出さなくてよい取引"}]},
+
+ {id:"C4L5",no:"4-5",title:"出さなくてよい取引",goal:"交付義務が免除される取引を確認できる",screens:[
+  {t:"cover",eb:"レッスン 4-5",h:"出さなくて<br>よい取引",
+   body:`<p class="lead">自動販売機で領収書は出ません。</p><div class="hr"></div>
+   <p>交付が難しい取引には<b>免除</b>が認められています。</p>`},
+  {t:"text",h:"3万円未満の旅客運送",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>対象</th></tr>
+   <tr><td>船舶（定期航路事業等）</td></tr>
+   <tr><td>バス（一般乗合旅客自動車運送）</td></tr>
+   <tr><td>鉄道（第一種・第二種）</td></tr>
+   <tr><td>軌道（軌道法第3条）</td></tr></table></div>
+   <p class="note">税込価額が3万円未満のものが対象です（施行令第70条の9第2項第1号）。</p>`},
+  {t:"text",h:"卸売市場・農協等",
+   body:`<div class="cond"><div class="cond-i"><div class="cond-n">1</div>
+   <div class="cond-t">卸売市場<small>卸売業者の生鮮食料品等の譲渡</small></div></div>
+   <div class="cond-i"><div class="cond-n">2</div>
+   <div class="cond-t">農協・漁協等<small>無条件委託・共同計算による譲渡</small></div></div></div>
+   <p class="note">出荷者から販売委託を受けたものに限られます（第2号）。</p>`},
+  {t:"text",h:"自動販売機など",
+   body:`<p>対価が通常少額で、不特定多数に対して行われ、<b>自動販売機</b>により行われること等により交付が著しく困難なものも免除されます。</p>
+   <div class="warn" style="margin-top:14px"><div class="warn-t">⚠ 具体的範囲は財務省令</div>
+   第3号の「財務省令で定めるもの」の具体的内容は、本アプリでは収録していません。</div>`},
+  {t:"law",name:"消費税法施行令 第70条の9第2項",sub:"（適格請求書の交付義務が免除される課税資産の譲渡等の範囲等）",
+   quote:`法第五十七条の四第一項に規定する政令で定める課税資産の譲渡等は、次に掲げる課税資産の譲渡等とする。<br>　一　<span style="color:#8E8E93">…</span>旅客の運送<span style="color:#8E8E93">…</span>（当該課税資産の譲渡等に係る税込価額が<b>三万円未満</b>のものに限る。）<br>　二　<span style="color:#8E8E93">…</span>卸売市場<span style="color:#8E8E93">…</span>／農業協同組合<span style="color:#8E8E93">…</span><br>　三　<span style="color:#8E8E93">…</span><b>自動販売機</b>により行われること等により適格請求書を交付することが著しく困難な課税資産の譲渡等`,
+   map:[["第1号","3万円未満の公共交通機関"],["第2号","卸売市場・農協等"],["第3号","自動販売機等"]],
+   url:L_SREI+"#Mp-At_70_9",note:"これらは帳簿のみの保存で仕入税額控除ができます（施行令第49条）。"},
+  {t:"quiz",qh:"公共交通機関の交付義務免除の金額基準は？",opts:[
+   {k:"A",txt:"税込1万円未満",ok:false,fb:"1万円未満は適格返還請求書の免除基準です。旅客運送は3万円未満です。"},
+   {k:"B",txt:"税込3万円未満",ok:true,fb:"そのとおりです。施行令第70条の9第2項第1号に定められています。"}]},
+  {t:"sum",items:["3万円未満の公共交通機関は交付義務免除","卸売市場・農協等も免除","自動販売機等も免除（範囲は財務省令）"],next:"4-6 帳簿だけでよい場合"}]},
+
+ {id:"C4L6",no:"4-6",title:"帳簿だけでよい場合",goal:"帳簿のみ保存で控除できる取引を確認できる",screens:[
+  {t:"cover",eb:"レッスン 4-6",h:"帳簿だけで<br>よい場合",
+   body:`<p class="lead">インボイスを受け取れない取引もあります。</p>
+   <div class="hr"></div><p>この場合、<b>帳簿だけ</b>で控除できます。</p>`},
+  {t:"text",h:"主な対象（1）",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>対象</th><th class="r">号</th></tr>
+   <tr><td>3万円未満の公共交通機関</td><td class="r">1号イ</td></tr>
+   <tr><td>回収される入場券等</td><td class="r">1号ロ</td></tr>
+   <tr><td>特定課税仕入れ</td><td class="r">2号</td></tr></table></div>
+   <p class="note">施行令第49条第1項に定められています。</p>`},
+  {t:"text",h:"主な対象（2）古物等",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>業種</th><th class="r">対象</th></tr>
+   <tr><td>古物商</td><td class="r">古物</td></tr>
+   <tr><td>質屋</td><td class="r">質物</td></tr>
+   <tr><td>宅建業者</td><td class="r">建物</td></tr>
+   <tr><td>金属くず業</td><td class="r">特定金属くず</td></tr></table></div>
+   <p class="note">登録事業者以外から買い受けたもので、棚卸資産に該当する場合に限ります。</p>`},
+  {t:"text",h:"帳簿への追加記載",
+   body:`<div class="warn"><div class="warn-t">⚠ 2つの追加記載が必要</div>
+   帳簿のみで控除する場合、帳簿に次を記載します。<br>
+   ① 該当する旨<br>
+   ② 相手方の住所または所在地</div>
+   <p class="note">国税庁長官が指定する者に係るものは②が不要です。</p>`},
+  {t:"law",name:"消費税法施行令 第49条第1項",sub:"（課税仕入れ等の税額の控除に係る帳簿等の記載事項等）",
+   quote:`法第三十条第七項に規定する政令で定める場合は、次に掲げる場合とする。<br>　一　法第三十条第一項に規定する課税仕入れに係る支払対価の額が<span style="color:#8E8E93">…</span>次に掲げる課税仕入れ<span style="color:#8E8E93">…</span>（当該課税仕入れが<b>次に掲げるものに該当する旨</b>及び当該課税仕入れの相手方の<b>住所又は所在地</b><span style="color:#8E8E93">…</span>を帳簿に記載している場合に限る。）`,
+   map:[["効果","請求書等の保存が不要"],["条件","帳簿への2項目の追加記載"]],
+   url:L_SREI+"#Mp-At_49",note:"古物等（ハ）は棚卸資産（消耗品を除く）に該当する場合に限られます。"},
+  {t:"quiz",qh:"帳簿のみで控除する場合に必要なことは？",opts:[
+   {k:"A",txt:"特別な届出",ok:false,fb:"届出は不要です。帳簿への追加記載が条件です。"},
+   {k:"B",txt:"該当する旨と相手方の住所の記載",ok:true,fb:"そのとおりです。施行令第49条第1項第1号の括弧書きに定められています。"}]},
+  {t:"sum",items:["交付義務免除の取引等は帳簿のみで控除できる","古物商・質屋・宅建業者等も対象","帳簿に該当する旨と相手方の住所を記載する"],next:"4-7 保存のルール"}]},
+
+ {id:"C4L7",no:"4-7",title:"保存のルール",goal:"写しの保存期間と方法を説明できる",screens:[
+  {t:"cover",eb:"レッスン 4-7",h:"保存の<br>ルール",
+   body:`<p class="lead">交付した適格請求書は、</p><p class="lead">自分でも保存します。</p>
+   <div class="hr"></div><p>期間と場所が定められています。</p>`},
+  {t:"text",h:"保存期間は7年",
+   body:`<div class="flow"><div class="fl-box wh">課税期間の末日の翌日から<span class="fl-sub">2月を経過した日</span></div>
+   <div class="fl-ar">↓<small>ここから起算</small></div>
+   <div class="fl-box">7年間保存</div></div>
+   <p class="note">清算中の法人で残余財産確定の場合は1月を経過した日からです。</p>`},
+  {t:"law",name:"消費税法施行令 第70条の13第1項",sub:"（適格請求書等の写しの保存期間等）",
+   quote:`適格請求書発行事業者は、<span style="color:#8E8E93">…</span>適格請求書<span style="color:#8E8E93">…</span>の写し<span style="color:#8E8E93">…</span>を、その作成した日<span style="color:#8E8E93">…</span>の属する課税期間の末日の翌日から<b>二月</b><span style="color:#8E8E93">…</span>を経過した日から<b>七年間</b>、<span style="color:#8E8E93">…</span>納税地又はその取引に係る事務所、事業所その他これらに準ずるものの所在地に保存しなければならない。`,
+   map:[["起算","課税期間末日の翌日から2月経過日"],["期間","7年間"],["場所","納税地または事務所等"]],
+   url:L_SREI+"#Mp-At_70_13",note:"第2項では、5年経過後は財務大臣の定める方法によることができるとされています。"},
+  {t:"text",h:"交付義務のほかの義務",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>義務</th><th class="r">条項</th></tr>
+   <tr><td>誤りがあった場合の修正交付</td><td class="r">第4項</td></tr>
+   <tr><td>電磁的記録での提供も可</td><td class="r">第5項</td></tr>
+   <tr><td>写しの保存</td><td class="r">第6項</td></tr></table></div>
+   <p class="note">第57条の4に定められています。</p>`},
+  {t:"text",h:"やってはいけないこと",
+   body:`<div class="warn"><div class="warn-t">⚠ 第57条の5（類似書類等の交付禁止）</div>
+   ① 登録事業者以外が誤認されるおそれのある書類を交付すること<br>
+   ② 登録事業者が偽りの記載をした書類を交付すること<br>
+   ③ ①②の電磁的記録を提供すること</div>`},
+  {t:"quiz",qh:"適格請求書の写しの保存期間は？",opts:[
+   {k:"A",txt:"5年間",ok:false,fb:"施行令第70条の13第1項では7年間とされています。5年は保存方法の緩和の起点です。"},
+   {k:"B",txt:"7年間",ok:true,fb:"そのとおりです。課税期間末日の翌日から2月を経過した日から起算します。"}]},
+  {t:"sum",items:["写しは7年間、納税地等で保存する","誤りがあれば修正した書類を交付する","類似書類等の交付は禁止されている（第57条の5）"],next:"4-8 代理交付と相続"}]},
+
+ {id:"C4L8",no:"4-8",title:"代理交付と相続",goal:"媒介者交付特例と相続の扱いを説明できる",screens:[
+  {t:"cover",eb:"レッスン 4-8",h:"代理交付と<br>相続",
+   body:`<p class="lead">委託販売や相続があった場合、</p><p class="lead">インボイスはどうなるでしょうか。</p>
+   <div class="hr"></div><p>2つの特例を見ます。</p>`},
+  {t:"term",lb:"この章の用語",w:"媒介者交付特例",rd:"ばいかいしゃこうふとくれい",
+   d:"委託販売などで、<b>媒介者が自分の名前と登録番号で</b>インボイスを交付できる特例。",
+   ls:["委託者・媒介者の双方が登録事業者であることが条件"]},
+  {t:"text",h:"媒介者交付の3条件",
+   body:`<div class="cond">
+   <div class="cond-i"><div class="cond-n">1</div><div class="cond-t">委託者が登録事業者</div></div>
+   <div class="cond-i"><div class="cond-n">2</div><div class="cond-t">媒介者も登録事業者</div></div>
+   <div class="cond-i"><div class="cond-n">3</div><div class="cond-t">譲渡等の時までに通知を受けている</div></div></div>`},
+  {t:"law",name:"消費税法施行令 第70条の12第1項",sub:"（媒介者等による適格請求書等の交付の特例）",
+   quote:`<span style="color:#8E8E93">…</span>事業者（<span style="color:#8E8E93">…</span>適格請求書発行事業者に限る。）が<span style="color:#8E8E93">…</span>媒介又は取次ぎに係る業務を行う者（<span style="color:#8E8E93">…</span>適格請求書発行事業者に限る。以下「媒介者等」という。）を介して<span style="color:#8E8E93">…</span>課税資産の譲渡等を行う場合<span style="color:#8E8E93">…</span>には、当該媒介者等は<span style="color:#8E8E93">…</span>当該<b>媒介者等の氏名又は名称及び登録番号を記載した</b>適格請求書<span style="color:#8E8E93">…</span>を<span style="color:#8E8E93">…</span>交付<span style="color:#8E8E93">…</span>することができる。`,
+   map:[["交付者","媒介者等"],["記載","媒介者等の名称・登録番号"],["義務","写しの保存・委託者への交付"]],
+   url:L_SREI+"#Mp-At_70_12",note:"媒介者等は速やかに写しを委託者に交付しなければなりません（第3項）。"},
+  {t:"text",h:"相続があった場合",
+   body:`<div class="flow"><div class="fl-box gy">被相続人が死亡<span class="fl-sub">登録事業者だった</span></div>
+   <div class="fl-ar">↓</div><div class="fl-box wh">みなし登録期間<span class="fl-sub">相続人を登録事業者とみなす</span></div>
+   <div class="fl-ar">↓</div><div class="fl-box">被相続人の登録番号を使える</div></div>`},
+  {t:"text",h:"みなし登録期間の終わり",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>終期（早い方）</th></tr>
+   <tr><td>相続人が登録を受けた日の前日</td></tr>
+   <tr><td>死亡日の翌日から4月を経過する日</td></tr></table></div>
+   <p class="note">第57条の3第3項に定められています。</p>`},
+  {t:"quiz",qh:"媒介者交付特例を使うための条件は？",opts:[
+   {k:"A",txt:"委託者が登録事業者であればよい",ok:false,fb:"媒介者等も登録事業者であることが条件です。"},
+   {k:"B",txt:"委託者と媒介者の双方が登録事業者",ok:true,fb:"そのとおりです。加えて譲渡等の時までの通知も必要です。"}]},
+  {t:"sum",items:["媒介者交付特例は双方が登録事業者であることが条件","媒介者等は写しを保存し委託者に交付する","相続では4月を限度にみなし登録期間がある"],next:null,finalC:true}]}
+]},
+
+/* ============================================================
+   コース5　申告と納付
+============================================================ */
+{id:"C5",no:5,color:"var(--c5)",title:"申告と納付",
+ desc:"いつまでに申告し、いつ納めるのか。中間申告や期限を過ぎた場合の扱いまで、7レッスンで理解します。",
+ lessons:[
+ {id:"C5L1",no:"5-1",title:"申告する期間の区切り",goal:"課税期間の区分を説明できる",screens:[
+  {t:"cover",eb:"レッスン 5-1",h:"申告する<br>期間の区切り",
+   body:`<p class="lead">消費税は、一定の期間ごとに申告します。</p>
+   <div class="hr"></div><p>その区切りを<b>課税期間</b>といいます。</p>`},
+  {t:"term",lb:"この章の用語",w:"課税期間",rd:"かぜいきかん",
+   d:"申告のために区切られた<b>期間</b>のこと。",ls:["個人は暦年","法人は事業年度"]},
+  {t:"text",h:"原則の課税期間",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>区分</th><th class="r">課税期間</th></tr>
+   <tr><td>個人事業者</td><td class="r">1月1日〜12月31日</td></tr>
+   <tr><td>法人</td><td class="r">事業年度</td></tr></table></div>
+   <p class="note">第19条第1項第1号・第2号に定められています。</p>`},
+  {t:"text",h:"短縮することもできる",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>短縮</th><th class="r">号</th></tr>
+   <tr><td>個人・3月ごと</td><td class="r">3号</td></tr>
+   <tr><td>個人・1月ごと</td><td class="r">3号の2</td></tr>
+   <tr><td>法人・3月ごと</td><td class="r">4号</td></tr>
+   <tr><td>法人・1月ごと</td><td class="r">4号の2</td></tr></table></div>
+   <p class="note">届出書の提出が必要です。</p>`},
+  {t:"law",name:"消費税法 第19条第1項",sub:"（課税期間）",
+   quote:`この法律において「課税期間」とは、次の各号に掲げる事業者の区分に応じ、当該各号に定める期間とする。<br>　一　個人事業者<span style="color:#8E8E93">…</span><b>一月一日から十二月三十一日までの期間</b><br>　二　法人<span style="color:#8E8E93">…</span>当該法人の<b>事業年度</b>`,
+   map:[["第1号","個人：暦年"],["第2号","法人：事業年度"],["第3号〜","短縮の特例"]],
+   url:L_SHO+"#Mp-At_19",note:"短縮の届出には2年の継続適用があります（第5項）。"},
+  {t:"quiz",qh:"法人の原則の課税期間は？",opts:[
+   {k:"A",txt:"1月1日〜12月31日",ok:false,fb:"それは個人事業者の課税期間です。"},
+   {k:"B",txt:"事業年度",ok:true,fb:"そのとおりです。第19条第1項第2号に定められています。"}]},
+  {t:"sum",items:["課税期間は個人なら暦年、法人なら事業年度","3月・1月に短縮することもできる","短縮の届出には2年の継続適用がある"],next:"5-2 2か月以内に申告する"}]},
+
+ {id:"C5L2",no:"5-2",title:"2か月以内に申告する",goal:"確定申告の期限を説明できる",screens:[
+  {t:"cover",eb:"レッスン 5-2",h:"2か月以内に<br>申告する",
+   body:`<p class="lead">課税期間が終わったら、申告します。</p>
+   <div class="hr"></div><p>期限は<b>いつまで</b>でしょうか。</p>`},
+  {t:"text",h:"原則は2か月以内",
+   body:`<div class="flow"><div class="fl-box wh">課税期間の末日<span class="fl-sub">例：12月31日</span></div>
+   <div class="fl-ar">↓<small>その翌日から2月以内</small></div>
+   <div class="fl-box">申告期限<span class="fl-sub">例：2月末日</span></div></div>
+   <p class="note">個人事業者は、所得税と異なり3月31日ではありません。</p>`},
+  {t:"law",name:"消費税法 第45条第1項",sub:"（確定申告）",
+   quote:`事業者（<span style="color:#8E8E93">…</span>）は、課税期間ごとに、当該課税期間の末日の翌日から<b>二月以内</b>に、<span style="color:#8E8E93">…</span>次に掲げる事項を記載した申告書を税務署長に提出しなければならない。<span style="color:#8E8E93">…</span>`,
+   map:[["期限","課税期間末日の翌日から2月以内"],["提出先","税務署長"]],
+   url:L_SHO+"#Mp-At_45",note:"ただし書では、課税資産の譲渡等がなく納付税額がない場合は提出不要とされています。"},
+  {t:"text",h:"法人は3か月に延長できる",
+   body:`<div class="cond"><div class="cond-i"><div class="cond-n">1</div>
+   <div class="cond-t">法人税の申告期限延長を受けている</div></div>
+   <div class="cond-i"><div class="cond-n">2</div>
+   <div class="cond-t">延長する旨の届出書を提出</div></div>
+   <div class="cond-res">3月以内に延長される</div></div>
+   <p class="note">年7.3%の利子税を併せて納付します（第45条の2第4項）。</p>`},
+  {t:"text",h:"納付も同じ期限",
+   body:`<div class="law"><div class="law-n">消費税法 第49条</div>
+   <div class="law-sub">（確定申告による納付）</div>
+   <div class="law-q">第四十五条第一項の規定による申告書を提出した者は、<span style="color:#8E8E93">…</span>当該申告書に記載した同項第四号に掲げる消費税額<span style="color:#8E8E93">…</span>に相当する消費税を、<b>当該申告書の提出期限までに</b>、国に納付しなければならない。</div>
+   <a class="law-lk" href="${L_SHO}#Mp-At_49" target="_blank" rel="noopener">e-Govで原文を確認する ↗</a></div>`},
+  {t:"quiz",qh:"個人事業者の消費税の申告期限は？",opts:[
+   {k:"A",txt:"3月31日",ok:false,fb:"それは所得税の期限です。消費税は課税期間末日の翌日から2月以内です。"},
+   {k:"B",txt:"課税期間末日の翌日から2月以内",ok:true,fb:"そのとおりです。暦年なら2月末日になります。"}]},
+  {t:"sum",items:["申告期限は課税期間末日の翌日から2月以内","納付も同じ期限（第49条）","法人は届出で3月に延長できる（第45条の2）"],next:"5-3 払いすぎたら返ってくる"}]},
+
+ {id:"C5L3",no:"5-3",title:"払いすぎたら返ってくる",goal:"還付の仕組みを説明できる",screens:[
+  {t:"cover",eb:"レッスン 5-3",h:"払いすぎたら<br>返ってくる",
+   body:`<p class="lead">払った税が預かった税を上回った場合、</p><p class="lead">差額は戻ってきます。</p>
+   <div class="hr"></div><p>これを<b>還付</b>といいます。</p>`},
+  {t:"text",h:"2種類の還付",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>還付</th><th class="r">根拠</th></tr>
+   <tr><td>控除不足額</td><td class="r">第52条</td></tr>
+   <tr><td>中間納付額の控除不足額</td><td class="r">第53条</td></tr></table></div>
+   <p class="note">それぞれ申告書の第5号・第7号に記載します。</p>`},
+  {t:"text",h:"納付税額がなくても申告できる",
+   body:`<p>確定申告の義務がない場合でも、還付を受けるために申告書を提出できます。</p>
+   <div class="law" style="margin-top:14px"><div class="law-n">消費税法 第46条第1項</div>
+   <div class="law-sub">（還付を受けるための申告）</div>
+   <div class="law-q">事業者（<span style="color:#8E8E93">…</span>）は、その課税期間<span style="color:#8E8E93">…</span>につき<span style="color:#8E8E93">…</span>第四十五条第一項第五号に掲げる不足額がある場合<span style="color:#8E8E93">…</span>には、<span style="color:#8E8E93">…</span>申告書を税務署長に提出することができる。</div>
+   <a class="law-lk" href="${L_SHO}#Mp-At_46" target="_blank" rel="noopener">e-Govで原文を確認する ↗</a></div>`},
+  {t:"law",name:"消費税法 第52条第1項",sub:"（仕入れに係る消費税額の控除不足額の還付）",
+   quote:`第四十五条第一項又は第四十六条第一項の規定による申告書の提出があつた場合において、これらの申告書に第四十五条第一項第五号に掲げる不足額の記載があるときは、税務署長は、これらの申告書を提出した者に対し、<b>当該不足額に相当する消費税を還付する</b>。`,
+   map:[["対象","第45条第1項第5号の不足額"],["主体","税務署長が還付"]],
+   url:L_SHO+"#Mp-At_52",note:"還付加算金の計算期間は、期限内申告なら提出期限の翌日から起算します（第2項）。"},
+  {t:"text",h:"中間納付額の還付",
+   body:`<p>中間申告で納めすぎていた場合も還付されます。</p>
+   <div class="warn" style="margin-top:14px"><div class="warn-t">⚠ 延滞税も還付される</div>
+   中間納付額について納付された延滞税があるときは、その対応部分も併せて還付されます（第53条第2項）。ただし還付加算金は付きません（第5項）。</div>`},
+  {t:"quiz",qh:"納付税額がない事業者が還付を受けるには？",opts:[
+   {k:"A",txt:"申告できない",ok:false,fb:"第46条第1項により、還付を受けるための申告書を提出できます。"},
+   {k:"B",txt:"還付のための申告書を提出する",ok:true,fb:"そのとおりです。これを還付申告といいます。"}]},
+  {t:"sum",items:["控除不足額は第52条で還付される","中間納付額の不足額は第53条で還付","納付税額がなくても還付申告ができる（第46条）"],next:"5-4 途中でも納める仕組み"}]},
+
+ {id:"C5L4",no:"5-4",title:"途中でも納める仕組み",goal:"中間申告の3区分を判定できる",screens:[
+  {t:"cover",eb:"レッスン 5-4",h:"途中でも<br>納める仕組み",
+   body:`<p class="lead">年1回の納付では、負担が集中します。</p>
+   <div class="hr"></div><p>そこで<b>中間申告</b>の制度があります。</p>`},
+  {t:"text",h:"3つの区分",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>直前期の税額</th><th class="r">回数</th></tr>
+   <tr><td>400万円超</td><td class="r">1月ごと</td></tr>
+   <tr><td>100万円超</td><td class="r">3月ごと</td></tr>
+   <tr><td>24万円超</td><td class="r">6月ごと</td></tr>
+   <tr><td>24万円以下</td><td class="r">なし</td></tr></table></div>
+   <p class="note">直前の課税期間の確定消費税額を月数按分した額で判定します。</p>`},
+  {t:"text",h:"提出期限",
+   body:`<div class="flow"><div class="fl-box wh">中間申告対象期間の末日</div>
+   <div class="fl-ar">↓<small>その翌日から2月以内</small></div>
+   <div class="fl-box">提出期限</div></div>
+   <p class="note">1月中間申告の最初の1月分は、課税期間開始日から2月を経過した日から2月以内です。</p>`},
+  {t:"law",name:"消費税法 第42条第1項",sub:"（中間申告）",
+   quote:`事業者（<span style="color:#8E8E93">…</span>）は、その課税期間<span style="color:#8E8E93">…</span>につき、<span style="color:#8E8E93">…</span>確定消費税額<span style="color:#8E8E93">…</span>に<span style="color:#8E8E93">…</span>当該課税期間の月数で除して計算した金額が<b>四百万円を超える場合</b>には、<span style="color:#8E8E93">…</span>一月中間申告対象期間<span style="color:#8E8E93">…</span>の末日の翌日から二月以内に<span style="color:#8E8E93">…</span>申告書を税務署長に提出しなければならない。`,
+   map:[["第1項","400万円超：1月ごと"],["第4項","100万円超：3月ごと"],["第6項","24万円超：6月ごと"]],
+   url:L_SHO+"#Mp-At_42",note:"免税事業者と課税期間を短縮している事業者は対象外です。"},
+  {t:"text",h:"出さなくても申告したことになる",
+   body:`<div class="warn"><div class="warn-t">⚠ 第44条（みなし中間申告）</div>
+   中間申告書を期限までに提出しなかった場合、<b>前年実績による申告書の提出があったものとみなされます</b>。</div>
+   <p class="note">提出しなくても納税義務は発生します。</p>`},
+  {t:"quiz",qh:"直前期の確定消費税額が200万円の場合、中間申告は？",opts:[
+   {k:"A",txt:"1月ごと",ok:false,fb:"1月ごとは400万円超の場合です。"},
+   {k:"B",txt:"3月ごと",ok:true,fb:"そのとおりです。100万円超400万円以下は3月ごと（年3回）です。"}]},
+  {t:"sum",items:["中間申告は400万円超・100万円超・24万円超で3区分","期限は対象期間末日の翌日から2月以内","未提出でも申告があったものとみなされる（第44条）"],next:"5-5 仮決算と任意の中間申告"}]},
+
+ {id:"C5L5",no:"5-5",title:"仮決算と任意の中間申告",goal:"仮決算と任意中間申告を説明できる",screens:[
+  {t:"cover",eb:"レッスン 5-5",h:"仮決算と<br>任意の中間申告",
+   body:`<p class="lead">中間申告には、2つの選択肢があります。</p>
+   <div class="hr"></div><p>前年実績によらない方法を見ます。</p>`},
+  {t:"cmp",h:"2つの計算方法",cards:[
+   {cls:"ng",h:"前年実績",lines:["直前期の","税額を","月数で","按分"],r:"原則"},
+   {cls:"ok",h:"仮決算",lines:["中間期間を","1課税期間と","みなして","計算"],r:"第43条"}],
+   after:`<p class="note">業績が落ちている場合、仮決算の方が有利になることがあります。</p>`},
+  {t:"law",name:"消費税法 第43条第1項",sub:"（仮決算をした場合の中間申告書の記載事項等）",
+   quote:`事業者が<span style="color:#8E8E93">…</span>中間申告書を提出する場合には、<span style="color:#8E8E93">…</span>当該中間申告対象期間を一課税期間とみなして計算した場合における次に掲げる事項を記載した中間申告書を提出することができる。`,
+   map:[["考え方","中間期間を一課税期間とみなす"],["効果","実績に応じた額で納付できる"]],
+   url:L_SHO+"#Mp-At_43",note:"資産の譲渡等の対価の額等の明細書類を添付します（第4項）。"},
+  {t:"text",h:"24万円以下でも申告できる",
+   body:`<p>中間申告が不要な事業者も、<b>届出</b>により6月中間申告ができます。</p>
+   <div class="cond" style="margin-top:14px"><div class="cond-i"><div class="cond-n">1</div>
+   <div class="cond-t">届出書を提出<small>第42条第8項</small></div></div>
+   <div class="cond-i"><div class="cond-n">2</div>
+   <div class="cond-t">やめる場合も届出<small>第42条第9項</small></div></div></div>
+   <p class="note">資金繰りの平準化に使えます。</p>`},
+  {t:"text",h:"提出しないと自動で取りやめ",
+   body:`<div class="warn"><div class="warn-t">⚠ 第42条第11項</div>
+   任意の中間申告の届出をした事業者が<b>期限までに提出しなかった</b>場合、取りやめの届出書を提出したものとみなされます。</div>`},
+  {t:"quiz",qh:"仮決算による中間申告の考え方は？",opts:[
+   {k:"A",txt:"前年実績を月数按分する",ok:false,fb:"それが原則の方法です。仮決算は中間期間の実績で計算します。"},
+   {k:"B",txt:"中間期間を一課税期間とみなして計算する",ok:true,fb:"そのとおりです。第43条第1項に定められています。"}]},
+  {t:"sum",items:["中間申告は前年実績か仮決算を選べる","24万円以下でも届出で6月中間申告できる","期限内に提出しないと自動で取りやめになる"],next:"5-6 遅れるとどうなるか"}]},
+
+ {id:"C5L6",no:"5-6",title:"遅れるとどうなるか",goal:"加算税と延滞税の違いを説明できる",screens:[
+  {t:"cover",eb:"レッスン 5-6",h:"遅れると<br>どうなるか",
+   body:`<p class="lead">申告や納付が遅れた場合、</p><p class="lead">追加の負担が生じます。</p>
+   <div class="hr"></div><p>2つの種類があります。</p>`},
+  {t:"cmp",h:"2つの違い",cards:[
+   {cls:"ng",h:"加算税",lines:["申告の","不備に","対する","ペナルティ"],r:"国税通則法"},
+   {cls:"ok",h:"延滞税",lines:["納付の","遅れに","対する","利息"],r:"第60条"}]},
+  {t:"text",h:"無申告加算税の率",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>納付税額</th><th class="r">率</th></tr>
+   <tr><td>50万円以下の部分</td><td class="r">15%</td></tr>
+   <tr><td>50万円超300万円以下</td><td class="r">20%</td></tr>
+   <tr><td>300万円超の部分</td><td class="r">30%</td></tr></table></div>
+   <p class="note">国税通則法第66条第1項に定められています。</p>`},
+  {t:"text",h:"自主的に申告すれば軽くなる",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>場面</th><th class="r">率</th></tr>
+   <tr><td>調査通知前の自主申告</td><td class="r">5%</td></tr>
+   <tr><td>更正・決定の予知前</td><td class="r">10%〜</td></tr>
+   <tr><td>1月以内＋全額納付済</td><td class="r">課さない</td></tr></table></div>
+   <p class="note">第66条第4項〜第6項に定められています。</p>`},
+  {t:"law",name:"国税通則法 第60条第2項",sub:"（延滞税）",
+   quote:`前項の延滞税の額は、<span style="color:#8E8E93">…</span>法定納期限<span style="color:#8E8E93">…</span>の翌日からその国税を完納する日までの期間の日数に応じ、その未納の税額に<b>年十四・六パーセント</b>の割合を乗じて計算した額とする。ただし、納期限<span style="color:#8E8E93">…</span>までの期間又は当該納期限の翌日から<b>二月</b>を経過する日までの期間については、その未納の税額に<b>年七・三パーセント</b>の割合を乗じて計算した額とする。`,
+   map:[["2月以内","年7.3%"],["2月超","年14.6%"]],
+   url:L_TSU+"#Mp-At_60",note:"実際の率は租税特別措置法第94条の特例により引き下げられます。"},
+  {t:"text",h:"実際の率は特例で下がる",
+   body:`<div class="warn"><div class="warn-t">⚠ 租税特別措置法第94条</div>
+   延滞税の率は、各年の<b>延滞税特例基準割合</b>（平均貸付割合＋年1%）により引き下げられます。<br><br>
+   ・年14.6% → 特例基準割合＋7.3%<br>
+   ・年7.3% → 特例基準割合＋1%（上限7.3%）</div>
+   <p class="note">具体的な率は年ごとに変わります。</p>`},
+  {t:"quiz",qh:"納期限から2月以内の延滞税の本則の率は？",opts:[
+   {k:"A",txt:"年14.6%",ok:false,fb:"14.6%は2月を経過した日以後の率です。"},
+   {k:"B",txt:"年7.3%",ok:true,fb:"そのとおりです。ただし特例により実際の率は下がります。"}]},
+  {t:"sum",items:["加算税は申告の不備、延滞税は納付の遅れ","無申告加算税は15%・20%・30%","延滞税は2月以内7.3%、超えると14.6%（本則）"],next:"5-7 間違えたときの直し方"}]},
+
+ {id:"C5L7",no:"5-7",title:"間違えたときの直し方",goal:"修正申告と更正の請求を区別できる",screens:[
+  {t:"cover",eb:"レッスン 5-7",h:"間違えた<br>ときの直し方",
+   body:`<p class="lead">申告後に誤りを見つけたら、</p><p class="lead">どうすればよいでしょうか。</p>
+   <div class="hr"></div><p>方向によって手続が違います。</p>`},
+  {t:"cmp",h:"方向で手続が違う",cards:[
+   {cls:"ok",h:"税額が少なすぎた",lines:["自分で","申告書を","提出する","修正申告"],r:"第19条"},
+   {cls:"ng",h:"税額が多すぎた",lines:["税務署長に","請求する","更正の請求",""],r:"第23条"}],
+   after:`<p class="note">納める方向は自分で、戻す方向は請求という構造です。</p>`},
+  {t:"law",name:"国税通則法 第19条第1項",sub:"（修正申告）",
+   quote:`納税申告書を提出した者<span style="color:#8E8E93">…</span>は、次の各号のいずれかに該当する場合には、その申告について<span style="color:#8E8E93">…</span>更正があるまでは、その申告に係る課税標準等又は税額等を修正する納税申告書を税務署長に提出することができる。<br>　一　先の納税申告書の提出により納付すべきものとしてこれに記載した税額に<b>不足額があるとき</b>`,
+   map:[["いつまで","更正があるまで"],["第1号","税額に不足額があるとき"]],
+   url:L_TSU+"#Mp-At_19",note:"第2号〜第4号では、純損失等の過大、還付税額の過大なども挙げられています。"},
+  {t:"text",h:"更正の請求は5年以内",
+   body:`<div class="flow"><div class="fl-box wh">法定申告期限</div>
+   <div class="fl-ar">↓<small>ここから</small></div>
+   <div class="fl-box">5年以内に請求<span class="fl-sub">税務署長へ</span></div></div>
+   <p class="note">後発的な事由（判決の確定等）がある場合は、その日の翌日から2月以内です。</p>`},
+  {t:"law",name:"国税通則法 第23条第1項",sub:"（更正の請求）",
+   quote:`納税申告書を提出した者は、次の各号のいずれかに該当する場合には、当該申告書に係る国税の法定申告期限から<b>五年</b><span style="color:#8E8E93">…</span>以内に限り、税務署長に対し、<span style="color:#8E8E93">…</span>更正をすべき旨の請求をすることができる。`,
+   map:[["期間","法定申告期限から5年以内"],["相手","税務署長"],["第2項","後発的事由は2月以内"]],
+   url:L_TSU+"#Mp-At_23",note:"更正の請求があっても、原則として徴収は猶予されません（第5項）。"},
+  {t:"text",h:"期限後申告もできる",
+   body:`<p>申告期限を過ぎてしまった場合も、<b>決定があるまで</b>は申告書を提出できます。</p>
+   <div class="law" style="margin-top:14px"><div class="law-n">国税通則法 第18条第1項</div>
+   <div class="law-q">期限内申告書を提出すべきであつた者<span style="color:#8E8E93">…</span>は、その提出期限後においても、<span style="color:#8E8E93">…</span>決定があるまでは、納税申告書を税務署長に提出することができる。</div>
+   <a class="law-lk" href="${L_TSU}#Mp-At_18" target="_blank" rel="noopener">e-Govで原文を確認する ↗</a></div>`},
+  {t:"quiz",qh:"税額を多く申告しすぎていた場合の手続は？",opts:[
+   {k:"A",txt:"修正申告",ok:false,fb:"修正申告は税額を増やす方向の手続です。"},
+   {k:"B",txt:"更正の請求",ok:true,fb:"そのとおりです。法定申告期限から5年以内に税務署長へ請求します。"}]},
+  {t:"sum",items:["税額が少なすぎたら修正申告（第19条）","多すぎたら更正の請求（第23条・5年以内）","期限後でも決定があるまで申告できる（第18条）"],next:null,finalC:true}]}
+]},
+
+/* ============================================================
+   コース6　国・地方公共団体の特例
+============================================================ */
+{id:"C6",no:6,color:"var(--c6)",title:"国・地方公共団体の特例",
+ desc:"国・地方公共団体には特別なルールがあります。会計単位・申告期限・特定収入を7レッスンで理解します。",
+ lessons:[
+ {id:"C6L1",no:"6-1",title:"会計ごとに別人格とみなす",goal:"会計単位の特例を説明できる",screens:[
+  {t:"cover",eb:"レッスン 6-1",h:"会計ごとに<br>別人格とみなす",
+   body:`<p class="lead">国や地方公共団体も「法人」として事業者にあたります。</p>
+   <div class="hr"></div><p>ただし、<b>特別な数え方</b>をします。</p>`},
+  {t:"text",h:"会計ごとに1つの法人",
+   body:`<div class="flow"><div class="fl-box gy">1つの地方公共団体<span class="fl-sub">都道府県・市町村など</span></div>
+   <div class="fl-ar">↓<small>消費税では</small></div>
+   <div class="fl-box wh">一般会計<span class="fl-sub">1つの法人とみなす</span></div>
+   <div class="fl-ar">＋</div>
+   <div class="fl-box wh">各特別会計<span class="fl-sub">それぞれ1つの法人</span></div></div>`},
+  {t:"term",lb:"この章の用語",w:"会計単位の特例",rd:"かいけいたんいのとくれい",
+   d:"国・地方公共団体の一般会計・特別会計ごとに、<b>別々の法人</b>が事業を行うものとみなすこと。",
+   ls:["納税義務の判定も会計ごと","申告も会計ごと"]},
+  {t:"law",name:"消費税法 第60条第1項",sub:"（国、地方公共団体等に対する特例）",
+   quote:`国若しくは地方公共団体が一般会計に係る業務として行う事業又は国若しくは地方公共団体が特別会計を設けて行う事業については、当該一般会計又は特別会計ごとに<b>一の法人が行う事業とみなして</b>、この法律の規定を適用する。<b>ただし</b>、国又は地方公共団体が特別会計を設けて行う事業のうち政令で定める特別会計を設けて行う事業については、一般会計に係る業務として行う事業とみなす。`,
+   map:[["単位","一般会計／特別会計ごと"],["効果","一の法人が行う事業とみなす"],["ただし書","政令で定める特別会計は一般会計扱い"]],
+   url:L_SHO+"#Mp-At_60",note:"この規定が国・地方公共団体の消費税実務の出発点です。"},
+  {t:"text",h:"地方消費税も同じ扱い",
+   body:`<div class="muni"><div class="muni-t">実務のポイント</div>
+   地方消費税でも、会計ごとに一の法人とみなされます。国税と地方税で判定単位がずれることはありません。</div>
+   <div class="law" style="margin-top:14px"><div class="law-n">地方税法 第72条の78第5項</div>
+   <div class="law-q">消費税法第六十条第一項の規定により一の法人が行う事業とみなされる<span style="color:#8E8E93">…</span>事業は、当該一般会計又は特別会計ごとに<b>一の法人が行う事業とみなして</b>、この節の規定を適用する。</div>
+   <a class="law-lk" href="${L_CHI}#Mp-At_72_78" target="_blank" rel="noopener">e-Govで原文を確認する ↗</a></div>`},
+  {t:"quiz",qh:"国・地方公共団体の納税義務は何を単位に判定しますか？",opts:[
+   {k:"A",txt:"団体全体",ok:false,fb:"第60条第1項により、会計ごとに一の法人とみなされます。"},
+   {k:"B",txt:"一般会計・特別会計ごと",ok:true,fb:"そのとおりです。これが実務の出発点です。"}]},
+  {t:"sum",items:["会計ごとに一の法人が行う事業とみなす","判定も申告も会計単位で行う","地方消費税も同じ扱い（地方税法第72条の78第5項）"],next:"6-2 一般会計は申告しない"}]},
+
+ {id:"C6L2",no:"6-2",title:"一般会計は申告しない",goal:"一般会計の申告義務不適用を説明できる",screens:[
+  {t:"cover",eb:"レッスン 6-2",h:"一般会計は<br>申告しない",
+   body:`<p class="lead">一般会計も「法人」とみなされます。</p>
+   <div class="hr"></div><p>では、<b>申告が必要</b>でしょうか。</p>`},
+  {t:"text",h:"2つの特例が働く",
+   body:`<div class="cond"><div class="cond-i"><div class="cond-n">1</div>
+   <div class="cond-t">控除額＝課税標準額に対する消費税額<small>第60条第6項</small></div></div>
+   <div class="cond-i"><div class="cond-n">2</div>
+   <div class="cond-t">申告等の規定を適用しない<small>第60条第7項</small></div></div>
+   <div class="cond-res">納付税額が生じず、申告も不要</div></div>`},
+  {t:"law",name:"消費税法 第60条第6項・第7項",sub:"（国、地方公共団体等に対する特例）",
+   quote:`６　第一項の規定により一の法人が行う事業とみなされる国又は地方公共団体の一般会計に係る業務として行う事業については、第三十条から第三十九条までの規定によりその課税期間の課税標準額に対する消費税額から控除することができる消費税額の合計額は、これらの規定にかかわらず、<b>当該課税標準額に対する消費税額と同額</b>とみなす。<br><br>７　国又は地方公共団体が一般会計に係る業務として事業を行う場合には、<b>第九条、第四十二条、第四十五条、第五十七条及び第五十八条の規定は、適用しない</b>。`,
+   map:[["第6項","控除額＝課税標準額に対する消費税額"],["第7項","第9条・第42条・第45条・第57条・第58条の不適用"]],
+   url:L_SHO+"#Mp-At_60",note:"第45条（確定申告）が適用されないため、申告義務がありません。"},
+  {t:"text",h:"適用されない条文の意味",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>条文</th><th class="r">内容</th></tr>
+   <tr><td>第9条</td><td class="r">免税の判定</td></tr>
+   <tr><td>第42条</td><td class="r">中間申告</td></tr>
+   <tr><td>第45条</td><td class="r">確定申告</td></tr>
+   <tr><td>第57条</td><td class="r">各種届出</td></tr>
+   <tr><td>第58条</td><td class="r">帳簿の備付け</td></tr></table></div>`},
+  {t:"text",h:"特別会計は申告が必要",
+   body:`<div class="muni"><div class="muni-t">実務のポイント</div>
+   第60条第7項は<b>一般会計に係る業務として事業を行う場合</b>に限定されています。<br><br>
+   特別会計を設けて行う事業には適用されないため、<b>申告が必要</b>です。</div>`},
+  {t:"quiz",qh:"一般会計について申告が不要な理由は？",opts:[
+   {k:"A",txt:"課税売上高が1,000万円以下だから",ok:false,fb:"第60条第7項により第45条（確定申告）そのものが適用されません。"},
+   {k:"B",txt:"第45条が適用されないから",ok:true,fb:"そのとおりです。第60条第7項で明示的に除外されています。"}]},
+  {t:"sum",items:["一般会計は控除額＝課税標準額に対する消費税額","第9条・第42条・第45条・第57条・第58条が不適用","特別会計には適用されないため申告が必要"],next:"6-3 特別会計の申告期限"}]},
+
+ {id:"C6L3",no:"6-3",title:"特別会計の申告期限",goal:"申告期限の特例を説明できる",screens:[
+  {t:"cover",eb:"レッスン 6-3",h:"特別会計の<br>申告期限",
+   body:`<p class="lead">一般の事業者は2か月以内です。</p>
+   <div class="hr"></div><p>国・地方公共団体には<b>別の期限</b>が定められています。</p>`},
+  {t:"text",h:"期限の一覧",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>区分</th><th class="r">期限</th></tr>
+   <tr><td>国</td><td class="r">5月以内</td></tr>
+   <tr><td>地方公共団体</td><td class="r">6月以内</td></tr>
+   <tr><td>公営企業<br>（地公企法30条1項）</td><td class="r">3月以内</td></tr>
+   <tr><td>別表第三法人<br>（承認を受けたもの）</td><td class="r">6月以内で<br>税務署長が承認する期間</td></tr></table></div>
+   <p class="note">施行令第76条第2項に定められています。</p>`},
+  {t:"law",name:"消費税法施行令 第76条第2項",sub:"（国、地方公共団体等の申告期限の特例）",
+   quote:`<span style="color:#8E8E93">…</span>法第四十五条第一項<span style="color:#8E8E93">…</span>の規定の適用については、次の各号に掲げる者の区分に応じ<span style="color:#8E8E93">…</span>読み替えるものとする。<br>　一　国<span style="color:#8E8E93">…</span>「<b>五月以内</b>」<br>　二　地方公共団体（次号に掲げるものを除く。）<span style="color:#8E8E93">…</span>「<b>六月以内</b>」<br>　三　地方公営企業法第三十条第一項<span style="color:#8E8E93">…</span>「<b>三月以内</b>」`,
+   map:[["第1号","国：5月以内"],["第2号","地方公共団体：6月以内"],["第3号","公営企業：3月以内"]],
+   url:L_SREI+"#Mp-At_76",note:"根拠は法第60条第8項の委任を受けた政令です。"},
+  {t:"text",h:"同じ団体内で期限が違う",
+   body:`<div class="muni"><div class="muni-t">実務のポイント</div>
+   同じ団体の中でも、会計によって期限が異なります。<br><br>
+   ・一般会計 … 申告不要<br>
+   ・特別会計（公営企業以外） … <b>6月以内</b><br>
+   ・水道・下水道等の公営企業 … <b>3月以内</b></div>`},
+  {t:"text",h:"中間申告も読み替える",
+   body:`<p>確定申告の期限が延長される場合、中間申告の規定も読み替えて適用されます。</p>
+   <div class="warn" style="margin-top:14px"><div class="warn-t">⚠ 施行令第76条第3項</div>
+   第37条の2および第42条の規定について、読替表により適用されます。<b>読替表の内容は本アプリでは収録していません。</b></div>`},
+  {t:"quiz",qh:"地方公営企業法第30条第1項が適用される事業の申告期限は？",opts:[
+   {k:"A",txt:"6月以内",ok:false,fb:"6月以内は公営企業以外の地方公共団体です。"},
+   {k:"B",txt:"3月以内",ok:true,fb:"そのとおりです。施行令第76条第2項第3号に定められています。"}]},
+  {t:"sum",items:["国は5月、地方公共団体は6月以内","公営企業は3月以内","同じ団体内でも会計により期限が違う"],next:"6-4 会計年度末での認識"}]},
+
+ {id:"C6L4",no:"6-4",title:"会計年度末での認識",goal:"資産の譲渡等の時期の特例を説明できる",screens:[
+  {t:"cover",eb:"レッスン 6-4",h:"会計年度末<br>での認識",
+   body:`<p class="lead">国・地方公共団体の会計は、現金の収支で管理します。</p>
+   <div class="hr"></div><p>消費税にも<b>これに合わせた特例</b>があります。</p>`},
+  {t:"text",h:"会計年度の末日に行われたものとできる",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>対象</th><th class="r">時期</th></tr>
+   <tr><td>資産の譲渡等</td><td class="r">対価を収納すべき<br>会計年度の末日</td></tr>
+   <tr><td>課税仕入れ等</td><td class="r">費用の支払をすべき<br>会計年度の末日</td></tr></table></div>
+   <p class="note">第60条第2項に定められています。</p>`},
+  {t:"law",name:"消費税法 第60条第2項",sub:"（国、地方公共団体等に対する特例）",
+   quote:`国又は地方公共団体が行つた資産の譲渡等、課税仕入れ及び課税貨物の保税地域からの引取りは、政令で定めるところにより、その資産の譲渡等の<b>対価を収納すべき会計年度</b>並びにその課税仕入れ及び課税貨物の保税地域からの引取りの<b>費用の支払をすべき会計年度の末日</b>に行われたものと<b>することができる</b>。`,
+   map:[["売上側","対価を収納すべき会計年度の末日"],["仕入側","費用の支払をすべき会計年度の末日"],["性質","「できる」規定"]],
+   url:L_SHO+"#Mp-At_60",note:"別表第三法人のうち国・地方公共団体に準ずるものとして政令で定めるものにも、第2項に準じた扱いがあります（第3項）。"},
+  {t:"text",h:"インボイスにも影響する",
+   body:`<div class="muni"><div class="muni-t">実務のポイント</div>
+   第60条第2項により会計年度の末日に行われたものとされる場合（その日の翌日以後に行うものに限る）は、<b>適格請求書の交付義務の対象外</b>とされています。<br><br>
+   根拠：施行令第70条の9第1項第2号</div>`},
+  {t:"quiz",qh:"第60条第2項の特例の性質は？",opts:[
+   {k:"A",txt:"必ず適用しなければならない",ok:false,fb:"条文は「することができる」と定めています。選択適用です。"},
+   {k:"B",txt:"選択して適用できる",ok:true,fb:"そのとおりです。「できる」規定です。"}]},
+  {t:"sum",items:["対価を収納／費用を支払うべき会計年度末日にできる","選択適用の規定（「できる」）","インボイス交付義務の免除にも関係する"],next:"6-5 補助金は売上じゃない"}]},
+
+ {id:"C6L5",no:"6-5",title:"補助金は売上じゃない",goal:"特定収入の考え方を説明できる",screens:[
+  {t:"cover",eb:"レッスン 6-5",h:"補助金は<br>売上じゃない",
+   body:`<p class="lead">国・地方公共団体の収入には、</p><p class="lead">対価ではないものが多くあります。</p>
+   <div class="hr"></div><p>補助金・交付金・税収などです。</p>`},
+  {t:"term",lb:"この章の用語",w:"特定収入",rd:"とくていしゅうにゅう",
+   d:"資産の譲渡等の<b>対価以外の収入</b>のこと（政令で定める収入を除く）。",
+   ls:["補助金・交付金・寄附金など"]},
+  {t:"text",h:"なぜ調整が必要か",
+   body:`<div class="flow"><div class="fl-box wh">補助金で物を買う<span class="fl-sub">消費税を払う</span></div>
+   <div class="fl-ar">↓<small>そのまま控除すると</small></div>
+   <div class="fl-box gy">対価のない収入で<span class="fl-sub">控除を受けてしまう</span></div>
+   <div class="fl-ar">↓</div>
+   <div class="fl-box">控除額を調整する</div></div>`},
+  {t:"text",h:"調整の対象となる者",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>対象</th></tr>
+   <tr><td>国・地方公共団体<br>（特別会計を設けて事業を行う場合に限る）</td></tr>
+   <tr><td>別表第三に掲げる法人</td></tr>
+   <tr><td>公益信託受託事業者</td></tr>
+   <tr><td>人格のない社団等<br>（免税事業者を除く）</td></tr></table></div>
+   <p class="note">第60条第4項に列挙されています。</p>`},
+  {t:"law",name:"消費税法 第60条第4項",sub:"（国、地方公共団体等に対する特例）",
+   quote:`国若しくは地方公共団体（特別会計を設けて事業を行う場合に限る。）、別表第三に掲げる法人<span style="color:#8E8E93">…</span>が課税仕入れを行い、又は課税貨物を保税地域から引き取る場合において、<span style="color:#8E8E93">…</span>課税期間において資産の譲渡等の対価以外の収入（政令で定める収入を除く。以下この項において「<b>特定収入</b>」という。）があり、かつ、当該特定収入の合計額が<span style="color:#8E8E93">…</span>に比し<b>僅少でない場合として政令で定める場合</b>に該当するときは、<b>第三十七条の規定の適用を受ける場合を除き</b>、<span style="color:#8E8E93">…</span>控除することができる課税仕入れ等の税額の合計額は、<span style="color:#8E8E93">…</span>特定収入に係る課税仕入れ等の税額として政令で定めるところにより計算した金額を控除した残額に相当する金額とする。`,
+   map:[["対象","特別会計・別表第三法人等"],["要件","僅少でない場合として政令で定める場合"],["効果","控除額を減額する"],["除外","簡易課税（第37条）適用時"]],
+   url:L_SHO+"#Mp-At_60",note:"「僅少でない場合」の具体的基準は政令で定められています。"},
+  {t:"text",h:"控除しきれない場合",
+   body:`<p>調整により控除しきれない金額があるときは、<b>課税資産の譲渡等に係る消費税額とみなして</b>加算します。</p>
+   <div class="law" style="margin-top:14px"><div class="law-n">消費税法 第60条第5項</div>
+   <div class="law-q">前項の場合において、同項に規定する課税仕入れ等の税額から<span style="color:#8E8E93">…</span>計算した金額を控除して控除しきれない金額があるときは、当該控除しきれない金額を<b>課税資産の譲渡等に係る消費税額とみなして</b>同項の課税期間の課税標準額に対する消費税額に加算する。</div>
+   <a class="law-lk" href="${L_SHO}#Mp-At_60" target="_blank" rel="noopener">e-Govで原文を確認する ↗</a></div>`},
+  {t:"text",h:"このアプリで扱える範囲",
+   body:`<div class="warn"><div class="warn-t">⚠ 計算方法と基準は収録していません</div>
+   「僅少でない場合として政令で定める場合」の具体的基準、および特定収入に係る課税仕入れ等の税額の計算方法は<b>政令</b>で定められていますが、本アプリでは条文を収録していません。<br><br>
+   実務での計算は、原文および国税庁の公表資料をご確認ください。</div>`},
+  {t:"quiz",qh:"特定収入の調整が不要となる場合は？",opts:[
+   {k:"A",txt:"一般会計の場合",ok:false,fb:"一般会計は第60条第6項・第7項で別に扱われます。第4項に明記された除外事由は簡易課税の適用です。"},
+   {k:"B",txt:"簡易課税（第37条）の適用を受ける場合",ok:true,fb:"そのとおりです。条文に「第三十七条の規定の適用を受ける場合を除き」と書かれています。"}]},
+  {t:"sum",items:["対価以外の収入を特定収入という","僅少でない場合は控除額を調整する","簡易課税適用時は調整不要"],next:"6-6 地方消費税の扱い"}]},
+
+ {id:"C6L6",no:"6-6",title:"地方消費税の扱い",goal:"譲渡割の申告・納付を説明できる",screens:[
+  {t:"cover",eb:"レッスン 6-6",h:"地方消費税の<br>扱い",
+   body:`<p class="lead">10%のうち2.2%は地方消費税です。</p>
+   <div class="hr"></div><p>これは<b>別に申告</b>するのでしょうか。</p>`},
+  {t:"text",h:"消費税と一緒に行う",
+   body:`<div class="flow"><div class="fl-box wh">消費税の申告書<span class="fl-sub">税務署長へ</span></div>
+   <div class="fl-ar">＋<small>併せて</small></div>
+   <div class="fl-box">譲渡割の申告書<span class="fl-sub">同じ提出期限</span></div></div>
+   <p class="note">別々に手続する必要はありません。</p>`},
+  {t:"term",lb:"この章の用語",w:"譲渡割",rd:"じょうとわり",
+   d:"地方消費税のうち、<b>国内取引</b>に係るもの。",ls:["輸入分は「貨物割」という"]},
+  {t:"law",name:"地方税法 第72条の88第1項",sub:"（譲渡割の申告の特例）",
+   quote:`譲渡割について、事業者<span style="color:#8E8E93">…</span>が消費税法第四十二条第一項<span style="color:#8E8E93">…</span>の規定による申告書<span style="color:#8E8E93">…</span>又は同法第四十五条第一項の規定による申告書<span style="color:#8E8E93">…</span>を提出する義務がある場合には、当該事業者は、当該中間申告書又は確定申告書の<b>提出期限までに</b><span style="color:#8E8E93">…</span>申告書を当該中間申告書又は確定申告書と<b>併せて税務署長に提出</b>しなければならない。`,
+   map:[["期限","消費税の申告書と同じ"],["提出先","税務署長"],["方法","併せて提出"]],
+   url:L_CHI+"#Mp-At_72_88",note:"納付も消費税と併せて国に行います（第72条の89）。"},
+  {t:"text",h:"賦課徴収は国が行う",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>事項</th><th class="r">条文</th></tr>
+   <tr><td>賦課徴収は国が行う</td><td class="r">第72条の87</td></tr>
+   <tr><td>申告は併せて提出</td><td class="r">第72条の88</td></tr>
+   <tr><td>納付も併せて</td><td class="r">第72条の89</td></tr>
+   <tr><td>還付も併せて</td><td class="r">第72条の91</td></tr></table></div>`},
+  {t:"text",h:"道府県知事への通知",
+   body:`<div class="muni"><div class="muni-t">実務のポイント</div>
+   申告書の提出を受けた税務署長は、記載事項を<b>事業者の事務所等所在地の道府県知事</b>に通知します。<br><br>
+   根拠：地方税法第72条の88第5項</div>`},
+  {t:"quiz",qh:"譲渡割の申告書はどこに提出しますか？",opts:[
+   {k:"A",txt:"道府県の税務担当課",ok:false,fb:"地方税法第72条の88第1項により、税務署長に提出します。"},
+   {k:"B",txt:"税務署長",ok:true,fb:"そのとおりです。消費税の申告書と併せて提出します。"}]},
+  {t:"sum",items:["譲渡割は消費税の申告書と併せて税務署長に提出","納付・還付も消費税と併せて行う","税務署長が道府県知事に通知する"],next:"6-7 実務の確認表"}]},
+
+ {id:"C6L7",no:"6-7",title:"実務の確認表",goal:"国・地方公共団体の消費税実務の全体像を把握する",screens:[
+  {t:"cover",eb:"レッスン 6-7",h:"実務の<br>確認表",
+   body:`<p class="lead">コース6の内容を、</p><p class="lead">実務の手順にまとめます。</p>
+   <div class="hr"></div><p>この順に確認すれば整理できます。</p>`},
+  {t:"text",h:"ステップ1・2",
+   body:`<div class="cond"><div class="cond-i"><div class="cond-n">1</div>
+   <div class="cond-t">会計単位を確認する<small>一般会計／各特別会計に分ける</small></div></div>
+   <div class="cond-i"><div class="cond-n">2</div>
+   <div class="cond-t">一般会計は申告不要<small>第60条第6項・第7項</small></div></div></div>`},
+  {t:"text",h:"ステップ3・4",
+   body:`<div class="cond"><div class="cond-i"><div class="cond-n">3</div>
+   <div class="cond-t">特別会計の期限を確認<small>公営企業3月／その他6月</small></div></div>
+   <div class="cond-i"><div class="cond-n">4</div>
+   <div class="cond-t">特定収入の調整を行う<small>第60条第4項</small></div></div></div>`},
+  {t:"text",h:"確認表（会計別）",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>会計</th><th class="r">申告</th></tr>
+   <tr><td>一般会計</td><td class="r">不要</td></tr>
+   <tr><td>特別会計<br>（公営企業以外）</td><td class="r">6月以内</td></tr>
+   <tr><td>公営企業会計</td><td class="r">3月以内</td></tr></table></div>
+   <p class="note">いずれも会計ごとに別の法人として扱います。</p>`},
+  {t:"text",h:"根拠条文の一覧",
+   body:`<div class="tbl-w"><table class="tbl"><tr><th>事項</th><th class="r">根拠</th></tr>
+   <tr><td>会計単位</td><td class="r">法60条1項</td></tr>
+   <tr><td>年度末認識</td><td class="r">法60条2項</td></tr>
+   <tr><td>特定収入</td><td class="r">法60条4・5項</td></tr>
+   <tr><td>一般会計</td><td class="r">法60条6・7項</td></tr>
+   <tr><td>申告期限</td><td class="r">令76条2項</td></tr>
+   <tr><td>地方消費税</td><td class="r">地法72条の88</td></tr></table></div>`},
+  {t:"quiz",qh:"国・地方公共団体の消費税実務で最初に確認すべきことは？",opts:[
+   {k:"A",txt:"課税売上高",ok:false,fb:"その前に会計単位を確定させる必要があります。判定自体が会計ごとです。"},
+   {k:"B",txt:"会計単位の確認",ok:true,fb:"そのとおりです。第60条第1項により会計ごとに一の法人とみなされます。"}]},
+  {t:"text",h:"未収録事項の確認",
+   body:`<div class="warn"><div class="warn-t">⚠ 実務判断に必要な未収録事項</div>
+   ・特定収入の「僅少でない場合」の基準（政令）<br>
+   ・特定収入に係る税額の計算方法（政令）<br>
+   ・施行令第76条第3項の読替表の内容<br>
+   ・一般会計扱いとなる特別会計の範囲（政令）<br>
+   ・第60条第3項の政令で定める別表第三法人の範囲<br><br>
+   これらは本アプリに収録していません。原文をご確認ください。</div>`},
+  {t:"sum",items:["①会計単位→②一般会計は不要→③期限確認→④特定収入調整","根拠は法第60条・施行令第76条・地方税法第72条の88","具体的な計算基準は政令で確認が必要"],next:null,finalC:true,finalAll:true}]}
+]}
+];
+
+/* ===== 用語・条文索引 ===== */
+const TERMS=[
+ {w:"間接税",rd:"かんせつぜい",d:"税を負担する人と国に納める人が違う税金。",src:"1-1"},
+ {w:"納税義務者",rd:"のうぜいぎむしゃ",d:"国に税金を納める義務がある人。消費税では事業者。",src:"1-2"},
+ {w:"資産の譲渡等",rd:"しさんのじょうとと",d:"物を売る・貸す・サービスを提供することの総称。",src:"1-3"},
+ {w:"非課税",rd:"ひかぜい",d:"3条件を満たすが法律であえて課税しない取引。",src:"1-4"},
+ {w:"輸出免税",rd:"ゆしゅつめんぜい",d:"輸出として行われる取引の消費税を免除すること。",src:"1-5"},
+ {w:"保税地域",rd:"ほぜいちいき",d:"輸入貨物が通関手続を終える前に置かれる場所。",src:"1-6"},
+ {w:"課税標準",rd:"かぜいひょうじゅん",d:"税率をかける土台になる金額。税抜きの対価の額。",src:"1-7"},
+ {w:"軽減税率",rd:"けいげんぜいりつ",d:"一部品目に適用される低い税率。条文上は6.24%。",src:"1-8"},
+ {w:"免税事業者",rd:"めんぜいじぎょうしゃ",d:"消費税を納める義務が免除されている事業者。",src:"2-1"},
+ {w:"基準期間",rd:"きじゅんきかん",d:"納税義務の判定に使う期間。個人は前々年、法人は前々事業年度。",src:"2-2"},
+ {w:"特定期間",rd:"とくていきかん",d:"個人は前年1〜6月、法人は前事業年度開始後6月。",src:"2-3"},
+ {w:"課税事業者選択",rd:"かぜいじぎょうしゃせんたく",d:"届出により自ら課税事業者になること。2年縛りあり。",src:"2-4"},
+ {w:"新設法人",rd:"しんせつほうじん",d:"基準期間がなく資本金等1,000万円以上の法人。",src:"2-6"},
+ {w:"仕入税額控除",rd:"しいれぜいがくこうじょ",d:"仕入れで払った税を売上で預かった税から差し引くこと。",src:"3-1"},
+ {w:"課税仕入れ",rd:"かぜいしいれ",d:"事業として資産を譲り受け、借り受け、役務提供を受けること。",src:"3-2"},
+ {w:"課税売上割合",rd:"かぜいうりあげわりあい",d:"売上全体のうち課税売上が占める割合。",src:"3-3"},
+ {w:"簡易課税",rd:"かんいかぜい",d:"売上の消費税額に一定率を掛けて仕入税額とみなす制度。",src:"3-4"},
+ {w:"適格請求書",rd:"てきかくせいきゅうしょ",d:"登録番号等の定められた事項が記載された請求書等。",src:"4-1"},
+ {w:"適格請求書発行事業者",rd:"てきかくせいきゅうしょはっこうじぎょうしゃ",d:"税務署長の登録を受けた事業者。",src:"4-2"},
+ {w:"媒介者交付特例",rd:"ばいかいしゃこうふとくれい",d:"媒介者が自分の名称・登録番号でインボイスを交付できる特例。",src:"4-8"},
+ {w:"課税期間",rd:"かぜいきかん",d:"申告のために区切られた期間。個人は暦年、法人は事業年度。",src:"5-1"},
+ {w:"会計単位の特例",rd:"かいけいたんいのとくれい",d:"国・地方公共団体の会計ごとに別の法人とみなすこと。",src:"6-1"},
+ {w:"特定収入",rd:"とくていしゅうにゅう",d:"資産の譲渡等の対価以外の収入。補助金・交付金など。",src:"6-5"},
+ {w:"譲渡割",rd:"じょうとわり",d:"地方消費税のうち国内取引に係るもの。",src:"6-6"}
+];
+
+const LAWS=[
+ {g:"消費税法",n:"第4条",t:"課税の対象",s:"国内取引と輸入取引",ls:"1-3/1-6",u:L_SHO+"#Mp-At_4"},
+ {g:"消費税法",n:"第5条",t:"納税義務者",s:"事業者が納税義務者",ls:"1-2",u:L_SHO+"#Mp-At_5"},
+ {g:"消費税法",n:"第6条",t:"非課税",s:"別表第二に掲げるもの",ls:"1-4",u:L_SHO+"#Mp-At_6"},
+ {g:"消費税法",n:"第7条",t:"輸出免税等",s:"輸出取引は免除",ls:"1-5",u:L_SHO+"#Mp-At_7"},
+ {g:"消費税法",n:"第9条",t:"小規模事業者の免除",s:"1,000万円以下は免税",ls:"2-1/2-2/2-4",u:L_SHO+"#Mp-At_9"},
+ {g:"消費税法",n:"第9条の2",t:"特定期間の特例",s:"前年前半で判定",ls:"2-3",u:L_SHO+"#Mp-At_9_2"},
+ {g:"消費税法",n:"第10条",t:"相続の特例",s:"被相続人の売上も判定",ls:"2-5",u:L_SHO+"#Mp-At_10"},
+ {g:"消費税法",n:"第12条の2",t:"新設法人の特例",s:"資本金1,000万円以上",ls:"2-6",u:L_SHO+"#Mp-At_12_2"},
+ {g:"消費税法",n:"第12条の4",t:"高額特定資産の特例",s:"3年間免税に戻れない",ls:"2-7",u:L_SHO+"#Mp-At_12_4"},
+ {g:"消費税法",n:"第19条",t:"課税期間",s:"暦年・事業年度・短縮",ls:"5-1",u:L_SHO+"#Mp-At_19"},
+ {g:"消費税法",n:"第28条",t:"課税標準",s:"対価の額（税抜き）",ls:"1-7",u:L_SHO+"#Mp-At_28"},
+ {g:"消費税法",n:"第29条",t:"税率",s:"7.8%／6.24%",ls:"1-8",u:L_SHO+"#Mp-At_29"},
+ {g:"消費税法",n:"第30条",t:"仕入税額控除",s:"控除の要件と按分",ls:"3-1/3-2/3-3/4-1",u:L_SHO+"#Mp-At_30"},
+ {g:"消費税法",n:"第37条",t:"簡易課税",s:"5,000万円以下＋届出",ls:"3-4/3-6",u:L_SHO+"#Mp-At_37"},
+ {g:"消費税法",n:"第42条",t:"中間申告",s:"400万／100万／24万",ls:"5-4/5-5",u:L_SHO+"#Mp-At_42"},
+ {g:"消費税法",n:"第43条",t:"仮決算の中間申告",s:"中間期間を一課税期間とみなす",ls:"3-8/5-5",u:L_SHO+"#Mp-At_43"},
+ {g:"消費税法",n:"第45条",t:"確定申告",s:"2月以内・記載事項",ls:"3-7/3-8/5-2",u:L_SHO+"#Mp-At_45"},
+ {g:"消費税法",n:"第46条",t:"還付を受けるための申告",s:"還付申告",ls:"5-3",u:L_SHO+"#Mp-At_46"},
+ {g:"消費税法",n:"第49条",t:"確定申告による納付",s:"提出期限までに納付",ls:"5-2",u:L_SHO+"#Mp-At_49"},
+ {g:"消費税法",n:"第52条",t:"控除不足額の還付",s:"第5号の不足額を還付",ls:"5-3",u:L_SHO+"#Mp-At_52"},
+ {g:"消費税法",n:"第57条の2",t:"登録",s:"適格請求書発行事業者の登録",ls:"4-2",u:L_SHO+"#Mp-At_57_2"},
+ {g:"消費税法",n:"第57条の3",t:"相続の特例",s:"みなし登録期間",ls:"4-8",u:L_SHO+"#Mp-At_57_3"},
+ {g:"消費税法",n:"第57条の4",t:"交付義務",s:"記載事項6項目",ls:"4-3/4-4/4-7",u:L_SHO+"#Mp-At_57_4"},
+ {g:"消費税法",n:"第57条の5",t:"類似書類の禁止",s:"偽りの記載等の禁止",ls:"4-7",u:L_SHO+"#Mp-At_57_5"},
+ {g:"消費税法",n:"第60条",t:"国・地方公共団体等の特例",s:"会計単位・特定収入等",ls:"6-1/6-2/6-4/6-5",u:L_SHO+"#Mp-At_60"},
+ {g:"施行令",n:"第49条",t:"帳簿等の記載事項",s:"帳簿のみ保存の場合",ls:"4-6",u:L_SREI+"#Mp-At_49"},
+ {g:"施行令",n:"第57条",t:"みなし仕入率",s:"90%〜40%の6区分",ls:"3-5",u:L_SREI+"#Mp-At_57"},
+ {g:"施行令",n:"第70条の9",t:"交付義務の免除",s:"3万円未満の公共交通等",ls:"4-5/6-4",u:L_SREI+"#Mp-At_70_9"},
+ {g:"施行令",n:"第70条の12",t:"媒介者交付特例",s:"双方が登録事業者",ls:"4-8",u:L_SREI+"#Mp-At_70_12"},
+ {g:"施行令",n:"第70条の13",t:"写しの保存期間",s:"7年間",ls:"4-7",u:L_SREI+"#Mp-At_70_13"},
+ {g:"施行令",n:"第76条",t:"申告期限の特例",s:"国5月／地方6月／公営企業3月",ls:"6-3",u:L_SREI+"#Mp-At_76"},
+ {g:"国税通則法",n:"第18条",t:"期限後申告",s:"決定があるまで提出可",ls:"5-7",u:L_TSU+"#Mp-At_18"},
+ {g:"国税通則法",n:"第19条",t:"修正申告",s:"更正があるまで提出可",ls:"5-7",u:L_TSU+"#Mp-At_19"},
+ {g:"国税通則法",n:"第23条",t:"更正の請求",s:"法定申告期限から5年以内",ls:"5-7",u:L_TSU+"#Mp-At_23"},
+ {g:"国税通則法",n:"第60条",t:"延滞税",s:"年7.3%／14.6%（本則）",ls:"5-6",u:L_TSU+"#Mp-At_60"},
+ {g:"国税通則法",n:"第66条",t:"無申告加算税",s:"15%／20%／30%",ls:"5-6",u:L_TSU+"#Mp-At_66"},
+ {g:"地方税法",n:"第72条の78",t:"地方消費税の納税義務者",s:"会計ごとに一の法人",ls:"6-1",u:L_CHI+"#Mp-At_72_78"},
+ {g:"地方税法",n:"第72条の83",t:"地方消費税の税率",s:"78分の22",ls:"1-8",u:L_CHI+"#Mp-At_72_83"},
+ {g:"地方税法",n:"第72条の88",t:"譲渡割の申告の特例",s:"消費税と併せて提出",ls:"6-6",u:L_CHI+"#Mp-At_72_88"}
+];
+
+/* ===== 状態 ===== */
+const KEY="shohizei_all_v21";
+let S=loadState();
+function loadState(){
+  try{const d=JSON.parse(localStorage.getItem(KEY));
+    if(d&&Array.isArray(d.done)&&d.answers) return d;}catch(e){}
+  return {done:[],answers:{}};
+}
+function saveState(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+
+let view="home",ci=0,li=0,si=0,dir="f",idxTab=0;
+const app=document.getElementById("app");
+const sa=document.getElementById("scrollArea");
+
+function CL(){return COURSES[ci]}
+function LS(){return CL().lessons[li]}
+function SC(){return LS().screens[si]}
+function skey(){return LS().id+"_"+si}
+function ans(){return S.answers[skey()]}
+function totalLessons(){return COURSES.reduce((a,c)=>a+c.lessons.length,0)}
+function courseDone(c){return c.lessons.filter(l=>S.done.includes(l.id)).length}
+
+function render(){
+  try{
+    if(view==="home")app.innerHTML=homeHTML();
+    else if(view==="course")app.innerHTML=courseHTML();
+    else if(view==="index")app.innerHTML=indexHTML();
+    else{app.innerHTML=lessonHTML();restoreQuiz();}
+    if(sa)sa.scrollTop=0;window.scrollTo(0,0);
+  }catch(e){console.error(e)}
+}
+
+function homeHTML(){
+  const t=totalLessons(),f=S.done.length,p=t?Math.round(f/t*100):0;
+  return `<div class="home">
+  <div class="home-k">自治体職員向け</div>
+  <div class="home-t">消費税を学ぶ</div>
+  <div class="home-d">税務経験がなくても、順番に読み進めれば消費税の仕組みが分かります。全6コース・46レッスン。</div>
+  <div class="prog"><div class="prog-r"><span class="prog-l">学習の進み</span>
+    <span class="prog-v">${f} / ${t}</span></div>
+    <div class="prog-b"><div class="prog-i" style="width:${p}%"></div></div></div>
+  <div class="sec-t">コース</div>
+  ${COURSES.map((c,i)=>{
+    const d=courseDone(c),n=c.lessons.length,pp=Math.round(d/n*100),fin=d===n;
+    return `<button class="cc ${fin?'fin':''}" onclick="openCourse(${i})">
+      <div class="cc-top"><div class="cc-n" style="background:${c.color}">${fin?'✓':c.no}</div>
+        <div class="cc-b"><div class="cc-t">${c.title}</div>
+          <div class="cc-s">${n}レッスン　${d}/${n} 完了</div></div>
+        <div class="cc-a">›</div></div>
+      <div class="cc-bar"><div class="cc-bar-i" style="width:${pp}%;background:${c.color}"></div></div>
+    </button>`}).join("")}
+  <div class="sub-btns">
+    <button class="sbtn" onclick="openIndex()">用語・条文の索引</button>
+    ${f>0?`<button class="sbtn" onclick="resetAll()">進捗をリセット</button>`:""}
+  </div>
+  <div class="foot-n"><b>条文の出典</b><br>
+    e-Gov法令検索<br>
+    ・消費税法（昭和六十三年法律第百八号）<br>
+    ・消費税法施行令（昭和六十三年政令第三百六十号）<br>
+    ・国税通則法（昭和三十七年法律第六十六号）<br>
+    ・地方税法（昭和二十五年法律第二百二十六号）<br><br>
+    <b>全国共通の内容です</b><br>
+    特定の自治体に固有の記載は含みません。法令に定められた一般的な規定のみを扱います。<br><br>
+    <b>収録していない事項</b><br>
+    非課税の具体的範囲（別表第二）、軽減税率の対象品目、特定収入の計算基準、高額特定資産の金額基準、インボイス制度の経過措置（2割特例・8割控除・少額特例）は収録していません。該当判断は原文をご確認ください。</div>
+  </div>`;
+}
+
+function courseHTML(){
+  const c=CL(),d=courseDone(c),n=c.lessons.length,p=Math.round(d/n*100);
+  return `<div class="hd"><div class="hd-row">
+    <button class="hd-btn" onclick="goHome()">‹</button>
+    <div class="hd-ttl">コース ${c.no}</div><div style="width:34px"></div></div></div>
+  <div class="body" style="padding-bottom:60px">
+  <div class="home-k" style="color:${c.color}">コース ${c.no}</div>
+  <div class="home-t" style="font-size:25px">${c.title}</div>
+  <div class="home-d">${c.desc}</div>
+  <div class="prog" style="background:var(--gray-bg)">
+    <div class="prog-r"><span class="prog-l" style="color:${c.color}">このコースの進み</span>
+    <span class="prog-v" style="color:${c.color}">${d} / ${n}</span></div>
+    <div class="prog-b"><div class="prog-i" style="width:${p}%;background:${c.color}"></div></div></div>
+  <div class="sec-t">レッスン</div>
+  ${c.lessons.map((l,i)=>{
+    const fin=S.done.includes(l.id);
+    return `<button class="lc ${fin?'fin':''}" onclick="openLesson(${i})">
+      <div class="lc-n" ${fin?`style="background:${c.color}"`:''}>${fin?'✓':l.no}</div>
+      <div class="lc-b"><div class="lc-t">${l.title}</div>
+        <div class="lc-s">${l.screens.length}画面｜${l.goal}</div></div>
+      <div class="lc-a">›</div></button>`}).join("")}
+  </div>`;
+}
+
+function indexHTML(){
+  const groups=[...new Set(LAWS.map(l=>l.g))];
+  return `<div class="hd"><div class="hd-row">
+    <button class="hd-btn" onclick="goHome()">✕</button>
+    <div class="hd-ttl">用語・条文の索引</div><div style="width:34px"></div></div></div>
+  <div class="body" style="padding-bottom:60px">
+  <div class="tabs">
+    <button class="tab ${idxTab===0?'on':''}" onclick="setTab(0)">用語 ${TERMS.length}</button>
+    <button class="tab ${idxTab===1?'on':''}" onclick="setTab(1)">条文 ${LAWS.length}</button>
+  </div>
+  ${idxTab===0?`<div class="idx-sec">
+    ${TERMS.map(t=>`<div class="idx-i"><div class="idx-w">${t.w}</div>
+      <div class="idx-rd">${t.rd}</div><div class="idx-d">${t.d}</div>
+      <div class="idx-src">レッスン ${t.src}</div></div>`).join("")}
+    </div>`
+  :`${groups.map(g=>`<div class="idx-sec"><div class="idx-h">${g}</div>
+    ${LAWS.filter(l=>l.g===g).map(l=>`<a class="idx-law" href="${l.u}" target="_blank" rel="noopener">
+      <div class="idx-law-n">${l.n}</div>
+      <div class="idx-law-b"><div class="idx-law-t">${l.t}</div>
+        <div class="idx-law-s">${l.s}　／　${l.ls}</div></div></a>`).join("")}
+    </div>`).join("")}
+    <p class="note">タップするとe-Gov法令検索の原文が開きます。</p>`}
+  </div>`;
+}
+
+function lessonHTML(){
+  const c=CL(),L=LS(),s=SC();
+  const p=(si+1)/L.screens.length*100;
+  const last=si===L.screens.length-1;
+  const blocked=s.t==="quiz"&&ans()===undefined;
+  return `<div class="hd"><div class="hd-row">
+    <button class="hd-btn" onclick="goCourse()">✕</button>
+    <div class="hd-ttl">${L.no}　${L.title}</div><div style="width:34px"></div></div>
+    <div class="bar"><div class="bar-in" style="width:${p}%;background:${c.color}"></div></div></div>
+  <div class="body"><div class="scr ${dir==='b'?'back':''}">${screenHTML(s,c)}</div></div>
+  <div class="ft">${si>0?`<button class="btn btn-s" onclick="prev()">戻る</button>`:""}
+    <button class="btn btn-p" id="nextBtn" style="background:${blocked?'':c.color}"
+      onclick="${last?'finish()':'next()'}" ${blocked?'disabled':''}>
+      ${blocked?'選んでください':(last?'レッスンを終える':'次へ　→')}</button></div>`;
+}
+
+function screenHTML(s,c){
+  const col=c?c.color:"var(--primary)";
+  switch(s.t){
+  case "cover":return `<div class="eyebrow" style="color:${col}">${s.eb}</div><h1>${s.h}</h1>${s.body}`;
+  case "text":return `<h2>${s.h}</h2>${s.body}`;
+  case "cond":return `<h2>${s.h}</h2><div class="cond">
+    ${s.conds.map((x,i)=>`${i>0?'<div class="cond-plus">＋</div>':''}
+      <div class="cond-i"><div class="cond-n">${x.n}</div>
+        <div class="cond-t">${x.t}${x.s?`<small>${x.s}</small>`:''}</div></div>`).join("")}
+    ${s.res?`<div class="cond-res">${s.res}</div>`:''}</div>`;
+  case "term":return `<div class="term"><div class="term-lb">${s.lb}</div>
+    <div class="term-w">${s.w}</div><div class="term-rd">${s.rd}</div>
+    <div class="term-d">${s.d}</div>
+    ${s.ls?`<ul class="term-ls">${s.ls.map(x=>`<li>${x}</li>`).join("")}</ul>`:""}</div>`;
+  case "cmp":return `<h2>${s.h}</h2><div class="cmp">${s.cards.map(x=>`
+    <div class="cmp-c ${x.cls}"><div class="cmp-h">${x.h}</div>
+      <div class="cmp-l">${x.lines.map(y=>`<div>${y||'&nbsp;'}</div>`).join("")}</div>
+      <div class="cmp-r">${x.r}</div></div>`).join("")}</div>${s.after||""}`;
+  case "quiz":return `<div class="q"><div class="q-h">${s.qh}</div>
+    <div id="opts">${s.opts.map((o,i)=>`<button class="opt" onclick="answer(${i})">
+      <span class="opt-k">${o.k}</span><span>${o.txt}</span></button>`).join("")}</div>
+    <div id="fb"></div></div>`;
+  case "law":return `<div class="law"><div class="law-lb">${s.lb||"条文の要旨"}</div>
+    <div class="law-n">${s.name}</div><div class="law-sub">${s.sub}</div>
+    <div class="law-q">${s.quote}</div>
+    ${s.map?`<div class="law-map">${s.map.map(m=>`<div class="law-map-r">
+      <span class="law-map-k">${m[0]}</span><span>${m[1]}</span></div>`).join("")}</div>`:""}
+    <a class="law-lk" href="${s.url}" target="_blank" rel="noopener">e-Govで原文を確認する ↗</a>
+    <div class="law-src">※ 要旨であり、条文の原文ではありません。正確な文言は必ずe-Govで確認してください。</div></div>
+    ${s.note?`<p class="note">${s.note}</p>`:""}`;
+  case "sum":return `${s.finalAll?`<div class="done"><div class="done-i">🏆</div>
+      <div class="done-t">全コース 修了</div>
+      <div class="done-s">消費税の体系をひととおり<br>学び終えました。</div></div>`
+    :s.finalC?`<div class="done"><div class="done-i">🎉</div>
+      <div class="done-t">コース${CL().no} 修了</div>
+      <div class="done-s">${CL().title}が分かりました。</div></div>`:""}
+    <div class="sum" style="background:${col}14">
+      <div class="sum-t" style="color:${col}">このレッスンのまとめ</div>
+      <ul class="sum-l">${s.items.map(x=>`<li>${x}</li>`).join("")}</ul></div>
+    ${s.next?`<p class="note"><b>次のレッスン</b><br>${s.next}</p>`
+      :`<p class="note">コース一覧に戻ると、ほかのレッスンを復習できます。</p>`}`;
+  default:return `<p class="note">表示できません。</p>`;
+  }
+}
+
+function restoreQuiz(){
+  const s=SC();if(s.t!=="quiz")return;
+  const i=ans();if(i===undefined)return;paint(i,s);
+}
+function paint(i,s){
+  const o=s.opts[i];
+  document.querySelectorAll("#opts .opt").forEach((b,j)=>{
+    b.disabled=true;b.classList.remove("sel-ok","sel-ng","dim");
+    b.classList.add(j===i?(o.ok?"sel-ok":"sel-ng"):"dim");});
+  const fb=document.getElementById("fb");
+  if(fb)fb.innerHTML=`<div class="fb ${o.ok?'ok':'ng'}">
+    <div class="fb-t">${o.ok?'⭕ 正解':'もう一歩'}</div>${o.fb}</div>`;
+  const b=document.getElementById("nextBtn");
+  if(b){const last=si===LS().screens.length-1;
+    b.disabled=false;b.style.background=CL().color;
+    b.textContent=last?"レッスンを終える":"次へ　→";}
+}
+
+function openCourse(i){ci=i;view="course";render()}
+function openLesson(i){li=i;si=0;dir="f";view="lesson";render()}
+function goCourse(){view="course";render()}
+function goHome(){view="home";render()}
+function openIndex(){idxTab=0;view="index";render()}
+function setTab(t){idxTab=t;render()}
+function next(){const s=SC();if(s.t==="quiz"&&ans()===undefined)return;
+  if(si<LS().screens.length-1){si++;dir="f";render()}}
+function prev(){if(si>0){si--;dir="b";render()}}
+function finish(){
+  const s=SC();if(s.t==="quiz"&&ans()===undefined)return;
+  const L=LS(),c=CL();
+  if(!S.done.includes(L.id)){S.done.push(L.id);saveState()}
+  const cd=courseDone(c),allC=cd===c.lessons.length;
+  const allA=S.done.length===totalLessons();
+  goCourse();
+  toast(allA?"🏆 全コース修了しました":allC?`🎉 コース${c.no} 修了`:`✓ レッスン ${L.no} 完了`);
+}
+function answer(i){
+  if(ans()!==undefined)return;
+  S.answers[skey()]=i;saveState();paint(i,SC());
+}
+function resetAll(){
+  if(confirm("すべての学習進捗をリセットします。よろしいですか？")){
+    S={done:[],answers:{}};saveState();render();toast("進捗をリセットしました");}
+}
+function toast(m){
+  const o=document.querySelector(".toast");if(o)o.remove();
+  const d=document.createElement("div");d.className="toast";d.textContent=m;
+  document.getElementById("device").appendChild(d);
+  setTimeout(()=>{if(d.parentNode)d.remove()},2400);
+}
+
+let tx=0,ty=0;
+function isWide(){return window.matchMedia("(min-width:640px)").matches}
+document.addEventListener("touchstart",e=>{
+  tx=e.changedTouches[0].screenX;ty=e.changedTouches[0].screenY},{passive:true});
+document.addEventListener("touchend",e=>{
+  if(view!=="lesson"||isWide())return;
+  const dx=e.changedTouches[0].screenX-tx,dy=e.changedTouches[0].screenY-ty;
+  if(Math.abs(dx)<58||Math.abs(dy)>Math.abs(dx))return;
+  if(dx<0)next();else prev();},{passive:true});
+
+document.addEventListener("keydown",e=>{
+  if(view==="home"){if(e.key==="Enter"){
+    for(let i=0;i<COURSES.length;i++){
+      const j=COURSES[i].lessons.findIndex(l=>!S.done.includes(l.id));
+      if(j>=0){ci=i;openLesson(j);return}}
+    openCourse(0);}return}
+  if(view==="course"){if(e.key==="Escape")goHome();return}
+  if(view==="index"){if(e.key==="Escape")goHome();return}
+  const s=SC(),last=si===LS().screens.length-1;
+  if(e.key==="ArrowRight"||e.key===" "){e.preventDefault();last?finish():next()}
+  else if(e.key==="ArrowLeft"){e.preventDefault();prev()}
+  else if(e.key==="Escape"){goCourse()}
+  else if(s.t==="quiz"&&ans()===undefined&&/^[1-9]$/.test(e.key)){
+    const i=parseInt(e.key,10)-1;if(i<s.opts.length)answer(i)}
+});
+
+render();
+</script>
+</body>
+</html>

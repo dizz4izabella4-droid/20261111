@@ -312,6 +312,10 @@ const FRESH=d=>{ const p=String(d).split('-').map(Number), u=new Date(p[0],p[1]-
 // ===== 実用の部屋の作品 =====
 // 書き方はトップ（../index.html）の APPS と同じ。path はこの部屋から見た場所（../フォルダ名/）。新しいものを先頭に足す
 const ROOM=[
+  {path:'../shohizei-nyumon/', ja:'消費税を学ぶ', label:'消費税を学ぶ（自治体職員向け入門講義）', name:'CONSUMPTION TAX BASICS', for:'both', color:'lemon', icon:'yen',
+   start:'2026-11-19', upd:'2026-11-19', ver:'1.0'},
+  {path:'../sonneki-tsusan/', ja:'損益通算・繰越控除', label:'損益通算・繰越控除（案件で学ぶ研修）', name:'LOSS OFFSET TRAINING', for:'both', color:'pink', icon:'scale',
+   start:'2026-11-19', upd:'2026-11-19', ver:'1.0'},
   {path:'../kakutei-kikinagashi/', ja:'確定申告の聞き流し', label:'確定申告 聞き流し（音声講座）', name:'TAX RETURN RADIO', for:'both', color:'lav', icon:'phones',
    start:'2026-11-19', upd:'2026-11-19', ver:'1.0'},
   {path:'../nogyo-keihi-drill/', ja:'農業所得の経費判定', label:'農業所得 経費判定ドリル', name:'FARM EXPENSE DRILL', for:'both', color:'mint', icon:'ledger',
@@ -320,6 +324,8 @@ const ROOM=[
    start:'2026-11-10', upd:'2026-11-18', ver:'1.0'},
 ];
 const ICONS={
+  yen:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="24" r="17"/><path d="M16 14l8 11 8-11M24 25v12M17 27h14M17 32h14"/></svg>',
+  scale:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M24 8v32M14 40h20M10 14h28"/><path d="M10 14l-5 12h10zM38 14l-5 12h10z"/></svg>',
   phones:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 30v-6a15 15 0 0 1 30 0v6"/><rect x="7" y="29" width="8" height="12" rx="3" fill="rgba(255,255,255,.25)"/><rect x="33" y="29" width="8" height="12" rx="3" fill="rgba(255,255,255,.25)"/></svg>',
   ledger:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="6" width="30" height="36" rx="3" fill="rgba(255,255,255,.25)"/><path d="M16 15h16M16 22h16M16 29h9"/></svg>',
   calc:'<svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><rect x="10" y="5" width="28" height="38" rx="3" fill="rgba(255,255,255,.25)"/><path d="M15 11h18v8H15zM17 26h2M24 26h2M31 26h0M17 33h2M24 33h2M31 30v6M28 33h6"/></svg>',
