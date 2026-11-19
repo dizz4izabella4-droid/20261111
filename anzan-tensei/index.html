@@ -1119,7 +1119,7 @@
     <div class="title-sub" id="result-stats"></div>
     <div class="proto-note">現在システム面の製作中であり、セリフはAI任せです。</div>
     <button class="menu-btn" id="btn-record-result">[ RECORD ]</button>
-    <button class="menu-btn" id="btn-result-back">[ 通路に戻る ]</button>
+    <button class="menu-btn" id="btn-result-back">[ 輪廻へ ]</button>
   </div>
 
   <!-- エンディング：読めない文字のスタッフロール。曲が終わるまで流れ、終わったら fin. -->
@@ -2051,10 +2051,47 @@
     state.paused = false;
     holdWalk = true;                     // 通路に戻って一息。前へ進む／W／↑ で再開
     forceEncounter = false;
-    addLog('入口の通路に戻った。もう一度、奥を目指せる。');
+    addLog('輪廻——入口の通路で目を覚ました。もう一度、奥を目指せる。');
     updateUI();
   }
-  document.getElementById('btn-result-back').onclick = closeResult;
+  // クリアのあと：一度死んで、最初（入口の通路）から生まれ直す。記録・装備・仲間の女神は持ち越し
+  let rebirthBusy = false;
+  function startRebirth() {
+    if (rebirthBusy) return;
+    rebirthBusy = true;
+    document.getElementById('result-screen').style.display = 'none';
+    const T = (fn, ms) => deathTimers.push(setTimeout(fn, ms));
+    const ds = document.getElementById('death-screen'), dt = document.getElementById('death-text'), blood = document.getElementById('death-blood');
+    addLog('廊下の果てで、あなたは静かに力尽きた。');
+    SFX.encounter();
+    T(() => {
+      SFX.hit(); SFX.sword(1); SFX.sword(2);
+      triggerShake();
+      blood.innerHTML = '<div class="band"></div>';
+      const n = 22;
+      for (let i = 0; i < n; i++) {
+        const d = document.createElement('div');
+        d.className = 'drip';
+        d.style.left = ((i + 0.15 + Math.random() * 0.7) / n * 100) + '%';
+        d.style.width = (5 + Math.random() * 11) + 'px';
+        d.style.setProperty('--len', (18 + Math.random() * 72) + '%');
+        d.style.animationDuration = (1.8 + Math.random() * 2.6) + 's';
+        d.style.animationDelay = (Math.random() * 1.1) + 's';
+        blood.appendChild(d);
+      }
+      dt.textContent = 'Death';
+      ds.style.display = 'block'; void ds.offsetWidth; ds.classList.add('go');
+    }, 600);
+    T(() => {
+      dt.textContent = '輪廻'; dt.classList.add('bless');
+      dt.style.animation = 'none'; void dt.offsetWidth; dt.style.animation = 'deathText 1.4s ease-out both';
+      SFX.summon();
+      addLog('——魂は、はじまりへ還る。');
+    }, 3200);
+    T(() => { ds.style.transition = 'opacity 1.2s'; ds.style.opacity = 0; }, 5400);
+    T(() => { clearDeath(); rebirthBusy = false; closeResult(); }, 6700);
+  }
+  document.getElementById('btn-result-back').onclick = startRebirth;
 
   // === エンカウント＆召喚フェーズ ===
   function triggerEncounter() {
