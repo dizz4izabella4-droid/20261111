@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <script>try{ if(navigator.audioSession) navigator.audioSession.type="ambient"; }catch(e){}</script>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#182d33">
+  <title>LUMINA — からくり時計</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body { min-height: 100svh; display: grid; place-items: center; overflow: hidden; background: #182d33; }
+    .clock { position: relative; width: min(100vw, calc(100svh * 4 / 3)); aspect-ratio: 4 / 3; overflow: hidden; touch-action: manipulation; outline: none; cursor: pointer; }
+    .scene, .overlay, .hands { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .scene { z-index: 1; inset: 0 auto auto 0; width: 512px; height: 384px; max-width: none; object-fit: fill; transform-origin: top left; }
+    .overlay { z-index: 2; pointer-events: none; }
+    .clock.night-mode .overlay { filter: brightness(.68) saturate(.78); }
+    .clock.night-mode .hands { filter: brightness(.8); }
+    .hands { z-index: 3; overflow: visible; pointer-events: none; opacity: 0; transition: opacity 150ms ease; }
+    .clock.hands-visible .hands { opacity: 1; }
+    .clock:focus-visible { outline: 3px solid #f6d68e; outline-offset: -4px; }
+    .audio-toggle { position: fixed; right: 18px; bottom: 18px; z-index: 5; width: 46px; height: 46px; display: grid; place-items: center; padding: 0; border: 1px solid rgba(255,230,173,.6); border-radius: 50%; color: #ffe6ad; background: rgba(24,45,51,.83); cursor: pointer; }
+    .audio-toggle svg { width: 21px; height: 21px; fill: currentColor; }
+    .audio-toggle:focus-visible { outline: 2px solid #fff0c8; outline-offset: 3px; }
+    .tap-hint { position: fixed; right: 76px; bottom: 29px; z-index: 5; margin: 0; color: #ffe6ad; font: 500 13px/1 sans-serif; letter-spacing: .08em; pointer-events: none; text-shadow: 0 1px 4px #182d33; }
+    @media (prefers-reduced-motion: reduce) { .hands { transition: none; } }
+  </style>
+<!--IZ-GAME-BASE:START-->
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black">
+<script>
+/* iz-game-base v1 — 全ゲーム共通の基本設計
+ *  1. iOS の「ダブルタップで拡大」「ピンチ拡大」を無効にする
+ *  2. 全画面表示の切り替え（Fullscreen API。iPhone は非対応のため「ホーム画面に追加」を案内）
+ *  3. 画面の向き（自動 / 縦 / 横）の選択（Androidは全画面時に固定、非対応端末は回転の案内を出す）
+ * 各作品の <head> へ tools/apply_game_base.py が埋め込む（作品は1ファイル完結のため、外部読み込みはしない）。
+ * 位置を変えたいときは、この前に window.IZ_BASE={pos:'tr'|'tl'|'br'|'bl'} を書く。
+ */
+(function () {
+  'use strict';
+  if (window.__izGameBase) return;
+  window.__izGameBase = 1;
+  var D = document, W = window, DE = D.documentElement;
+  var KEY = 'izGameBase.orient';
+  var cfg = W.IZ_BASE || {};
+  /* 表示文言。作品側で window.IZ_BASE={lang:'en'} を書くと英語になる（既定は日本語） */
+  var T = cfg.lang === 'en'
+    ? { set: 'Display settings', scr: 'SCREEN', fs: 'Go full screen', fsOff: 'Exit full screen', ori: 'ORIENTATION', auto: 'Auto', port: 'Portrait', land: 'Landscape', close: 'Close', nAuto: 'Follows your device orientation.', nFix: 'Locks the orientation in full screen. If it cannot be locked, please rotate your device.', rot: function (m) { return '\u21bb Please turn your device to ' + (m === 'land' ? 'landscape' : 'portrait'); } }
+    : { set: '表示設定', scr: '画面', fs: '全画面にする', fsOff: '全画面をやめる', ori: '向き', auto: '自動', port: '縦', land: '横', close: '閉じる', nAuto: '端末の向きに合わせます。', nFix: '全画面のときに向きを固定します。固定できない場合は、端末を回してください。', rot: function (m) { return '\u21bb 端末を' + (m === 'land' ? '横' : '縦') + '向きにしてください'; } };
+
+  /* ---------- 1. 拡大の無効化 ---------- */
+  function fixViewport() {
+    var m = D.querySelector('meta[name="viewport"]');
+    if (!m) {
+      m = D.createElement('meta');
+      m.name = 'viewport';
+      (D.head || DE).appendChild(m);
+      m.content = 'width=device-width,initial-scale=1,viewport-fit=cover';
+    }
+    var c = m.getAttribute('content') || '';
+    c = c.replace(/(^|,)\s*(maximum-scale|minimum-scale|user-scalable)\s*=\s*[^,]*/gi, '').replace(/^,/, '');
+    m.setAttribute('content', c + ',maximum-scale=1,user-scalable=no');
+  }
+  fixViewport();
+
+  var st = D.createElement('style');
+  st.textContent = 'html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}';
+  (D.head || DE).appendChild(st);
+
+  // iOS Safari はピンチを gesture イベントで受ける
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (t) {
+    D.addEventListener(t, function (e) { e.preventDefault(); }, { passive: false });
+  });
+  // 2本指の拡大（scale が 1 から動いたとき）だけを止める。マルチタッチ操作そのものは妨げない
+  D.addEventListener('touchmove', function (e) {
+    if (e.touches && e.touches.length > 1 && e.scale && e.scale !== 1) e.preventDefault();
+  }, { passive: false });
+  // ダブルタップ拡大の保険。ボタン・入力欄などは click を壊さないよう除外し、CSS の touch-action に任せる
+  var lastEnd = 0;
+  var SKIP = 'input,textarea,select,button,a,label,summary,video,audio,[contenteditable],[role="button"],[data-iz-base-ui]';
+  D.addEventListener('touchend', function (e) {
+    var now = Date.now();
+    var t = e.target;
+    var skip = t && t.closest && t.closest(SKIP);
+    if (!skip && now - lastEnd < 350 && e.cancelable) e.preventDefault();
+    lastEnd = now;
+  }, { passive: false });
+
+  /* ---------- 2・3. 全画面と向き ---------- */
+  var fsEl = DE;
+  var fsReq = fsEl.requestFullscreen || fsEl.webkitRequestFullscreen || fsEl.msRequestFullscreen;
+  var fsOk = !!fsReq && (D.fullscreenEnabled !== false) && (D.webkitFullscreenEnabled !== false);
+  function isFs() { return !!(D.fullscreenElement || D.webkitFullscreenElement); }
+  function standalone() {
+    return !!(navigator.standalone || (W.matchMedia && W.matchMedia('(display-mode: standalone)').matches));
+  }
+  function enterFs() {
+    try {
+      var p = fsReq.call(fsEl, { navigationUI: 'hide' });
+      if (p && p.catch) p.catch(function () {});
+      return p;
+    } catch (e) { return null; }
+  }
+  function exitFs() {
+    var f = D.exitFullscreen || D.webkitExitFullscreen || D.msExitFullscreen;
+    try { var p = f && f.call(D); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+  }
+  function lockApi() { return W.screen && screen.orientation && screen.orientation.lock; }
+  // 変更できない機能は表示しない（iPhone は両方とも不可なので、ボタン自体を出さない）
+  var orOk = !!lockApi() && (navigator.maxTouchPoints > 0);
+  var uiOk = fsOk || orOk;
+  function applyOrient(mode, wantFs) {
+    // 戻り値は使わず、結果は banner() が画面の向きで判定する
+    if (mode === 'auto') {
+      try { if (W.screen && screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (e) {}
+      return;
+    }
+    var tgt = mode === 'land' ? 'landscape' : 'portrait';
+    function lock() {
+      if (!lockApi()) return;
+      try { var p = screen.orientation.lock(tgt); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+    }
+    if (isFs() || standalone()) lock();
+    else if (wantFs && fsOk) {
+      var p = enterFs();
+      if (p && p.then) p.then(lock, function () {}); else lock();
+    }
+  }
+  var mode = 'auto';
+  try { mode = localStorage.getItem(KEY) || 'auto'; } catch (e) {}
+  if ((mode !== 'land' && mode !== 'port') || !orOk) mode = 'auto';
+
+  /* ---------- UI ---------- */
+  var ui, btn, panel, banner, bT;
+  var pos = cfg.pos || 'tr';
+  function build() {
+    if (ui || !D.body || !uiOk) return;
+    var css = D.createElement('style');
+    css.textContent =
+      '#izb{position:fixed;z-index:2147483646;font:12px/1.4 "Hiragino Sans","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;color:#fff;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}' +
+      '#izb *{box-sizing:border-box}' +
+      '#izb.tr{top:calc(6px + env(safe-area-inset-top,0px));right:calc(6px + env(safe-area-inset-right,0px))}' +
+      '#izb.tl{top:calc(6px + env(safe-area-inset-top,0px));left:calc(6px + env(safe-area-inset-left,0px))}' +
+      '#izb.br{bottom:calc(6px + env(safe-area-inset-bottom,0px));right:calc(6px + env(safe-area-inset-right,0px))}' +
+      '#izb.bl{bottom:calc(6px + env(safe-area-inset-bottom,0px));left:calc(6px + env(safe-area-inset-left,0px))}' +
+      '#izb button{font:inherit;color:inherit;border:0;margin:0;cursor:pointer;-webkit-appearance:none;appearance:none}' +
+      '#izb .iz-b{width:30px;height:30px;border-radius:8px;background:rgba(20,20,24,.45);border:1px solid rgba(255,255,255,.25);font-size:16px;line-height:28px;text-align:center;padding:0;opacity:.45;transition:opacity .2s}' +
+      '#izb .iz-b:active,#izb.open .iz-b{opacity:1}' +
+      '#izb .iz-p{display:none;position:absolute;width:210px;padding:10px;border-radius:10px;background:rgba(18,18,22,.94);border:1px solid rgba(255,255,255,.22);box-shadow:0 4px 18px rgba(0,0,0,.5)}' +
+      '#izb.open .iz-p{display:block}' +
+      '#izb.tr .iz-p,#izb.tl .iz-p{top:36px}#izb.br .iz-p,#izb.bl .iz-p{bottom:36px}' +
+      '#izb.tr .iz-p,#izb.br .iz-p{right:0}#izb.tl .iz-p,#izb.bl .iz-p{left:0}' +
+      '#izb .iz-h{font-size:11px;color:#aab;margin:0 0 5px}' +
+      '#izb .iz-r{display:flex;gap:4px;margin-bottom:9px}' +
+      '#izb .iz-r button{flex:1;padding:8px 0;border-radius:7px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);font-size:13px}' +
+      '#izb .iz-r button.on{background:#e8c13a;color:#111;border-color:#e8c13a;font-weight:700}' +
+      '#izb .iz-r button[disabled]{opacity:.4}' +
+      '#izb .iz-n{font-size:10.5px;color:#9a9aa8;margin:-3px 0 6px}' +
+      '#izb .iz-x{display:block;width:100%;padding:6px 0;border-radius:7px;background:transparent;border:1px solid rgba(255,255,255,.18);font-size:12px;color:#ccd}' +
+      '#izbn{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:2147483645;padding:7px 14px;border-radius:18px;background:rgba(18,18,22,.88);border:1px solid rgba(255,255,255,.25);color:#fff;font:13px/1.3 "Hiragino Sans","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;pointer-events:none;display:none;white-space:nowrap}';
+    (D.head || DE).appendChild(css);
+
+    ui = D.createElement('div');
+    ui.id = 'izb';
+    ui.className = pos;
+    ui.setAttribute('data-iz-base-ui', '');
+    ui.innerHTML =
+      '<button type="button" class="iz-b" tabindex="-1" aria-label="' + T.set + '">⛶</button>' +
+      '<div class="iz-p">' +
+      (fsOk ? '<div class="iz-h">' + T.scr + '</div><div class="iz-r"><button type="button" tabindex="-1" data-fs="1">' + T.fs + '</button></div>' : '') +
+      (orOk ? '<div class="iz-h">' + T.ori + '</div><div class="iz-r" id="izor"><button type="button" tabindex="-1" data-o="auto">' + T.auto + '</button><button type="button" tabindex="-1" data-o="port">' + T.port + '</button><button type="button" tabindex="-1" data-o="land">' + T.land + '</button></div><div class="iz-n" id="izon"></div>' : '') +
+      '<button type="button" class="iz-x" tabindex="-1" data-close="1">' + T.close + '</button>' +
+      '</div>';
+    D.body.appendChild(ui);
+    btn = ui.querySelector('.iz-b');
+    panel = ui.querySelector('.iz-p');
+
+    banner = D.createElement('div');
+    banner.id = 'izbn';
+    D.body.appendChild(banner);
+
+    // UI 上の操作はゲーム側へ伝えない
+    ['touchstart', 'touchend', 'pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'dblclick', 'keydown', 'keyup'].forEach(function (t) {
+      ui.addEventListener(t, function (e) { e.stopPropagation(); });
+    });
+    ui.addEventListener('click', function (e) {
+      var t = e.target.closest('button');
+      if (!t) return;
+      if (t === btn) { ui.classList.toggle('open'); refresh(); }
+      else if (t.getAttribute('data-close')) ui.classList.remove('open');
+      else if (t.getAttribute('data-fs')) { isFs() ? exitFs() : enterFs(); setTimeout(refresh, 250); }
+      else if (t.getAttribute('data-o')) setMode(t.getAttribute('data-o'), true);
+      if (t.blur) t.blur();
+    });
+    refresh();
+  }
+  function setMode(m, fromUser) {
+    mode = m;
+    try { localStorage.setItem(KEY, m); } catch (e) {}
+    applyOrient(m, fromUser);
+    refresh();
+    setTimeout(banner_, 400);
+  }
+  function refresh() {
+    if (!ui) return;
+    var fb = ui.querySelector('[data-fs]');
+    if (fb) fb.textContent = isFs() ? T.fsOff : T.fs;
+    var bs = ui.querySelectorAll('[data-o]');
+    for (var i = 0; i < bs.length; i++) bs[i].classList.toggle('on', bs[i].getAttribute('data-o') === mode);
+    var on = ui.querySelector('#izon');
+    if (on) on.textContent = mode === 'auto' ? T.nAuto : T.nFix;
+  }
+  function banner_() {
+    if (!banner) return;
+    var land = W.innerWidth > W.innerHeight;
+    var bad = (mode === 'land' && !land) || (mode === 'port' && land);
+    if (bad) {
+      banner.textContent = T.rot(mode);
+      banner.style.display = 'block';
+      clearTimeout(bT);
+      bT = setTimeout(function () { banner.style.display = 'none'; }, 6000);
+    } else banner.style.display = 'none';
+  }
+  function onChange() { refresh(); setTimeout(banner_, 300); }
+  D.addEventListener('fullscreenchange', onChange);
+  D.addEventListener('webkitfullscreenchange', onChange);
+  W.addEventListener('orientationchange', onChange);
+  W.addEventListener('resize', function () { setTimeout(banner_, 300); });
+
+  function init() {
+    build();
+    if (mode !== 'auto') { applyOrient(mode, false); setTimeout(banner_, 600); }
+  }
+  if (D.body) init(); else D.addEventListener('DOMContentLoaded', init);
+
+  W.IZBase = { fullscreen: function (on) { on === false ? exitFs() : enterFs(); }, orientation: setMode, get mode() { return mode; } };
+})();
+</script>
+<!--IZ-GAME-BASE:END-->
+</head>
+<body>
+  <main class="clock" role="button" tabindex="0" aria-label="時計の針を表示または非表示にする" aria-pressed="false">
+    <img class="scene" src="assets/campfire_random_80ms.gif" alt="焚き火を囲む旅人たち">
+    <img class="overlay" src="assets/clock_overlay_window_4x3.png" alt="">
+    <svg class="hands" viewBox="0 0 1448 1086" aria-hidden="true">
+      <defs><linearGradient id="metal" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#563c24"/><stop offset=".3" stop-color="#b9853c"/><stop offset=".52" stop-color="#ffe7a5"/><stop offset=".75" stop-color="#b9853c"/><stop offset="1" stop-color="#563c24"/></linearGradient></defs>
+      <g id="minute-hand"><path d="M696 538 L699 340 L704 138 L709 340 L712 538 Z" fill="url(#metal)" stroke="#50351e" stroke-width="2"/></g>
+      <g id="hour-hand"><path d="M694 538 L695 379 L704 232 L713 379 L714 538 Z" fill="url(#metal)" stroke="#50351e" stroke-width="2"/></g>
+      <g><circle cx="704" cy="516" r="22" fill="#53331e" stroke="#dfb76c" stroke-width="5"/><circle cx="704" cy="516" r="14" fill="#ac762e"/><circle cx="704" cy="516" r="7" fill="#ffe1a4"/></g>
+    </svg>
+  </main>
+  <p class="tap-hint" aria-hidden="true">タップ</p>
+  <button class="audio-toggle" type="button" aria-label="時間帯の曲を再生" aria-pressed="false" title="時間帯の曲を再生する">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+  </button>
+  <audio id="music" preload="none" loop></audio>
+  <script>
+    const clock = document.querySelector('.clock');
+    const scene = document.querySelector('.scene');
+    const minuteHand = document.querySelector('#minute-hand');
+    const hourHand = document.querySelector('#hour-hand');
+    const audio = document.querySelector('#music');
+    const audioButton = document.querySelector('.audio-toggle');
+    const PIVOT = '704 516';
+    function fitLayers() {
+      const scale = clock.clientWidth / 1448;
+      scene.style.left = `${448 * scale}px`;
+      scene.style.top = `${324 * scale}px`;
+      scene.style.width = `${512 * scale}px`;
+      scene.style.height = `${384 * scale}px`;
+    }
+    const tracks = {
+      morning: ['assets/morning.mp3', 'assets/morning-alt.mp3'],
+      evening: ['assets/evening.mp3'],
+      midnight: ['assets/midnight.mp3']
+    };
+    const scenes = {
+      campfire: 'assets/campfire_random_80ms.gif',
+      sleeping: 'assets/LUMINA_sleeping_campfire_4frames_80ms.gif'
+    };
+    let activeScene = '';
+    let hideTimer;
+    let activeTrack = '';
+    let musicEnabled = false;
+
+    function tokyoTime() {
+      const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+      }).formatToParts(new Date());
+      return Object.fromEntries(parts.filter(part => part.type !== 'literal').map(part => [part.type, Number(part.value)]));
+    }
+    function updateHands() {
+      const { hour, minute, second } = tokyoTime();
+      const minuteAngle = (minute + second / 60) * 6;
+      const hourAngle = ((hour % 12) + minute / 60 + second / 3600) * 30;
+      minuteHand.setAttribute('transform', `rotate(${minuteAngle} ${PIVOT})`);
+      hourHand.setAttribute('transform', `rotate(${hourAngle} ${PIVOT})`);
+    }
+    function hideHands() {
+      clearTimeout(hideTimer);
+      clock.classList.remove('hands-visible');
+      clock.setAttribute('aria-pressed', 'false');
+    }
+    function toggleHands() {
+      if (clock.classList.contains('hands-visible')) return hideHands();
+      clearTimeout(hideTimer);
+      updateHands();
+      clock.classList.add('hands-visible');
+      clock.setAttribute('aria-pressed', 'true');
+      hideTimer = setTimeout(hideHands, 5000);
+    }
+    function trackForTime({ hour }) {
+      if (hour >= 0 && hour < 5) return ['midnight', tracks.midnight[0]];
+      if (hour >= 17) return ['evening', tracks.evening[0]];
+      if (hour >= 5 && hour < 12) return ['morning', tracks.morning[0]];
+      // 午後は夕方の曲を静かに継続し、時間帯ごとの空白を作らない。
+      return ['evening', tracks.evening[0]];
+    }
+    function daytimeSceneForTime({ hour }) {
+      if (hour >= 5 && hour < 12) return 'morning';
+      if (hour >= 12 && hour < 17) return 'day';
+      return '';
+    }
+    function syncScene() {
+      const time = tokyoTime();
+      if (time.hour < 5) {
+        if (activeScene !== 'sleeping') {
+          activeScene = 'sleeping';
+          clock.classList.add('night-mode');
+          scene.src = scenes.sleeping;
+        }
+        return;
+      }
+      const period = daytimeSceneForTime(time);
+      clock.classList.remove('night-mode');
+      if (!period) {
+        if (activeScene !== 'campfire') {
+          activeScene = 'campfire';
+          scene.src = scenes.campfire;
+        }
+        return;
+      }
+      const parts = new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+      const dayKey = `${period}:${parts}`;
+      if (activeScene.startsWith(dayKey)) return;
+      const frameIndex = Math.floor(Math.random() * 4);
+      activeScene = `${dayKey}:${frameIndex}`;
+      scene.src = `assets/day-frames/frame-${frameIndex}.jpeg`;
+    }
+    function syncMusicTrack() {
+      const [key, source] = trackForTime(tokyoTime());
+      if (!musicEnabled || !source || key === activeTrack) return;
+      activeTrack = key;
+      audio.src = source;
+      audio.play().catch(() => {
+        musicEnabled = false;
+        activeTrack = '';
+        updateAudioButton();
+      });
+    }
+    function updateAudioButton() {
+      const playing = musicEnabled && !audio.paused;
+      audioButton.setAttribute('aria-pressed', String(playing));
+      audioButton.setAttribute('aria-label', playing ? '音楽を停止' : '音楽を再生');
+      audioButton.title = playing ? '音楽を停止する' : '時間帯の音楽を再生する';
+      audioButton.innerHTML = playing
+        ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>'
+        : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
+    }
+    clock.addEventListener('click', toggleHands);
+    new ResizeObserver(fitLayers).observe(clock);
+    fitLayers();
+    clock.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleHands(); }
+    });
+    audioButton.addEventListener('click', async () => {
+      if (musicEnabled && !audio.paused) {
+        audio.pause(); musicEnabled = false; activeTrack = ''; updateAudioButton(); return;
+      }
+      musicEnabled = true;
+      activeTrack = '';
+      syncMusicTrack();
+      updateAudioButton();
+    });
+    audio.addEventListener('ended', () => {
+      // 念のため、曲が終わった場合も現在の時間帯の曲を再開する。
+      activeTrack = '';
+      syncMusicTrack();
+    });
+    audio.addEventListener('play', updateAudioButton);
+    audio.addEventListener('pause', updateAudioButton);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        if (clock.classList.contains('hands-visible')) updateHands();
+        syncScene();
+        syncMusicTrack();
+      }
+    });
+    updateHands();
+    setInterval(() => {
+      if (clock.classList.contains('hands-visible')) updateHands();
+      syncScene();
+      syncMusicTrack();
+    }, 1000);
+  </script>
+</body>
+</html>

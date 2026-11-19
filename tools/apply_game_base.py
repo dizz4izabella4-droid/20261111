@@ -46,6 +46,8 @@ TARGETS = [
     'redline/play/template.html',
     'final-stop/index.html',
     'fantasy/index.html',
+    'lumina/index.html',
+    'shoko/index.html',
 ]
 PWA_META = (
     '<meta name="apple-mobile-web-app-capable" content="yes">'

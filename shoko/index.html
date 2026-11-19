@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<title>証拠保管庫 — izのおもちゃ箱</title>
+<meta name="theme-color" content="#202622">
+<style>
+:root{--ink:#19221e;--night:#202622;--night2:#29312c;--night3:#343c35;--line:#525d51;--cream:#c4b99b;--muted:#a59f89;--paper:#e8e1d0;--page:#f1ecde;--red:#8d453d;--brass:#bda874;--open:#d4c7aa;--shadow:0 20px 60px #0005}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--night);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;color:#e7e1d4}button,textarea,input,select{font:inherit}button{cursor:pointer}button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid #d6ba76;outline-offset:2px}::selection{background:#a79567;color:#161815}body:before{content:"";position:fixed;inset:0;z-index:10;opacity:.055;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.76' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.53'/%3E%3C/svg%3E")}
+.shell{height:100dvh;min-height:560px;display:grid;grid-template-rows:72px minmax(0,1fr)}.header{display:flex;align-items:center;gap:22px;padding:0 29px;background:#1a211d;border-bottom:1px solid #4e5747;z-index:2}.mark{display:grid;place-items:center;border:1px solid #aea17b;color:#bba981;width:38px;height:38px;font-family:Georgia,serif;font-size:23px;line-height:1}.brand{display:flex;flex-direction:column;gap:1px;min-width:190px}.brand small{font-size:9px;letter-spacing:.31em;color:#b9a981}.brand strong{font:normal 25px/1.1 "Yu Mincho","Hiragino Mincho ProN",serif;letter-spacing:.17em;color:#f1ead8}.header-note{color:#908f7d;letter-spacing:.12em;font-size:11px}.header-end{margin-left:auto;display:flex;align-items:center;gap:15px}.demo{font-size:10px;letter-spacing:.14em;border:1px solid #756e58;padding:5px 9px;color:#c0b494}.menu-top{display:flex;border:1px solid #5b6558;border-radius:3px;overflow:hidden}.menu-top button{color:#c1bda7;background:transparent;border:0;padding:9px 13px;font-size:12px;letter-spacing:.06em}.menu-top button.active{background:#c2b293;color:#22261f}.menu-top button+button{border-left:1px solid #5b6558}
+.workspace{display:grid;grid-template-columns:minmax(230px,264px) minmax(294px,370px) minmax(370px,1fr);min-height:0}.shelf{background:linear-gradient(90deg,#252d27,#2b342c 96%);border-right:1px solid #53594b;display:flex;flex-direction:column;min-height:0;overflow:hidden}.eyebrow{font-size:10px;letter-spacing:.25em;color:#b2a581}.shelf-head{padding:30px 24px 20px;border-bottom:1px solid #444c40}.shelf-head h2{font:normal 22px "Yu Mincho","Hiragino Mincho ProN",serif;letter-spacing:.06em;margin:10px 0 8px}.shelf-head p{font-size:11px;line-height:1.85;color:#b2b0a0;margin:0}.shelf-scroll{padding:23px 18px 20px;overflow:auto;flex:1;scrollbar-color:#5f6559 transparent}.shelf-plate{margin:0 6px 13px;color:#b9ae8d;font-size:11px;letter-spacing:.13em}.shelf-divider{height:7px;margin:16px 3px 17px;background:linear-gradient(#141a16 1px,#5b5544 3px,#2b3027 6px);box-shadow:0 8px 9px #0b0c092b}.drawer{position:relative;display:grid;grid-template-columns:49px 1fr auto;gap:12px;align-items:center;text-align:left;width:100%;background:linear-gradient(95deg,#353d34,#303930);color:#e0dac7;border:1px solid #626752;border-bottom:2px solid #171e18;padding:13px 13px 13px 10px;margin-bottom:7px;box-shadow:inset 0 1px #6b705c1a,2px 3px 4px #0002;transition:background .17s,transform .17s}.drawer:hover{background:#464b3c;transform:translateX(3px)}.drawer.selected{background:linear-gradient(95deg,#514a35,#403f30);border-color:#b0a17a;box-shadow:inset 3px 0 #c6ae77,2px 3px 4px #0003}.drawer-code{font:12px Georgia,serif;text-align:center;background:#b0a081;color:#242920;border:1px solid #e2cd9e;padding:6px 3px;white-space:nowrap;box-shadow:0 1px 0 #0003}.drawer-name{font-size:13px;letter-spacing:.04em;font-weight:600}.drawer-num{font:11px Georgia,serif;color:#b4b09c;font-variant-numeric:tabular-nums}.shelf-foot{padding:16px 23px;border-top:1px solid #474f41;color:#aba78f;font-size:11px;line-height:1.7}
+.catalog{background:linear-gradient(#30382f,#272e28);border-right:1px solid #4c5548;display:flex;flex-direction:column;min-height:0}.catalog-head{padding:30px 24px 21px;border-bottom:1px solid #475043}.catalog-head .section-code{font:17px Georgia,serif;color:#c6b28a}.catalog-head h2{font:normal 26px/1.35 "Yu Mincho","Hiragino Mincho ProN",serif;letter-spacing:.06em;margin:11px 0 7px}.catalog-head .smallline{font-size:11px;color:#b1b09a}.catalog-tools{display:flex;align-items:center;justify-content:space-between;padding:11px 22px;border-bottom:1px solid #4b5246;background:#292f29;gap:8px}.catalog-tools label{font-size:10px;color:#aca892;letter-spacing:.08em}.catalog-tools select{font-size:11px;color:#d4ccb3;background:#353b34;border:1px solid #646a5a;border-radius:2px;padding:7px}.catalog-items{flex:1;overflow:auto;min-height:0;scrollbar-color:#6b6d5c transparent}.catalog-item{display:flex;gap:12px;text-align:left;width:100%;border:0;border-bottom:1px solid #485043;background:transparent;color:inherit;padding:17px 21px;transition:background .15s}.catalog-item:hover{background:#394239}.catalog-item.active{background:#454b3e;box-shadow:inset 3px 0 #c6ad77}.file-icon{position:relative;flex:0 0 32px;height:41px;background:#c6b99a;border:1px solid #ede0b9;margin-top:1px;box-shadow:2px 3px 0 #0c0d0b36}.file-icon:after{content:"";position:absolute;top:7px;left:6px;width:19px;height:1px;background:#9b8d72;box-shadow:0 5px #9b8d72,0 10px #9b8d72,0 15px #9b8d72}.file-icon.photo{background:#a2a69b;border-color:#c1c4bb}.file-icon.photo:after{width:16px;height:12px;top:9px;left:7px;background:#59685e;box-shadow:none}.item-content{flex:1;min-width:0}.item-top{display:flex;justify-content:space-between;color:#c0b596;font:10px Georgia,serif;letter-spacing:.08em}.item-title{font:15px/1.5 "Yu Mincho","Hiragino Mincho ProN",serif;color:#f2eadd;margin:6px 0}.item-meta{font-size:10px;color:#a8ab9b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.catalog-item .dot{height:6px;width:6px;border-radius:50%;background:#d1b171;display:inline-block;margin-right:5px}.catalog-bottom{border-top:1px solid #50594a;font:11px Georgia,serif;color:#aeb09b;padding:12px 22px;display:flex;justify-content:space-between}
+.reader{position:relative;overflow:auto;min-height:0;background:radial-gradient(ellipse at 50% -10%,#5a5948 0%,#414437 46%,#2d3129 100%);scrollbar-color:#7d7c6e transparent}.reader:before{content:"";pointer-events:none;position:absolute;top:0;bottom:0;left:28px;width:1px;background:#dfcc9240}.reader-frame{width:min(100% - 76px,760px);min-height:100%;margin:0 auto;padding:28px 0 43px}.reader-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:15px}.reader-top span{color:#cfbd95;font:11px Georgia,serif;letter-spacing:.14em}.reader-actions{display:flex;gap:8px}.tool-btn{border:1px solid #88816b;color:#eee4d0;background:#36392f;border-radius:2px;padding:8px 11px;font-size:11px;letter-spacing:.03em}.tool-btn:hover{background:#55513f}.tool-btn.pressed{background:#786b4d;border-color:#baa877}.paper{position:relative;background:var(--paper);color:#2d2924;min-height:545px;box-shadow:2px 4px 2px #1518102b,7px 9px 30px #0b130e68;transform:rotate(-.14deg);padding:45px clamp(23px,5vw,56px) 38px;overflow:hidden;background-image:linear-gradient(90deg,#c4b69530 0%,transparent 9%,transparent 92%,#c1ad8b22 100%),repeating-linear-gradient(0deg,#00000004 0 1px,transparent 1px 31px)}.paper:before{content:"";position:absolute;inset:8px;border:1px solid #8d806050;pointer-events:none}.paper-heading{border-bottom:2px double #7c7763;padding:0 0 18px;margin-bottom:25px}.paper-kicker{display:flex;justify-content:space-between;font:11px Georgia,serif;color:#675f51;letter-spacing:.12em}.paper h1{font:normal clamp(21px,2.5vw,30px)/1.45 "Yu Mincho","Hiragino Mincho ProN",serif;letter-spacing:.09em;margin:27px 0 17px}.paper-meta{display:grid;grid-template-columns:1fr 1fr;gap:7px 17px;font-size:11px;color:#514a3c;line-height:1.7}.paper-meta strong{font-weight:500;color:#282820;margin-right:8px}.paper-body{font:15px/2.15 "Yu Mincho","Hiragino Mincho ProN",serif;letter-spacing:.035em;min-height:185px;white-space:pre-wrap;overflow-wrap:anywhere}.paper-body p{margin:0 0 17px}.paper-body p{orphans:2;widows:2}.paper-footer{margin:30px 0 0;padding:14px 0 0;border-top:1px solid #a79b7a70;display:flex;justify-content:space-between;color:#8d816a;font:10px Georgia,serif;letter-spacing:.1em}.stamp{position:absolute;top:114px;right:43px;border:2px solid #93564c95;color:#93564cb5;padding:5px 10px;font:16px Georgia,serif;transform:rotate(-12deg);letter-spacing:.15em;pointer-events:none}.note-block{margin-top:22px;background:#252b25;border:1px solid #75705d;padding:18px 20px 17px;box-shadow:0 9px 21px #0003}.note-title{display:flex;justify-content:space-between;align-items:center;color:#d5c5a5;font-size:12px;letter-spacing:.07em;margin-bottom:11px}.note-title small{color:#9c9b84;font-size:10px;letter-spacing:.03em}.note-block textarea{width:100%;resize:vertical;min-height:72px;padding:12px;border:1px solid #51594c;background:#303931;color:#e7e0cc;font-size:13px;line-height:1.7;border-radius:0}.note-block textarea::placeholder{color:#818978}.empty-paper{display:flex;align-items:center;justify-content:center;min-height:510px;text-align:center}.empty-paper h2{font:normal 24px "Yu Mincho",serif;letter-spacing:.08em}.empty-paper p{font-size:12px;color:#685e4d;line-height:2}.empty-paper .glyph{font:57px Georgia,serif;color:#a69b7d;margin-bottom:20px}.desk-page{width:min(100% - 76px,760px);margin:0 auto;padding:32px 0 50px}.desk-title{font:normal 29px "Yu Mincho","Hiragino Mincho ProN",serif;letter-spacing:.12em;margin:12px 0}.desk-help{font-size:12px;color:#b9b3a0;line-height:1.9}.desk-card{background:#e2dbc8;color:#2f302a;padding:17px 21px;margin:15px 0;display:flex;align-items:center;gap:18px;border:1px solid #a69a7f;box-shadow:2px 4px 9px #0002}.desk-card h3{font:normal 17px "Yu Mincho",serif;margin:3px 0 5px}.desk-card p{font-size:11px;color:#655f52;margin:0}.desk-card .spacer{flex:1}.desk-card button{border:1px solid #8a7e65;background:transparent;color:#403a2e;padding:7px 10px;font-size:11px}.desk-card button:hover{background:#d1c3a8}.desk-empty{font:14px/2 "Yu Mincho",serif;color:#bcb59f;padding:28px 0}.desk-notes{margin-top:26px;border-top:1px solid #6f6c59;padding-top:23px}.desk-notes h3{font:normal 19px "Yu Mincho",serif}.desk-notes textarea{width:100%;min-height:190px;resize:vertical;padding:20px;background:#e0d8c7;border:1px solid #ac9c7a;color:#312c25;line-height:1.8}.quiet-btn{background:none;border:0;color:#a99f84;font-size:11px;text-decoration:underline;text-underline-offset:3px;padding:3px}.copy-status{color:#b7ac90;font-size:11px}.mobile-nav{display:none}.screen-reader{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+
+/* 棚階層：棚の種類を追加する場合は JS の SHELVES に1項目追加 */
+.shelf-categories{display:grid;gap:10px;margin-bottom:4px}
+.shelf-select{position:relative;width:100%;min-height:104px;padding:17px 14px 14px 17px;border:1px solid #5d604f;border-bottom:5px solid #131a14;text-align:left;color:#e9debf;background:linear-gradient(130deg,#394137 0%,#2e382f 58%,#272e28 100%);box-shadow:inset 0 1px #8b886c33,2px 6px 8px #0005;transition:transform .15s,border-color .15s,background .15s}
+.shelf-select::before{content:"";position:absolute;inset:7px;pointer-events:none;border:1px solid #a2977828}
+.shelf-select::after{content:"";position:absolute;bottom:-5px;left:-6px;right:-6px;height:4px;background:linear-gradient(90deg,#68593d,#302c23 45%,#68593d);z-index:1}
+.shelf-select:hover{transform:translateY(-2px);border-color:#b5a37b}
+.shelf-select.selected{background:linear-gradient(135deg,#58503b,#3a3c2f 75%);border-color:#bbab7c;box-shadow:inset 4px 0 #bca477,2px 6px 8px #0005}
+.shelf-select-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;font:10px Georgia,serif;letter-spacing:.16em;color:#c2b391}
+.shelf-select-name{display:block;font:normal 22px/1.3 "Yu Mincho","Hiragino Mincho ProN",serif;letter-spacing:.14em;color:#f1e9d6}
+.shelf-select-bottom{display:flex;align-items:center;justify-content:space-between;gap:7px;margin-top:8px;color:#c1b99f;font-size:10px}
+.shelf-empty-mark{font-size:9px;color:#b8b2a2;border:1px solid #7e7d65;padding:2px 5px;letter-spacing:.1em}
+.folder-heading{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:12px}
+.folder-heading .shelf-plate{margin-bottom:0}
+.folder-shelf-name{font-size:10px;color:#a39b81}
+.folder-empty{border:1px dashed #696b58;padding:22px 15px;background:#262e28;color:#aaa996;line-height:2;text-align:center;font-size:12px}
+.folder-empty strong{display:block;color:#d7cab0;font:normal 19px "Yu Mincho",serif;letter-spacing:.07em;margin-bottom:6px}
+.catalog-empty{padding:55px 24px;text-align:center;color:#aca996;font-size:13px;line-height:2}
+.catalog-empty .glyph{font:50px Georgia,serif;color:#8b8571}
+.catalog-empty strong{display:block;font:normal 22px "Yu Mincho",serif;color:#e5d7bd;letter-spacing:.04em;margin-top:15px}
+.shelf-scroll{scrollbar-gutter:stable}
+@media(max-width:850px){.shelf-categories{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.shelf-select{min-height:110px}.shelf-select-name{font-size:20px}}
+@media(max-width:430px){.shelf-categories{grid-template-columns:1fr 1fr}.shelf-select{padding:15px 11px}.shelf-select-name{font-size:18px;letter-spacing:.08em}.shelf-select-bottom{font-size:9px}}
+
+@media (max-width:1150px){.workspace{grid-template-columns:213px 313px minmax(300px,1fr)}.shelf-head,.catalog-head{padding-left:18px;padding-right:18px}.shelf-scroll{padding-left:11px;padding-right:11px}.reader-frame,.desk-page{width:calc(100% - 45px)}}
+@media (max-width:850px){.shell{min-height:0;grid-template-rows:61px minmax(0,1fr) 55px}.header{padding:0 15px}.brand{min-width:unset}.brand small{font-size:8px}.brand strong{font-size:19px}.header-note,.demo,.menu-top{display:none}.workspace{grid-template-columns:1fr;position:relative;overflow:hidden}.workspace>section{grid-column:1;grid-row:1;display:none;border:0}.workspace[data-screen="shelf"]>.shelf,.workspace[data-screen="catalog"]>.catalog,.workspace[data-screen="reader"]>.reader{display:flex}.workspace[data-screen="reader"]>.reader{display:block}.shelf-head,.catalog-head{padding-top:20px}.reader-frame,.desk-page{width:calc(100% - 42px)}.reader-frame{padding-top:17px}.paper{padding:30px 27px;min-height:480px}.paper h1{font-size:25px}.stamp{top:97px;right:32px}.mobile-nav{display:flex;align-items:center;background:#19201b;border-top:1px solid #586050}.mobile-nav button{flex:1;height:100%;background:transparent;color:#c7c0aa;border:0;font-size:12px;letter-spacing:.1em}.mobile-nav button.active{background:#6b6046;color:#fff}.drawer{margin-bottom:9px}.shelf-scroll{padding:14px}.shelf-head p{font-size:11px}.catalog-items{overflow:auto}.catalog-item{padding:17px 20px}}
+@media (max-width:430px){.header{gap:11px}.mark{width:32px;height:32px;font-size:19px}.brand strong{font-size:18px}.reader-frame,.desk-page{width:calc(100% - 24px)}.paper{padding:27px 21px}.paper-meta{grid-template-columns:1fr}.reader-actions .tool-btn{padding:7px 8px}}
+@media print{body{background:white;color:black}.header,.shelf,.catalog,.reader-top,.note-block,.mobile-nav{display:none!important}.workspace{display:block}.reader{background:#fff;overflow:visible}.reader-frame{width:100%;padding:0}.paper{box-shadow:none;transform:none;border:0}}
+.header-end{margin-right:40px}@media (max-width:850px){.header{padding-right:52px}}
+</style>
+<!--IZ-GAME-BASE:START-->
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black">
+<script>
+/* iz-game-base v1 — 全ゲーム共通の基本設計
+ *  1. iOS の「ダブルタップで拡大」「ピンチ拡大」を無効にする
+ *  2. 全画面表示の切り替え（Fullscreen API。iPhone は非対応のため「ホーム画面に追加」を案内）
+ *  3. 画面の向き（自動 / 縦 / 横）の選択（Androidは全画面時に固定、非対応端末は回転の案内を出す）
+ * 各作品の <head> へ tools/apply_game_base.py が埋め込む（作品は1ファイル完結のため、外部読み込みはしない）。
+ * 位置を変えたいときは、この前に window.IZ_BASE={pos:'tr'|'tl'|'br'|'bl'} を書く。
+ */
+(function () {
+  'use strict';
+  if (window.__izGameBase) return;
+  window.__izGameBase = 1;
+  var D = document, W = window, DE = D.documentElement;
+  var KEY = 'izGameBase.orient';
+  var cfg = W.IZ_BASE || {};
+  /* 表示文言。作品側で window.IZ_BASE={lang:'en'} を書くと英語になる（既定は日本語） */
+  var T = cfg.lang === 'en'
+    ? { set: 'Display settings', scr: 'SCREEN', fs: 'Go full screen', fsOff: 'Exit full screen', ori: 'ORIENTATION', auto: 'Auto', port: 'Portrait', land: 'Landscape', close: 'Close', nAuto: 'Follows your device orientation.', nFix: 'Locks the orientation in full screen. If it cannot be locked, please rotate your device.', rot: function (m) { return '\u21bb Please turn your device to ' + (m === 'land' ? 'landscape' : 'portrait'); } }
+    : { set: '表示設定', scr: '画面', fs: '全画面にする', fsOff: '全画面をやめる', ori: '向き', auto: '自動', port: '縦', land: '横', close: '閉じる', nAuto: '端末の向きに合わせます。', nFix: '全画面のときに向きを固定します。固定できない場合は、端末を回してください。', rot: function (m) { return '\u21bb 端末を' + (m === 'land' ? '横' : '縦') + '向きにしてください'; } };
+
+  /* ---------- 1. 拡大の無効化 ---------- */
+  function fixViewport() {
+    var m = D.querySelector('meta[name="viewport"]');
+    if (!m) {
+      m = D.createElement('meta');
+      m.name = 'viewport';
+      (D.head || DE).appendChild(m);
+      m.content = 'width=device-width,initial-scale=1,viewport-fit=cover';
+    }
+    var c = m.getAttribute('content') || '';
+    c = c.replace(/(^|,)\s*(maximum-scale|minimum-scale|user-scalable)\s*=\s*[^,]*/gi, '').replace(/^,/, '');
+    m.setAttribute('content', c + ',maximum-scale=1,user-scalable=no');
+  }
+  fixViewport();
+
+  var st = D.createElement('style');
+  st.textContent = 'html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}';
+  (D.head || DE).appendChild(st);
+
+  // iOS Safari はピンチを gesture イベントで受ける
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (t) {
+    D.addEventListener(t, function (e) { e.preventDefault(); }, { passive: false });
+  });
+  // 2本指の拡大（scale が 1 から動いたとき）だけを止める。マルチタッチ操作そのものは妨げない
+  D.addEventListener('touchmove', function (e) {
+    if (e.touches && e.touches.length > 1 && e.scale && e.scale !== 1) e.preventDefault();
+  }, { passive: false });
+  // ダブルタップ拡大の保険。ボタン・入力欄などは click を壊さないよう除外し、CSS の touch-action に任せる
+  var lastEnd = 0;
+  var SKIP = 'input,textarea,select,button,a,label,summary,video,audio,[contenteditable],[role="button"],[data-iz-base-ui]';
+  D.addEventListener('touchend', function (e) {
+    var now = Date.now();
+    var t = e.target;
+    var skip = t && t.closest && t.closest(SKIP);
+    if (!skip && now - lastEnd < 350 && e.cancelable) e.preventDefault();
+    lastEnd = now;
+  }, { passive: false });
+
+  /* ---------- 2・3. 全画面と向き ---------- */
+  var fsEl = DE;
+  var fsReq = fsEl.requestFullscreen || fsEl.webkitRequestFullscreen || fsEl.msRequestFullscreen;
+  var fsOk = !!fsReq && (D.fullscreenEnabled !== false) && (D.webkitFullscreenEnabled !== false);
+  function isFs() { return !!(D.fullscreenElement || D.webkitFullscreenElement); }
+  function standalone() {
+    return !!(navigator.standalone || (W.matchMedia && W.matchMedia('(display-mode: standalone)').matches));
+  }
+  function enterFs() {
+    try {
+      var p = fsReq.call(fsEl, { navigationUI: 'hide' });
+      if (p && p.catch) p.catch(function () {});
+      return p;
+    } catch (e) { return null; }
+  }
+  function exitFs() {
+    var f = D.exitFullscreen || D.webkitExitFullscreen || D.msExitFullscreen;
+    try { var p = f && f.call(D); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+  }
+  function lockApi() { return W.screen && screen.orientation && screen.orientation.lock; }
+  // 変更できない機能は表示しない（iPhone は両方とも不可なので、ボタン自体を出さない）
+  var orOk = !!lockApi() && (navigator.maxTouchPoints > 0);
+  var uiOk = fsOk || orOk;
+  function applyOrient(mode, wantFs) {
+    // 戻り値は使わず、結果は banner() が画面の向きで判定する
+    if (mode === 'auto') {
+      try { if (W.screen && screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (e) {}
+      return;
+    }
+    var tgt = mode === 'land' ? 'landscape' : 'portrait';
+    function lock() {
+      if (!lockApi()) return;
+      try { var p = screen.orientation.lock(tgt); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+    }
+    if (isFs() || standalone()) lock();
+    else if (wantFs && fsOk) {
+      var p = enterFs();
+      if (p && p.then) p.then(lock, function () {}); else lock();
+    }
+  }
+  var mode = 'auto';
+  try { mode = localStorage.getItem(KEY) || 'auto'; } catch (e) {}
+  if ((mode !== 'land' && mode !== 'port') || !orOk) mode = 'auto';
+
+  /* ---------- UI ---------- */
+  var ui, btn, panel, banner, bT;
+  var pos = cfg.pos || 'tr';
+  function build() {
+    if (ui || !D.body || !uiOk) return;
+    var css = D.createElement('style');
+    css.textContent =
+      '#izb{position:fixed;z-index:2147483646;font:12px/1.4 "Hiragino Sans","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;color:#fff;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}' +
+      '#izb *{box-sizing:border-box}' +
+      '#izb.tr{top:calc(6px + env(safe-area-inset-top,0px));right:calc(6px + env(safe-area-inset-right,0px))}' +
+      '#izb.tl{top:calc(6px + env(safe-area-inset-top,0px));left:calc(6px + env(safe-area-inset-left,0px))}' +
+      '#izb.br{bottom:calc(6px + env(safe-area-inset-bottom,0px));right:calc(6px + env(safe-area-inset-right,0px))}' +
+      '#izb.bl{bottom:calc(6px + env(safe-area-inset-bottom,0px));left:calc(6px + env(safe-area-inset-left,0px))}' +
+      '#izb button{font:inherit;color:inherit;border:0;margin:0;cursor:pointer;-webkit-appearance:none;appearance:none}' +
+      '#izb .iz-b{width:30px;height:30px;border-radius:8px;background:rgba(20,20,24,.45);border:1px solid rgba(255,255,255,.25);font-size:16px;line-height:28px;text-align:center;padding:0;opacity:.45;transition:opacity .2s}' +
+      '#izb .iz-b:active,#izb.open .iz-b{opacity:1}' +
+      '#izb .iz-p{display:none;position:absolute;width:210px;padding:10px;border-radius:10px;background:rgba(18,18,22,.94);border:1px solid rgba(255,255,255,.22);box-shadow:0 4px 18px rgba(0,0,0,.5)}' +
+      '#izb.open .iz-p{display:block}' +
+      '#izb.tr .iz-p,#izb.tl .iz-p{top:36px}#izb.br .iz-p,#izb.bl .iz-p{bottom:36px}' +
+      '#izb.tr .iz-p,#izb.br .iz-p{right:0}#izb.tl .iz-p,#izb.bl .iz-p{left:0}' +
+      '#izb .iz-h{font-size:11px;color:#aab;margin:0 0 5px}' +
+      '#izb .iz-r{display:flex;gap:4px;margin-bottom:9px}' +
+      '#izb .iz-r button{flex:1;padding:8px 0;border-radius:7px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);font-size:13px}' +
+      '#izb .iz-r button.on{background:#e8c13a;color:#111;border-color:#e8c13a;font-weight:700}' +
+      '#izb .iz-r button[disabled]{opacity:.4}' +
+      '#izb .iz-n{font-size:10.5px;color:#9a9aa8;margin:-3px 0 6px}' +
+      '#izb .iz-x{display:block;width:100%;padding:6px 0;border-radius:7px;background:transparent;border:1px solid rgba(255,255,255,.18);font-size:12px;color:#ccd}' +
+      '#izbn{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:2147483645;padding:7px 14px;border-radius:18px;background:rgba(18,18,22,.88);border:1px solid rgba(255,255,255,.25);color:#fff;font:13px/1.3 "Hiragino Sans","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;pointer-events:none;display:none;white-space:nowrap}';
+    (D.head || DE).appendChild(css);
+
+    ui = D.createElement('div');
+    ui.id = 'izb';
+    ui.className = pos;
+    ui.setAttribute('data-iz-base-ui', '');
+    ui.innerHTML =
+      '<button type="button" class="iz-b" tabindex="-1" aria-label="' + T.set + '">⛶</button>' +
+      '<div class="iz-p">' +
+      (fsOk ? '<div class="iz-h">' + T.scr + '</div><div class="iz-r"><button type="button" tabindex="-1" data-fs="1">' + T.fs + '</button></div>' : '') +
+      (orOk ? '<div class="iz-h">' + T.ori + '</div><div class="iz-r" id="izor"><button type="button" tabindex="-1" data-o="auto">' + T.auto + '</button><button type="button" tabindex="-1" data-o="port">' + T.port + '</button><button type="button" tabindex="-1" data-o="land">' + T.land + '</button></div><div class="iz-n" id="izon"></div>' : '') +
+      '<button type="button" class="iz-x" tabindex="-1" data-close="1">' + T.close + '</button>' +
+      '</div>';
+    D.body.appendChild(ui);
+    btn = ui.querySelector('.iz-b');
+    panel = ui.querySelector('.iz-p');
+
+    banner = D.createElement('div');
+    banner.id = 'izbn';
+    D.body.appendChild(banner);
+
+    // UI 上の操作はゲーム側へ伝えない
+    ['touchstart', 'touchend', 'pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'dblclick', 'keydown', 'keyup'].forEach(function (t) {
+      ui.addEventListener(t, function (e) { e.stopPropagation(); });
+    });
+    ui.addEventListener('click', function (e) {
+      var t = e.target.closest('button');
+      if (!t) return;
+      if (t === btn) { ui.classList.toggle('open'); refresh(); }
+      else if (t.getAttribute('data-close')) ui.classList.remove('open');
+      else if (t.getAttribute('data-fs')) { isFs() ? exitFs() : enterFs(); setTimeout(refresh, 250); }
+      else if (t.getAttribute('data-o')) setMode(t.getAttribute('data-o'), true);
+      if (t.blur) t.blur();
+    });
+    refresh();
+  }
+  function setMode(m, fromUser) {
+    mode = m;
+    try { localStorage.setItem(KEY, m); } catch (e) {}
+    applyOrient(m, fromUser);
+    refresh();
+    setTimeout(banner_, 400);
+  }
+  function refresh() {
+    if (!ui) return;
+    var fb = ui.querySelector('[data-fs]');
+    if (fb) fb.textContent = isFs() ? T.fsOff : T.fs;
+    var bs = ui.querySelectorAll('[data-o]');
+    for (var i = 0; i < bs.length; i++) bs[i].classList.toggle('on', bs[i].getAttribute('data-o') === mode);
+    var on = ui.querySelector('#izon');
+    if (on) on.textContent = mode === 'auto' ? T.nAuto : T.nFix;
+  }
+  function banner_() {
+    if (!banner) return;
+    var land = W.innerWidth > W.innerHeight;
+    var bad = (mode === 'land' && !land) || (mode === 'port' && land);
+    if (bad) {
+      banner.textContent = T.rot(mode);
+      banner.style.display = 'block';
+      clearTimeout(bT);
+      bT = setTimeout(function () { banner.style.display = 'none'; }, 6000);
+    } else banner.style.display = 'none';
+  }
+  function onChange() { refresh(); setTimeout(banner_, 300); }
+  D.addEventListener('fullscreenchange', onChange);
+  D.addEventListener('webkitfullscreenchange', onChange);
+  W.addEventListener('orientationchange', onChange);
+  W.addEventListener('resize', function () { setTimeout(banner_, 300); });
+
+  function init() {
+    build();
+    if (mode !== 'auto') { applyOrient(mode, false); setTimeout(banner_, 600); }
+  }
+  if (D.body) init(); else D.addEventListener('DOMContentLoaded', init);
+
+  W.IZBase = { fullscreen: function (on) { on === false ? exitFs() : enterFs(); }, orientation: setMode, get mode() { return mode; } };
+})();
+</script>
+<!--IZ-GAME-BASE:END-->
+</head>
+<body>
+<div class="shell">
+  <header class="header">
+    <div class="mark" aria-hidden="true">E</div>
+    <div class="brand"><small>EVIDENCE VAULT</small><strong>証拠保管庫</strong></div>
+    <div class="header-note">SHELVES / FOLDERS / DOCUMENTS</div>
+    <div class="header-end"><span class="demo">棚構成 試作版</span><div class="menu-top" aria-label="表示切り替え"><button id="showArchive" class="active">資料を探す</button><button id="showDesk">作業机 <span id="deskCount">0</span></button></div></div>
+  </header>
+  <main class="workspace" id="workspace" data-screen="shelf">
+    <section class="shelf" id="shelfPane" aria-label="資料棚">
+      <div class="shelf-head"><span class="eyebrow">ARCHIVE / SHELVES</span><h2>資料棚</h2><p>棚を選び、収蔵箱を引き出す。<br>書類は閲覧・作業机へ。</p></div>
+      <div class="shelf-scroll"><p class="shelf-plate">資料棚 / SELECT A SHELF</p><div id="shelfCategories" class="shelf-categories"></div><div class="shelf-divider"></div><div class="folder-heading"><span class="shelf-plate" id="folderPlate">収蔵箱</span><span class="folder-shelf-name" id="folderShelfName"></span></div><div id="folderDrawers"></div></div>
+      <div class="shelf-foot"><span id="shelfCount">2</span> SHELVES / <span id="totalCount">0 FILES</span><br>資料は棚を越えて作業机に集められます。</div>
+    </section>
+    <section class="catalog" id="catalogPane" aria-label="綴じ資料一覧"><div class="catalog-head"><span class="eyebrow">CABINET / <span id="catalogCode" class="section-code">A-01</span></span><h2 id="catalogTitle">事件報告</h2><div class="smallline" id="catalogSubtitle">箱の中の記録</div></div><div class="catalog-tools"><label>綴じ資料</label><select id="order" aria-label="並び替え"><option value="number">管理番号順</option><option value="date">作成日順</option><option value="star">しおり優先</option></select></div><div class="catalog-items" id="fileList"></div><div class="catalog-bottom"><span id="catalogCount">—</span><span>END OF INDEX</span></div></section>
+    <section class="reader" id="readerPane" aria-label="資料閲覧"><div id="readerContent"></div></section>
+  </main>
+  <nav class="mobile-nav" aria-label="画面移動"><button data-target="shelf" class="active">資料棚</button><button data-target="catalog">索引</button><button data-target="reader">閲覧</button><button data-target="desk">作業机</button></nav>
+</div>
+<script>
+'use strict';
+// 書庫：棚構成の試作。既存42件の本文は変更しない。
+const FOLDERS=[
+ {id:'A-01',name:'事件報告',sub:'発生届・経過報告'},
+ {id:'A-02',name:'現場検証',sub:'現場記録・写真台帳'},
+ {id:'B-01',name:'供述記録',sub:'聴取票・申し立て'},
+ {id:'B-02',name:'照会・回答',sub:'各所への照会文書'},
+ {id:'C-01',name:'施設・運行',sub:'設備点検・運行記録'},
+ {id:'C-02',name:'庶務・管理',sub:'勤務日誌・備品台帳'},
+ {id:'D-01',name:'遺失物等',sub:'拾得届・引継書'},
+ {id:'D-02',name:'過年度記録',sub:'旧年度の保管文書'}
+];
+// 棚を増やすときはこの配列に定義を追加する。folderIds に既存の収納箱IDを列挙する。
+// 空の棚は folderIds: []。資料追加や事件の執筆は別作業とする。
+const SHELVES=[
+ {id:'accident',code:'01',name:'事故',sub:'事故・関連資料の保管棚',folderIds:['A-01','A-02','B-01','B-02','C-01','C-02','D-01','D-02']},
+ {id:'murder',code:'02',name:'殺人事件',sub:'今後の資料収録先',folderIds:[]}
+];
+const RECORDS=[
+// A-01
+["A-01", "1994-04-13", "湾岸第三区 車両火災報告", "事故受付係", "午前0時25分ごろ、湾岸第三区の側道において貨物車一台の焼損を確認した。現場到着時、運転者は車内にいなかった。\n火元および乗員の行動については別途調査を要する。\n\n現場は旧橋東詰から約七百メートルの市道脇で、車体は進行方向と逆向きに停止していた。道路の中央に荷崩れを示す散乱物はなく、貨物室の扉は火熱で変形し、内部の積載物は数量を確定できない。消火を担当した隊員によれば、到着時には火勢が弱まりつつあった。発見時刻を発火時刻と扱わないよう注意が付された。\n車体後部の登録標識は湾岸地区登録「港45あ17-42」と読み取れたが、車内には運転免許証、乗務日報、身分証等を確認できなかった。登録標識による照会を優先し、車体そのものの識別は現場検証班へ回された。\n現場の脇に残された靴跡については、消火隊員や通行人の往来と区別が付かず、事故に関係するものとして採用していない。"],
+["A-01", "1994-04-16", "港湾作業員の所在不明届", "地域連絡室", "港湾関連会社に勤務する男性について、勤務先から所在不明の届け出があった。最終出勤日について、提出書類と口頭説明の間に相違がある。\n\n届出の対象者は港湾荷役会社「日新荷役」の契約作業員、藤田賢治（三十七歳）。会社提出の出勤表には四月十三日の早朝欄に青鉛筆の印があり、一方、現場責任者は十二日午後六時過ぎに帰宅したと説明している。翌朝の印について、本人の出勤を示すか事務上の処理かは確認できない。\n藤田の住居には作業着と手帳が残され、給与の仮払いや退職の申し出は記録されていない。家族は「二、三日連絡が取れないことは以前にもあった」と話しており、届出時点では事件性を判断できない。車両火災との関係を示す記録は添付されていない。"],
+["A-01", "1994-04-15", "車両火災事故 追加報告", "事故受付係", "焼損車両の登録番号を確認した。申告された運転者名と当日の運行予定表の記載は一致しない。原因は確認中である。\n\n登録標識「港45あ17-42」の名義人は青波運送で、同社はこれを社内の「17号車」と呼んでいる。事故第一報に記された運転者は岡田慎であるが、提出された当日運行予定表では北野修が配置されていた。第一報の氏名は現場発見者からの伝聞で、出典となる伝票は残っていない。\n照会に使用した識別資料は焼損を免れた後部登録標識の拓本と、警備員が書き留めた数字の控えである。車台に直接刻まれた番号については、この追加報告では照合していない。\n照会担当者の回付欄には、整備担当からの追加回答を待つ旨が書かれているが、決裁印は押されていない。"],
+["A-01", "1994-03-22", "中央通り 物損事故届", "道路管理課", "午前6時台に店舗前の石柱が破損したとの届け出を受理。負傷者なし。修繕費用は管理者側で精査する。\n\n破損した石柱は中央通りの菓子店前に設置されていた案内用のもの。閉店後に音を聞いた住民はいるが、接触した車の種類は見ていない。店主は前夜まで石柱が立っていたと述べた。\n周囲から採取した塗膜片は黒色と白色が混在し、同じ車両に由来するとは限らない。道路管理課は衝突車両を特定できないまま、新しい石柱を発注した。支出決裁は四月一日付で完了。添付の修繕見積書は石材の調達費と施工費に分かれ、施工日だけが未定とされる。"],
+["A-01", "1994-05-21", "埠頭倉庫 扉損壊届", "倉庫管理課", "第二区の管理倉庫で夜間の扉損壊を確認。保管物品の数量に変化はなかった。外部からの侵入の有無は不明。\n\n損壊があったのは第二区の穀物保管倉庫で、四月の車両火災現場とは別管理区域にある。扉下部のレールに擦過痕があり、鍵穴と側面の留め具には新しい傷が認められなかった。\n五月二十二日、管理人から「閉鎖後に外からこじ開けられた」との補足があったが、その根拠は扉の開閉が重くなっていたことである。入出庫台帳と封印札の番号は一致し、保管中の袋詰め穀物の欠損もない。設備の老朽化による可能性を排除していない。"],
+["A-01", "1993-11-28", "北駅前 自転車盗難届", "地域連絡室", "施錠した自転車一台が駅前駐輪場から消失したと申告。所定の記録票へ登録した。\n\n車両は銀色の実用自転車で、前籠と荷台を備える。盗難届の提出者は北駅を通勤に利用する会社員で、同日の夕刻に施錠を確認したという。自転車の製造番号は購入時の保証書から転記した。\n駅前では週末に放置自転車の整理が行われており、撤去記録の確認を先に行った。しかし該当番号は撤去台帳にも交番への拾得届にも見当たらず、事件は未解決のまま記録を閉じている。申告者から盗難保険への届出があり、受理番号を備考欄に転記した。"],
+// A-02
+["A-02", "1994-04-13", "車両火災 現場見取図", "現場調査班", "図面原本は資料袋に保管。道路は北側の旧橋へ続き、西側に排水施設がある。\n現場の周囲には車輪の跡が複数確認されたが、同一車両によるものか判別できない。\n\n見取図の北は用紙上端、旧橋へ向かう道路を上り方向とする。焼損車は東側の排水路に寄って停止し、後部はわずかに西へ振れていた。側道から港湾施設へ入る門は図面の範囲外にあり、この見取図だけで入構経路を判断することはできない。\n車の前後には複数の車輪痕があるが、消火車両の進入で一部が重なった。横転の跡や側道の柵との新しい接触痕は見つかっていない。\n検証班の補助メモには『後部左側の登録標識は回収済み。車台刻印は右後方で後刻確認』とある。刻印位置は原図の車体右側に小さな丸印で示された。"],
+["A-02", "1994-04-13", "現場写真 収録一覧", "現場調査班", "写真A：焼損車両の前面。写真B：側道の路面。写真C：旧橋側から見た道路。写真D：排水施設の外壁。\n原版の一部は別箱に保管する。\n\n写真Aは火災の当日午前一時過ぎ、写真BからDは消火後に撮影された。写真Cの橋脚と写真Dの排水設備は道路脇の位置関係を確かめるためのもので、そこに不審者が写ったという報告はない。\n追補の写真Eは、四月十四日に保管場所へ移した焼損車体の右後方、主フレーム上面の近接写真。煤を払った箇所に打刻が残り、拡大印画の読み取り欄には「K4-618」と転記されている。読み取り欄の横に、撮影者と確認者の異なる二つの署名がある。\n写真Eの原版は写真A〜Dと別の封筒に納められ、『車台番号調査用』の朱書きがある。封筒には撮影日と印画番号を手書きした茶色い荷札が結ばれている。"],
+["A-02", "1994-04-14", "検証記録 降雨の影響", "現場調査班", "火災前夜から断続的に雨が降っていた。路面の痕跡は雨水と消火作業の影響を受けている。採取位置ごとの比較には注意を要する。\n\n雨量記録によれば十二日二十三時台から十三日零時台にかけて小雨と強雨が交互に発生した。したがって、車輪痕の新旧や深さを発生順に並べることはできない。現場検証班は、轍の写真を通行経路の確定資料には採用しなかった。\n一方、焼け残った金属部品の刻印については、屋外での初見記録と保管場所での再確認記録を分けている。後者は四月十四日付の写真Eと照合し、右後方主フレームに「K4-618」と読める文字列がある、と記載した。\n足跡に残る靴底模様が複数あることは確認できるが、作業員のものとする証拠はない。"],
+["A-02", "1994-05-21", "倉庫扉 現場記録", "現場調査班", "扉の外側に傷があるが、形成時期の判定は難しい。窓の固定金具に破損はない。管理人から提出された鍵束を撮影した。\n\n調査時の扉は下端が床面に擦れており、開閉するたびに同じ場所の塗膜が削れた。管理人の立ち会いで閉鎖操作を三度繰り返すと、二度目に途中で引っ掛かった。外から工具を差し込むのに十分な隙間があったかは、固定枠の変形が進んでいるため確定できない。\n鍵束は管理用二本と非常用一本で、提出時の封印札は五月二十二日付。鍵の形状に不自然な加工はない。倉庫の管理記録と保守点検票を照らし合わせるよう申し送りがある。"],
+["A-02", "1994-02-02", "排水路 定期巡視写真票", "保全係", "排水路の護岸と橋脚を定点撮影。老朽化した柵の補修予定箇所を記録した。\n\n撮影は冬季の排水路点検に合わせた定例業務で、三か所の護岸と一つの橋脚を撮っている。東側護岸では金網の一部が外れ、下流へ向かう歩道には通行注意の立札が設けられていた。\n写真の整理番号は「排-02-1」から「排-02-7」。定点写真には撮影位置を示す赤い矢印が付され、次回点検も同じ画角で記録することになっている。"],
+// B-01
+["B-01", "1994-04-14", "運送会社 担当者の説明", "聴取担当", "「車両は十二日の夜に出発した。運転者は決められた経路を通るはずだった。途中で予定を変えたとの連絡は受けていない」と説明した。\n\n説明者は青波運送配車係の岸本。十二日夕方の配車表には17号車と運転手北野修の組み合わせがあり、貨物は梱包資材とされる。出庫印を押したのは岸本本人ではなく、夜勤担当者だった。\n岸本は『17号は後部の番号が17-42で、社内ではそれだけで通じる。運転者まで番号で管理しているわけではない』とも説明した。後日、本人は「事故車だと聞かされただけで、現物を見て確認したことはない」と補足している。\n配車表について不自然な訂正はなかったが、帰庫の有無は夜勤からの引継ぎがなく分からないという。"],
+["B-01", "1994-04-14", "埠頭警備員の供述", "聴取担当", "「午前零時前後、門の外に貨物車らしい影を見た。ただし雨が強く、車体の色も番号も確認できなかった」と述べた。\n\n警備員は三十代の男性で、当夜は西側の詰所に一人で勤務していた。時刻については壁時計を見た記憶ではなく、零時の巡回ベルが鳴ったあとだったという順序から推定している。\n『門の外の影は車両一台分の大きさでしたが、ヘッドライトと雨で輪郭しか見えませんでした。青波運送の車だと断言したことはありません。翌朝、そういう事故があったと聞いただけです』\n供述にある「貨物車らしい」は運転席の高さから受けた印象であり、ナンバーや荷台の形を識別できたという意味ではない。"],
+["B-01", "1994-04-17", "事務職員の参考説明", "聴取担当", "「失踪した作業員は十二日の夕方に職場を出た。翌日も出勤予定だったが、姿を見ていない」と説明した。勤務時刻は記憶による。\n\n説明者は日新荷役の事務職員、松尾。藤田賢治が十二日に使ったタイムカードを午後六時台に回収した記憶はあるが、その後に本人を直接見送ったかどうかは曖昧だとした。\n『十三日朝の青い印は、未処理の出勤予定を残しておくために私が付けた可能性があります。朝の出勤を確認した印とは限りません』と述べている。勤務表は月末にまとめて書き直される場合があり、原本以外の写しを本人の行動記録と断定しないよう注記された。"],
+["B-01", "1994-04-17", "近隣住民の目撃記録", "聴取担当", "「深夜に大きな音を聞いた。時計は見ていない。港の方向だったと思う」との話を受けた。日時の特定はできていない。\n\n住民は港から二キロほど離れた住宅街に住み、寝室で金属が落ちるような音を聞いたという。翌朝、家人との会話で「昨夜のこと」と話したため、聞き取り側は十三日未明の可能性があると記録した。\nただし同じ夜には港湾道路の補修工事があり、大きな音は工事車両や家屋の雨樋から生じた可能性も残る。本人は車の走行音、爆発音、火災による光を見聞きしたとは述べていない。"],
+["B-01", "1994-05-22", "倉庫管理人の説明", "聴取担当", "「扉は前日まで正常だった。夜間に巡回したときは施錠されていた」と説明した。巡回の正確な時刻は記録されていない。\n\n第二区倉庫の管理人は夜間二度の巡回を習慣としていたが、五月二十一日は雨のため二度目の巡回を短縮したと認めている。最初の申告にあった「扉は完全に閉まっていた」は、遠くから鍵の表示板を見ただけだった。\n管理人は前年から扉の開閉が重いことを修理担当に伝えていたとも述べた。鍵束が失われたことはなく、倉庫の内容物の数も減っていないという。"],
+["B-01", "1993-11-30", "拾得物に関する申告", "聴取担当", "「鞄を駅の待合室で見た気がする」との申告を受けた。時間や人物の特徴に関する説明は曖昧であった。\n\n申告者は北駅近くの食堂従業員。十一月二十八日午後に茶色い鞄を見たと思うが、鞄を持つ人物は覚えていない。『革の色が似ていたのでそう思っただけかもしれない』という発言を調書に残した。\nその日の構内では観光客の忘れ物も多く、待合室の椅子に別の鞄が置かれていたことが駅員から報告されている。写真による本人確認は行われていない。"],
+// B-02
+["B-02", "1994-04-18", "運送会社への照会", "資料担当", "車両番号、出庫時刻、乗務員配置、途中の停車予定について回答を求めた。運行原簿の提出を依頼した。\n\n照会事項には『登録標識による車両特定が済んだとしても、該当車体を確認できる資料を別途提出すること』との付箋が貼られている。車両台帳、点検票、運行原簿の三種類を求めたが、初回回答では運行原簿の写しのみが返送された。\n担当者は再照会の要否を上司に上申し、欄外に『車体番号は整備側記録参照』と朱書きした。再照会文書の発送を示す受付印は見当たらない。"],
+["B-02", "1994-04-20", "運送会社からの回答", "資料担当", "提出された運行原簿には、十二日23時40分出庫とある。翌日0時以降の記録欄には訂正があり、訂正者の署名はない。\n\n回答者は青波運送事務課。運行原簿に記載された17号車の出庫時刻は十二日二十三時四十分。出庫欄には「港45あ17-42」とあり、翌日欄の「帰庫」の文字には二重線が引かれている。上から「未確認」と書かれているが、訂正時刻と訂正者が記入されていない。\n原簿は車両が実際にどこを走ったかを記録するものではなく、出庫指示と帰着報告の受け渡しを示す事務資料だ、と回答書に記載されている。車両台帳の車台番号欄は写しから省かれ、整備担当の原票を参照するよう付記されていた。\n配車係からの口頭確認では『17号車に予定を出したこと』までは間違いないが、『焼損車と同じ車体だったこと』は確認していない。"],
+["B-02", "1994-04-20", "港湾ゲート管理照会", "資料担当", "十二日夜から十三日朝までのゲート利用記録の提出を依頼。回答に先立ち、一部の記録簿が翌朝に書き直されている旨の連絡を受けた。\n\n依頼先の港湾管理課によれば、受付簿は夜勤交代時に合計欄を書き直す慣行があった。照会時に存在したのは清書簿で、濡れて読めなくなったとされる原票は別保管になっていた。\n再記入された時刻欄の「0:08」は、警備員の口頭報告に基づくか、後から記録を参照したかが不明。門の番号についても旧案内図の記号が使われている可能性があるため、出入りの位置と車両の種類を別々に確かめることを求めた。"],
+["B-02", "1994-04-21", "港湾ゲート 回答票", "資料担当", "通常の通行票に押印がない車両が一台記録されている。ただし受付係によれば、雨天時には押印漏れが生じることがあった。\n\n未押印の通行票は「臨時通行」の欄に挟まれ、車両番号の末尾が「42」に見える。ただし紙の端が水濡れで欠けており、筆跡の「1」と「7」を判別できない。受付係は同日の別の通行票にも押印漏れがあると説明している。\nこの回答票だけでは、通行した車両の所有者、進行方向、運転者は確定できない。登録番号の一部が一致したとしても、事故車と同一であるとの照合は行われていない。\n入構口の位置については、旧称『第三門』が現行の『西一門』を指すと付記されている。"],
+["B-02", "1994-05-01", "市道通行制限の照会", "道路管理課", "旧橋東側の工事について、実施日と通行規制の詳細を照会した。規制時間の告示と現場日誌の記載に差がある。\n\n工事告示の写しには『二十二時から翌二時まで通行に注意』とあり、地元新聞の小さな案内欄には『夜間通行規制』と短く掲載された。全車両通行止めとする決裁や道路標識設置票は見つかっていない。\n現場日誌には二十二時から片側交互通行、二十三時五十分に資材車両の通過を確認、と書かれている。照会先の担当者は、規制区間が限定的だったことから、橋を通ったか否かを告示の見出しだけで判定してはならないと回答した。"],
+// C-01
+["C-01", "1994-04-12", "湾岸道路 工事日誌", "道路管理課", "旧橋東側の補修工事を実施。午後10時より片側交互通行とした。夜間の全面封鎖は実施していない。\n\n規制位置は橋の東側接続道路の約百二十メートルで、西側の歩道と車両一車線は利用可能であった。二十二時から二十三時五十分までは誘導員を配置し、その後も警告灯と仮設標識を残した。工事車両の撤収予定は十三日午前一時。\n現場責任者は『全面封鎖という報告はしていない。雨によって作業を一時止めた時間はあったが、一般車の通行を禁じたものではない』と余白に追記している。\nしたがって、規制の存在だけを理由に旧橋経由の移動を不可能とすることはできない。"],
+["C-01", "1994-04-13", "港湾ゲート 利用集計", "港湾管理課", "深夜帯の車両通行件数は通常より少なかった。合計数には手書きの加筆があり、原票との照合が必要である。\n\n集計表は夜勤が手書きで作成したもので、零時から一時までの件数は当初十一台、その後十二台に改められている。訂正箇所に個人印はないが、欄外には『同一票の二重記入を調整』と鉛筆書きがある。\n通行の方向、車種、通行票の押印状況を区別しない合計数のため、特定の貨物車が実際に通行したことの根拠には使えない。門の旧称と新称が清書時に混在していることが確認された。"],
+["C-01", "1994-04-11", "貨物車 定期点検票", "整備担当", "灯火、制動装置、エンジンの始動を確認した。特記すべき故障は認められなかった。点検担当者の署名あり。\n\n対象は青波運送の社内17号車、登録標識「港45あ17-42」。点検票の車台番号欄は「K4-681」。右後方主フレームにある製造時の打刻を、整備士の浜田と立会人の二名で照合し、転記欄に割印を付している。\n四月十一日の作業は灯火の電球交換と制動調整にとどまり、主フレームを交換した記録はない。翌十二日の配車前確認票にも同じ車両番号と前日点検の受付印がある。\n車体後部の銀色の補強板に小さな腐食があり、整備士は次回点検時の再確認を指示している。"],
+["C-01", "1994-04-12", "臨時車両出入許可簿", "施設管理課", "夜間の臨時許可は二件。許可書の控えのうち一件は番号が読み取れない状態で残されている。\n\n一件は施設内の配電盤点検に使う小型作業車、もう一件は業者からの申請書が添付されていない一時通行車両である。後者の許可時刻欄は「0時台」とだけ書かれ、車種の略号が不明瞭。\n臨時許可簿は常設契約車両を網羅しないため、この二件のどちらかが焼損車両であるとは言えない。受付番号の付け方は年度途中で変更されており、他の台帳の番号と単純に一致させないよう注意書きがある。"],
+["C-01", "1994-06-03", "第二区倉庫 シャッター点検", "施設管理課", "シャッターの開閉動作を確認。下部ガイドに摩耗があり、交換を申請した。\n\n点検は五月の扉損壊届を受けて前倒しで実施した。下部ガイドの摩耗は左右で差が大きく、閉鎖時に戸車が浮き上がるため鍵を掛けても扉の端が外側へわずかに開くことがある。\n交換を申請した部材は六月中旬に入荷予定で、点検時に応急の位置調整だけを行った。倉庫内の保管品の紛失は報告されていない。二か月前の定期整備で摩耗の兆候があったことも点検簿に残っている。"],
+// C-02
+["C-02", "1994-04-13", "夜間当直 日誌", "管理事務室", "23時00分巡回開始。零時過ぎに雨脚が強まったため西側通路を通らず事務所へ戻ったと記録。巡回経路の変更理由について追記あり。\n\n巡回担当者は西詰所から管理棟までの定例経路を歩く予定だったが、十三日零時十五分ごろから雨が強まったため西側通路を省略した、と翌朝の引継ぎ欄に書き加えた。帰着時刻の印は零時三十分。\nただし雨脚が強まった時刻は本人の記憶によるもので、観測所の雨量記録と完全には一致しない。巡回中に港の外で火災を見たとの記載はなく、不在だった通路で何が起きたかも証明できない。"],
+["C-02", "1994-04-15", "無線設備 故障受付", "設備係", "携帯無線一台について、送信が途切れるとの報告があった。故障時刻は不明で、受信記録も残されていない。\n\n故障品は携帯型無線機二号機。送信ボタンを押した際に雑音が入ることがあり、担当者は四月十五日に交換用機器を借り受けた。記録にある『夜間に交信不能』は、故障届を記入した職員が事情をまとめた表現で、四月十二日夜に故障していたと確認されたものではない。\n受信側の保存記録がないため、いかなる通報も無かったと証明することもできない。機械の故障と事件への関係は判断されていない。"],
+["C-02", "1994-04-09", "消火設備 年度点検", "消防設備係", "消火栓と消火器の点検を完了。未交換の古い消火器が一基あるため、期限を定めて処置する。\n\n消火栓は三月末の通水試験を通過し、消火器の使用期限表示も確認された。未交換品は事務棟二階の倉庫入口にあった予備器で、火災現場からは距離がある。\n未交換器は使用禁止の札をつけて別置した。担当係は後継品の型式と予定納入日を控え、月末の備品台帳への反映を求めている。"],
+["C-02", "1994-03-28", "庁舎 備品搬入記録", "庶務課", "事務机二台、椅子六脚、書庫用棚一台を搬入した。現品検収済み。\n\n搬入品は旧庁舎から庁舎別館へ移設したもので、備品票には寸法と数量のみが記されている。書庫用棚の塗装に剥離があったため、納入業者へ補修を依頼した。\n検収担当者は三月二十九日付の請求明細と照合して数量相違なしと報告。倉庫や港湾施設へ転用した形跡はない。受入票には『右側の棚板に一か所傷』と記載され、補修が終わるまで検収写真を添付する扱いとした。"],
+["C-02", "1994-04-19", "休暇申請票", "庶務課", "港湾管理課の職員一名より年次休暇の申請。記載の日付は本人署名とともに確認された。\n\n申請者は港湾管理課の統計担当職員で、希望日は五月二日から四日まで。提出日が四月十九日であり、火災発生日の勤務を欠いたという内容ではない。\n同職員は休暇前に毎月の通行台数統計を引き継ぐ予定であったが、対象の集計は四月末分である。申請者は電話で休暇開始日の確認を受け、原本に本人が訂正印を押した。"],
+// D-01
+["D-01", "1993-11-28", "革製鞄 拾得届", "遺失物係", "北駅待合室で茶色の革製鞄が拾得された。内容物は鍵束、筆記具、白紙の封筒。氏名を特定できるものはなかった。\n\n拾得場所は北駅構内の三番待合室、時刻は十八時二十分。鞄は肩掛け用の金具が片側だけ外れており、鍵束には小さな銀色の家型飾りが付いていた。茶色の封筒は未記入で、切手も貼られていない。\n翌日までに名乗り出た所有者はなく、駅の案内板へ拾得届の掲示を行った。警察の預かり票には十一月二十八日の受付印がある。待合室で拾得した駅員の連絡先と、移送した保管所の受領番号が裏面に記されている。"],
+["D-01", "1994-04-19", "番号札 拾得届", "遺失物係", "市営倉庫付近の歩道で真鍮製の番号札を拾得。片面の刻印は摩耗している。所有者は判明していない。\n\n番号札は縦三・五センチほどの薄い真鍮板で、片面に『12』とも『17』とも読める二文字が浅く刻まれている。錆はなく、穴には短い麻紐の切れ端が残る。\n近接する市営倉庫では同じ形状の札を工具棚の管理に使っていたが、欠品の申告はなく、所持者を特定できない。拾得者は通勤途中の高校生で、現場に車両や人の姿は見なかったという。\n登録番号の一部に見えるという付箋が付いているが、資料担当の判断は記されていない。"],
+["D-01", "1994-02-14", "腕時計 遺失届", "遺失物係", "駅南口付近で腕時計を紛失したとの届出。所有者の申告では黒色の革ベルト。拾得物との照合結果は未記載。\n\n届け出の時計は丸型の銀色ケースで、裏蓋に個人の記念日を刻んだもの。遺失者は駅南口の商店主で、朝の開店準備中に気付いたと話している。紛失した正確な日時は不明。\n二月二十日付の拾得物照会が一件あったが、照合対象は形状の異なる腕時計であり、本人のものとは認められなかった。届出人は引き続き連絡を希望している。"],
+["D-01", "1994-05-30", "封筒一通 拾得物受付", "遺失物係", "封印された封筒の拾得物受付を実施。内容物は未開封で保管。提出者名は別紙に記載。\n\n五月二十九日の夕方、郵便受けの上に封筒が一通置かれていたとして窓口へ届けられた。白封筒の端に水濡れの跡があり、宛先も差出人も書かれていない。預かり期間中は未開封扱いとされた。\n提出者は市民会館の清掃員。市民会館の催事資料と取り違えられた可能性があり、遺失物係は管理者へ照会している。担当者は封筒の外側のみを確認し、別紙に保管棚の番号を記入した。"],
+["D-01", "1993-12-07", "折畳傘 引継記録", "遺失物係", "黒色の折畳傘を定期保管期限に基づいて引き継いだ。付属品なし。\n\n傘の持ち手は木製で、金属の留め具に小さな亀裂があった。持ち主の申告がないため、保管期限の到来に合わせて通常の手続きを行った。\n引継先は市の不用品整理係で、運送用トラックに積み込まれた日時は十二月七日午後三時。運送便の名称が略号で書かれており、受け渡し票の裏には雨でにじんだ係員の押印が残る。"],
+// D-02
+["D-02", "1991-10-18", "旧橋補修計画書（控）", "道路管理課", "橋梁の腐食箇所について、三年間の段階補修を計画。北側歩道に安全対策を要すると記載されている。\n\n補修の優先順位は欄干、歩道側の舗装、橋脚基部の順とされる。車両重量の制限は橋全体の耐荷重評価によって決められ、工事中の一時的な交通整理とは別の扱いである。\n平成五年度の付属計画には『大型車を恒久的に通行禁止とする必要なし』との判断がある。ただし実施した補修の範囲と年月日はこの控えからは確認できない。四月十二日の夜間規制状況は当日の工事日誌によるものとする。"],
+["D-02", "1992-08-01", "港湾案内図 改訂通知", "管理事務室", "倉庫の番号変更に伴い案内図を改訂。旧番号と新番号の対照表は別紙に記載。\n\n旧案内図では港湾西側入口を『第三門』、東側倉庫を『第三区倉庫』と表記していた。改訂後、第三門は『西一門』、第三区倉庫は『第二区四号倉庫』に名称を変更した。区画そのものが移動したわけではない。\n古い文書に記載された第三門と新しい文書の西一門を、別々の出入口として数えることがないよう、管理事務室で対照表を配布した。旧図面の配布を受けた係には、差し替えの確認印を押すことが求められた。"],
+["D-02", "1993-04-17", "湾岸第三区 区画変更記録", "施設管理課", "敷地境界の変更により、既存の門扉名称を変更した。利用方法は従来どおりとされた。\n\n変更対象は市有地と民有地の境界線で、門扉の名称と境界標を整理した。現場の出入経路を増設または閉鎖したものではない。旧図面を参照する際は、図面の右上に記載された改訂日を確認するよう求めている。\n名称の変更は土地管理上の措置であり、門を使用する車両の所有権、乗務員、通行時刻に関する記録ではない。記録上の『第三門』と『西一門』の混在を不審な二重通行と扱わないための注記がある。"],
+["D-02", "1990-12-12", "夜間電話運用規程", "管理事務室", "緊急通報を受けた場合の記録順序と、担当者不在時の引継ぎ方法を定めた。\n\n夜間の電話通報は、発信者・受信者・受理時刻の三項目を先に記録し、内容の細部は巡回担当の報告後に補記することとされた。通報後に清書する場合は清書日を別欄に記入し、最初の受付時刻を変更しないよう定める。\n電話を受けていない部署の台帳には翌朝の報告時刻が転記されることもあり、異なる台帳にある二つの時刻は同一の出来事を指すとは限らない。後の訂正が必ずしも隠蔽を意味するわけではない。"],
+["D-02", "1989-06-09", "旧書庫 移管一覧", "庶務課", "旧庁舎から移された文書の一覧。年代不明の簿冊は仮番号を付け、区分ごとに収納した。\n\n移管時に目録がない簿冊は一冊ずつ点検し、表紙の題名を仮称として一覧に登録した。内容が似ていても、移管番号だけで同じ事件に属すると判断しないことが原則とされた。\n封筒・写真・フィルムの類は紙簿冊と別棚で保管するため、同じ表題でも物理的な収納場所が異なる場合がある。移管対象の終年は昭和六十四年以前の文書に限る。新しい簿冊が後から混入した場合は別の受付番号を付して処理する。"],
+];
+const KEY='shoko.room.prototype.v1';
+let saved;try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){saved={}}
+const initialShelf=SHELVES.find(s=>s.id===saved.shelf)||SHELVES[0];
+const state={shelf:initialShelf.id,folder:initialShelf.folderIds.includes(saved.folder)?saved.folder:(initialShelf.folderIds[0]||''),active:saved.active||'',desk:new Set(Array.isArray(saved.desk)?saved.desk:[]),stars:new Set(Array.isArray(saved.stars)?saved.stars:[]),read:new Set(Array.isArray(saved.read)?saved.read:[]),notes:saved.notes&&typeof saved.notes==='object'?saved.notes:{},general:saved.general||'',view:'archive',screen:'shelf',sort:'number'};
+const docs=RECORDS.map((v,i)=>({folder:v[0],date:v[1],title:v[2],issuer:v[3],body:v[4],id:v[0]+'-'+String(RECORDS.slice(0,i+1).filter(d=>d[0]===v[0]).length).padStart(3,'0'),type:/写真|見取図/.test(v[2])?'photo':'paper'}));
+const byId=id=>docs.find(x=>x.id===id),el=id=>document.getElementById(id);
+function store(){try{localStorage.setItem(KEY,JSON.stringify({shelf:state.shelf,folder:state.folder,active:state.active,desk:[...state.desk],stars:[...state.stars],read:[...state.read],notes:state.notes,general:state.general}))}catch(e){console.warn('保存できません',e)}}
+function node(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!==undefined)e.textContent=txt;return e}
+function safeDoc(){return byId(state.active)}
+function switchScreen(name){if(name==='desk'){state.view='desk';renderReader();}else if(name==='reader'&&state.view==='desk'){state.view='archive';renderReader();}state.screen=name;el('workspace').dataset.screen=name==='desk'?'reader':name;document.querySelectorAll('.mobile-nav button').forEach(b=>b.classList.toggle('active',b.dataset.target===name));el('showArchive').classList.toggle('active',state.view==='archive');el('showDesk').classList.toggle('active',state.view==='desk');}
+function currentShelf(){return SHELVES.find(s=>s.id===state.shelf)||SHELVES[0]}
+function selectShelf(shelfId){
+ const shelf=SHELVES.find(s=>s.id===shelfId);if(!shelf)return;
+ if(state.shelf!==shelf.id){state.shelf=shelf.id;state.folder=shelf.folderIds[0]||'';state.active='';state.view='archive';store();renderAll()}
+ if(!shelf.folderIds.length){switchScreen('catalog')}
+ else if(innerWidth<=850){switchScreen('shelf')}
+}
+function renderShelf(){
+ const categories=el('shelfCategories'),boxes=el('folderDrawers'),shelf=currentShelf();
+ categories.replaceChildren();boxes.replaceChildren();
+ for(const entry of SHELVES){
+  const count=docs.filter(d=>entry.folderIds.includes(d.folder)).length;
+  const b=node('button','shelf-select'+(entry.id===state.shelf?' selected':''));b.type='button';
+  b.setAttribute('aria-pressed',entry.id===state.shelf?'true':'false');b.setAttribute('aria-label',entry.name+'の棚 '+count+'件');
+  const top=node('span','shelf-select-top');top.append(node('span','', 'SHELF '+entry.code),node('span','',entry.id===state.shelf?'●':'○'));
+  const bottom=node('span','shelf-select-bottom');bottom.append(node('span','',entry.sub),node('span','',String(count).padStart(2,'0')+' FILES'));
+  b.append(top,node('span','shelf-select-name',entry.name),bottom);
+  b.addEventListener('click',()=>selectShelf(entry.id));categories.append(b);
+ }
+ el('folderShelfName').textContent=shelf.name+' / '+shelf.folderIds.length+' 箱';
+ for(const id of shelf.folderIds){
+  const f=FOLDERS.find(x=>x.id===id);if(!f)continue;
+  const b=node('button','drawer'+(state.folder===f.id?' selected':''));b.type='button';
+  b.setAttribute('aria-pressed',state.folder===f.id?'true':'false');
+  b.append(node('span','drawer-code',f.id),node('span','drawer-name',f.name),node('span','drawer-num',String(docs.filter(x=>x.folder===f.id).length).padStart(2,'0')));
+  b.title=f.sub;
+  b.addEventListener('click',()=>{state.folder=f.id;state.active='';state.view='archive';store();renderAll();switchScreen('catalog')});boxes.append(b);
+ }
+ if(!shelf.folderIds.length){const empty=node('div','folder-empty');empty.append(node('strong','','未収蔵'),node('span','','この棚には、まだ資料がありません。'));boxes.append(empty)}
+ el('shelfCount').textContent=String(SHELVES.length);el('totalCount').textContent=docs.length+' FILES';
+}
+function listForFolder(){const out=docs.filter(d=>d.folder===state.folder);if(state.sort==='date')out.sort((a,b)=>b.date.localeCompare(a.date));else if(state.sort==='star')out.sort((a,b)=>Number(state.stars.has(b.id))-Number(state.stars.has(a.id))||a.id.localeCompare(b.id));return out}
+function renderCatalog(){
+ const f=FOLDERS.find(x=>x.id===state.folder),shelf=currentShelf();
+ el('catalogCode').textContent=f?f.id:'SHELF '+shelf.code;
+ el('catalogTitle').textContent=f?f.name:shelf.name;
+ el('catalogSubtitle').textContent=f?f.sub:'この棚の資料一覧';
+ const files=f?listForFolder():[],wrap=el('fileList');wrap.replaceChildren();
+ if(!f){const empty=node('div','catalog-empty');empty.append(node('div','glyph','▤'),node('strong','','未収蔵'),node('p','', '「'+shelf.name+'」の棚に資料はまだありません。'));wrap.append(empty)}
+ files.forEach(d=>{const b=node('button','catalog-item'+(state.active===d.id?' active':''));b.type='button';const icon=node('span','file-icon'+(d.type==='photo'?' photo':''));icon.setAttribute('aria-hidden','true');const content=node('span','item-content');const top=node('span','item-top');top.append(node('span','',d.id),node('span','',state.stars.has(d.id)?'＊':d.date));content.append(top,node('div','item-title',d.title),node('div','item-meta',(state.read.has(d.id)?'既読 · ':'')+d.issuer));b.append(icon,content);b.addEventListener('click',()=>{state.active=d.id;state.read.add(d.id);store();renderCatalog();renderReader();switchScreen('reader')});wrap.append(b)});
+ el('catalogCount').textContent=files.length+' RECORDS';el('order').value=state.sort;
+}
+function makeAction(text,active,callback){const b=node('button','tool-btn'+(active?' pressed':''),text);b.addEventListener('click',callback);return b}
+function renderReader(){const wrap=el('readerContent');wrap.replaceChildren();if(state.view==='desk'){renderDesk();return}const d=safeDoc();const frame=node('div','reader-frame');const top=node('div','reader-top');top.append(node('span','',d?'DOCUMENT '+d.id:'DOCUMENT READER'));const acts=node('div','reader-actions');if(d){acts.append(makeAction(state.stars.has(d.id)?'しおりを外す':'しおり',state.stars.has(d.id),()=>{state.stars.has(d.id)?state.stars.delete(d.id):state.stars.add(d.id);store();renderReader();renderCatalog()}));acts.append(makeAction(state.desk.has(d.id)?'机から戻す':'机に置く',state.desk.has(d.id),()=>{state.desk.has(d.id)?state.desk.delete(d.id):state.desk.add(d.id);store();updateDeskCount();renderReader()}))}top.append(acts);frame.append(top);
+ const paper=node('article','paper');if(!d){const empty=node('div','empty-paper');const t=node('div');t.append(node('div','glyph','▤'),node('h2','', '資料を選んでください'),node('p','',currentShelf().folderIds.length?'左の資料棚から箱を開き、\n閲覧する資料を選びます。':'この棚にはまだ書類がありません。'));empty.append(t);paper.append(empty)}else{const ph=node('div','paper-heading'),k=node('div','paper-kicker');k.append(node('span','', 'DOCUMENT / '+d.id),node('span','', 'RECORD COPY'));const h=node('h1','',d.title),meta=node('div','paper-meta');[['整理番号',d.id],['作成年月日',d.date.replaceAll('-',' / ')],['作成部署',d.issuer],['保管箱',state.folder]].forEach(([label,val])=>{const div=node('div');div.append(node('strong','',label),document.createTextNode(val));meta.append(div)});ph.append(k,h,meta);paper.append(ph);const body=node('div','paper-body');d.body.split('\n').forEach(p=>{body.append(node('p','',p))});paper.append(body);const foot=node('div','paper-footer');foot.append(node('span','','PRIVATE ARCHIVES / TEST'),node('span','','— '+d.id+' —'));paper.append(foot);paper.append(node('div','stamp','保管写'));}frame.append(paper);
+ if(d){const note=node('div','note-block'),nt=node('div','note-title');nt.append(node('span','','個人メモ'),node('small','','この資料にのみ保存'));note.append(nt);const ta=node('textarea');ta.placeholder='気になったことを自由に記録';ta.value=state.notes[d.id]||'';ta.setAttribute('aria-label','この資料のメモ');ta.addEventListener('input',()=>{state.notes[d.id]=ta.value;store()});note.append(ta);frame.append(note)}wrap.append(frame)}
+function renderDesk(){const wrap=el('readerContent');wrap.replaceChildren();const page=node('div','desk-page');page.append(node('div','eyebrow','WORK TABLE / PERSONAL NOTES'),node('h2','desk-title','作業机'),node('p','desk-help','調べながら手元に置いた資料と、自分のメモ。\nこの画面は推理の正誤を判定しません。'));const ids=[...state.desk].filter(byId);if(!ids.length)page.append(node('p','desk-empty','まだ資料はありません。閲覧画面から「机に置く」で追加できます。'));ids.forEach(id=>{const d=byId(id),card=node('div','desk-card'),icon=node('div','file-icon'),t=node('div'),h=node('h3','',d.title);t.append(node('div','item-top',d.id),h,node('p','',d.date+' / '+d.issuer));const spacer=node('div','spacer');const open=node('button','','開く');open.addEventListener('click',()=>{state.view='archive';state.shelf=(SHELVES.find(s=>s.folderIds.includes(d.folder))||SHELVES[0]).id;state.folder=d.folder;state.active=id;state.read.add(id);store();renderAll();switchScreen('reader')});const remove=node('button','','戻す');remove.addEventListener('click',()=>{state.desk.delete(id);store();renderDesk();updateDeskCount()});card.append(icon,t,spacer,open,remove);page.append(card)});const n=node('div','desk-notes');n.append(node('h3','','覚え書き'));const ta=node('textarea');ta.value=state.general;ta.placeholder='仮説、資料番号、疑問点など';ta.setAttribute('aria-label','全体メモ');ta.addEventListener('input',()=>{state.general=ta.value;store()});n.append(ta);const footer=node('div');footer.style.cssText='display:flex;gap:15px;align-items:center;flex-wrap:wrap;margin-top:15px';const save=node('button','tool-btn','メモと机を保存');save.addEventListener('click',()=>{const data={version:1,exportedAt:new Date().toISOString(),desk:[...state.desk],stars:[...state.stars],read:[...state.read],notes:state.notes,general:state.general};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download='shoko-notes.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)});footer.append(save,node('span','copy-status','メモはこのブラウザにも自動保存'));n.append(footer);page.append(n);wrap.append(page)}
+function updateDeskCount(){el('deskCount').textContent=String(state.desk.size)}
+function renderAll(){renderShelf();renderCatalog();renderReader();updateDeskCount();el('showArchive').classList.toggle('active',state.view==='archive');el('showDesk').classList.toggle('active',state.view==='desk')}
+function viewDesk(toDesk){state.view=toDesk?'desk':'archive';renderAll();if(toDesk)switchScreen('desk');else switchScreen(innerWidth<=850?'shelf':'catalog')}
+el('showArchive').addEventListener('click',()=>viewDesk(false));el('showDesk').addEventListener('click',()=>viewDesk(true));el('order').addEventListener('change',e=>{state.sort=e.target.value;renderCatalog()});document.querySelectorAll('.mobile-nav button').forEach(b=>b.addEventListener('click',()=>switchScreen(b.dataset.target)));document.addEventListener('keydown',e=>{if(e.key==='Escape' && innerWidth<=850 && state.screen==='reader'){switchScreen('catalog')}});state.active=(byId(state.active)&&currentShelf().folderIds.includes(byId(state.active).folder))?state.active:'';renderAll();if(innerWidth>850)el('workspace').dataset.screen='reader';
+</script>
+</body></html>
