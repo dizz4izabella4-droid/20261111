@@ -339,7 +339,7 @@ const CONFIG = Object.freeze({
   STEP: 1 / 120, DT_MAX: 0.1,
   HITS_TO_STOP: 3, SIDES: [1, -1, 1],            // 1=右 -1=左。ミスしたときは同じ側をもう一度出す
   INTRO: 4.0, INTRO_GAP: [40, 26],
-  OPEN: { CARL: 4.6, PARK: 2.9, GO: 2.8, SIREN_WAIT: 14, CATCH: 14, SWING: 14, GAP_GO: 62, TC: 6, PX: 4.4 },      // 開始演出：駐車中に赤い車が通る→追跡開始→サイレンを鳴らす→追いつく
+  OPEN: { CARL: 4.6, PARK: 3.9, GO: 2.8, SIREN_WAIT: 14, CATCH: 14, SWING: 14, GAP_GO: 62, TC: 6, PX: 4.4 },      // 開始演出：駐車中に赤い車が通る→追跡開始→サイレンを鳴らす→追いつく
   APPROACH: 5.5, APPROACH_AFTER_MISS: 2.7, GAP_WINDOW: 3,
   WINDOW: 3.2, WINDOW_RESCUE: 4.6, ALIGN: 0.5, ALIGN_RESCUE: 0.85,        // フラつく車が真正面（横ズレ ALIGN 以内）に来た間にタップで突撃
   LUNGE: 0.18, HITSTOP: [0.08, 0.08, 0.12], TILT: [3, 4, 6],
@@ -1221,7 +1221,7 @@ const CORE = (function () {
         case 'window': case 'miss': case 'whiff': case 'ramArm': case 'spot': case 'door': case 'arrest': AUDIO.sfx(e.type, e); break;
         case 'hit': AUDIO.sfx('hit', e); FX.hit(e); GLASS.hit(e.stage, e.side, true); break;
         case 'radio': el.radio.textContent = e.text; el.radio.classList.add('on'); radioT = 3; AUDIO.sfx('radio'); break;
-        case 'sub': if (e.sub === 'EVENT') pickCmds(); if (e.sub === 'OPEN_PARK') setTimeout(() => { if (S.sub === 'OPEN_PARK') AUDIO.sfx('pass'); }, 1100); break;
+        case 'sub': if (e.sub === 'EVENT') pickCmds(); if (e.sub === 'OPEN_PARK') setTimeout(() => { if (S.sub === 'OPEN_PARK') AUDIO.sfx('pass'); }, 2100); break;
         case 'cmd':
           if (e.step === 'speak') { SAY = { text: e.text, t0: tNow, dur: e.dur || 2.4 }; showSub(e.text, CONFIG.CMDS_JA[e.i], 3.4); if (e.auto) { const tk = ++sayTok; setTimeout(() => { if (tk === sayTok) { pend.said = true; SAY = { text: '', t0: -9, dur: 0 }; } }, (e.dur || 2.4) * 1000); } }
           if (e.step === 'yourturn') AUDIO.sfx('turn');          // 「自分の番」の合図
@@ -1917,7 +1917,7 @@ const CORE = (function () {
     ctx.restore();
   }
   function drawParkView(W, H) {
-    const t = S.t, hz = V.hor, r = H - hz, u = Math.min(W, H * 0.62), mono = 'ui-monospace,Menlo,monospace', cxm = W / 2;
+    const t = S.t - 1.0, hz = V.hor, r = H - hz, u = Math.min(W, H * 0.62), mono = 'ui-monospace,Menlo,monospace', cxm = W / 2;
     const yFar = hz + 0.07 * r, yMid = hz + 0.215 * r, yNear = hz + 0.36 * r, yCurb = hz + 0.4 * r, yLot = hz + 0.54 * r, yDash = hz + 0.66 * r;
     drawSky(W, 0);
     // 向かいの歩道と街灯
@@ -1990,12 +1990,20 @@ const CORE = (function () {
       const sh = [hx - u * 0.07, hy + ry * 2.6], el = [hx - u * 0.1, hy + ry * 3.9], rest = [hx - u * 0.17, hy + ry * 3.45], mouth = [hx - rx * 1.35, hy + ry * 0.7], hd = [rest[0] + (mouth[0] - rest[0]) * a, rest[1] + (mouth[1] - rest[1]) * a];
       ctx.strokeStyle = '#243d7c'; ctx.lineCap = 'round'; ctx.lineWidth = u * 0.07; ctx.beginPath(); ctx.moveTo(sh[0], sh[1]); ctx.lineTo(el[0], el[1]); ctx.stroke();
       ctx.lineWidth = u * 0.06; ctx.beginPath(); ctx.moveTo(el[0], el[1]); ctx.lineTo(hd[0], hd[1]); ctx.stroke();
-      const bx = hd[0] - u * 0.012, by = hd[1] - u * 0.018, br = u * 0.03;
+      const hbx = hd[0] - u * 0.012, hby = hd[1] - u * 0.018, br = u * 0.03;
+      let bx = hbx, by = hby;
+      if (t >= 1.25) {                                                                                                                              // びっくりしてベーグルを落とす
+        const a0 = ss01(Math.min(1, Math.max(0, 0.5 - 0.5 * Math.cos(6.2832 * 1.25 / 0.9) * 1.25))), td = t - 1.25 - 0.06;
+        const h0 = [rest[0] + (mouth[0] - rest[0]) * a0, rest[1] + (mouth[1] - rest[1]) * a0];
+        const fl = hy + ry * 5.6, y0 = h0[1] - u * 0.018;
+        bx = h0[0] - u * 0.012 - Math.max(0, td) * u * 0.05; by = y0;
+        if (td > 0) { by = y0 + u * 2.6 * td * td; if (by > fl) { const tb = td - Math.sqrt((fl - y0) / (u * 2.6)); by = fl - Math.abs(Math.sin(tb * 9)) * u * 0.03 * Math.exp(-tb * 5); } }
+      }
       ctx.strokeStyle = '#c98f48'; ctx.lineWidth = u * 0.022; ctx.beginPath(); ctx.arc(bx, by, br, 0, 6.2832); ctx.stroke();
       ctx.strokeStyle = '#e6b56c'; ctx.lineWidth = u * 0.01; ctx.beginPath(); ctx.arc(bx, by, br + u * 0.002, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
       ctx.fillStyle = '#f6e6b8'; for (let i = 0; i < 7; i++) { const aa = i * 0.9 + 0.4; ctx.fillRect(bx + Math.cos(aa) * br - 0.6, by + Math.sin(aa) * br - 0.6, 1.5, 1.5); }
       if (a > 0.5 || t >= 1.25) { ctx.fillStyle = '#c99a74'; ctx.beginPath(); ctx.moveTo(bx + br * 0.5, by - br * 0.3); ctx.arc(bx + br * 0.32, by - br * 0.6, br * 0.18, 0, 6.2832); ctx.fill(); }   // 噛みあと（欠けたような影）
-      ctx.fillStyle = '#dcae86'; ctx.beginPath(); ctx.arc(hd[0], hd[1], u * 0.024, 0, 6.2832); ctx.fill(); ctx.beginPath(); ctx.arc(bx + br * 0.2, by + br * 0.95, u * 0.016, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = '#dcae86'; ctx.beginPath(); ctx.arc(hd[0], hd[1], u * 0.024, 0, 6.2832); ctx.fill(); if (t < 1.31) { ctx.beginPath(); ctx.arc(bx + br * 0.2, by + br * 0.95, u * 0.016, 0, 6.2832); ctx.fill(); }
       ctx.lineCap = 'butt';
     }
     // ハンドル（運転席＝自分）
