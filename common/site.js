@@ -18,7 +18,6 @@
   };
   var STATUS = {
     stable: null,
-    test:   { ja: '試作', cls: 'st' },
     wip:    { ja: '未完', cls: 'st' },
     paused: { ja: '開発停止', cls: 'stop' }
   };
@@ -75,7 +74,7 @@
           var ok = !!(h && h.status === 'ok' && h.first);
           var o = {
             id: w.id, title: w.title, titleEn: w.titleEn || '', summary: w.summary || '',
-            category: CATS[w.category] ? w.category : 'lab', status: w.status || 'stable', statusNote: w.statusNote || '',
+            category: CATS[w.category] ? w.category : 'lab', status: w.status || 'stable', statusNote: w.statusNote || '', sticker: w.sticker || '',
             devices: w.devices || [], icon: w.icon, gallery: w.gallery !== false, order: i,
             url: new URL(w.path, ROOT).href, path: w.path,
             history: h, dateState: !h ? 'pending' : (h.status === 'ok' ? 'ok' : (h.status === 'none' ? 'none' : 'unverified')),

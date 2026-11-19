@@ -67,6 +67,7 @@ BRAINの曲は、リポジトリ直下の既存素材（`assets/bgm/tides-under-
 | `titleEn` |  | 英語の名前（カードの小さな見出し、BRAINの枝の名前） |
 | `category` | ○ | `game`（ゲーム）／`tool`（実用）／`lab`（実験） |
 | `summary` |  | 1行の説明 |
+| `sticker` |  | カードの角に貼るシールの文字（例：オススメ）。無ければ貼らない |
 | `devices` |  | `["pc","mobile"]`／`["mobile"]`／`["pc"]`。不明なら書かない（しぼり込みで隠れない） |
 | `status` |  | `stable`（表示なし）／`test`（試作）／`wip`（未完）／`paused`（開発停止。BRAINでは白抜きの点） |
 | `statusNote` |  | 状態の補足（例 `不具合連発`、`開発困難・PC不可`） |

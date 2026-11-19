@@ -124,7 +124,7 @@
     badges += IZ.catBadge(w) + IZ.statusBadges(w) + (dv ? '<span class="b">' + dv + '</span>' : '');
     var dates = '公開 <b>' + IZ.dateLabel(w, 'first') + '</b>　更新 <b>' + IZ.dateLabel(w, 'last') + '</b>';
     var liked = IZ.favs.has(w.id);
-    return '<li class="wrap"><a class="card ' + cat.cls + '" href="' + IZ.esc(w.url) + '">' +
+    return '<li class="wrap">' + (w.sticker ? '<span class="sticker">' + IZ.esc(w.sticker) + '</span>' : '') + '<a class="card ' + cat.cls + '" href="' + IZ.esc(w.url) + '">' +
       '<span class="ico">' + IZ.icon(w.icon) + '</span>' +
       '<span class="cbody">' +
         (w.titleEn && w.titleEn !== w.title ? '<span class="en" lang="en">' + hl(w.titleEn) + '</span>' : '') +
