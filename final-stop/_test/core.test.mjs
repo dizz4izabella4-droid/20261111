@@ -105,7 +105,7 @@ log('4. ズレたタップを続ける（時間切れなし）');
   const miss = evs.filter(e => e.type === 'miss'); const ram = evs.find(e => e.type === 'ram');
   ok(miss.length >= 3, '空振りMISSが3回以上'); ok(ram && ram.at > miss[0].at - 0.01 && ram.at < miss[2].at, '2回目のMISSでramが出る');
   ok(!evs.some(e => e.type === 'window'), '窓の合図（window）は出さない');
-  ok(c.state.sub === 'WINDOW' || c.state.sub === 'APPROACH', '時間切れでMISSへ落ちない');
+  ok(['WINDOW', 'APPROACH', 'LUNGE', 'RECOVER'].includes(c.state.sub), '時間切れでMISSへ落ちない');
 }
 
 // 5. 窓が開く前のスワイプ

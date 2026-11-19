@@ -355,7 +355,7 @@ const CONFIG = Object.freeze({
     OPEN_GO: { en: "That red car! Let's get him!", ja: '赤い車だ！ 追うぞ！', say: true },
     OPEN_SIREN: { en: 'Hit the siren!', ja: 'サイレンを鳴らせ！', say: true },
     OPEN_CATCH: { en: 'The sound changes every press!', ja: '押す度に音が変わるぞ', say: true },
-    INTRO: { en: 'Ram him! Touch!', ja: '「つっこめ！」タッチ！', say: true },
+    INTRO: { en: 'You can ram him to stop him!', ja: 'ぶつけて止めてもいいぞ', say: true },
     HIT1: { en: 'Good hit! Two more!', ja: 'いいぞ！ あと2回！', say: true },
     HIT2: { en: 'One more! Stop him!', ja: 'あと1回！ 止めるぞ！', say: true },
     HIT3: { en: "That's it! He's stopping!", ja: 'やった、止まるぞ！', say: true },
@@ -405,7 +405,7 @@ const CORE = (function () {
       window: null, ram: false, ramArmed: false, cmd: { i: 0, step: '' }, pose: { from: 'inCar', to: 'inCar', k: 1 }, ytLimit: 5, siren: 'OFF', lights: true, timeScale: 1,
       elapsed: 0, side: 1, tilt: 0, fade: 0, wobble: 0, lock: 0, dur: 0, auto: false, crackSeed: Math.floor(rnd() * 1e9), pxKick: 0, hintShown: false };
     let ev = [], n = 0, simT = 0, acc = 0, wentAt = -1, lock = 0, swipeLock = 0, wobble = 0;
-    let gapE = 0, sxE = 0, pxE = 0, tiltE = 0, beatSide = C.SIDES[0], afterMiss = false, buffered = false, radioIdx = 0, pxF = 0, speakAuto = false, stuckSent = false;
+    let gapE = 0, sxE = 0, pxE = 0, tiltE = 0, beatSide = C.SIDES[0], afterMiss = false, buffered = false, radioIdx = 0, pxF = 0, speakAuto = false, stuckSent = false, lungeMiss = false;
     let flags = {}, sirenIdx = 0, ytLimit = 5, ytMore = 0;
     let pend = { swipe: null, tap: false, button: null, voice: false, more: false };
 
@@ -428,17 +428,13 @@ const CORE = (function () {
       if (subs[sub].enter) subs[sub].enter();
       return true;
     }
-    function lunge() { beatSide = (S.sx - S.px) >= 0 ? 1 : -1; go('LUNGE'); }
+    function lunge() { beatSide = (S.sx - S.px) >= 0 ? 1 : -1; lungeMiss = false; go('LUNGE'); }
     // 好きなタイミングでタッチして突撃。判定だけ残す：逃走車が真正面（横ズレ ALIGN 以内）なら命中、ズレていれば空振り
     function tapRam(i, locked) {
       if (!i.tap || locked) return false;
-      const thr = S.streakMiss >= C.RESCUE.widen ? C.ALIGN_RESCUE : C.ALIGN;
-      if (Math.abs(S.sx - S.px) <= thr) { lunge(); return true; }
-      if (swipeLock <= 0) {
-        swipeOutside(true); S.misses++; S.streakMiss++; emit('miss', { streak: S.streakMiss });
-        if (S.streakMiss >= C.RESCUE.misses && !S.ram) { S.ram = true; emit('ram', { on: true }); }
-      }
-      return false;
+      // タッチすると必ず真っ直ぐ突撃する。逃走車が真正面（ALIGN 以内）にいれば命中、いなければ横に避けられる
+      const thr = S.streakMiss >= C.RESCUE.widen ? C.ALIGN_RESCUE : C.ALIGN, off = S.sx - S.px;
+      beatSide = off >= 0 ? 1 : -1; lungeMiss = Math.abs(off) > thr; go('LUNGE'); return true;
     }
     function swipeOutside(wob) { if (wob && swipeLock <= 0) { wobble = C.WOBBLE; swipeLock = C.WOBBLE + C.SWIPE_LOCK; emit('whiff'); } }
 
@@ -510,9 +506,15 @@ const CORE = (function () {
       LUNGE: {
         enter() { S.window = null; },
         upd(h) {
-          const p = ss(S.t / C.LUNGE);
-          S.gap = lerp(gapE, 0, p); S.sx = lerp(sxE, sxE + beatSide * 0.9, p); S.pxKick = beatSide * 0.6 * p;
-          if (S.t >= C.LUNGE) {
+          const dur = lungeMiss ? C.LUNGE * 2 : C.LUNGE, p = ss(S.t / dur);
+          if (lungeMiss) { S.gap = lerp(gapE, 0.8, p); S.sx = lerp(sxE, sxE + beatSide * 2.4, p); }        // 目の前にいない：逃走車は横にかわし、パトカーは空を切る
+          else { S.gap = lerp(gapE, 0, p); S.sx = lerp(sxE, sxE + beatSide * 0.9, p); S.pxKick = beatSide * 0.6 * p; }
+          if (S.t >= dur) {
+            if (lungeMiss) {
+              S.misses++; S.streakMiss++; emit('whiff'); emit('miss', { streak: S.streakMiss });
+              if (S.streakMiss >= C.RESCUE.misses && !S.ram) { S.ram = true; emit('ram', { on: true }); }
+              go('RECOVER'); return;
+            }
             S.hits++; S.damage = Math.min(3, S.hits); S.sinceHit = 0; S.streakMiss = 0; S.ram = false; S.ramArmed = false;
             emit('hit', { stage: S.hits, x: S.sx, side: beatSide });
             go('HIT');
