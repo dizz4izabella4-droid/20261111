@@ -118,7 +118,7 @@
   <div class="foot-in">
     <a href="../">作品一覧へ</a>
     <a href="../brain/">BRAIN</a>
-    <span class="concept">自分がほしいものを好きなだけつくる</span>
+    <span class="concept">好きなものを好きなように好きなだけつくる</span>
   </div>
 </footer>
 
@@ -190,12 +190,12 @@
 
   function calendar() {
     var byDay = {};
-    works.forEach(function (w) { (w.history && w.history.days || []).forEach(function (d) { (byDay[d] = byDay[d] || []).push(w.title); }); });
+    works.forEach(function (w) { if (w.first) (byDay[w.first] = byDay[w.first] || []).push(w.title); });
     var days = Object.keys(byDay).sort();
     if (!days.length) return '<p class="empty">記録がありません。</p>';
     var months = [], cur = days[0].slice(0, 7), end = days[days.length - 1].slice(0, 7);
     while (cur <= end) { months.push(cur); var yy = +cur.slice(0, 4), mm = +cur.slice(5); mm++; if (mm > 12) { mm = 1; yy++; } cur = yy + '-' + (mm < 10 ? '0' : '') + mm; }
-    var html = '<p style="font-size:13px;color:var(--sub);margin:0 0 6px">その日に手を入れた作品の数（濃いほど多い）。マスにふれると作品名が出ます。</p><div class="cal-wrap">';
+    var html = '<p style="font-size:13px;color:var(--sub);margin:0 0 6px">その日に公開した作品の数（濃いほど多い）。マスにふれると作品名が出ます。</p><div class="cal-wrap">';
     months.forEach(function (ym) {
       var y = +ym.slice(0, 4), m = +ym.slice(5), first = new Date(Date.UTC(y, m - 1, 1)).getUTCDay(), n = new Date(Date.UTC(y, m, 0)).getUTCDate();
       html += '<div class="cal"><h4>' + y + '年' + m + '月</h4><div class="cal-g" role="list">' + WD.map(function (x) { return '<span class="h" aria-hidden="true">' + x + '</span>'; }).join('');
