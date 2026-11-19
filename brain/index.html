@@ -23,6 +23,8 @@ a{color:inherit}
 #title{position:fixed;z-index:3;left:0;right:0;top:max(54px,calc(env(safe-area-inset-top,0px) + 50px));text-align:center;font:400 22px Georgia,serif;letter-spacing:9px;text-indent:9px;color:#7b838b;pointer-events:none}
 
 /* 枝（作品の木） */
+#bgi{position:fixed;inset:0;z-index:0;width:100%;height:100%;border:0;pointer-events:none;opacity:0;background:#fff;visibility:hidden;transition:opacity 3s ease,visibility 0s 3s}
+#bgi.show{opacity:.78;visibility:visible;transition:opacity 3s ease}
 #stage{position:fixed;inset:0;z-index:1}
 #tree{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);will-change:transform}
 #tree svg{display:block;width:100%;height:100%;overflow:visible}
@@ -72,7 +74,6 @@ a{color:inherit}
 #snd{position:fixed;z-index:40;right:max(10px,env(safe-area-inset-right,0px));bottom:max(10px,env(safe-area-inset-bottom,0px));width:38px;height:38px;border-radius:50%;border:1px solid #c9ced3;background:rgba(255,255,255,.9);color:#6b737b;display:grid;place-items:center;padding:0;cursor:pointer}
 #snd svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 #snd .x{display:block}#snd .w{display:none}#snd.on .x{display:none}#snd.on .w{display:block}
-#motion{position:fixed;z-index:40;left:max(10px,env(safe-area-inset-left,0px));bottom:max(10px,env(safe-area-inset-bottom,0px));height:38px;padding:0 12px;border-radius:19px;border:1px solid #c9ced3;background:rgba(255,255,255,.9);color:#6b737b;font:400 10px/1 Georgia,serif;letter-spacing:.2em;cursor:pointer}
 body.still .ghost,body.still .node.new .pulse{animation:none!important}
 @media(prefers-reduced-motion:reduce){.ghost,.node.new .pulse{animation:none!important}}
 </style>
@@ -84,6 +85,7 @@ body.still .ghost,body.still .node.new .pulse{animation:none!important}
 </nav>
 <div id="title" aria-hidden="true">BRAIN</div>
 
+<iframe id="bgi" title="" aria-hidden="true" tabindex="-1" scrolling="no"></iframe>
 <main id="stage" aria-label="BRAIN：作品が枝として伸びる木。点を選ぶと作品が開きます。">
   <div id="tree"></div>
   <div id="fog"></div>
@@ -91,7 +93,6 @@ body.still .ghost,body.still .node.new .pulse{animation:none!important}
 
 
 <p id="concept">ほしいものをすきなようにつくる</p>
-<button id="motion" type="button" aria-pressed="false" title="動きを止める">STILL</button>
 <button id="snd" type="button" aria-pressed="false" aria-label="音を鳴らす"><svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><g class="w"><path d="M15.5 9a4.2 4.2 0 0 1 0 6"/><path d="M18 6.6a7.6 7.6 0 0 1 0 10.8"/></g><path class="x" d="M16 9.5l5 5M21 9.5l-5 5"/></svg></button>
 
 <script src="../common/site.js"></script>
@@ -99,7 +100,7 @@ body.still .ghost,body.still .node.new .pulse{animation:none!important}
 (function () {
   'use strict';
   var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var still = reduce; try { if (localStorage.getItem('izSite.still') === '1') still = true; } catch (e) {}
+  var still = reduce;
   var A = IZ.ROOT + 'assets/';
 
   /* ---------- 木 ---------- */
@@ -283,11 +284,15 @@ body.still .ghost,body.still .node.new .pulse{animation:none!important}
     if (Math.abs(tx - cx) > .05 || Math.abs(ty - cy) > .05) raf = requestAnimationFrame(step);
   }
 
-  /* 動きを止める */
-  var mb = document.getElementById('motion');
-  function applyStill() { document.body.classList.toggle('still', still); mb.setAttribute('aria-pressed', String(still)); mb.textContent = still ? 'MOVE' : 'STILL'; mb.title = still ? '動きをもどす' : '動きを止める'; if (still) { tx = ty = cx = cy = 0; treeEl.style.transform = ''; treeEl.classList.remove('anim'); } }
-  mb.addEventListener('click', function () { still = !still; try { localStorage.setItem('izSite.still', still ? '1' : '0'); } catch (e) {} applyStill(); });
-  applyStill();
+  /* 音のボタンで、後ろにイカロスのオート映像（UIなし・無音・半透明）を流す。止めると外して負荷をなくす */
+  var bgi = document.getElementById('bgi'), bgReady = false, bgOn = false;
+  addEventListener('message', function (e) { if (e.source === bgi.contentWindow && e.data && e.data.icarusReady) { bgReady = true; if (bgOn) bgStart(); } });
+  function bgStart() { try { bgi.contentWindow.postMessage('start', '*'); } catch (err) {} bgi.classList.add('show'); }
+  function bgPlay(on) {
+    bgOn = on;
+    if (on) { if (!bgi.getAttribute('src')) { bgReady = false; bgi.setAttribute('src', '../icarus/?bg=1'); } else if (bgReady) bgStart(); }
+    else { bgi.classList.remove('show'); setTimeout(function () { if (!bgOn) { bgi.removeAttribute('src'); bgReady = false; } }, 3200); }
+  }
 
   /* 音：最初は鳴らさない。右下のボタンで鳴らす（旧BRAINの曲を流用） */
   var snd = document.getElementById('snd'), au = null, fade = 0;
@@ -297,6 +302,7 @@ body.still .ghost,body.still .node.new .pulse{animation:none!important}
     var on = !snd.classList.contains('on');
     snd.classList.toggle('on', on); snd.setAttribute('aria-pressed', String(on)); snd.setAttribute('aria-label', on ? '音を止める' : '音を鳴らす');
     if (on) au.play().then(function () { ramp(.5, 1500); }).catch(function () {}); else ramp(0, 500);
+    bgPlay(on);
   });
   document.addEventListener('visibilitychange', function () { if (au && document.hidden) au.pause(); else if (au && snd.classList.contains('on')) au.play().catch(function () {}); });
 
