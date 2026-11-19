@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>BRAIN｜izのおもちゃ箱</title>
+<script>/* iPhoneのマナーモード（消音スイッチ）に従わせる。曲（audio要素）も効果音も、消音のときは鳴らさない */try{ if(navigator.audioSession) navigator.audioSession.type="ambient"; }catch(e){}</script>
+<style>
+:root { color-scheme:dark; --px:0px; --fg:0px; --warm:#ffc27c; }
+*{ box-sizing:border-box }
+html,body{ width:100%;height:100%;margin:0;overflow:hidden;background:#050c16; }
+body{ font-family:system-ui,sans-serif; user-select:none;-webkit-user-select:none; }
+#world{ position:fixed;inset:0;overflow:hidden; touch-action:none;cursor:grab;isolation:isolate;background:#050c16; }
+#world.dragging{cursor:grabbing}
+#reel{position:absolute;z-index:5;inset:0;perspective:1200px;transform-style:preserve-3d;pointer-events:none;}
+.window{position:absolute;top:49%;left:50%;width:clamp(135px,19vw,270px);aspect-ratio:1086/1448;transform-origin:center center;pointer-events:auto;cursor:pointer;outline:none;will-change:transform,opacity;transform-style:preserve-3d;}
+.window:focus-visible .window-shell{outline:2px solid #eec69a;outline-offset:4px}
+.window-shell{position:relative;width:100%;height:100%;transform-style:preserve-3d;perspective:950px;}
+.portal{position:absolute;left:17%;width:67%;top:11%;height:78%;overflow:hidden;background:radial-gradient(ellipse at 50% 43%,#bf7841 0%,#5a3e46 30%,#10253c 64%,#080e21 100%);border-radius:1%;box-shadow:inset 0 0 18px 9px #030914,0 0 33px rgba(252,177,77,.16);opacity:.1;transition:opacity 1s,box-shadow 1s;pointer-events:none}
+.portal::before{content:"";position:absolute;inset:-25%;background:radial-gradient(ellipse at 50% 40%,rgba(255,221,162,.60),rgba(245,159,64,.22) 27%,transparent 56%);}
+.portal::after{content:"";position:absolute;inset:0;background:none;mix-blend-mode:screen}
+/* ガラス4面にだけ、現在のおもちゃ箱トップを映す */
+.glass{position:absolute;left:21.7%;top:15.5%;width:57%;height:68%;z-index:5;pointer-events:none;overflow:hidden;transition:opacity .35s}
+.wood{position:absolute;top:10.7%;height:78.04%;z-index:5;pointer-events:none;transition:opacity .35s}
+.wood.left{left:16.76%;width:32.87%}.wood.right{left:49.63%;width:34.08%}
+.wood img{width:100%;height:100%;display:block;object-fit:fill}
+.window.open .wood,.window.open .glass{opacity:0}
+:root{--ww:clamp(135px,19vw,270px)}
+@media(max-width:650px){:root{--ww:clamp(125px,40vw,185px)}}
+.plate{position:absolute;left:50%;top:101.5%;transform:translateX(-50%);z-index:8;pointer-events:none;
+ min-width:46%;padding:.28em .9em .32em;border-radius:.18em;text-align:center;white-space:nowrap;
+ font:700 calc(var(--ww)*.062)/1.2 'Hiragino Mincho ProN','Yu Mincho',serif;letter-spacing:.32em;text-indent:.32em;
+ color:#2a160a;text-shadow:0 1px 0 rgba(255,214,160,.45),0 -1px 0 rgba(0,0,0,.35);
+ background:repeating-linear-gradient(92deg,rgba(0,0,0,.07) 0 2px,transparent 2px 7px,rgba(255,200,130,.05) 7px 8px),linear-gradient(180deg,#a8723f,#82532a 55%,#6a4222);
+ box-shadow:inset 0 1px 0 rgba(255,220,170,.5),inset 0 -2px 3px rgba(0,0,0,.45),inset 0 0 0 .1em rgba(60,30,10,.55),0 .35em .5em rgba(0,0,0,.45)}
+.plate::before,.plate::after{content:"";position:absolute;top:50%;width:.32em;height:.32em;margin-top:-.16em;border-radius:50%;background:radial-gradient(circle at 35% 30%,#e9c88a,#7a5527 70%);box-shadow:0 .05em .08em rgba(0,0,0,.6)}
+.plate::before{left:.45em}.plate::after{right:.45em}
+.window:not(.selected) .plate{opacity:.85}
+.cine{position:absolute;inset:0;background:#000}
+.white{position:absolute;inset:0;background:#fff}
+.other{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 38%,#fff6d8 0%,#cfeee6 38%,#a9b8ee 78%,#8f95d8 100%)}
+.sticker{position:absolute;left:50%;top:41%;z-index:8;pointer-events:none;transform:translate(-50%,-50%) rotate(-5deg);padding:.3em .8em .34em;white-space:nowrap;
+ font:700 calc(var(--ww)*.085)/1.1 'Hiragino Mincho ProN','Yu Mincho',serif;letter-spacing:.18em;text-indent:.18em;color:#c4161c;
+ background:linear-gradient(160deg,#fbf6ea,#eee4cf);border:.09em solid #c4161c;outline:.04em solid #fbf6ea;outline-offset:-.2em;border-radius:.1em;
+ box-shadow:0 .12em .3em rgba(0,0,0,.55),inset 0 0 .5em rgba(120,80,30,.25);transition:opacity .35s}
+.window.open .sticker{opacity:0}
+.gate{position:absolute;left:17%;top:11%;width:67%;height:78%;z-index:9;pointer-events:none;cursor:pointer}
+.window.open .gate{pointer-events:auto}
+.glass img{max-width:none}
+.glass iframe,.glass img{position:absolute;left:0;top:0;width:600px;height:900px;border:0;transform-origin:0 0;background:#050c16;opacity:.88}
+.glass::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,rgba(255,255,255,.10),transparent 38%,rgba(255,190,120,.07))}
+.window.open .glass{opacity:0}
+.panel{position:absolute;top:10.7%;height:78.04%;z-index:4;backface-visibility:hidden;transform-style:preserve-3d;transition:transform 1.27s cubic-bezier(.16,.78,.16,1);}
+.panel img{height:100%;width:100%;display:block;object-fit:fill;pointer-events:none;}
+.panel.left{left:16.76%;width:32.87%;transform-origin:0% 50%}
+.panel.right{left:49.63%;width:34.08%;transform-origin:100% 50%}
+.frame{position:absolute;inset:0;z-index:6;pointer-events:none;width:100%;height:100%;object-fit:fill;}
+.window.open .panel.left{transform:rotateY(-105deg)}
+.window.open .panel.right{transform:rotateY(105deg)}
+.window.open .portal{opacity:1;box-shadow:inset 0 0 20px 4px rgba(15,7,22,.75),0 0 44px rgba(252,177,77,.42)}
+@media(max-width:650px){.window{width:clamp(125px,40vw,185px)}#world{touch-action:none}#vignette{box-shadow:inset 0 0 100px 35px rgba(0,5,13,.34)}}
+/* 背景を真っ白に */
+html,body,#world{background:#fff!important}
+@media(prefers-reduced-motion:reduce){#mist,#water,.window-shell,.portal::before{animation:none!important}.panel,.portal{transition-duration:.05s}}
+
+#tree{position:absolute;z-index:1;left:50%;top:49%;width:min(96vh,170vw);aspect-ratio:1;margin-left:calc(min(96vh,170vw) / -2);margin-top:calc(min(96vh,170vw) / -2);pointer-events:none;will-change:transform;transition:opacity .6s,filter .6s}
+#bgi{position:absolute;z-index:0;inset:0;width:100%;height:100%;border:0;pointer-events:none;opacity:0;background:#fff;transition:opacity 3s ease}
+#bgi.show{opacity:.78}
+#tree.waiting{animation:treewait 2.4s ease-in-out infinite}
+@keyframes treewait{0%,100%{opacity:1}50%{opacity:.45}}
+#brain{position:fixed;z-index:30;top:max(48px,calc(env(safe-area-inset-top,0px) + 44px));left:0;right:0;text-align:center;font:400 22px Georgia,serif;letter-spacing:9px;text-indent:9px;color:#7b838b;pointer-events:none}
+#tree svg{width:100%;height:100%;display:block;overflow:visible}
+#tree .ln{fill:none;stroke:#A9AFB5;stroke-width:1.2;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1;animation:grow 2.2s cubic-bezier(.3,.6,.2,1) forwards;animation-delay:var(--d,0s);transition:stroke .5s}
+#tree .ln.w{stroke-width:.8}
+@keyframes grow{to{stroke-dashoffset:0}}
+#tree .dot{fill:#888D92;transition:fill .5s,r .5s;opacity:0;animation:fadein 1s forwards;animation-delay:var(--d,0s)}
+#tree .dot.hold{fill:#fff;stroke:#9aa0a6;stroke-width:1.2}
+#tree text{font-family:Georgia,'Times New Roman',serif;fill:#8d9298;opacity:0;animation:fadein 1.2s forwards;animation-delay:var(--d,0s);transition:fill .5s}
+#tree .hub text{font-size:30px;letter-spacing:3px;font-weight:700}
+#tree .wk text{font-family:system-ui,sans-serif;font-size:15px;letter-spacing:.6px}
+#tree g.on .ln{stroke:#5b6670}#tree g.on .dot:not(.hold){fill:#3b4650}#tree g.on text{fill:#2f3a44}
+
+#tree .cap{font-family:system-ui,sans-serif;font-size:10px;letter-spacing:3.5px;fill:#b3b8bd}
+@keyframes fadein{to{opacity:1}}
+#fog{position:absolute;z-index:2;inset:0;pointer-events:none;background:radial-gradient(ellipse 70% 60% at 50% 52%,rgba(255,255,255,0),rgba(255,255,255,.35) 100%),linear-gradient(180deg,rgba(255,255,255,.3),rgba(255,255,255,0) 22%,rgba(255,255,255,0) 60%,rgba(255,255,255,.7) 94%)}
+.window-shell::before{content:'';position:absolute;left:6%;right:6%;bottom:-3%;height:9%;border-radius:50%;background:radial-gradient(ellipse,rgba(40,50,70,.38),transparent 70%);pointer-events:none}
+#snd{position:fixed;z-index:40;right:max(10px,env(safe-area-inset-right,0px));bottom:max(12px,env(safe-area-inset-bottom,0px));width:36px;height:36px;border-radius:50%;border:1px solid #c9ced3;background:rgba(255,255,255,.85);color:#6b737b;display:grid;place-items:center;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#snd svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}#snd .x{display:none}#snd.off .x{display:block}#snd.off .w{display:none}
+#gate{position:fixed;inset:0;z-index:100;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:34px;transition:opacity 1.4s ease}
+#gate.out{opacity:0;pointer-events:none}
+#gate .g-t{font:400 26px Georgia,'Times New Roman',serif;letter-spacing:10px;text-indent:10px;color:#6b737b}
+#gate button{all:unset;cursor:pointer;box-sizing:border-box;padding:11px 38px 11px 43px;border:1px solid #c3c8cd;border-radius:2px;font:400 12px Georgia,'Times New Roman',serif;letter-spacing:6px;color:#6b737b;transition:background .35s,color .35s,border-color .35s;-webkit-tap-highlight-color:transparent}
+#gate button:hover,#gate button:focus-visible{background:#3b4650;border-color:#3b4650;color:#fff}
+#gate .g-n{font:400 10px system-ui,sans-serif;letter-spacing:3px;color:#aab0b6;margin-top:-14px}
+body.pre #tree,body.pre #tree *{animation-play-state:paused!important}
+#flash{position:fixed;left:0;top:0;z-index:95;pointer-events:none;border-radius:50%;opacity:0;will-change:transform,opacity;background:radial-gradient(circle,#fff 0,#fff 42%,rgba(255,246,222,.92) 52%,rgba(255,228,170,.45) 62%,rgba(255,220,150,0) 72%);transform:translate(-50%,-50%) scale(.02)}
+#flash.go{opacity:1;transition:transform 1.15s cubic-bezier(.45,0,.75,.5),opacity .25s ease-out}
+.window.open .portal{background:radial-gradient(ellipse at 50% 45%,#fffdf2 0%,#ffe9b8 40%,#f6b866 80%,#c9803a 100%)}
+#home{position:fixed;z-index:120;left:max(12px,env(safe-area-inset-left,0px));top:max(12px,env(safe-area-inset-top,0px));width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:1px solid #c9ced3;border-radius:50%;background:rgba(255,255,255,.85);color:#6b737b;text-decoration:none;font:400 18px/1 system-ui,sans-serif}
+</style>
+</head>
+<body>
+<div id="brain" aria-hidden="true">BRAIN</div>
+<div id="gate" role="dialog" aria-label="入り口"><div class="g-t">BRAIN</div><button id="gateBtn" type="button">ENTER</button><div class="g-n">♪ 音が流れます</div></div>
+<a id="home" href="../" aria-label="トップへ戻る">×</a>
+<div id="flash" aria-hidden="true"></div>
+<audio id="bgm" src="../assets/bgm/tides-under-glass.mp3" loop preload="auto"></audio>
+<button id="snd" type="button" aria-label="BGMのオン・オフ"><svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><g class="w"><path d="M15.5 9a4.2 4.2 0 0 1 0 6"/><path d="M18 6.6a7.6 7.6 0 0 1 0 10.8"/></g><path class="x" d="M16 9.5l5 5M21 9.5l-5 5"/></svg></button>
+<main id="world" aria-label="おもちゃ箱の入り口。左右にドラッグして窓を選び、タップで扉が開きます。">
+  
+  <iframe id="bgi" src="../icarus/?bg=1" title="" aria-hidden="true" tabindex="-1" scrolling="no"></iframe><div id="tree" aria-hidden="true"></div><div id="fog"></div><div id="reel"></div>
+</main>
+<script>
+(()=>{'use strict';
+const WORLD=document.getElementById('world');
+const REEL=document.getElementById('reel');
+const data=[
+  {name:'TOY BOX',url:'../toybox/'},
+  {name:'LABORATORY',url:'../lab/'},
+  {name:'CINEMA'},      // 幕は下ろしたまま（まだ入れない）
+  {name:'UTILITY ROOM',url:'../utility/'},
+  {name:'OTHER WORLD',url:'https://iz3ico.github.io/app/'},
+];
+let pid=0,target=0,visual=0,travel=0,drag=false,moved=false,lastX=0,downX=0,dragStart=0,downTime=0,openIndex=-1;
+let dirty=true,lastVisual=NaN;
+let w=innerWidth,h=innerHeight,last=performance.now();
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const win=[];
+for(let i=0;i<data.length;i++){
+  const el=document.createElement('div');el.className='window';el.tabIndex=0;el.dataset.index=i;
+  el.setAttribute('role','button');el.setAttribute('aria-label',data[i].name+'の窓');el.setAttribute('aria-expanded','false');
+  el.innerHTML='<div class="window-shell"><div class="aura"></div><div class="portal"></div><div class="panel left"><img draggable="false" src="../assets/window_left.webp" alt=""></div><div class="panel right"><img draggable="false" src="../assets/window_right.webp" alt=""></div><div class="glass"></div><div class="plate"></div><div class="wood left"><img draggable="false" src="../assets/wood_left.webp" alt=""></div><div class="wood right"><img draggable="false" src="../assets/wood_right.webp" alt=""></div><img class="frame" draggable="false" src="../assets/window_frame.webp" alt=""><div class="reflection"></div></div>';
+  REEL.append(el);win.push(el);
+  el.addEventListener('click',e=>{e.stopPropagation();if(moved)return;activate(i)});
+  el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();activate(i)}});
+}
+const mounted=[];
+function fitGlass(){win.forEach(el=>{const g=el.querySelector('.glass'),f=g&&g.querySelector('iframe');if(!f)return;f.style.transform='scale('+Math.max(g.offsetWidth/600,g.offsetHeight/900).toFixed(4)+')'})}
+const TINT=['linear-gradient(180deg,#fff3f9,#f4eaff 55%,#e4f6f0)','radial-gradient(ellipse at 50% 30%,#2a4a9a,#0a1230 75%)','linear-gradient(90deg,#5a0f18,#a01f2c 20%,#5a0f18 40%,#a01f2c 60%,#5a0f18 80%,#a01f2c)','#fff','radial-gradient(ellipse at 50% 38%,#fff6d8 0%,#cfeee6 38%,#a9b8ee 78%,#8f95d8 100%)'];
+function mount(i){if(mounted[i])return;mounted[i]=true;const g=win[i].querySelector('.glass');const d=document.createElement('div');d.style.cssText='position:absolute;inset:0;background:'+TINT[i];g.append(d)}
+function mountGlass(){win.forEach((el,i)=>{const g=el.querySelector('.glass');el.querySelector('.plate').textContent=data[i].name;
+  if(i===2){const k=document.createElement('div');k.className='sticker';k.textContent='COMING SOON';el.querySelector('.window-shell').append(k)}
+  
+  if(data[i].url){const ext=/^https?:/.test(data[i].url);const a=document.createElement('a');a.className='gate';a.href=data[i].url;if(ext){a.target='_blank';a.rel='noopener'}a.setAttribute('aria-label',data[i].name+'を開く');a.addEventListener('click',e=>{e.stopPropagation();if(!ext){e.preventDefault();lightGo(i,true)}});el.querySelector('.window-shell').append(a)}});fitGlass()}
+addEventListener('pageshow',()=>closeAll());
+function wrap(n,size){return ((n%size)+size)%size}
+function centeredDelta(i,p){let d=wrap(i-p,data.length);if(d>data.length/2)d-=data.length;if(d===data.length/2&&i!==0&&p>i)d-=data.length;return d}
+function gap(){return Math.min(w*.5,720)}
+function closeAll(){openIndex=-1;win.forEach(el=>{el.classList.remove('open');el.setAttribute('aria-expanded','false')})}
+let lighting=false,leaving=false;
+function go(i){if(leaving)return;leaving=true;location.href=data[i].url}
+function lightGo(i,fast){if(lighting||leaving)return;lighting=true;const f=document.getElementById('flash'),g=win[i].querySelector('.glass').getBoundingClientRect();
+  const cx=g.left+g.width/2,cy=g.top+g.height/2,R=Math.hypot(Math.max(cx,w-cx),Math.max(cy,h-cy))*2.9;
+  f.style.width=f.style.height=R+'px';f.style.left=cx+'px';f.style.top=cy+'px';f.style.transitionDuration=reduceMotion?'.01s':(fast?'.75s,.2s':'1.15s,.25s');
+  void f.offsetWidth;f.classList.add('go');f.style.transform='translate(-50%,-50%) scale(1)';
+  setTimeout(()=>go(i),reduceMotion?60:(fast?800:1250))}
+addEventListener('pageshow',()=>{lighting=false;leaving=false;const f=document.getElementById('flash');f.classList.remove('go');f.style.transform=''});
+function activate(i){const d=centeredDelta(i,visual);if(Math.abs(d)>.38){closeAll();target+=d;return}
+  if(openIndex!==i){closeAll();openIndex=i;win[i].classList.add('open');win[i].setAttribute('aria-expanded','true');if(data[i].url&&!/^https?:/.test(data[i].url))setTimeout(()=>{if(openIndex===i)lightGo(i,false)},reduceMotion?100:650);return}
+  if(data[i].url)return;closeAll();
+}
+function onDown(e){if(e.button!==undefined&&e.button!==0)return;drag=true;moved=false;downX=lastX=e.clientX;dragStart=target;downTime=performance.now();pid=e.pointerId}
+function onMove(e){if(!drag)return;const dx=e.clientX-downX;if(Math.abs(dx)>7&&!moved){moved=true;WORLD.classList.add('dragging');try{WORLD.setPointerCapture(pid)}catch{}}const dd=e.clientX-lastX;lastX=e.clientX;if(moved){target-=dd/gap();travel+=dd;visual=target;closeAll()}}
+function onUp(e){if(!drag)return;drag=false;WORLD.classList.remove('dragging');try{WORLD.releasePointerCapture(e.pointerId)}catch{};if(moved){target=Math.round(target);setTimeout(()=>moved=false,0)}else moved=false}
+WORLD.addEventListener('pointerdown',onDown);WORLD.addEventListener('pointermove',onMove);WORLD.addEventListener('pointerup',onUp);WORLD.addEventListener('pointercancel',onUp);
+WORLD.addEventListener('click',e=>{if(!e.target.closest('.window')&&!moved)closeAll()});
+addEventListener('keydown',e=>{if(e.key==='ArrowRight'){closeAll();target=Math.round(target)+1}else if(e.key==='ArrowLeft'){closeAll();target=Math.round(target)-1}else if(e.key==='Escape'){closeAll()}});
+function resize(){w=innerWidth;h=innerHeight;dirty=true}
+addEventListener('resize',()=>{resize();fitGlass()});resize();mountGlass();
+
+const HUBS=[
+ {i:0,name:'TOY BOX',s:-1,y:235,w:[['ANZAN'],['NOCHE SIN LUNA'],['NOBIRU HIGE'],['GLASS BREAKER'],['WAIYADA'],['KOUMORI'],['CMD TYPING MOBILE'],['CMD TYPING']]},
+ {i:1,name:'LABORATORY',s:1,y:365,w:[['REDLINE'],['YAWARAKA',1],['PC98 NOVEL'],['NOBIRU HIGE 2'],['WHERE WHICH',1],['ICARUS']]},
+ {i:2,name:'CINEMA',s:-1,y:545,w:[['COMING SOON',1]]},
+ {i:3,name:'UTILITY ROOM',s:1,y:655,w:[['CALCULATOR DRILL']]},
+ {i:4,name:'OTHER WORLD',s:-1,y:800,w:[['HEALING DOOR']]}];
+const treeEl=document.getElementById('tree');let hubG=[];
+const PORTRAIT=matchMedia('(max-aspect-ratio: 4/5)');
+let seed=7;function rnd(){seed=(seed*1664525+1013904223)%4294967296;return seed/4294967296}
+function buildTree(){seed=7;const P=PORTRAIT.matches,N='http://www.w3.org/2000/svg',C=700,deg=Math.PI/180;
+ const ANG=P?{0:240,1:300,2:120,3:60,4:270}:{0:205,1:335,2:155,3:25,4:270};
+ const pt=(a,r)=>[C+Math.cos(a*deg)*r,C+Math.sin(a*deg)*r];
+ const curve=(a,r0,r1,bend)=>{const p0=pt(a,r0),p1=pt(a+bend,r1),m=pt(a+bend*1.6,(r0+r1)/2);return 'M'+p0[0].toFixed(1)+' '+p0[1].toFixed(1)+' Q'+m[0].toFixed(1)+' '+m[1].toFixed(1)+' '+p1[0].toFixed(1)+' '+p1[1].toFixed(1)};
+ let h='<svg viewBox="0 0 1400 1400" xmlns="'+N+'">';
+ // 奥の細い枝（読ませない飾り）
+ const taken=Object.values(ANG);const FILL=34;
+ for(let k=0;k<FILL;k++){const a=k*(360/FILL)+rnd()*6-3;if(taken.some(t=>Math.abs(((a-t+540)%360)-180)<7))continue;
+  const r1=300+rnd()*330,bend=rnd()*14-7,d=(0.4+rnd()*1.8).toFixed(2);
+  h+='<g class="fl" style="opacity:.8"><path class="ln w" pathLength="1" style="--d:'+d+'s" d="'+curve(a,30,r1,bend)+'"/>';
+  const f0=pt(a+bend*1.2,r1*(.62+rnd()*.12));
+  for(const sg of [-1,1]){if(rnd()<.35)continue;const a2=a+bend+sg*(18+rnd()*14),r2=r1+60+rnd()*120,e=pt(a2,r2);
+   h+='<path class="ln w" pathLength="1" style="--d:'+(+d+.8).toFixed(2)+'s" d="M'+f0[0].toFixed(1)+' '+f0[1].toFixed(1)+' L'+e[0].toFixed(1)+' '+e[1].toFixed(1)+'"/><circle class="dot" cx="'+e[0].toFixed(1)+'" cy="'+e[1].toFixed(1)+'" r="2.4" style="--d:'+(+d+1.4).toFixed(2)+'s"/>'}
+  const e1=pt(a+bend,r1);h+='<circle class="dot" cx="'+e1[0].toFixed(1)+'" cy="'+e1[1].toFixed(1)+'" r="3" style="--d:'+(+d+1).toFixed(2)+'s"/></g>'}
+ // 5つの部屋
+ HUBS.forEach((H,k)=>{const a=ANG[H.i],R=520,d0=(1.0+k*.3).toFixed(2),tp=pt(a,R),c=Math.cos(a*deg),sn=Math.sin(a*deg);
+  const anc=P?'middle':(c>.35?'start':(c<-.35?'end':'middle'));
+  h+='<g class="hub" data-i="'+H.i+'"><path class="ln" pathLength="1" style="--d:'+d0+'s" d="'+curve(a,30,R,0)+'"/><circle class="dot" cx="'+tp[0].toFixed(1)+'" cy="'+tp[1].toFixed(1)+'" r="6" style="--d:'+d0+'s"/>';
+  const lp=pt(a,R+(P?30:24));h+='<text x="'+lp[0].toFixed(1)+'" y="'+(lp[1]+(sn<-.5?-4:sn>.5?22:8)).toFixed(1)+'" text-anchor="'+anc+'" style="--d:'+d0+'s">'+H.name+'</text>';
+  const n=H.w.length,span=P?24:30,st=n>1?span/(n-1):0;
+  H.w.forEach((W,j)=>{const wa=a+(n>1?(j-(n-1)/2)*st:0),wp=pt(wa,P?640:670),d1=(+d0+.7+j*.1).toFixed(2);
+   const wc=Math.cos(wa*deg),wanc=wc>.35?'start':(wc<-.35?'end':'middle'),tl=pt(wa,(P?640:670)+14);
+   h+='<g class="wk"><path class="ln w" pathLength="1" style="--d:'+d1+'s" d="M'+tp[0].toFixed(1)+' '+tp[1].toFixed(1)+' L'+wp[0].toFixed(1)+' '+wp[1].toFixed(1)+'"/><circle class="dot'+(W[1]?' hold':'')+'" cx="'+wp[0].toFixed(1)+'" cy="'+wp[1].toFixed(1)+'" r="3.4" style="--d:'+d1+'s"/>'+(P?'':'<text x="'+tl[0].toFixed(1)+'" y="'+(tl[1]+5).toFixed(1)+'" text-anchor="'+wanc+'" style="--d:'+d1+'s">'+W[0]+'</text>')+'</g>'});
+  h+='</g>'});
+ h+='<circle class="dot" cx="700" cy="700" r="9" style="--d:.2s;fill:#6b737b"/></svg>';treeEl.innerHTML=h;hubG=[];treeEl.querySelectorAll('.hub').forEach(g=>hubG[+g.dataset.i]=g);lastAct=-1}
+let lastAct=-1;
+PORTRAIT.addEventListener('change',buildTree);buildTree();
+const AMP=30;
+
+let growMs=0;(function(){let m=0;treeEl.querySelectorAll('[style*="--d"]').forEach(x=>{const v=parseFloat((x.getAttribute('style').match(/--d:([\d.]+)s/)||[])[1]);if(v>m)m=v});growMs=(m+2.4)*1000})();
+let T0=performance.now(),entered=false;let icReady=false,revealed=false;const bgi=document.getElementById('bgi');
+addEventListener('message',e=>{if(e.data&&e.data.icarusReady)icReady=true});
+const revealTimer=setInterval(()=>{if(revealed||!entered)return;const el=performance.now()-T0;if(el<growMs)return;
+ if(icReady||el>40000){revealed=true;treeEl.classList.remove('waiting');try{bgi.contentWindow.postMessage('start','*')}catch(e){}bgi.classList.add('show');clearInterval(revealTimer)}
+ else treeEl.classList.add('waiting')},250);
+function render(t){let dt=Math.min(.05,(t-last)/1000);last=t;if(!drag){visual+=(target-visual)*Math.min(1,dt*(reduceMotion?20:11));if(Math.abs(target-visual)<.0008)visual=target}
+  if(!dirty&&!drag&&visual===target&&visual===lastVisual){requestAnimationFrame(render);return}
+  dirty=false;lastVisual=visual;
+  const offset=gap();{const n=data.length;treeEl.style.transform='translate3d('+(-AMP*Math.sin(2*Math.PI*visual/n)).toFixed(2)+'px,'+(AMP*.12*Math.cos(2*Math.PI*visual/n)).toFixed(2)+'px,0)';const act=wrap(Math.round(visual),n);if(act!==lastAct){hubG.forEach((g,k)=>g&&g.classList.toggle('on',k===act));lastAct=act}}
+  win.forEach((el,i)=>{const d=centeredDelta(i,visual);const a=Math.abs(d);if(a<1.7&&!mounted[i])mount(i);
+    const scale=Math.max(.51,1-.18*a);
+    const x=d*offset;
+    const y=Math.min(h*.04,22)*a;
+    const tilt=Math.max(-21,Math.min(21,-d*10));
+    el.style.left='calc(50% + '+x.toFixed(3)+'px)';
+    el.style.transform='translate(-50%,calc(-50% + '+y.toFixed(2)+'px)) scale('+scale.toFixed(4)+') rotateY('+tilt.toFixed(3)+'deg)';
+    el.style.opacity=a>2.2?'0':String(Math.max(0,1-a*.14));
+    el.style.zIndex=String(Math.round(90-a*10));
+    el.style.pointerEvents=a>1.6?'none':'auto';
+    el.classList.toggle('selected',a<.4);
+  });
+  // A fixed camera: only the texture offsets move. repeat-x means there is never a blank edge.
+  const tileW=1652*(h/724); const p=((travel*.38)%tileW+tileW)%tileW; WORLD.style.setProperty('--px',p.toFixed(2)+'px');
+  requestAnimationFrame(render);
+}
+requestAnimationFrame(render);
+
+/* BGM: 最初のタップ/キーで小さく流し始める（ブラウザの自動再生制限）。ゆっくり音量を上げ、ループ。右下のボタンでオフ（記憶する）。消音スイッチには従う */
+(function(){const a=document.getElementById('bgm'),btn=document.getElementById('snd'),VOL=.5;let on=true,fade=0;
+ try{on=localStorage.getItem('izTopBgm')!=='off'}catch(e){}
+ a.volume=0;btn.classList.toggle('off',!on);
+ function ramp(to,ms){clearInterval(fade);const from=a.volume,t0=performance.now();fade=setInterval(()=>{const k=Math.min(1,(performance.now()-t0)/ms);a.volume=Math.max(0,Math.min(1,from+(to-from)*k));if(k>=1){clearInterval(fade);if(to===0)a.pause()}},60)}
+ function start(){if(!on)return Promise.resolve();return a.play().then(()=>ramp(VOL,3500))}
+ let armed=true;function first(){if(!armed)return;start().then(()=>{armed=false;['pointerdown','keydown','touchend'].forEach(t=>removeEventListener(t,first,true))}).catch(()=>{})}
+ ['pointerdown','keydown','touchend'].forEach(t=>addEventListener(t,first,true));
+ btn.addEventListener('pointerdown',e=>e.stopPropagation());
+ btn.addEventListener('click',e=>{e.stopPropagation();on=!on;btn.classList.toggle('off',!on);try{localStorage.setItem('izTopBgm',on?'on':'off')}catch(_){}
+  if(on){armed=false;a.play().then(()=>ramp(VOL,1200)).catch(()=>{})}else ramp(0,500)});
+ document.addEventListener('visibilitychange',()=>{if(document.hidden){a.pause()}else if(on&&!armed){a.play().catch(()=>{})}});
+ addEventListener('pagehide',()=>a.pause());
+ addEventListener('pageshow',e=>{if(e.persisted&&on&&!armed)a.play().catch(()=>{})});
+})();
+
+/* 入り口: 最初に1回ボタンを押してもらう（音を流すため）。同じ訪問中に戻ってきたときは出さない */
+(function(){const g=document.getElementById('gate'),b=document.getElementById('gateBtn');let seen=false;try{seen=sessionStorage.getItem('izTopEntered')==='1'}catch(e){}
+ function enter(){if(entered)return;entered=true;T0=performance.now();document.body.classList.remove('pre');try{sessionStorage.setItem('izTopEntered','1')}catch(e){}g.classList.add('out');setTimeout(()=>g.remove(),1500)}
+ if(seen){g.remove();enter();return}
+ document.body.classList.add('pre');b.addEventListener('click',enter)})();
+// Exposed only for automated quality checking. No visible debug UI.
+window.__BRAIN_QA__={state:()=>({camera:'fixed',target,visual,travel,openIndex}),select:(i)=>{closeAll();target=i},close:closeAll};
+})();
+</script>
+
+
+</body>
+</html>
