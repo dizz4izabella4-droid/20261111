@@ -1149,7 +1149,8 @@ const CORE = (function () {
     const finish = () => { spoken = true; clearInterval(ty); shown = tx.length; draw(); next(); };
     if (VOICE.ok && VOICE.on) {
       // 1文ずつ読み上げる（長い1発の読み上げは iOS で途中で切れやすい）。文字はその文の声が始まってから出す
-      const sents = tx.match(/[^。]+。?/g) || [tx]; let idx = 0, base = 0;
+      const sents0 = tx.match(/[^。]+。?/g) || [tx]; let idx = 0, base = 0;
+      const sents = sents0.length > 1 ? [sents0[0] + sents0[1]].concat(sents0.slice(2)) : sents0;      // 出だしの「全ユニットへ。」だけ短く切ると、iOSで声が立ち上がる前に欠けやすい → 次の文と1つにして読む
       const playNext = () => {
         if (idx >= sents.length) { finish(); return; }
         const st = sents[idx], b0 = base; let sd = false, t2 = 0, cur = 0;
@@ -1159,7 +1160,7 @@ const CORE = (function () {
         VOICE.speak(st, 'quietja', end, startT, ci => { if (ci < st.length) upd(ci); });
         setTimeout(() => { if (!t2 && !sd) startT(); }, 3000);      // 声の開始が通知されない時の保険
       };
-      playNext();
+      setTimeout(playNext, 450);      // 音声出力が立ち上がるのを少し待ってから話し始める（出だしが欠けないように）
     } else { shown = 0; ty = setInterval(() => { shown += 1; draw(); if (shown >= tx.length) { clearInterval(ty); spoken = true; next(); } }, 110); }       // 音声なし設定：文字だけ
     setTimeout(finish, 40000);      // 保険：何があっても次へ進む
   });
