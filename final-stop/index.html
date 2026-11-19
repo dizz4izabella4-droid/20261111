@@ -1349,9 +1349,28 @@ const CORE = (function () {
     ctx.fillStyle = 'rgba(190,220,255,.14)'; ctx.fillRect(-0.7 * k, -1.4 * k, 0.5 * k, 0.5 * k); ctx.restore();
     ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = Math.max(1, 0.014 * k); ctx.beginPath(); for (const c of alive) path(c.poly); ctx.stroke();
   }
+  function bgFix(o) { return '#101015'; }
+  // 3段階目の逃走車：ボディは全部飛び散り、タイヤと座席（と焼け残った骨組み）しか残らない。原点は下辺中央。
+  function drawWreck(w, h, k) {
+    ctx.fillStyle = '#16161c'; ctx.fillRect(-w * 0.36, -h * 0.18, w * 0.72, h * 0.045);          // 車軸まわりの骨組み
+    ctx.fillStyle = '#2a2a31'; ctx.fillRect(-w * 0.31, -h * 0.25, w * 0.62, h * 0.03);
+    ctx.fillStyle = '#1c1c22'; ctx.fillRect(-w * 0.07, -h * 0.17, w * 0.14, h * 0.05); ctx.fillRect(w * 0.13, -h * 0.15, w * 0.2, h * 0.025);   // マフラー・配管
+    for (const sd of [-1, 1]) {
+      const sx = sd * 0.45 * k, sw = 0.5 * k, top = -h * 0.64, bt = -h * 0.26;
+      ctx.fillStyle = '#3a2a24'; rrect(sx - sw / 2, top, sw, bt - top, sw * 0.18); ctx.fill();                     // 座席の背もたれ
+      ctx.fillStyle = '#5a4034'; rrect(sx - sw * 0.38, top + h * 0.05, sw * 0.76, (bt - top) * 0.62, sw * 0.12); ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.lineWidth = Math.max(1, w * 0.01); ctx.beginPath(); ctx.moveTo(sx - sw * 0.38, top + h * 0.16); ctx.lineTo(sx + sw * 0.38, top + h * 0.16); ctx.moveTo(sx - sw * 0.38, top + h * 0.26); ctx.lineTo(sx + sw * 0.38, top + h * 0.26); ctx.stroke();
+      ctx.fillStyle = '#2e211c'; rrect(sx - sw * 0.28, top - h * 0.09, sw * 0.56, h * 0.1, sw * 0.12); ctx.fill();   // ヘッドレスト
+      ctx.fillStyle = '#7a1c1c'; ctx.beginPath(); ctx.moveTo(sx - sw * 0.5, bt); ctx.lineTo(sx - sw * 0.3, bt - h * 0.06); ctx.lineTo(sx - sw * 0.1, bt); ctx.fill();   // 焼け残った赤いボディの切れ端
+    }
+    ctx.strokeStyle = '#1b1b21'; ctx.lineWidth = Math.max(1.5, w * 0.022); ctx.beginPath(); ctx.moveTo(-w * 0.20, -h * 0.64); ctx.lineTo(-w * 0.10, -h * 1.0); ctx.moveTo(w * 0.22, -h * 0.64); ctx.lineTo(w * 0.34, -h * 0.82); ctx.stroke();   // 折れた支柱
+    for (let i = 0; i < 4; i++) { const ph = (tNow * 1.8 + i * 0.27) % 1, fx = w * (-0.4 + i * 0.27), r = w * (0.05 + 0.04 * Math.sin(tNow * 12 + i)); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,' + (120 + (i % 2) * 60) + ',30,' + (0.75 * (1 - ph * 0.5)).toFixed(2) + ')'; ctx.beginPath(); ctx.ellipse(fx, -h * (0.27 + ph * 0.16), r, r * 1.8, 0, 0, 6.2832); ctx.fill(); ctx.restore(); }   // 小さな炎
+    for (let i = 0; i < 12; i++) { const ph = (tNow * 0.7 + i * 0.09) % 1, r = w * (0.09 + ph * 0.2); ctx.fillStyle = 'rgba(34,34,40,' + (0.66 * (1 - ph)).toFixed(3) + ')'; ctx.beginPath(); ctx.arc(w * 0.28 * Math.sin(i * 2.3 + tNow * 1.2), -h * (0.5 + ph * 0.95), r, 0, 6.2832); ctx.fill(); }
+  }
   // 車の後ろ姿（逃走車・パトカー共通）。原点は下辺中央、w×h に収まる。
   function drawCarRear(cx, bot, w, h, o) {
     ctx.save(); ctx.translate(cx, bot);
+    if (o.spin) { const sy = -h * 0.5; ctx.translate(0, -(o.hop || 0)); ctx.translate(0, sy); ctx.rotate(o.spin); ctx.translate(0, -sy); }      // 被弾のたびにスピン
     if (o.tilt) ctx.rotate(o.tilt * Math.PI / 180);
     // 影
     ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.beginPath(); ctx.ellipse(0, -h * 0.02, w * 0.56, h * 0.07, 0, 0, 6.2832); ctx.fill();
@@ -1359,6 +1378,8 @@ const CORE = (function () {
     if (o.door > 0) { const d = o.door; ctx.fillStyle = o.roof; ctx.beginPath(); ctx.moveTo(-w / 2, -h * 0.62); ctx.lineTo(-w / 2 - w * 0.3 * d, -h * 0.60 - h * 0.05 * d); ctx.lineTo(-w / 2 - w * 0.3 * d, -h * 0.17); ctx.lineTo(-w / 2, -h * 0.2); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#0a0f1c'; ctx.fillRect(-w / 2 - w * 0.26 * d, -h * 0.56 - h * 0.04 * d, w * 0.2 * d, h * 0.16); }
     // タイヤ
     ctx.fillStyle = '#0b0b0e'; ctx.fillRect(-w * 0.47, -h * 0.26, w * 0.17, h * 0.26); ctx.fillRect(w * 0.30, -h * 0.26, w * 0.17, h * 0.26);
+    // 3段階目：ほぼ全壊。タイヤと座席しか残らない
+    if (!o.police && o.damage >= 3) { drawWreck(w, h, w / CAR.w); ctx.restore(); return; }
     // キャビン（上部）
     const cabW0 = w * 0.84, cabW1 = w * 0.66, y0 = -h * 0.60, y1 = -h * 1.0;
     ctx.fillStyle = o.roof; ctx.beginPath(); ctx.moveTo(-cabW0 / 2, y0); ctx.lineTo(-cabW1 / 2, y1); ctx.lineTo(cabW1 / 2, y1); ctx.lineTo(cabW0 / 2, y0); ctx.closePath(); ctx.fill();
@@ -1406,22 +1427,26 @@ const CORE = (function () {
         ctx.fillStyle = rg; ctx.fillRect(gx - r, ly - lb / 2 - r, r * 2, r * 2); ctx.restore();
       }
     }
-    // ガラス破損に伴う車体のダメージ：接触側のへこみ・擦り傷、浮いたトランク
-    if (o.glass && o.glass.n >= 1) {
+    // 破損（大きく）：1=接触側が大きくへこむ・擦り傷 2=トランクが吹き飛び・屋根が裂け・バンパーが外れ・煙 3=ほぼ全壊（上の drawWreck：タイヤと座席だけ）
+    if (!o.police && o.glass && o.glass.n >= 1) {
       const sdn = o.glass.side > 0 ? -1 : 1;
-      ctx.fillStyle = 'rgba(0,0,0,.30)'; ctx.beginPath(); ctx.moveTo(sdn * w * 0.50, -h * 0.58); ctx.lineTo(sdn * w * 0.22, -h * 0.55); ctx.lineTo(sdn * w * 0.30, -h * 0.30); ctx.lineTo(sdn * w * 0.50, -h * 0.20); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = 'rgba(225,225,235,.8)'; ctx.lineWidth = Math.max(1, w * 0.008); for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(sdn * w * (0.48 - i * 0.04), -h * (0.57 - i * 0.05)); ctx.lineTo(sdn * w * (0.30 - i * 0.02), -h * (0.50 - i * 0.07)); ctx.stroke(); }
+      ctx.fillStyle = 'rgba(0,0,0,.42)'; ctx.beginPath(); ctx.moveTo(sdn * w * 0.50, -h * 0.60); ctx.lineTo(sdn * w * 0.10, -h * 0.56); ctx.lineTo(sdn * w * 0.17, -h * 0.43); ctx.lineTo(sdn * w * 0.04, -h * 0.31); ctx.lineTo(sdn * w * 0.26, -h * 0.19); ctx.lineTo(sdn * w * 0.50, -h * 0.14); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(225,225,235,.85)'; ctx.lineWidth = Math.max(1, w * 0.009); for (let i = 0; i < 7; i++) { ctx.beginPath(); ctx.moveTo(sdn * w * (0.48 - i * 0.05), -h * (0.58 - i * 0.05)); ctx.lineTo(sdn * w * (0.22 - i * 0.025), -h * (0.48 - i * 0.055)); ctx.stroke(); }
+      ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = Math.max(1, w * 0.014); ctx.beginPath(); ctx.moveTo(-w * 0.30, -h * 0.58); ctx.lineTo(-w * 0.18, -h * 0.47); ctx.lineTo(-w * 0.26, -h * 0.38); ctx.lineTo(-w * 0.12, -h * 0.28); ctx.stroke();
     }
-    if (o.glass && o.glass.n >= 2) { ctx.fillStyle = '#07080c'; ctx.beginPath(); ctx.moveTo(-w * 0.44, -h * 0.55); ctx.lineTo(w * 0.44, -h * 0.55); ctx.lineTo(w * 0.44, -h * 0.60); ctx.lineTo(-w * 0.44, -h * 0.64); ctx.closePath(); ctx.fill(); }
-    // 破損：1=へこみ 2=煙 3=バンパー外れ・大きな煙
-    if (o.damage >= 1) { ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = Math.max(1, w * 0.012); ctx.beginPath(); ctx.moveTo(-w * 0.30, -h * 0.58); ctx.lineTo(-w * 0.18, -h * 0.47); ctx.lineTo(-w * 0.26, -h * 0.38); ctx.stroke(); }
-    if (o.damage >= 2) {
-      ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.beginPath(); ctx.moveTo(w * 0.22, -h * 0.60); ctx.lineTo(w * 0.34, -h * 0.44); ctx.lineTo(w * 0.24, -h * 0.30); ctx.stroke();
-      for (let i = 0; i < 5; i++) { const ph = (tNow * 0.9 + i * 0.2) % 1, r = w * (0.05 + ph * 0.11); ctx.fillStyle = 'rgba(70,70,76,' + (0.5 * (1 - ph)).toFixed(3) + ')'; ctx.beginPath(); ctx.arc(w * (0.14 + 0.05 * Math.sin(i * 2 + tNow)), -h * (0.62 + ph * 0.55), r, 0, 6.2832); ctx.fill(); }
-    }
-    if (o.damage >= 3) {
-      ctx.save(); ctx.translate(-w * 0.36, -h * 0.15); ctx.rotate(-0.18); ctx.fillStyle = o.bumper; ctx.fillRect(-w * 0.14, 0, w * 0.5, h * 0.09); ctx.restore();
-      for (let i = 0; i < 7; i++) { const ph = (tNow * 0.7 + i * 0.15) % 1, r = w * (0.07 + ph * 0.16); ctx.fillStyle = 'rgba(40,40,46,' + (0.62 * (1 - ph)).toFixed(3) + ')'; ctx.beginPath(); ctx.arc(w * 0.1 * Math.sin(i * 3 + tNow * 1.4), -h * (0.55 + ph * 0.8), r, 0, 6.2832); ctx.fill(); }
+    if (!o.police && o.damage >= 2) {
+      const sdn = o.glass && o.glass.side > 0 ? -1 : 1;
+      // トランクが吹き飛んだ穴（中は暗い・配線やスペアタイヤ）
+      ctx.fillStyle = '#07080c'; ctx.beginPath(); ctx.moveTo(-w * 0.46, -h * 0.30); ctx.lineTo(-w * 0.44, -h * 0.60); ctx.lineTo(-w * 0.30, -h * 0.55); ctx.lineTo(-w * 0.20, -h * 0.64); ctx.lineTo(-w * 0.06, -h * 0.54); ctx.lineTo(w * 0.08, -h * 0.65); ctx.lineTo(w * 0.24, -h * 0.55); ctx.lineTo(w * 0.36, -h * 0.62); ctx.lineTo(w * 0.46, -h * 0.58); ctx.lineTo(w * 0.45, -h * 0.30); ctx.lineTo(w * 0.20, -h * 0.36); ctx.lineTo(-w * 0.10, -h * 0.30); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#26262c'; ctx.beginPath(); ctx.arc(-sdn * w * 0.14, -h * 0.42, w * 0.13, 0, 6.2832); ctx.fill(); ctx.fillStyle = '#0c0c10'; ctx.beginPath(); ctx.arc(-sdn * w * 0.14, -h * 0.42, w * 0.06, 0, 6.2832); ctx.fill();
+      ctx.strokeStyle = '#c64a2a'; ctx.lineWidth = Math.max(1, w * 0.012); ctx.beginPath(); ctx.moveTo(sdn * w * 0.2, -h * 0.58); ctx.lineTo(sdn * w * 0.3, -h * 0.46); ctx.lineTo(sdn * w * 0.18, -h * 0.4); ctx.stroke();
+      // 屋根が接触側から大きく裂ける（中の骨組みが見える）
+      ctx.fillStyle = '#07080c'; ctx.beginPath(); ctx.moveTo(sdn * w * 0.42, y0 - h * 0.01); ctx.lineTo(sdn * w * 0.12, y0 - h * 0.12); ctx.lineTo(sdn * w * 0.22, y0 - h * 0.2); ctx.lineTo(sdn * w * 0.05, y0 - h * 0.3); ctx.lineTo(sdn * w * 0.2, y1 + h * 0.01); ctx.lineTo(sdn * cabW1 * 0.5, y1); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = o.roof; ctx.lineWidth = Math.max(1.5, w * 0.025); ctx.beginPath(); ctx.moveTo(sdn * w * 0.40, y0 - h * 0.01); ctx.lineTo(sdn * w * 0.18, y0 - h * 0.30); ctx.stroke();
+      // バンパーが外れてぶら下がる
+      ctx.fillStyle = bgFix(o); ctx.fillRect(-w * 0.5, -h * 0.20, w, h * 0.10);
+      ctx.save(); ctx.translate(-w * 0.36, -h * 0.15); ctx.rotate(-0.35); ctx.fillStyle = o.bumper; ctx.fillRect(-w * 0.16, 0, w * 0.56, h * 0.09); ctx.restore();
+      for (let i = 0; i < 9; i++) { const ph = (tNow * 0.8 + i * 0.12) % 1, r = w * (0.07 + ph * 0.16); ctx.fillStyle = 'rgba(46,46,52,' + (0.62 * (1 - ph)).toFixed(3) + ')'; ctx.beginPath(); ctx.arc(w * (0.14 * Math.sin(i * 2 + tNow)), -h * (0.62 + ph * 0.7), r, 0, 6.2832); ctx.fill(); }
     }
     ctx.restore();
   }
@@ -1429,11 +1454,23 @@ const CORE = (function () {
 
   /* ================= FX（B3：衝突の演出。見た目だけで、進行には関わらない） ================= */
   const FX = {
-    parts: [], rings: [], shake: 0, flash: 0, glints: [],
+    parts: [], rings: [], shake: 0, flash: 0, glints: [], spin: null,
+    // 被弾のたびに逃走車がくるくる回る（1段階目は1回転、2段階目は2回転、3段階目は3回転）
+    spinA() { const s = this.spin; if (!s) return 0; const u = Math.min(1, s.t / s.dur); return s.dir * s.turns * 6.2832 * (1 - Math.pow(1 - u, 3)); },
+    spinHop(h) { const s = this.spin; if (!s) return 0; const u = Math.min(1, s.t / s.dur); return Math.sin(u * Math.PI) * h * 0.22; },
     hit(e) {
       const sbx = probe.suspect; if (!sbx) return;
       const st = Math.min(3, e.stage || 1), side = e.side || 1, cx = sbx.cx - side * sbx.w * 0.42, cy = (sbx.top + sbx.bot) / 2 + sbx.w * 0.05;
       this.shake = [7, 10, 16][st - 1]; this.flash = [0.45, 0.55, 0.85][st - 1]; this.rings.push({ x: cx, y: cy, t: 0, r: sbx.w * (0.5 + st * 0.15) });
+      this.spin = { t: 0, dur: [0.9, 1.25, 1.7][st - 1], dir: side > 0 ? 1 : -1, turns: st };
+      // ボディの破片（赤い板）。段階が進むほど大量に飛び散る。3段階目で車体はほぼ全部飛ぶ
+      const ksB = sbx.w / CAR.w, np = [8, 18, 40][st - 1];
+      for (let i = 0; i < np; i++) {
+        const sz = ksB * rr(0.12, 0.42), vv = []; const nv = 4 + ((Math.random() * 2) | 0); for (let j = 0; j < nv; j++) { const an = j / nv * 6.2832 + rr(-0.3, 0.3), rd = sz * rr(0.55, 1); vv.push(Math.cos(an) * rd, Math.sin(an) * rd * 0.7); }
+        const a = rr(0, 6.2832), sp = ksB * rr(2, 9), big = Math.random() < 0.3;
+        this.parts.push({ k: 'g', ns: 1, x: sbx.cx + rr(-0.5, 0.5) * sbx.w, y: sbx.bot - sbx.h * rr(0.2, 0.85), verts: vv, rot: rr(0, 6), vr: rr(-9, 9), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.7 - ksB * rr(1, 4), t: 0, life: rr(0.9, 1.6),
+          fill: ['#a82b2b', '#8c2424', '#6e1c1c', '#2a2a30', '#d8d8de'][(Math.random() * 5) | 0], alpha: 1, zoom: big ? rr(1.6, 3.2) : 1, glint: false });
+      }
       const n = 18 + st * 10;
       for (let i = 0; i < n; i++) {
         const a = -side * Math.PI * (0.1 + Math.random() * 0.8) + (Math.random() - 0.5) * 1.2 + (side > 0 ? Math.PI : 0), sp = 70 + Math.random() * 260;
@@ -1446,7 +1483,8 @@ const CORE = (function () {
       for (let i = 0; i < 26; i++) this.parts.push({ k: 'u', x: sbx.cx + (Math.random() - 0.5) * sbx.w, y: sbx.bot - 2, vx: (Math.random() - 0.5) * 50, vy: -10 - Math.random() * 30, t: 0, life: 1.2 + Math.random() * 1.2, sz: sbx.w * (0.08 + Math.random() * 0.1) });
     },
     // ガラスの破片：メートルの多角形を画面の px にして飛ばす（一部は手前に迫ってくる）
-    shard(poly, hx, hy, side, kind, big) {
+    shard(poly, hx, hy, side, kind, big) { for (let r = 0; r < 4; r++) this.shard1(poly, hx, hy, side, kind, big && r === 0); },      // ガラスの飛散は4倍
+    shard1(poly, hx, hy, side, kind, big) {
       const sbx = probe.suspect; if (!sbx) return; const ks = sbx.w / CAR.w;
       let mx = 0, my = 0; for (const p of poly) { mx += p[0]; my += p[1]; } mx /= poly.length; my /= poly.length;
       const verts = []; for (const p of poly) verts.push((p[0] - mx) * ks, (p[1] - my) * ks);
@@ -1467,6 +1505,7 @@ const CORE = (function () {
     glint() { if (probe.cuffs) this.glints.push({ x: probe.cuffs.x, y: probe.cuffs.y, t: 0 }); },
     update(dt) {
       this.shake *= Math.exp(-dt * 11); if (this.shake < 0.2) this.shake = 0;
+      if (this.spin) { this.spin.t += dt; if (this.spin.t >= this.spin.dur) this.spin = null; }
       this.flash = Math.max(0, this.flash - dt * 2.4);
       for (const p of this.parts) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.k === 's' || p.k === 'd' || p.k === 'c') p.vy += 520 * dt; if (p.k === 'c') { p.rot += p.vr * dt; p.vx *= 0.99; } if (p.k === 'g') { p.rot += p.vr * dt; if (p.zoom <= 1.7) p.vy += 700 * dt; } if (p.k === 'd') p.rot += p.vr * dt; if (p.k === 'u') { p.vx *= 0.98; p.sz += dt * 10; } }
       this.parts = this.parts.filter(p => p.t < p.life);
@@ -1482,7 +1521,7 @@ const CORE = (function () {
         else if (p.k === 'g') {
           const lf = p.t / p.life, fade = lf > 0.7 ? (1 - lf) / 0.3 : 1, sc = 1 + (p.zoom - 1) * Math.pow(lf, 1.4);
           ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.scale(sc, sc); ctx.beginPath(); ctx.moveTo(p.verts[0], p.verts[1]); for (let i = 2; i < p.verts.length; i += 2) ctx.lineTo(p.verts[i], p.verts[i + 1]); ctx.closePath();
-          ctx.globalAlpha = p.alpha * fade; ctx.fillStyle = p.fill; ctx.fill(); ctx.globalAlpha = Math.min(1, 0.95 * fade); ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = 1 / sc + 0.4; ctx.stroke();
+          ctx.globalAlpha = p.alpha * fade; ctx.fillStyle = p.fill; ctx.fill(); if (!p.ns) { ctx.globalAlpha = Math.min(1, 0.95 * fade); ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = 1 / sc + 0.4; ctx.stroke(); }
           if (p.glint && Math.sin(p.t * 25 + p.x) > 0.6) { ctx.globalAlpha = fade; ctx.fillStyle = '#fff'; ctx.fillRect(p.verts[0] - 1, p.verts[1] - 1, 2.5, 2.5); }
           ctx.restore();
         }
@@ -1653,7 +1692,7 @@ const CORE = (function () {
       for (let i = 0; i < 16; i++) { const a = hash(i + 900) * 6.2832, r0 = 90 + ((tNow * 260 + i * 53) % 260), x0 = W / 2 + Math.cos(a) * r0 * 1.1, y0 = V.hor + 40 + Math.sin(a) * r0 * 0.7; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + Math.cos(a) * 18, y0 + Math.sin(a) * 14); ctx.stroke(); }
     }
     const doorK = S.phase === 'EVENT' ? ss01((S.t - 3) / 0.4) : (S.phase === 'CMD' || S.phase === 'ARREST' || S.phase === 'END' || S.phase === 'DEAD') ? 1 : 0;
-    drawCarRear(sb.cx, sb.bot, sb.w, sb.h, { body: '#a82b2b', bodyLow: '#6e1c1c', roof: '#8c2424', bumper: '#2a2a30', tail: '#ff3030', tilt: S.tilt, damage: S.damage, glass: GLASS, hazard: inEv ? (Math.floor(tNow * 2.6) % 2 === 0) : null, door: doorK });
+    drawCarRear(sb.cx, sb.bot, sb.w, sb.h, { body: '#a82b2b', bodyLow: '#6e1c1c', roof: '#8c2424', bumper: '#2a2a30', tail: '#ff3030', tilt: S.tilt, spin: FX.spinA(), hop: FX.spinHop(sb.h), damage: S.damage, glass: GLASS, hazard: inEv ? (Math.floor(tNow * 2.6) % 2 === 0) : null, door: doorK });
     probe.cuffs = null;
     if (inEv && !(S.phase === 'EVENT' && S.t < 0.3)) {
       const J = poseJoints(S.pose), wIn = (INCAR[S.pose.from] ? 1 - S.pose.k : 0) + (INCAR[S.pose.to] ? S.pose.k : 0);
