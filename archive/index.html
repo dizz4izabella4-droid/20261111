@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
 <title>ARCHIVE｜izのおもちゃ箱</title>
-<meta name="description" content="izのおもちゃ箱の制作記録。作品ごとの公開日（初回コミット日）と最終更新日。">
+<meta name="description" content="izのおもちゃ箱の制作記録。作品ごとの公開日と最終更新日。">
 <link rel="stylesheet" href="../common/site.css">
 <style>
 .facts{display:flex;flex-wrap:wrap;gap:8px 22px;margin:0 0 14px;padding:0;list-style:none;font-size:13px;color:var(--sub)}
@@ -37,7 +37,6 @@
 .ev.update{padding:7px 0}
 .ev.update a.w{font-weight:400;font-size:14px}
 .ev.update time{font-size:13px;font-weight:400;color:var(--sub)}
-.hash{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px}
 
 /* 一覧表 */
 .tbl{width:100%;border-collapse:collapse;font-size:14px}
@@ -50,7 +49,6 @@
 .tbl td.num,.tbl td.d{font-variant-numeric:tabular-nums;white-space:nowrap}
 .tbl a{text-decoration:none;font-weight:700}
 .tbl a:hover{text-decoration:underline}
-.tbl .hash a{font-weight:400;color:var(--sub)}
 @media(max-width:720px){
   .tbl thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
   .tbl tr{display:grid;grid-template-columns:repeat(3,1fr);gap:2px 10px;padding:12px 0;border-bottom:1px solid var(--line)}
@@ -97,11 +95,9 @@
   <details class="rule">
     <summary>日付の決め方</summary>
     <ul>
-      <li><b>公開日</b>：その作品に関係する、GitHub上の最初のコミットの日。実際にWebで見られるようになった日とは異なる場合があります。</li>
-      <li><b>最終更新日</b>：その作品に関係する、最後のコミットの日。全作品共通の部品を一括で入れたコミットも含みます。</li>
-      <li>日付はコミットの日時（author date）を<b>日本時間（UTC+09:00）</b>に直したものです。</li>
-      <li>フォルダの移動・改名は旧名の履歴までたどっています（例：ウェア・ウィッチ ← ことばのおへや、CMDタイピング ← トップの index.html）。たどれない場合は日付を出さず「要確認」と表示します。</li>
-      <li>コミットの記号（7桁の英数字）を押すと、GitHub上の該当コミットを確認できます。</li>
+      <li><b>公開日</b>：その作品を最初に記録した日。実際にWebで見られるようになった日とは異なる場合があります。</li>
+      <li><b>最終更新日</b>：その作品を最後に直した日。</li>
+      <li>日付は<b>日本時間</b>です。確定できない作品は日付を出さず「要確認」と表示します。</li>
     </ul>
   </details>
 
@@ -111,7 +107,6 @@
       <button type="button" data-v="tbl" aria-pressed="false">作品ごとの表</button>
       <button type="button" data-v="cal" aria-pressed="false">日ごとの制作</button>
     </div>
-    <label class="toggle" id="updWrap"><input type="checkbox" id="showUpd"> 更新した日も並べる</label>
   </div>
 
   <section id="out" aria-live="polite"></section>
@@ -139,11 +134,6 @@
   var hv = (location.hash || '').slice(1); if (/^(tl|tbl|cal)$/.test(hv)) view = hv;
 
   function wd(d) { var p = d.split('-'); return WD[new Date(Date.UTC(+p[0], p[1] - 1, +p[2])).getUTCDay()]; }
-  function hashLink(h) {
-    if (!h) return '';
-    var u = IZ.commitURL(repo, h);
-    return '<a class="hash" href="' + u + '" target="_blank" rel="noopener noreferrer" title="GitHubでコミットを見る">' + h.slice(0, 7) + '</a>';
-  }
   function wlink(w) { return '<a class="w" href="' + IZ.esc(w.url) + '">' + IZ.esc(w.title) + '</a>'; }
 
   function timeline() {
@@ -151,7 +141,6 @@
     works.forEach(function (w) {
       if (!w.first) return;
       evs.push({ d: w.first, t: w.history.first.time, kind: 'pub', w: w });
-      if (showUpd) (w.history.days || []).forEach(function (d) { if (d !== w.first) evs.push({ d: d, t: '', kind: 'up', w: w }); });
     });
     evs.sort(function (a, b) { return a.d < b.d ? 1 : a.d > b.d ? -1 : (a.kind !== b.kind ? (a.kind === 'pub' ? -1 : 1) : (a.t < b.t ? 1 : a.t > b.t ? -1 : a.w.order - b.w.order)); });
     var html = '', y = '', m = '';
@@ -165,7 +154,7 @@
       if (e.kind === 'pub') {
         html += '<li class="ev"><time datetime="' + e.d + '">' + md + '<small>' + wd(e.d) + '</small></time><div>' +
           '<span class="k pub">公開</span>' + wlink(w) + ' <span class="b cat ' + IZ.CATS[w.category].cls + '">' + IZ.CATS[w.category].ja + '</span>' +
-          '<div class="sub">初回コミット ' + hashLink(h.first.commit) + '　最終更新 ' + IZ.dot(h.last.date) + ' ' + hashLink(h.last.commit) + '　更新した日 ' + (h.days || []).length + '日・' + h.commits + 'コミット</div></div></li>';
+          '<div class="sub">最終更新 ' + IZ.dot(h.last.date) + '</div></div></li>';
       } else {
         html += '<li class="ev update"><time datetime="' + e.d + '">' + md + '<small>' + wd(e.d) + '</small></time><div><span class="k up">更新</span>' + wlink(w) + '</div></li>';
       }
@@ -180,7 +169,6 @@
       var x, y;
       if (k === 'name') { return dir * a.title.localeCompare(b.title, 'ja'); }
       if (k === 'cat') { x = a.category; y = b.category; }
-      else if (k === 'days' || k === 'commits') { x = a.history ? (k === 'days' ? (a.history.days || []).length : a.history.commits) : -1; y = b.history ? (k === 'days' ? (b.history.days || []).length : b.history.commits) : -1; }
       else { x = (a[k] || '') + (a.history && a.history[k] ? a.history[k].time : ''); y = (b[k] || '') + (b.history && b.history[k] ? b.history[k].time : ''); if (!x && y) return 1; if (x && !y) return -1; }
       return x < y ? -dir : x > y ? dir : a.order - b.order;
     });
@@ -192,22 +180,20 @@
       var h = w.history || {};
       return '<tr><td class="name"><a href="' + IZ.esc(w.url) + '">' + IZ.esc(w.title) + '</a>' + (w.gallery ? '' : ' <span class="b">一覧に出さない作品</span>') + '</td>' +
         '<td data-l="種類"><span class="b cat ' + IZ.CATS[w.category].cls + '">' + IZ.CATS[w.category].ja + '</span></td>' +
-        '<td class="d" data-l="公開日">' + IZ.dateLabel(w, 'first') + (h.first && w.first ? ' <span class="hash">' + hashLink(h.first.commit) + '</span>' : '') + '</td>' +
-        '<td class="d" data-l="最終更新日">' + IZ.dateLabel(w, 'last') + (h.last ? ' <span class="hash">' + hashLink(h.last.commit) + '</span>' : '') + '</td>' +
-        '<td class="num" data-l="更新した日">' + (h.days ? h.days.length + '日' : '—') + '</td>' +
-        '<td class="num" data-l="コミット数">' + (h.commits != null ? h.commits : '—') + '</td></tr>';
+        '<td class="d" data-l="公開日">' + IZ.dateLabel(w, 'first') + '</td>' +
+        '<td class="d" data-l="最終更新日">' + IZ.dateLabel(w, 'last') + '</td></tr>';
     }).join('');
-    return '<table class="tbl"><caption class="sr">作品ごとの公開日と最終更新日</caption><thead><tr>' + th('name', '作品') + th('cat', '種類') + th('first', '公開日') + th('last', '最終更新日') + th('days', '更新した日') + th('commits', 'コミット数') + '</tr></thead><tbody>' + rows + '</tbody></table>';
+    return '<table class="tbl"><caption class="sr">作品ごとの公開日と最終更新日</caption><thead><tr>' + th('name', '作品') + th('cat', '種類') + th('first', '公開日') + th('last', '最終更新日') + '</tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
   function calendar() {
     var byDay = {};
-    works.forEach(function (w) { (w.history && w.history.days || []).forEach(function (d) { (byDay[d] = byDay[d] || []).push(w.title); }); });
+    works.forEach(function (w) { [w.first, w.last].forEach(function (d, i) { if (d && (i === 0 || d !== w.first)) (byDay[d] = byDay[d] || []).push(w.title); }); });
     var days = Object.keys(byDay).sort();
     if (!days.length) return '<p class="empty">記録がありません。</p>';
     var months = [], cur = days[0].slice(0, 7), end = days[days.length - 1].slice(0, 7);
     while (cur <= end) { months.push(cur); var yy = +cur.slice(0, 4), mm = +cur.slice(5); mm++; if (mm > 12) { mm = 1; yy++; } cur = yy + '-' + (mm < 10 ? '0' : '') + mm; }
-    var html = '<p style="font-size:13px;color:var(--sub);margin:0 0 6px">その日にコミットのあった作品の数（濃いほど多い）。マスにふれると作品名が出ます。</p><div class="cal-wrap">';
+    var html = '<p style="font-size:13px;color:var(--sub);margin:0 0 6px">その日に公開・更新した作品の数（濃いほど多い）。マスにふれると作品名が出ます。</p><div class="cal-wrap">';
     months.forEach(function (ym) {
       var y = +ym.slice(0, 4), m = +ym.slice(5), first = new Date(Date.UTC(y, m - 1, 1)).getUTCDay(), n = new Date(Date.UTC(y, m, 0)).getUTCDate();
       html += '<div class="cal"><h4>' + y + '年' + m + '月</h4><div class="cal-g" role="list">' + WD.map(function (x) { return '<span class="h" aria-hidden="true">' + x + '</span>'; }).join('');
@@ -225,7 +211,6 @@
 
   function render() {
     document.querySelectorAll('#view button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === view)); });
-    $('updWrap').hidden = view !== 'tl';
     $('out').innerHTML = view === 'tl' ? timeline() : view === 'tbl' ? table() : calendar();
   }
 
@@ -236,7 +221,6 @@
     render();
   });
   addEventListener('hashchange', function () { var h = location.hash.slice(1); if (/^(tl|tbl|cal)$/.test(h) && h !== view) { view = h; if (works.length) render(); } });
-  $('showUpd').addEventListener('change', function () { showUpd = this.checked; render(); });
   $('out').addEventListener('click', function (e) {
     var b = e.target.closest('th button'); if (!b) return;
     var k = b.getAttribute('data-k');
@@ -252,20 +236,18 @@
     var dated = works.filter(function (w) { return w.first; });
     var firsts = dated.map(function (w) { return w.first; }).sort();
     var lasts = works.map(function (w) { return w.last; }).filter(Boolean).sort();
-    var days = {}; works.forEach(function (w) { (w.history && w.history.days || []).forEach(function (x) { days[x] = 1; }); });
     $('facts').innerHTML =
       '<li><b>' + works.length + '</b>作品</li>' +
       (firsts.length ? '<li><b>' + IZ.dot(firsts[0]) + '</b>から</li><li>最後の更新 <b>' + IZ.dot(lasts[lasts.length - 1]) + '</b></li>' : '') +
-      '<li>制作した日 <b>' + Object.keys(days).length + '</b>日</li>';
+      '';
     var pending = works.filter(function (w) { return !w.first; });
     if (pending.length) {
       $('warn').innerHTML = '<div class="notice warn"><b>日付を確定していない作品</b>（年表には出していません）<br>' + pending.map(function (w) {
         return IZ.esc(w.title) + '：' + IZ.dateLabel(w, 'first');
       }).join('<br>') + '</div>';
     }
-    var gen = hist && hist.generatedAt ? hist.generatedAt.replace('T', ' ').slice(0, 16) : '未集計';
-    $('src').innerHTML = '出典：GitHubリポジトリ <a href="https://github.com/' + IZ.esc(repo) + '" target="_blank" rel="noopener noreferrer">' + IZ.esc(repo) + '</a> のコミット履歴。' +
-      '集計 ' + gen + '（日本時間）、集計時点で最新の作品コミット ' + (hist && hist.latestWorkCommit ? hashLink(hist.latestWorkCommit) : '—') + '。';
+    var gen = hist && hist.generatedAt ? hist.generatedAt.replace('T', ' ').slice(0, 10) : '未集計';
+    $('src').textContent = '集計 ' + gen + '（日本時間）';
     render();
   }).catch(function (err) {
     $('out').innerHTML = err && err.message === 'file' ? IZ.fileNotice : '<p class="notice">記録を読み込めませんでした。</p>';
