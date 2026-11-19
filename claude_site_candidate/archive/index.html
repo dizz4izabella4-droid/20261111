@@ -162,7 +162,7 @@
       if (em !== m) { if (m) html += '</ul></div>'; m = em; html += '<div class="month"><h3>' + (+em.slice(5)) + '月　' + (perMonth[em] || 0) + '作品</h3><ul class="tl">'; }
       var w = e.w, h = w.history, md = (+e.d.slice(5, 7)) + '/' + (+e.d.slice(8));
       if (e.kind === 'pub') {
-        html += '<li class="ev"><time datetime="' + e.d + '">' + md + '<small>' + wd(e.d) + ' ' + e.t + '</small></time><div>' +
+        html += '<li class="ev"><time datetime="' + e.d + '">' + md + '<small>' + wd(e.d) + '</small></time><div>' +
           '<span class="k pub">公開</span>' + wlink(w) + ' <span class="b cat ' + IZ.CATS[w.category].cls + '">' + IZ.CATS[w.category].ja + '</span>' +
           '<div class="sub">初回コミット ' + hashLink(h.first.commit) + '　最終更新 ' + IZ.dot(h.last.date) + ' ' + hashLink(h.last.commit) + '　更新した日 ' + (h.days || []).length + '日・' + h.commits + 'コミット</div></div></li>';
       } else {

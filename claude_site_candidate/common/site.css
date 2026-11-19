@@ -112,3 +112,21 @@ mark{background:#fff0a8;color:inherit;border-radius:2px}
   .sort .lbl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
   .sort select{font-size:13px;padding-right:26px;max-width:46vw}
 }
+
+/* ---- 姉妹サイト（あそびば） ---- */
+.sister-top{display:flex;align-items:center;gap:7px;min-height:44px;padding:0 12px;text-decoration:none;font-size:13px;font-weight:700;color:#8a5a00;background:#fff6dd;border-radius:999px;white-space:nowrap}
+.sister-top span{font-size:10px;font-weight:600;letter-spacing:.08em;color:#a77a1e}
+.sister-top:hover{background:#ffeebb}
+.sister{display:flex;align-items:center;gap:16px;margin:26px 0 0;padding:18px 18px;border:2px solid #f0d68a;border-radius:var(--radius);background:linear-gradient(135deg,#fffaf0,#fff2cc);text-decoration:none;transition:box-shadow .15s,transform .15s}
+.sister:hover{box-shadow:0 6px 18px rgba(160,110,0,.16)}
+.sister:active{transform:scale(.99)}
+.sister-ico{flex:none;width:58px;height:58px;border-radius:15px;display:grid;place-items:center;background:#e9a825;color:#fff}
+.sister-ico svg{width:34px;height:34px}
+.sister-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.sister-t{font-size:20px;font-weight:700;letter-spacing:.06em}
+.sister-go{flex:none;font-size:24px;color:#a77a1e}
+@media(max-width:560px){
+  .site-in{position:relative}
+  .sister-top{width:100%;justify-content:center;margin:6px 0 8px;min-height:40px}
+  .sister{padding:15px 14px;gap:13px}
+}
