@@ -320,7 +320,7 @@ canvas{position:absolute;left:0;top:0;display:block}
   <button id="vmicbtn" class="ui hide" aria-label="mic"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3" fill="#fff"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/></svg><span class="lab">HOLD TO TALK</span></button>
   <button id="dbgb" aria-label="debug"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="8" height="11" rx="4"/><path d="M12 8V6M9 8 7 5M15 8l2-3M8 12H4M16 12h4M8 16l-3 2M16 16l3 2M10 5.2a2 2 0 0 1 4 0"/></svg></button>
   <div id="dbgp"></div>
-  <div id="alert" class="ui"><div class="lr"></div><div class="lb"></div><div class="t1" id="alertt1">緊急無線</div><div class="t2" id="alertt2">強盗事件発生中</div><div class="t3" id="alerttx">強盗事件が発生。容疑者は車で逃走中。</div><div class="t4" id="alertt4">タップして受信</div><button id="alertgo" class="btn" style="position:static;display:none;width:230px;height:52px;font-size:17px;font-family:inherit;pointer-events:auto;align-items:center;justify-content:center">同意してスタート</button></div>
+  <div id="alert" class="ui"><div class="lr"></div><div class="lb"></div><div class="t1" id="alertt1">緊急無線</div><div class="t2" id="alertt2" style="visibility:hidden">強盗事件発生中</div><div class="t3" id="alerttx" style="visibility:hidden"></div><div class="t4" id="alertt4">タップして受信</div><button id="alertgo" class="btn" style="position:static;display:none;width:230px;height:52px;font-size:17px;font-family:inherit;pointer-events:auto;align-items:center;justify-content:center">同意してスタート</button></div>
   <div id="title" class="ui ov"><h1>FINAL STOP</h1><button class="btn" data-iz-base-ui data-b="start" style="pointer-events:auto">START</button><button id="voicebtn" class="btn" data-iz-base-ui data-b="voice" style="pointer-events:auto;position:static;width:150px;height:36px">VOICE ON</button><div id="micnote">申し訳ありませんが、マイクをオンにしないとクリアできません。</div><div id="micerr"></div><pre id="micdiag"></pre><button id="vmic" class="btn" data-iz-base-ui data-b="vmic" style="pointer-events:auto">心のマイクを使う</button></div>
   <div id="end" class="ui ov hide"><h2>ARRESTED</h2><button class="btn" data-iz-base-ui data-b="replay" style="pointer-events:auto">REPLAY</button></div>
   <div id="resume" class="ui ov hide">TAP TO RESUME</div>
@@ -1054,7 +1054,7 @@ const CORE = (function () {
       ALERT = false; $('alert').classList.add('hide'); AUDIO.init(); wake(); paused = false; $('resume').classList.add('hide');
       spoken = {}; core.restart(); core.warp(label); syncGlass(); jpKey = ''; dp.classList.remove('on');
     };
-    const items = [['SCENES'], ['Emergency radio screen', () => { dp.classList.remove('on'); VOICE.cancel(); ALERT = true; alertStep = 0; const A = $('alert'); A.classList.remove('hide', 'mic'); $('alertt1').textContent = '緊急無線'; $('alertt2').textContent = '強盗事件発生中'; $('alerttx').textContent = '強盗事件が発生。容疑者は車で逃走中。'; $('alertt4').textContent = 'タップして受信'; $('alertt4').style.display = ''; $('alertgo').style.display = 'none'; }],
+    const items = [['SCENES'], ['Emergency radio screen', () => { dp.classList.remove('on'); VOICE.cancel(); ALERT = true; alertStep = 0; const A = $('alert'); A.classList.remove('hide', 'mic'); $('alertt1').textContent = '緊急無線'; $('alertt2').textContent = '強盗事件発生中'; $('alertt2').style.visibility = 'hidden'; $('alerttx').textContent = ''; $('alerttx').style.visibility = 'hidden'; $('alertt4').textContent = 'タップして受信'; $('alertt4').style.display = ''; $('alertgo').style.display = 'none'; }],
       ['Opening (parked)', () => jump('OPEN_PARK')], ['Opening: siren!', () => jump('OPEN_SIREN')], ['Chase (start)', () => jump('INTRO')], ['Hit window', () => jump('WINDOW')],
       ['Cmd 1 listen', () => jump('PREVIEW0')], ['Cmd 2 listen', () => jump('PREVIEW1')], ['Cmd 3 listen', () => jump('PREVIEW2')], ['Cmd 4 listen', () => jump('PREVIEW3')],
       ['SAY IT (cmd 1)', () => jump('YOURTURN0')], ['SAY IT (cmd 4)', () => jump('YOURTURN3')], ['Praise (cmd 1)', () => jump('REACT0')], ['Dead (shot)', () => jump('DEAD')], ['Arrest', () => jump('ARREST')],
@@ -1079,7 +1079,7 @@ const CORE = (function () {
   $('alert').addEventListener('click', e => {
     e.stopPropagation();      // 無線の間は AudioContext を作らない（iOSで読み上げが途中で切れる・ザラつく原因になる）。作るのは「同意してスタート」から
     if (alertStep !== 0) return;
-    alertStep = 1; const tx = CONFIG.ALERT_RADIO_JA; $('alerttx').textContent = ''; $('alertt4').textContent = '受信中…';
+    alertStep = 1; const tx = CONFIG.ALERT_RADIO_JA; $('alertt2').style.visibility = 'visible'; $('alerttx').style.visibility = 'visible'; $('alerttx').textContent = ''; $('alertt4').textContent = '受信中…';
     // 静寂の中で無線だけを流す（効果音なし）。文字は音声が始まってから、読み進めた分だけ出す（音声より先には出さない）
     let shown = 0, spoken = false, moved = false, ty = 0;
     const draw = () => { if (alertStep === 1) $('alerttx').textContent = tx.slice(0, shown); };
