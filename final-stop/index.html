@@ -1108,6 +1108,8 @@ const CORE = (function () {
   function showSub(en, ja, sec) { $('jpsub').innerHTML = '<b>' + CONFIG.PARTNER + '</b> ' + en + '<br><span class="ja">「' + ja + '」</span>'; $('jpsub').classList.add('on'); jpT = sec; }
   // デバッグパネル：追跡を飛ばして音声・場面を確認する
   { const dp = $('dbgp'), db = $('dbgb');
+    if (!Q.get('debug')) { db.remove(); dp.remove(); }      // 虫アイコン（デバッグ）は通常は出さない。?debug=1 の時だけ使える
+    else {
     const syncGlass = () => { GLASS.reset(); for (let h = 1; h <= S.hits; h++) GLASS.hit(h, S.side || 1, false); };
     const jump = label => {
       VOICE.cancel(); MICV.release(); SAY = { text: '', t0: -9, dur: 0 }; PR = null; FX.parts.length = 0; FX.rings.length = 0;
@@ -1124,6 +1126,7 @@ const CORE = (function () {
     for (const it of items) { if (it.length === 1) { const h = document.createElement('h4'); h.textContent = it[0]; dp.appendChild(h); } else { const b = document.createElement('button'); b.textContent = it[0]; b.addEventListener('click', e => { e.stopPropagation(); it[1](b); }); dp.appendChild(b); } }
     for (const el2 of [db, dp]) { el2.addEventListener('pointerdown', e => e.stopPropagation()); }
     db.addEventListener('click', e => { e.stopPropagation(); AUDIO.init(); dp.classList.toggle('on'); });
+    }
   }
   // タイトルの前：赤と青の光と緊急無線
   let ALERT = !AUTO && !SHOT, alertStep = 0;
