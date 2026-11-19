@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>ARCHIVE｜izのおもちゃ箱</title>
+<meta name="description" content="izのおもちゃ箱の制作記録。作品ごとの公開日（初回コミット日）と最終更新日。">
+<link rel="stylesheet" href="../common/site.css">
+<style>
+.facts{display:flex;flex-wrap:wrap;gap:8px 22px;margin:0 0 14px;padding:0;list-style:none;font-size:13px;color:var(--sub)}
+.facts b{font-size:20px;color:var(--ink);font-weight:700;margin-right:3px;font-variant-numeric:tabular-nums}
+.rule{font-size:13px;color:var(--sub);background:var(--tint);border-radius:12px;padding:12px 14px;margin:0 0 18px;line-height:1.7}
+.rule summary{cursor:pointer;color:var(--ink);font-weight:600}
+.rule ul{margin:8px 0 0;padding-left:1.2em}
+.viewbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:10px}
+.toggle{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--sub);min-height:38px;cursor:pointer}
+.toggle input{width:18px;height:18px;accent-color:var(--ink)}
+
+/* 年表 */
+.year{margin:26px 0 0}
+.year>h2{display:flex;align-items:baseline;gap:10px;margin:0 0 4px;font:400 30px/1.1 var(--en);letter-spacing:.06em}
+.year>h2 small{font:400 13px var(--jp);color:var(--sub);letter-spacing:.04em}
+.month{margin:14px 0 0}
+.month>h3{position:sticky;top:var(--hdr,58px);z-index:5;background:rgba(255,255,255,.95);margin:0;padding:8px 0 6px;font-size:14px;color:var(--sub);font-weight:600;border-bottom:1px solid var(--line)}
+.tl{list-style:none;margin:0;padding:0}
+.ev{display:grid;grid-template-columns:76px 1fr;gap:4px 14px;padding:12px 0;border-bottom:1px solid var(--line)}
+.ev time{font-variant-numeric:tabular-nums;font-size:15px;font-weight:700;line-height:1.3}
+.ev time small{display:block;font-size:11px;color:var(--faint);font-weight:400}
+.ev .k{display:inline-block;font-size:11px;padding:2px 6px;border-radius:5px;margin-right:6px;vertical-align:2px}
+.ev .k.pub{background:var(--ink);color:#fff}
+.ev .k.up{background:#fff;color:var(--sub);border:1px solid #cfd4d9}
+.ev a.w{font-weight:700;text-decoration:none;font-size:15px}
+.ev a.w:hover{text-decoration:underline}
+.ev .sub{font-size:12px;color:var(--sub);margin-top:3px}
+.ev .sub a{color:var(--sub)}
+.ev.update{padding:7px 0}
+.ev.update a.w{font-weight:400;font-size:14px}
+.ev.update time{font-size:13px;font-weight:400;color:var(--sub)}
+.hash{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px}
+
+/* 一覧表 */
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th,.tbl td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.tbl th{font-size:12px;color:var(--sub);font-weight:600;white-space:nowrap}
+.tbl th button{all:unset;cursor:pointer;display:inline-flex;gap:4px;align-items:center}
+.tbl th button:focus-visible{outline:2px solid var(--focus)}
+.tbl th[aria-sort="ascending"] button::after{content:"↑"}
+.tbl th[aria-sort="descending"] button::after{content:"↓"}
+.tbl td.num,.tbl td.d{font-variant-numeric:tabular-nums;white-space:nowrap}
+.tbl a{text-decoration:none;font-weight:700}
+.tbl a:hover{text-decoration:underline}
+.tbl .hash a{font-weight:400;color:var(--sub)}
+@media(max-width:720px){
+  .tbl thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .tbl tr{display:grid;grid-template-columns:repeat(3,1fr);gap:2px 10px;padding:12px 0;border-bottom:1px solid var(--line)}
+  .tbl td{border:0;padding:2px 0}
+  .tbl td.name{grid-column:1/-1}
+  .tbl td.d{white-space:normal}
+  .tbl td[data-l]::before{content:attr(data-l);display:block;font-size:11px;color:var(--faint)}
+}
+
+/* 日ごとの制作（カレンダー） */
+.cal-wrap{display:flex;gap:22px;flex-wrap:wrap;margin:8px 0 6px}
+.cal h4{margin:0 0 6px;font-size:13px;font-weight:600;color:var(--sub)}
+.cal-g{display:grid;grid-template-columns:repeat(7,22px);gap:3px}
+.cal-g span{width:22px;height:22px;border-radius:5px;background:#f4f5f7;font-size:9px;line-height:22px;text-align:center;color:#b5bbc1}
+.cal-g span.h{color:var(--sub);background:transparent;font-size:10px}
+.cal-g span.x{background:transparent}
+.cal-g span[data-v="1"]{background:#cfd8e0}.cal-g span[data-v="2"]{background:#9fb1c1}.cal-g span[data-v="3"]{background:#6c8499}.cal-g span[data-v="4"]{background:#3d566b}
+.cal-g span[data-v]{color:var(--ink)}
+.cal-g span[data-v="3"],.cal-g span[data-v="4"]{color:#fff}
+.legend{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--faint)}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.src{margin-top:26px;font-size:12px;color:var(--sub);line-height:1.8}
+.src a{color:var(--sub)}
+.warn{margin-top:18px}
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="site-in">
+    <a class="brand" href="../">izのおもちゃ箱</a>
+    <nav class="tabs" aria-label="サイト">
+      <a href="../">GALLERY</a>
+      <a href="../brain/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5.2C11.2 3.9 9.4 3.4 8 4.2 6.5 4.6 5.8 6.2 6.3 7.5 4.7 8.2 4.2 10.2 5.2 11.6 4.6 13.1 5.2 15 6.7 15.7 6.7 17.4 8.2 18.6 9.7 18.4 10.7 19.2 11.7 19 12 18.4M12 5.2V18.4"/><path d="M12 5.2C12.8 3.9 14.6 3.4 16 4.2 17.5 4.6 18.2 6.2 17.7 7.5 19.3 8.2 19.8 10.2 18.8 11.6 19.4 13.1 18.8 15 17.3 15.7 17.3 17.4 15.8 18.6 14.3 18.4 13.3 19.2 12.3 19 12 18.4"/></svg>BRAIN</a>
+      <a href="./" aria-current="page">ARCHIVE</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="lead"><h1>制作の記録</h1></div>
+  <ul class="facts" id="facts"></ul>
+
+  <details class="rule">
+    <summary>日付の決め方</summary>
+    <ul>
+      <li><b>公開日</b>：その作品に関係する、GitHub上の最初のコミットの日。実際にWebで見られるようになった日とは異なる場合があります。</li>
+      <li><b>最終更新日</b>：その作品に関係する、最後のコミットの日。全作品共通の部品を一括で入れたコミットも含みます。</li>
+      <li>日付はコミットの日時（author date）を<b>日本時間（UTC+09:00）</b>に直したものです。</li>
+      <li>フォルダの移動・改名は旧名の履歴までたどっています（例：ウェア・ウィッチ ← ことばのおへや、CMDタイピング ← トップの index.html）。たどれない場合は日付を出さず「要確認」と表示します。</li>
+      <li>コミットの記号（7桁の英数字）を押すと、GitHub上の該当コミットを確認できます。</li>
+    </ul>
+  </details>
+
+  <div class="viewbar">
+    <div class="seg" role="group" aria-label="表示のしかた" id="view">
+      <button type="button" data-v="tl" aria-pressed="true">年表</button>
+      <button type="button" data-v="tbl" aria-pressed="false">作品ごとの表</button>
+      <button type="button" data-v="cal" aria-pressed="false">日ごとの制作</button>
+    </div>
+    <label class="toggle" id="updWrap"><input type="checkbox" id="showUpd"> 更新した日も並べる</label>
+  </div>
+
+  <section id="out" aria-live="polite"></section>
+  <div id="warn"></div>
+  <p class="src" id="src"></p>
+</main>
+
+<footer class="foot">
+  <div class="foot-in">
+    <a href="../">作品一覧へ</a>
+    <a href="../brain/">BRAIN</a>
+    <span class="concept">自分がほしいものを好きなだけつくる</span>
+  </div>
+</footer>
+
+<script src="../common/site.js"></script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var WD = ['日', '月', '火', '水', '木', '金', '土'];
+  var view = 'tl', showUpd = false, tblSort = { key: 'first', dir: -1 };
+  var works = [], repo = '', hist = null;
+  try { var v = localStorage.getItem('izSite.archiveView'); if (/^(tl|tbl|cal)$/.test(v || '')) view = v; } catch (e) {}
+  var hv = (location.hash || '').slice(1); if (/^(tl|tbl|cal)$/.test(hv)) view = hv;
+
+  function wd(d) { var p = d.split('-'); return WD[new Date(Date.UTC(+p[0], p[1] - 1, +p[2])).getUTCDay()]; }
+  function hashLink(h) {
+    if (!h) return '';
+    var u = IZ.commitURL(repo, h);
+    return '<a class="hash" href="' + u + '" target="_blank" rel="noopener noreferrer" title="GitHubでコミットを見る">' + h.slice(0, 7) + '</a>';
+  }
+  function wlink(w) { return '<a class="w" href="' + IZ.esc(w.url) + '">' + IZ.esc(w.title) + '</a>'; }
+
+  function timeline() {
+    var evs = [];
+    works.forEach(function (w) {
+      if (!w.first) return;
+      evs.push({ d: w.first, t: w.history.first.time, kind: 'pub', w: w });
+      if (showUpd) (w.history.days || []).forEach(function (d) { if (d !== w.first) evs.push({ d: d, t: '', kind: 'up', w: w }); });
+    });
+    evs.sort(function (a, b) { return a.d < b.d ? 1 : a.d > b.d ? -1 : (a.kind !== b.kind ? (a.kind === 'pub' ? -1 : 1) : (a.t < b.t ? 1 : a.t > b.t ? -1 : a.w.order - b.w.order)); });
+    var html = '', y = '', m = '';
+    var perYear = {}, perMonth = {};
+    evs.forEach(function (e) { if (e.kind !== 'pub') return; perYear[e.d.slice(0, 4)] = (perYear[e.d.slice(0, 4)] || 0) + 1; perMonth[e.d.slice(0, 7)] = (perMonth[e.d.slice(0, 7)] || 0) + 1; });
+    evs.forEach(function (e) {
+      var ey = e.d.slice(0, 4), em = e.d.slice(0, 7);
+      if (ey !== y) { if (y) html += '</ul></div></section>'; y = ey; m = ''; html += '<section class="year"><h2>' + ey + ' <small>' + (perYear[ey] || 0) + '作品を公開</small></h2>'; }
+      if (em !== m) { if (m) html += '</ul></div>'; m = em; html += '<div class="month"><h3>' + (+em.slice(5)) + '月　' + (perMonth[em] || 0) + '作品</h3><ul class="tl">'; }
+      var w = e.w, h = w.history, md = (+e.d.slice(5, 7)) + '/' + (+e.d.slice(8));
+      if (e.kind === 'pub') {
+        html += '<li class="ev"><time datetime="' + e.d + '">' + md + '<small>' + wd(e.d) + ' ' + e.t + '</small></time><div>' +
+          '<span class="k pub">公開</span>' + wlink(w) + ' <span class="b cat ' + IZ.CATS[w.category].cls + '">' + IZ.CATS[w.category].ja + '</span>' +
+          '<div class="sub">初回コミット ' + hashLink(h.first.commit) + '　最終更新 ' + IZ.dot(h.last.date) + ' ' + hashLink(h.last.commit) + '　更新した日 ' + (h.days || []).length + '日・' + h.commits + 'コミット</div></div></li>';
+      } else {
+        html += '<li class="ev update"><time datetime="' + e.d + '">' + md + '<small>' + wd(e.d) + '</small></time><div><span class="k up">更新</span>' + wlink(w) + '</div></li>';
+      }
+    });
+    if (y) html += '</ul></div></section>';
+    return html || '<p class="empty">集計済みの作品がありません。</p>';
+  }
+
+  function table() {
+    var k = tblSort.key, dir = tblSort.dir;
+    var list = works.slice().sort(function (a, b) {
+      var x, y;
+      if (k === 'name') { return dir * a.title.localeCompare(b.title, 'ja'); }
+      if (k === 'cat') { x = a.category; y = b.category; }
+      else if (k === 'days' || k === 'commits') { x = a.history ? (k === 'days' ? (a.history.days || []).length : a.history.commits) : -1; y = b.history ? (k === 'days' ? (b.history.days || []).length : b.history.commits) : -1; }
+      else { x = (a[k] || '') + (a.history && a.history[k] ? a.history[k].time : ''); y = (b[k] || '') + (b.history && b.history[k] ? b.history[k].time : ''); if (!x && y) return 1; if (x && !y) return -1; }
+      return x < y ? -dir : x > y ? dir : a.order - b.order;
+    });
+    function th(key, label) {
+      var s = tblSort.key === key ? (tblSort.dir > 0 ? 'ascending' : 'descending') : 'none';
+      return '<th aria-sort="' + s + '"><button type="button" data-k="' + key + '">' + label + '</button></th>';
+    }
+    var rows = list.map(function (w) {
+      var h = w.history || {};
+      return '<tr><td class="name"><a href="' + IZ.esc(w.url) + '">' + IZ.esc(w.title) + '</a>' + (w.gallery ? '' : ' <span class="b">一覧に出さない作品</span>') + '</td>' +
+        '<td data-l="種類"><span class="b cat ' + IZ.CATS[w.category].cls + '">' + IZ.CATS[w.category].ja + '</span></td>' +
+        '<td class="d" data-l="公開日">' + IZ.dateLabel(w, 'first') + (h.first && w.first ? ' <span class="hash">' + hashLink(h.first.commit) + '</span>' : '') + '</td>' +
+        '<td class="d" data-l="最終更新日">' + IZ.dateLabel(w, 'last') + (h.last ? ' <span class="hash">' + hashLink(h.last.commit) + '</span>' : '') + '</td>' +
+        '<td class="num" data-l="更新した日">' + (h.days ? h.days.length + '日' : '—') + '</td>' +
+        '<td class="num" data-l="コミット数">' + (h.commits != null ? h.commits : '—') + '</td></tr>';
+    }).join('');
+    return '<table class="tbl"><caption class="sr">作品ごとの公開日と最終更新日</caption><thead><tr>' + th('name', '作品') + th('cat', '種類') + th('first', '公開日') + th('last', '最終更新日') + th('days', '更新した日') + th('commits', 'コミット数') + '</tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  function calendar() {
+    var byDay = {};
+    works.forEach(function (w) { (w.history && w.history.days || []).forEach(function (d) { (byDay[d] = byDay[d] || []).push(w.title); }); });
+    var days = Object.keys(byDay).sort();
+    if (!days.length) return '<p class="empty">記録がありません。</p>';
+    var months = [], cur = days[0].slice(0, 7), end = days[days.length - 1].slice(0, 7);
+    while (cur <= end) { months.push(cur); var yy = +cur.slice(0, 4), mm = +cur.slice(5); mm++; if (mm > 12) { mm = 1; yy++; } cur = yy + '-' + (mm < 10 ? '0' : '') + mm; }
+    var html = '<p style="font-size:13px;color:var(--sub);margin:0 0 6px">その日にコミットのあった作品の数（濃いほど多い）。マスにふれると作品名が出ます。</p><div class="cal-wrap">';
+    months.forEach(function (ym) {
+      var y = +ym.slice(0, 4), m = +ym.slice(5), first = new Date(Date.UTC(y, m - 1, 1)).getUTCDay(), n = new Date(Date.UTC(y, m, 0)).getUTCDate();
+      html += '<div class="cal"><h4>' + y + '年' + m + '月</h4><div class="cal-g" role="list">' + WD.map(function (x) { return '<span class="h" aria-hidden="true">' + x + '</span>'; }).join('');
+      for (var i = 0; i < first; i++) html += '<span class="x" aria-hidden="true"></span>';
+      for (var d = 1; d <= n; d++) {
+        var key = ym + '-' + (d < 10 ? '0' : '') + d, ws = byDay[key] || [];
+        var v = ws.length ? Math.min(4, ws.length >= 8 ? 4 : ws.length >= 5 ? 3 : ws.length >= 3 ? 2 : 1) : 0;
+        html += '<span role="listitem"' + (v ? ' data-v="' + v + '" tabindex="0"' : '') + ' title="' + m + '/' + d + (ws.length ? '：' + IZ.esc(ws.join('、')) : '：記録なし') + '" aria-label="' + m + '月' + d + '日 ' + (ws.length ? ws.length + '作品' : '記録なし') + '">' + d + '</span>';
+      }
+      html += '</div></div>';
+    });
+    html += '</div><div class="legend">少 <i style="background:#cfd8e0"></i><i style="background:#9fb1c1"></i><i style="background:#6c8499"></i><i style="background:#3d566b"></i> 多（1・3・5・8作品以上）</div>';
+    return html;
+  }
+
+  function render() {
+    document.querySelectorAll('#view button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === view)); });
+    $('updWrap').hidden = view !== 'tl';
+    $('out').innerHTML = view === 'tl' ? timeline() : view === 'tbl' ? table() : calendar();
+  }
+
+  $('view').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    view = b.getAttribute('data-v');
+    try { localStorage.setItem('izSite.archiveView', view); history.replaceState(null, '', '#' + view); } catch (er) {}
+    render();
+  });
+  addEventListener('hashchange', function () { var h = location.hash.slice(1); if (/^(tl|tbl|cal)$/.test(h) && h !== view) { view = h; if (works.length) render(); } });
+  $('showUpd').addEventListener('change', function () { showUpd = this.checked; render(); });
+  $('out').addEventListener('click', function (e) {
+    var b = e.target.closest('th button'); if (!b) return;
+    var k = b.getAttribute('data-k');
+    tblSort = { key: k, dir: tblSort.key === k ? -tblSort.dir : (k === 'name' || k === 'cat' ? 1 : -1) };
+    render();
+    var nb = document.querySelector('th button[data-k="' + k + '"]'); if (nb) nb.focus();
+  });
+  function hdr() { var s = document.querySelector('.site'); if (s) document.documentElement.style.setProperty('--hdr', s.offsetHeight + 'px'); }
+  addEventListener('resize', hdr); hdr();
+
+  IZ.load().then(function (d) {
+    works = d.works; repo = d.repo; hist = d.history;
+    var dated = works.filter(function (w) { return w.first; });
+    var firsts = dated.map(function (w) { return w.first; }).sort();
+    var lasts = works.map(function (w) { return w.last; }).filter(Boolean).sort();
+    var days = {}; works.forEach(function (w) { (w.history && w.history.days || []).forEach(function (x) { days[x] = 1; }); });
+    $('facts').innerHTML =
+      '<li><b>' + works.length + '</b>作品</li>' +
+      (firsts.length ? '<li><b>' + IZ.dot(firsts[0]) + '</b>から</li><li>最後の更新 <b>' + IZ.dot(lasts[lasts.length - 1]) + '</b></li>' : '') +
+      '<li>制作した日 <b>' + Object.keys(days).length + '</b>日</li>';
+    var pending = works.filter(function (w) { return !w.first; });
+    if (pending.length) {
+      $('warn').innerHTML = '<div class="notice warn"><b>日付を確定していない作品</b>（年表には出していません）<br>' + pending.map(function (w) {
+        return IZ.esc(w.title) + '：' + IZ.dateLabel(w, 'first');
+      }).join('<br>') + '</div>';
+    }
+    var gen = hist && hist.generatedAt ? hist.generatedAt.replace('T', ' ').slice(0, 16) : '未集計';
+    $('src').innerHTML = '出典：GitHubリポジトリ <a href="https://github.com/' + IZ.esc(repo) + '" target="_blank" rel="noopener noreferrer">' + IZ.esc(repo) + '</a> のコミット履歴。' +
+      '集計 ' + gen + '（日本時間）、集計時点で最新の作品コミット ' + (hist && hist.latestWorkCommit ? hashLink(hist.latestWorkCommit) : '—') + '。';
+    render();
+  }).catch(function (err) {
+    $('out').innerHTML = err && err.message === 'file' ? IZ.fileNotice : '<p class="notice">記録を読み込めませんでした。</p>';
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+# 作品の公開日・最終更新日（data/history.json）を、push のたびに自動で集計し直すワークフロー。
+# 採用が決まったら .github/workflows/update-history.yml にコピーして使う（比較中は動かさない）。
+#
+# 安全のための工夫
+# - 履歴を全部取ってから集計する（fetch-depth: 0）。浅いcloneでは集計スクリプト自体が止まる。
+# - 書き込むのは history.json だけ。中身が変わらなければコミットしない。
+# - GITHUB_TOKEN で作ったコミットは、このワークフローを再び起動しない（GitHubの仕様）。
+#   さらに paths-ignore で history.json だけの変更では起動しないので、無限ループにならない。
+# - 権限は contents: write のみ。外部サービス・有料サービスは使わない。
+# - 失敗してもサイトは前回の history.json のまま表示される。手元で
+#   python3 tools/build_history.py を実行して push すれば復旧できる。
+name: update-history
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "data/history.json"
+      - "claude_site_candidate/data/history.json"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-history
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 集計
+        # 採用後のパス。比較中の場所で試すなら claude_site_candidate/tools/build_history.py
+        run: python3 tools/build_history.py
+      - name: 変わっていればコミット
+        run: |
+          FILE=data/history.json
+          if git diff --quiet -- "$FILE"; then
+            echo "変更なし"; exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$FILE"
+          git commit -m "ARCHIVE: 公開日・更新日を自動集計"
+          git push
