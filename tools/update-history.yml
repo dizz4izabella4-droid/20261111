@@ -16,7 +16,7 @@ on:
     branches: [main]
     paths-ignore:
       - "data/history.json"
-      - "claude_site_candidate/data/history.json"
+      - "data/history.json"
   workflow_dispatch: {}
 
 permissions:
@@ -35,7 +35,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: 集計
-        # 採用後のパス。比較中の場所で試すなら claude_site_candidate/tools/build_history.py
+        # 採用後のパス。比較中の場所で試すなら tools/build_history.py
         run: python3 tools/build_history.py
       - name: 変わっていればコミット
         run: |

@@ -4,7 +4,7 @@
    ※サイトを別の場所へ移したときは ROOT_FROM_ASSETS だけを直す（README「本番への切り替え」参照）。 */
 (function () {
   'use strict';
-  var ROOT_FROM_ASSETS = '../../';   // common/ から見たリポジトリの根（claude_site_candidate/common/ → 20261111/）。本番でサイトをリポジトリ直下に置いたら '../'
+  var ROOT_FROM_ASSETS = '../';   // common/ から見たリポジトリの根（common/ → 20261111/）。サイトを別の階層へ移したときだけ直す
   var DATA_FROM_ASSETS = '../data/'; // common/ から見た data/
   var me = document.currentScript && document.currentScript.src || location.href;
   var ROOT = new URL(ROOT_FROM_ASSETS, me).href;
@@ -136,6 +136,6 @@
     ROOT: ROOT, DATA: DATA, CATS: CATS, STATUS: STATUS, load: load, icon: icon, esc: esc, dot: dot,
     catBadge: catBadge, statusBadges: statusBadges, deviceText: deviceText, dateLabel: dateLabel,
     commitURL: commitURL, todayJST: todayJST,
-    fileNotice: '<div class="notice">このページはローカルサーバーで開いてください。ターミナルでリポジトリのフォルダに移り <code>python3 -m http.server 8000</code> を実行し、<code>http://localhost:8000/claude_site_candidate/</code> を開きます。</div>'
+    fileNotice: '<div class="notice">このページはローカルサーバーで開いてください。ターミナルでリポジトリのフォルダに移り <code>python3 -m http.server 8000</code> を実行し、<code>http://localhost:8000/</code> を開きます。</div>'
   };
 })();

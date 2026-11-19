@@ -6,9 +6,9 @@
   日付       = コミットの author date を日本時間（UTC+09:00）に直した日付
 
 使い方（リポジトリのどこからでも可）:
-  python3 claude_site_candidate/tools/build_history.py          # 集計して history.json を更新
-  python3 claude_site_candidate/tools/build_history.py --check  # 書き込まずに確認だけ（未登録フォルダ・要確認の作品を表示）
-  python3 claude_site_candidate/tools/build_history.py --add-stubs  # 未登録の作品フォルダを works.json に仮登録
+  python3 tools/build_history.py          # 集計して history.json を更新
+  python3 tools/build_history.py --check  # 書き込まずに確認だけ（未登録フォルダ・要確認の作品を表示）
+  python3 tools/build_history.py --add-stubs  # 未登録の作品フォルダを works.json に仮登録
 
 標準ライブラリだけで動く（Python 3.8 以上）。浅いclone（--depth）では日付を判定せず、エラーで止まる。
 """

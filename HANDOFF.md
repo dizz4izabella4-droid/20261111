@@ -99,9 +99,14 @@ HANDOFF.md                         本書
 
 ### 作品を増やすとき
 
+（2026-11-19 にサイトを作り直した。トップの `APPS` 配列は使わない。）
+
 1. リポジトリに作品のフォルダを作り、中に `index.html` を置く（例：`new-game/index.html`）。
-2. トップの `index.html` の `APPS`（テスト段階なら `lab/index.html` の `LAB`）の**先頭**に1件足す（新しく追加した作品が一番上に来る。2026-11-13 に決定）（`path`・`name`・`ja`・`for`・`color`・`icon`・`start`・`date`。`for` は `'pc'`・`'mobile'`・`'both'`）。
-3. push すると、選択画面に並ぶ。
+2. `python3 tools/build_history.py --add-stubs` を実行すると、台帳にないフォルダが `data/works.json` に仮登録される。`title`・`category`（game / lab / tool）・`summary`・`device`（pc / mobile / both）だけ直す。
+3. `python3 tools/build_history.py` で公開日・最終更新日（Gitの初回・最終コミット、日本時間）を `data/history.json` に集計する。
+4. コミットして push すると、GALLERY・ARCHIVE・BRAINに並ぶ。詳しくは `docs/site-guide.md`。
+
+旧「部屋」の `toybox/`・`lab/`・`utility/` は、作品一覧へ転送するだけのページ。旧BRAINは `brain/v1/`。
 
 ### アーティファクト版と index.html の違い
 

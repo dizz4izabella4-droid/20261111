@@ -21,7 +21,7 @@
 | PC98 NOVEL（PC-98ふうノベルゲームエンジンの土台。サンプル「零時の記録」つき。test ver.） | `pc98-novel/` | スマホ・PC |
 | ファンタジー（ローポリ3Dキャラを2D背景で歩かせた試作の記録。実験室。test ver.） | `fantasy/` | スマホ・PC |
 
-作品を増やすときは、フォルダを作って中に `index.html` を置き、トップの `index.html` にある `APPS` の先頭に1件足します（新しい作品が上に並びます）。詳しくは [HANDOFF.md](HANDOFF.md) を見てください。
+作品を増やすときは、フォルダを作って中に `index.html` を置き、`python3 tools/build_history.py --add-stubs` で `data/works.json`（作品台帳）に仮登録して題名などを直し、`python3 tools/build_history.py` で日付を集計します。詳しくは [docs/site-guide.md](docs/site-guide.md) を見てください。
 
 ## 全作品共通の基本設計
 

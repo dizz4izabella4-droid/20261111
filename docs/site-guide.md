@@ -17,14 +17,14 @@ git checkout claude-site-candidate     # このブランチ（またはパッチ
 python3 -m http.server 8000
 ```
 
-ブラウザで <http://localhost:8000/claude_site_candidate/> を開きます。リポジトリの直下で起動するのは、作品へのリンク（`../anzan-tensei/` など）を本物の作品につなぐためです。ファイルをダブルクリックして `file://` で開くと台帳を読み込めないので、その旨の案内が出ます。
+ブラウザで <http://localhost:8000/> を開きます。リポジトリの直下で起動するのは、作品へのリンク（`../anzan-tensei/` など）を本物の作品につなぐためです。ファイルをダブルクリックして `file://` で開くと台帳を読み込めないので、その旨の案内が出ます。
 
-iPhoneで試すときは、MacとiPhoneを同じWi‑Fiにつなぎ、`python3 -m http.server 8000 --bind 0.0.0.0` で起動して、iPhoneのSafariで `http://（MacのIPアドレス）:8000/claude_site_candidate/` を開きます。
+iPhoneで試すときは、MacとiPhoneを同じWi‑Fiにつなぎ、`python3 -m http.server 8000 --bind 0.0.0.0` で起動して、iPhoneのSafariで `http://（MacのIPアドレス）:8000/` を開きます。
 
 ## ファイル構成
 
 ```
-claude_site_candidate/
+（リポジトリ直下）
   index.html            GALLERY
   brain/index.html      BRAIN
   archive/index.html    ARCHIVE
@@ -33,9 +33,10 @@ claude_site_candidate/
   data/works.json       ★作品台帳（人が編集するのはここだけ）
   data/history.json     公開日・更新日の集計結果（自動生成。手で編集しない）
   tools/build_history.py  Git履歴から history.json を作るスクリプト（Python標準ライブラリのみ）
-  tools/update-history.yml  自動集計用のGitHub Actions（採用後に .github/workflows/ へコピー）
-  migration/            採用時に旧「部屋」URLを作品一覧へ転送するページ（toybox/ lab/ utility/）
-  README.md / REPORT.md
+  tools/update-history.yml  自動集計用のGitHub Actions（使う場合は .github/workflows/ へコピー）
+  toybox/ lab/ utility/   旧「部屋」URLを作品一覧へ転送するだけのページ
+  brain/v1/             旧BRAIN（そのまま残してある）
+  docs/site-guide.md / docs/claude-site-report.md
 ```
 
 BRAINの窓の画像・曲は、リポジトリ直下の既存素材（`assets/window_*.webp`、`assets/bgm/tides-under-glass.mp3`）をそのまま参照しています。複製はしていません。
@@ -81,8 +82,8 @@ GALLERYの並び順は日付で決まるので、台帳の中の順番は気に�
 1. 作品のフォルダ（例 `new-game/index.html`）を作ってコミット・push（今までどおり）。
 2. 台帳に登録する。次のどちらか。
    - `data/works.json` の `works` に1件書き足す。
-   - または `python3 claude_site_candidate/tools/build_history.py --add-stubs` を実行すると、台帳にないフォルダを仮登録してくれるので、`title`・`category`・`summary` だけ直す。
-3. 日付を集計する：`python3 claude_site_candidate/tools/build_history.py`
+   - または `python3 tools/build_history.py --add-stubs` を実行すると、台帳にないフォルダを仮登録してくれるので、`title`・`category`・`summary` だけ直す。
+3. 日付を集計する：`python3 tools/build_history.py`
 4. `data/works.json` と `data/history.json` をコミット・push。GALLERY・ARCHIVE・BRAINの3画面に同時に出ます。
 
 採用後に自動集計（`tools/update-history.yml`）を入れた場合、3 は不要です（pushすると数十秒後に history.json が更新されます）。集計前でも作品は一覧に出て、日付欄は「未集計」になります。
@@ -140,10 +141,8 @@ BRAINの木は台帳と日付から自動で描かれるので、作品ごとの
 - bot のコミットはワークフローを再起動しないうえ、history.json だけの変更は `paths-ignore` で除外しているので、無限ループになりません。
 - 失敗しても前回の history.json がそのまま表示されます。手元で `python3 tools/build_history.py` → コミット → push で復旧できます。GitHubの Actions 画面から「Run workflow」で手動実行もできます。
 
-## 本番への切り替え（採用が決まったら）
+## 本番への切り替え（実施済み）
 
-1. `index.html`・`archive/`・`common/`・`data/` をリポジトリ直下へ、`brain/index.html` を `brain/` へ移す（旧BRAINは `brain/v1/` などに退避する場合、その中の `../assets/` を `../../assets/` に直す）。
-2. `common/site.js` の `ROOT_FROM_ASSETS` を `'../'` に直す（1か所）。
-3. `tools/build_history.py` を直下の `tools/` へ移す（パスは自動で決まる）。`.github/workflows/update-history.yml` を置く場合は、`run:` の行が `python3 tools/build_history.py` になっていることを確認。
-4. `toybox/`・`lab/`・`utility/` の index.html を `migration/` の同名ファイルに置き換える（旧URL・ブックマークは作品一覧の該当種類へ転送）。`shared/roomnav.js` は使われなくなりますが、消さずに残しても害はありません。
-5. 作品フォルダ・作品の中身・保存データ（localStorage）には触れません。このサイトが使う保存キーは `izSite.` で始まる表示設定だけです。
+2026-11-19 に本番へ切り替えました。旧トップは Git 履歴に残り、旧BRAINは `brain/v1/` にあります。`common/site.js` の `ROOT_FROM_ASSETS` は `'../'` です。作品フォルダ・作品の中身・保存データ（localStorage）には触れていません。このサイトが使う保存キーは `izSite.` で始まる表示設定とお気に入りだけです。
+
+元に戻すときは、この切り替えコミットを `git revert` します。
