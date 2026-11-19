@@ -268,6 +268,15 @@ body.kb .room{--chsize:38px}
 .hero-pic .hmouth{position:absolute;left:56.5%;top:10.7%;width:3.5%;height:.7%;background:#8a4440;border-radius:50%;transform:translate(-50%,-50%) scaleY(0);transition:transform .08s}
 .hero-pic[data-talk="1"] .hmouth{transform:translate(-50%,-50%) scaleY(1)}
 .hero #emote-fx{top:4%}
+/* リアル（実写ふうの絵）：目・口のかさねは アニメ用なので外す。しゃべる ときは ほんの少し ゆらす */
+body.real .hero{height:76%;right:1%;aspect-ratio:640/1062}
+body.real .hero-pic .lid,body.real .hero-pic .hmouth{display:none}
+body.real .hero-pic[data-talk="1"] img{animation:realTalk .34s ease-in-out infinite;transform-origin:50% 100%}
+@keyframes realTalk{0%,100%{transform:scale(1,1)}50%{transform:scale(1.004,1.008)}}
+.setup-style{display:flex;gap:10px}
+.setup-style button{border:2px solid var(--gold,#c9a46a);border-radius:999px;padding:7px 20px;background:transparent;color:var(--parch,#f8f2e2);font-size:14px;font-weight:900;letter-spacing:.08em}
+.setup-style button[aria-pressed="true"]{background:var(--gold,#c9a46a);color:var(--nvD,#1b2440)}
+.setup-prev.real{width:110px;height:170px}
 .chibi{position:absolute;left:0;bottom:0;z-index:1;pointer-events:none;user-select:none;opacity:0;transition:opacity .6s ease;will-change:transform}
 .chibi.on{opacity:1}
 #chibi-inner{position:relative;display:flex;justify-content:center}
@@ -834,7 +843,7 @@ header{min-width:0}
 
       <div id="hero" class="hero" aria-hidden="true">
         <div id="hero-inner" class="presence-float">
-          <div id="character-emote"><div class="hero-pic" id="hero-pic"><img src="hero/elf.webp" alt="" draggable="false"><i class="lid l"></i><i class="lid r"></i><i class="hmouth"></i></div></div>
+          <div id="character-emote"><div class="hero-pic" id="hero-pic"><img id="hero-img" src="hero/elf.webp" alt="" draggable="false"><i class="lid l"></i><i class="lid r"></i><i class="hmouth"></i></div></div>
           <div id="emote-fx" aria-hidden="true"></div>
         </div>
       </div>
@@ -908,6 +917,7 @@ header{min-width:0}
   <div class="setup-card" id="setup-step2">
     <h2>WHERE <b>WHICH</b></h2>
     <div id="setup-preview" class="setup-prev" aria-hidden="true"></div>
+    <div class="setup-style" id="setup-style" role="group" aria-label="すがた"><button type="button" data-style="anime" aria-pressed="true">アニメ</button><button type="button" data-style="real" aria-pressed="false">リアル</button></div>
     <p>この子と いっしょに すごすよ。<br>なまえを つけてあげよう。</p>
     <input id="setup-name" class="setup-name" type="text" maxlength="10" value="えるふ" placeholder="なまえ（10もじまで）" autocomplete="off" aria-label="キャラクターの なまえ">
     <div id="setup-err" class="setup-err"></div>
@@ -2129,6 +2139,7 @@ header{min-width:0}
       // ===== せってい（むだに ある オプションがめん。ひらく ときと きめる ときに ローディングが でるよ）=====
       const OPTS_KEY = 'iris_options_v1';
       const OPT_DEFS = [
+        { k: 'style', label: 'すがた', def: 'anime', vals: [['anime', 'アニメ'], ['real', 'リアル']] },
         { k: 'speed', label: 'おはなしの はやさ', def: 'normal', vals: [['slow', 'ゆっくり'], ['normal', 'ふつう'], ['fast', 'はやい']] },
         { k: 'freq', label: 'ひとりごとの ひんど', def: 'normal', vals: [['low', 'すくない'], ['normal', 'ふつう'], ['high', 'おおい']] },
         { k: 'scene', label: 'へやの ようす', def: 'auto', vals: [['auto', 'じかんで かわる'], ['day', 'ひる'], ['dusk', 'ゆうがた'], ['night', 'よる'], ['rain', 'あめ']] },
@@ -2155,6 +2166,9 @@ header{min-width:0}
         document.body.classList.toggle('fs-s', opts.font === 's');
         document.body.classList.toggle('fs-l', opts.font === 'l');
         document.body.classList.toggle('nofx', opts.fx === 'off');
+        const isReal = opts.style === 'real', hi = document.getElementById('hero-img');
+        document.body.classList.toggle('real', isReal);
+        if (hi) { const want = isReal ? 'hero/real.webp' : 'hero/elf.webp'; if (hi.getAttribute('src') !== want) hi.setAttribute('src', want); }
         updateScene(false);
       }
 
@@ -2305,8 +2319,15 @@ header{min-width:0}
 
       function showSetupStep() {
         dom.setup.classList.remove('hidden');
-        dom.setupPreview.innerHTML = '<img src="hero/px_front.webp" alt="">';
+        refreshSetupStyle();
         dom.setupErr.textContent = '';
+      }
+
+      function refreshSetupStyle() {
+        const isReal = opts.style === 'real';
+        dom.setupPreview.classList.toggle('real', isReal);
+        dom.setupPreview.innerHTML = '<img src="' + (isReal ? 'hero/real.webp' : 'hero/px_front.webp') + '" alt="">';
+        document.querySelectorAll('#setup-style button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.style === opts.style)));
       }
 
       function decideName() {
@@ -2445,6 +2466,11 @@ header{min-width:0}
 
       function bindStartEvents() {
         dom.setupDecide.addEventListener('click', decideName);
+        document.querySelectorAll('#setup-style button').forEach((b) => b.addEventListener('click', () => {
+          opts.style = b.dataset.style;
+          try { localStorage.setItem(OPTS_KEY, JSON.stringify(opts)); } catch (err) { /* むし */ }
+          applyOpts(); refreshSetupStyle();
+        }));
         dom.setupName.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') { e.preventDefault(); decideName(); }
         });
