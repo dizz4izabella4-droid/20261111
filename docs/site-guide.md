@@ -5,7 +5,7 @@
 | 画面 | 場所 | 役割 |
 |---|---|---|
 | GALLERY | `index.html` | 初めての人が作品を探して開く。最初はゲームだけを表示（`?cat=all` ですべて）。ハートでお気に入りにすると先頭に並ぶ。端末でしぼり込み、名前で検索、並べ替え。姉妹サイト「あそびば」への目立つカードつき |
-| BRAIN | `brain/` | 理念の表現。作品が「枝」として伸びる白い木と、旧BRAINの木窓 |
+| BRAIN | `brain/` | 理念の表現。作品が「枝」として伸びる白い木（画面の真ん中）。旧BRAINは `brain/v1/` |
 | ARCHIVE | `archive/` | 制作の記録。公開日（初回コミット日）と最終更新日（日付のみ。時刻は表示しない）、年表・表・カレンダー |
 
 ## Macで試す
@@ -39,7 +39,7 @@ iPhoneで試すときは、MacとiPhoneを同じWi‑Fiにつなぎ、`python3 -
   docs/site-guide.md / docs/claude-site-report.md
 ```
 
-BRAINの窓の画像・曲は、リポジトリ直下の既存素材（`assets/window_*.webp`、`assets/bgm/tides-under-glass.mp3`）をそのまま参照しています。複製はしていません。
+BRAINの曲は、リポジトリ直下の既存素材（`assets/bgm/tides-under-glass.mp3`）をそのまま参照しています。複製はしていません。
 
 ## 作品台帳（data/works.json）の書き方
 

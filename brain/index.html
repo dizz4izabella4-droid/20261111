@@ -7,7 +7,7 @@
 <title>BRAIN｜izのおもちゃ箱</title>
 <script>/* iPhoneの消音スイッチに従う */try{if(navigator.audioSession)navigator.audioSession.type="ambient"}catch(e){}</script>
 <style>
-:root{--ink:#2f3a44;--line:#a9afb5;--faint:#d3d7db;--ww:clamp(118px,13.5vw,200px)}
+:root{--ink:#2f3a44;--line:#a9afb5;--faint:#d3d7db}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:#fff;color:var(--ink);overflow:hidden}
 body{font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI","Yu Gothic",Meiryo,"Noto Sans JP",system-ui,sans-serif;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
@@ -62,44 +62,12 @@ a{color:inherit}
 .origin{fill:#6b737b}
 #fog{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 72% 62% at 50% 50%,rgba(255,255,255,0) 55%,rgba(255,255,255,.55) 100%)}
 
-/* 窓（既存の木窓素材を流用。扉が開いて光がさし、その先へ移る） */
-.win{position:fixed;z-index:10;width:var(--ww);aspect-ratio:1086/1448;text-decoration:none;perspective:900px;outline:none;-webkit-touch-callout:none}
-.win.l{left:max(3vw,env(safe-area-inset-left,0px));top:50%;transform:translateY(-46%)}
-.win.r{right:max(3vw,env(safe-area-inset-right,0px));top:50%;transform:translateY(-46%)}
-.shell{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .4s}
-.win:hover .shell,.win:focus-visible .shell{transform:translateY(-4px)}
-.shell::before{content:'';position:absolute;left:6%;right:6%;bottom:-3%;height:8%;border-radius:50%;background:radial-gradient(ellipse,rgba(40,50,70,.32),transparent 70%)}
-.portal{position:absolute;left:17%;top:11%;width:67%;height:78%;background:radial-gradient(ellipse at 50% 45%,#fffdf2 0%,#ffe9b8 40%,#f6b866 80%,#c9803a 100%);opacity:.12;transition:opacity .8s}
-.panel{position:absolute;top:10.7%;height:78.04%;backface-visibility:hidden;transition:transform 1.1s cubic-bezier(.16,.78,.16,1)}
-.panel img,.frame{display:block;width:100%;height:100%;object-fit:fill;pointer-events:none}
-.panel.pl{left:16.76%;width:32.87%;transform-origin:0 50%}
-.panel.pr{left:49.63%;width:34.08%;transform-origin:100% 50%}
-.frame{position:absolute;inset:0}
-.win.open .panel.pl{transform:rotateY(-105deg)}
-.win.open .panel.pr{transform:rotateY(105deg)}
-.win.open .portal{opacity:1}
-.plate{position:absolute;left:50%;top:101.5%;transform:translateX(-50%);min-width:56%;padding:.3em .9em .34em;border-radius:.18em;text-align:center;white-space:nowrap;
- font:700 calc(var(--ww)*.075)/1.2 Georgia,"Times New Roman",serif;letter-spacing:.28em;text-indent:.28em;color:#2a160a;text-shadow:0 1px 0 rgba(255,214,160,.45);
- background:repeating-linear-gradient(92deg,rgba(0,0,0,.07) 0 2px,transparent 2px 7px),linear-gradient(180deg,#a8723f,#82532a 55%,#6a4222);
- box-shadow:inset 0 1px 0 rgba(255,220,170,.5),inset 0 -2px 3px rgba(0,0,0,.45),0 .3em .45em rgba(0,0,0,.35)}
-.win:focus-visible .plate{outline:2px solid #2f6fd6;outline-offset:3px}
-#flash{position:fixed;left:0;top:0;z-index:60;pointer-events:none;border-radius:50%;opacity:0;background:radial-gradient(circle,#fff 0,#fff 42%,rgba(255,246,222,.92) 52%,rgba(255,228,170,.45) 62%,rgba(255,220,150,0) 72%);transform:translate(-50%,-50%) scale(.02)}
-#flash.go{opacity:1;transition:transform .8s cubic-bezier(.45,0,.75,.5),opacity .2s ease-out}
-
-@media(max-aspect-ratio:4/5){
-  :root{--ww:clamp(92px,27vw,150px)}
-  .win.l,.win.r{top:auto;bottom:max(66px,calc(env(safe-area-inset-bottom,0px) + 58px));transform:none}
-  .win.l{left:calc(50% - var(--ww) - 6vw)}
-  .win.r{right:calc(50% - var(--ww) - 6vw)}
-  .win:hover .shell,.win:focus-visible .shell{transform:none}
-}
-
 #snd{position:fixed;z-index:40;right:max(10px,env(safe-area-inset-right,0px));bottom:max(10px,env(safe-area-inset-bottom,0px));width:38px;height:38px;border-radius:50%;border:1px solid #c9ced3;background:rgba(255,255,255,.9);color:#6b737b;display:grid;place-items:center;padding:0;cursor:pointer}
 #snd svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 #snd .x{display:block}#snd .w{display:none}#snd.on .x{display:none}#snd.on .w{display:block}
 #motion{position:fixed;z-index:40;left:max(10px,env(safe-area-inset-left,0px));bottom:max(10px,env(safe-area-inset-bottom,0px));height:38px;padding:0 12px;border-radius:19px;border:1px solid #c9ced3;background:rgba(255,255,255,.9);color:#6b737b;font:400 10px/1 Georgia,serif;letter-spacing:.2em;cursor:pointer}
 body.still .ghost,body.still .node.new .pulse{animation:none!important}
-@media(prefers-reduced-motion:reduce){.ghost,.node.new .pulse{animation:none!important}.panel,.portal,.shell{transition-duration:.01s!important}}
+@media(prefers-reduced-motion:reduce){.ghost,.node.new .pulse{animation:none!important}}
 </style>
 </head>
 <body>
@@ -116,9 +84,6 @@ body.still .ghost,body.still .node.new .pulse{animation:none!important}
   <div id="fog"></div>
 </main>
 
-<a class="win l" href="../archive/" aria-label="ARCHIVE（制作の記録）へ"><div class="shell"></div></a>
-<a class="win r" href="../" aria-label="GALLERY（作品一覧）へ"><div class="shell"></div></a>
-<div id="flash" aria-hidden="true"></div>
 
 <button id="motion" type="button" aria-pressed="false" title="動きを止める">STILL</button>
 <button id="snd" type="button" aria-pressed="false" aria-label="音を鳴らす"><svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><g class="w"><path d="M15.5 9a4.2 4.2 0 0 1 0 6"/><path d="M18 6.6a7.6 7.6 0 0 1 0 10.8"/></g><path class="x" d="M16 9.5l5 5M21 9.5l-5 5"/></svg></button>
@@ -130,38 +95,6 @@ body.still .ghost,body.still .node.new .pulse{animation:none!important}
   var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   var still = reduce; try { if (localStorage.getItem('izSite.still') === '1') still = true; } catch (e) {}
   var A = IZ.ROOT + 'assets/';
-
-  /* ---------- 窓 ---------- */
-  var wins = Array.prototype.slice.call(document.querySelectorAll('.win'));
-  wins.forEach(function (w, i) {
-    w.querySelector('.shell').innerHTML = '<div class="portal"></div>' +
-      '<div class="panel pl"><img alt="" draggable="false" src="' + A + 'window_left.webp"></div>' +
-      '<div class="panel pr"><img alt="" draggable="false" src="' + A + 'window_right.webp"></div>' +
-      '<img class="frame" alt="" draggable="false" src="' + A + 'window_frame.webp">' +
-      '<div class="plate">' + (i === 0 ? 'ARCHIVE' : 'GALLERY') + '</div>';
-    w.addEventListener('click', function (e) {
-      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; // 新しいタブで開く操作はそのまま
-      e.preventDefault(); openWin(w);
-    });
-  });
-  var leaving = false;
-  function openWin(w) {
-    if (leaving) return; leaving = true;
-    var fast = reduce || still;
-    w.classList.add('open');
-    setTimeout(function () {
-      var f = document.getElementById('flash'), r = w.getBoundingClientRect();
-      var cx = r.left + r.width / 2, cy = r.top + r.height / 2, R = Math.hypot(Math.max(cx, innerWidth - cx), Math.max(cy, innerHeight - cy)) * 2.9;
-      f.style.width = f.style.height = R + 'px'; f.style.left = cx + 'px'; f.style.top = cy + 'px';
-      if (fast) f.style.transitionDuration = '.01s';
-      void f.offsetWidth; f.classList.add('go'); f.style.transform = 'translate(-50%,-50%) scale(1)';
-      setTimeout(function () { location.href = w.href; }, fast ? 40 : 760);
-    }, fast ? 30 : 620);
-  }
-  addEventListener('pageshow', function () {
-    leaving = false; wins.forEach(function (w) { w.classList.remove('open'); });
-    var f = document.getElementById('flash'); f.classList.remove('go'); f.style.transform = ''; f.style.transitionDuration = '';
-  });
 
   /* ---------- 木 ---------- */
   var treeEl = document.getElementById('tree'), svgNS = 'http://www.w3.org/2000/svg';
@@ -294,17 +227,12 @@ body.still .ghost,body.still .node.new .pulse{animation:none!important}
     });
   }
 
-  /* 画面に合わせて木の大きさを決める（窓とぶつからないように） */
+  /* 画面に合わせて木の大きさを決める（画面の真ん中に置く） */
   function fit() {
-    var W = innerWidth, H = innerHeight, ww = wins[0].offsetWidth, top = 70, size;
-    if (portrait.matches) {
-      var bottom = wins[0].offsetHeight * 1.12 + 80, avail = H - top - bottom;
-      size = Math.min(W * 1.25, avail);
-      treeEl.style.top = (top + avail / 2) + 'px';
-    } else {
-      size = Math.min(H - top - 24, W - (ww + W * .03) * 2 - 30);
-      treeEl.style.top = (top / 2 + H / 2) + 'px';
-    }
+    var W = innerWidth, H = innerHeight, top = 70, bottom = 56, size;
+    var avail = H - top - bottom;
+    size = Math.min(avail, W * (portrait.matches ? 1.25 : 1));
+    treeEl.style.top = (H / 2 + (top - bottom) / 2) + 'px';
     size = Math.max(260, size);
     treeEl.style.width = treeEl.style.height = size + 'px';
     var px = size / 1320; // 1単位あたりの画面ピクセル
