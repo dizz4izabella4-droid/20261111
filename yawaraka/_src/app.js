@@ -71,6 +71,8 @@ function withOutline(mesh, th = 0.035) {
 const cat = new THREE.Group();     // 床からの位置（ジャンプ・持ち上げ）
 scene.add(cat);
 let squish = null;                 // ぷにぷに変形用（キャラごとに作り直す）
+let faceMask = null;
+const PROT = 0.6;
 let colorBase = null, scorch = null, bodyCol = 0xffffff, itemCol = null;
 let curKey = 'mebae', gs = { x: 1, y: 1, z: 1 }, flashT = -1;
 const undoStack = [];
@@ -568,7 +570,7 @@ function nearest(x, y, z) {
 function bindPoints(pts) {
   const n = pts.length / 3;
   const idx = new Int32Array(n * KNN), wt = new Float32Array(n * KNN), h = new Float32Array(n), n0 = new Float32Array(n * 3);
-  const anc = new Float32Array(n * 3), ar = new Float32Array(n);
+  const anc = new Float32Array(n * 3), ar = new Float32Array(n), mk = new Float32Array(n);
   for (let p = 0; p < n; p++) {
     const x = pts[p * 3], y = pts[p * 3 + 1], z = pts[p * 3 + 2];
     const nb = nearest(x, y, z);
@@ -579,6 +581,7 @@ function bindPoints(pts) {
       px += basePos[v * 3] * w; py += basePos[v * 3 + 1] * w; pz += basePos[v * 3 + 2] * w;
       nx += baseNrm[v * 3] * w; ny += baseNrm[v * 3 + 1] * w; nz += baseNrm[v * 3 + 2] * w;
     }
+    for (let k = 0; k < KNN; k++) mk[p] += wt[p * KNN + k] * (faceMask ? faceMask[idx[p * KNN + k]] : 0);
     const nl = Math.hypot(nx, ny, nz) || 1; nx /= nl; ny /= nl; nz /= nl;
     n0[p * 3] = nx; n0[p * 3 + 1] = ny; n0[p * 3 + 2] = nz;
     const hh = (x - px) * nx + (y - py) * ny + (z - pz) * nz;
@@ -588,14 +591,14 @@ function bindPoints(pts) {
     anc[p * 3] = ax; anc[p * 3 + 1] = ay; anc[p * 3 + 2] = az;
     ar[p] = Math.hypot(ax / shapeN.A, ay / shapeN.B, az / shapeN.C);
   }
-  return { n, idx, wt, h, n0, anc, ar };
+  return { n, idx, wt, h, n0, anc, ar, mk };
 }
 // 足場を体と同じ式で動かし、そこから「今の法線方向」に元の高さぶん浮かせる → 体と一緒になめらかに伸びる
 function evalBind(b, base, out, withNormal = true) {
   const N = bodyGeo.attributes.normal.array;
   for (let p = 0; p < b.n; p++) {
     const j = p * 3;
-    const d = deformPoint(b.anc[j], b.anc[j + 1], b.anc[j + 2], b.ar[p]);
+    const d = deformPoint(b.anc[j], b.anc[j + 1], b.anc[j + 2], b.ar[p], b.mk[p]);
     let x = d[0] - b.anc[j], y = d[1] - b.anc[j + 1], z = d[2] - b.anc[j + 2];   // 足場の移動量
     if (withNormal) {
       let nx = 0, ny = 0, nz = 0;
@@ -605,6 +608,14 @@ function evalBind(b, base, out, withNormal = true) {
       }
       const nl = Math.hypot(nx, ny, nz) || 1, hh = b.h[p];
       x += (nx / nl - b.n0[j]) * hh; y += (ny / nl - b.n0[j + 1]) * hh; z += (nz / nl - b.n0[j + 2]) * hh;
+      // 表面にもぐらないように：体の表面から最低限うかせる（目や口が消えない）
+      if (hh > 0.004) {
+        const PP = bodyGeo.attributes.position.array, ex = base[j] + x, ey = base[j + 1] + y, ez = base[j + 2] + z;
+        let sd = 0;
+        for (let k = 0; k < KNN; k++) { const v = b.idx[p * KNN + k] * 3, w = b.wt[p * KNN + k]; sd += w * ((ex - PP[v]) * N[v] + (ey - PP[v + 1]) * N[v + 1] + (ez - PP[v + 2]) * N[v + 2]); }
+        const want = 0.8 * hh;
+        if (sd < want) { const d = (want - sd) / nl; x += nx * d; y += ny * d; z += nz * d; }
+      }
     }
     out[j] = base[j] + x; out[j + 1] = base[j + 1] + y; out[j + 2] = base[j + 2] + z;
   }
@@ -614,11 +625,11 @@ const _tmp3 = new Float32Array(3);
 // 体の変形を「なめらかな関数」として共通化（体の頂点も顔パーツも同じ式で動かす → ずれない）
 const DF = { ox: 0, oy: 0, oz: 0, gx: 0, gy: 0, gz: 0, sig2: 1, sideK: 0, shell: 1 };
 const _d = [0, 0, 0];
-function deformPoint(bx, by, bz, rBase) {
+function deformPoint(bx, by, bz, rBase, mask = 0) {
   const dx = bx - DF.gx, dy = by - DF.gy, dz = bz - DF.gz, d2 = dx * dx + dy * dy + dz * dz;
   const plant = Math.min(Math.max((by - floorY) / 0.35, 0), 1);              // 底は床にくっついたまま
   const front = Math.min(Math.max(bz / shapeN.C, 0), 1);                     // 横に引くと正面（顔）を少し広めに
-  const w = Math.max(Math.exp(-d2 / DF.sig2), Math.exp(-d2 / (DF.sig2 * 1.8)) * 0.35 * DF.sideK * front) * plant;
+  const w = Math.max(Math.exp(-d2 / DF.sig2), Math.exp(-d2 / (DF.sig2 * 1.8)) * 0.35 * DF.sideK * front) * plant * (1 - PROT * mask);
   let x = bx + DF.ox * w, y = by + DF.oy * w, z = bz + DF.oz * w;
   if (w > 1e-4) {
     // めり込み防止：元の体の殻より内側に入った点は外へ押し戻す
@@ -677,7 +688,7 @@ function buildCharacter(key) {
   INK = c.ink;
   grad.image.data.set(c.grad); grad.needsUpdate = true;
   bodyMat = new THREE.MeshToonMaterial({ color: c.body, gradientMap: grad, vertexColors: true });
-  inkMat = new THREE.MeshBasicMaterial({ color: c.ink });
+  inkMat = new THREE.MeshBasicMaterial({ color: c.ink, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
 
   // 組み立て（シーンに入れる前に原点で作る）
   squish = new THREE.Group();
@@ -711,6 +722,22 @@ function buildCharacter(key) {
   prepSurface(c.shape);
   squish.updateMatrixWorld(true);
   riders = []; faceVerts = []; faceCaps = [];
+  {   // 顔のパーツ（目・口・鼻）の近くの体は、引っぱっても形をたもつ
+    const pts = [];
+    face.traverse(o => {
+      if (!o.isMesh) return;
+      if (o.geometry.type === 'TubeGeometry' || o.userData.deform) { const a = o.geometry.attributes.position.array; for (let i = 0; i < a.length; i += 24) pts.push(a[i], a[i + 1], a[i + 2]); }
+      else pts.push(o.position.x, o.position.y, o.position.z);
+    });
+    const n = basePos.length / 3, R2 = 2 * 0.26 * 0.26;
+    faceMask = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const x = basePos[i * 3], y = basePos[i * 3 + 1], z = basePos[i * 3 + 2];
+      let m = 0;
+      for (let q = 0; q < pts.length; q += 3) { const dx = x - pts[q], dy = y - pts[q + 1], dz = z - pts[q + 2], d2 = dx * dx + dy * dy + dz * dz; if (d2 < 0.9) { const e = Math.exp(-d2 / R2); if (e > m) m = e; } }
+      faceMask[i] = Math.min(1, m * 1.4);
+    }
+  }
   for (const o of squish.children.filter(x => x !== body && x !== face)) {
     const ctr = new THREE.Box3().setFromObject(o).getCenter(new THREE.Vector3());
     riders.push({ o, base: Float32Array.from([o.position.x, o.position.y, o.position.z]), ctr: ctr.toArray(), bind: bindPoints(ctr.toArray()) });
@@ -889,6 +916,8 @@ canvas.addEventListener('pointerdown', e => {
   if (!h) return;
   // つかむ（伸びたままの所をもう一度つかんでもOK）
   const localHit = body.worldToLocal(h.point.clone());
+  if (pull.active && !pull.held && RET.hold && !pull.relax) commitPose(false);   // 別の場所をつかむ前に、いまの形を確定
+  pull.relax = false;
   if (!pull.active) pull.off.set(0, 0, 0);
   pull.grab.copy(localHit).sub(pull.off);
   pull.vel.set(0, 0, 0);
@@ -945,7 +974,6 @@ function release() {
   pull.held = false;
   controls.enabled = true;
   sfx.stretch(0, 0);
-  if (bakeOn && bakeNow()) return;
   sfx.boing(pull.off.length());
   pull.wasLifted = pull.off.y > 0.25;
   // 離した瞬間にぷるんっ
@@ -1516,14 +1544,13 @@ function toast(msg) {
 let onPlucked = () => {};
 
 // 焼き付け：今の形を「元の形」にして、少し焼き色もつく（顔・耳・芽も貼りつけ直す）
-let bakeOn = true;
 const SCORCH = [0.62, 0.36, 0.14];
 function applyScorch() {
   const C = bodyGeo.attributes.color.array;
   for (let i = 0; i < scorch.length; i++) { const k = scorch[i]; for (let j = 0; j < 3; j++) C[i * 3 + j] = colorBase[i * 3 + j] * (1 - k) + SCORCH[j] * k; }
   bodyGeo.attributes.color.needsUpdate = true;
 }
-const RET = { k: 140, d: 7 };
+const RET = { k: 140, d: 7, hold: true };
 function rebind() {
   prepSurface(current.shape);
   for (const f of faceVerts) f.bind = bindPoints(f.base);
@@ -1552,31 +1579,35 @@ function applySnap(s) {
 }
 function pushUndo() { undoStack.push(snap()); if (undoStack.length > 30) undoStack.shift(); updateButtons(); }
 function updateButtons() { ui('undo').disabled = !undoStack.length; }
-function bakeNow() {
-  if (!pull.active) return false;
+function commitPose(burn) {
   pushUndo();
-  const nb = Float32Array.from(pos.array);
+  const hasPose = pull.active;
+  const nb = hasPose ? Float32Array.from(pos.array) : basePos;
   for (let i = 0; i < scorch.length; i++) {      // 焼き色：のびた所ほどよく焼ける
-    const dx = nb[i * 3] - basePos[i * 3], dy = nb[i * 3 + 1] - basePos[i * 3 + 1], dz = nb[i * 3 + 2] - basePos[i * 3 + 2];
-    scorch[i] = Math.min(0.9, scorch[i] + 0.06 + 0.18 * Math.min(Math.hypot(dx, dy, dz) / 0.7, 1));
+    let a = burn ? 0.1 : 0;
+    if (hasPose && burn) { const dx = nb[i * 3] - basePos[i * 3], dy = nb[i * 3 + 1] - basePos[i * 3 + 1], dz = nb[i * 3 + 2] - basePos[i * 3 + 2]; a += 0.25 * Math.min(Math.hypot(dx, dy, dz) / 0.7, 1); }
+    scorch[i] = Math.min(0.9, scorch[i] + a);
   }
   applyScorch();
-  const nfv = faceVerts.map(f => { const o = new Float32Array(f.base.length); evalBind(f.bind, f.base, o); return o; });
-  const nfc = faceCaps.map(c => { const o = new Float32Array(3); evalBind(c.bind, c.base, o); return o; });
-  const nrd = riders.map(r => { const o = new Float32Array(3); evalBind(r.bind, r.base, o, false); return o; });
-  basePos.set(nb);
-  faceVerts.forEach((f, i) => f.base.set(nfv[i]));
-  faceCaps.forEach((c, i) => c.base.set(nfc[i]));
-  riders.forEach((r, i) => { for (let k = 0; k < 3; k++) r.ctr[k] += nrd[i][k] - r.base[k]; r.base.set(nrd[i]); });
-  pull.active = pull.held = false; pull.off.set(0, 0, 0); pull.vel.set(0, 0, 0); pull.prevOff = null; pullLift = 0;
-  DF.ox = DF.oy = DF.oz = 0; DF.shell = 1;
-  commitBases();
-  flashT = 0; sfx.thud(3); spring.sqV -= 2.5;
-  return true;
+  if (hasPose) {
+    const nfv = faceVerts.map(f => { const o = new Float32Array(f.base.length); evalBind(f.bind, f.base, o); return o; });
+    const nfc = faceCaps.map(c => { const o = new Float32Array(3); evalBind(c.bind, c.base, o); return o; });
+    const nrd = riders.map(r => { const o = new Float32Array(3); evalBind(r.bind, r.base, o, false); return o; });
+    basePos.set(nb);
+    faceVerts.forEach((f, i) => f.base.set(nfv[i]));
+    faceCaps.forEach((c, i) => c.base.set(nfc[i]));
+    riders.forEach((r, i) => { for (let k = 0; k < 3; k++) r.ctr[k] += nrd[i][k] - r.base[k]; r.base.set(nrd[i]); });
+    pull.active = pull.held = false; pull.relax = false; pull.off.set(0, 0, 0); pull.vel.set(0, 0, 0); pull.prevOff = null; pullLift = 0;
+    DF.ox = DF.oy = DF.oz = 0; DF.shell = 1;
+    controls.enabled = true; sfx.stretch(0, 0);
+    commitBases();
+  }
+  if (burn) { flashT = 0; sfx.thud(3); spring.sqV -= 2.5; toast(hasPose ? 'BAKED: this is the new base shape' : 'BAKED a little'); }
 }
 // まるごと のばす・ちぢめる（床を基準に）
 function scaleShape(ax, ay, az) {
-  if (pull.active || anim.on) return;
+  if (anim.on) return;
+  if (pull.active) commitPose(false);
   const nx = gs.x * ax, ny = gs.y * ay, nz = gs.z * az;
   const ok = v => v >= 0.55 && v <= 2.2;
   if (!ok(nx) || !ok(ny) || !ok(nz)) { toast('LIMIT'); return; }
@@ -1587,11 +1618,9 @@ function scaleShape(ax, ay, az) {
   commitBases();
   sfx.boing(0.5); spring.sqV += ay > 1 ? 2 : -2;
 }
-ui('bakeMode').onclick = () => {
-  bakeOn = !bakeOn; ui('bakeMode').classList.toggle('on', bakeOn);
-  toast(bakeOn ? 'BAKE ON: let go to fix the shape (and toast it)' : 'BAKE OFF: it springs back');
-};
-ui('undo').onclick = () => { if (pull.active || !undoStack.length) return; applySnap(undoStack.pop()); updateButtons(); sfx.poke(); };
+ui('bakeBtn').onclick = () => { if (!anim.on) commitPose(true); };
+ui('relaxBtn').onclick = () => { if (pull.active && !pull.held) { pull.relax = true; sfx.boing(0.5); } };
+ui('undo').onclick = () => { if (pull.active && !pull.held) { pull.relax = true; return; } if (pull.active || !undoStack.length) return; applySnap(undoStack.pop()); updateButtons(); sfx.poke(); };
 ui('reset').onclick = () => { buildCharacter(curKey); sfx.poke(); spring.sqV = -3; toast('RESET'); };
 ui('hp').onclick = () => scaleShape(1, 1.12, 1);
 ui('hm').onclick = () => scaleShape(1, 1 / 1.12, 1);
@@ -1610,8 +1639,12 @@ for (const [k, label, col] of PLANT_LIST) {
   b.onclick = () => { if (current.rt.plant) current.rt.plant(k); };
   tray.appendChild(b);
 }
-function trayOpen(v) { tray.classList.toggle('open', v); ui('plantBtn').classList.toggle('on', v); if (v) palOpen(false); }
-ui('plantBtn').onclick = () => trayOpen(!tray.classList.contains('open'));
+const PANELS = { shape: ['tShape', 'pShape'], item: ['plantBtn', 'tray'], color: ['colorBtn', 'pal'], more: ['tMore', 'pMore'] };
+let panelNow = 'item';
+function openPanel(n) { panelNow = n; for (const k in PANELS) { ui(PANELS[k][1]).classList.toggle('open', k === n); ui(PANELS[k][0]).classList.toggle('on', k === n); } }
+function trayOpen(v) { if (v) openPanel('item'); else if (panelNow === 'item') openPanel(null); }
+for (const k in PANELS) ui(PANELS[k][0]).onclick = () => openPanel(panelNow === k ? null : k);
+openPanel(null);
 onPlucked = () => { trayOpen(true); toast('Pulled out! Pick something to plant'); };
 // ---- モード：のばす / カメラ
 let mode = 'sculpt', spinSaved = true;
@@ -1623,8 +1656,8 @@ function setMode(m) {
   const sc = m === 'sculpt';
   controls.enableRotate = !sc; controls.enablePan = false;
   controls.autoRotate = sc ? false : spinSaved; ui('spin').classList.toggle('on', controls.autoRotate);
-  ui('modeBtn').classList.toggle('on', sc); ui('modeBtn').textContent = sc ? 'MODE: STRETCH' : 'MODE: CAMERA';
-  ui('hint').textContent = sc ? 'Pull the body · BAKE fixes the shape' : 'Drag to rotate · pinch to zoom';
+  ui('modeBtn').classList.toggle('on', sc); ui('modeBtn').textContent = sc ? 'STRETCH' : 'CAMERA';
+  ui('hint').textContent = sc ? 'Pull the body, then press BAKE' : 'Drag to rotate · pinch to zoom';
   canvas.style.cursor = sc ? 'grab' : 'move';
 }
 ui('modeBtn').onclick = () => setMode(mode === 'sculpt' ? 'camera' : 'sculpt');
@@ -1632,11 +1665,12 @@ setMode('sculpt');
 
 // ---- 戻るまでの時間
 function setReturn(T) {
+  RET.hold = T >= 4.15; T = Math.min(T, 4);
   RET.k = 140 * Math.pow(0.5 / T, 2); RET.d = 7 * (0.5 / T);
-  ui('retv').textContent = T.toFixed(2).replace(/0$/, '') + 's';
+  ui('retv').textContent = RET.hold ? 'HOLD' : T.toFixed(2).replace(/0$/, '') + 's';
 }
 ui('ret').oninput = e => setReturn(parseFloat(e.target.value));
-setReturn(0.5);
+setReturn(4.2);
 
 // ---- 色
 const BODY_COLS = ['#ffffff', '#ffd6e0', '#d7f0d9', '#d4e6ff', '#e6d9ff', '#fff1b8', '#ffd9b0', '#cfcac0', '#8a8f9c'];
@@ -1651,8 +1685,6 @@ function addSw(label, cols, fn) {
 }
 addSw('BODY', BODY_COLS, c => { bodyCol = new THREE.Color(c).getHex(); bodyMat.color.set(bodyCol); sfx.poke(); });
 addSw('ITEM', ITEM_COLS, c => { itemCol = new THREE.Color(c).getHex(); if (current.rt.tint) current.rt.tint(itemCol); sfx.poke(); });
-function palOpen(v) { pal.classList.toggle('open', v); ui('colorBtn').classList.toggle('on', v); if (v) trayOpen(false); }
-ui('colorBtn').onclick = () => palOpen(!pal.classList.contains('open'));
 
 let startKey = 'mebae';
 try { startKey = localStorage.getItem('mochi-char') || 'mebae'; } catch (e) {}
@@ -1722,13 +1754,13 @@ renderer.setAnimationLoop(() => {
 
   // 引っ張り：離したら行きすぎながら戻る
   if (pull.active) {
-    if (!pull.held) {
+    if (!pull.held && (!RET.hold || pull.relax)) {
       const K2 = RET.k, D2 = RET.d;
       const acc = pull.off.clone().multiplyScalar(-K2).addScaledVector(pull.vel, -D2);
       pull.vel.addScaledVector(acc, dt);
       pull.off.addScaledVector(pull.vel, dt);
     }
-    const lifted = Math.max(0, pull.off.y) * (bakeOn ? 0.15 : 0.5);          // 上に引くと体ごと持ち上がる
+    const lifted = Math.max(0, pull.off.y) * (RET.hold ? 0 : 0.5);          // 上に引くと体ごと持ち上がる
     pullLift = lifted;
     if (pull.held) {
       const prev = pull.prevOff || pull.off.clone();
@@ -1750,7 +1782,7 @@ renderer.setAnimationLoop(() => {
     const P = pos.array;
     for (let i = 0; i < pos.count; i++) {
       const j = i * 3;
-      const d = deformPoint(basePos[j], basePos[j + 1], basePos[j + 2], baseR[i]);
+      const d = deformPoint(basePos[j], basePos[j + 1], basePos[j + 2], baseR[i], faceMask[i]);
       P[j] = d[0]; P[j + 1] = d[1]; P[j + 2] = d[2];
     }
     pos.needsUpdate = true;
