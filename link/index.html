@@ -50,6 +50,172 @@ html,body{height:100%;background:var(--bg);color:var(--ink);overflow:hidden;
 #dots i{width:6px;height:6px;border-radius:50%;background:#4a3f31;transition:background .2s}
 #dots i.on{background:var(--lamp)}
 </style>
+<!--IZ-LINK-BRIDGE:START--><script id="izlink-bridge">
+/* izlink bridge v1 — 連携アプリの共通データ層とイベント
+ *
+ * 各アプリ（保管庫・レッドライン・iz2611）と外枠（link/）に埋め込む小さな部品。
+ * 埋め込みは tools/apply_link_bridge.py で行う（作品は1ファイル完結のため）。
+ *
+ * 保存先（同一ドメインの localStorage）
+ *   izlink.v1.meta      : { caseId, settings:{ brand, stringsForFloppy } }
+ *   izlink.v1.<caseId>  : { marks:[], floppies:{}, terminal:{}, board:{items:[],pins:[],strings:[]}, truth:null }
+ *
+ * API（window.IzLink）
+ *   IzLink.linked                 外枠の中で動いているか（単体起動なら false）
+ *   IzLink.brand()                端末名（既定 'iz2611'）
+ *   IzLink.setting(key)           設定値
+ *   IzLink.caseId()               現在の事件ID
+ *   IzLink.meta() / setMeta(fn)   メタの読み出し・更新
+ *   IzLink.get(caseId?)           事件データ（無ければ空の形で返す）
+ *   IzLink.update(fn, caseId?)    事件データを fn(data) で書き換えて保存し、'data.changed' を流す
+ *   IzLink.on(type, cb)           イベント受信（自分・他の画面・外枠のどこから来たものも）。戻り値で解除
+ *   IzLink.emit(type, payload)    イベント送信（自分にも届く。外枠経由で他の画面へも届く）
+ *   IzLink.onVisibility(cb)       表示・非表示の通知（外枠が送る）
+ *
+ * 主なイベント
+ *   case.selected {caseId}  mark.added {docId,...}  string.added {stringId}
+ *   floppy.found {caseId}   floppy.inserted {caseId}  article.pinned {articleId}
+ *   evidence.found {...}    truth.revealed {...}      data.changed {caseId}
+ */
+(function (global) {
+  'use strict';
+  if (global.IzLink) return;
+
+  var PREFIX = 'izlink.v1.';
+  var META_KEY = PREFIX + 'meta';
+  var DEFAULT_SETTINGS = { brand: 'iz2611', stringsForFloppy: 3 };
+  var listeners = {};
+  var visListeners = [];
+  var isTop = global.parent === global;
+
+  function read(key, fallback) {
+    try {
+      var s = global.localStorage.getItem(key);
+      return s ? JSON.parse(s) : fallback;
+    } catch (e) { return fallback; }
+  }
+  function write(key, value) {
+    try { global.localStorage.setItem(key, JSON.stringify(value)); return true; }
+    catch (e) { return false; }
+  }
+
+  function emptyCase() {
+    return { marks: [], floppies: {}, terminal: {}, board: { items: [], pins: [], strings: [] }, truth: null };
+  }
+  function normalizeCase(d) {
+    var e = emptyCase();
+    if (!d || typeof d !== 'object') return e;
+    for (var k in e) if (!(k in d)) d[k] = e[k];
+    if (!d.board || typeof d.board !== 'object') d.board = e.board;
+    ['items', 'pins', 'strings'].forEach(function (k) { if (!Array.isArray(d.board[k])) d.board[k] = []; });
+    return d;
+  }
+
+  function meta() {
+    var m = read(META_KEY, null) || {};
+    m.settings = m.settings || {};
+    for (var k in DEFAULT_SETTINGS) if (!(k in m.settings)) m.settings[k] = DEFAULT_SETTINGS[k];
+    if (!('caseId' in m)) m.caseId = null;
+    return m;
+  }
+  function setMeta(fn) {
+    var m = meta();
+    var r = fn(m);
+    write(META_KEY, r || m);
+    return r || m;
+  }
+
+  function caseId() { return meta().caseId; }
+  function get(id) {
+    id = id || caseId();
+    if (!id) return emptyCase();
+    return normalizeCase(read(PREFIX + id, null));
+  }
+  function update(fn, id) {
+    id = id || caseId();
+    if (!id) return null;
+    var d = get(id);
+    var r = fn(d);
+    d = normalizeCase(r || d);
+    write(PREFIX + id, d);
+    emit('data.changed', { caseId: id });
+    return d;
+  }
+
+  function deliver(type, payload, origin) {
+    var ev = { type: type, payload: payload || {}, origin: origin };
+    (listeners[type] || []).slice().forEach(function (cb) { try { cb(ev.payload, ev); } catch (e) { console.error(e); } });
+    (listeners['*'] || []).slice().forEach(function (cb) { try { cb(ev.payload, ev); } catch (e) { console.error(e); } });
+  }
+  function on(type, cb) {
+    (listeners[type] = listeners[type] || []).push(cb);
+    return function () {
+      var a = listeners[type] || [];
+      var i = a.indexOf(cb);
+      if (i >= 0) a.splice(i, 1);
+    };
+  }
+
+  var selfId = Math.random().toString(36).slice(2);
+  function emit(type, payload) {
+    deliver(type, payload, 'self');
+    var msg = { izlink: 1, kind: 'event', type: type, payload: payload || {}, from: selfId };
+    if (!isTop) {
+      try { global.parent.postMessage(msg, '*'); } catch (e) {}
+    } else {
+      broadcastToFrames(msg, null);
+    }
+  }
+  // 外枠だけが使う：各枠へ配る（送り元には返さない）
+  function broadcastToFrames(msg, exceptWin) {
+    var frames = global.document ? global.document.querySelectorAll('iframe') : [];
+    Array.prototype.forEach.call(frames, function (f) {
+      if (f.contentWindow && f.contentWindow !== exceptWin) {
+        try { f.contentWindow.postMessage(msg, '*'); } catch (e) {}
+      }
+    });
+  }
+
+  global.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d) return;
+    // 外枠からの表示通知（link/ の既存形式）
+    if (d.type === 'izlink.visibility') {
+      visListeners.slice().forEach(function (cb) { try { cb(!!d.visible); } catch (er) {} });
+      return;
+    }
+    if (d.izlink !== 1 || d.kind !== 'event' || d.from === selfId) return;
+    if (isTop) {
+      // 外枠：子の emit を受けて、自分にも届け、他の枠へ中継する
+      deliver(d.type, d.payload, 'frame');
+      broadcastToFrames(d, e.source);
+    } else if (e.source === global.parent) {
+      deliver(d.type, d.payload, 'frame');
+    }
+  });
+
+  var api = {
+    version: 1,
+    linked: !isTop,
+    isFrame: isTop,
+    brand: function () { return meta().settings.brand; },
+    setting: function (k) { return meta().settings[k]; },
+    meta: meta,
+    setMeta: setMeta,
+    caseId: caseId,
+    get: get,
+    update: update,
+    on: on,
+    emit: emit,
+    onVisibility: function (cb) { visListeners.push(cb); },
+    _keys: { prefix: PREFIX, meta: META_KEY }
+  };
+  global.IzLink = api;
+  if (!isTop) {
+    try { global.parent.postMessage({ type: 'izlink.ready' }, '*'); } catch (e) {}
+  }
+})(window);
+</script><!--IZ-LINK-BRIDGE:END-->
 </head>
 <body>
 <div id="viewport"><div id="track"></div></div>
@@ -77,39 +243,263 @@ var CONFIG = {
 // ?real=1 で本物のアプリを読み込む（既定はダミー）
 var USE_REAL = /[?&]real=1\b/.test(location.search);
 
+/* ===== ダミーの事件（試作用テストデータ） ===== */
+var CATALOG = {
+  cases: [
+    { id:'test01', title:'テスト事件A（ダミー）',
+      docs:[ {id:'d1', title:'調書：第一発見者の供述'},
+             {id:'d2', title:'写真：現場の見取り図'},
+             {id:'d3', title:'鑑識メモ：凶器について'},
+             {id:'d4', title:'聴取：管理人の証言'} ],
+      papers:{
+        '1987-02-14':[ {id:'a1', title:'県道で雪崩、山荘地区が孤立'},
+                       {id:'a2', title:'地方版：猟銃の盗難届相次ぐ'} ],
+        '1987-02-15':[ {id:'a3', title:'洋館で宿泊客が死亡'},
+                       {id:'a4', title:'小欄：除雪車、未明に故障'} ] } },
+    { id:'test02', title:'テスト事件B（ダミー）',
+      docs:[ {id:'d1', title:'調書：通報記録'},
+             {id:'d2', title:'写真：遺留品'} ],
+      papers:{ '1990-07-01':[ {id:'a1', title:'港で漁船火災'} ] } }
+  ]
+};
+function findCase(id){ for (var i=0;i<CATALOG.cases.length;i++) if (CATALOG.cases[i].id===id) return CATALOG.cases[i]; return null; }
+
 function label(p){ return p.label.replace('{brand}', CONFIG.brand); }
 
+/* ===== 共通データの初期化 ===== */
+if (/[?&]reset=1\b/.test(location.search)) {
+  try {
+    Object.keys(localStorage).forEach(function(k){ if (k.indexOf(IzLink._keys.prefix)===0) localStorage.removeItem(k); });
+  } catch(e){}
+}
+IzLink.setMeta(function(m){
+  m.settings.brand = CONFIG.brand;
+  m.settings.stringsForFloppy = CONFIG.stringsForFloppy;
+});
+
+/* ===== 連携のルール（外枠が受け持つ） ===== */
+function boardHas(d, id){ return d.board.items.some(function(it){ return it.id===id; }); }
+function addBoardItem(d, item){
+  if (boardHas(d, item.id)) return;
+  var n = d.board.items.length;
+  item.x = 40 + (n % 4) * 160; item.y = 40 + Math.floor(n / 4) * 140; // 仮の配置
+  d.board.items.push(item);
+}
+
+IzLink.on('case.selected', function(p){
+  if (!findCase(p.caseId)) return;
+  IzLink.setMeta(function(m){ m.caseId = p.caseId; });
+  IzLink.emit('data.changed', { caseId: p.caseId });
+  go(1); // 「この事件を開く」→ ボードへ
+});
+
+IzLink.on('mark.added', function(p){
+  var c = findCase(p.caseId); if (!c) return;
+  var doc = c.docs.filter(function(x){ return x.id===p.docId; })[0]; if (!doc) return;
+  IzLink.update(function(d){
+    if (!d.marks.some(function(m){ return m.docId===doc.id; })) d.marks.push({ docId:doc.id, at:Date.now() });
+    // 資料ごとボードへ（通知はしない）
+    addBoardItem(d, { id:'doc:'+doc.id, kind:'doc', ref:doc.id, title:doc.title });
+  }, p.caseId);
+});
+
+IzLink.on('article.pinned', function(p){
+  var c = findCase(p.caseId); if (!c) return;
+  var art = null;
+  Object.keys(c.papers).forEach(function(date){
+    c.papers[date].forEach(function(a){ if (a.id===p.articleId) art = { a:a, date:date }; });
+  });
+  if (!art) return;
+  IzLink.update(function(d){
+    addBoardItem(d, { id:'article:'+art.a.id, kind:'article', ref:art.a.id, title:art.a.title, date:art.date });
+  }, p.caseId);
+});
+
+IzLink.on('string.added', function(p){
+  var id = p.caseId || IzLink.caseId(); if (!id) return;
+  var d = IzLink.get(id);
+  var f = d.floppies[id];
+  if (f && f.found) return;
+  if (d.board.strings.length >= IzLink.setting('stringsForFloppy')) {
+    IzLink.update(function(d){ d.floppies[id] = { found:true, taken:false, at:Date.now() }; }, id);
+    IzLink.emit('floppy.found', { caseId:id });
+  }
+});
+
+IzLink.on('floppy.inserted', function(p){
+  IzLink.update(function(d){ d.terminal.inserted = p.caseId; d.terminal.at = Date.now(); }, p.caseId);
+});
+
 /* ===== ダミー画面 ===== */
+var THEMES = [
+  {bg:'#2b241b', fg:'#e8dfcc', accent:'#b3261e', font:'serif'},
+  {bg:'#3b2a20', fg:'#f3ead8', accent:'#c0392b', font:'serif'},
+  {bg:'#000a00', fg:'#7cff7c', accent:'#7cff7c', font:'monospace'}
+];
+
+/* 以下の dummy* 関数は、そのまま iframe の中で実行される（外の変数は使えない） */
+function dummyShoko(CAT){
+  var root = document.getElementById('app');
+  function find(id){ return CAT.cases.filter(function(c){ return c.id===id; })[0]; }
+  function render(){
+    var cid = IzLink.caseId(), h = '<h1>資料保管庫</h1><h2>事件ファイル</h2>';
+    CAT.cases.forEach(function(c){
+      h += '<div class="card'+(c.id===cid?' cur':'')+'"><span class="spine"></span>'+
+           '<div><b>'+c.title+'</b> <span class="stamp">再捜査</span></div>'+
+           (c.id===cid ? '<div class="dim">現在の事件</div>' : '<button data-open="'+c.id+'">この事件を開く</button>')+'</div>';
+    });
+    if (cid) {
+      var c = find(cid), d = IzLink.get(cid);
+      h += '<h2>資料</h2>';
+      c.docs.forEach(function(doc){
+        var marked = d.marks.some(function(m){ return m.docId===doc.id; });
+        h += '<div class="row"><span>'+doc.title+'</span><button data-mark="'+doc.id+'"'+(marked?' disabled':'')+'>'+
+             (marked?'マーカー済み':'マーカーを引く')+'</button></div>';
+      });
+      var f = d.floppies[cid];
+      h += '<h2>フロッピー</h2>';
+      if (f && f.found) h += '<div class="row"><span>専用フロッピー（'+IzLink.brand()+'用）</span>'+
+             (f.taken ? '<span class="dim">手に取った</span>' : '<button data-take="1">手に取る</button>')+'</div>';
+      else h += '<div class="row dim">まだ見当たらない</div>';
+    }
+    root.innerHTML = h;
+  }
+  root.addEventListener('click', function(e){
+    var b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.open) IzLink.emit('case.selected', { caseId:b.dataset.open });
+    else if (b.dataset.mark) IzLink.emit('mark.added', { caseId:IzLink.caseId(), docId:b.dataset.mark });
+    else if (b.dataset.take) { var id = IzLink.caseId(); IzLink.update(function(d){ d.floppies[id].taken = true; }); }
+  });
+  IzLink.on('data.changed', render);
+  render();
+}
+
+function dummyRedline(CAT){
+  var root = document.getElementById('app');
+  var COLORS = { red:'#c0392b', blue:'#2e6db4', black:'#111' };
+  var COLOR_NAMES = { red:'赤', blue:'青', black:'黒' };
+  var color = 'red', sel = null;
+  function uid(){ return Math.random().toString(36).slice(2, 8); }
+  function render(){
+    var cid = IzLink.caseId(), h = '<h1>レッドライン</h1>';
+    if (!cid) { root.innerHTML = h + '<p class="dim">事件が選ばれていない。<br>保管庫の事件ファイルで「この事件を開く」を押す。</p>'; return; }
+    var d = IzLink.get(cid), b = d.board;
+    var title = (CAT.cases.filter(function(c){ return c.id===cid; })[0] || {}).title;
+    h += '<p class="dim">'+title+' のボード</p><h2>貼られた物</h2>';
+    if (!b.items.length) h += '<p class="dim">まだ何もない（保管庫でマーカーを引く／端末で記事を貼る）</p>';
+    b.items.forEach(function(it){
+      var pin = b.pins.filter(function(p){ return p.itemId===it.id; })[0];
+      h += '<div class="row"><span><small>'+(it.kind==='doc'?'資料':'記事')+'</small> '+it.title+'</span>'+
+        (pin ? '<button class="pin'+(sel===pin.id?' sel':'')+'" data-pin="'+pin.id+'">ピン</button>'
+             : '<button data-addpin="'+it.id+'">ピンを刺す</button>')+'</div>';
+    });
+    h += '<h2>紐 '+b.strings.length+' / '+IzLink.setting('stringsForFloppy')+'</h2><div class="row">';
+    Object.keys(COLORS).forEach(function(k){
+      h += '<button class="sw'+(color===k?' sel':'')+'" data-color="'+k+'" style="border-color:'+COLORS[k]+'">'+COLOR_NAMES[k]+'</button>';
+    });
+    h += '</div><p class="dim">ピン → ピンの順にタップすると紐を張る</p>';
+    b.strings.forEach(function(s){
+      function name(pid){ var p = b.pins.filter(function(x){ return x.id===pid; })[0];
+        var it = p && b.items.filter(function(x){ return x.id===p.itemId; })[0]; return it ? it.title : '?'; }
+      h += '<div class="row"><span style="color:'+COLORS[s.color]+'">━</span><span>'+name(s.a)+' — '+name(s.b)+'</span></div>';
+    });
+    root.innerHTML = h;
+  }
+  root.addEventListener('click', function(e){
+    var btn = e.target.closest('button'); if (!btn) return;
+    var cid = IzLink.caseId();
+    if (btn.dataset.color) { color = btn.dataset.color; render(); return; }
+    if (btn.dataset.addpin) {
+      IzLink.update(function(d){ d.board.pins.push({ id:'p'+uid(), itemId:btn.dataset.addpin }); });
+      return;
+    }
+    if (btn.dataset.pin) {
+      var pid = btn.dataset.pin;
+      if (!sel || sel===pid) { sel = sel===pid ? null : pid; render(); return; }
+      var a = sel; sel = null;
+      var dup = IzLink.get().board.strings.some(function(s){ return (s.a===a&&s.b===pid)||(s.a===pid&&s.b===a); });
+      if (dup) { render(); return; }
+      var sid = 's'+uid();
+      IzLink.update(function(d){ d.board.strings.push({ id:sid, a:a, b:pid, color:color }); });
+      IzLink.emit('string.added', { caseId:cid, stringId:sid });
+    }
+  });
+  IzLink.on('data.changed', render);
+  render();
+}
+
+function dummyTerm(CAT){
+  var root = document.getElementById('app');
+  var booting = false, date = null;
+  function render(){
+    var brand = IzLink.brand(), cid = IzLink.caseId();
+    var h = '<h1>'+brand+'</h1>';
+    if (booting) return;
+    if (!cid) { root.innerHTML = h + '<p>A:\\&gt; ディスクがありません_</p>'; return; }
+    var d = IzLink.get(cid), f = d.floppies[cid], c = CAT.cases.filter(function(x){ return x.id===cid; })[0];
+    if (d.terminal.inserted !== cid) {
+      h += '<p>A:\\&gt; ディスクがありません_</p>';
+      if (f && f.taken) h += '<button data-insert="1">フロッピーを挿す</button>';
+      else h += '<p class="dim">専用フロッピーが必要（保管庫で見つける）</p>';
+      root.innerHTML = h; return;
+    }
+    var dates = Object.keys(c.papers);
+    if (!date || dates.indexOf(date) < 0) date = dates[0];
+    h += '<p>新聞縮刷版 検索</p><div class="row">';
+    dates.forEach(function(dt){ h += '<button class="'+(dt===date?'sel':'')+'" data-date="'+dt+'">'+dt+'</button>'; });
+    h += '</div>';
+    c.papers[date].forEach(function(a){
+      var on = d.board.items.some(function(it){ return it.id==='article:'+a.id; });
+      h += '<div class="row"><span>'+a.title+'</span><button data-pin="'+a.id+'"'+(on?' disabled':'')+'>'+(on?'貼った':'ボードに貼る')+'</button></div>';
+    });
+    root.innerHTML = h;
+  }
+  function boot(){
+    booting = true;
+    var lines = [IzLink.brand()+' SYSTEM', 'MEMORY CHECK ... 640KB OK', 'FDD A: READ ...', 'LOADING CASE DISK ...', 'READY'];
+    var i = 0;
+    root.innerHTML = '<h1>'+IzLink.brand()+'</h1><pre id="boot"></pre>';
+    (function next(){
+      if (i >= lines.length) { booting = false; render(); return; }
+      document.getElementById('boot').textContent += lines[i++] + '\n';
+      setTimeout(next, 280);
+    })();
+  }
+  root.addEventListener('click', function(e){
+    var b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.insert) { IzLink.emit('floppy.inserted', { caseId:IzLink.caseId() }); boot(); }
+    else if (b.dataset.date) { date = b.dataset.date; render(); }
+    else if (b.dataset.pin) IzLink.emit('article.pinned', { caseId:IzLink.caseId(), articleId:b.dataset.pin });
+  });
+  IzLink.on('data.changed', render);
+  render();
+}
+
+var DUMMIES = [dummyShoko, dummyRedline, dummyTerm];
+var BRIDGE_SRC = (document.getElementById('izlink-bridge') || {}).textContent || '';
+
 function dummyDoc(p, i){
-  var themes = [
-    {bg:'#2b241b', fg:'#e8dfcc', accent:'#b3261e', font:'serif',     note:'書類・調書の棚。マーカーを引くとボードに載る（予定）。'},
-    {bg:'#3b2a20', fg:'#f3ead8', accent:'#c0392b', font:'serif',     note:'コルクのボード。資料・メモ・ピン・紐（予定）。'},
-    {bg:'#000a00', fg:'#7cff7c', accent:'#7cff7c', font:'monospace', note:'フロッピーを挿すと起動する端末（予定）。'}
-  ];
-  var t = themes[i];
+  var t = THEMES[i];
   return '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">'+
   '<meta name="viewport" content="width=device-width,initial-scale=1">'+
-  '<style>*{box-sizing:border-box;margin:0}html,body{height:100%}'+
-  'body{background:'+t.bg+';color:'+t.fg+';font-family:'+t.font+';display:flex;flex-direction:column;'+
-  'align-items:center;justify-content:center;gap:18px;padding:40px;text-align:center}'+
-  'h1{font-size:26px;letter-spacing:.2em;border-bottom:2px solid '+t.accent+';padding-bottom:8px}'+
-  'p{font-size:13px;opacity:.75;line-height:1.8;max-width:22em}'+
-  '#t{font-family:monospace;font-size:40px;letter-spacing:.05em}'+
-  '#s{font-size:11px;opacity:.6;letter-spacing:.15em}'+
-  'input{width:80%;max-width:280px;height:6px;accent-color:'+t.accent+'}'+
-  '</style></head><body>'+
-  '<h1>'+label(p)+'</h1>'+
-  '<p>ダミー画面（'+['左','中央','右'][i]+'）<br>'+t.note+'</p>'+
-  '<div id="t">0.0</div><div id="s">停止中</div>'+
-  '<p>↓ 画面内の横スクロール操作がスワイプと競合しないかの確認用</p><input type="range">'+
-  '<script>'+
-  'var active=false,sec=0,last=0;'+
-  'function loop(ts){if(active){if(last)sec+=(ts-last)/1000;last=ts;document.getElementById("t").textContent=sec.toFixed(1);}requestAnimationFrame(loop);}'+
-  'requestAnimationFrame(loop);'+
-  'addEventListener("message",function(e){var d=e.data;if(!d||d.type!=="izlink.visibility")return;'+
-  'active=d.visible;last=0;document.getElementById("s").textContent=active?"表示中（動作中）":"停止中";});'+
-  'parent.postMessage({type:"izlink.ready",id:"'+p.id+'"},"*");'+
-  '<\/script></body></html>';
+  '<style>*{box-sizing:border-box;margin:0}html,body{min-height:100%}'+
+  'body{background:'+t.bg+';color:'+t.fg+';font-family:'+t.font+';padding:28px 36px 48px;font-size:14px;line-height:1.6}'+
+  'h1{font-size:20px;letter-spacing:.2em;border-bottom:2px solid '+t.accent+';padding-bottom:6px;margin-bottom:10px}'+
+  'h2{font-size:13px;letter-spacing:.15em;margin:18px 0 6px;opacity:.85}'+
+  '.dim{opacity:.6;font-size:12px}'+
+  '.row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.08);flex-wrap:wrap}'+
+  '.card{position:relative;padding:10px 12px 10px 18px;margin:6px 0;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.12)}'+
+  '.card.cur{border-color:'+t.accent+'}'+
+  '.spine{position:absolute;left:0;top:0;bottom:0;width:6px;background:#b3261e}'+
+  '.stamp{display:inline-block;border:2px solid #b3261e;color:#d0453a;font-size:11px;padding:0 4px;transform:rotate(-6deg);margin-left:6px}'+
+  'button{font:inherit;font-size:12px;padding:6px 10px;margin:2px;background:rgba(0,0,0,.35);color:inherit;border:1px solid '+t.accent+';border-radius:3px}'+
+  'button:disabled{opacity:.4}button.sel{background:'+t.accent+';color:'+t.bg+'}'+
+  'button.sw{border-width:3px}pre{font:inherit;white-space:pre-wrap}'+
+  '#vis{position:fixed;right:8px;bottom:22px;font-size:10px;opacity:.5}'+
+  '</style><script>'+BRIDGE_SRC+'<\/script></head><body>'+
+  '<div id="app"></div><div id="vis">停止中</div>'+
+  '<script>IzLink.onVisibility(function(v){document.getElementById("vis").textContent=v?"表示中":"停止中";});'+
+  '('+DUMMIES[i].toString()+')('+JSON.stringify(CATALOG)+');<\/script></body></html>';
 }
 
 /* ===== 組み立て ===== */
@@ -198,9 +588,9 @@ function go(i){
 
 /* ===== エッジスワイプ ===== */
 function bindStrip(el, dir){ // dir: -1=左端（前の画面へ） +1=右端（次の画面へ）
-  var sx = 0, sy = 0, t0 = 0, id = null, moved = false;
+  var sx = 0, t0 = 0, id = null, moved = false;
   el.addEventListener('pointerdown', function(e){
-    id = e.pointerId; sx = e.clientX; sy = e.clientY; t0 = performance.now(); moved = false;
+    id = e.pointerId; sx = e.clientX; t0 = performance.now(); moved = false;
     el.setPointerCapture(id);
     track.classList.remove('anim');
   });
@@ -237,10 +627,10 @@ window.addEventListener('keydown', function(e){
   if (e.key === 'ArrowRight' && e.altKey) go(index + 1);
 });
 
-/* 子アプリからの通知（今後 link-bridge が使う） */
+/* 子アプリからの外枠向け通知 */
 window.addEventListener('message', function(e){
   var d = e.data;
-  if (!d || typeof d.type !== 'string' || d.type.indexOf('izlink.') !== 0) return;
+  if (!d || typeof d.type !== 'string') return;
   if (d.type === 'izlink.ready') sendVisibility();
   if (d.type === 'izlink.go' && typeof d.index === 'number') go(d.index);
 });
