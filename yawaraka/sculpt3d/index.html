@@ -1,0 +1,695 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+</head>
+<body>
+<title>胴像づくり 3D</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* layout: 絵は常に上に固定（スマホは画面の約半分）。道具・色・向きは下に積む。横長の画面は左に絵、右に道具 */
+:root {
+  color-scheme: dark;
+  --bg: #15130f;
+  --panel: #201d17;
+  --line: #3a352b;
+  --fg: #ece6d8;
+  --mute: #a39b88;
+  --accent: #d9a05b;
+  --good: #7fc4a8;
+  --font: "Hiragino Sans", "Noto Sans JP", "Yu Gothic", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 14px; line-height: 1.5;
+  padding-block: 6px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  max-width: 520px; margin-inline: auto; -webkit-user-select: none; user-select: none;
+}
+h1 { font-size: 15px; margin: 0 0 4px; letter-spacing: .08em; font-weight: 600; }
+h1 small { color: var(--mute); font-weight: 400; font-size: 12px; letter-spacing: 0; margin-left: 8px; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--good); outline-offset: 2px; }
+
+.stagecol { position: sticky; top: 0; z-index: 5; background: var(--bg); padding-block: 4px 2px; }
+.stage {
+  position: relative; margin-inline: auto; aspect-ratio: 4 / 5; border-radius: 6px; overflow: hidden; background: #0d0c0a; touch-action: none;
+  width: min(100%, calc(50vh * 0.8)); width: min(100%, calc(50dvh * 0.8));
+}
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.stage #o { pointer-events: none; }
+.toast { min-height: 1.3em; color: var(--good); font-size: 12px; text-align: center; margin-top: 2px; }
+
+.panel { padding-top: 4px; }
+.grid5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.row > * { min-width: 0; }
+.tool, .chip, .act {
+  min-height: 44px; padding: 6px 2px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 6px; font-size: 13px; text-align: center; line-height: 1.25;
+}
+.chip, .act { flex: 1 1 0; }
+.tool[aria-pressed="true"], .chip[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: #2a251b; font-weight: 600; }
+.tool small { display: block; color: var(--mute); font-size: 10px; font-weight: 400; }
+.act:active, .tool:active, .chip:active { background: #2e2a20; }
+.act[disabled] { opacity: .4; }
+.sl { display: grid; grid-template-columns: 5.4em 1fr 2.8em; gap: 8px; align-items: center; margin-top: 6px; font-size: 13px; }
+.sl input { width: 100%; accent-color: var(--accent); min-height: 30px; }
+.sl output { text-align: right; color: var(--mute); font-variant-numeric: tabular-nums; }
+
+details { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+summary { cursor: pointer; color: var(--mute); font-size: 12px; letter-spacing: .12em; min-height: 28px; }
+details[open] > summary { color: var(--fg); }
+
+#svp { display: block; width: 100%; height: auto; aspect-ratio: 160 / 66; border-radius: 6px; border: 1px solid var(--line); margin-top: 8px; touch-action: none; cursor: crosshair; }
+.hue input { background: linear-gradient(90deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00); border-radius: 6px; height: 12px; min-height: 12px; }
+.pal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 8px; }
+.sw { aspect-ratio: 1; min-height: 34px; border-radius: 6px; border: 2px solid var(--line); padding: 0; }
+.sw[aria-pressed="true"] { border-color: var(--fg); box-shadow: 0 0 0 2px var(--accent); }
+.cur { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.cur b { color: var(--fg); font-weight: 500; font-variant-numeric: tabular-nums; margin-right: 4px; }
+.box { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--mute); }
+.box i { display: inline-block; width: 22px; height: 22px; border-radius: 4px; border: 1px solid var(--line); }
+.hint { color: var(--mute); font-size: 12px; margin-top: 8px; }
+
+@media (min-width: 820px) {
+  body { max-width: 1060px; }
+  .app { display: grid; grid-template-columns: minmax(320px, 1fr) 400px; gap: 24px; align-items: start; }
+  .stagecol { top: 8px; }
+  .stage { width: min(100%, calc(82vh * 0.8)); width: min(100%, calc(82dvh * 0.8)); }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<h1>胴像づくり<small>完全3D 試作</small></h1>
+
+<div class="app">
+  <div class="stagecol">
+    <div class="stage" id="stage">
+      <canvas id="c" aria-label="彫刻の画面。指でなぞって彫る・塗る。「回す」で向きを変える"></canvas>
+      <canvas id="o" aria-hidden="true"></canvas>
+    </div>
+    <div class="toast" id="toast" aria-live="polite"></div>
+  </div>
+
+  <div class="panel">
+    <div class="grid5" id="tools"></div>
+    <div class="sl"><label for="sSize">大きさ</label><input id="sSize" type="range" min="4" max="30" step="1" value="12"><output id="oSize">12</output></div>
+    <div class="sl"><label for="sStr">強さ</label><input id="sStr" type="range" min="0.05" max="1" step="0.05" value="0.5"><output id="oStr">0.50</output></div>
+    <div class="sl"><label for="sSoft">筆のぼかし</label><input id="sSoft" type="range" min="0" max="1" step="0.05" value="0.8"><output id="oSoft">0.80</output></div>
+    <div class="row">
+      <button class="chip" id="bSym" type="button" aria-pressed="true">左右対称 入</button>
+    </div>
+
+    <details open>
+      <summary>向き（回して見る）</summary>
+      <div class="sl"><label for="sYaw">左右に回す</label><input id="sYaw" type="range" min="-180" max="180" step="5" value="0"><output id="oYaw">0</output></div>
+      <div class="sl"><label for="sPit">上下に傾ける</label><input id="sPit" type="range" min="-70" max="70" step="5" value="0"><output id="oPit">0</output></div>
+      <div class="row">
+        <button class="act" id="bFront" type="button">正面</button>
+        <button class="act" id="bSide" type="button">真横</button>
+        <button class="act" id="bTop" type="button">斜め上</button>
+      </div>
+      <p class="hint">「回す」の道具で、画面をなぞっても回せます。重い計算のため、動かしている間は粗く、止めると細かく描き直します。</p>
+    </details>
+
+    <details>
+      <summary>色（好きな色を選べます）</summary>
+      <canvas id="svp" width="160" height="100" aria-label="筆の色。横が鮮やかさ、縦が明るさ"></canvas>
+      <div class="sl hue"><label for="sHue">色合い</label><input id="sHue" type="range" min="0" max="360" step="1" value="210"><output id="oHue">210</output></div>
+      <div class="cur">
+        <span class="box"><i id="swCur"></i><b id="hexCur">#2f6fb5</b>筆の色</span>
+        <span class="box"><i id="swBase"></i>地の色</span>
+        <button class="chip" id="bBase" type="button" style="flex:0 0 auto;padding-inline:12px">筆の色を全体に</button>
+      </div>
+      <div class="pal" id="pal"></div>
+      <p class="hint">下の色見本は、よく使う色のショートカットです。「塗る」の道具で、筆の色をぼんやり重ねて塗れます。「塗り消し」で塗りだけを消せます。</p>
+    </details>
+
+    <details>
+      <summary>質感・光</summary>
+      <div class="row" id="mats"></div>
+      <div class="row"><button class="chip" id="bPatina" type="button" aria-pressed="true">くぼみに緑青（金属のみ）</button></div>
+      <div class="sl"><label for="sAz">光の向き</label><input id="sAz" type="range" min="0" max="360" step="5" value="135"><output id="oAz">135</output></div>
+      <div class="sl"><label for="sEl">光の高さ</label><input id="sEl" type="range" min="15" max="85" step="5" value="45"><output id="oEl">45</output></div>
+    </details>
+
+    <details>
+      <summary>はじめから</summary>
+      <div class="row" id="shapes"></div>
+      <div class="sl"><label for="rSize">胸の大きさ</label><input id="rSize" type="range" min="0.8" max="1.4" step="0.05" value="1"><output id="oRSize">1.00</output></div>
+      <div class="sl"><label for="rOver">張り出し</label><input id="rOver" type="range" min="0" max="1.6" step="0.1" value="1"><output id="oROver">1.0</output></div>
+      <div class="sl"><label for="rGap">左右の間隔</label><input id="rGap" type="range" min="0.28" max="0.46" step="0.02" value="0.36"><output id="oRGap">0.36</output></div>
+      <div class="sl"><label for="rLift">高さ</label><input id="rLift" type="range" min="0.1" max="0.34" step="0.02" value="0.22"><output id="oRLift">0.22</output></div>
+      <p class="hint">「お手本」を選んだ直後は、スライダーを離すと形が作り直されます。彫り始めたあとは、「お手本」を押したときだけ作り直します。</p>
+    </details>
+  </div>
+</div>
+
+<script>
+'use strict';
+(function () {
+  /* ===== 体積（3Dの格子）：各点に「表面までの距離」を持つ。負なら内側 ===== */
+  var BX = 1.0, BY = 1.3, Z0 = -0.45, Z1 = 0.95;
+  var NX = 129, NY = 167, NZ = 90, NXY = NX * NY, N = NXY * NZ;
+  var SX = (NX - 1) / (2 * BX), SY = (NY - 1) / (2 * BY), SZ = (NZ - 1) / (Z1 - Z0);
+  var D = new Float32Array(N);
+  var PC = new Uint32Array(N), PB = new Uint8Array(PC.buffer); /* 塗りの層：色(RGB)と濃さ(A) */
+  var P = { tool: 'raise', size: 12, str: 0.5, soft: 0.8, sym: true, mat: 'metal', patina: true, yaw: 0, pit: 0, az: 135, el: 45, shape: 'ref', base: [176, 118, 64], cur: [47, 111, 181] };
+  var $ = function (id) { return document.getElementById(id); };
+  var HW = 300, HH = 375, LW = 100, LH = 125, VH = 3.0, VW = VH * 0.8;
+  var cv = $('c'), ov = $('o'), ctx = cv.getContext('2d'), octx = ov.getContext('2d');
+  cv.width = HW; cv.height = HH;
+  var hiImg = ctx.createImageData(HW, HH);
+  var lowCv = document.createElement('canvas'); lowCv.width = LW; lowCv.height = LH;
+  var lowCtx = lowCv.getContext('2d'), lowImg = lowCtx.createImageData(LW, LH);
+
+  function gs(u) { return Math.exp(-u * u); }
+  function hex(c) { return '#' + c.map(function (v) { var s = Math.round(v).toString(16); return s.length < 2 ? '0' + s : s; }).join(''); }
+  function toast(m) { $('toast').textContent = m; clearTimeout(toast.t); if (m) toast.t = setTimeout(function () { $('toast').textContent = ''; }, 2800); }
+
+  /* 体積の値を、なめらかに読む（3方向の線形補間） */
+  function samp(x, y, z) {
+    var fx = (x + BX) * SX, fy = (y + BY) * SY, fz = (z - Z0) * SZ;
+    if (fx < 0) fx = 0; else if (fx > NX - 1.001) fx = NX - 1.001;
+    if (fy < 0) fy = 0; else if (fy > NY - 1.001) fy = NY - 1.001;
+    if (fz < 0) fz = 0; else if (fz > NZ - 1.001) fz = NZ - 1.001;
+    var ix = fx | 0, iy = fy | 0, iz = fz | 0, ax = fx - ix, ay = fy - iy, az = fz - iz, o = ix + iy * NX + iz * NXY;
+    var a = D[o], b = D[o + 1], c = D[o + NX], d = D[o + NX + 1], e = D[o + NXY], f = D[o + NXY + 1], g = D[o + NXY + NX], h = D[o + NXY + NX + 1];
+    var c00 = a + (b - a) * ax, c10 = c + (d - c) * ax, c01 = e + (f - e) * ax, c11 = g + (h - g) * ax;
+    var c0 = c00 + (c10 - c00) * ay, c1 = c01 + (c11 - c01) * ay;
+    return c0 + (c1 - c0) * az;
+  }
+
+  /* ===== お手本：胴体の数式（背中側も丸く閉じた3Dの形） ===== */
+  var R = { size: 1.0, over: 1.0, gap: 0.36, lift: 0.22 };
+  var RTH = 20 * Math.PI / 180, RCT = Math.cos(RTH), RST = Math.sin(RTH);
+  var refPristine = false;
+  function smin(a, b, k) { var t = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - t * t * k * 0.25; }
+  function rell(x, y, z, cx, cy, cz, rx, ry, rz) {
+    var px = x - cx, py = y - cy, pz = z - cz;
+    var yy = py * RCT + pz * RST, zz = -py * RST + pz * RCT;
+    var k = Math.sqrt((px / rx) * (px / rx) + (yy / ry) * (yy / ry) + (zz / rz) * (zz / rz));
+    return (k - 1) * Math.min(rx, ry, rz);
+  }
+  function torsoSDF(x, y, z) {
+    var a = 0.70 + 0.13 * gs((y - 0.55) / 0.6) + 0.05 * gs((y + 1.25) / 0.4);
+    var c = z > 0 ? 0.38 + 0.11 * gs((y - 0.30) / 0.55) : 0.30;
+    var q = Math.sqrt((x / a) * (x / a) + (z / c) * (z / c));
+    var d = (q - 1) * Math.min(a, c);
+    d = -smin(-d, -(Math.abs(y) - 1.25), 0.07); /* 上下の切り口は、角を少し丸める */
+    var rx = 0.36 * R.size, ry = 0.34 * R.size, rz = 0.34 * R.size, czb = 0.27 + 0.12 * R.over;
+    for (var m = 0; m < 2; m++) {
+      var cx = m ? R.gap : -R.gap;
+      d = smin(d, rell(x, y, z, cx, R.lift, czb, rx, ry, rz), 0.24);
+      var bx = x - cx, by = y - (R.lift - RST * rz * 0.98), bz = z - (czb + RCT * rz * 0.98);
+      d = smin(d, Math.sqrt(bx * bx + by * by + bz * bz) - 0.05, 0.03);
+    }
+    var nx = x, ny = y + 0.80, nz = z - 0.401;
+    d = Math.max(d, -(Math.sqrt(nx * nx + ny * ny + nz * nz) - 0.055));
+    return d;
+  }
+  function blobSDF(x, y, z) {
+    var k = Math.sqrt((x / 0.8) * (x / 0.8) + (y / 1.0) * (y / 1.0) + ((z - 0.1) / 0.5) * ((z - 0.1) / 0.5));
+    return (k - 1) * 0.5;
+  }
+  function fillVolume(fn) {
+    var o = 0, ix, iy, iz;
+    for (iz = 0; iz < NZ; iz++) {
+      var z = Z0 + iz / SZ;
+      for (iy = 0; iy < NY; iy++) {
+        var y = -BY + iy / SY;
+        for (ix = 0; ix < NX; ix++, o++) {
+          var v = fn(-BX + ix / SX, y, z);
+          D[o] = v > 0.6 ? 0.6 : v < -0.6 ? -0.6 : v;
+        }
+      }
+    }
+    refPristine = true; needRender = true;
+  }
+  function buildReference() { fillVolume(torsoSDF); }
+  function makeReference(withUndo) {
+    toast('お手本を作っています…（数秒かかります）');
+    setTimeout(function () {
+      if (withUndo) pushFull();
+      buildReference(); if (withUndo) PC.fill(0); saveSoon();
+      toast(withUndo ? 'お手本を出しました。「もどす」で前の形に戻せます。' : '');
+    }, 40);
+  }
+
+  /* ===== 光線で表面を探す ===== */
+  var HX = 0, HY = 0, HZ = 0;
+  function march(ox, oy, oz, dx, dy, dz) {
+    var tn = 0, tf = 1e9, ta, tb, tt;
+    if (Math.abs(dx) < 1e-9) { if (ox < -BX || ox > BX) return -1; } else { ta = (-BX - ox) / dx; tb = (BX - ox) / dx; if (ta > tb) { tt = ta; ta = tb; tb = tt; } if (ta > tn) tn = ta; if (tb < tf) tf = tb; }
+    if (Math.abs(dy) < 1e-9) { if (oy < -BY || oy > BY) return -1; } else { ta = (-BY - oy) / dy; tb = (BY - oy) / dy; if (ta > tb) { tt = ta; ta = tb; tb = tt; } if (ta > tn) tn = ta; if (tb < tf) tf = tb; }
+    if (Math.abs(dz) < 1e-9) { if (oz < Z0 || oz > Z1) return -1; } else { ta = (Z0 - oz) / dz; tb = (Z1 - oz) / dz; if (ta > tb) { tt = ta; ta = tb; tb = tt; } if (ta > tn) tn = ta; if (tb < tf) tf = tb; }
+    if (tn >= tf) return -1;
+    var t = tn, tp = tn;
+    for (var it = 0; it < 320; it++) {
+      var d = samp(ox + dx * t, oy + dy * t, oz + dz * t);
+      if (d < 0.0008) {
+        var l = tp, h = t;
+        for (var b = 0; b < 6; b++) { var m = (l + h) * 0.5; if (samp(ox + dx * m, oy + dy * m, oz + dz * m) < 0) h = m; else l = m; }
+        HX = ox + dx * h; HY = oy + dy * h; HZ = oz + dz * h;
+        return h;
+      }
+      var st = d * 0.7; if (st < 0.004) st = 0.004; else if (st > 0.08) st = 0.08;
+      tp = t; t += st;
+      if (t > tf) return -1;
+    }
+    return -1;
+  }
+
+  /* ===== 向き ===== */
+  var Ex = [1, 0, 0], Ey = [0, 1, 0], Ez = [0, 0, 1], CZ = 0.2;
+  function viewVec(x, y, z) {
+    var yaw = -P.yaw * Math.PI / 180, pit = -P.pit * Math.PI / 180;
+    var cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pit), sp = Math.sin(pit);
+    var y1 = y * cp - z * sp, z1 = y * sp + z * cp;
+    return [x * cy + z1 * sy, y1, -x * sy + z1 * cy];
+  }
+  function setBasis() { Ex = viewVec(1, 0, 0); Ey = viewVec(0, 1, 0); Ez = viewVec(0, 0, 1); }
+  function rayFor(u, v) { /* 画面の位置(u,v)から出る光線。結果は ORG と -Ez */
+    return [Ex[0] * u + Ey[0] * v + Ez[0] * 4, Ex[1] * u + Ey[1] * v + Ez[1] * 4, CZ + Ex[2] * u + Ey[2] * v + Ez[2] * 4];
+  }
+  function hitAt(fx, fy) { /* 画面の割合(0..1)で指定した点の表面。なければ null */
+    var u = (fx - 0.5) * VW, v = (0.5 - fy) * VH, o = rayFor(u, v);
+    var t = march(o[0], o[1], o[2], -Ez[0], -Ez[1], -Ez[2]);
+    return t < 0 ? null : [HX, HY, HZ];
+  }
+
+  /* ===== 色 ===== */
+  var AR = 0, AG = 0, AB = 0;
+  function albedoAt(x, y, z) {
+    var ix = Math.round((x + BX) * SX), iy = Math.round((y + BY) * SY), iz = Math.round((z - Z0) * SZ);
+    if (ix < 0) ix = 0; else if (ix > NX - 1) ix = NX - 1;
+    if (iy < 0) iy = 0; else if (iy > NY - 1) iy = NY - 1;
+    if (iz < 0) iz = 0; else if (iz > NZ - 1) iz = NZ - 1;
+    var o = (ix + iy * NX + iz * NXY) * 4, a = PB[o + 3] / 255, b = P.base;
+    AR = b[0] + (PB[o] - b[0]) * a; AG = b[1] + (PB[o + 1] - b[1]) * a; AB = b[2] + (PB[o + 2] - b[2]) * a;
+  }
+  var MAT = {
+    metal: { hi: [255, 236, 205], sp: 0.7, ex: 26, amb: 0.17, patina: true },
+    gloss: { hi: [255, 255, 255], sp: 0.5, ex: 60, amb: 0.2, patina: false },
+    matte: { hi: [255, 255, 255], sp: 0.07, ex: 8, amb: 0.22, patina: false }
+  };
+
+  /* ===== 描画（行ごとに少しずつ描ける） ===== */
+  var L = { w: [0, 0, 1], hw: [0, 0, 1] };
+  function setLight() {
+    var az = P.az * Math.PI / 180, el = P.el * Math.PI / 180;
+    var lx = Math.cos(el) * Math.cos(az), ly = Math.cos(el) * Math.sin(az), lz = Math.sin(el);
+    var hx = lx, hy = ly, hz = lz + 1, hl = Math.hypot(hx, hy, hz); hx /= hl; hy /= hl; hz /= hl;
+    L.w = [lx * Ex[0] + ly * Ey[0] + lz * Ez[0], lx * Ex[1] + ly * Ey[1] + lz * Ez[1], lx * Ex[2] + ly * Ey[2] + lz * Ez[2]];
+    L.hw = [hx * Ex[0] + hy * Ey[0] + hz * Ez[0], hx * Ex[1] + hy * Ey[1] + hz * Ez[1], hx * Ex[2] + hy * Ey[2] + hz * Ez[2]];
+  }
+  function renderRows(img, W, H, r0, r1) {
+    var px = img.data, m = MAT[P.mat], usePatina = m.patina && P.patina;
+    var dx = -Ez[0], dy = -Ez[1], dz = -Ez[2], e = 0.022;
+    for (var py = r0; py < r1; py++) {
+      var v = (0.5 - (py + 0.5) / H) * VH;
+      for (var qx = 0; qx < W; qx++) {
+        var u = ((qx + 0.5) / W - 0.5) * VW, o4 = (py * W + qx) * 4;
+        var ox = Ex[0] * u + Ey[0] * v + Ez[0] * 4, oy = Ex[1] * u + Ey[1] * v + Ez[1] * 4, oz = CZ + Ex[2] * u + Ey[2] * v + Ez[2] * 4;
+        var t = march(ox, oy, oz, dx, dy, dz), r, g, b;
+        if (t < 0) {
+          var vg = 1 - 0.8 * ((u / VW) * (u / VW) + (v / VH) * (v / VH));
+          r = 32 * vg; g = 29 * vg; b = 25 * vg;
+        } else {
+          var X = HX, Y = HY, Z = HZ;
+          var gx = samp(X + e, Y, Z) - samp(X - e, Y, Z), gy = samp(X, Y + e, Z) - samp(X, Y - e, Z), gz = samp(X, Y, Z + e) - samp(X, Y, Z - e);
+          var gl = Math.sqrt(gx * gx + gy * gy + gz * gz) || 1; gx /= gl; gy /= gl; gz /= gl;
+          var ndl = gx * L.w[0] + gy * L.w[1] + gz * L.w[2]; if (ndl < 0) ndl = 0;
+          var sp = gx * L.hw[0] + gy * L.hw[1] + gz * L.hw[2]; sp = sp > 0 ? Math.pow(sp, m.ex) * m.sp : 0;
+          var occ = (0.07 - samp(X + gx * 0.07, Y + gy * 0.07, Z + gz * 0.07)) / 0.07; occ = occ < 0 ? 0 : occ > 1 ? 1 : occ;
+          var ao = 1 - 0.55 * occ, df = (m.amb + ndl * 0.95) * ao;
+          albedoAt(X, Y, Z);
+          var cr = AR, cg = AG, cb = AB;
+          if (usePatina) { var pa = Math.min(0.6, occ * 0.9); cr += (62 - cr) * pa; cg += (128 - cg) * pa; cb += (106 - cb) * pa; }
+          r = cr * df + m.hi[0] * sp; g = cg * df + m.hi[1] * sp; b = cb * df + m.hi[2] * sp;
+        }
+        px[o4] = r > 255 ? 255 : r; px[o4 + 1] = g > 255 ? 255 : g; px[o4 + 2] = b > 255 ? 255 : b; px[o4 + 3] = 255;
+      }
+    }
+  }
+  function renderLow() {
+    setBasis(); setLight();
+    renderRows(lowImg, LW, LH, 0, LH);
+    lowCtx.putImageData(lowImg, 0, 0);
+    ctx.imageSmoothingEnabled = true; ctx.drawImage(lowCv, 0, 0, HW, HH);
+  }
+  var hiRow = 0, hiActive = false;
+  function renderHiChunk(budget) {
+    var t0 = performance.now();
+    while (hiRow < HH && performance.now() - t0 < budget) {
+      var r1 = Math.min(HH, hiRow + 4);
+      renderRows(hiImg, HW, HH, hiRow, r1);
+      ctx.putImageData(hiImg, 0, 0, 0, hiRow, HW, r1 - hiRow);
+      hiRow = r1;
+    }
+    if (hiRow >= HH) hiActive = false;
+  }
+  function renderHiSync() { setBasis(); setLight(); hiRow = 0; hiActive = true; renderHiChunk(1e9); }
+
+  /* ===== 彫る・塗る（3Dの球の範囲で、体積を書き換える） ===== */
+  var strokeId = 1, touched = new Uint32Array(N), logIdx = [], logD = [], logP = [];
+  var undoStack = [], needRender = true, saveT = 0;
+  function logVoxel(i) {
+    if (touched[i] === strokeId) return;
+    touched[i] = strokeId; logIdx.push(i); logD.push(D[i]); logP.push(PC[i]);
+  }
+  function applyAt(cx, cy, cz, f) {
+    var Rr = P.size / 100, s = P.str * f, tool = P.tool, edge = 0.15 + 0.85 * P.soft;
+    var ix0 = Math.max(1, Math.floor((cx - Rr + BX) * SX)), ix1 = Math.min(NX - 2, Math.ceil((cx + Rr + BX) * SX));
+    var iy0 = Math.max(1, Math.floor((cy - Rr + BY) * SY)), iy1 = Math.min(NY - 2, Math.ceil((cy + Rr + BY) * SY));
+    var iz0 = Math.max(1, Math.floor((cz - Rr - Z0) * SZ)), iz1 = Math.min(NZ - 2, Math.ceil((cz + Rr - Z0) * SZ));
+    var ix, iy, iz, paint = tool === 'paint' || tool === 'unpaint', src = null, sw = 0, sh = 0;
+    if (tool === 'smooth') {
+      sw = ix1 - ix0 + 3; sh = iy1 - iy0 + 3; src = new Float32Array(sw * sh * (iz1 - iz0 + 3));
+      for (iz = iz0 - 1; iz <= iz1 + 1; iz++) for (iy = iy0 - 1; iy <= iy1 + 1; iy++) for (ix = ix0 - 1; ix <= ix1 + 1; ix++)
+        src[(ix - ix0 + 1) + (iy - iy0 + 1) * sw + (iz - iz0 + 1) * sw * sh] = D[ix + iy * NX + iz * NXY];
+    }
+    for (iz = iz0; iz <= iz1; iz++) {
+      var wz = Z0 + iz / SZ - cz;
+      for (iy = iy0; iy <= iy1; iy++) {
+        var wy = -BY + iy / SY - cy;
+        for (ix = ix0; ix <= ix1; ix++) {
+          var wx = -BX + ix / SX - cx, dist = Math.sqrt(wx * wx + wy * wy + wz * wz);
+          if (dist >= Rr) continue;
+          var t = 1 - dist / Rr, i = ix + iy * NX + iz * NXY, w;
+          if (paint) {
+            var dv = D[i]; if (dv > 0.05 || dv < -0.12) continue;
+            var te = t / edge; if (te > 1) te = 1; w = te * te * (3 - 2 * te);
+            var k = w * s * 0.16, o = i * 4, a0 = PB[o + 3] / 255;
+            logVoxel(i);
+            if (tool === 'unpaint') { PB[o + 3] = Math.max(0, Math.round(a0 * (1 - Math.min(1, k * 2)) * 255)); continue; }
+            var a1 = k + a0 * (1 - k), wk = a1 > 0 ? 1 / a1 : 0;
+            PB[o] = (P.cur[0] * k + PB[o] * a0 * (1 - k)) * wk;
+            PB[o + 1] = (P.cur[1] * k + PB[o + 1] * a0 * (1 - k)) * wk;
+            PB[o + 2] = (P.cur[2] * k + PB[o + 2] * a0 * (1 - k)) * wk;
+            PB[o + 3] = Math.round(a1 * 255);
+            continue;
+          }
+          w = t * t * (3 - 2 * t);
+          var v = D[i], nv = v;
+          /* じっくり調整できるよう、1回あたりの量を小さくしてある（長さの単位は、胴体の幅が約1.6） */
+          if (tool === 'raise') nv = v - s * w * 0.0045;
+          else if (tool === 'carve') nv = v + s * w * 0.0045;
+          else if (tool === 'pinch') nv = v - s * w * w * w * 0.009;
+          else if (tool === 'cut') nv = v + s * w * w * w * 0.009;
+          else {
+            var q = (ix - ix0 + 1) + (iy - iy0 + 1) * sw + (iz - iz0 + 1) * sw * sh, sl = sw * sh;
+            var avg = (src[q - 1] + src[q + 1] + src[q - sw] + src[q + sw] + src[q - sl] + src[q + sl] + src[q]) / 7;
+            nv = v + (avg - v) * Math.min(1, w * s * 0.5);
+          }
+          if (nv !== v) { logVoxel(i); D[i] = nv > 0.6 ? 0.6 : nv < -0.6 ? -0.6 : nv; }
+        }
+      }
+    }
+  }
+  function stamp(p, f) {
+    applyAt(p[0], p[1], p[2], f);
+    if (P.sym && Math.abs(p[0]) > P.size / 100 * 0.15) applyAt(-p[0], p[1], p[2], f);
+    needRender = true;
+  }
+
+  /* ===== 取り消し（変えた点だけ記録する） ===== */
+  function beginStroke() { strokeId++; logIdx = []; logD = []; logP = []; }
+  function endStroke() {
+    if (logIdx.length) {
+      undoStack.push({ t: 's', idx: Int32Array.from(logIdx), d: Float32Array.from(logD), p: Uint32Array.from(logP) });
+      if (undoStack.length > 40) undoStack.shift();
+      $('bUndo').disabled = false;
+    }
+    logIdx = []; logD = []; logP = [];
+    saveSoon();
+  }
+  function pushFull() {
+    undoStack.push({ t: 'f', D: new Float32Array(D), PC: new Uint32Array(PC), base: P.base.slice() });
+    var nf = 0; for (var i = undoStack.length - 1; i >= 0; i--) if (undoStack[i].t === 'f' && ++nf > 3) { undoStack.splice(i, 1); }
+    $('bUndo').disabled = false;
+  }
+  function undo() {
+    if (!undoStack.length) return;
+    var e = undoStack.pop();
+    if (e.t === 's') { for (var k = 0; k < e.idx.length; k++) { D[e.idx[k]] = e.d[k]; PC[e.idx[k]] = e.p[k]; } }
+    else if (e.t === 'f') { D.set(e.D); PC.set(e.PC); P.base = e.base; }
+    else if (e.t === 'b') { P.base = e.base; }
+    $('bUndo').disabled = !undoStack.length;
+    refPristine = false; syncColors(); needRender = true; saveSoon();
+  }
+
+  /* ===== 保存（IndexedDB。体積が大きいため） ===== */
+  function idb() {
+    return new Promise(function (res, rej) {
+      var r = indexedDB.open('dozo3d', 1);
+      r.onupgradeneeded = function () { r.result.createObjectStore('kv'); };
+      r.onsuccess = function () { res(r.result); }; r.onerror = function () { rej(r.error); };
+    });
+  }
+  function idbPut(k, v) { return idb().then(function (db) { return new Promise(function (res, rej) { var tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, k); tx.oncomplete = res; tx.onerror = rej; }); }); }
+  function idbGet(k) { return idb().then(function (db) { return new Promise(function (res, rej) { var q = db.transaction('kv').objectStore('kv').get(k); q.onsuccess = function () { res(q.result); }; q.onerror = rej; }); }); }
+  function save() {
+    try { localStorage.setItem('dozo3d-s1', JSON.stringify({ base: P.base, cur: P.cur, mat: P.mat, patina: P.patina })); } catch (e) {}
+    try { idbPut('sdf', D.slice()).then(function () { return idbPut('paint', PC.slice()); }).catch(function () {}); } catch (e) {}
+  }
+  function saveSoon() { clearTimeout(saveT); saveT = setTimeout(save, 1500); }
+  function loadSaved() {
+    try { var s = localStorage.getItem('dozo3d-s1'); if (s) { var o = JSON.parse(s); if (o.base) P.base = o.base; if (o.cur) P.cur = o.cur; if (o.mat) P.mat = o.mat; if (typeof o.patina === 'boolean') P.patina = o.patina; } } catch (e) {}
+    var timeout = new Promise(function (res) { setTimeout(function () { res(false); }, 2500); });
+    var job = idbGet('sdf').then(function (a) {
+      if (!a || a.length !== N) return false;
+      D.set(a);
+      return idbGet('paint').then(function (b) { if (b && b.length === N) PC.set(b); return true; });
+    }).catch(function () { return false; });
+    return Promise.race([job, timeout]);
+  }
+
+  /* ===== 操作（なぞる） ===== */
+  var down = false, cur = null, last = null, hover = null, lastTs = 0, lastInteract = 0, rotLast = null;
+  function frac(e) { var r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height }; }
+  cv.addEventListener('pointerdown', function (e) {
+    e.preventDefault();
+    try { cv.setPointerCapture(e.pointerId); } catch (x) {}
+    down = true; cur = frac(e); last = null; hover = cur; lastInteract = performance.now();
+    if (P.tool === 'rotate') rotLast = { x: e.clientX, y: e.clientY }; else { beginStroke(); refPristine = false; }
+    drawOverlay();
+  });
+  cv.addEventListener('pointermove', function (e) {
+    hover = frac(e);
+    if (down) {
+      cur = hover; lastInteract = performance.now();
+      if (P.tool === 'rotate' && rotLast) {
+        P.yaw = Math.max(-180, Math.min(180, P.yaw + (e.clientX - rotLast.x) * 0.5));
+        P.pit = Math.max(-70, Math.min(70, P.pit + (e.clientY - rotLast.y) * 0.4));
+        rotLast = { x: e.clientX, y: e.clientY }; syncView(); needRender = true;
+      }
+    }
+    drawOverlay();
+  });
+  function up() { if (!down) return; down = false; last = null; rotLast = null; if (P.tool !== 'rotate') endStroke(); hover = null; drawOverlay(); }
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  cv.addEventListener('pointerleave', function () { if (!down) { hover = null; drawOverlay(); } });
+
+  function strokeFrame(dt) {
+    var f = Math.max(0.5, Math.min(4, dt / 16.7)), Rr = P.size / 100;
+    var spacing = Math.max(0.01, Rr * 0.3);
+    if (!last) { var h0 = hitAt(cur.x, cur.y); if (h0) stamp(h0, f); last = { x: cur.x, y: cur.y }; return; }
+    var du = (cur.x - last.x) * VW, dv = (cur.y - last.y) * VH, len = Math.hypot(du, dv);
+    if (len < spacing * 0.3) { var h1 = hitAt(cur.x, cur.y); if (h1) stamp(h1, f); return; }
+    var n = Math.min(12, Math.max(1, Math.round(len / spacing)));
+    for (var s = 1; s <= n; s++) {
+      var fx = last.x + (cur.x - last.x) * s / n, fy = last.y + (cur.y - last.y) * s / n, hp = hitAt(fx, fy);
+      if (hp) stamp(hp, f);
+    }
+    last = { x: cur.x, y: cur.y };
+  }
+
+  /* ===== 筆の輪 ===== */
+  function drawOverlay() {
+    var w = ov.width, hh = ov.height;
+    octx.clearRect(0, 0, w, hh);
+    var p = down ? cur : hover;
+    if (!p || P.tool === 'rotate') return;
+    var rpx = P.size / 100 / VH * hh;
+    octx.save(); octx.lineWidth = 1.5;
+    var paintTool = P.tool === 'paint';
+    octx.strokeStyle = paintTool ? hex(P.cur) : 'rgba(255,255,255,.85)';
+    octx.beginPath(); octx.arc(p.x * w, p.y * hh, rpx, 0, Math.PI * 2); octx.stroke();
+    if (P.sym) {
+      /* 左右対称の相手側は、今の向きでは画面の位置が違う。表面の点を求めて印をつける */
+      var hp = hitAt(p.x, p.y);
+      if (hp) {
+        var mx = -hp[0], my = hp[1], mz = hp[2];
+        var rel = [mx, my, mz - CZ], sx = rel[0] * Ex[0] + rel[1] * Ex[1] + rel[2] * Ex[2], sy = rel[0] * Ey[0] + rel[1] * Ey[1] + rel[2] * Ey[2];
+        octx.globalAlpha = 0.45; octx.beginPath(); octx.arc((sx / VW + 0.5) * w, (0.5 - sy / VH) * hh, rpx, 0, Math.PI * 2); octx.stroke();
+      }
+    }
+    octx.restore();
+  }
+  function fitOverlay() {
+    var r = $('stage').getBoundingClientRect(), s = Math.min(2, window.devicePixelRatio || 1);
+    ov.width = Math.max(200, Math.round(r.width * s)); ov.height = Math.round(ov.width * HH / HW);
+    drawOverlay();
+  }
+  window.addEventListener('resize', fitOverlay);
+
+  /* ===== ループ：動かしている間は粗く、止めたら細かく ===== */
+  function frame(ts) {
+    var dt = lastTs ? ts - lastTs : 16.7; lastTs = ts;
+    if (down && cur && P.tool !== 'rotate') strokeFrame(dt);
+    if (needRender) { needRender = false; renderLow(); hiActive = true; hiRow = 0; lastInteract = performance.now(); }
+    else if (hiActive && !down && performance.now() - lastInteract > 160) { renderHiChunk(12); }
+    requestAnimationFrame(frame);
+  }
+
+  /* ===== 操作パネル ===== */
+  var TOOLS = [['raise', '盛る', '足す'], ['carve', '削る', '掘る'], ['smooth', 'ならす', 'なめらか'], ['pinch', 'つまむ', '細い山'], ['cut', '筋', '細い溝'], ['paint', '塗る', 'ぼんやり'], ['unpaint', '塗り消し', '色だけ'], ['rotate', '回す', 'なぞって']];
+  function drawTools() {
+    var box = $('tools'); box.innerHTML = '';
+    TOOLS.forEach(function (t) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'tool';
+      b.setAttribute('aria-pressed', P.tool === t[0] ? 'true' : 'false');
+      b.innerHTML = t[1] + '<small>' + t[2] + '</small>';
+      b.onclick = function () { P.tool = t[0]; drawTools(); drawOverlay(); };
+      box.appendChild(b);
+    });
+    var u = document.createElement('button'); u.type = 'button'; u.className = 'act'; u.id = 'bUndo'; u.textContent = 'もどす';
+    u.disabled = !undoStack.length; u.onclick = undo; box.appendChild(u);
+  }
+  function chips(boxId, list, key, after) {
+    var box = $(boxId); box.innerHTML = '';
+    list.forEach(function (t) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'chip';
+      b.setAttribute('aria-pressed', P[key] === t[0] ? 'true' : 'false'); b.textContent = t[1];
+      b.onclick = function () { after(t[0]); chips(boxId, list, key, after); };
+      box.appendChild(b);
+    });
+  }
+  function syncView() {
+    $('sYaw').value = Math.round(P.yaw); $('oYaw').textContent = Math.round(P.yaw);
+    $('sPit').value = Math.round(P.pit); $('oPit').textContent = Math.round(P.pit);
+  }
+  function setView(yaw, pit) { P.yaw = yaw; P.pit = pit; syncView(); needRender = true; drawOverlay(); }
+
+  /* 色の選び方：色合い・鮮やかさ・明るさ（HSV） */
+  var HSV = [210, 0.74, 0.71];
+  function hsv2rgb(hh, ss, vv) {
+    var c = vv * ss, hp = (hh % 360) / 60, x = c * (1 - Math.abs(hp % 2 - 1)), m = vv - c, r = 0, g = 0, b = 0;
+    if (hp < 1) { r = c; g = x; } else if (hp < 2) { r = x; g = c; } else if (hp < 3) { g = c; b = x; }
+    else if (hp < 4) { g = x; b = c; } else if (hp < 5) { r = x; b = c; } else { r = c; b = x; }
+    return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
+  }
+  function rgb2hsv(c) {
+    var r = c[0] / 255, g = c[1] / 255, b = c[2] / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn, hh = 0;
+    if (d > 0) { if (mx === r) hh = 60 * (((g - b) / d + 6) % 6); else if (mx === g) hh = 60 * ((b - r) / d + 2); else hh = 60 * ((r - g) / d + 4); }
+    return [hh, mx ? d / mx : 0, mx];
+  }
+  var svc = $('svp'), svx = svc.getContext('2d'), svimg = svx.createImageData(160, 100);
+  function drawSV() {
+    var px = svimg.data, o = 0;
+    for (var y = 0; y < 100; y++) for (var x = 0; x < 160; x++, o += 4) {
+      var c = hsv2rgb(HSV[0], x / 159, 1 - y / 99);
+      px[o] = c[0]; px[o + 1] = c[1]; px[o + 2] = c[2]; px[o + 3] = 255;
+    }
+    svx.putImageData(svimg, 0, 0);
+    var mx = HSV[1] * 159, my = (1 - HSV[2]) * 99;
+    svx.lineWidth = 2; svx.strokeStyle = '#000'; svx.beginPath(); svx.arc(mx, my, 7, 0, 6.2832); svx.stroke();
+    svx.lineWidth = 1.5; svx.strokeStyle = '#fff'; svx.beginPath(); svx.arc(mx, my, 6, 0, 6.2832); svx.stroke();
+  }
+  function setFromHSV() { P.cur = hsv2rgb(HSV[0], HSV[1], HSV[2]); syncColors(true); drawOverlay(); }
+  function svPick(e) {
+    var r = svc.getBoundingClientRect();
+    HSV[1] = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)); HSV[2] = 1 - Math.max(0, Math.min(1, (e.clientY - r.top) / r.height));
+    setFromHSV();
+  }
+  var svDown = false;
+  svc.addEventListener('pointerdown', function (e) { svDown = true; try { svc.setPointerCapture(e.pointerId); } catch (x) {} svPick(e); });
+  svc.addEventListener('pointermove', function (e) { if (svDown) svPick(e); });
+  svc.addEventListener('pointerup', function () { svDown = false; saveSoon(); });
+  svc.addEventListener('pointercancel', function () { svDown = false; });
+
+  var PAL = [
+    ['ブロンズ', [176, 118, 64]], ['銅', [184, 102, 70]], ['金', [214, 170, 70]], ['銀', [190, 192, 196]], ['漆黒', [34, 32, 32]], ['石膏', [232, 228, 218]], ['テラコッタ', [190, 108, 78]],
+    ['緑青', [82, 150, 128]], ['群青', [47, 111, 181]], ['深紅', [160, 38, 48]], ['若草', [124, 166, 72]], ['紫', [112, 78, 150]], ['桃色', [226, 150, 160]], ['琥珀', [226, 168, 52]]
+  ];
+  function syncColors(fromPicker) {
+    if (!fromPicker) HSV = rgb2hsv(P.cur);
+    $('swCur').style.background = hex(P.cur); $('swBase').style.background = hex(P.base); $('hexCur').textContent = hex(P.cur);
+    $('sHue').value = Math.round(HSV[0]); $('oHue').textContent = Math.round(HSV[0]);
+    drawSV();
+    var sw = $('pal').children;
+    for (var i = 0; i < sw.length; i++) { var c = PAL[i][1]; sw[i].setAttribute('aria-pressed', (c[0] === P.cur[0] && c[1] === P.cur[1] && c[2] === P.cur[2]) ? 'true' : 'false'); }
+    needRender = true;
+  }
+  function drawPalette() {
+    var box = $('pal'); box.innerHTML = '';
+    PAL.forEach(function (c) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'sw';
+      b.style.background = hex(c[1]); b.setAttribute('aria-label', c[0] + 'を筆の色にする'); b.title = c[0];
+      b.onclick = function () { P.cur = c[1].slice(); syncColors(false); drawOverlay(); saveSoon(); };
+      box.appendChild(b);
+    });
+  }
+
+  $('sSize').oninput = function () { P.size = +this.value; $('oSize').textContent = this.value; drawOverlay(); };
+  $('sStr').oninput = function () { P.str = +this.value; $('oStr').textContent = (+this.value).toFixed(2); };
+  $('sSoft').oninput = function () { P.soft = +this.value; $('oSoft').textContent = (+this.value).toFixed(2); };
+  $('sYaw').oninput = function () { P.yaw = +this.value; $('oYaw').textContent = this.value; needRender = true; drawOverlay(); };
+  $('sPit').oninput = function () { P.pit = +this.value; $('oPit').textContent = this.value; needRender = true; drawOverlay(); };
+  $('bFront').onclick = function () { setView(0, 0); };
+  $('bSide').onclick = function () { setView(90, 0); };
+  $('bTop').onclick = function () { setView(25, 35); };
+  $('sAz').oninput = function () { P.az = +this.value; $('oAz').textContent = this.value; needRender = true; };
+  $('sEl').oninput = function () { P.el = +this.value; $('oEl').textContent = this.value; needRender = true; };
+  $('bSym').onclick = function () { P.sym = !P.sym; this.setAttribute('aria-pressed', P.sym); this.textContent = '左右対称 ' + (P.sym ? '入' : '切'); };
+  $('bPatina').onclick = function () { P.patina = !P.patina; this.setAttribute('aria-pressed', P.patina); needRender = true; saveSoon(); };
+  $('sHue').oninput = function () { HSV[0] = +this.value; setFromHSV(); };
+  $('sHue').onchange = saveSoon;
+  $('bBase').onclick = function () { undoStack.push({ t: 'b', base: P.base.slice() }); $('bUndo').disabled = false; P.base = P.cur.slice(); syncColors(); saveSoon(); toast('地の色を変えました。「もどす」で戻せます。'); };
+  function rsl(id, oid, key, fmt) {
+    $(id).oninput = function () { R[key] = +this.value; $(oid).textContent = (+this.value).toFixed(fmt); };
+    $(id).onchange = function () {
+      R[key] = +this.value;
+      if (refPristine) makeReference(false); else toast('「お手本」を押すと、この形で作り直します。');
+    };
+  }
+  rsl('rSize', 'oRSize', 'size', 2); rsl('rOver', 'oROver', 'over', 1); rsl('rGap', 'oRGap', 'gap', 2); rsl('rLift', 'oRLift', 'lift', 2);
+
+  function drawMats() { chips('mats', [['metal', '金属'], ['gloss', 'ツヤ'], ['matte', 'マット']], 'mat', function (v) { P.mat = v; needRender = true; saveSoon(); }); }
+  function drawShapes() {
+    chips('shapes', [['ref', 'お手本'], ['blob', 'まるい粘土']], 'shape', function (v) {
+      P.shape = v; pushFull(); PC.fill(0);
+      if (v === 'ref') { makeReference(false); toast('お手本を作っています…（数秒かかります）'); return; }
+      fillVolume(blobSDF); refPristine = false; saveSoon(); toast('まるい粘土にしました。「もどす」で戻せます。');
+    });
+  }
+
+  /* ===== 起動 ===== */
+  function start() {
+    drawTools(); drawPalette(); syncColors(); drawMats(); drawShapes();
+    $('bPatina').setAttribute('aria-pressed', P.patina);
+    fitOverlay(); needRender = true;
+    requestAnimationFrame(frame);
+    window.__d3 = {
+      P: P, N: N, setView: setView, renderHiSync: renderHiSync, hitAt: hitAt, stamp: stamp, beginStroke: beginStroke, endStroke: endStroke, undo: undo,
+      stats: function () { var neg = 0, ps = 0; for (var i = 0; i < N; i += 7) { if (D[i] < 0) neg++; ps += PB[i * 4 + 3]; } return { inside: neg, paint: ps, undo: undoStack.length }; },
+      isHi: function () { return !hiActive; }
+    };
+  }
+  toast('読み込み中…');
+  loadSaved().then(function (ok) {
+    if (!ok) { P.shape = 'ref'; buildReference(); }
+    toast('');
+    start();
+  });
+})();
+</script>
+
+</body>
+</html>
