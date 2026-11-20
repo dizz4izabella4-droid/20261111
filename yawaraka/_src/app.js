@@ -784,8 +784,6 @@ ground.receiveShadow = true;
 scene.add(ground);
 
 // ---- UI
-const spinBtn = document.getElementById('spin');
-spinBtn.onclick = () => { controls.autoRotate = !controls.autoRotate; spinBtn.classList.toggle('on', controls.autoRotate); };
 const lineBtn = document.getElementById('line');
 lineBtn.onclick = () => { lineOn = !lineOn; outlines.forEach(o => o.visible = lineOn); pedOutlines.forEach(o => o.visible = lineOn); lineBtn.classList.toggle('on', lineOn); };
 
@@ -1068,8 +1066,6 @@ function stepHop(I, dt) {
   if (I.rt && I.rt.update) I.rt.update(dt, { shx: 0, shz: 0, sy: syC, vy: h.phase === 'air' ? h.vy : 0, pullX: 0 });
   if (h.phase === 'idle' && Math.abs(h.sq) < 0.004 && Math.abs(h.sqV) < 0.04) { I.hop = null; I.squish.matrix.identity(); I.cat.position.y = I.lift + (I.sy || 0); }
 }
-document.getElementById('jump').onclick = doJump;
-addEventListener('keydown', e => { if (e.code === 'Space' && !anim.on) { e.preventDefault(); doJump(); } });
 
 // 着地の衝撃リング
 const ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.0, 64),
@@ -1741,11 +1737,10 @@ let mode = 'sculpt', spinSaved = true;
 function setMode(m) {
   if (m === mode && ui('modeBtn').dataset.init) return;
   ui('modeBtn').dataset.init = '1';
-  if (mode === 'camera') spinSaved = controls.autoRotate;
   mode = m;
   const cam = m === 'camera';
   controls.enableRotate = cam; controls.enablePan = false;
-  controls.autoRotate = cam ? spinSaved : false; ui('spin').classList.toggle('on', controls.autoRotate);
+  controls.autoRotate = false; ui('modeBtn').dataset.m = m;
   ui('modeBtn').classList.toggle('on', !cam); ui('modeBtn').textContent = { sculpt: 'STRETCH', place: 'PLACE', move: 'MOVE', camera: 'CAMERA' }[m];
   ui('hint').textContent = { sculpt: 'Pull the body, then press BAKE', place: 'Drag on the body to move the item', move: 'Drag a character to place it', camera: 'Drag to rotate · pinch to zoom' }[m];
   canvas.style.cursor = cam ? 'move' : 'grab';
