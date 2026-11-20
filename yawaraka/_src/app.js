@@ -56,7 +56,7 @@ function outlineMat(th) {
     side: THREE.BackSide
   });
 }
-const outlines = [];
+let outlines = [];
 let lineOn = true;
 function withOutline(mesh, th = 0.035) {
   const o = new THREE.Mesh(mesh.geometry, outlineMat(th));
@@ -68,14 +68,16 @@ function withOutline(mesh, th = 0.035) {
 }
 
 // ---- キャラ全体
-const cat = new THREE.Group();     // 床からの位置（ジャンプ・持ち上げ）
+let cat = new THREE.Group();     // 床からの位置（ジャンプ・持ち上げ）
 scene.add(cat);
 let squish = null;                 // ぷにぷに変形用（キャラごとに作り直す）
 let faceMask = null, itemAll = false;
 const PROT = 0.6;
 let colorBase = null, scorch = null, bodyCol = 0xffffff, itemCol = null;
 let curKey = 'mebae', gs = { x: 1, y: 1, z: 1 }, flashT = -1;
-const undoStack = [];
+let undoStack = [];
+let ovD = null, bound = null, curInst = null;
+const insts = [];
 const ui = id => document.getElementById(id);
 let current = null, body, bodyGeo, basePos, face, floorY = 0, lift = 0, pos;
 let riders = [], faceVerts = [], faceCaps = [];
@@ -433,7 +435,8 @@ function buildMebae() {
     mouths: [mouthN, mouthS],
     get leafMeshes() { return sp.mode === 'on' ? [grabBall] : []; },
     tint: tintMain,
-    get plantKind() { return sp.mode === 'empty' ? null : kindNow; },
+    clear() { sp.held = false; sp.active = false; sp.off.set(0, 0, 0); sp.vel.set(0, 0, 0); if (sprout.parent) sprout.parent.remove(sprout); sp.mode = 'empty'; },
+    get plantKind() { return sp.mode === 'empty' || sp.mode === 'fly' ? null : kindNow; },
     setEyesClosed(v) {
       if (closedEyes[0].visible === v) return;
       openEyes.forEach(m => m.visible = !v);
@@ -670,11 +673,12 @@ const CHARS = {
   },
 };
 
-function buildCharacter(key) {
+function buildCharacter(key, opts = {}) {
   const c = CHARS[key] || CHARS.neko;
+  if (!curInst) { curInst = { cat }; insts.push(curInst); }
   if (current && current.rt && current.rt.dispose) current.rt.dispose();
   current = c; curKey = key;
-  undoStack.length = 0; gs = { x: 1, y: 1, z: 1 }; flashT = -1;
+  undoStack = []; gs = { x: 1, y: 1, z: 1 }; flashT = -1;
   // 状態リセット
   pull.active = pull.held = false; pull.off.set(0, 0, 0); pull.vel.set(0, 0, 0); pullLift = 0;
   jump.phase = 'idle'; jump.y = 0; jump.vy = 0;
@@ -682,7 +686,7 @@ function buildCharacter(key) {
   controls.enabled = true;
   leafDrag = false;
   if (squish) { cat.remove(squish); squish.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
-  outlines.length = 0;
+  outlines = outlines.filter(attached);
 
   // 色
   INK = c.ink;
@@ -698,7 +702,7 @@ function buildCharacter(key) {
   colorBase = Float32Array.from(bodyGeo.attributes.color.array); scorch = new Float32Array(bodyGeo.attributes.position.count);
   bodyCol = c.body; itemCol = null;
   body = withOutline(new THREE.Mesh(bodyGeo, bodyMat), 0.04);
-  body.receiveShadow = false;
+  body.receiveShadow = false; body.userData.inst = curInst;
   squish.add(body);
   face = new THREE.Group();
   squish.add(face);
@@ -717,6 +721,7 @@ function buildCharacter(key) {
 
   basePos = Float32Array.from(bodyGeo.attributes.position.array);
   pos = bodyGeo.attributes.position;
+  ovD = new Float32Array(basePos.length);
 
   // 耳・芽・肉球・顔は「体の表面の場所」にバインドして、伸びても表面に貼りついたままにする
   prepSurface(c.shape);
@@ -758,16 +763,13 @@ function buildCharacter(key) {
   lift = -floorY + 0.006;
   cat.add(squish);
   cat.position.y = lift;
-  controls.target.y = lift + (c.shape.B - lift) * 0.5 - 0.4;
+  if (!opts.keep) controls.target.y = lift + (c.shape.B - lift) * 0.5 - 0.4;
+  computeBound();
 
-  ring.material.color.set(c.ink); pedLine.uniforms.col.value.set(c.ink);
-  ui('plantBtn').style.display = current.rt.plant ? '' : 'none'; if (!current.rt.plant) trayOpen(false);
-  updateButtons();
-  document.getElementById('cname').textContent = c.name;
-  document.documentElement.style.setProperty('--ink', c.inkCss);
-  for (const k in CHARS) document.getElementById('ch-' + k).classList.toggle('on', k === key);
+  applyCharUI(c, key);
   if (typeof anim !== 'undefined' && anim.on) controls.enabled = false;
   try { localStorage.setItem('mochi-char', key); } catch (e) {}
+  syncInst();
 }
 for (const k in CHARS) document.getElementById('ch-' + k).onclick = () => { if (CHARS[k] !== current) { buildCharacter(k); sfx.poke(); spring.sqV = -3; } };
 
@@ -897,8 +899,20 @@ function setNdc(e) {
 }
 let leafDrag = false, waitUp = false;
 canvas.addEventListener('pointerdown', e => {
-  if (anim.on || mode !== 'sculpt') return;               // 鑑賞中・カメラモード中は引っぱらない
+  if (anim.on || mode === 'camera') return;               // 鑑賞中・カメラモード中は引っぱらない
   setNdc(e);
+  {   // 重なっている中から、さわった子を選ぶ
+    const vis = insts.filter(i => i.cat.visible);
+    if (vis.length > 1) { const hh = ray.intersectObjects(vis.map(i => i.body), false)[0]; if (hh && hh.object.userData.inst !== curInst) selectInst(hh.object.userData.inst); }
+  }
+  if (mode === 'move') {
+    if (stageOn) { toast('Turn STAGE off to move'); return; }
+    if (!ray.intersectObject(body, false)[0]) return;
+    const p = ray.ray.intersectPlane(floorPlane, new THREE.Vector3()); if (!p) return;
+    mv = { dx: cat.position.x - p.x, dz: cat.position.z - p.z };
+    controls.enabled = false; sfx.grab(); canvas.setPointerCapture(e.pointerId);
+    return;
+  }
   // んちょめちょぽの葉っぱを先に判定
   const rt = current.rt;
   if (rt.leafMeshes) {
@@ -917,11 +931,7 @@ canvas.addEventListener('pointerdown', e => {
   // つかむ（伸びたままの所をもう一度つかんでもOK）
   const localHit = body.worldToLocal(h.point.clone());
   if (pull.active && !pull.held && localHit.distanceTo(pull.grab.clone().add(pull.off)) > 0.6) {   // 遠い場所をつかみなおしたら、焼いていない形は捨てる
-    pull.off.set(0, 0, 0); pull.vel.set(0, 0, 0); pull.active = false; DF.ox = DF.oy = DF.oz = 0;
-    pos.array.set(basePos); pos.needsUpdate = true; bodyGeo.computeVertexNormals();
-    riders.forEach(r => { if (r.o.parent === squish) r.o.position.fromArray(r.base); });
-    faceVerts.forEach(f => { f.attr.array.set(f.base); f.attr.needsUpdate = true; });
-    faceCaps.forEach(c => c.o.position.fromArray(c.base));
+    cancelPose();
   }
   pull.relax = false;
   if (!pull.active) pull.off.set(0, 0, 0);
@@ -938,6 +948,11 @@ canvas.addEventListener('pointerdown', e => {
 });
 let leafPrev = 0, leafPrevT = 0;
 canvas.addEventListener('pointermove', e => {
+  if (mv) {
+    setNdc(e); const p = ray.ray.intersectPlane(floorPlane, new THREE.Vector3());
+    if (p) { cat.position.x = Math.max(-6.5, Math.min(6.5, p.x + mv.dx)); cat.position.z = Math.max(-5, Math.min(4, p.z + mv.dz)); }
+    return;
+  }
   if (leafDrag) {
     setNdc(e);
     const r = current.rt.leafDrag(ray.ray) || { L: leafPrev, plucked: false };
@@ -966,6 +981,7 @@ canvas.addEventListener('pointermove', e => {
   pull.off.copy(o);
 });
 function release() {
+  if (mv) { mv = null; controls.enabled = true; return; }
   if (waitUp) { waitUp = false; controls.enabled = true; return; }
   if (leafDrag) {
     leafDrag = false;
@@ -1041,6 +1057,7 @@ const anim = { on: false, kind: 'hop', phase: 'crouch', pt: 0, y: 0, vy: 0, x: 0
 const HOP = { crouch: 0.13, air: 0.48, rest: 0.08, h: 0.38, step: 0.65 };
 HOP.g = 8 * HOP.h / (HOP.air * HOP.air);
 const animBtn = document.getElementById('animBtn'), animIcon = document.getElementById('animIcon');
+let animPos = { x: 0, z: 0 };
 function setAnim(on) {
   anim.on = on; applyStage();
   document.body.classList.toggle('anim', on);
@@ -1049,14 +1066,14 @@ function setAnim(on) {
   if (on) {
     sfx.unlock();
     // 引っ張り中などは解除
-    release();
+    release(); animPos = { x: cat.position.x, z: cat.position.z };
     anim.saved = { pos: camera.position.clone(), target: controls.target.clone(), auto: controls.autoRotate };
     controls.autoRotate = false;
     controls.enabled = false;
     dotFloor.visible = true;
     resetAnimMotion(); anim.x = 0; anim.lean = 0; anim.vx = 0; anim.camX = 0; anim.sq = 0; anim.sh = 0; anim.shV = 0; anim.shx = 0; anim.shxV = 0; anim.yaw = anim.kind === 'hop' ? Math.PI / 2 : FACE;
   } else {
-    cat.position.x = cat.position.z = 0;
+    cat.position.x = animPos.x; cat.position.z = animPos.z;
     cat.rotation.set(0, 0, 0);
     dotFloor.visible = false;
     ground.position.x = 0;
@@ -1541,7 +1558,11 @@ let stageOn = true;
 function applyStage() {
   const on = stageOn && !anim.on;
   ped.visible = on; ground.position.y = on ? -PH : 0;
+  ui('multi').style.display = stageOn ? 'none' : 'flex';
+  ui('cnt').textContent = insts.length + ' / 6';
+  for (const I of insts) I.cat.visible = !(on || anim.on) || I === curInst;
 }
+let stageBackup = null;
 let toastT = 0;
 function toast(msg) {
   const t = ui('toast'); t.textContent = msg; t.classList.add('on');
@@ -1569,7 +1590,7 @@ function commitBases() {
   faceVerts.forEach(f => { f.attr.array.set(f.base); f.attr.needsUpdate = true; });
   faceCaps.forEach(c => c.o.position.fromArray(c.base));
   riders.forEach(r => { if (r.o.parent === squish) r.o.position.fromArray(r.base); });
-  rebind();
+  rebind(); computeBound();
 }
 function snap() {
   return { base: basePos.slice(), fv: faceVerts.map(f => f.base.slice()), fc: faceCaps.map(c => c.base.slice()),
@@ -1589,6 +1610,7 @@ function commitPose(burn) {
   pushUndo();
   const hasPose = pull.active;
   const nb = hasPose ? Float32Array.from(pos.array) : basePos;
+  if (hasPose) for (let i = 0; i < nb.length; i++) nb[i] -= ovD[i];
   for (let i = 0; i < scorch.length; i++) {      // 焼き色：のびた所ほどよく焼ける
     let a = burn ? 0.1 : 0;
     if (hasPose && burn) { const dx = nb[i * 3] - basePos[i * 3], dy = nb[i * 3 + 1] - basePos[i * 3 + 1], dz = nb[i * 3 + 2] - basePos[i * 3 + 2]; a += 0.25 * Math.min(Math.hypot(dx, dy, dz) / 0.7, 1); }
@@ -1632,7 +1654,12 @@ ui('hp').onclick = () => scaleShape(1, 1.12, 1);
 ui('hm').onclick = () => scaleShape(1, 1 / 1.12, 1);
 ui('wp').onclick = () => scaleShape(1.12, 1, 1.12);
 ui('wm').onclick = () => scaleShape(1 / 1.12, 1, 1 / 1.12);
-ui('stage').onclick = () => { stageOn = !stageOn; ui('stage').classList.toggle('on', stageOn); applyStage(); };
+ui('stage').onclick = () => {
+  stageOn = !stageOn; ui('stage').classList.toggle('on', stageOn);
+  if (stageOn) { stageBackup = insts.map(I => ({ I, x: I.cat.position.x, z: I.cat.position.z })); cat.position.x = cat.position.z = 0; }
+  else { for (const b of stageBackup || []) { b.I.cat.position.x = b.x; b.I.cat.position.z = b.z; } toast('MULTI MODE: COPY to add more'); }
+  applyStage();
+};
 
 // 植え替え
 const PLANT_LIST = [['tophat', 'TOP HAT', '#2b2b33'], ['party', 'PARTY', '#ff8fb1'], ['crown', 'CROWN', '#f2c744'], ['beanie', 'BEANIE', '#5aa9e6'], ['straw', 'STRAW', '#e8cf8a'], ['chef', 'CHEF', '#ffffff'], ['bow', 'BOW', '#ff6b9a'],
@@ -1659,14 +1686,14 @@ function setMode(m) {
   ui('modeBtn').dataset.init = '1';
   if (mode === 'camera') spinSaved = controls.autoRotate;
   mode = m;
-  const sc = m === 'sculpt';
-  controls.enableRotate = !sc; controls.enablePan = false;
-  controls.autoRotate = sc ? false : spinSaved; ui('spin').classList.toggle('on', controls.autoRotate);
-  ui('modeBtn').classList.toggle('on', sc); ui('modeBtn').textContent = sc ? 'STRETCH' : 'CAMERA';
-  ui('hint').textContent = sc ? 'Pull the body, then press BAKE' : 'Drag to rotate · pinch to zoom';
-  canvas.style.cursor = sc ? 'grab' : 'move';
+  const cam = m === 'camera';
+  controls.enableRotate = cam; controls.enablePan = false;
+  controls.autoRotate = cam ? spinSaved : false; ui('spin').classList.toggle('on', controls.autoRotate);
+  ui('modeBtn').classList.toggle('on', !cam); ui('modeBtn').textContent = { sculpt: 'STRETCH', move: 'MOVE', camera: 'CAMERA' }[m];
+  ui('hint').textContent = { sculpt: 'Pull the body, then press BAKE', move: 'Drag a character to place it', camera: 'Drag to rotate · pinch to zoom' }[m];
+  canvas.style.cursor = cam ? 'move' : 'grab';
 }
-ui('modeBtn').onclick = () => setMode(mode === 'sculpt' ? 'camera' : 'sculpt');
+ui('modeBtn').onclick = () => setMode({ sculpt: 'move', move: 'camera', camera: 'sculpt' }[mode]);
 setMode('sculpt');
 
 // ---- 戻るまでの時間
@@ -1703,6 +1730,146 @@ addSw('BODY', BODY_COLS, c => { bodyCol = new THREE.Color(c).getHex(); bodyMat.c
   all.onclick = () => { itemAll = !itemAll; all.classList.toggle('on', itemAll); applyItem(); sfx.poke(); };
   addSw('ITEM', ITEM_COLS, c => { itemCol = new THREE.Color(c).getHex(); applyItem(); }, all);
 }
+
+// ================= 増量モード（ステージを消すと、コピーして好きに置ける） =================
+const attached = o => { for (let p = o; p; p = p.parent) if (p === scene) return true; return false; };
+function syncInst() {
+  const I = curInst;
+  I.cat = cat; I.squish = squish; I.body = body; I.bodyGeo = bodyGeo; I.basePos = basePos; I.pos = pos; I.face = face;
+  I.faceVerts = faceVerts; I.faceCaps = faceCaps; I.riders = riders; I.baseNrm = baseNrm; I.baseR = baseR; I.elevMax = elevMax; I.hash = hash; I.shapeN = shapeN;
+  I.colorBase = colorBase; I.scorch = scorch; I.faceMask = faceMask; I.bodyMat = bodyMat; I.inkMat = inkMat; I.floorY = floorY; I.lift = lift; I.gs = gs;
+  I.current = current; I.rt = current.rt; I.bodyCol = bodyCol; I.itemCol = itemCol; I.itemAll = itemAll; I.key = curKey; I.undo = undoStack; I.ovD = ovD; I.bound = bound;
+}
+function loadState(I) {
+  cat = I.cat; squish = I.squish; body = I.body; bodyGeo = I.bodyGeo; basePos = I.basePos; pos = I.pos; face = I.face;
+  faceVerts = I.faceVerts; faceCaps = I.faceCaps; riders = I.riders; baseNrm = I.baseNrm; baseR = I.baseR; elevMax = I.elevMax; hash = I.hash; shapeN = I.shapeN;
+  colorBase = I.colorBase; scorch = I.scorch; faceMask = I.faceMask; bodyMat = I.bodyMat; inkMat = I.inkMat; floorY = I.floorY; lift = I.lift; gs = I.gs;
+  current = I.current; current.rt = I.rt; bodyCol = I.bodyCol; itemCol = I.itemCol; itemAll = I.itemAll; curKey = I.key; undoStack = I.undo; ovD = I.ovD; bound = I.bound; curInst = I;
+}
+function runOn(I, fn) {
+  if (I === curInst) { fn(); return; }
+  const prev = curInst; syncInst(); loadState(I);
+  try { fn(); } finally { syncInst(); loadState(prev); }
+}
+function computeBound() {
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, z0 = 1e9, z1 = -1e9;
+  for (let i = 0; i < basePos.length; i += 3) {
+    const x = basePos[i], y = basePos[i + 1], z = basePos[i + 2];
+    if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; if (z < z0) z0 = z; if (z > z1) z1 = z;
+  }
+  bound = { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, cz: (z0 + z1) / 2, rx: Math.max((x1 - x0) / 2, 0.3), ry: Math.max((y1 - y0) / 2, 0.3), rz: Math.max((z1 - z0) / 2, 0.3) };
+  if (curInst) curInst.bound = bound;
+}
+// 体・顔・芽をいまの状態（つまみ＋重なり）に合わせて作り直す
+function refreshMesh(usePull) {
+  if (!usePull) { DF.ox = DF.oy = DF.oz = 0; DF.shell = 1; }
+  const P = pos.array, n = pos.count;
+  for (let i = 0; i < n; i++) {
+    const j = i * 3;
+    if (usePull) { const d = deformPoint(basePos[j], basePos[j + 1], basePos[j + 2], baseR[i], faceMask[i]); P[j] = d[0] + ovD[j]; P[j + 1] = d[1] + ovD[j + 1]; P[j + 2] = d[2] + ovD[j + 2]; }
+    else { P[j] = basePos[j] + ovD[j]; P[j + 1] = basePos[j + 1] + ovD[j + 1]; P[j + 2] = basePos[j + 2] + ovD[j + 2]; }
+  }
+  pos.needsUpdate = true;
+  bodyGeo.computeVertexNormals(); bodyGeo.computeBoundingSphere();
+  const addOv = (b, out, p) => {
+    for (let k = 0; k < KNN; k++) { const v = b.idx[p * KNN + k] * 3, w = b.wt[p * KNN + k]; out[p * 3] += ovD[v] * w; out[p * 3 + 1] += ovD[v + 1] * w; out[p * 3 + 2] += ovD[v + 2] * w; }
+  };
+  for (const f of faceVerts) { evalBind(f.bind, f.base, f.attr.array); for (let p = 0; p < f.bind.n; p++) addOv(f.bind, f.attr.array, p); f.attr.needsUpdate = true; }
+  for (const c of faceCaps) { evalBind(c.bind, c.base, _tmp3); addOv(c.bind, _tmp3, 0); c.o.position.fromArray(_tmp3); }
+  for (const r of riders) { if (r.o.parent !== squish) continue; evalBind(r.bind, r.base, _tmp3, false); addOv(r.bind, _tmp3, 0); r.o.position.fromArray(_tmp3); }
+}
+// 重なったら、お互いにへこむ（ゆるい楕円どうしの押し合い）
+function updateOverlaps(dt) {
+  const vis = insts.filter(i => i.cat.visible);
+  const kk = 1 - Math.exp(-dt * 14);
+  for (const A of vis) {
+    const others = [];
+    for (const B of vis) if (B !== A) {
+      const dx = A.cat.position.x - B.cat.position.x, dz = A.cat.position.z - B.cat.position.z;
+      const R = Math.max(A.bound.rx, A.bound.rz) + Math.max(B.bound.rx, B.bound.rz);
+      if (dx * dx + dz * dz < R * R) others.push(B);
+    }
+    if (!others.length && !A.ovAct) continue;
+    const D = A.ovD, BP = A.basePos, FM = A.faceMask, n = BP.length / 3;
+    const ax = A.cat.position.x, az = A.cat.position.z, al = A.lift;
+    let mx = 0;
+    for (let i = 0; i < n; i++) {
+      const j = i * 3, wx = BP[j] + ax, wy = BP[j + 1] + al, wz = BP[j + 2] + az;
+      let tx = 0, ty = 0, tz = 0;
+      for (const B of others) {
+        const bd = B.bound, cx = B.cat.position.x + bd.cx, cy = bd.cy + B.lift, cz = B.cat.position.z + bd.cz;
+        let ux = (wx - cx) / bd.rx, uy = (wy - cy) / bd.ry, uz = (wz - cz) / bd.rz;
+        const r2 = ux * ux + uy * uy + uz * uz;
+        if (r2 >= 1) continue;
+        let r = Math.sqrt(r2);
+        if (r < 0.03) { ux = (ax - B.cat.position.x) || 1; uy = 0; uz = az - B.cat.position.z; const l = Math.hypot(ux, uz) || 1; ux /= l; uz /= l; r = 1; }
+        ux /= r; uy /= r; uz /= r;
+        tx += (cx + ux * bd.rx - wx) * 0.5; ty += (cy + uy * bd.ry - wy) * 0.5; tz += (cz + uz * bd.rz - wz) * 0.5;
+      }
+      const pr = 1 - PROT * FM[i];
+      tx *= pr; ty *= pr; tz *= pr;
+      if (wy + ty < 0.006) ty = 0.006 - wy;
+      D[j] += (tx - D[j]) * kk; D[j + 1] += (ty - D[j + 1]) * kk; D[j + 2] += (tz - D[j + 2]) * kk;
+      const m = Math.abs(D[j]) + Math.abs(D[j + 1]) + Math.abs(D[j + 2]); if (m > mx) mx = m;
+    }
+    if (mx > 1e-3) A.ovAct = true;
+    else if (A.ovAct) { D.fill(0); A.ovAct = false; A.ovDirty = true; }
+  }
+}
+function applyCharUI(c, key) {
+  INK = c.ink; grad.image.data.set(c.grad); grad.needsUpdate = true;
+  ring.material.color.set(c.ink); pedLine.uniforms.col.value.set(c.ink);
+  ui('plantBtn').style.display = current.rt.plant ? '' : 'none'; if (!current.rt.plant) trayOpen(false);
+  updateButtons();
+  document.getElementById('cname').textContent = c.name;
+  document.documentElement.style.setProperty('--ink', c.inkCss);
+  for (const k in CHARS) document.getElementById('ch-' + k).classList.toggle('on', k === key);
+}
+function cancelPose() {
+  if (!pull.active) return;
+  pull.off.set(0, 0, 0); pull.vel.set(0, 0, 0); pull.active = pull.held = false; pull.relax = false; pullLift = 0;
+  refreshMesh(false);
+}
+function selectInst(I) {
+  if (I === curInst) return;
+  cancelPose(); cat.position.y = lift;
+  syncInst(); loadState(I);
+  applyCharUI(current, curKey);
+  jump.phase = 'idle'; jump.y = 0; for (const k in spring) spring[k] = 0;
+  leafDrag = false; sfx.grab();
+}
+function copyActive() {
+  if (insts.length >= 6) { toast('MAX 6'); return; }
+  cancelPose();
+  const s = snap();
+  const src = { key: curKey, bodyCol, itemCol, itemAll, plant: current.rt.plantKind, px: cat.position.x };
+  syncInst();
+  cat = new THREE.Group(); scene.add(cat); squish = null; current = null;
+  curInst = { cat }; insts.push(curInst);
+  buildCharacter(src.key, { keep: true });
+  applySnap(s);
+  bodyCol = src.bodyCol; bodyMat.color.set(bodyCol); itemCol = src.itemCol; itemAll = src.itemAll;
+  const rt = current.rt;
+  if (rt.plant) { if (src.plant === null) rt.clear(); else rt.plant(src.plant); if (itemCol !== null) rt.tint(itemCol, itemAll); }
+  const side = insts.length % 2 ? -1 : 1;
+  cat.position.x = Math.max(-6, Math.min(6, src.px + side * 1.9)); cat.position.z = 0.3 * (insts.length - 2);
+  undoStack = []; updateButtons();
+  syncInst(); applyStage(); sfx.sprout(); toast('COPIED · use MOVE to place it');
+}
+function removeActive() {
+  if (insts.length < 2) { toast('Last one stays'); return; }
+  const I = curInst, idx = insts.indexOf(I), next = insts[idx ? idx - 1 : 1];
+  cancelPose();
+  if (current.rt.dispose) current.rt.dispose();
+  scene.remove(cat); cat.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+  insts.splice(idx, 1);
+  loadState(next); applyCharUI(current, curKey); applyStage(); sfx.pluck();
+}
+ui('copyBtn').onclick = copyActive;
+ui('delBtn').onclick = removeActive;
+// 床の上でつかんで動かす
+let mv = null;
+const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
 let startKey = 'mebae';
 try { startKey = localStorage.getItem('mochi-char') || 'mebae'; } catch (e) {}
@@ -1797,25 +1964,10 @@ renderer.setAnimationLoop(() => {
     DF.ox = o.x; DF.oy = o.y; DF.oz = o.z; DF.gx = g.x; DF.gy = g.y; DF.gz = g.z;
     DF.sig2 = sig2; DF.sideK = Math.min(Math.abs(o.x) / (L + 1e-6), 1);
     { const n = pull.n; const inw = n ? THREE.MathUtils.clamp(-(o.x * n.x + o.y * n.y + o.z * n.z) / (L + 1e-6), 0, 1) : 0; DF.shell = 1 - 0.8 * inw; }   // 押しこむときは凹ませてよい
-    const P = pos.array;
-    for (let i = 0; i < pos.count; i++) {
-      const j = i * 3;
-      const d = deformPoint(basePos[j], basePos[j + 1], basePos[j + 2], baseR[i], faceMask[i]);
-      P[j] = d[0]; P[j + 1] = d[1]; P[j + 2] = d[2];
-    }
-    pos.needsUpdate = true;
-    bodyGeo.computeVertexNormals(); bodyGeo.computeBoundingSphere();
-    // 顔・耳・芽は体の表面にバインドして追従
-    for (const f of faceVerts) { evalBind(f.bind, f.base, f.attr.array); f.attr.needsUpdate = true; }
-    for (const c of faceCaps) { evalBind(c.bind, c.base, _tmp3); c.o.position.fromArray(_tmp3); }
-    for (const r of riders) { if (r.o.parent !== squish) continue; evalBind(r.bind, r.base, _tmp3, false); r.o.position.fromArray(_tmp3); }
+    refreshMesh(true);
     if (!pull.held && pull.off.length() < 0.002 && pull.vel.length() < 0.01) {
-      pullLift = 0;
-      pos.array.set(basePos); pos.needsUpdate = true; bodyGeo.computeVertexNormals();
-      riders.forEach(r => { if (r.o.parent === squish) r.o.position.fromArray(r.base); });
-      faceVerts.forEach(f => { f.attr.array.set(f.base); f.attr.needsUpdate = true; });
-      faceCaps.forEach(c => c.o.position.fromArray(c.base));
-      pull.active = false;
+      pullLift = 0; pull.active = false; pull.relax = false;
+      refreshMesh(false);
     }
   }
 
@@ -1825,6 +1977,14 @@ renderer.setAnimationLoop(() => {
     if (flashT > 0.6) { flashT = -1; bodyMat.color.set(bodyCol); }
   }
   cat.position.y = lift + pullLift + jump.y + (anim.on ? anim.y + (anim.dy || 0) : 0);
+  if (insts.length > 1 && !anim.on && !stageOn) {
+    updateOverlaps(dt);
+    for (const I of insts) {
+      if (!I.cat.visible) continue;
+      if (I !== curInst) { I.cat.position.y = I.lift; I.rt.update && I.rt.update(dt, { shx: 0, shz: 0, sy: 1, vy: 0, pullX: 0 }); }
+      if (I.ovAct || I.ovDirty) { I.ovDirty = false; if (I === curInst) { if (!pull.active) refreshMesh(false); } else runOn(I, () => refreshMesh(false)); }
+    }
+  }
 
   // 衝撃リング
   if (ringT >= 0) {
