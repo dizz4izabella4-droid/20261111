@@ -20,7 +20,7 @@ const controls = new OrbitControls(camera, canvas);
 controls.target.set(0, 0.85, 0);
 controls.enableDamping = true;
 controls.minDistance = 3;
-controls.maxDistance = 16;
+controls.maxDistance = 30;
 controls.maxPolarAngle = Math.PI;   // 下からものぞける
 controls.autoRotate = true;
 controls.autoRotateSpeed = 1.2;
@@ -1813,13 +1813,13 @@ function updateOverlaps(dt) {
     }
     if (!others.length && !A.ovAct) continue;
     const D = A.ovD, BP = A.basePos, FM = A.faceMask, n = BP.length / 3;
-    const ax = A.cat.position.x, az = A.cat.position.z, al = A.lift;
+    const ax = A.cat.position.x, az = A.cat.position.z, al = A.lift + (A.sy || 0);
     let mx = 0;
     for (let i = 0; i < n; i++) {
       const j = i * 3, wx = BP[j] + ax, wy = BP[j + 1] + al, wz = BP[j + 2] + az;
       let tx = 0, ty = 0, tz = 0;
       for (const B of others) {
-        const bd = B.bound, cx = B.cat.position.x + bd.cx, cy = bd.cy + B.lift, cz = B.cat.position.z + bd.cz;
+        const bd = B.bound, cx = B.cat.position.x + bd.cx, cy = bd.cy + B.lift + (B.sy || 0), cz = B.cat.position.z + bd.cz;
         let ux = (wx - cx) / bd.rx, uy = (wy - cy) / bd.ry, uz = (wz - cz) / bd.rz;
         const r2 = ux * ux + uy * uy + uz * uz;
         if (r2 >= 1) continue;
@@ -1864,7 +1864,7 @@ function copyActive() {
   if (insts.length >= 6) { toast('MAX 6'); return; }
   cancelPose();
   const s = snap();
-  const src = { key: curKey, bodyCol, itemCol, itemAll, plant: current.rt.plantKind, px: cat.position.x };
+  const src = { key: curKey, bodyCol, itemCol, itemAll, plant: current.rt.plantKind, px: cat.position.x, pz: cat.position.z, sy: curInst.sy || 0 };
   syncInst();
   cat = new THREE.Group(); scene.add(cat); squish = null; current = null;
   curInst = { cat }; insts.push(curInst);
@@ -1873,10 +1873,9 @@ function copyActive() {
   bodyCol = src.bodyCol; bodyMat.color.set(bodyCol); itemCol = src.itemCol; itemAll = src.itemAll;
   const rt = current.rt;
   if (rt.plant) { if (src.plant === null) rt.clear(); else rt.plant(src.plant); if (itemCol !== null) rt.tint(itemCol, itemAll); }
-  const side = insts.length % 2 ? -1 : 1;
-  cat.position.x = Math.max(-6, Math.min(6, src.px + side * 1.9)); cat.position.z = 0.3 * (insts.length - 2);
+  cat.position.x = src.px; cat.position.z = src.pz + 0.03 * (insts.length - 1); curInst.sy = src.sy;   // 基本は今の位置
   undoStack = []; updateButtons();
-  syncInst(); applyStage(); sfx.sprout(); toast('COPIED · use MOVE to place it');
+  syncInst(); applyStage(); sfx.sprout(); toast('COPIED at the same spot · ROW / STACK / MOVE to arrange');
 }
 function removeActive() {
   if (insts.length < 2) { toast('Last one stays'); return; }
@@ -1888,6 +1887,43 @@ function removeActive() {
   loadState(next); applyCharUI(current, curKey); applyStage(); sfx.pluck();
 }
 ui('copyBtn').onclick = copyActive;
+// 全員が画面に入るようにカメラを引く
+function fitView(L) {
+  let x0 = 1e9, x1 = -1e9, y1 = 0, z1 = -1e9;
+  for (const I of L) { const b = I.bound; x0 = Math.min(x0, I.cat.position.x + b.cx - b.rx); x1 = Math.max(x1, I.cat.position.x + b.cx + b.rx); y1 = Math.max(y1, b.cy + b.ry + I.lift + (I.sy || 0)); z1 = Math.max(z1, I.cat.position.z + b.cz + b.rz); }
+  const cx = (x0 + x1) / 2, cy = y1 * 0.5, W = (x1 - x0) / 2 + 0.5, H = y1 / 2 + 0.6;
+  const vf = THREE.MathUtils.degToRad(camera.fov) / 2, hf = Math.atan(Math.tan(vf) * camera.aspect);
+  const d = Math.max(W / Math.tan(hf), H / Math.tan(vf), 8.4) * 1.3 + z1 * 0.5;
+  const dir = camera.position.clone().sub(controls.target).normalize();
+  const t0 = controls.target.clone(), p0 = camera.position.clone(), t1 = new THREE.Vector3(cx, cy - d * 0.12, 0), p1 = t1.clone().addScaledVector(dir, d);
+  const st = performance.now();
+  (function step() {
+    const k = Math.min(1, (performance.now() - st) / 600), e = k * k * (3 - 2 * k);
+    controls.target.lerpVectors(t0, t1, e); camera.position.lerpVectors(p0, p1, e); controls.update();
+    if (k < 1) requestAnimationFrame(step);
+  })();
+}
+// 並べかた：ROW=横並び、STACK=縦積み
+function arrange(kind) {
+  const L = insts.filter(i => i.cat.visible); if (L.length < 2) { toast('COPY first'); return; }
+  cancelPose();
+  if (kind === 'row') {
+    const w = L.map(i => 2 * Math.max(i.bound.rx, i.bound.rz) + 0.12), tot = w.reduce((a, b) => a + b, 0);
+    let x = -tot / 2;
+    L.forEach((i, k) => { i.cat.position.x = x + w[k] / 2; i.cat.position.z = 0; i.sy = 0; x += w[k]; });
+  } else {
+    const b0 = L[0]; let prev = b0; b0.sy = 0; b0.cat.position.x = L.reduce((a, i) => a + i.cat.position.x, 0) / L.length; b0.cat.position.z = 0;
+    for (let k = 1; k < L.length; k++) {
+      const I = L[k], top = prev.bound.cy + prev.bound.ry + prev.lift + (prev.sy || 0), bot = I.bound.cy - I.bound.ry + I.lift;
+      I.cat.position.x = b0.cat.position.x; I.cat.position.z = b0.cat.position.z + 0.02 * k;
+      I.sy = Math.max(0, top - bot - 0.1 * (I.bound.ry * 2)); prev = I;
+    }
+  }
+  for (const I of L) I.ovDirty = true;
+  fitView(L);
+  sfx.sprout(); toast(kind === 'row' ? 'Lined up' : 'Stacked');
+}
+ui('rowBtn').onclick = () => arrange('row'); ui('stackBtn').onclick = () => arrange('stack');
 ui('delBtn').onclick = removeActive;
 // 床の上でつかんで動かす
 let mv = null;
@@ -1998,12 +2034,12 @@ renderer.setAnimationLoop(() => {
     bodyMat.color.set(bodyCol).lerp(new THREE.Color(0xffa561), k * 0.7);
     if (flashT > 0.6) { flashT = -1; bodyMat.color.set(bodyCol); }
   }
-  cat.position.y = lift + pullLift + jump.y + (anim.on ? anim.y + (anim.dy || 0) : 0);
+  cat.position.y = lift + (stageOn ? 0 : curInst.sy || 0) + pullLift + jump.y + (anim.on ? anim.y + (anim.dy || 0) : 0);
   if (insts.length > 1 && !anim.on && !stageOn) {
     updateOverlaps(dt);
     for (const I of insts) {
       if (!I.cat.visible) continue;
-      if (I !== curInst) { I.cat.position.y = I.lift; I.rt.update && I.rt.update(dt, { shx: 0, shz: 0, sy: 1, vy: 0, pullX: 0 }); }
+      if (I !== curInst) { I.cat.position.y = I.lift + (I.sy || 0); I.rt.update && I.rt.update(dt, { shx: 0, shz: 0, sy: 1, vy: 0, pullX: 0 }); }
       if (I.ovAct || I.ovDirty) { I.ovDirty = false; if (I === curInst) { if (!pull.active) refreshMesh(false); } else runOn(I, () => refreshMesh(false)); }
     }
   }
