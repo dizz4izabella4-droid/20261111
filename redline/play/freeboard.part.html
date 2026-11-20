@@ -1,0 +1,341 @@
+<!-- REDLINE フリーボードモード（正本）。tools/apply_link_bridge.py で template.html と index.html の </body> 直前に埋め込む。
+     連携アプリ（link/）の中では、タイトルを省いて「現在の事件のボード」をすぐ開く。
+     単体では、タイトルの FREE BOARD から個人用ボードを開く（CASES で通常のパズルへ戻る）。
+     データは IzLink の事件データ board（items / pins / strings / strokes）に保存する。 -->
+<style id="fb-style">
+#fb{position:fixed;inset:0;z-index:30;display:none;background:#e9e6df;overflow:hidden;touch-action:none;
+  -webkit-user-select:none;user-select:none;font-family:"Helvetica Neue",Arial,"Hiragino Sans","Yu Gothic",sans-serif}
+#fb.on{display:block}
+#fbStage{position:absolute;inset:0;background-size:cover;background-position:center}
+#fbWorld{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+#fbItems,#fbPins{position:absolute;left:0;top:0}
+#fbSvg{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+.fbI{position:absolute;box-shadow:0 3px 8px rgba(0,0,0,.28),0 1px 2px rgba(0,0,0,.2);color:#222}
+.fbI.doc{width:190px;background:#f6f1e4;padding:12px 12px 10px;border:1px solid #d8ceb6}
+.fbI.doc .k{font-size:9px;letter-spacing:.2em;color:#8b7d62}
+.fbI.doc .t{font:600 14px/1.45 "Yu Mincho","Hiragino Mincho ProN",serif;margin-top:4px}
+.fbI.doc .ph{height:54px;margin-top:8px;background:repeating-linear-gradient(0deg,#e4dccb 0 7px,#efe8d8 7px 9px)}
+.fbI .notes{position:absolute;left:100%;top:6px;margin-left:-14px;display:flex;flex-direction:column;gap:6px;width:150px}
+.fbI .note{background:#f6e27a;font-size:11px;line-height:1.45;padding:6px 7px;box-shadow:1px 2px 4px rgba(0,0,0,.25);transform:rotate(2deg)}
+.fbI .note:nth-child(even){transform:rotate(-2deg);background:#f9d88a}
+.fbI.article{width:210px;background:#ddd9cf;padding:10px 11px 11px;filter:saturate(.5);border:1px solid #c3bdb0}
+.fbI.article .src{font-size:9px;color:#555;letter-spacing:.08em}
+.fbI.article .t{font:700 15px/1.35 "Yu Mincho","Hiragino Mincho ProN",serif;margin-top:4px}
+.fbI.article .cols{height:40px;margin-top:6px;background:repeating-linear-gradient(90deg,transparent 0 46px,#0002 46px 47px),repeating-linear-gradient(0deg,#0000 0 4px,#0001 4px 5px)}
+.fbI.memo{width:150px;min-height:90px;background:#fff7b0;padding:12px;font:15px/1.5 "Segoe Print","Bradley Hand","Hiragino Maru Gothic ProN",cursive;white-space:pre-wrap;word-break:break-word}
+.fbI.sel{outline:3px solid #d9a23a;outline-offset:2px}
+.fbP{position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#ff8a7a,#c0281c 55%,#6d0f08);box-shadow:1px 3px 3px rgba(0,0,0,.45)}
+.fbP.sel{box-shadow:0 0 0 4px #ffd36a,1px 3px 3px rgba(0,0,0,.45)}
+#fbHud{position:absolute;left:34px;top:calc(8px + env(safe-area-inset-top));right:72px;display:flex;justify-content:space-between;align-items:center;
+  color:#2a2a2a;font-size:11px;letter-spacing:.14em;pointer-events:none}
+#fbHud b{font-size:13px;letter-spacing:.08em;background:rgba(255,255,255,.75);padding:4px 9px;border-radius:3px}
+#fbHud span{background:rgba(255,255,255,.75);padding:4px 9px;border-radius:3px}
+#fbBar{position:absolute;left:0;right:0;bottom:0;padding:8px 32px calc(10px + env(safe-area-inset-bottom));
+  display:flex;gap:6px;justify-content:center;flex-wrap:wrap;background:linear-gradient(transparent,rgba(30,22,16,.55) 35%,rgba(30,22,16,.8))}
+#fbBar button{font:700 11px/1 Arial,sans-serif;letter-spacing:.08em;color:#f3ebdd;background:#3b2d22;border:1px solid #6b5640;
+  border-radius:4px;padding:10px 10px;min-width:48px;cursor:pointer}
+#fbBar button.on{background:#b3261e;border-color:#e2675c;color:#fff}
+#fbBar .sw{min-width:34px;padding:10px 0;position:relative}
+#fbBar .sw i{display:block;width:16px;height:16px;border-radius:50%;margin:0 auto;border:2px solid #fff8}
+#fbBar .sw.on{background:#f3ebdd;border-color:#fff}
+#fbBar .gap{width:6px}
+#fbMsg{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);background:rgba(255,255,255,.88);color:#333;padding:16px 20px;
+  border-radius:4px;font-size:13px;line-height:1.7;text-align:center;display:none;box-shadow:0 4px 14px rgba(0,0,0,.2)}
+#fbDlg{position:absolute;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;padding:20px;z-index:2}
+#fbDlg.on{display:flex}
+#fbDlg .box{background:#f6f1e4;max-width:440px;width:100%;max-height:86%;overflow:auto;padding:16px 18px;box-shadow:0 8px 30px rgba(0,0,0,.4);color:#222}
+#fbDlg h3{font:700 17px/1.4 "Yu Mincho","Hiragino Mincho ProN",serif;margin:4px 0 10px}
+#fbDlg .k{font-size:10px;letter-spacing:.18em;color:#8b7d62}
+#fbDlg .note{background:#f6e27a;padding:7px 9px;margin:6px 0;font-size:13px;line-height:1.6}
+#fbDlg textarea{width:100%;height:120px;font:15px/1.5 sans-serif;padding:8px;border:1px solid #bbb;box-sizing:border-box}
+#fbDlg .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+#fbDlg .row button{font:700 12px Arial,sans-serif;letter-spacing:.08em;padding:9px 14px;border:0;border-radius:3px;background:#3b2d22;color:#f3ebdd}
+#fbDlg .row button.p{background:#b3261e}
+#fbOpen{position:absolute;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:5;font:700 12px Arial,sans-serif;letter-spacing:.15em;
+  color:#f3ebdd;background:rgba(40,28,20,.8);border:1px solid #c3271d;padding:10px 14px;border-radius:3px}
+</style>
+<div id="fb" aria-label="FREE BOARD">
+  <div id="fbStage"><div id="fbWorld"><div id="fbItems"></div><svg id="fbSvg" width="1" height="1"></svg><div id="fbPins"></div></div></div>
+  <div id="fbHud"><b id="fbTitle">FREE BOARD</b><span id="fbCount">STRINGS 0</span></div>
+  <div id="fbMsg"></div>
+  <div id="fbBar">
+    <button data-mode="move" class="on">MOVE</button>
+    <button data-mode="pin">PIN</button>
+    <button data-mode="string">STRING</button>
+    <button data-mode="pen">PEN</button>
+    <button data-mode="memo">MEMO</button>
+    <button data-mode="erase">ERASE</button>
+    <span class="gap"></span>
+    <button class="sw on" data-color="red" aria-label="red"><i style="background:#b3261e"></i></button>
+    <button class="sw" data-color="blue" aria-label="blue"><i style="background:#2e5fa8"></i></button>
+    <button class="sw" data-color="black" aria-label="black"><i style="background:#1d1d1d"></i></button>
+    <span class="gap"></span>
+    <button data-act="fit">FIT</button>
+    <button data-act="cases" id="fbCases">CASES</button>
+  </div>
+  <div id="fbDlg"><div class="box" id="fbDlgBox"></div></div>
+</div>
+<script id="fb-script">
+(function(){
+'use strict';
+if(!window.IzLink) return;
+var LINKED=IzLink.linked, LOCAL_CASE='redline-free';
+var COLORS={red:'#b3261e',blue:'#2e5fa8',black:'#1d1d1d'};
+var $=function(id){return document.getElementById(id);};
+var root=$('fb'), stage=$('fbStage'), world=$('fbWorld'), itemsEl=$('fbItems'), pinsEl=$('fbPins'), svg=$('fbSvg');
+var mode='move', color='red', cid=null, B=null, cam={x:40,y:60,k:1}, sel=null, elOf={};
+var NS='http://www.w3.org/2000/svg';
+function uid(p){return p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+/* ---------- データ ---------- */
+function caseNow(){ return LINKED?IzLink.caseId():LOCAL_CASE; }
+function load(){
+  cid=caseNow(); if(!cid){ B=null; return; }
+  var d=IzLink.get(cid); B=d.board; if(!Array.isArray(B.strokes)) B.strokes=[];
+  $('fbTitle').textContent=LINKED?(d.title||cid):'FREE BOARD';
+  try{ var v=JSON.parse(localStorage.getItem('redline.fb.view.'+cid)||'null'); if(v&&v.k) cam=v; }catch(e){}
+}
+function commit(fn){
+  if(!cid) return;
+  var d=IzLink.update(function(d){ if(!Array.isArray(d.board.strokes)) d.board.strokes=[]; fn(d.board); },cid);
+  if(d) B=d.board;
+}
+function saveView(){ try{ localStorage.setItem('redline.fb.view.'+cid,JSON.stringify(cam)); }catch(e){} }
+
+/* ---------- 座標 ---------- */
+function toWorld(cx,cy){ var r=stage.getBoundingClientRect(); return {x:(cx-r.left-cam.x)/cam.k, y:(cy-r.top-cam.y)/cam.k}; }
+function applyCam(){ world.style.transform='translate('+cam.x+'px,'+cam.y+'px) scale('+cam.k+')'; }
+function itemById(id){ for(var i=0;i<B.items.length;i++) if(B.items[i].id===id) return B.items[i]; return null; }
+function size(it){ var e=elOf[it.id]; return e?{w:e.offsetWidth,h:e.offsetHeight}:{w:180,h:120}; }
+function pinPos(p){
+  if(p.itemId){ var it=itemById(p.itemId); if(!it) return null;
+    var dx=p.dx!=null?p.dx:size(it).w/2, dy=p.dy!=null?p.dy:10; return {x:(it.x||0)+dx, y:(it.y||0)+dy}; }
+  return {x:p.x||0,y:p.y||0};
+}
+
+/* ---------- 描画 ---------- */
+function itemHTML(it){
+  var lines=(it.lines||[]).map(function(l){return '<div class="note">'+esc(l.quote)+'</div>';}).join('');
+  if(it.kind==='article') return '<div class="src">'+esc((it.source||'NEWSPAPER')+' '+(it.date||''))+'</div><div class="t">'+esc(it.title)+'</div><div class="cols"></div>';
+  if(it.kind==='memo') return esc(it.text||'');
+  return '<div class="k">DOCUMENT '+esc(it.ref||'')+'</div><div class="t">'+esc(it.title)+'</div><div class="ph"></div>'+(lines?'<div class="notes">'+lines+'</div>':'');
+}
+function render(){
+  itemsEl.innerHTML=''; pinsEl.innerHTML=''; elOf={};
+  $('fbMsg').style.display=B?'none':'block';
+  if(!B){ $('fbMsg').innerHTML='事件が選ばれていない。<br>保管庫の事件ファイルで「この事件を開く」を押す。'; drawLines(); return; }
+  B.items.forEach(function(it,i){
+    if(it.x==null){ it.x=40+(i%3)*380; it.y=40+Math.floor(i/3)*260; }
+    var e=document.createElement('div'); e.className='fbI '+(it.kind||'doc')+(sel&&sel.type==='item'&&sel.id===it.id?' sel':'');
+    e.innerHTML=itemHTML(it); e.style.left=it.x+'px'; e.style.top=it.y+'px';
+    var rot=((it.id.charCodeAt(it.id.length-1)%7)-3)*.6; e.style.transform='rotate('+rot+'deg)';
+    itemsEl.appendChild(e); elOf[it.id]=e;
+  });
+  placePins(); drawLines(); applyCam();
+  $('fbCount').textContent='STRINGS '+B.strings.length;
+}
+function placePins(){
+  pinsEl.innerHTML='';
+  B.pins.forEach(function(p){ var q=pinPos(p); if(!q) return;
+    var e=document.createElement('div'); e.className='fbP'+(sel&&sel.type==='pin'&&sel.id===p.id?' sel':''); e.style.left=q.x+'px'; e.style.top=q.y+'px'; pinsEl.appendChild(e); });
+}
+function curve(a,b){ var mx=(a.x+b.x)/2, my=(a.y+b.y)/2, d=Math.hypot(b.x-a.x,b.y-a.y); return {cx:mx,cy:my+Math.min(60,12+d*.12)}; }
+function cpath(a,b){ var c=curve(a,b); return 'M'+a.x+' '+a.y+' Q '+c.cx+' '+c.cy+' '+b.x+' '+b.y; }
+var tmp=null; // 描きかけの紐・線
+function drawLines(){
+  var h='';
+  if(B){
+    B.strokes.forEach(function(s){ if(s.pts.length<2) return;
+      h+='<polyline points="'+s.pts.map(function(p){return p[0]+','+p[1];}).join(' ')+'" fill="none" stroke="'+(COLORS[s.color]||COLORS.black)+'" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity=".85"/>'; });
+    var pm={}; B.pins.forEach(function(p){ pm[p.id]=pinPos(p); });
+    B.strings.forEach(function(s){ var a=pm[s.a], b=pm[s.b]; if(!a||!b) return;
+      var col=COLORS[s.color]||COLORS.red;
+      h+='<path d="'+cpath(a,b)+'" fill="none" stroke="#0003" stroke-width="5" transform="translate(1.5 3)"/>'+
+         '<path d="'+cpath(a,b)+'" fill="none" stroke="'+col+'" stroke-width="3.2" stroke-linecap="round"'+(sel&&sel.type==='string'&&sel.id===s.id?' stroke-dasharray="6 5"':'')+'/>'; });
+  }
+  if(tmp&&tmp.kind==='string') h+='<path d="'+cpath(tmp.a,tmp.b)+'" fill="none" stroke="'+COLORS[color]+'" stroke-width="3" stroke-dasharray="2 6" stroke-linecap="round"/>';
+  if(tmp&&tmp.kind==='pen'&&tmp.pts.length>1) h+='<polyline points="'+tmp.pts.map(function(p){return p[0]+','+p[1];}).join(' ')+'" fill="none" stroke="'+COLORS[color]+'" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>';
+  svg.innerHTML=h;
+}
+
+/* ---------- 当たり判定（ワールド座標） ---------- */
+function hitPin(w){ var r=16/cam.k, best=null, bd=r;
+  B.pins.forEach(function(p){ var q=pinPos(p); if(!q) return; var d=Math.hypot(q.x-w.x,q.y-w.y); if(d<bd){bd=d;best=p;} }); return best; }
+function hitItem(w){ for(var i=B.items.length-1;i>=0;i--){ var it=B.items[i], s=size(it);
+  if(w.x>=it.x&&w.x<=it.x+s.w&&w.y>=it.y&&w.y<=it.y+s.h) return it; } return null; }
+function distSeg(p,a,b){ var dx=b[0]-a[0], dy=b[1]-a[1], l=dx*dx+dy*dy, t=l?Math.max(0,Math.min(1,((p.x-a[0])*dx+(p.y-a[1])*dy)/l)):0;
+  return Math.hypot(p.x-(a[0]+t*dx),p.y-(a[1]+t*dy)); }
+function hitString(w){ var r=12/cam.k, pm={}; B.pins.forEach(function(p){ pm[p.id]=pinPos(p); });
+  for(var i=B.strings.length-1;i>=0;i--){ var s=B.strings[i], a=pm[s.a], b=pm[s.b]; if(!a||!b) continue; var c=curve(a,b), prev=[a.x,a.y];
+    for(var t=1;t<=20;t++){ var u=t/20, x=(1-u)*(1-u)*a.x+2*(1-u)*u*c.cx+u*u*b.x, y=(1-u)*(1-u)*a.y+2*(1-u)*u*c.cy+u*u*b.y;
+      if(distSeg(w,prev,[x,y])<r) return s; prev=[x,y]; } } return null; }
+function hitStroke(w){ var r=10/cam.k; for(var i=B.strokes.length-1;i>=0;i--){ var p=B.strokes[i].pts;
+  for(var j=1;j<p.length;j++) if(distSeg(w,p[j-1],p[j])<r) return B.strokes[i]; } return null; }
+
+/* ---------- 操作 ---------- */
+var ptrs={}, act=null, pinch=null;
+function setMode(m){ mode=m; sel=null; tmp=null;
+  Array.prototype.forEach.call(document.querySelectorAll('#fbBar [data-mode]'),function(b){b.classList.toggle('on',b.dataset.mode===m);});
+  if(B) render(); }
+stage.addEventListener('pointerdown',function(e){
+  if(!B) return;
+  ptrs[e.pointerId]={x:e.clientX,y:e.clientY};
+  try{ stage.setPointerCapture(e.pointerId); }catch(er){}
+  var ids=Object.keys(ptrs);
+  if(ids.length===2){ // 2本指：拡大縮小と移動
+    if(act&&act.kind==='pen'){ tmp=null; } act=null;
+    var a=ptrs[ids[0]], b=ptrs[ids[1]];
+    pinch={d:Math.hypot(a.x-b.x,a.y-b.y), mx:(a.x+b.x)/2, my:(a.y+b.y)/2, cam:{x:cam.x,y:cam.y,k:cam.k}}; drawLines(); return; }
+  if(ids.length>2) return;
+  var w=toWorld(e.clientX,e.clientY);
+  act={kind:'tap', sx:e.clientX, sy:e.clientY, w:w, moved:false};
+  if(mode==='move'){
+    var p=hitPin(w);
+    if(p&&!p.itemId){ act.kind='dragPin'; act.pin=p; act.ox=p.x-w.x; act.oy=p.y-w.y; return; }
+    var it=hitItem(w);
+    if(it){ act.kind='dragItem'; act.item=it; act.ox=it.x-w.x; act.oy=it.y-w.y;
+      var idx=B.items.indexOf(it); B.items.splice(idx,1); B.items.push(it); itemsEl.appendChild(elOf[it.id]); return; }
+    act.kind='pan'; act.cam={x:cam.x,y:cam.y};
+  } else if(mode==='string'){
+    var p2=hitPin(w); if(p2){ act.kind='string'; act.from=p2; tmp={kind:'string',a:pinPos(p2),b:w}; }
+    else { act.kind='pan'; act.cam={x:cam.x,y:cam.y}; }
+  } else if(mode==='pen'){ act.kind='pen'; tmp={kind:'pen',pts:[[Math.round(w.x),Math.round(w.y)]]}; }
+});
+stage.addEventListener('pointermove',function(e){
+  if(!ptrs[e.pointerId]) return;
+  ptrs[e.pointerId]={x:e.clientX,y:e.clientY};
+  if(pinch){ var ids=Object.keys(ptrs); if(ids.length<2) return; var a=ptrs[ids[0]], b=ptrs[ids[1]];
+    var d=Math.hypot(a.x-b.x,a.y-b.y), mx=(a.x+b.x)/2, my=(a.y+b.y)/2, r=stage.getBoundingClientRect();
+    var k=Math.max(.3,Math.min(3,pinch.cam.k*d/Math.max(pinch.d,1)));
+    var wx=(pinch.mx-r.left-pinch.cam.x)/pinch.cam.k, wy=(pinch.my-r.top-pinch.cam.y)/pinch.cam.k;
+    cam={k:k,x:mx-r.left-wx*k,y:my-r.top-wy*k}; applyCam(); return; }
+  if(!act) return;
+  if(Math.hypot(e.clientX-act.sx,e.clientY-act.sy)>6) act.moved=true;
+  var w=toWorld(e.clientX,e.clientY);
+  if(act.kind==='pan'&&act.moved){ cam.x=act.cam.x+(e.clientX-act.sx); cam.y=act.cam.y+(e.clientY-act.sy); applyCam(); }
+  else if(act.kind==='dragItem'&&act.moved){ var it=act.item; it.x=Math.round(w.x+act.ox); it.y=Math.round(w.y+act.oy);
+    var el=elOf[it.id]; el.style.left=it.x+'px'; el.style.top=it.y+'px'; placePins(); drawLines(); }
+  else if(act.kind==='dragPin'&&act.moved){ act.pin.x=Math.round(w.x+act.ox); act.pin.y=Math.round(w.y+act.oy); placePins(); drawLines(); }
+  else if(act.kind==='string'){ tmp.b=w; drawLines(); }
+  else if(act.kind==='pen'){ var l=tmp.pts[tmp.pts.length-1]; if(Math.hypot(w.x-l[0],w.y-l[1])*cam.k>2){ tmp.pts.push([Math.round(w.x),Math.round(w.y)]); drawLines(); } }
+});
+function end(e){
+  if(!ptrs[e.pointerId]) return;
+  delete ptrs[e.pointerId];
+  if(pinch){ if(Object.keys(ptrs).length<2){ pinch=null; saveView(); } return; }
+  var a=act; act=null; if(!a) return;
+  var w=toWorld(e.clientX,e.clientY);
+  if(a.kind==='pan'){ if(a.moved) saveView(); else tap(a.w); return; }
+  if(a.kind==='dragItem'){ var it=a.item;
+    if(!a.moved){ openItem(it); return; }
+    commit(function(b){ var x=b.items.filter(function(q){return q.id===it.id;})[0]; if(x){ x.x=it.x; x.y=it.y; b.items=b.items.filter(function(q){return q!==x;}).concat([x]); } }); return; }
+  if(a.kind==='dragPin'){ if(a.moved){ var p=a.pin; commit(function(b){ b.pins.forEach(function(q){ if(q.id===p.id){ q.x=p.x; q.y=p.y; } }); }); } return; }
+  if(a.kind==='string'){ tmp=null; var to=hitPin(w);
+    if(!a.moved){ // タップ：ピン → ピンの順でも張れる
+      if(sel&&sel.type==='pin'&&sel.id!==a.from.id){ addString(sel.id,a.from.id); sel=null; }
+      else sel=(sel&&sel.id===a.from.id)?null:{type:'pin',id:a.from.id};
+      placePins(); drawLines(); return; }
+    if(to&&to.id!==a.from.id) addString(a.from.id,to.id); sel=null; drawLines(); return; }
+  if(a.kind==='pen'){ var pts=tmp.pts; tmp=null;
+    if(pts.length>1) commit(function(b){ b.strokes.push({id:uid('k'),color:color,pts:pts}); }); else drawLines(); return; }
+  if(a.kind==='tap'&&!a.moved) tap(a.w);
+}
+stage.addEventListener('pointerup',end); stage.addEventListener('pointercancel',function(e){ tmp=null; end(e); });
+stage.addEventListener('wheel',function(e){ if(!B) return; e.preventDefault(); var r=stage.getBoundingClientRect();
+  var k=Math.max(.3,Math.min(3,cam.k*Math.exp(-e.deltaY*.0015))), wx=(e.clientX-r.left-cam.x)/cam.k, wy=(e.clientY-r.top-cam.y)/cam.k;
+  cam={k:k,x:e.clientX-r.left-wx*k,y:e.clientY-r.top-wy*k}; applyCam(); clearTimeout(stage._wt); stage._wt=setTimeout(saveView,300); },{passive:false});
+
+function tap(w){
+  if(mode==='pin'){ var it=hitItem(w);
+    var p=it?{id:uid('p'),itemId:it.id,dx:Math.round(w.x-it.x),dy:Math.round(w.y-it.y)}:{id:uid('p'),x:Math.round(w.x),y:Math.round(w.y)};
+    commit(function(b){ b.pins.push(p); }); return; }
+  if(mode==='memo'){ memoDialog(null,w); return; }
+  if(mode==='erase'){ var p2=hitPin(w);
+    if(p2){ commit(function(b){ b.pins=b.pins.filter(function(q){return q.id!==p2.id;}); b.strings=b.strings.filter(function(s){return s.a!==p2.id&&s.b!==p2.id;}); }); return; }
+    var s=hitString(w); if(s){ commit(function(b){ b.strings=b.strings.filter(function(q){return q.id!==s.id;}); }); return; }
+    var k=hitStroke(w); if(k){ commit(function(b){ b.strokes=b.strokes.filter(function(q){return q.id!==k.id;}); }); return; }
+    var it2=hitItem(w); if(it2){ eraseItem(it2); } return; }
+  if(mode==='move'){ var it3=hitItem(w); if(it3) openItem(it3); }
+}
+function addString(a,b){
+  if(B.strings.some(function(s){return (s.a===a&&s.b===b)||(s.a===b&&s.b===a);})) return;
+  var sid=uid('s');
+  commit(function(bd){ bd.strings.push({id:sid,a:a,b:b,color:color}); });
+  IzLink.emit('string.added',{caseId:cid,stringId:sid});
+}
+function eraseItem(it){
+  dialog('<div class="k">REMOVE</div><h3>'+esc(it.title||'メモ')+'</h3><p style="font-size:13px">ボードから外す（ピンと紐も外れる）。</p>',
+    [['CANCEL',null],['REMOVE',function(){ commit(function(b){
+      var gone=b.pins.filter(function(p){return p.itemId===it.id;}).map(function(p){return p.id;});
+      b.items=b.items.filter(function(q){return q.id!==it.id;}); b.pins=b.pins.filter(function(p){return gone.indexOf(p.id)<0;});
+      b.strings=b.strings.filter(function(s){return gone.indexOf(s.a)<0&&gone.indexOf(s.b)<0;}); }); }]]);
+}
+
+/* ---------- ダイアログ ---------- */
+function dialog(html,buttons){
+  var box=$('fbDlgBox'); box.innerHTML=html+'<div class="row"></div>'; var row=box.querySelector('.row');
+  buttons.forEach(function(b,i){ var x=document.createElement('button'); x.textContent=b[0]; if(i===buttons.length-1) x.className='p';
+    x.addEventListener('click',function(){ var keep=b[1]&&b[1]()===false; if(!keep) $('fbDlg').classList.remove('on'); }); row.appendChild(x); });
+  $('fbDlg').classList.add('on');
+}
+function openItem(it){
+  if(it.kind==='memo'){ memoDialog(it); return; }
+  var notes=(it.lines||[]).map(function(l){return '<div class="note">'+esc(l.quote)+'</div>';}).join('');
+  var k=it.kind==='article'?esc((it.source||'NEWSPAPER')+' '+(it.date||'')):'DOCUMENT '+esc(it.ref||'');
+  dialog('<div class="k">'+k+'</div><h3>'+esc(it.title)+'</h3>'+(notes?'<div class="k">MARKED</div>'+notes:''),[['CLOSE',null]]);
+}
+function memoDialog(it,w){
+  dialog('<div class="k">MEMO</div><textarea id="fbMemo" placeholder="メモ">'+esc(it?it.text:'')+'</textarea>',
+    [['CANCEL',null],['OK',function(){ var t=$('fbMemo').value.trim();
+      if(it){ commit(function(b){ b.items.forEach(function(q){ if(q.id===it.id) q.text=t; }); }); }
+      else if(t){ var r=stage.getBoundingClientRect(), c=w||toWorld(r.left+r.width/2,r.top+r.height/2);
+        commit(function(b){ b.items.push({id:uid('m'),kind:'memo',text:t,title:t.slice(0,20),x:Math.round(c.x),y:Math.round(c.y)}); }); } }]]);
+  setTimeout(function(){ var t=$('fbMemo'); if(t) t.focus(); },50);
+}
+$('fbDlg').addEventListener('pointerdown',function(e){ e.stopPropagation(); });
+$('fbDlg').addEventListener('click',function(e){ if(e.target===$('fbDlg')) $('fbDlg').classList.remove('on'); });
+
+/* ---------- 道具の帯 ---------- */
+function fit(){
+  if(!B||!B.items.length){ cam={x:40,y:60,k:1}; applyCam(); return; }
+  var x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  B.items.forEach(function(it){ var s=size(it); x0=Math.min(x0,it.x); y0=Math.min(y0,it.y); x1=Math.max(x1,it.x+s.w+(it.lines&&it.lines.length?140:0)); y1=Math.max(y1,it.y+s.h); });
+  var r=stage.getBoundingClientRect(), pad=50, top=40, bot=90;
+  var k=Math.max(.3,Math.min(1.4,Math.min((r.width-pad*2)/(x1-x0),(r.height-top-bot)/(y1-y0))));
+  cam={k:k,x:(r.width-(x1-x0)*k)/2-x0*k,y:top+((r.height-top-bot)-(y1-y0)*k)/2-y0*k}; applyCam(); saveView();
+}
+$('fbBar').addEventListener('click',function(e){
+  var b=e.target.closest('button'); if(!b) return;
+  if(b.dataset.mode) setMode(b.dataset.mode);
+  else if(b.dataset.color){ color=b.dataset.color; Array.prototype.forEach.call(document.querySelectorAll('#fbBar .sw'),function(x){x.classList.toggle('on',x===b);}); }
+  else if(b.dataset.act==='fit') fit();
+  else if(b.dataset.act==='cases') close();
+});
+
+/* ---------- 開く・閉じる ---------- */
+function open(){ root.classList.add('on'); load(); render(); if(B&&!localStorage.getItem('redline.fb.view.'+cid)) setTimeout(fit,0); }
+function close(){ root.classList.remove('on'); }
+window.RedlineFreeBoard={open:open,close:close};
+// ボードの地はレッドラインのホワイトボード写真（あれば）
+try{ if(typeof IMG!=='undefined'&&IMG.board) stage.style.backgroundImage='linear-gradient(rgba(255,255,255,.25),rgba(255,255,255,.25)),url('+IMG.board+')'; }catch(e){}
+IzLink.on('data.changed',function(p){
+  if(!root.classList.contains('on')||act||pinch) return;
+  if(p&&p.caseId&&cid&&p.caseId!==cid&&caseNow()===cid) return;
+  var prev=cid; load(); if(cid!==prev) sel=null; render();
+});
+window.addEventListener('resize',function(){ if(root.classList.contains('on')) applyCam(); });
+
+if(LINKED){
+  // 連携中：タイトルとパズルを出さず、ボードから始める
+  $('fbCases').style.display='none';
+  var t=$('title'); if(t) t.style.display='none';
+  open();
+} else {
+  var t2=$('title');
+  if(t2){ var ob=document.createElement('button'); ob.id='fbOpen'; ob.type='button'; ob.textContent='FREE BOARD';
+    ob.addEventListener('click',function(e){ e.stopPropagation(); t2.style.display='none'; open(); }); t2.appendChild(ob); }
+}
+})();
+</script>

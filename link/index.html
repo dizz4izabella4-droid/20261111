@@ -304,7 +304,7 @@ function boardHas(d, id){ return d.board.items.some(function(it){ return it.id==
 function addBoardItem(d, item){
   if (boardHas(d, item.id)) return;
   var n = d.board.items.length;
-  item.x = 40 + (n % 4) * 160; item.y = 40 + Math.floor(n / 4) * 140; // 仮の配置
+  item.x = 40 + (n % 3) * 380; item.y = 40 + Math.floor(n / 3) * 260; // 仮の配置（付箋が隣に隠れない間隔）
   d.board.items.push(item);
 }
 

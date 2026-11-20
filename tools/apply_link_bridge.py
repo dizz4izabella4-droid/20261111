@@ -7,6 +7,10 @@
 埋め込み位置は、HTML 内の <!--IZ-LINK-BRIDGE:START--> と <!--IZ-LINK-BRIDGE:END--> の間。
 共通ゲーム基盤のブロックがあればその手前、無ければ </head> の直前に入れる。
 連携するアプリ（保管庫・レッドライン・端末）を増やすときは TARGETS に足す。
+
+あわせて、BODY_PARTS の部品（例：レッドラインのフリーボードモード redline/play/freeboard.part.html）を、
+<!--<名前>:START--> と <!--<名前>:END--> の目印ごと </body> の直前に入れる。
+レッドラインは template.html（画像なし）と index.html（画像埋め込み済み）の両方に同じものを入れる。
 """
 import os, sys
 
@@ -20,6 +24,12 @@ TARGETS = [
     'shoko/index.html',
     'iz2611/index.html',
     'iz2611/cases/x-01/index.html',
+    'redline/play/template.html',
+    'redline/play/index.html',
+]
+# (目印の名前, 正本, 入れる先)
+BODY_PARTS = [
+    ('REDLINE-FREEBOARD', 'redline/play/freeboard.part.html', ['redline/play/template.html', 'redline/play/index.html']),
 ]
 
 
@@ -49,19 +59,43 @@ def apply(html, blk):
     return html[:i] + blk + '\n' + html[i:]
 
 
+def apply_body(html, name, part):
+    st, en = '<!--' + name + ':START-->', '<!--' + name + ':END-->'
+    s = html.find(st)
+    if s >= 0:
+        e = html.find(en, s)
+        if e < 0:
+            raise ValueError(name + ' END marker missing')
+        tail = html[e + len(en):]
+        if tail.startswith('\n'):
+            tail = tail[1:]
+        html = html[:s] + tail
+    i = html.rfind('</body>')
+    if i < 0:
+        raise ValueError('</body> not found')
+    return html[:i] + st + '\n' + part.rstrip('\n') + '\n' + en + '\n' + html[i:]
+
+
 def main():
     check = '--check' in sys.argv
     blk = block()
     stale = []
+    parts = []
+    for name, src, targets in BODY_PARTS:
+        with open(os.path.join(ROOT, src), encoding='utf-8', newline='') as f:
+            parts.append((name, f.read(), targets))
     for rel in TARGETS:
         p = os.path.join(ROOT, rel)
-        with open(p, encoding='utf-8') as f:
+        with open(p, encoding='utf-8', newline='') as f:
             html = f.read()
         new = apply(html, blk)
+        for name, part, targets in parts:
+            if rel in targets:
+                new = apply_body(new, name, part)
         if new != html:
             stale.append(rel)
             if not check:
-                with open(p, 'w', encoding='utf-8') as f:
+                with open(p, 'w', encoding='utf-8', newline='') as f:
                     f.write(new)
     if check:
         for rel in stale:
