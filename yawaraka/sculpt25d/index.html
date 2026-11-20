@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+</head>
+<body>
+<title>胴像づくり</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* layout: 絵は常に上に固定（スマホは画面の約半分）。道具・色・質感は下に積み、スクロールしても絵が見える。横長の画面は左に絵、右に道具 */
+:root {
+  color-scheme: dark;
+  --bg: #15130f;
+  --panel: #201d17;
+  --line: #3a352b;
+  --fg: #ece6d8;
+  --mute: #a39b88;
+  --accent: #d9a05b;
+  --good: #7fc4a8;
+  --font: "Hiragino Sans", "Noto Sans JP", "Yu Gothic", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 14px; line-height: 1.5;
+  padding-block: 6px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  max-width: 520px; margin-inline: auto; -webkit-user-select: none; user-select: none;
+}
+h1 { font-size: 15px; margin: 0 0 4px; letter-spacing: .08em; font-weight: 600; }
+h1 small { color: var(--mute); font-weight: 400; font-size: 12px; letter-spacing: 0; margin-left: 8px; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--good); outline-offset: 2px; }
+
+.stagecol { position: sticky; top: 0; z-index: 5; background: var(--bg); padding-block: 4px 2px; }
+.stage {
+  position: relative; margin-inline: auto; aspect-ratio: 4 / 5; border-radius: 6px; overflow: hidden; background: #0d0c0a; touch-action: none;
+  width: min(100%, calc(50vh * 0.8)); width: min(100%, calc(50dvh * 0.8));
+}
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.stage #o { pointer-events: none; }
+.toast { min-height: 1.3em; color: var(--good); font-size: 12px; text-align: center; margin-top: 2px; }
+
+.panel { padding-top: 4px; }
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.row > * { min-width: 0; }
+.tool, .chip, .act {
+  min-height: 44px; padding: 6px 4px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 6px; font-size: 13px; text-align: center; line-height: 1.25;
+}
+.chip, .act { flex: 1 1 0; }
+.tool[aria-pressed="true"], .chip[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: #2a251b; font-weight: 600; }
+.tool small { display: block; color: var(--mute); font-size: 10px; font-weight: 400; }
+.act:active, .tool:active, .chip:active { background: #2e2a20; }
+.act[disabled] { opacity: .4; }
+.sl { display: grid; grid-template-columns: 5.4em 1fr 2.6em; gap: 8px; align-items: center; margin-top: 6px; font-size: 13px; }
+.sl input { width: 100%; accent-color: var(--accent); min-height: 30px; }
+.sl output { text-align: right; color: var(--mute); font-variant-numeric: tabular-nums; }
+
+details { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+summary { cursor: pointer; color: var(--mute); font-size: 12px; letter-spacing: .12em; min-height: 28px; }
+details[open] > summary { color: var(--fg); }
+
+#svp { display: block; width: 100%; height: auto; aspect-ratio: 160 / 66; border-radius: 6px; border: 1px solid var(--line); margin-top: 8px; touch-action: none; cursor: crosshair; }
+.hue input { background: linear-gradient(90deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00); border-radius: 6px; height: 12px; min-height: 12px; }
+.cur b { color: var(--fg); font-weight: 500; font-variant-numeric: tabular-nums; margin-right: 4px; }
+.pal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 8px; }
+.sw { aspect-ratio: 1; min-height: 34px; border-radius: 6px; border: 2px solid var(--line); padding: 0; }
+.sw[aria-pressed="true"] { border-color: var(--fg); box-shadow: 0 0 0 2px var(--accent); }
+.cur { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.cur label { color: var(--mute); font-size: 12px; }
+.cur input[type="color"] { width: 54px; height: 38px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+.box { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--mute); }
+.box i { display: inline-block; width: 22px; height: 22px; border-radius: 4px; border: 1px solid var(--line); }
+.hint { color: var(--mute); font-size: 12px; margin-top: 8px; }
+
+@media (min-width: 820px) {
+  body { max-width: 1060px; }
+  .app { display: grid; grid-template-columns: minmax(320px, 1fr) 400px; gap: 24px; align-items: start; }
+  .stagecol { top: 8px; }
+  .stage { width: min(100%, calc(82vh * 0.8)); width: min(100%, calc(82dvh * 0.8)); }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<h1>胴像づくり<small>2.5D 試作</small></h1>
+
+<div class="app">
+  <div class="stagecol">
+    <div class="stage" id="stage">
+      <canvas id="c" aria-label="彫刻の画面。指でなぞって彫る・塗る"></canvas>
+      <canvas id="o" aria-hidden="true"></canvas>
+    </div>
+    <div class="toast" id="toast" aria-live="polite"></div>
+  </div>
+
+  <div class="panel">
+    <div class="grid4" id="tools"></div>
+    <div class="sl"><label for="sSize">大きさ</label><input id="sSize" type="range" min="3" max="34" step="1" value="14"><output id="oSize">14</output></div>
+    <div class="sl"><label for="sStr">強さ</label><input id="sStr" type="range" min="0.05" max="1" step="0.05" value="0.5"><output id="oStr">0.50</output></div>
+    <div class="sl"><label for="sSoft">筆のぼかし</label><input id="sSoft" type="range" min="0" max="1" step="0.05" value="0.8"><output id="oSoft">0.80</output></div>
+    <div class="row">
+      <button class="chip" id="bSym" type="button" aria-pressed="true">左右対称 入</button>
+      <button class="chip" id="bGuide" type="button" aria-pressed="true">目安線 入</button>
+    </div>
+
+    <details open>
+      <summary>色（好きな色を選べます）</summary>
+      <canvas id="svp" width="160" height="100" aria-label="筆の色。横が鮮やかさ、縦が明るさ"></canvas>
+      <div class="sl hue"><label for="sHue">色合い</label><input id="sHue" type="range" min="0" max="360" step="1" value="210"><output id="oHue">210</output></div>
+      <div class="cur">
+        <span class="box"><i id="swCur"></i><b id="hexCur">#2f6fb5</b>筆の色</span>
+        <span class="box"><i id="swBase"></i>地の色</span>
+        <button class="chip" id="bBase" type="button" style="flex:0 0 auto;padding-inline:12px">筆の色を全体に</button>
+      </div>
+      <div class="pal" id="pal"></div>
+      <p class="hint">下の色見本は、よく使う色のショートカットです。「塗る」の道具で、筆の色をぼんやり重ねて塗れます。「塗り消し」で塗りだけを消せます。地の色は彫った形はそのままで、全体の色だけ変わります。</p>
+    </details>
+
+    <details>
+      <summary>質感・光・見る角度</summary>
+      <div class="row" id="mats"></div>
+      <div class="row"><button class="chip" id="bPatina" type="button" aria-pressed="true">くぼみに緑青（金属のみ）</button></div>
+      <div class="sl"><label for="sView">見る角度</label><input id="sView" type="range" min="0" max="90" step="5" value="0"><output id="oView">0</output></div>
+      <div class="sl"><label for="sAz">光の向き</label><input id="sAz" type="range" min="0" max="360" step="5" value="135"><output id="oAz">135</output></div>
+      <div class="sl"><label for="sEl">光の高さ</label><input id="sEl" type="range" min="20" max="80" step="5" value="45"><output id="oEl">45</output></div>
+    </details>
+
+    <details>
+      <summary>はじめから</summary>
+      <div class="row" id="shapes"></div>
+      <div class="sl"><label for="rSize">胸の大きさ</label><input id="rSize" type="range" min="0.8" max="1.4" step="0.05" value="1"><output id="oRSize">1.00</output></div>
+      <div class="sl"><label for="rOver">張り出し</label><input id="rOver" type="range" min="0" max="1.6" step="0.1" value="1"><output id="oROver">1.0</output></div>
+      <div class="sl"><label for="rGap">左右の間隔</label><input id="rGap" type="range" min="0.28" max="0.46" step="0.02" value="0.36"><output id="oRGap">0.36</output></div>
+      <div class="sl"><label for="rLift">高さ</label><input id="rLift" type="range" min="0.1" max="0.34" step="0.02" value="0.22"><output id="oRLift">0.22</output></div>
+      <p class="hint">「お手本」を選んだ直後は、スライダーを離すと形が作り直されます。彫り始めたあとは、「お手本」を押したときだけ作り直します。</p>
+    </details>
+  </div>
+</div>
+
+<script>
+'use strict';
+(function () {
+  var GW = 200, GH = 250, HS = 46;
+  var h = new Float32Array(GW * GH), tmp = new Float32Array(GW * GH);
+  var pt = new Uint8ClampedArray(GW * GH * 4); /* 塗りの層：色(RGB)と濃さ(A) */
+  var P = { tool: 'raise', size: 14, str: 0.5, soft: 0.8, sym: true, guide: true, mat: 'metal', patina: true, view: 0, az: 135, el: 45, shape: 'ref', base: [176, 118, 64], cur: [47, 111, 181] };
+  var $ = function (id) { return document.getElementById(id); };
+  var cv = $('c'), ov = $('o'), ctx = cv.getContext('2d'), octx = ov.getContext('2d');
+  cv.width = GW; cv.height = GH;
+  var img = ctx.createImageData(GW, GH);
+  var undoStack = [], dirty = true, down = false, last = null, cur = null, hover = null, saveT = 0;
+
+  function gs(u) { return Math.exp(-u * u); }
+  function sstep(a, b, x) { var t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
+  function hex(c) { return '#' + c.map(function (v) { var s = Math.round(v).toString(16); return s.length < 2 ? '0' + s : s; }).join(''); }
+  function unhex(s) { return [parseInt(s.slice(1, 3), 16), parseInt(s.slice(3, 5), 16), parseInt(s.slice(5, 7), 16)]; }
+  function toast(m) { $('toast').textContent = m; clearTimeout(toast.t); if (m) toast.t = setTimeout(function () { $('toast').textContent = ''; }, 2600); }
+
+  /* 初期の形（荒型・四角） */
+  function initShape(kind) {
+    var x, y;
+    for (y = 0; y < GH; y++) {
+      var v = (y / (GH - 1) - 0.5) * 2;
+      for (x = 0; x < GW; x++) {
+        var u = (x / (GW - 1) - 0.5) * 2, val = 0;
+        if (kind === 'rough') {
+          var a = 0.80 - 0.12 * gs((v - 0.5) / 0.35) + 0.05 * gs((v + 0.35) / 0.4);
+          var q = Math.abs(u) / a;
+          if (q < 1 && Math.abs(v) < 0.96) {
+            val = 0.50 * Math.pow(1 - q * q, 0.55);
+            var bx = Math.abs(u) - 0.36, by = v + 0.28;
+            val += 0.12 * Math.exp(-(bx * bx) / 0.05 - (by * by) / 0.07);
+            val += 0.04 * gs((v - 0.05) / 0.35) * (1 - q * q);
+          }
+        } else {
+          var e = Math.min(0.82 - Math.abs(u), 0.92 - Math.abs(v));
+          if (e > 0) val = 0.42 * sstep(0, 0.1, e);
+        }
+        h[y * GW + x] = val;
+      }
+    }
+    for (var pass = 0; pass < 3; pass++) {
+      tmp.set(h);
+      for (y = 1; y < GH - 1; y++) for (x = 1; x < GW - 1; x++) {
+        var i = y * GW + x;
+        h[i] = (tmp[i] * 4 + tmp[i - 1] + tmp[i + 1] + tmp[i - GW] + tmp[i + GW]) / 8;
+      }
+    }
+    dirty = true;
+  }
+
+  /* 高さを全体になめらかにする（光線の計算や保存で出る細かなムラを消す） */
+  function blur(passes) {
+    for (var pass = 0; pass < passes; pass++) {
+      tmp.set(h);
+      for (var y = 1; y < GH - 1; y++) for (var x = 1; x < GW - 1; x++) {
+        var i = y * GW + x;
+        h[i] = (tmp[i] * 4 + tmp[i - 1] + tmp[i + 1] + tmp[i - GW] + tmp[i + GW]) / 8;
+      }
+    }
+  }
+
+  /* お手本：数式で作った胴体を、正面から見た高さに直す */
+  var R = { size: 1.0, over: 1.0, gap: 0.36, lift: 0.22 };
+  var RBX = 1.04, RBY = 1.3, RZ0 = -0.3, RZ1 = 1.1, DEPTH = 0.45;
+  var RTH = 20 * Math.PI / 180, RCT = Math.cos(RTH), RST = Math.sin(RTH);
+  var refPristine = false;
+  function rsmin(a, b, k) { var t = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - t * t * k * 0.25; }
+  function rell(x, y, z, cx, cy, cz, rx, ry, rz) {
+    var px = x - cx, py = y - cy, pz = z - cz;
+    var yy = py * RCT + pz * RST, zz = -py * RST + pz * RCT;
+    var k = Math.sqrt((px / rx) * (px / rx) + (yy / ry) * (yy / ry) + (zz / rz) * (zz / rz));
+    return (k - 1) * Math.min(rx, ry, rz);
+  }
+  function rsdf(x, y, z) {
+    var a = 0.70 + 0.13 * gs((y - 0.55) / 0.6) + 0.05 * gs((y + 1.25) / 0.4);
+    var cz = 0.38 + 0.11 * gs((y - 0.30) / 0.55);
+    var q = Math.sqrt((x / a) * (x / a) + (z / cz) * (z / cz));
+    var d = (q - 1) * Math.min(a, cz);
+    d = Math.max(d, Math.abs(y) - 1.25, RZ0 - z);
+    var rx = 0.36 * R.size, ry = 0.34 * R.size, rz = 0.34 * R.size;
+    var czb = 0.27 + 0.12 * R.over;
+    for (var m = 0; m < 2; m++) {
+      var cx = m ? R.gap : -R.gap;
+      d = rsmin(d, rell(x, y, z, cx, R.lift, czb, rx, ry, rz), 0.24);
+      var bx = x - cx, by = y - (R.lift - RST * rz * 0.98), bz = z - (czb + RCT * rz * 0.98);
+      d = rsmin(d, Math.sqrt(bx * bx + by * by + bz * bz) - 0.05, 0.03);
+    }
+    var nx = x, ny = y + 0.80, nz = z - 0.401;
+    d = Math.max(d, -(Math.sqrt(nx * nx + ny * ny + nz * nz) - 0.055));
+    return d;
+  }
+  function buildReference() {
+    var x, y;
+    for (y = 0; y < GH; y++) {
+      var wy = RBY - 2 * RBY * y / (GH - 1);
+      for (x = 0; x < GW; x++) {
+        var wx = -RBX + 2 * RBX * x / (GW - 1), i = y * GW + x;
+        h[i] = 0;
+        if (Math.abs(wx) > 1.0) continue;
+        var z = RZ1, zp = z;
+        while (z > RZ0) {
+          var d = rsdf(wx, wy, z);
+          if (d < 0.0004) {
+            var lo = z, hi = zp;
+            for (var b = 0; b < 7; b++) { var mid = (lo + hi) / 2; if (rsdf(wx, wy, mid) < 0) lo = mid; else hi = mid; }
+            h[i] = (lo - RZ0) * DEPTH; break;
+          }
+          zp = z; z -= Math.max(d * 0.7, 0.002);
+        }
+      }
+    }
+    blur(5);
+    dirty = true; refPristine = true;
+  }
+  function makeReference(withUndo) {
+    toast('お手本を作っています…');
+    setTimeout(function () {
+      if (withUndo) { pushUndo(); pt.fill(0); }
+      buildReference(); saveSoon();
+      toast(withUndo ? 'お手本を出しました。「もどす」で前の形に戻せます。' : '');
+    }, 30);
+  }
+
+  /* 保存と読み込み（形・塗り・設定） */
+  function b64(arr) {
+    var s = '', n = arr.length, CH = 8192;
+    for (var i = 0; i < n; i += CH) s += String.fromCharCode.apply(null, arr.subarray(i, Math.min(n, i + CH)));
+    return btoa(s);
+  }
+  function unb64(b, out) {
+    var s = atob(b);
+    if (s.length !== out.length) return false;
+    for (var i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
+    return true;
+  }
+  function save() {
+    try {
+      var q = new Uint8Array(h.length * 2);
+      for (var i = 0; i < h.length; i++) {
+        var v16 = Math.max(0, Math.min(65535, Math.round(h[i] * 65535)));
+        q[i * 2] = v16 & 255; q[i * 2 + 1] = v16 >> 8;
+      }
+      localStorage.setItem('dozo-h3', b64(q));
+      localStorage.setItem('dozo-p1', b64(pt));
+      localStorage.setItem('dozo-s1', JSON.stringify({ base: P.base, cur: P.cur, mat: P.mat, patina: P.patina }));
+    } catch (e) {}
+  }
+  function load() {
+    try {
+      var b = localStorage.getItem('dozo-h3');
+      if (b) {
+        var q16 = new Uint8Array(h.length * 2);
+        if (!unb64(b, q16)) return false;
+        for (var i = 0; i < h.length; i++) h[i] = (q16[i * 2] | (q16[i * 2 + 1] << 8)) / 65535;
+      } else {
+        /* 古い保存（8bit）は段差の筋が出るので、読み込み時になめらかにする */
+        var b8 = localStorage.getItem('dozo-h2');
+        if (!b8) return false;
+        var q8 = new Uint8Array(h.length);
+        if (!unb64(b8, q8)) return false;
+        for (var j = 0; j < h.length; j++) h[j] = q8[j] / 255;
+        blur(4);
+      }
+      var p = localStorage.getItem('dozo-p1'), pu = new Uint8Array(pt.length);
+      if (p && unb64(p, pu)) pt.set(pu);
+      var s = localStorage.getItem('dozo-s1');
+      if (s) { var o = JSON.parse(s); if (o.base) P.base = o.base; if (o.cur) P.cur = o.cur; if (o.mat) P.mat = o.mat; if (typeof o.patina === 'boolean') P.patina = o.patina; }
+      return true;
+    } catch (e) { return false; }
+  }
+  function saveSoon() { clearTimeout(saveT); saveT = setTimeout(save, 600); }
+
+  /* 取り消し */
+  function pushUndo() {
+    undoStack.push({ h: new Float32Array(h), p: new Uint8ClampedArray(pt), base: P.base.slice() });
+    if (undoStack.length > 20) undoStack.shift();
+    $('bUndo').disabled = false;
+  }
+  function undo() {
+    if (!undoStack.length) return;
+    var s = undoStack.pop();
+    h.set(s.h); pt.set(s.p); P.base = s.base;
+    $('bUndo').disabled = !undoStack.length;
+    refPristine = false; syncColors(); dirty = true; saveSoon();
+  }
+
+  /* 道具 */
+  function applyAt(cx, cy) {
+    var r = P.size, s = P.str, tool = P.tool;
+    var x0 = Math.max(1, Math.floor(cx - r)), x1 = Math.min(GW - 2, Math.ceil(cx + r));
+    var y0 = Math.max(1, Math.floor(cy - r)), y1 = Math.min(GH - 2, Math.ceil(cy + r));
+    var x, y, i, paint = tool === 'paint' || tool === 'unpaint';
+    var edge = 0.15 + 0.85 * P.soft;
+    if (tool === 'smooth') {
+      for (y = y0 - 1; y <= y1 + 1; y++) for (x = x0 - 1; x <= x1 + 1; x++) tmp[y * GW + x] = h[y * GW + x];
+    }
+    for (y = y0; y <= y1; y++) {
+      for (x = x0; x <= x1; x++) {
+        var d = Math.hypot(x - cx, y - cy);
+        if (d >= r) continue;
+        var t = 1 - d / r, w;
+        i = y * GW + x;
+        if (paint) {
+          w = sstep(0, edge, t);
+          var k = w * s * 0.16, o = i * 4, a0 = pt[o + 3] / 255;
+          if (tool === 'unpaint') { pt[o + 3] = Math.max(0, Math.round((a0 * (1 - Math.min(1, k * 2))) * 255)); continue; }
+          var a1 = k + a0 * (1 - k), wk = a1 > 0 ? 1 / a1 : 0;
+          pt[o] = (P.cur[0] * k + pt[o] * a0 * (1 - k)) * wk;
+          pt[o + 1] = (P.cur[1] * k + pt[o + 1] * a0 * (1 - k)) * wk;
+          pt[o + 2] = (P.cur[2] * k + pt[o + 2] * a0 * (1 - k)) * wk;
+          pt[o + 3] = Math.round(a1 * 255);
+          continue;
+        }
+        w = t * t * (3 - 2 * t);
+        var v = h[i];
+        /* じっくり調整できるよう、1回あたりの量を小さくしてある */
+        if (tool === 'raise') v += s * w * 0.005;
+        else if (tool === 'carve') v -= s * w * 0.005;
+        else if (tool === 'pinch') v += s * w * w * w * 0.010;
+        else if (tool === 'cut') v -= s * w * w * w * 0.010;
+        else {
+          var avg = (tmp[i - 1] + tmp[i + 1] + tmp[i - GW] + tmp[i + GW] + tmp[i - GW - 1] + tmp[i - GW + 1] + tmp[i + GW - 1] + tmp[i + GW + 1] + tmp[i]) / 9;
+          v += (avg - v) * Math.min(1, w * s * 0.5);
+        }
+        h[i] = v < 0 ? 0 : v > 1 ? 1 : v;
+      }
+    }
+  }
+  function stamp(x, y) {
+    applyAt(x, y);
+    /* 中心線の上では、左右対称のぶんが同じ場所に二重にかからないようにする */
+    if (P.sym && Math.abs(x - (GW - 1) / 2) > 1.5) applyAt(GW - 1 - x, y);
+    dirty = true;
+  }
+
+  function pos(e) {
+    var r = cv.getBoundingClientRect();
+    return { x: (e.clientX - r.left) / r.width * GW, y: (e.clientY - r.top) / r.height * GH };
+  }
+  cv.addEventListener('pointerdown', function (e) {
+    e.preventDefault();
+    if (P.view > 0) { toast('「見る角度」を0に戻すと、彫れます。'); return; }
+    try { cv.setPointerCapture(e.pointerId); } catch (x) {}
+    pushUndo(); refPristine = false; down = true; cur = pos(e); last = null; hover = cur; drawOverlay();
+  });
+  cv.addEventListener('pointermove', function (e) {
+    var p = pos(e); hover = p;
+    if (down) cur = p;
+    drawOverlay();
+  });
+  function up() {
+    if (!down) return;
+    down = false; last = null; saveSoon(); hover = null; drawOverlay();
+  }
+  cv.addEventListener('pointerup', up);
+  cv.addEventListener('pointercancel', up);
+  cv.addEventListener('pointerleave', function () { if (!down) { hover = null; drawOverlay(); } });
+
+  /* 色の計算（地の色と塗りの層を混ぜる） */
+  var AR = 0, AG = 0, AB = 0;
+  function albedoAt(i) {
+    var o = i * 4, a = pt[o + 3] / 255, b = P.base;
+    AR = b[0] + (pt[o] - b[0]) * a; AG = b[1] + (pt[o + 1] - b[1]) * a; AB = b[2] + (pt[o + 2] - b[2]) * a;
+  }
+
+  var MAT = {
+    metal: { hi: [255, 236, 205], sp: 0.7, ex: 26, amb: 0.17, patina: true },
+    gloss: { hi: [255, 255, 255], sp: 0.5, ex: 60, amb: 0.2, patina: false },
+    matte: { hi: [255, 255, 255], sp: 0.07, ex: 8, amb: 0.22, patina: false }
+  };
+
+  function render() {
+    var m = MAT[P.mat], az = P.az * Math.PI / 180, el = P.el * Math.PI / 180;
+    var Lx = Math.cos(el) * Math.cos(az), Ly = Math.cos(el) * Math.sin(az), Lz = Math.sin(el);
+    var lxy = Math.hypot(Lx, Ly) || 1e-6, sdx = Lx / lxy, sdy = -Ly / lxy, tanE = Lz / lxy;
+    var Hx = Lx, Hy = Ly, Hz = Lz + 1, hl = Math.hypot(Hx, Hy, Hz); Hx /= hl; Hy /= hl; Hz /= hl;
+    var px = img.data, x, y, usePatina = m.patina && P.patina;
+    for (y = 0; y < GH; y++) {
+      for (x = 0; x < GW; x++) {
+        var i = y * GW + x, hz = h[i];
+        var xm = x > 1 ? x - 2 : 0, xp = x < GW - 2 ? x + 2 : GW - 1, ym = y > 1 ? y - 2 : 0, yp = y < GH - 2 ? y + 2 : GH - 1;
+        var dhx = (h[y * GW + xp] - h[y * GW + xm]) / (xp - xm) * HS;
+        var dhy = (h[yp * GW + x] - h[ym * GW + x]) / (yp - ym) * HS;
+        var inv = 1 / Math.sqrt(dhx * dhx + dhy * dhy + 1), nx = -dhx * inv, ny = dhy * inv, nz = inv;
+        var ndl = Math.max(0, nx * Lx + ny * Ly + nz * Lz);
+        var sh = 1, base = hz * HS + 1.2;
+        for (var t = 2; t < 34; t += 1.5) {
+          var sx = Math.round(x + sdx * t), sy = Math.round(y + sdy * t);
+          if (sx < 0 || sy < 0 || sx >= GW || sy >= GH) break;
+          if (h[sy * GW + sx] * HS > base + t * tanE) { sh = 0.45; break; }
+        }
+        var o = i * 4, r, g, b;
+        if (hz < 0.012) {
+          var vx = (x / GW - 0.5), vy = (y / GH - 0.5), vg = 1 - 0.9 * (vx * vx + vy * vy);
+          var k = (0.42 + 0.5 * Lz) * sh * vg;
+          r = 52 * k; g = 48 * k; b = 42 * k;
+        } else {
+          var xl = x > 4 ? x - 4 : 0, xr = x < GW - 5 ? x + 4 : GW - 1, yu = y > 4 ? y - 4 : 0, yd = y < GH - 5 ? y + 4 : GH - 1;
+          var cav = hz - 0.25 * (h[y * GW + xl] + h[y * GW + xr] + h[yu * GW + x] + h[yd * GW + x]);
+          var ao = Math.max(0.55, Math.min(1.05, 1 + cav * 3));
+          var df = (m.amb + ndl * sh * 0.95) * ao;
+          var sp = Math.pow(Math.max(0, nx * Hx + ny * Hy + nz * Hz), m.ex) * m.sp * sh;
+          albedoAt(i);
+          var cr = AR, cg = AG, cb = AB;
+          if (usePatina) {
+            var pa = Math.max(0, Math.min(0.6, -cav * 5));
+            cr += (62 - cr) * pa; cg += (128 - cg) * pa; cb += (106 - cb) * pa;
+          }
+          r = cr * df + m.hi[0] * sp; g = cg * df + m.hi[1] * sp; b = cb * df + m.hi[2] * sp;
+        }
+        px[o] = r > 255 ? 255 : r; px[o + 1] = g > 255 ? 255 : g; px[o + 2] = b > 255 ? 255 : b; px[o + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+
+  /* 角度をつけて見る（高さマップを立体として回す。彫る操作はできない） */
+  var ang = null, actx = null, aimg = null;
+  function renderAngled() {
+    var W2 = 120, H2 = 150;
+    if (!ang) { ang = document.createElement('canvas'); ang.width = W2; ang.height = H2; actx = ang.getContext('2d'); aimg = actx.createImageData(W2, H2); }
+    var m = MAT[P.mat], yaw = P.view * Math.PI / 180, cy = Math.cos(yaw), sy = Math.sin(yaw);
+    var az = P.az * Math.PI / 180, el = P.el * Math.PI / 180;
+    var Lx = Math.cos(el) * Math.cos(az), Ly = Math.cos(el) * Math.sin(az), Lz = Math.sin(el);
+    var Hx = Lx, Hy = Ly, Hz = Lz + 1, hl = Math.hypot(Hx, Hy, Hz); Hx /= hl; Hy /= hl; Hz /= hl;
+    var ex = cy, ez = -sy, dx = -sy, dz = -cy, px = aimg.data;
+    var cx0 = GW / 2, cy0 = GH / 2, cz0 = 20;
+    for (var py = 0; py < H2; py++) {
+      var v = (py + 0.5) / H2 * GH - GH / 2;
+      for (var qx = 0; qx < W2; qx++) {
+        var u = (qx + 0.5) / W2 * GW - GW / 2, o = (py * W2 + qx) * 4;
+        var ox = cx0 + u * ex - dx * 260, oz = cz0 + u * ez - dz * 260, oy = cy0 + v;
+        var hit = false, X = 0, Z = 0, hv = 0, idx = 0;
+        for (var t = 0; t < 520; t += 0.9) {
+          X = ox + dx * t; Z = oz + dz * t;
+          if (X < 0 || X > GW - 1 || oy < 0 || oy > GH - 1 || Z < 0) continue;
+          idx = (oy | 0) * GW + (X | 0); hv = h[idx];
+          if (hv > 0.012 && Z < hv * HS) { hit = true; break; }
+        }
+        var r, g, b;
+        if (!hit) { var vg = 1 - 0.8 * (Math.pow(u / GW, 2) + Math.pow(v / GH, 2)); r = 30 * vg; g = 28 * vg; b = 24 * vg; }
+        else {
+          var xi = X | 0, yi = oy | 0, xm = xi > 0 ? xi - 1 : xi, xp = xi < GW - 1 ? xi + 1 : xi, ym = yi > 0 ? yi - 1 : yi, yp = yi < GH - 1 ? yi + 1 : yi;
+          var dhx = (h[yi * GW + xp] - h[yi * GW + xm]) / (xp - xm) * HS, dhy = (h[yp * GW + xi] - h[ym * GW + xi]) / (yp - ym) * HS;
+          var wall = hv * HS - Z > 1.5, nzv = wall ? 0.12 : 1;
+          var inv = 1 / Math.sqrt(dhx * dhx + dhy * dhy + nzv * nzv), nx = -dhx * inv, ny = dhy * inv, nz = nzv * inv;
+          var ndl = Math.max(0, nx * Lx + ny * Ly + nz * Lz);
+          var df = m.amb + ndl * 0.95, sp = Math.pow(Math.max(0, nx * Hx + ny * Hy + nz * Hz), m.ex) * m.sp;
+          albedoAt(yi * GW + xi);
+          r = AR * df + m.hi[0] * sp; g = AG * df + m.hi[1] * sp; b = AB * df + m.hi[2] * sp;
+        }
+        px[o] = r > 255 ? 255 : r; px[o + 1] = g > 255 ? 255 : g; px[o + 2] = b > 255 ? 255 : b; px[o + 3] = 255;
+      }
+    }
+    actx.putImageData(aimg, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(ang, 0, 0, GW, GH);
+  }
+
+  /* 目安線と筆の輪 */
+  var GUIDES = [['胸の頂点', 0.40], ['胸の下', 0.54], ['ウエスト', 0.70], ['へそ', 0.81]];
+  function drawOverlay() {
+    var w = ov.width, hh = ov.height, k = w / GW;
+    octx.clearRect(0, 0, w, hh);
+    if (P.view > 0) return;
+    if (P.guide) {
+      octx.save();
+      octx.setLineDash([6, 8]); octx.lineWidth = 1;
+      octx.strokeStyle = 'rgba(127,196,168,.55)';
+      octx.beginPath(); octx.moveTo(w / 2, 0); octx.lineTo(w / 2, hh); octx.stroke();
+      octx.strokeStyle = 'rgba(236,230,216,.32)'; octx.fillStyle = 'rgba(236,230,216,.75)';
+      octx.font = Math.round(w * 0.028) + 'px sans-serif';
+      GUIDES.forEach(function (g) {
+        var yy = hh * g[1];
+        octx.beginPath(); octx.moveTo(0, yy); octx.lineTo(w, yy); octx.stroke();
+        octx.fillText(g[0], 6, yy - 4);
+      });
+      octx.restore();
+    }
+    var p = down ? cur : hover;
+    if (p) {
+      octx.save(); octx.lineWidth = 1.5;
+      var paintTool = P.tool === 'paint';
+      octx.strokeStyle = paintTool ? hex(P.cur) : 'rgba(255,255,255,.85)';
+      var pts = [p]; if (P.sym) pts.push({ x: GW - 1 - p.x, y: p.y });
+      pts.forEach(function (q, n) {
+        octx.globalAlpha = n ? 0.45 : 1;
+        octx.beginPath(); octx.arc(q.x * k, q.y * k, P.size * k, 0, Math.PI * 2); octx.stroke();
+        if (paintTool) { octx.strokeStyle = 'rgba(0,0,0,.5)'; octx.setLineDash([3, 4]); octx.beginPath(); octx.arc(q.x * k, q.y * k, P.size * k + 2, 0, Math.PI * 2); octx.stroke(); octx.setLineDash([]); octx.strokeStyle = hex(P.cur); }
+      });
+      octx.restore();
+    }
+  }
+  function fitOverlay() {
+    var r = $('stage').getBoundingClientRect(), s = Math.min(2, window.devicePixelRatio || 1);
+    ov.width = Math.max(200, Math.round(r.width * s)); ov.height = Math.round(ov.width * GH / GW);
+    drawOverlay();
+  }
+  window.addEventListener('resize', fitOverlay);
+
+  /* ループ */
+  function frame() {
+    if (down && cur) {
+      var sp = Math.max(1, P.size * 0.25);
+      if (last) {
+        var dx = cur.x - last.x, dy = cur.y - last.y, len = Math.hypot(dx, dy);
+        if (len > 0.3) {
+          var n = Math.max(1, Math.round(len / sp));
+          for (var s = 1; s <= n; s++) stamp(last.x + dx * s / n, last.y + dy * s / n);
+          last = { x: cur.x, y: cur.y };
+        } else stamp(cur.x, cur.y);
+      } else { stamp(cur.x, cur.y); last = { x: cur.x, y: cur.y }; }
+    }
+    if (dirty) { dirty = false; if (P.view > 0) renderAngled(); else render(); }
+    requestAnimationFrame(frame);
+  }
+
+  /* 操作パネル */
+  var TOOLS = [['raise', '盛る', '足す'], ['carve', '削る', '掘る'], ['smooth', 'ならす', 'なめらか'], ['pinch', 'つまむ', '細い山'], ['cut', '筋', '細い溝'], ['paint', '塗る', 'ぼんやり筆'], ['unpaint', '塗り消し', '色だけ消す']];
+  function drawTools() {
+    var box = $('tools'); box.innerHTML = '';
+    TOOLS.forEach(function (t) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'tool';
+      b.setAttribute('aria-pressed', P.tool === t[0] ? 'true' : 'false');
+      b.innerHTML = t[1] + '<small>' + t[2] + '</small>';
+      b.onclick = function () { P.tool = t[0]; drawTools(); drawOverlay(); };
+      box.appendChild(b);
+    });
+    var u = document.createElement('button'); u.type = 'button'; u.className = 'act'; u.id = 'bUndo'; u.textContent = 'もどす';
+    u.disabled = !undoStack.length; u.onclick = undo; box.appendChild(u);
+  }
+  function chips(boxId, list, key, after) {
+    var box = $(boxId); box.innerHTML = '';
+    list.forEach(function (t) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'chip';
+      b.setAttribute('aria-pressed', P[key] === t[0] ? 'true' : 'false'); b.textContent = t[1];
+      b.onclick = function () { after(t[0]); chips(boxId, list, key, after); };
+      box.appendChild(b);
+    });
+  }
+
+  /* 色パレット */
+  var PAL = [
+    ['ブロンズ', [176, 118, 64]], ['銅', [184, 102, 70]], ['金', [214, 170, 70]], ['銀', [190, 192, 196]], ['漆黒', [34, 32, 32]], ['石膏', [232, 228, 218]], ['テラコッタ', [190, 108, 78]],
+    ['緑青', [82, 150, 128]], ['群青', [47, 111, 181]], ['深紅', [160, 38, 48]], ['若草', [124, 166, 72]], ['紫', [112, 78, 150]], ['桃色', [226, 150, 160]], ['琥珀', [226, 168, 52]]
+  ];
+  /* 色の選び方：色合い・鮮やかさ・明るさ（HSV）。どんな色でも選べる */
+  var HSV = [210, 0.74, 0.71];
+  function hsv2rgb(hh, ss, vv) {
+    var c = vv * ss, hp = (hh % 360) / 60, x = c * (1 - Math.abs(hp % 2 - 1)), m = vv - c, r = 0, g = 0, b = 0;
+    if (hp < 1) { r = c; g = x; } else if (hp < 2) { r = x; g = c; } else if (hp < 3) { g = c; b = x; }
+    else if (hp < 4) { g = x; b = c; } else if (hp < 5) { r = x; b = c; } else { r = c; b = x; }
+    return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
+  }
+  function rgb2hsv(c) {
+    var r = c[0] / 255, g = c[1] / 255, b = c[2] / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn, hh = 0;
+    if (d > 0) {
+      if (mx === r) hh = 60 * (((g - b) / d + 6) % 6); else if (mx === g) hh = 60 * ((b - r) / d + 2); else hh = 60 * ((r - g) / d + 4);
+    }
+    return [hh, mx ? d / mx : 0, mx];
+  }
+  var svc = $('svp'), svx = svc.getContext('2d'), svimg = svx.createImageData(160, 100);
+  function drawSV() {
+    var px = svimg.data, o = 0;
+    for (var y = 0; y < 100; y++) for (var x = 0; x < 160; x++, o += 4) {
+      var c = hsv2rgb(HSV[0], x / 159, 1 - y / 99);
+      px[o] = c[0]; px[o + 1] = c[1]; px[o + 2] = c[2]; px[o + 3] = 255;
+    }
+    svx.putImageData(svimg, 0, 0);
+    var mx = HSV[1] * 159, my = (1 - HSV[2]) * 99;
+    svx.lineWidth = 2; svx.strokeStyle = '#000'; svx.beginPath(); svx.arc(mx, my, 7, 0, 6.2832); svx.stroke();
+    svx.lineWidth = 1.5; svx.strokeStyle = '#fff'; svx.beginPath(); svx.arc(mx, my, 6, 0, 6.2832); svx.stroke();
+  }
+  function setFromHSV() { P.cur = hsv2rgb(HSV[0], HSV[1], HSV[2]); syncColors(true); drawOverlay(); }
+  function svPick(e) {
+    var r = svc.getBoundingClientRect();
+    HSV[1] = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)); HSV[2] = 1 - Math.max(0, Math.min(1, (e.clientY - r.top) / r.height));
+    setFromHSV();
+  }
+  var svDown = false;
+  svc.addEventListener('pointerdown', function (e) { svDown = true; try { svc.setPointerCapture(e.pointerId); } catch (x) {} svPick(e); });
+  svc.addEventListener('pointermove', function (e) { if (svDown) svPick(e); });
+  svc.addEventListener('pointerup', function () { svDown = false; saveSoon(); });
+  svc.addEventListener('pointercancel', function () { svDown = false; });
+
+  function syncColors(fromPicker) {
+    if (!fromPicker) HSV = rgb2hsv(P.cur);
+    $('swCur').style.background = hex(P.cur); $('swBase').style.background = hex(P.base); $('hexCur').textContent = hex(P.cur);
+    $('sHue').value = Math.round(HSV[0]); $('oHue').textContent = Math.round(HSV[0]);
+    drawSV();
+    var box = $('pal'); var sw = box.children;
+    for (var i = 0; i < sw.length; i++) {
+      var c = PAL[i][1];
+      sw[i].setAttribute('aria-pressed', (c[0] === P.cur[0] && c[1] === P.cur[1] && c[2] === P.cur[2]) ? 'true' : 'false');
+    }
+  }
+  function drawPalette() {
+    var box = $('pal'); box.innerHTML = '';
+    PAL.forEach(function (c) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'sw';
+      b.style.background = hex(c[1]); b.setAttribute('aria-label', c[0] + 'を筆の色にする'); b.title = c[0];
+      b.onclick = function () { P.cur = c[1].slice(); syncColors(false); drawOverlay(); saveSoon(); };
+      box.appendChild(b);
+    });
+  }
+
+  $('sSize').oninput = function () { P.size = +this.value; $('oSize').textContent = this.value; drawOverlay(); };
+  $('sStr').oninput = function () { P.str = +this.value; $('oStr').textContent = (+this.value).toFixed(2); };
+  $('sSoft').oninput = function () { P.soft = +this.value; $('oSoft').textContent = (+this.value).toFixed(2); };
+  $('sView').oninput = function () { P.view = +this.value; $('oView').textContent = this.value; dirty = true; drawOverlay(); };
+  $('sAz').oninput = function () { P.az = +this.value; $('oAz').textContent = this.value; dirty = true; };
+  $('sEl').oninput = function () { P.el = +this.value; $('oEl').textContent = this.value; dirty = true; };
+  $('bSym').onclick = function () { P.sym = !P.sym; this.setAttribute('aria-pressed', P.sym); this.textContent = '左右対称 ' + (P.sym ? '入' : '切'); };
+  $('bGuide').onclick = function () { P.guide = !P.guide; this.setAttribute('aria-pressed', P.guide); this.textContent = '目安線 ' + (P.guide ? '入' : '切'); drawOverlay(); };
+  $('bPatina').onclick = function () { P.patina = !P.patina; this.setAttribute('aria-pressed', P.patina); dirty = true; saveSoon(); };
+  $('sHue').oninput = function () { HSV[0] = +this.value; setFromHSV(); };
+  $('sHue').onchange = saveSoon;
+  $('bBase').onclick = function () { pushUndo(); P.base = P.cur.slice(); syncColors(); dirty = true; saveSoon(); toast('地の色を変えました。「もどす」で戻せます。'); };
+  chips('mats', [['metal', '金属'], ['gloss', 'ツヤ'], ['matte', 'マット']], 'mat', function (v) { P.mat = v; dirty = true; saveSoon(); });
+  chips('shapes', [['ref', 'お手本'], ['rough', '荒型'], ['block', '四角い粘土']], 'shape', function (v) {
+    P.shape = v;
+    if (v === 'ref') { makeReference(true); return; }
+    pushUndo(); pt.fill(0); refPristine = false; initShape(v); saveSoon(); toast('最初の形にしました。「もどす」で戻せます。');
+  });
+  function rsl(id, oid, key, fmt) {
+    $(id).oninput = function () { R[key] = +this.value; $(oid).textContent = (+this.value).toFixed(fmt); };
+    $(id).onchange = function () {
+      R[key] = +this.value;
+      if (refPristine) makeReference(false); else toast('「お手本」を押すと、この形で作り直します。');
+    };
+  }
+  rsl('rSize', 'oRSize', 'size', 2); rsl('rOver', 'oROver', 'over', 1); rsl('rGap', 'oRGap', 'gap', 2); rsl('rLift', 'oRLift', 'lift', 2);
+
+  var loaded = load();
+  drawTools(); drawPalette(); syncColors();
+  $('bPatina').setAttribute('aria-pressed', P.patina);
+  chips('mats', [['metal', '金属'], ['gloss', 'ツヤ'], ['matte', 'マット']], 'mat', function (v) { P.mat = v; dirty = true; saveSoon(); });
+  if (!loaded) { P.shape = 'ref'; buildReference(); }
+  chips('shapes', [['ref', 'お手本'], ['rough', '荒型'], ['block', '四角い粘土']], 'shape', function (v) {
+    P.shape = v;
+    if (v === 'ref') { makeReference(true); return; }
+    pushUndo(); pt.fill(0); refPristine = false; initShape(v); saveSoon(); toast('最初の形にしました。「もどす」で戻せます。');
+  });
+  fitOverlay();
+  requestAnimationFrame(frame);
+
+  /* 動作確認用 */
+  window.__dozo = { h: h, pt: pt, P: P, GW: GW, GH: GH, stats: function () { var mx = 0, s = 0, pa = 0; for (var i = 0; i < h.length; i++) { if (h[i] > mx) mx = h[i]; s += h[i]; pa += pt[i * 4 + 3]; } return { max: mx, sum: s, paint: pa }; } };
+})();
+</script>
+
+</body>
+</html>
