@@ -68,7 +68,7 @@ function guidePanel(doc,legacy){
  wrap.setAttribute('aria-label','学習用解説。原資料ではありません');
  wrap.append(make('div','shoko-lesson-label','学習用解説 / TUTORIAL — 原資料ではありません'));
  wrap.append(make('h2','','この事件の論理を読み解く'));
- wrap.append(make('p','shoko-lesson-intro','この枠は学習用の解説です。下の薄い紙面が元の捜査資料です。根拠の番号を押すと、その資料の該当ページへ移動できます。'));
+ wrap.append(make('p','shoko-lesson-intro','この枠は学習用の解説です。上の薄い紙面が元の捜査資料です。根拠の番号を押すと、その資料の該当ページへ移動できます。'));
  wrap.append(make('div','shoko-focus','注目する問い：'+proof.topic));
  const bookNo=Math.max(0,parseInt(doc.id.split('-').at(-1),10)-1);
  wrap.append(make('p','shoko-lesson-intro','この冊子の読み方：'+spec[Math.min(bookNo+1,spec.length-2)]));
@@ -195,10 +195,10 @@ renderReader=function(){
  const page=doc.pages?openBookPage:0,content=doc.pages?doc.pages[page]:doc.body;
  if(mode==='guide'){
   const parts=splitSourceAndCommentary(content);
-  const panel=guidePanel(doc,parts.legacy);if(panel)frame.insertBefore(panel,paper);
-  const divider=make('div','shoko-source-divider');divider.append(make('strong','','原資料 / SOURCE RECORD'),make('span','','ここから下は元の捜査記録です。茶色の下線のみ学習用の表示です。'));
+  const divider=make('div','shoko-source-divider');divider.append(make('strong','','原資料 / SOURCE RECORD'),make('span','','まず、この原資料を読んでください。茶色の下線は注目する用語です。'));
   frame.insertBefore(divider,paper);
   markBody(body,parts.source,guideMarks(doc,parts.source));
+  const panel=guidePanel(doc,parts.legacy);if(panel)frame.insertBefore(panel,paper.nextSibling);
  }else{
   markBody(body,content,(Array.isArray(highlights[doc.id])?highlights[doc.id]:[]).filter(x=>x.page===page).map(x=>({...x,kind:'user'})));
   const tools=lineTools(doc,content,page,body);
