@@ -1,0 +1,2673 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#f2f5f9">
+<title>机上の空論GP | 交通事故シミュレーション</title>
+<style>
+:root {
+  color-scheme: light;
+  --ink: #152237; --muted: #53637a; --line: #dce4ee; --soft: #f2f5f9;
+  --white: #fff; --blue: #124799; --blue-dark: #153568; --pale: #edf4ff;
+  --teal: #08746d; --amber: #935712; --red: #a73146;
+  font-family: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", Meiryo, system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--soft); color: var(--ink); font-size: 16px; }
+button, input, select { font: inherit; color: inherit; }
+button, summary, select, input[type=checkbox] { cursor: pointer; }
+button:focus-visible, summary:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 3px solid #6196ed; outline-offset: 3px;
+}
+button:disabled { opacity: .5; cursor: default; }
+button {
+  background: var(--white); border: 1px solid var(--line); border-radius: 9px;
+  min-height: 40px; padding: 0 13px; font-weight: 720; font-size: .875rem;
+}
+button:hover:not(:disabled) { background: var(--pale); }
+[hidden] { display: none !important; }
+h1,h2,h3,p { margin: 0; }
+.shell { width: min(1152px, calc(100% - 56px)); margin-inline: auto; }
+.topbar { background: var(--white); border-bottom: 1px solid var(--line); }
+.topbar .shell { display:flex; min-height:66px; align-items:center; justify-content:space-between; gap:12px; }
+.identity { display:flex; align-items:center; gap:11px; white-space:nowrap; }
+.brand { font-family: system-ui,sans-serif; font-size:1.48rem; font-weight:790; letter-spacing:-.085em; }
+.brand-mark {
+  width:32px; height:32px; background:#1d4885; border-radius:9px; display:grid; place-items:center;
+}
+.brand-mark::after {
+  content:""; width:18px; height:18px; transform:rotate(-12deg);
+  background:linear-gradient(#baddff,#baddff) center / 4px 100% no-repeat,
+             linear-gradient(#baddff,#baddff) center / 100% 4px no-repeat;
+}
+.identity-caption { border-left:1px solid var(--line); padding-left:12px; font-size:.8125rem; color:var(--muted); }
+.top-actions { display:flex; gap:8px; }
+.primary { background:var(--blue); color:white; border-color:var(--blue); }
+.primary:hover:not(:disabled) { background:#103d82; }
+.download-icon { display:inline-block; width:12px; height:12px; border-bottom:1.5px solid currentColor; position:relative; margin-right:6px; }
+.download-icon::before { content:""; position:absolute; left:5px; top:0; width:1.5px; height:7px; background:currentColor; }
+.download-icon::after { content:""; position:absolute; left:3px; top:3px; width:5px; height:5px; border:solid currentColor; border-width:0 1.5px 1.5px 0; transform:rotate(45deg); }
+main { padding:34px 0 26px; }
+.headline h1 { font-size:clamp(1.65rem,4vw,2.55rem); line-height:1.2; letter-spacing:-.045em; font-weight:800; }
+.headline p { color:var(--muted); margin-top:11px; font-size:.9375rem; line-height:1.65; }
+.tabs { display:flex; gap:5px; width:max-content; max-width:100%; margin:24px 0 16px; border:1px solid var(--line); border-radius:11px; padding:4px; background:#e7edf5; }
+.tabs button { min-width:116px; border-color:transparent; background:transparent; color:#44566e; }
+.tabs button[aria-pressed=true] { border-color:#d9e2ef; background:#fff; color:var(--blue-dark); box-shadow:0 1px 3px #14294710; }
+.card { background:white; border:1px solid var(--line); border-radius:14px; box-shadow:0 2px 5px #0f254807; }
+.diagram { overflow:hidden; }
+.diagram-head { display:flex; align-items:center; justify-content:space-between; padding:13px 17px; gap:10px; }
+.diagram-head h2, .section-title { font-size:1.04rem; font-weight:780; }
+.diagram-head p { font-size:.8125rem; color:var(--muted); margin-top:3px; }
+.zoom { display:flex; align-items:center; gap:5px; }
+.zoom button { padding:0 10px; min-height:36px; }
+.zoom output { min-width:44px; text-align:center; color:var(--muted); font-size:.8125rem; font-variant-numeric:tabular-nums; }
+canvas { display:block; width:100%; height:clamp(370px, 38vw, 482px); background:#101a2a; touch-action:none; cursor:grab; }
+canvas.dragging { cursor:grabbing; }
+canvas.drawing { cursor:crosshair; }
+.legend { display:flex; flex-wrap:wrap; gap:7px 20px; align-items:center; min-height:46px; padding:8px 17px; color:var(--muted); font-size:.8125rem; }
+.legend-item { display:inline-flex; gap:7px; align-items:center; }
+.swatch { width:10px; height:10px; border-radius:3px; background:var(--swatch); display:inline-block; }
+.line-sample { width:19px; border-top:2px dashed #657890; }
+.scene-toolbar { padding:9px 17px; background:#f7f9fc; border-top:1px solid var(--line); display:flex; flex-wrap:wrap; gap:7px; align-items:center; }
+.scene-toolbar button[aria-pressed=true] { border-color:#7ca0d7; background:var(--pale); color:var(--blue-dark); }
+.note { display:flex; align-items:baseline; gap:8px; font-size:.8125rem; line-height:1.65; color:var(--muted); margin:14px 1px; }
+.note::before { content:"ⓘ"; color:var(--blue); font-weight:700; }
+.result { margin:15px 0 22px; padding:15px 17px; }
+.metrics { display:grid; grid-template-columns:1.15fr repeat(3,1fr); gap:12px; }
+.metric { min-width:0; border-left:1px solid var(--line); padding-left:14px; }
+.metric:first-child { padding-left:0; border:0; }
+.metric dt { color:var(--muted); font-size:.8125rem; line-height:1.4; }
+.metric dd { margin:4px 0 0; font-size:1.3rem; font-weight:760; font-variant-numeric:tabular-nums; }
+.metric dd small { font-size:.78rem; font-weight:630; }
+.bad { color:var(--red); }
+.good { color:var(--teal); }
+.result-details { margin-top:12px; color:var(--muted); font-size:.875rem; line-height:1.7; }
+.result-details summary { width:max-content; font-weight:700; color:var(--blue); }
+.result-details p { margin-top:5px; line-height:1.65; }
+.section-title { margin:0 0 10px 1px; }
+.inputs { display:grid; grid-template-columns:1fr 1fr .84fr; gap:12px; }
+.input-card { padding:15px; min-width:0; }
+.input-card h3, .scene-control h3 { font-size:.96rem; margin-bottom:12px; }
+.car-badge { display:inline-grid; width:24px; height:24px; place-items:center; border-radius:6px; margin-right:7px; font:750 .88rem system-ui; }
+.car-a { color:#065a53; background:#cdf7ed; }
+.car-b { color:#77450d; background:#ffe9c8; }
+.fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 12px; align-items:start; }
+.road-fields { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.field { display:grid; gap:5px; min-width:0; color:var(--muted); font-size:.875rem; }
+.field-label { display:flex; align-items:center; justify-content:space-between; min-height:20px; gap:4px; }
+.number { display:flex; align-items:center; position:relative; }
+.number input, select {
+  border:1px solid #d0daea; border-radius:8px; width:100%; min-height:41px;
+  background:#fff; color:var(--ink); padding:5px 9px; font-size:1rem; min-width:0;
+}
+.number input { appearance:textfield; font-variant-numeric:tabular-nums; }
+.number input::-webkit-inner-spin-button, .number input::-webkit-outer-spin-button { appearance:none; }
+.number.has-unit input { padding-right:var(--unit-width); }
+.number-unit { position:absolute; right:8px; font-size:.75rem; pointer-events:none; color:var(--muted); }
+select { appearance:none; padding-right:29px; background:
+  linear-gradient(45deg,transparent 50%,#546887 50%) calc(100% - 14px) 52% / 5px 5px no-repeat,
+  linear-gradient(135deg,#546887 50%,transparent 50%) calc(100% - 9px) 52% / 5px 5px no-repeat, #fff; }
+.position { margin-top:11px; }
+.position summary { color:var(--blue); font-size:.8125rem; font-weight:680; }
+.position .fields { margin-top:8px; }
+.input-card .field + .field { margin-top:0; }
+.toggles { display:flex; flex-wrap:wrap; gap:12px 18px; margin:10px 0 0; }
+.check { display:inline-flex; gap:6px; align-items:center; color:var(--muted); font-size:.875rem; line-height:1.45; }
+.check input { width:16px; height:16px; accent-color:var(--blue); margin:0; flex:none; }
+.quick-mu { font-size:.8125rem; margin-top:10px; color:var(--muted); }
+.advanced { display:grid; gap:9px; margin-top:15px; }
+.advanced > details { overflow:hidden; }
+.advanced > details > summary { min-height:48px; padding:12px 15px; font-weight:720; font-size:.9rem; list-style:none; display:flex; align-items:center; gap:9px; }
+.advanced > details > summary::-webkit-details-marker { display:none; }
+.advanced > details > summary::before { content:""; width:7px; height:7px; transform:rotate(-45deg); border:solid #59718e; border-width:0 1.5px 1.5px 0; margin-right:3px; }
+.advanced > details[open] > summary::before { transform:rotate(45deg); }
+.advanced-body { border-top:1px solid var(--line); padding:14px 15px; }
+.advanced-body .check { margin-bottom:12px; }
+.advanced-body .toggles .check { margin:0; }
+.advanced .subgrid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.advanced small, .obstacle-help, .mode-copy { font-size:.875rem; color:var(--muted); line-height:1.65; }
+.advanced h3 { font-size:.9rem; margin-bottom:9px; }
+.obstacle-row { padding:12px 0; border-bottom:1px solid var(--line); }
+.obstacle-row:first-child { padding-top:0; }
+.obstacle-row:last-child { border:0; }
+.obstacle-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.obstacle-head button { min-height:32px; }
+.obstacle-fields { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.mode-panel { padding:15px; margin:15px 0; }
+.mode-panel .section-title { margin-left:0; }
+.mode-copy { margin:8px 0; }
+.scene-controls { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.scene-control { background:#f7f9fc; border:1px solid var(--line); border-radius:10px; padding:12px; min-width:0; }
+.scene-control .fields { margin-top:9px; }
+.scene-conditions { margin:13px 0; }
+.scene-conditions .fields { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.lock { color:var(--muted); border:0; background:transparent; font-weight:400; min-height:23px; min-width:27px; padding:0 3px; line-height:1; }
+.lock[aria-pressed=true] { background:#dae8fc; }
+.candidates { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:8px; }
+.candidate { display:grid; text-align:left; align-content:start; gap:4px; padding:9px; line-height:1.45; }
+.candidate[aria-pressed=true] { background:var(--pale); border-color:#85a7da; }
+.candidate small { color:var(--muted); }
+.trace-info { font-size:.875rem; margin-top:5px; }
+.action-row { display:flex; justify-content:flex-end; padding-top:12px; }
+.status { position:fixed; right:18px; bottom:18px; z-index:3; max-width:calc(100% - 36px); border-radius:9px; background:#183457; padding:9px 13px; color:white; font-size:.875rem; box-shadow:0 4px 15px #112b4540; }
+@media(max-width:800px) {
+  .shell { width:calc(100% - 36px); }
+  .inputs { grid-template-columns:1fr 1fr; }
+  .surface-card { grid-column:1 / -1; }
+}
+@media(max-width:600px) {
+  .shell { width:calc(100% - 28px); }
+  .topbar .shell { min-height:59px; }
+  .top-actions { gap:5px; }
+  .top-actions button { padding:0 7px; min-height:36px; font-size:.75rem; }
+  .identity { gap:7px; }
+  .identity-caption { display:none; }
+  .brand-mark { width:28px; height:28px; }
+  main { padding-top:24px; }
+  .headline p { font-size:.875rem; }
+  .tabs { width:100%; margin:17px 0 12px; }
+  .tabs button { min-width:0; flex:1; font-size:.875rem; min-height:40px; padding:0 4px; }
+  .diagram-head { padding:10px; }
+  .diagram-head h2 { font-size:.9375rem; }
+  .diagram-head p { font-size:.75rem; }
+  .zoom { gap:3px; }
+  .zoom button { min-width:28px; padding:0 5px; min-height:33px; }
+  .zoom output { min-width:36px; font-size:.75rem; }
+  canvas { height:clamp(266px, 81vw, 395px); }
+  .legend { padding:8px 10px; gap:6px 13px; font-size:.75rem; }
+  .result { padding:12px; margin:12px 0 18px; }
+  .metrics { grid-template-columns:1fr 1fr; gap:11px; }
+  .metric:nth-child(odd) { padding-left:0; border:0; }
+  .metric dd { font-size:1.1rem; }
+  .inputs { display:flex; flex-direction:column; }
+  .input-card { padding:12px; }
+  .advanced .subgrid, .scene-controls, .candidates { grid-template-columns:1fr; }
+  .scene-conditions .fields, .road-fields, .obstacle-fields { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+</style>
+<script>window.IZ_BASE = {pos: 'bl'};</script>
+<!--IZ-GAME-BASE:START-->
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black">
+<script>
+/* iz-game-base v1 — 全ゲーム共通の基本設計
+ *  1. iOS の「ダブルタップで拡大」「ピンチ拡大」を無効にする
+ *  2. 全画面表示の切り替え（Fullscreen API。iPhone は非対応のため「ホーム画面に追加」を案内）
+ *  3. 画面の向き（自動 / 縦 / 横）の選択（Androidは全画面時に固定、非対応端末は回転の案内を出す）
+ * 各作品の <head> へ tools/apply_game_base.py が埋め込む（作品は1ファイル完結のため、外部読み込みはしない）。
+ * 位置を変えたいときは、この前に window.IZ_BASE={pos:'tr'|'tl'|'br'|'bl'} を書く。
+ */
+(function () {
+  'use strict';
+  if (window.__izGameBase) return;
+  window.__izGameBase = 1;
+  var D = document, W = window, DE = D.documentElement;
+  var KEY = 'izGameBase.orient';
+  var cfg = W.IZ_BASE || {};
+  /* 表示文言。作品側で window.IZ_BASE={lang:'en'} を書くと英語になる（既定は日本語） */
+  var T = cfg.lang === 'en'
+    ? { set: 'Display settings', scr: 'SCREEN', fs: 'Go full screen', fsOff: 'Exit full screen', ori: 'ORIENTATION', auto: 'Auto', port: 'Portrait', land: 'Landscape', close: 'Close', nAuto: 'Follows your device orientation.', nFix: 'Locks the orientation in full screen. If it cannot be locked, please rotate your device.', rot: function (m) { return '\u21bb Please turn your device to ' + (m === 'land' ? 'landscape' : 'portrait'); } }
+    : { set: '表示設定', scr: '画面', fs: '全画面にする', fsOff: '全画面をやめる', ori: '向き', auto: '自動', port: '縦', land: '横', close: '閉じる', nAuto: '端末の向きに合わせます。', nFix: '全画面のときに向きを固定します。固定できない場合は、端末を回してください。', rot: function (m) { return '\u21bb 端末を' + (m === 'land' ? '横' : '縦') + '向きにしてください'; } };
+
+  /* ---------- 1. 拡大の無効化 ---------- */
+  function fixViewport() {
+    var m = D.querySelector('meta[name="viewport"]');
+    if (!m) {
+      m = D.createElement('meta');
+      m.name = 'viewport';
+      (D.head || DE).appendChild(m);
+      m.content = 'width=device-width,initial-scale=1,viewport-fit=cover';
+    }
+    var c = m.getAttribute('content') || '';
+    c = c.replace(/(^|,)\s*(maximum-scale|minimum-scale|user-scalable)\s*=\s*[^,]*/gi, '').replace(/^,/, '');
+    m.setAttribute('content', c + ',maximum-scale=1,user-scalable=no');
+  }
+  fixViewport();
+
+  var st = D.createElement('style');
+  st.textContent = 'html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}';
+  (D.head || DE).appendChild(st);
+
+  // iOS Safari はピンチを gesture イベントで受ける
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (t) {
+    D.addEventListener(t, function (e) { e.preventDefault(); }, { passive: false });
+  });
+  // 2本指の拡大（scale が 1 から動いたとき）だけを止める。マルチタッチ操作そのものは妨げない
+  D.addEventListener('touchmove', function (e) {
+    if (e.touches && e.touches.length > 1 && e.scale && e.scale !== 1) e.preventDefault();
+  }, { passive: false });
+  // ダブルタップ拡大の保険。ボタン・入力欄などは click を壊さないよう除外し、CSS の touch-action に任せる
+  var lastEnd = 0;
+  var SKIP = 'input,textarea,select,button,a,label,summary,video,audio,[contenteditable],[role="button"],[data-iz-base-ui]';
+  D.addEventListener('touchend', function (e) {
+    var now = Date.now();
+    var t = e.target;
+    var skip = t && t.closest && t.closest(SKIP);
+    if (!skip && now - lastEnd < 350 && e.cancelable) e.preventDefault();
+    lastEnd = now;
+  }, { passive: false });
+
+  /* ---------- 2・3. 全画面と向き ---------- */
+  var fsEl = DE;
+  var fsReq = fsEl.requestFullscreen || fsEl.webkitRequestFullscreen || fsEl.msRequestFullscreen;
+  var fsOk = !!fsReq && (D.fullscreenEnabled !== false) && (D.webkitFullscreenEnabled !== false);
+  function isFs() { return !!(D.fullscreenElement || D.webkitFullscreenElement); }
+  function standalone() {
+    return !!(navigator.standalone || (W.matchMedia && W.matchMedia('(display-mode: standalone)').matches));
+  }
+  function enterFs() {
+    try {
+      var p = fsReq.call(fsEl, { navigationUI: 'hide' });
+      if (p && p.catch) p.catch(function () {});
+      return p;
+    } catch (e) { return null; }
+  }
+  function exitFs() {
+    var f = D.exitFullscreen || D.webkitExitFullscreen || D.msExitFullscreen;
+    try { var p = f && f.call(D); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+  }
+  function lockApi() { return W.screen && screen.orientation && screen.orientation.lock; }
+  // 変更できない機能は表示しない（iPhone は両方とも不可なので、ボタン自体を出さない）
+  var orOk = !!lockApi() && (navigator.maxTouchPoints > 0);
+  var uiOk = fsOk || orOk;
+  function applyOrient(mode, wantFs) {
+    // 戻り値は使わず、結果は banner() が画面の向きで判定する
+    if (mode === 'auto') {
+      try { if (W.screen && screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (e) {}
+      return;
+    }
+    var tgt = mode === 'land' ? 'landscape' : 'portrait';
+    function lock() {
+      if (!lockApi()) return;
+      try { var p = screen.orientation.lock(tgt); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+    }
+    if (isFs() || standalone()) lock();
+    else if (wantFs && fsOk) {
+      var p = enterFs();
+      if (p && p.then) p.then(lock, function () {}); else lock();
+    }
+  }
+  var mode = 'auto';
+  try { mode = localStorage.getItem(KEY) || 'auto'; } catch (e) {}
+  if ((mode !== 'land' && mode !== 'port') || !orOk) mode = 'auto';
+
+  /* ---------- UI ---------- */
+  var ui, btn, panel, banner, bT;
+  var pos = cfg.pos || 'tr';
+  function build() {
+    if (ui || !D.body || !uiOk) return;
+    var css = D.createElement('style');
+    css.textContent =
+      '#izb{position:fixed;z-index:2147483646;font:12px/1.4 "Hiragino Sans","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;color:#fff;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}' +
+      '#izb *{box-sizing:border-box}' +
+      '#izb.tr{top:calc(6px + env(safe-area-inset-top,0px));right:calc(6px + env(safe-area-inset-right,0px))}' +
+      '#izb.tl{top:calc(6px + env(safe-area-inset-top,0px));left:calc(6px + env(safe-area-inset-left,0px))}' +
+      '#izb.br{bottom:calc(6px + env(safe-area-inset-bottom,0px));right:calc(6px + env(safe-area-inset-right,0px))}' +
+      '#izb.bl{bottom:calc(6px + env(safe-area-inset-bottom,0px));left:calc(6px + env(safe-area-inset-left,0px))}' +
+      '#izb button{font:inherit;color:inherit;border:0;margin:0;cursor:pointer;-webkit-appearance:none;appearance:none}' +
+      '#izb .iz-b{width:30px;height:30px;border-radius:8px;background:rgba(20,20,24,.45);border:1px solid rgba(255,255,255,.25);font-size:16px;line-height:28px;text-align:center;padding:0;opacity:.45;transition:opacity .2s}' +
+      '#izb .iz-b:active,#izb.open .iz-b{opacity:1}' +
+      '#izb .iz-p{display:none;position:absolute;width:210px;padding:10px;border-radius:10px;background:rgba(18,18,22,.94);border:1px solid rgba(255,255,255,.22);box-shadow:0 4px 18px rgba(0,0,0,.5)}' +
+      '#izb.open .iz-p{display:block}' +
+      '#izb.tr .iz-p,#izb.tl .iz-p{top:36px}#izb.br .iz-p,#izb.bl .iz-p{bottom:36px}' +
+      '#izb.tr .iz-p,#izb.br .iz-p{right:0}#izb.tl .iz-p,#izb.bl .iz-p{left:0}' +
+      '#izb .iz-h{font-size:11px;color:#aab;margin:0 0 5px}' +
+      '#izb .iz-r{display:flex;gap:4px;margin-bottom:9px}' +
+      '#izb .iz-r button{flex:1;padding:8px 0;border-radius:7px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);font-size:13px}' +
+      '#izb .iz-r button.on{background:#e8c13a;color:#111;border-color:#e8c13a;font-weight:700}' +
+      '#izb .iz-r button[disabled]{opacity:.4}' +
+      '#izb .iz-n{font-size:10.5px;color:#9a9aa8;margin:-3px 0 6px}' +
+      '#izb .iz-x{display:block;width:100%;padding:6px 0;border-radius:7px;background:transparent;border:1px solid rgba(255,255,255,.18);font-size:12px;color:#ccd}' +
+      '#izbn{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:2147483645;padding:7px 14px;border-radius:18px;background:rgba(18,18,22,.88);border:1px solid rgba(255,255,255,.25);color:#fff;font:13px/1.3 "Hiragino Sans","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;pointer-events:none;display:none;white-space:nowrap}';
+    (D.head || DE).appendChild(css);
+
+    ui = D.createElement('div');
+    ui.id = 'izb';
+    ui.className = pos;
+    ui.setAttribute('data-iz-base-ui', '');
+    ui.innerHTML =
+      '<button type="button" class="iz-b" tabindex="-1" aria-label="' + T.set + '">⛶</button>' +
+      '<div class="iz-p">' +
+      (fsOk ? '<div class="iz-h">' + T.scr + '</div><div class="iz-r"><button type="button" tabindex="-1" data-fs="1">' + T.fs + '</button></div>' : '') +
+      (orOk ? '<div class="iz-h">' + T.ori + '</div><div class="iz-r" id="izor"><button type="button" tabindex="-1" data-o="auto">' + T.auto + '</button><button type="button" tabindex="-1" data-o="port">' + T.port + '</button><button type="button" tabindex="-1" data-o="land">' + T.land + '</button></div><div class="iz-n" id="izon"></div>' : '') +
+      '<button type="button" class="iz-x" tabindex="-1" data-close="1">' + T.close + '</button>' +
+      '</div>';
+    D.body.appendChild(ui);
+    btn = ui.querySelector('.iz-b');
+    panel = ui.querySelector('.iz-p');
+
+    banner = D.createElement('div');
+    banner.id = 'izbn';
+    D.body.appendChild(banner);
+
+    // UI 上の操作はゲーム側へ伝えない
+    ['touchstart', 'touchend', 'pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'dblclick', 'keydown', 'keyup'].forEach(function (t) {
+      ui.addEventListener(t, function (e) { e.stopPropagation(); });
+    });
+    ui.addEventListener('click', function (e) {
+      var t = e.target.closest('button');
+      if (!t) return;
+      if (t === btn) { ui.classList.toggle('open'); refresh(); }
+      else if (t.getAttribute('data-close')) ui.classList.remove('open');
+      else if (t.getAttribute('data-fs')) { isFs() ? exitFs() : enterFs(); setTimeout(refresh, 250); }
+      else if (t.getAttribute('data-o')) setMode(t.getAttribute('data-o'), true);
+      if (t.blur) t.blur();
+    });
+    refresh();
+  }
+  function setMode(m, fromUser) {
+    mode = m;
+    try { localStorage.setItem(KEY, m); } catch (e) {}
+    applyOrient(m, fromUser);
+    refresh();
+    setTimeout(banner_, 400);
+  }
+  function refresh() {
+    if (!ui) return;
+    var fb = ui.querySelector('[data-fs]');
+    if (fb) fb.textContent = isFs() ? T.fsOff : T.fs;
+    var bs = ui.querySelectorAll('[data-o]');
+    for (var i = 0; i < bs.length; i++) bs[i].classList.toggle('on', bs[i].getAttribute('data-o') === mode);
+    var on = ui.querySelector('#izon');
+    if (on) on.textContent = mode === 'auto' ? T.nAuto : T.nFix;
+  }
+  function banner_() {
+    if (!banner) return;
+    var land = W.innerWidth > W.innerHeight;
+    var bad = (mode === 'land' && !land) || (mode === 'port' && land);
+    if (bad) {
+      banner.textContent = T.rot(mode);
+      banner.style.display = 'block';
+      clearTimeout(bT);
+      bT = setTimeout(function () { banner.style.display = 'none'; }, 6000);
+    } else banner.style.display = 'none';
+  }
+  function onChange() { refresh(); setTimeout(banner_, 300); }
+  D.addEventListener('fullscreenchange', onChange);
+  D.addEventListener('webkitfullscreenchange', onChange);
+  W.addEventListener('orientationchange', onChange);
+  W.addEventListener('resize', function () { setTimeout(banner_, 300); });
+
+  function init() {
+    build();
+    if (mode !== 'auto') { applyOrient(mode, false); setTimeout(banner_, 600); }
+  }
+  if (D.body) init(); else D.addEventListener('DOMContentLoaded', init);
+
+  W.IZBase = { fullscreen: function (on) { on === false ? exitFs() : enterFs(); }, orientation: setMode, get mode() { return mode; } };
+})();
+</script>
+<!--IZ-GAME-BASE:END-->
+</head>
+<body>
+<header class="topbar">
+  <div class="shell">
+    <div class="identity"><span class="brand-mark" aria-hidden="true"></span><span class="brand">sofia</span><span class="identity-caption">事故再現ツール</span></div>
+    <div class="top-actions">
+      <button id="export-settings" type="button"><span class="download-icon" aria-hidden="true"></span>設定を保存</button>
+      <button id="export-png" class="primary" type="button"><span class="download-icon" aria-hidden="true"></span>PNGを保存</button>
+    </div>
+  </div>
+</header>
+<main class="shell">
+  <header class="headline">
+    <h1>机上の空論GP</h1>
+    <p>信号のない十字路で、車両2台の出会い頭事故を再現・検証します。</p>
+  </header>
+  <nav class="tabs" aria-label="シミュレーションのモード">
+    <button type="button" data-mode="forward" aria-pressed="true">検証</button>
+    <button type="button" data-mode="inverse" aria-pressed="false">逆算</button>
+    <button type="button" data-mode="scene" aria-pressed="false">現場推定</button>
+  </nav>
+  <section class="card diagram" aria-labelledby="diagram-title">
+    <div class="diagram-head">
+      <div><h2 id="diagram-title">交差点の平面図</h2><p id="diagram-hint">車両をドラッグして初期位置を調整</p></div>
+      <div class="zoom" aria-label="図面の表示倍率">
+        <button type="button" data-action="zoom-out" aria-label="縮小">−</button>
+        <output id="zoom-value">100%</output>
+        <button type="button" data-action="zoom-in" aria-label="拡大">＋</button>
+        <button type="button" data-action="zoom-fit" aria-label="図面全体を表示">全体</button>
+      </div>
+    </div>
+    <canvas id="plan" aria-label="交差点と車両の軌跡を示す平面図">初期位置や停止位置は下の入力欄で設定できます。</canvas>
+    <div id="legend" class="legend" aria-label="図面の凡例"></div>
+    <div id="scene-toolbar" class="scene-toolbar" hidden>
+      <button type="button" data-action="scene-move" aria-pressed="true">停止地点を移動</button>
+      <button type="button" data-action="scene-trace-a" aria-pressed="false">車両Aの痕跡</button>
+      <button type="button" data-action="scene-trace-b" aria-pressed="false">車両Bの痕跡</button>
+      <button type="button" data-action="scene-clear" disabled>痕跡を消去</button>
+    </div>
+  </section>
+  <section id="forward-result" class="card result" aria-label="検証結果" aria-live="polite"></section>
+  <section id="inverse-panel" class="card mode-panel" aria-labelledby="inverse-title" hidden>
+    <h2 class="section-title" id="inverse-title">回避条件の逆算</h2>
+    <div id="inverse-controls" class="fields"></div>
+    <div id="inverse-result" class="result-details" aria-live="polite"></div>
+  </section>
+  <section id="scene-panel" class="card mode-panel" aria-labelledby="scene-title" hidden>
+    <h2 class="section-title" id="scene-title">現場の痕跡と停止位置</h2>
+    <p class="mode-copy">痕跡は走行順に図面をなぞって描きます。停止地点と車体の向き、衝突後に移動した方向を入力すると候補が更新されます。鍵で固定した値は推定中も保持されます。</p>
+    <div id="scene-controls"></div>
+    <div id="scene-result" aria-live="polite"></div>
+    <div class="action-row"><button type="button" data-action="seed-scene">検証の衝突結果を停止位置に入力</button></div>
+  </section>
+  <section aria-labelledby="settings-title">
+    <h2 id="settings-title" class="section-title">シミュレーション設定</h2>
+    <div id="basic" class="inputs"></div>
+    <div class="advanced" id="advanced">
+      <details class="card" data-section="cars"><summary>車両の詳細</summary><div class="advanced-body" id="advanced-cars"></div></details>
+      <details class="card" data-section="surface"><summary>路面と衝突</summary><div class="advanced-body" id="advanced-surface"></div></details>
+      <details class="card" data-section="roads"><summary>道路形状と規制</summary><div class="advanced-body" id="advanced-roads"></div></details>
+      <details class="card" data-section="visibility"><summary>見通しと遮蔽物</summary><div class="advanced-body" id="advanced-visibility"></div></details>
+    </div>
+    <div class="action-row"><button type="button" data-action="reset">初期設定に戻す</button></div>
+  </section>
+  <p class="note" id="disclaimer">この数値は理論上の計算であり、実際の事故を完全に再現するものではない。</p>
+</main>
+<div id="message" class="status" role="status" hidden></div>
+<script>
+"use strict";
+/* World distances are metres, times are seconds and angles are radians clockwise from east. */
+const SofiaPhysics = (() => {
+  const GRAVITY = 9.80665;
+  const EPS = 1e-7;
+  const DIRECTIONS = {
+    E: { x: 1, y: 0, angle: 0 },
+    W: { x: -1, y: 0, angle: Math.PI },
+    S: { x: 0, y: 1, angle: Math.PI / 2 },
+    N: { x: 0, y: -1, angle: -Math.PI / 2 }
+  };
+  const WORLD_AXES = [{ x: 1, y: 0 }, { x: 0, y: 1 }];
+
+  const dot = (a, b) => a.x * b.x + a.y * b.y;
+  const cross = (a, b) => a.x * b.y - a.y * b.x;
+  const delta = (a, b) => ({ x: a.x - b.x, y: a.y - b.y });
+  const scale = (v, k) => ({ x: v.x * k, y: v.y * k });
+  const normalTo = (v) => ({ x: -v.y, y: v.x });
+  const unitAt = (angle) => ({ x: Math.cos(angle), y: Math.sin(angle) });
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  const finite = (v, fallback) => Number.isFinite(v) ? v : fallback;
+  const norm = (v) => Math.hypot(v.x, v.y);
+
+  function halfProjection(body, axis, forward = unitAt(body.angle)) {
+    return (Math.abs(dot(forward, axis)) * body.length +
+      Math.abs(dot(normalTo(forward), axis)) * body.width) / 2;
+  }
+
+  function overlap(a, b) {
+    const facingA = unitAt(a.angle);
+    const facingB = unitAt(b.angle);
+    const axes = [facingA, normalTo(facingA), facingB, normalTo(facingB)];
+    const offset = delta(b, a);
+    let best = null;
+    for (const axis of axes) {
+      const spacing = dot(offset, axis);
+      const depth = halfProjection(a, axis, facingA) + halfProjection(b, axis, facingB) -
+        Math.abs(spacing);
+      if (depth < -EPS) return null;
+      if (!best || depth < best.depth) {
+        best = { depth, normal: scale(axis, spacing < 0 ? -1 : 1) };
+      }
+    }
+    return best;
+  }
+
+  function support(body, direction, tangentDirection) {
+    const forward = unitAt(body.angle);
+    const side = normalTo(forward);
+    let normal = dot(body, direction);
+    let low = dot(body, tangentDirection);
+    let high = low;
+    for (const [axis, radius] of [[forward, body.length / 2], [side, body.width / 2]]) {
+      const normalPart = dot(axis, direction);
+      const tangentPart = dot(axis, tangentDirection) * radius;
+      normal += Math.abs(normalPart) * radius;
+      if (Math.abs(normalPart) > EPS) {
+        low += Math.sign(normalPart) * tangentPart;
+        high += Math.sign(normalPart) * tangentPart;
+      } else {
+        low -= Math.abs(tangentPart);
+        high += Math.abs(tangentPart);
+      }
+    }
+    return { normal, low, high };
+  }
+
+  function contactPoint(a, b, normal) {
+    const tangent = normalTo(normal);
+    const sideA = support(a, normal, tangent);
+    const sideB = support(b, scale(normal, -1), tangent);
+    const along = (sideA.normal - sideB.normal) / 2;
+    const across = (Math.max(sideA.low, sideB.low) + Math.min(sideA.high, sideB.high)) / 2;
+    return { x: normal.x * along + tangent.x * across, y: normal.y * along + tangent.y * across };
+  }
+
+  function applyImpact(a, b, normal, location, restitution) {
+    const leverA = delta(location, a);
+    const leverB = delta(location, b);
+    const contactA = normalTo(leverA);
+    const contactB = normalTo(leverB);
+    const relative = {
+      x: b.v.x + b.omega * contactB.x - a.v.x - a.omega * contactA.x,
+      y: b.v.y + b.omega * contactB.y - a.v.y - a.omega * contactA.y
+    };
+    const closing = Math.max(0, -dot(relative, normal));
+    if (closing <= EPS) return { relative, closing };
+    const momentA = cross(leverA, normal);
+    const momentB = cross(leverB, normal);
+    const impulse = (1 + restitution) * closing /
+      (1 / a.mass + 1 / b.mass + momentA ** 2 / a.inertia + momentB ** 2 / b.inertia);
+    a.v = delta(a.v, scale(normal, impulse / a.mass));
+    b.v = delta(b.v, scale(normal, -impulse / b.mass));
+    a.omega -= impulse * momentA / a.inertia;
+    b.omega += impulse * momentB / b.inertia;
+    return { relative, closing };
+  }
+
+  function sweptContact(a, b, spans, dt) {
+    let entry = -Infinity;
+    let exit = Infinity;
+    let normal = null;
+    const offset = delta(b, a);
+    const change = delta(scale(b.forward, spans[1]), scale(a.forward, spans[0]));
+    for (const axis of WORLD_AXES) {
+      const center = dot(offset, axis);
+      const radius = halfProjection(a, axis, a.forward) + halfProjection(b, axis, b.forward);
+      const motion = dot(change, axis);
+      if (Math.abs(motion) <= EPS) {
+        if (Math.abs(center) > radius + EPS) return null;
+        continue;
+      }
+
+      // With orthogonal approaches a single body moves along each world axis.
+      const mover = Math.abs(dot(a.forward, axis)) > .5 ? a : b;
+      const travel = spans[mover === a ? 0 : 1];
+      const acceleration = mover.decel;
+      const timeAt = (fraction) => {
+        if (fraction <= 0 || fraction >= 1 || acceleration <= EPS ||
+            Math.abs(motion) + EPS < travel) return dt * fraction;
+        const distance = travel * fraction;
+        const speedAt = Math.sqrt(Math.max(0, mover.speed ** 2 - 2 * acceleration * distance));
+        return 2 * distance / (mover.speed + speedAt);
+      };
+      const edge = motion > 0 ? -radius : radius;
+      const start = timeAt((edge - center) / motion);
+      const end = timeAt((-edge - center) / motion);
+      const edgeNormal = scale(axis, Math.sign(edge));
+      if (start > entry + EPS) {
+        entry = start;
+        normal = edgeNormal;
+      } else if (Math.abs(start - entry) <= EPS) {
+        // Simultaneous orthogonal edges define a corner contact.
+        normal = scale({ x: normal.x + edgeNormal.x, y: normal.y + edgeNormal.y }, Math.SQRT1_2);
+      }
+      exit = Math.min(exit, end);
+      if (entry > exit + EPS) return null;
+    }
+
+    if (entry > dt + EPS || exit < -EPS) return null;
+    if (!normal || entry < -EPS) {
+      const overlapNow = overlap(a, b);
+      return overlapNow && overlapNow.depth > EPS ?
+        { dt: 0, normal: overlapNow.normal, initialOverlap: true } : null;
+    }
+    return { dt: clamp(entry, 0, dt), normal, initialOverlap: false };
+  }
+
+  function bodyFor(car, fallback) {
+    const forward = DIRECTIONS[car.dir] || DIRECTIONS[fallback];
+    const mass = Math.max(1, finite(car.mass, 1400));
+    const length = Math.max(.1, finite(car.length, 4.4));
+    const width = Math.max(.1, finite(car.width, 1.75));
+    return {
+      x: finite(car.x, 0), y: finite(car.y, 0), angle: forward.angle, forward,
+      speed: Math.max(0, finite(car.speed, 0)) / 3.6,
+      mass, length, width, inertia: mass * (length ** 2 + width ** 2) / 12,
+      tireRadius: .35 * Math.hypot(length, width),
+      reaction: Math.max(0, finite(car.reaction, .8)),
+      brakeFraction: clamp(finite(car.brake, 1), 0, 1),
+      obeysStop: !!car.obeysStop, discovery: Number.isFinite(car.discovery) ? car.discovery : null,
+      seen: null, brake: null, path: [], passed: false, decel: 0, omega: 0,
+      brakingDistance: 0, travelDistance: 0, slideDistance: 0
+    };
+  }
+
+  function roadBorders(s) {
+    return (s.obstacles || []).filter((obstacle) => obstacle.w > 0 && obstacle.h > 0)
+      .map(({ x, y, w, h }) => ({ min: [x - w / 2, y - h / 2], max: [x + w / 2, y + h / 2] }));
+  }
+
+  function segmentBlocked(source, target, obstacle) {
+    let enter = 0;
+    let leave = 1;
+    for (let i = 0; i < 2; i++) {
+      const origin = source[i];
+      const movement = target[i] - origin;
+      if (Math.abs(movement) <= EPS) {
+        if (origin < obstacle.min[i] || origin > obstacle.max[i]) return false;
+        continue;
+      }
+      const first = (obstacle.min[i] - origin) / movement;
+      const last = (obstacle.max[i] - origin) / movement;
+      enter = Math.max(enter, Math.min(first, last));
+      leave = Math.min(leave, Math.max(first, last));
+      if (enter > leave) return false;
+    }
+    return true;
+  }
+
+  function poseAt(body, time) {
+    const speed = body.passed ? 0 : body.speed;
+    const distance = (speed - .5 * body.decel * time) * time;
+    return { x: body.x + body.forward.x * distance, y: body.y + body.forward.y * distance };
+  }
+
+  function visible(body, other, obstacles, ahead = 0) {
+    const driver = poseAt(body, ahead);
+    if (body.discovery !== null) return -dot(driver, body.forward) <= body.discovery + EPS;
+    if (other.passed) return false;
+    if (!obstacles.length) return true;
+    const target = poseAt(other, ahead);
+    const side = normalTo(body.forward);
+    const otherSide = normalTo(other.forward);
+    const eye = [
+      driver.x + body.forward.x * body.length * .22 + side.x * body.width * .22,
+      driver.y + body.forward.y * body.length * .22 + side.y * body.width * .22
+    ];
+    for (const [longitudinal, lateral] of [[0, 0], [-.48, -.48], [-.48, .48], [.48, -.48], [.48, .48]]) {
+      const point = [
+        target.x + other.forward.x * other.length * longitudinal + otherSide.x * other.width * lateral,
+        target.y + other.forward.y * other.length * longitudinal + otherSide.y * other.width * lateral
+      ];
+      if (!obstacles.some((obstacle) => segmentBlocked(eye, point, obstacle))) return true;
+    }
+    return false;
+  }
+
+  function snapshot(body, time, phase) {
+    return { x: body.x, y: body.y, angle: body.angle, t: time, phase };
+  }
+
+  function pushPose(body, time, phase) {
+    const previous = body.path[body.path.length - 1];
+    if (previous && Math.abs(previous.t - time) <= EPS && previous.phase === phase) return;
+    body.path.push(snapshot(body, time, phase));
+  }
+
+  function phaseBefore(body) {
+    if (body.speed <= EPS) return 'stop';
+    return body.brake ? 'brake' : 'approach';
+  }
+
+  function signTime(body, grip) {
+    if (!body.signActive || body.brake || body.passed || body.speed <= EPS) return Infinity;
+    const remaining = -dot(body, body.forward) - body.signCenterDistance;
+    const rate = grip * body.brakeFraction;
+    const stopping = rate > EPS ? body.speed ** 2 / (2 * rate) : 0;
+    return Math.max(0, (remaining - stopping) / body.speed);
+  }
+
+  function advance(body, dt) {
+    if (body.passed || body.speed <= EPS) return;
+    const distance = (body.speed - .5 * body.decel * dt) * dt;
+    body.x += body.forward.x * distance;
+    body.y += body.forward.y * distance;
+    body.travelDistance += distance;
+    if (body.brake) body.brakingDistance += distance;
+    body.speed = Math.max(0, body.speed - body.decel * dt);
+    if (body.speed <= EPS) {
+      body.speed = 0;
+      body.decel = 0;
+    }
+  }
+
+  function energy(body) {
+    return .5 * (body.mass * dot(body.v, body.v) + body.inertia * body.omega ** 2);
+  }
+
+  function activeSlide(body) {
+    return norm(body.v) > .002 || Math.abs(body.omega) > .002;
+  }
+
+  function slide(body, grip, dt) {
+    const speed = norm(body.v);
+    const spin = body.omega * body.tireRadius;
+    const combined = Math.hypot(speed, spin);
+    if (!activeSlide(body)) {
+      body.v = { x: 0, y: 0 };
+      body.omega = 0;
+      return;
+    }
+    const newSpeed = Math.max(0, speed - grip * speed / combined * dt);
+    const newSpin = Math.max(0, Math.abs(body.omega) -
+      grip * body.mass * body.tireRadius * Math.abs(spin) / (body.inertia * combined) * dt);
+    const distance = (speed + newSpeed) / 2 * dt;
+    if (speed > EPS) {
+      body.x += body.v.x / speed * distance;
+      body.y += body.v.y / speed * distance;
+      body.v = scale(body.v, newSpeed / speed);
+    }
+    body.angle += (body.omega + Math.sign(body.omega) * newSpin) / 2 * dt;
+    body.omega = Math.sign(body.omega) * newSpin;
+    body.slideDistance += distance;
+  }
+
+  function settle(bodies, start, grip, sampleInterval) {
+    const [a, b] = bodies;
+    let time = start;
+    let last = start;
+    const timeLimit = grip > EPS ? 180 : 8;
+    while ((activeSlide(a) || activeSlide(b)) && time - start < timeLimit - EPS) {
+      const contactSpeed = norm(a.v) + norm(b.v) +
+        Math.abs(a.omega) * a.tireRadius + Math.abs(b.omega) * b.tireRadius;
+      const step = Math.min(.04, Math.max(.003, .15 * Math.min(a.width, b.width) / (contactSpeed + EPS)),
+        timeLimit - (time - start));
+      slide(a, grip, step);
+      slide(b, grip, step);
+      time += step;
+      const contact = overlap(a, b);
+      if (contact && contact.depth > EPS) {
+        applyImpact(a, b, contact.normal, contactPoint(a, b, contact.normal), 0);
+        const correction = contact.depth + 1e-5;
+        const correctionA = scale(contact.normal, b.mass / (a.mass + b.mass) * correction);
+        const correctionB = scale(contact.normal, a.mass / (a.mass + b.mass) * correction);
+        a.x -= correctionA.x;
+        a.y -= correctionA.y;
+        b.x += correctionB.x;
+        b.y += correctionB.y;
+      }
+      if (time - last >= sampleInterval - EPS) {
+        for (const body of bodies) pushPose(body, time, activeSlide(body) ? 'slide' : 'stop');
+        last = time;
+      }
+    }
+    return { time, limited: activeSlide(a) || activeSlide(b) };
+  }
+
+  function output(body, time, hit) {
+    const endedStopped = hit ? !activeSlide(body) : body.speed <= EPS;
+    const phase = hit ? (endedStopped ? 'stop' : 'slide') : phaseBefore(body);
+    pushPose(body, time, phase);
+    return {
+      path: body.path, seen: body.seen, brake: body.brake, end: snapshot(body, time, phase),
+      stopped: endedStopped, passed: body.passed, brakingDistance: body.brakingDistance,
+      travelDistance: body.travelDistance + body.slideDistance, slideDistance: body.slideDistance,
+      conflictDistance: body.initialConflict
+    };
+  }
+
+  function simulate(s, options = {}) {
+    const bodies = [bodyFor(s.cars[0], 'E'), bodyFor(s.cars[1], 'S')];
+    const [a, b] = bodies;
+    const grip = Math.max(0, finite(s.mu, .72)) * GRAVITY;
+    const restitution = clamp(finite(s.restitution, .2), 0, 1);
+    const obstacles = roadBorders(s);
+    const roads = s.roads || {};
+    const horizon = Math.max(.1, finite(options.maxTime, 60));
+    const sampleInterval = options.fast ? .65 : .1;
+    for (const [body, other] of [[a, b], [b, a]]) {
+      const alongX = body.forward.x !== 0;
+      const crossingWidth = (alongX ? roads.y : roads.x)?.width ?? 8;
+      body.signCenterDistance = crossingWidth / 2 + 1 + body.length / 2;
+      body.signActive = !!(alongX ? roads.stopX : roads.stopY) && body.obeysStop &&
+        -dot(body, body.forward) >= body.signCenterDistance - EPS;
+      const lateralAxis = body.forward.x * other.forward.x === 0 && body.forward.y * other.forward.y === 0 ?
+        dot(other, body.forward) : 0;
+      body.conflictCenter = lateralAxis;
+      body.conflictRadius = (body.length + other.width) / 2;
+      body.initialConflict = Math.max(0, lateralAxis - dot(body, body.forward) - body.conflictRadius);
+      body.passed = dot(body, body.forward) > lateralAxis + body.conflictRadius + 12;
+      pushPose(body, 0, phaseBefore(body));
+    }
+
+    let t = 0;
+    let sampled = 0;
+    let collision = null;
+    while (t < horizon - EPS) {
+      let duration = Math.min(.04, horizon - t);
+      for (let i = 0; i < bodies.length; i++) {
+        const body = bodies[i];
+        const other = bodies[1 - i];
+        if (body.passed || body.speed <= EPS) continue;
+        if (!body.seen && visible(body, other, obstacles)) {
+          body.seen = snapshot(body, t, phaseBefore(body));
+          pushPose(body, t, phaseBefore(body));
+        }
+        const reactionTime = body.seen ? body.seen.t + body.reaction - t : Infinity;
+        const stopTime = signTime(body, grip);
+        if (!body.brake && Math.min(reactionTime, stopTime) <= EPS) {
+          body.brake = { ...snapshot(body, t, 'brake'), reason: stopTime <= reactionTime ? 'sign' : 'reaction' };
+          body.decel = grip * body.brakeFraction;
+          pushPose(body, t, 'brake');
+        }
+        if (!body.brake) duration = Math.min(duration, reactionTime, stopTime);
+        if (body.decel > EPS) duration = Math.min(duration, body.speed / body.decel);
+      }
+
+      for (let i = 0; i < bodies.length; i++) {
+        const body = bodies[i];
+        const other = bodies[1 - i];
+        if (body.seen || body.passed || body.speed <= EPS ||
+            !visible(body, other, obstacles, duration)) continue;
+        let low = 0;
+        let high = duration;
+        for (let search = 0; search < 14; search++) {
+          const middle = (low + high) / 2;
+          if (visible(body, other, obstacles, middle)) high = middle;
+          else low = middle;
+        }
+        duration = Math.min(duration, Math.max(high, EPS * 10));
+      }
+
+      const spans = bodies.map((body) => body.passed ? 0 :
+        (body.speed - .5 * body.decel * duration) * duration);
+      const event = sweptContact(a, b, spans, duration);
+      if (event) duration = event.dt;
+      for (const body of bodies) advance(body, duration);
+      t += duration;
+
+      if (event) {
+        for (const body of bodies) {
+          pushPose(body, t, phaseBefore(body));
+          body.v = scale(body.forward, body.passed ? 0 : body.speed);
+        }
+        const location = contactPoint(a, b, event.normal);
+        const preVelocity = bodies.map((body) => body.v);
+        const beforeEnergy = energy(a) + energy(b);
+        const impact = applyImpact(a, b, event.normal, location, restitution);
+        const lostEnergy = Math.max(0, beforeEnergy - energy(a) - energy(b));
+        collision = {
+          ...location, t, angleA: a.angle, angleB: b.angle,
+          deltaV: norm(impact.relative) * 3.6, closingSpeed: impact.closing * 3.6,
+          energy: lostEnergy, before: preVelocity.map((v) => norm(v) * 3.6),
+          after: bodies.map((body) => norm(body.v) * 3.6), preVelocity,
+          postVelocity: bodies.map((body) => body.v), angularVelocity: bodies.map((body) => body.omega),
+          vehicleDeltaV: bodies.map((body, i) => norm(delta(body.v, preVelocity[i])) * 3.6),
+          poses: bodies.map((body) => snapshot(body, t, 'slide')), normal: event.normal,
+          initialOverlap: event.initialOverlap && t < EPS
+        };
+        for (const body of bodies) pushPose(body, t, activeSlide(body) ? 'slide' : 'stop');
+        break;
+      }
+
+      for (const body of bodies) {
+        const left = dot(body, body.forward) > body.conflictCenter + body.conflictRadius + 12;
+        const justPassed = left && !body.passed;
+        if (justPassed) {
+          body.passed = true;
+          body.decel = 0;
+        }
+        if (justPassed || (body.speed === 0 && body.path.at(-1).phase !== 'stop') ||
+            (!body.passed && body.speed > 0 && t - sampled >= sampleInterval - EPS)) {
+          pushPose(body, t, phaseBefore(body));
+        }
+      }
+      if (t - sampled >= sampleInterval - EPS) sampled = t;
+      if (bodies.every((body) => body.passed || body.speed <= EPS)) break;
+    }
+
+    let limited = !collision && bodies.some((body) => !body.passed && body.speed > EPS);
+    if (collision && !options.fast) {
+      const motion = settle(bodies, t, grip, sampleInterval);
+      t = motion.time;
+      limited = motion.limited;
+    }
+    return { collision, cars: bodies.map((body) => output(body, t, Boolean(collision))), duration: t, limited };
+  }
+
+  return { simulate, overlap };
+})();
+
+function simulate(s, options) {
+  return SofiaPhysics.simulate(s, options);
+}
+function solveInverse(s, carIndex, key) {
+  const driver = s.cars[carIndex];
+  const other = s.cars[1 - carIndex];
+  const axis = driver.dir === 'E' || driver.dir === 'W' ? 'x' : 'y';
+  const sign = driver.dir === 'E' || driver.dir === 'S' ? 1 : -1;
+  const startDistance = Math.max(0, -driver[axis] * sign);
+  const conflictEdge = other[axis] - sign * (driver.length + other.width) / 2;
+  const gapAt = position => (conflictEdge - position[axis]) * sign;
+  const search = {
+    speed: { min: 0, max: 160, unit: 'km/h', highest: true },
+    distance: { min: 0, max: startDistance, unit: 'm', highest: false },
+    mu: { min: 0.05, max: 1.2, unit: '', highest: false },
+    reaction: { min: 0, max: 4, unit: '秒', highest: true },
+    discovery: { min: 0, max: startDistance, unit: 'm', highest: false }
+  }[key];
+  if (!search) {
+    return { value: null, unit: '', detail: '逆算する項目を選んでください。', scenario: null, result: null, alternatives: [] };
+  }
+
+  const unit = search.unit;
+  const format = value => Number(value.toFixed(2)).toLocaleString('ja-JP');
+  const measure = value => unit ? format(value) + ' ' + unit : format(value);
+  const fast = { fast: true };
+  const behaviors = {
+    stop: '対象車が交錯域の手前で停止',
+    'target-first': '対象車が先に通過',
+    'other-first': '相手車が先に通過',
+    'other-stop': '相手車が交錯域の手前で停止',
+    clear: '両車の位置関係によって回避'
+  };
+
+  function thisScenario(value) {
+    if (key === 'mu') return { ...s, mu: value };
+    const changeField = key === 'distance' ? 'discovery' : key;
+    return {
+      ...s,
+      cars: s.cars.map((car, index) => index === carIndex ? { ...car, [changeField]: value } : car)
+    };
+  }
+
+  function crossingTime(record, vehicle, counterpart, mu, exit) {
+    const course = vehicle.dir === 'E' || vehicle.dir === 'W' ? 'x' : 'y';
+    const direction = vehicle.dir === 'E' || vehicle.dir === 'S' ? 1 : -1;
+    const half = (vehicle.length + counterpart.width) / 2;
+    const marker = counterpart[course] + direction * half * (exit ? 1 : -1);
+    const distance = (marker - vehicle[course]) * direction;
+    if (distance <= 0) return 0;
+    const speed = vehicle.speed / 3.6;
+    if (speed <= 0) return Infinity;
+    const acceleration = 9.80665 * mu * vehicle.brake;
+    const afterBrake = record.brake ? (marker - record.brake[course]) * direction : null;
+    if (afterBrake === null || afterBrake <= 0 || acceleration <= 0) return distance / speed;
+    const squared = speed ** 2 - 2 * acceleration * afterBrake;
+    if (squared < -0.000001) return Infinity;
+    return record.brake.t + 2 * afterBrake / (speed + Math.sqrt(Math.max(0, squared)));
+  }
+
+  function runTrial(value) {
+    const scenario = thisScenario(value);
+    const result = simulate(scenario, fast);
+    if (result.collision || result.limited) {
+      return { value, scenario, kind: result.collision ? 'collision' : 'undetermined' };
+    }
+    const ours = result.cars[carIndex];
+    const theirs = result.cars[1 - carIndex];
+    if (ours.end.phase === 'stop' && gapAt(ours.end) >= -0.001) {
+      return { value, scenario, kind: 'stop' };
+    }
+    const trialDriver = scenario.cars[carIndex];
+    const trialOther = scenario.cars[1 - carIndex];
+    const ourEntry = crossingTime(ours, trialDriver, trialOther, scenario.mu, false);
+    const theirEntry = crossingTime(theirs, trialOther, trialDriver, scenario.mu, false);
+    const ourExit = crossingTime(ours, trialDriver, trialOther, scenario.mu, true);
+    const theirExit = crossingTime(theirs, trialOther, trialDriver, scenario.mu, true);
+    if (Number.isFinite(ourExit) && ourExit <= theirEntry + 0.00002) {
+      const otherStoppedBeforeEntry = !Number.isFinite(theirEntry) && theirs.end.phase === 'stop';
+      return { value, scenario, kind: otherStoppedBeforeEntry ? 'other-stop' : 'target-first' };
+    }
+    if (Number.isFinite(theirExit) && theirExit <= ourEntry + 0.00002) {
+      return { value, scenario, kind: 'other-first' };
+    }
+    return { value, scenario, kind: 'clear' };
+  }
+
+  const requiredAcceleration = 9.80665 * s.mu * driver.brake;
+  const initialSpeed = driver.speed / 3.6;
+  const requiredDistance = initialSpeed === 0 ? 0
+    : requiredAcceleration > 0 ? initialSpeed ** 2 / (2 * requiredAcceleration) : null;
+
+  if (key === 'distance' && initialSpeed === 0) {
+    return {
+      value: 0, unit, detail: '対象車は初期状態で停止しています。',
+      scenario: s, result: simulate(s), alternatives: []
+    };
+  }
+
+  if (key === 'distance' && requiredDistance === null) {
+    return {
+      value: null,
+      unit,
+      detail: '現在の摩擦係数とブレーキ強度では、走行中の車を停止させる有限の制動距離は求まりません。',
+      scenario: s,
+      result: simulate(s),
+      alternatives: []
+    };
+  }
+
+  // A crossing can have multiple disjoint collision-free ranges. Sample first,
+  // then refine each transition against the same forward model.
+  const trials = new Map();
+  function evaluate(value) {
+    if (!trials.has(value)) trials.set(value, runTrial(value));
+    return trials.get(value);
+  }
+
+  const steps = search.max > search.min ? 64 : 0;
+  const values = new Set(Array.from({ length: steps + 1 }, (_, index) =>
+    steps ? search.min + (search.max - search.min) * index / steps : search.min
+  ));
+  const control = key === 'mu' ? s.mu : driver[key === 'distance' ? 'discovery' : key];
+  if (Number.isFinite(control) && control >= search.min && control <= search.max) values.add(control);
+  const samples = Array.from(values).sort((a, b) => a - b).map(evaluate);
+  const uncertainty = samples.some(sample => sample.kind === 'undetermined');
+  const safe = sample => sample.kind !== 'collision' && sample.kind !== 'undetermined';
+  const stopping = sample => sample.kind === 'stop';
+
+  function refine(a, b, accepts) {
+    let left = a;
+    let right = b;
+    const keepLeft = accepts(left);
+    for (let index = 0; index < 14 && right.value - left.value > 0.00001; index++) {
+      const mid = evaluate((left.value + right.value) / 2);
+      if (accepts(mid) === keepLeft) left = mid;
+      else right = mid;
+    }
+    return keepLeft ? left : right;
+  }
+
+  function findBands(accepts) {
+    const bands = [];
+    for (let index = 0; index < samples.length; index++) {
+      if (!accepts(samples[index])) continue;
+      const first = index;
+      while (index + 1 < samples.length && accepts(samples[index + 1])) index++;
+      const last = index;
+      const a = first ? refine(samples[first - 1], samples[first], accepts) : samples[first];
+      const b = last + 1 < samples.length
+        ? refine(samples[last], samples[last + 1], accepts) : samples[last];
+      const kinds = new Set([a.kind, ...samples.slice(first, last + 1).map(sample => sample.kind), b.kind]);
+      bands.push({ a, b, kinds });
+    }
+    return bands;
+  }
+
+  const safeBands = findBands(safe);
+  const stoppingBands = findBands(stopping);
+  const relevantEndpoint = bands => {
+    const band = search.highest ? bands[bands.length - 1] : bands[0];
+    return band ? (search.highest ? band.b : band.a) : null;
+  };
+  const safePoint = relevantEndpoint(safeBands);
+  const stopPoint = relevantEndpoint(stoppingBands);
+  const alternatives = safeBands.map(band => ({
+    min: band.a.value,
+    max: band.b.value,
+    unit,
+    kind: band.kinds.size === 1 ? band.a.kind : 'mixed',
+    detail: [...band.kinds].map(kind => behaviors[kind]).join('、')
+  }));
+  const stopLimit = stopPoint ? { value: stopPoint.value, unit } : null;
+  const scope = measure(search.min) + '〜' + measure(search.max);
+  const resolution = uncertainty
+    ? '計算時間内に判定しきれない条件を除いています。'
+    : '探索刻みより狭い区間は見落とす場合があります。';
+
+  if (key === 'distance') {
+    const record = simulate(s, fast).cars[carIndex];
+    const reactionDistance = initialSpeed * driver.reaction;
+    let detail = '初速 ' + format(driver.speed) + ' km/h からの制動距離です。相手の発見から反応時間中に進む距離は約 ' +
+      format(reactionDistance) + ' m です。';
+    if (record.brake) {
+      const available = gapAt(record.brake);
+      if (available < 0) detail += ' 現在の条件では交錯域に入ってから制動を始めます。';
+      else detail += ' 現在の制動開始地点から交錯域の手前までは約 ' + format(available) + ' m です。';
+    } else {
+      detail += ' 現在の条件では計算中に制動を開始していません。';
+    }
+    const scenario = stopPoint?.scenario ?? s;
+    const result = simulate(scenario);
+    const stopForSign = stopPoint && result.cars[carIndex].brake?.reason === 'sign';
+    if (stopForSign) {
+      detail += ' 一時停止規制に合わせた制動で交錯域の手前に停止します。';
+    } else if (stopPoint) {
+      detail += ' 手前で停止するには、交差点中心の約 ' + format(stopPoint.value) + ' m 手前までの発見が必要です。';
+    } else {
+      detail += ' 現在の初期位置からは、手前で停止できる発見地点を確認できませんでした。';
+    }
+    return {
+      value: requiredDistance, unit, detail, scenario, result,
+      alternatives: [], discoveryLimit: stopPoint && !stopForSign ? stopPoint.value : null
+    };
+  }
+
+  if (!safePoint) {
+    return {
+      value: null,
+      unit,
+      detail: scope + 'で衝突しない条件を確認できませんでした。' + resolution,
+      scenario: s,
+      result: simulate(s),
+      alternatives
+    };
+  }
+
+  const boundary = search.highest ? search.max : search.min;
+  const atBound = Math.abs(safePoint.value - boundary) < 0.00001;
+  const directionLabel = search.highest ? '上限' : '下限';
+  let detail = '探索範囲 ' + scope + 'で衝突しない' + directionLabel + 'は約 ' +
+    measure(safePoint.value) + ' です。' + behaviors[safePoint.kind] + 'する条件です。';
+  if (atBound) detail += ' 探索範囲の端でも回避しています。';
+  if (stopPoint && Math.abs(stopPoint.value - safePoint.value) > 0.001) {
+    detail += ' 対象車が交錯域の手前で停止する' + directionLabel + 'は約 ' + measure(stopPoint.value) + ' です。';
+  }
+  if (key === 'mu') detail += ' 路面の摩擦係数は両車に適用しています。';
+  if (key === 'discovery') detail += ' 距離は交差点の中心から測ります。';
+  detail += ' ' + resolution;
+  return {
+    value: safePoint.value,
+    unit,
+    detail,
+    scenario: safePoint.scenario,
+    result: simulate(safePoint.scenario),
+    alternatives,
+    stopLimit,
+    atBound
+  };
+}
+const estimateScene = (() => {
+  const gravity = 9.80665;
+  const maxSpeed = 160;
+  const carKeys = ['a', 'b'];
+  const bounds = [[-.98, .98], [.05, 1.2], [0, 1], [0, maxSpeed], [0, maxSpeed], [0, 1], [-1, 1]];
+  const directions = { E: [1, 0], W: [-1, 0], N: [0, -1], S: [0, 1] };
+  const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
+  const gap = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const sq = value => value * value;
+  const angleDifference = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
+  const lerp = (a, b, fraction) => a + (b - a) * fraction;
+
+  function traceGeometry(input) {
+    const raw = [];
+    for (const point of input || []) {
+      if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) continue;
+      if (!raw.length || gap(raw.at(-1), point) >= .08) raw.push(point);
+    }
+    if (raw.length < 2) return null;
+
+    const cumulative = [0];
+    for (let i = 1; i < raw.length; i++) cumulative.push(cumulative[i - 1] + gap(raw[i - 1], raw[i]));
+    const sampleCount = clamp(Math.ceil(cumulative.at(-1) / .65) + 1, 2, 180);
+    const samples = [];
+    let segment = 1;
+    for (let i = 0; i < sampleCount; i++) {
+      const position = cumulative.at(-1) * i / (sampleCount - 1);
+      while (cumulative[segment] < position && segment < cumulative.length - 1) segment++;
+      const fraction = (position - cumulative[segment - 1]) / (cumulative[segment] - cumulative[segment - 1]);
+      samples.push({ x: lerp(raw[segment - 1].x, raw[segment].x, fraction),
+        y: lerp(raw[segment - 1].y, raw[segment].y, fraction) });
+    }
+
+    // Keep the endpoints and damp the small kinks introduced by touch sampling.
+    const points = samples.map((point, i) => {
+      if (i === 0 || i === samples.length - 1) return point;
+      return { x: (samples[i - 1].x + 2 * point.x + samples[i + 1].x) / 4,
+        y: (samples[i - 1].y + 2 * point.y + samples[i + 1].y) / 4 };
+    });
+    const lengths = points.slice(1).map((point, i) => gap(point, points[i]));
+    const length = lengths.reduce((total, step) => total + step, 0);
+    if (length < .25) return null;
+
+    const curvatures = points.map((b, i) => {
+      if (i === 0 || i === points.length - 1) return 0;
+      const a = points[Math.max(0, i - 2)];
+      const c = points[Math.min(i + 2, points.length - 1)];
+      const cross = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+      const sides = gap(a, b) * gap(b, c) * gap(a, c);
+      return sides > .02 ? 2 * Math.abs(cross) / sides : 0;
+    });
+    let lowerSqPerMu = 0;
+    let totalCurvature = 0;
+    for (let i = lengths.length - 1; i >= 0; i--) {
+      const curvature = (curvatures[i] + curvatures[i + 1]) / 2;
+      const distance = lengths[i];
+      totalCurvature += curvature * distance;
+      // q = v², dq/dx = 2 sqrt((μg)² − (κq)²) while tracing backward.
+      if (curvature < 1e-5) {
+        lowerSqPerMu += 2 * gravity * distance;
+        continue;
+      }
+      const cap = gravity / curvature;
+      if (lowerSqPerMu < cap) {
+        const phase = Math.asin(lowerSqPerMu / cap) + 2 * curvature * distance;
+        lowerSqPerMu = cap * Math.sin(Math.min(Math.PI / 2, phase));
+      }
+    }
+
+    const tangent = (a, b) => {
+      const norm = gap(a, b);
+      return norm > .01 ? { x: (b.x - a.x) / norm, y: (b.y - a.y) / norm } : { x: 0, y: 0 };
+    };
+    const first = points[0];
+    const last = points.at(-1);
+    const offset = Math.min(3, points.length - 1);
+    return { points, first, last, length, lowerSqPerMu,
+      radius: totalCurvature > .009 ? length / totalCurvature : null,
+      firstTangent: tangent(first, points[offset]), lastTangent: tangent(points.at(-1 - offset), last) };
+  }
+
+  function offsetPoint(point, tangent, distance, phase) {
+    return { x: point.x + tangent.x * distance, y: point.y + tangent.y * distance, phase };
+  }
+
+  function contactGeometry(cars, axis, phase, contactFraction) {
+    const [a, b] = cars;
+    const [aDirection, bDirection] = cars.map(car => directions[car.dir]);
+    const sideX = (a.length + b.width) / 2;
+    const sideY = (a.width + b.length) / 2;
+    const positions = [{ x: 0, y: a.y, angle: Math.atan2(aDirection[1], aDirection[0]) },
+      { x: b.x, y: 0, angle: Math.atan2(bDirection[1], bDirection[0]) }];
+    const [first, second] = positions;
+
+    if (axis === 0) {
+      first.x = second.x - aDirection[0] * sideX;
+      second.y = first.y + phase * sideY;
+      const minY = Math.max(first.y - a.width / 2, second.y - b.length / 2);
+      const maxY = Math.min(first.y + a.width / 2, second.y + b.length / 2);
+      return { positions, impact: { x: first.x + aDirection[0] * a.length / 2,
+        y: lerp(minY, maxY, .5 + contactFraction * .43) }, nx: aDirection[0], ny: 0 };
+    }
+
+    first.x = second.x + phase * sideX;
+    second.y = first.y - bDirection[1] * sideY;
+    const minX = Math.max(first.x - a.length / 2, second.x - b.width / 2);
+    const maxX = Math.min(first.x + a.length / 2, second.x + b.width / 2);
+    return { positions, impact: { x: lerp(minX, maxX, .5 + contactFraction * .43),
+      y: second.y + bDirection[1] * b.length / 2 }, nx: 0, ny: -bDirection[1] };
+  }
+
+  function traceApproach(trace, position, direction, car) {
+    if (!trace) return false;
+    const deltaX = trace.last.x - trace.first.x;
+    const deltaY = trace.last.y - trace.first.y;
+    const progress = deltaX * direction[0] + deltaY * direction[1];
+    const endX = trace.last.x - position.x;
+    const endY = trace.last.y - position.y;
+    const endProgress = endX * direction[0] + endY * direction[1];
+    const endAcross = Math.abs(endX * direction[1] - endY * direction[0]);
+    return progress > trace.length * .4 && endProgress <= car.length * .55 && endAcross <= car.width * 1.6;
+  }
+
+  function pointToSegmentDistance(point, a, b) {
+    const x = b.x - a.x;
+    const y = b.y - a.y;
+    const magnitude = x * x + y * y;
+    if (magnitude < .0001) return gap(point, a);
+    const fraction = clamp(((point.x - a.x) * x + (point.y - a.y) * y) / magnitude, 0, 1);
+    return Math.hypot(point.x - a.x - x * fraction, point.y - a.y - y * fraction);
+  }
+
+  function momentumFit(cars, carData, contact, speed, mu, restitution, tangency) {
+    const { positions, impact, nx, ny } = contact;
+    const tx = -ny;
+    const ty = nx;
+    const [a, b] = carData;
+    const [aSpeed, bSpeed] = speed;
+    const aRx = impact.x - positions[0].x;
+    const aRy = impact.y - positions[0].y;
+    const bRx = impact.x - positions[1].x;
+    const bRy = impact.y - positions[1].y;
+    const aCrossN = aRx * ny - aRy * nx;
+    const bCrossN = bRx * ny - bRy * nx;
+    const aCrossT = aRx * ty - aRy * tx;
+    const bCrossT = bRx * ty - bRy * tx;
+    const linear = 1 / cars[0].mass + 1 / cars[1].mass;
+    const nn = linear + sq(aCrossN) / a.inertia + sq(bCrossN) / b.inertia;
+    const tt = linear + sq(aCrossT) / a.inertia + sq(bCrossT) / b.inertia;
+    const nt = aCrossN * aCrossT / a.inertia + bCrossN * bCrossT / b.inertia;
+    const relX = b.direction[0] * bSpeed - a.direction[0] * aSpeed;
+    const relY = b.direction[1] * bSpeed - a.direction[1] * aSpeed;
+    const targetN = -(1 + restitution) * (relX * nx + relY * ny);
+    const targetT = -(relX * tx + relY * ty);
+    if (targetN < 1e-4) return null;
+
+    const stuckTangent = (targetT * nn - targetN * nt) / (nn * tt - nt * nt);
+    const friction = .65;
+    const lower = -friction * targetN / (nn - friction * nt);
+    const upper = friction * targetN / (nn + friction * nt);
+    const tangent = clamp(stuckTangent, lower, upper) * tangency;
+    const normal = (targetN - nt * tangent) / nn;
+    const impulseX = normal * nx + tangent * tx;
+    const impulseY = normal * ny + tangent * ty;
+    const omega = [-(normal * aCrossN + tangent * aCrossT) / a.inertia,
+      (normal * bCrossN + tangent * bCrossT) / b.inertia];
+    const predictedStops = cars.map((car, i) => {
+      const { direction, radius } = carData[i];
+      const sign = i === 0 ? -1 : 1;
+      const vx = direction[0] * speed[i] + sign * impulseX / car.mass;
+      const vy = direction[1] * speed[i] + sign * impulseY / car.mass;
+      // A single friction budget decelerates translation and rotation together.
+      const duration = Math.hypot(vx, vy, omega[i] * radius) / (gravity * mu);
+      const { x, y, angle } = positions[i];
+      return { x: x + vx * duration / 2, y: y + vy * duration / 2,
+        angle: angleDifference(angle + omega[i] * duration / 2, 0),
+        heading: Math.hypot(vx, vy) > .05 ? Math.atan2(vy, vx) : angle };
+    });
+    return predictedStops;
+  }
+
+  function halton(index, base) {
+    let result = 0;
+    for (let fraction = 1 / base; index > 0; fraction /= base) {
+      result += fraction * (index % base);
+      index = Math.floor(index / base);
+    }
+    return result;
+  }
+
+  return function estimateScene(s, scene) {
+    const cars = s.cars;
+    const carData = cars.map(car => ({
+      direction: directions[car.dir],
+      radius: Math.hypot(car.length, car.width) / Math.sqrt(12),
+      inertia: car.mass * (sq(car.length) + sq(car.width)) / 12
+    }));
+    const locks = scene.locks || {};
+    const evidence = cars.map((_, i) => scene.stopEnabled?.[i] ? scene.stops?.[i] : null);
+    const geometries = cars.map((_, i) => traceGeometry(scene.traces?.[i]));
+    const traces = geometries.map((trace, i) => {
+      if (!trace) return null;
+      const lower = Math.sqrt(trace.lowerSqPerMu * s.mu) * 3.6;
+      const startExtension = clamp(lower / 3.6 * cars[i].reaction, 2, 22);
+      const endExtension = clamp(trace.length * .35, 2, 10);
+      return { length: trace.length, lower, radius: trace.radius, route: [
+        offsetPoint(trace.first, trace.firstTangent, -startExtension, 'approach'),
+        ...trace.points.map(point => ({ ...point, phase: 'brake' })),
+        offsetPoint(trace.last, trace.lastTangent, endExtension, 'slide')
+      ] };
+    });
+    if (![...evidence, ...traces].some(Boolean)) {
+      return { traces, candidates: [], detail: '痕跡を描くか、停止位置を入力すると候補を更新します。' };
+    }
+
+    const stopFields = ['x', 'y', 'angle', 'heading'];
+    const fieldScale = { x: 2, y: 2, angle: .75, heading: .55 };
+    const lockTolerance = { x: 1.1, y: 1.1, angle: .35, heading: .35 };
+    const fixed = [null, locks.mu ? s.mu : null, locks.restitution ? s.restitution : null,
+      locks['a.speed'] ? cars[0].speed : null, locks['b.speed'] ? cars[1].speed : null, null, null];
+    const carSpeeds = cars.map(car => car.speed);
+    const base = [0, s.mu, s.restitution, ...carSpeeds, .55, 0];
+    const stopError = (field, prediction, observation) => field === 'x' || field === 'y'
+      ? prediction - observation : angleDifference(prediction, observation);
+
+    function assess(axis, trial) {
+      const values = trial.map((value, i) => fixed[i] ?? clamp(value, ...bounds[i]));
+      const [phase, mu, restitution, aStart, bStart, tangent, contactFraction] = values;
+      const contact = contactGeometry(cars, axis, phase, contactFraction);
+      const startSpeeds = [aStart, bStart];
+      const preImpactTrace = geometries.map((trace, i) => traceApproach(trace, contact.positions[i], carData[i].direction, cars[i]));
+      const energySpeedSq = geometries.map((trace, i) => preImpactTrace[i] ? trace.lowerSqPerMu * mu : 0);
+      const speedSq = startSpeeds.map((speed, i) => sq(speed / 3.6) - energySpeedSq[i]);
+      if (speedSq.some(value => value < -1e-8)) return null;
+      const before = speedSq.map(value => Math.sqrt(Math.max(0, value)));
+      const predictedStops = momentumFit(cars, carData, contact, before, mu, restitution, tangent);
+      if (!predictedStops) return null;
+
+      let scoreCost = .27 * sq((mu - s.mu) / .3) + .12 * sq((restitution - s.restitution) / .4)
+        + .12 * sq(phase) + .06 * sq(contactFraction) + .03 * sq(tangent - .55);
+      let evidenceTerms = 0;
+      let feasible = true;
+      cars.forEach((car, i) => {
+        scoreCost += (evidence[i] ? .12 : .45) * sq((startSpeeds[i] - car.speed) / 23);
+        const stop = evidence[i];
+        if (stop) {
+          for (const field of stopFields) {
+            if (!Number.isFinite(stop[field])) continue;
+            const locked = locks[carKeys[i] + '.' + field];
+            const error = Math.abs(stopError(field, predictedStops[i][field], stop[field]));
+            if (locked && error > lockTolerance[field]) feasible = false;
+            const cost = sq(error / fieldScale[field]);
+            scoreCost += (locked ? 8 : 1) * cost;
+            evidenceTerms++;
+          }
+        }
+        const trace = geometries[i];
+        if (!trace) return;
+        const position = contact.positions[i];
+        let fit;
+        if (preImpactTrace[i]) {
+          const direction = carData[i].direction;
+          const lateral = (trace.last.x - position.x) * direction[1] - (trace.last.y - position.y) * direction[0];
+          fit = .3 * sq(gap(trace.last, position) / 9) + .45 * sq(lateral / 3);
+        } else {
+          const midpoint = trace.points[Math.floor(trace.points.length / 2)];
+          const miss = (pointToSegmentDistance(trace.first, position, predictedStops[i])
+            + 2 * pointToSegmentDistance(midpoint, position, predictedStops[i])
+            + pointToSegmentDistance(trace.last, position, predictedStops[i])) / 4;
+          fit = sq(miss / 3);
+        }
+        scoreCost += fit;
+        evidenceTerms++;
+      });
+
+      return { axis, values, contact, startSpeeds, before, predictedStops, scoreCost, evidenceTerms, feasible, preImpactTrace };
+    }
+
+    function refine(axis, seed) {
+      let best = seed;
+      const steps = [.3, .14, .2, 9, 9, .22, .3];
+      for (let round = 0; round < 9; round++) {
+        const scale = Math.pow(.67, round);
+        for (let i = 0; i < steps.length; i++) {
+          if (fixed[i] !== null) continue;
+          for (const sign of [-1, 1]) {
+            const next = best.values.slice();
+            next[i] += sign * scale * steps[i];
+            const trial = assess(axis, next);
+            if (trial && trial.scoreCost < best.scoreCost) best = trial;
+          }
+        }
+      }
+      return best;
+    }
+
+    const fits = [];
+    for (const axis of [0, 1]) {
+      const seeds = [];
+      function addSeed(values) {
+        const fit = assess(axis, values);
+        if (fit) seeds.push(fit);
+      }
+      for (const phase of [-.8, -.4, 0, .4, .8]) {
+        const contact = contactGeometry(cars, axis, phase, 0);
+        const postMomentum = [0, 0];
+        evidence.forEach((stop, i) => {
+          if (!stop || !Number.isFinite(stop.x) || !Number.isFinite(stop.y)) return;
+          const position = contact.positions[i];
+          const distance = gap(position, stop);
+          if (distance < .05) return;
+          const speed = Math.sqrt(2 * gravity * s.mu * distance);
+          postMomentum[0] += (stop.x - position.x) / distance * speed * cars[i].mass;
+          postMomentum[1] += (stop.y - position.y) / distance * speed * cars[i].mass;
+        });
+        addSeed([phase, ...base.slice(1)]);
+        addSeed([phase, ...base.slice(1, 3), ...cars.map((car, i) => {
+          const { direction } = carData[i];
+          const projected = (postMomentum[0] * direction[0] + postMomentum[1] * direction[1]) / car.mass;
+          const preTrace = traceApproach(geometries[i], contact.positions[i], direction, car);
+          const traceLoss = preTrace ? geometries[i].lowerSqPerMu * s.mu : 0;
+          return Math.sqrt(sq(Math.max(0, projected)) + traceLoss) * 3.6 || car.speed;
+        }), .55, 0]);
+      }
+
+      const primes = [2, 3, 5, 7, 11, 13, 17];
+      for (let j = 1; j <= 144; j++) {
+        const values = bounds.map(([low, high], i) => lerp(low, high, halton(j, primes[i])));
+        for (let i = 0; i < 2; i++) {
+          if (j % 3 !== 0) values[i + 3] = clamp(carSpeeds[i] + (values[i + 3] / maxSpeed - .5) * 100, 0, maxSpeed);
+        }
+        addSeed(values);
+      }
+      seeds.sort((a, b) => a.scoreCost - b.scoreCost);
+      for (const seed of seeds.slice(0, 7)) fits.push(refine(axis, seed));
+      fits.push(...seeds.filter(seed => seed.feasible).slice(0, 6));
+    }
+
+    const candidates = [];
+    for (const fit of fits.filter(fit => fit.feasible).sort((a, b) => a.scoreCost - b.scoreCost)) {
+      const { contact, values, predictedStops, startSpeeds, before } = fit;
+      if (candidates.some(candidate => candidate.axis === fit.axis && gap(candidate.impact, contact.impact) < .9
+        && candidate.startSpeeds.every((speed, i) => Math.abs(speed - startSpeeds[i]) < 6))) continue;
+      const stops = predictedStops.map((prediction, i) => {
+        const position = { ...prediction };
+        for (const field of stopFields) {
+          if (locks[carKeys[i] + '.' + field] && Number.isFinite(evidence[i]?.[field])) position[field] = evidence[i][field];
+        }
+        return position;
+      });
+      const routes = cars.map((car, i) => {
+        const position = contact.positions[i];
+        const initial = { x: car.x, y: car.y, phase: 'approach' };
+        const trace = geometries[i];
+        const end = { x: stops[i].x, y: stops[i].y, phase: 'slide' };
+        const impact = { ...position, phase: 'slide' };
+        if (!fit.preImpactTrace[i]) return [initial, impact, end];
+        const distance = startSpeeds[i] / 3.6 * car.reaction;
+        const reactionStart = offsetPoint(trace.first, trace.firstTangent, -distance, 'approach');
+        return [reactionStart, ...trace.points.map(point => ({ ...point, phase: 'brake' })), impact, end];
+      });
+      candidates.push({
+        label: fit.axis === 0 ? 'Aの前面とBの側面' : 'Bの前面とAの側面',
+        score: Math.round(100 / (1 + Math.sqrt(fit.scoreCost / Math.max(1, fit.evidenceTerms)))),
+        axis: fit.axis, impact: contact.impact, positions: contact.positions, routes, stops, predictedStops,
+        mu: values[1], restitution: values[2], speeds: before.map(value => value * 3.6), startSpeeds,
+        stopErrors: predictedStops.map((point, i) => evidence[i] && Number.isFinite(evidence[i].x) && Number.isFinite(evidence[i].y)
+          ? gap(point, evidence[i]) : null)
+      });
+      if (candidates.length === 5) break;
+    }
+
+    let detail = '停止時の位置と向き、痕跡を手がかりに、接触と摩擦滑走を近似しました。推定速度には幅があります。痕跡からの下限は、描いた順に路面の摩擦限界で滑り、終端の速度を0とした場合の概算です。';
+    if (candidates.length === 0) detail = 'この接触モデルで条件に合う候補が見つかりませんでした。ロックした値と観測点を確認してください。痕跡からの下限は、路面の摩擦限界で終端まで滑った場合の概算です。';
+    return { traces, candidates, detail };
+  };
+})();
+/* Intersection plan, coordinate conversion, and pointer hit testing. */
+function createDiagram(canvas) {
+  const ctx = canvas.getContext('2d');
+  const TAU = Math.PI * 2;
+  const carColors = ['#53ddc7', '#f5b365'];
+  const headings = {E: 0, S: Math.PI / 2, W: Math.PI, N: -Math.PI / 2};
+  const impactColor = '#ff8998';
+  const ink = '#101a2a';
+  const baseExtent = 50;
+  let camera = {width: 1, height: 1, cx: 0.5, cy: 0.5, scale: 1};
+  let carLabels = [];
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function screen(point) {
+    return {
+      x: camera.cx + camera.scale * point.x,
+      y: camera.cy + camera.scale * point.y
+    };
+  }
+
+  function point(event) {
+    const rect = canvas.getBoundingClientRect();
+    const px = (event.clientX - rect.left) * camera.width / Math.max(rect.width, 1);
+    const py = (event.clientY - rect.top) * camera.height / Math.max(rect.height, 1);
+    return {x: (px - camera.cx) / camera.scale, y: (py - camera.cy) / camera.scale};
+  }
+
+  function stroke(points, color, width = 1, dash = []) {
+    if (points.length < 2) return;
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.setLineDash(dash);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function worldStroke(points, color, width, dash) {
+    stroke(points.map(screen), color, width, dash);
+  }
+
+  function disk(x, y, radius, color, border, width = 1) {
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, TAU);
+    ctx.fillStyle = color;
+    ctx.fill();
+    if (border) {
+      ctx.strokeStyle = border;
+      ctx.lineWidth = width;
+      ctx.stroke();
+    }
+  }
+
+  function box(x, y, w, h, color, border, radius = 4) {
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, radius);
+    ctx.fillStyle = color;
+    ctx.fill();
+    if (border) {
+      ctx.strokeStyle = border;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
+
+  function label(text, x, y, color, {intro = '', align = 'left'} = {}) {
+    ctx.font = '600 11px system-ui, sans-serif';
+    const width = Math.ceil(ctx.measureText(text).width) + (intro ? 26 : 14);
+    const h = 22;
+    x = clamp(x - (align === 'right' ? width : 0), 5, Math.max(5, camera.width - width - 5));
+    y = clamp(y, 5, Math.max(5, camera.height - h - 5));
+    box(x, y, width, h, '#172438', color + '80', 5);
+    if (intro) {
+      disk(x + 9, y + h / 2, 4, color);
+    }
+    ctx.fillStyle = color;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, x + (intro ? 17 : 7), y + h / 2);
+    return {x,y,w:width,h};
+  }
+
+  function grid() {
+    const {width, height, cx, cy, scale} = camera;
+    ctx.fillStyle = ink;
+    ctx.fillRect(0, 0, width, height);
+    const spacing = 5 * scale;
+    const step = Math.max(1, 5 ** Math.ceil(Math.log(14 / spacing) / Math.log(5)));
+    for (let i = Math.ceil(-cx / spacing / step) * step; cx + i * spacing <= width; i += step) {
+      const x = cx + i * spacing;
+      stroke([{x,y:0},{x,y:height}], i % 5 === 0 ? '#26364e' : '#1b293d');
+    }
+    for (let i = Math.ceil(-cy / spacing / step) * step; cy + i * spacing <= height; i += step) {
+      const y = cy + i * spacing;
+      stroke([{x:0,y},{x:width,y}], i % 5 === 0 ? '#26364e' : '#1b293d');
+    }
+  }
+
+  function roads(config) {
+    const {width, height, cx, cy, scale} = camera;
+    const hx = config.x.width * scale / 2;
+    const hy = config.y.width * scale / 2;
+    const left = cx - hy;
+    const right = cx + hy;
+    const top = cy - hx;
+    const bottom = cy + hx;
+    const corners = [
+      [{x:0,y:top},{x:left,y:top},{x:left,y:0}],
+      [{x:right,y:0},{x:right,y:top},{x:width,y:top}],
+      [{x:width,y:bottom},{x:right,y:bottom},{x:right,y:height}],
+      [{x:left,y:height},{x:left,y:bottom},{x:0,y:bottom}]
+    ];
+
+    ctx.fillStyle = '#2b394c';
+    ctx.fillRect(0, top, width, hx * 2);
+    ctx.fillRect(left, 0, hy * 2, height);
+    for (const corner of corners) stroke(corner, '#77869c', 1.25);
+
+    ctx.fillStyle = '#314056';
+    ctx.fillRect(left, top, hy * 2, hx * 2);
+    const crosshair = Math.min(4, hx / 3, hy / 3);
+    stroke([{x:cx-crosshair,y:cy},{x:cx+crosshair,y:cy}], '#77869c99');
+    stroke([{x:cx,y:cy-crosshair},{x:cx,y:cy+crosshair}], '#77869c99');
+
+    function laneLines(axis, lanes, half, axisCenter, near, far, span) {
+      for (let i = 1; i < lanes; i++) {
+        const location = axisCenter - half + i * (half * 2 / lanes);
+        const dash = [Math.max(4, scale * 2), Math.max(3, scale * 1.5)];
+        const centerline = i * 2 === lanes;
+        const color = centerline && config.priority === axis ? '#d0b782bf' : '#b0bed287';
+        const makePoint = axis === 'x' ? n => ({x:n,y:location}) : n => ({x:location,y:n});
+        stroke([makePoint(0),makePoint(near)], color, 1, dash);
+        stroke([makePoint(far),makePoint(span)], color, 1, dash);
+      }
+    }
+
+    laneLines('x', config.x.lanes, hx, cy, left, right, width);
+    laneLines('y', config.y.lanes, hy, cx, top, bottom, height);
+
+    const insetX = Math.min(3, hx / 6);
+    const insetY = Math.min(3, hy / 6);
+    if (config.stopX) {
+      stroke([{x:left-scale,y:cy+insetX},{x:left-scale,y:bottom-insetX}], '#e7edf3', 2);
+      stroke([{x:right+scale,y:top+insetX},{x:right+scale,y:cy-insetX}], '#e7edf3', 2);
+    }
+    if (config.stopY) {
+      stroke([{x:left+insetY,y:top-scale},{x:cx-insetY,y:top-scale}], '#e7edf3', 2);
+      stroke([{x:cx+insetY,y:bottom+scale},{x:right-insetY,y:bottom+scale}], '#e7edf3', 2);
+    }
+  }
+
+  function obstacle(rect, selected) {
+    const center = screen(rect);
+    const w = rect.w * camera.scale;
+    const h = rect.h * camera.scale;
+    const x = center.x - w / 2;
+    const y = center.y - h / 2;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip();
+    ctx.fillStyle = '#35485e';
+    ctx.fillRect(x, y, w, h);
+    for (let offset = -h; offset < w; offset += 7) {
+      stroke([{x:x+offset,y:y+h},{x:x+offset+h,y}], '#51637b');
+    }
+    ctx.restore();
+    ctx.strokeStyle = selected ? '#cad8eb' : '#7f91a7';
+    ctx.lineWidth = selected ? 2 : 1;
+    ctx.strokeRect(x, y, w, h);
+    if (w >= 47 && h >= 23) {
+      ctx.fillStyle = '#e3eaf4';
+      ctx.font = '600 11px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('遮蔽物', center.x, center.y);
+    }
+  }
+
+  function vehicle(position, dimensions, angle, color, style, selected = false) {
+    const center = screen(position);
+    const len = dimensions.length * camera.scale;
+    const wid = dimensions.width * camera.scale;
+    const x = -len / 2;
+    const y = -wid / 2;
+    const radius = Math.min(4, wid * 0.23, len * 0.13);
+    ctx.save();
+    ctx.translate(center.x, center.y);
+    ctx.rotate(angle);
+    if (style === 'active') {
+      if (selected) box(x - 4, y - 4, len + 8, wid + 8, color + '24', color, radius + 2);
+      box(x, y, len, wid, color, '#142132', radius);
+      if (len >= 13 && wid >= 5) {
+        const windowWidth = len * 0.15;
+        const windowHeight = wid * 0.64;
+        box(len * 0.13, -windowHeight / 2, windowWidth, windowHeight, '#172d3d', null, 1);
+        box(-len * 0.37, -windowHeight / 2, len * 0.11, windowHeight, '#172d3d', null, 1);
+        ctx.fillStyle = '#f3f9ffaa';
+        ctx.fillRect(len * 0.36, y + 1.2, len * 0.06, Math.max(0.6, wid * 0.18));
+        ctx.fillRect(len * 0.36, -y - 1.2 - wid * 0.18, len * 0.06, Math.max(0.6, wid * 0.18));
+      }
+    } else {
+      if (style === 'impact') ctx.setLineDash([3, 2]);
+      box(x, y, len, wid, color + (style === 'impact' ? '14' : '35'), color, radius);
+      ctx.setLineDash([]);
+      if (wid >= 4) {
+        stroke([{x:len*.09,y:-wid*.24},{x:len*.31,y:0},{x:len*.09,y:wid*.24}], color);
+      }
+    }
+    ctx.restore();
+  }
+
+  function plotPath(track, car, color) {
+    const points = track.path || [];
+    if (points.length < 2) return;
+    const phases = {
+      approach: {width: 1.65, dash: [5, 5], opacity: '93'},
+      brake: {width: 1.4, dash: [], opacity: 'ee'},
+      slide: {width: 2.15, dash: [2, 4], opacity: 'f0'},
+      stop: {width: 1.6, dash: [2, 4], opacity: 'f0'}
+    };
+    function drawSection(section, phase) {
+      const settings = phases[phase] || phases.approach;
+      if (phase === 'brake' && car.width * camera.scale > 4) {
+        for (const side of [-1, 1]) {
+          const offset = side * car.width * 0.31;
+          const wheelTrack = section.map(p => {
+            const angle = p.angle ?? headings[car.dir];
+            return {x: p.x - Math.sin(angle) * offset, y: p.y + Math.cos(angle) * offset};
+          });
+          worldStroke(wheelTrack, color + settings.opacity, settings.width, settings.dash);
+        }
+        return;
+      }
+      worldStroke(section, color + settings.opacity, settings.width, settings.dash);
+    }
+    let phase = points[0].phase;
+    let section = [points[0]];
+    for (let i = 1; i < points.length; i++) {
+      const next = points[i];
+      if (next.phase !== phase) {
+        drawSection(section, phase);
+        section = [points[i - 1]];
+        phase = next.phase;
+      }
+      section.push(next);
+    }
+    drawSection(section, phase);
+
+    if (track.seen) {
+      const p = screen(track.seen);
+      disk(p.x, p.y, 3.3, '#26364c', color, 1.4);
+    }
+    if (track.brake) {
+      const p = screen(track.brake);
+      box(p.x - 2.5, p.y - 2.5, 5, 5, color, ink, 1);
+    }
+  }
+
+  function isVisible(p, margin = 8) {
+    return p.x >= margin && p.x <= camera.width - margin &&
+      p.y >= margin && p.y <= camera.height - margin;
+  }
+
+  function collisionMarker(position, text) {
+    const p = screen(position);
+    if (!isVisible(p)) return;
+    disk(p.x, p.y, 11, '#ff899821', '#ff899883', 1);
+    disk(p.x, p.y, 4, impactColor, ink, 1.25);
+    stroke([{x:p.x+7,y:p.y+7},{x:p.x+13,y:p.y+13}], impactColor + 'b5', 1);
+    label(text, p.x + 12, p.y + 11, impactColor);
+  }
+
+  function forwardOverlay(cars, result) {
+    if (!result?.cars) return;
+    result.cars.forEach((track, index) => plotPath(track, cars[index], carColors[index]));
+    const collision = result.collision;
+    const impactPoses = collision?.poses || collision?.positions;
+    if (impactPoses) {
+      impactPoses.forEach((pose, i) => {
+        const angle = i === 0 ? collision.angleA : collision.angleB;
+        vehicle(pose, cars[i], pose.angle ?? angle, carColors[i], 'impact');
+      });
+    }
+    result.cars.forEach((track, i) => {
+      if (!track.end || Math.hypot(track.end.x - cars[i].x, track.end.y - cars[i].y) < 0.3) return;
+      if (collision || track.path.at(-1)?.phase === 'stop' || track.stopped) {
+        vehicle(track.end, cars[i], track.end.angle, carColors[i], 'outline');
+      }
+    });
+  }
+
+  function stopMarker(stop, dimensions, i, picked) {
+    const p = screen(stop);
+    const color = carColors[i];
+    const heading = stop.heading ?? stop.angle;
+    const ux = Math.cos(heading);
+    const uy = Math.sin(heading);
+    const start = 6 + dimensions.length * camera.scale / 2;
+    const end = start + 16;
+    const arrow = {x:p.x+ux*end,y:p.y+uy*end};
+    stroke([{x:p.x+ux*start,y:p.y+uy*start},arrow], color, 1.6);
+    stroke([
+      {x:arrow.x-ux*6-uy*3,y:arrow.y-uy*6+ux*3},
+      arrow,
+      {x:arrow.x-ux*6+uy*3,y:arrow.y-uy*6-ux*3}
+    ], color, 1.6);
+    vehicle(stop, dimensions, stop.angle, color, 'active', picked);
+    if (isVisible(p)) {
+      carLabels.push({
+        ...label(i === 0 ? 'A 停止' : 'B 停止', p.x - 6, p.y + 11, color, {align:'right'}),
+        kind: 'stop', index: i
+      });
+    }
+  }
+
+  function sceneOverlay(cars, view) {
+    const traceInfo = view.estimate?.traces || [];
+    const candidate = view.estimate?.candidates?.[view.selected ?? 0];
+    candidate?.routes?.forEach((route, i) => {
+      if (route) worldStroke(route, carColors[i] + '91', 1.55, [5, 4]);
+    });
+    view.scene?.traces?.forEach((route, i) => {
+      if (traceInfo[i]?.route) worldStroke(traceInfo[i].route, carColors[i] + '93', 1.6, [3, 4]);
+      if (route) {
+        worldStroke(route, carColors[i], 2.65);
+        if (route.length > 1) {
+          const first = screen(route[0]);
+          const last = screen(route.at(-1));
+          disk(first.x, first.y, 3.2, ink, carColors[i], 1.5);
+          disk(last.x, last.y, 3.2, carColors[i], ink);
+        }
+      }
+    });
+    candidate?.positions?.forEach((pose, i) => {
+      vehicle(pose, cars[i], pose.angle ?? headings[cars[i].dir], carColors[i], 'impact');
+    });
+    candidate?.stops?.forEach((pose, i) => {
+      const observed = view.scene?.stopEnabled?.[i] ? view.scene.stops[i] : null;
+      if (pose && (!observed || Math.hypot(pose.x - observed.x, pose.y - observed.y) > 0.75)) {
+        vehicle(pose, cars[i], pose.angle, carColors[i], 'outline');
+      }
+    });
+    if (candidate?.impact) collisionMarker(candidate.impact, '推定衝突地点');
+    view.scene?.stops?.forEach((stop, i) => {
+      if (stop && (view.scene.stopEnabled?.[i] ?? true)) {
+        const picked = view.selection?.kind === 'stop' && view.selection.index === i;
+        stopMarker(stop, cars[i], i, picked);
+      }
+    });
+  }
+
+  function instruments() {
+    const {width, height, scale} = camera;
+    const x = width - 27;
+    const y = 23;
+    ctx.fillStyle = '#e0ecfc';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '600 11px system-ui, sans-serif';
+    ctx.fillText('N', x, y - 10);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + 5, y + 13);
+    ctx.lineTo(x, y + 10);
+    ctx.lineTo(x - 5, y + 13);
+    ctx.closePath();
+    ctx.fill();
+
+    const scaleMax = Math.max(22, Math.min(68, width * 0.25));
+    const units = [50, 20, 10, 5, 2, 1, 0.5].find(n => n * scale <= scaleMax) || 0.25;
+    const ruler = units * scale;
+    const baseline = height - 17;
+    const origin = 17;
+    ctx.fillStyle = '#ced9e8';
+    ctx.textAlign = 'left';
+    ctx.font = '500 11px system-ui, sans-serif';
+    const widthOfLabel = ctx.measureText(units + ' m').width;
+    box(9, baseline - 11, ruler + widthOfLabel + 26, 21, '#142033e8', '#51637b66');
+    stroke([{x:origin,y:baseline-3},{x:origin,y:baseline+3}], '#d9e4f3');
+    stroke([{x:origin+ruler,y:baseline-3},{x:origin+ruler,y:baseline+3}], '#d9e4f3');
+    stroke([{x:origin,y:baseline},{x:origin+ruler,y:baseline}], '#d9e4f3', 1.3);
+    ctx.fillStyle = '#d9e4f3';
+    ctx.fillText(units + ' m', origin + ruler + 7, baseline);
+  }
+
+  function draw(s, view = {}) {
+    const rect = canvas.getBoundingClientRect();
+    const width = Math.max(1, canvas.clientWidth || rect.width);
+    const height = Math.max(1, canvas.clientHeight || rect.height);
+    if (width < 2 || height < 2) return;
+    const ratio = Math.min(3, window.devicePixelRatio || 1);
+    const backingWidth = Math.ceil(width * ratio);
+    const backingHeight = Math.ceil(height * ratio);
+    if (canvas.width !== backingWidth) canvas.width = backingWidth;
+    if (canvas.height !== backingHeight) canvas.height = backingHeight;
+    const zoom = Math.max(0.005, Number(view.zoom) || 1);
+    camera = {width, height, cx: width / 2, cy: height / 2, scale: Math.min(width,height) / baseExtent * zoom};
+    carLabels = [];
+    ctx.setTransform(backingWidth / width, 0, 0, backingHeight / height, 0, 0);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    grid();
+    roads(s.roads);
+    s.obstacles.forEach((rect, i) => obstacle(rect, view.selection?.kind === 'obstacle' && view.selection.index === i));
+    if (view.mode === 'scene') {
+      sceneOverlay(s.cars, view);
+    } else {
+      forwardOverlay(s.cars, view.result);
+      s.cars.forEach((car, i) => {
+        const color = carColors[i];
+        vehicle(car, car, headings[car.dir], color, 'active', view.selection?.kind === 'car' && view.selection.index === i);
+        const p = screen(car);
+        if (!isVisible(p)) return;
+        const offset = Math.max(8, camera.scale * (car.dir === 'E' || car.dir === 'W' ? car.width : car.length) / 2 + 4);
+        carLabels.push({
+          ...label(i === 0 ? '車両 A' : '車両 B', p.x + 6, p.y + offset, color, {intro: color}),
+          kind: 'car', index: i
+        });
+      });
+      if (view.result?.collision) collisionMarker(view.result.collision, '衝突地点');
+    }
+    instruments();
+  }
+
+  function hit(worldPoint, s, view = {}) {
+    const isScene = view.mode === 'scene';
+    const targets = isScene ? view.scene?.stops || [] : s.cars;
+    const kind = isScene ? 'stop' : 'car';
+    const tolerance = 8 / camera.scale;
+    let nearby = null;
+    for (let index = targets.length - 1; index >= 0; index--) {
+      const pose = targets[index];
+      if (!pose || (isScene && view.scene.stopEnabled?.[index] === false)) continue;
+      const angle = isScene ? pose.angle : headings[pose.dir];
+      const dx = worldPoint.x - pose.x;
+      const dy = worldPoint.y - pose.y;
+      const longitudinal = Math.abs(dx * Math.cos(angle) + dy * Math.sin(angle)) - s.cars[index].length / 2;
+      const lateral = Math.abs(dy * Math.cos(angle) - dx * Math.sin(angle)) - s.cars[index].width / 2;
+      if (longitudinal <= 0 && lateral <= 0) return {kind, index};
+      if (!nearby && longitudinal <= tolerance && lateral <= tolerance) nearby = {kind, index};
+    }
+    const p = screen(worldPoint);
+    for (let index = carLabels.length - 1; index >= 0; index--) {
+      const label = carLabels[index];
+      if (p.x >= label.x && p.x <= label.x + label.w && p.y >= label.y && p.y <= label.y + label.h) {
+        return {kind:label.kind,index:label.index};
+      }
+    }
+    if (nearby) return nearby;
+    for (let index = s.obstacles.length - 1; index >= 0; index--) {
+      const ob = s.obstacles[index];
+      if (Math.abs(worldPoint.x - ob.x) <= ob.w / 2 && Math.abs(worldPoint.y - ob.y) <= ob.h / 2) {
+        return {kind:'obstacle',index};
+      }
+    }
+    return null;
+  }
+
+  function fitZoom(s, view = {}) {
+    const {width,height} = camera;
+    const nominalScale = Math.min(width,height) / baseExtent;
+    const scene = view.mode === 'scene';
+    const points = scene ? [] : [...s.cars];
+    for (const ob of s.obstacles) {
+      points.push({x:ob.x-ob.w/2,y:ob.y-ob.h/2}, {x:ob.x+ob.w/2,y:ob.y+ob.h/2});
+    }
+    if (scene) {
+      view.scene?.traces?.forEach(trace => {
+        for (const p of trace || []) points.push(p);
+      });
+      view.scene?.stops?.forEach((stop, i) => {
+        if (stop && view.scene.stopEnabled?.[i] !== false) points.push(stop);
+      });
+      const candidate = view.estimate?.candidates?.[view.selected ?? 0];
+      candidate?.routes?.forEach(route => {
+        for (const p of route || []) points.push(p);
+      });
+      candidate?.positions?.forEach(pose => points.push(pose));
+    } else if (view.result?.cars) {
+      view.result.cars.forEach(track => {
+        for (const p of track.path) points.push(p);
+      });
+    }
+    let maxX = 17;
+    let maxY = 17;
+    for (const p of points) {
+      maxX = Math.max(maxX,Math.abs(p.x));
+      maxY = Math.max(maxY,Math.abs(p.y));
+    }
+    const paddedWidth = Math.max(width * 0.65, width - 76);
+    const paddedHeight = Math.max(height * 0.65, height - 76);
+    return clamp(Math.min(paddedWidth / (2*maxX), paddedHeight / (2*maxY)) / nominalScale, 0.005, 1.25);
+  }
+
+  return {draw, point, hit, fitZoom};
+}
+// Application state and browser controls.
+const presets = {
+  sedan: { label: "普通乗用車", mass: 1450, length: 4.55, width: 1.78 },
+  kei: { label: "軽自動車", mass: 850, length: 3.39, width: 1.48 },
+  suv: { label: "SUV", mass: 1850, length: 4.72, width: 1.89 },
+  truck: { label: "小型トラック", mass: 3200, length: 5.1, width: 1.9 },
+  bike: { label: "二輪車（乗員含む）", mass: 250, length: 2.1, width: .78 },
+  custom: { label: "手入力" }
+};
+const surfaces = {
+  dry: { label:"乾燥", mu:.7 }, rain:{ label:"雨", mu:.45 },
+  snow:{ label:"雪", mu:.2 }, ice:{ label:"凍結", mu:.1 }, custom:{ label:"手入力" }
+};
+const inverseTypes = {
+  speed:"限界速度", distance:"必要な制動距離", mu:"最低摩擦係数",
+  reaction:"反応時間の限界", discovery:"発見地点の限界距離"
+};
+const modeNames = {forward:"検証",inverse:"逆算",scene:"現場推定"};
+const disclaimer = "この数値は理論上の計算であり、実際の事故を完全に再現するものではない。";
+const uncertainty = "現場推定には幅があり、条件に合う複数の候補が得られる場合があります。";
+const pinKey = "sofia-intersection-pinned-v1";
+const names = ["車両A","車両B"];
+const colors = ["#32a995","#d18a36"];
+const directions = [{E:"東向き",W:"西向き"},{S:"南向き",N:"北向き"}];
+const clone = value => JSON.parse(JSON.stringify(value));
+const clamp = (value,min,max) => Math.min(max, Math.max(min,value));
+const degree = rad => rad * 180 / Math.PI;
+const radians = deg => deg * Math.PI / 180;
+const rounded = value => Math.round(value * 100) / 100;
+const angleLabel = angle => Math.round((degree(angle) % 360 + 360) % 360) % 360;
+const format = (value, places = 1) => Number.isFinite(value)
+  ? value.toLocaleString("ja-JP", {maximumFractionDigits:places, minimumFractionDigits:places}) : "—";
+const escapeText = value => String(value ?? "").replace(/[&<>"']/g, char => ({
+  "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+})[char]);
+const byId = id => document.getElementById(id);
+function defaultConfig() {
+  return {
+    surface:"dry", mu:.7, restitution:.18,
+    roads:{x:{width:8,lanes:2},y:{width:8,lanes:2},priority:"x",stopX:false,stopY:true},
+    obstacles:[{x:-10,y:-9.5,w:8,h:7}],
+    cars:[
+      {...presets.sedan,preset:"sedan",x:-18,y:2.1,dir:"E",speed:42,reaction:1,brake:1,obeysStop:false,discovery:null},
+      {...presets.kei,preset:"kei",x:-2.1,y:-18,dir:"S",speed:39,reaction:1,brake:1,obeysStop:false,discovery:null}
+    ]
+  };
+}
+function defaultScene() {
+  return {
+    traces:[[],[]], stopEnabled:[false,false], locks:{},
+    stops:[{x:11,y:5,angle:radians(22),heading:radians(15)},{x:4,y:12,angle:radians(60),heading:radians(65)}]
+  };
+}
+function readPins() {
+  try { return JSON.parse(localStorage.getItem(pinKey)) || {}; }
+  catch { return {}; }
+}
+let s = defaultConfig();
+let scene = defaultScene();
+let inverse = {car:0,key:"speed"};
+const pinned = readPins();
+let mode = "forward", selected = 0, zoom = 1, sceneTool = "move";
+let forwardResult, inverseResult, sceneEstimate, pointer, selection, pendingFrame = 0, toastTimer;
+let configVersion = 0, renderedConfigVersion = -1;
+const plan = byId("plan");
+const diagram = createDiagram(plan);
+
+function readPath(path) {
+  return path.split(".").reduce((value, key) => value[key], {s,scene,inverse});
+}
+function writePath(path, value) {
+  const keys = path.split(".");
+  const last = keys.pop();
+  readPath(keys.join("."))[last] = value;
+}
+function fieldHeading(path,label,lock) {
+  const locked = scene.locks[lock] === true;
+  return `<div class="field-label"><label for="${path}">${label}</label>${
+    lock ? `<button type="button" class="lock" data-lock="${lock}" aria-pressed="${locked}"
+      aria-label="${label}を固定" title="${locked ? "固定を解除" : "この値を固定"}">${locked ? "🔒" : "🔓"}</button>` : ""
+  }</div>`;
+}
+function numberField(path,label,unit,min,max,step,opts={}) {
+  const value = readPath(path);
+  const numeric = value == null ? "" : (opts.angle ? angleLabel(value) : rounded(value));
+  const unitWidth = unit === "km/h" ? 48 : 31;
+  return `<div class="field">${fieldHeading(path,label,opts.lock)}
+    <div class="number ${unit ? "has-unit" : ""}" style="--unit-width:${unitWidth}px">
+      <input id="${path}" data-bind="${path}" type="number" inputmode="decimal"
+        min="${min}" max="${max}" step="${step}" value="${numeric}" ${opts.angle ? 'data-angle="true"' : ""}
+        ${opts.optional ? 'data-optional="true" placeholder="自動"' : ""}>
+      ${unit ? `<span class="number-unit" aria-hidden="true">${unit}</span>` : ""}
+    </div></div>`;
+}
+function selectField(path,label,choices) {
+  return `<div class="field">${fieldHeading(path,label)}<select id="${path}" data-bind="${path}">
+    ${Object.entries(choices).map(([key,text]) => `<option value="${key}" ${String(readPath(path)) === key ? "selected" : ""}>${text}</option>`).join("")}
+  </select></div>`;
+}
+function checkbox(path,label) {
+  return `<label class="check"><input id="${path}" type="checkbox" data-bind="${path}" ${readPath(path) ? "checked" : ""}>${label}</label>`;
+}
+function pin(section) {
+  return `<label class="check"><input type="checkbox" data-pin="${section}" ${pinned[section] ? "checked" : ""}>この設定を常に開く</label>`;
+}
+function badge(index) {
+  return `<span class="car-badge car-${index ? "b" : "a"}" aria-hidden="true">${index ? "B" : "A"}</span>`;
+}
+function renderControls() {
+  byId("basic").innerHTML = s.cars.map((car,index) => {
+    const path = `s.cars.${index}`;
+    return `<article class="card input-card"><h3>${badge(index)}${names[index]}</h3>
+      <div class="fields">
+        ${numberField(path+".speed","初期速度","km/h",0,160,.1)}
+        ${selectField(path+".preset","車種",Object.fromEntries(Object.entries(presets).map(([key,v])=>[key,v.label])))}
+      </div>
+      <details class="position"><summary>初期位置と進行方向</summary><div class="fields">
+        ${numberField(path+".x","X 座標","m",-150,150,.1)}
+        ${numberField(path+".y","Y 座標","m",-150,150,.1)}
+        ${selectField(path+".dir","進行方向",directions[index])}
+      </div></details></article>`;
+  }).join("") + `<article class="card input-card surface-card"><h3>路面</h3>${
+    selectField("s.surface","路面状態",Object.fromEntries(Object.entries(surfaces).map(([key,v])=>[key,v.label])))
+  }<p class="quick-mu">摩擦係数 μ <strong id="quick-mu">${format(s.mu,2)}</strong></p></article>`;
+  byId("advanced-cars").innerHTML = pin("cars") + `<div class="subgrid">${s.cars.map((car,index) => {
+    const path = `s.cars.${index}`;
+    return `<div><h3>${badge(index)}${names[index]}</h3><div class="fields">
+      ${numberField(path+".mass","質量","kg",70,40000,1)}
+      ${numberField(path+".length","全長","m",1,20,.01)}
+      ${numberField(path+".width","全幅","m",.4,5,.01)}
+      ${numberField(path+".reaction","反応時間","s",0,4,.01)}
+      ${numberField(path+".brake","制動の強さ","",0,1,.01)}
+      ${numberField(path+".discovery","発見距離を指定","m",0,150,.1,{optional:true})}
+    </div><div class="toggles">${checkbox(path+".obeysStop","一時停止標識に従う")}</div></div>`;
+  }).join("")}</div>
+  <p class="mode-copy">制動の強さは路面グリップに対する割合（1で最大）。発見距離は交差点中心までの進行方向の距離で、空欄なら遮蔽物から判定します。</p>`;
+  byId("advanced-surface").innerHTML = pin("surface") + `<div class="fields">
+    ${numberField("s.mu","タイヤと路面の摩擦係数 μ","",.05,1.2,.01)}
+    ${numberField("s.restitution","衝突時の反発係数","",0,1,.01)}
+  </div><p class="mode-copy">反発係数が小さいほど衝突で失われるエネルギーが大きくなります。変形などによる推定損失を結果に表示します。</p>`;
+  byId("advanced-roads").innerHTML = pin("roads") + `<div class="fields road-fields">
+    ${numberField("s.roads.x.width","東西の道路幅","m",3,30,.1)}
+    ${numberField("s.roads.x.lanes","東西の車線数","",1,8,1)}
+    ${selectField("s.roads.priority","優先道路",{none:"指定なし",x:"東西",y:"南北"})}
+    ${numberField("s.roads.y.width","南北の道路幅","m",3,30,.1)}
+    ${numberField("s.roads.y.lanes","南北の車線数","",1,8,1)}
+  </div><div class="toggles">
+    ${checkbox("s.roads.stopX","東西に一時停止規制")}
+    ${checkbox("s.roads.stopY","南北に一時停止規制")}
+  </div><p class="mode-copy">車線数は道路の図示に使います。一時停止規制は、標識に従う車両の制動に反映されます。</p>`;
+  renderObstacles();
+  byId("inverse-controls").innerHTML = selectField("inverse.car","対象車両",{"0":"車両A","1":"車両B"})+
+    selectField("inverse.key","逆算する項目",inverseTypes);
+  renderSceneControls();
+}
+function renderObstacles() {
+  byId("advanced-visibility").innerHTML = pin("visibility") +
+    (s.obstacles.length ? s.obstacles.map((obstacle,index) => {
+      const path = `s.obstacles.${index}`;
+      return `<div class="obstacle-row"><div class="obstacle-head"><h3>遮蔽物 ${index+1}</h3>
+        <button type="button" data-action="remove-obstacle" data-index="${index}" aria-label="遮蔽物 ${index+1}を削除">削除</button></div>
+        <div class="fields obstacle-fields">
+          ${numberField(path+".x","中心 X","m",-100,100,.1)}
+          ${numberField(path+".y","中心 Y","m",-100,100,.1)}
+          ${numberField(path+".w","東西の幅","m",.3,50,.1)}
+          ${numberField(path+".h","南北の幅","m",.3,50,.1)}
+        </div></div>`;
+    }).join("") : '<p class="obstacle-help">遮蔽物はありません。</p>') +
+    '<div class="toggles"><button type="button" data-action="add-obstacle">遮蔽物を追加</button></div>';
+}
+function renderSceneControls() {
+  byId("scene-controls").innerHTML = `<div class="scene-controls">${scene.stops.map((stop,index) => {
+    const path = `scene.stops.${index}`, key = index ? "b" : "a";
+    return `<article class="scene-control"><h3>${badge(index)}${names[index]}の停止位置</h3>
+      ${checkbox(`scene.stopEnabled.${index}`,"停止位置を推定に使う")}
+      <div class="fields" ${scene.stopEnabled[index] ? "" : "hidden"}>
+        ${numberField(path+".x","停止 X","m",-150,150,.1,{lock:key+".x"})}
+        ${numberField(path+".y","停止 Y","m",-150,150,.1,{lock:key+".y"})}
+        ${numberField(path+".angle","車体角度","°",0,359,1,{angle:true,lock:key+".angle"})}
+        ${numberField(path+".heading","衝突後の移動方向","°",0,359,1,{angle:true,lock:key+".heading"})}
+      </div>
+    </article>`;
+  }).join("")}</div><p class="mode-copy">角度は東を 0°、南を 90° として時計回りに入力します。</p>`;
+  const limits = [
+    ["s.mu","摩擦係数 μ","",.05,1.2,.01,"mu"],
+    ["s.restitution","反発係数","",0,1,.01,"restitution"],
+    ["s.cars.0.speed","車両Aの初期速度","km/h",0,160,.1,"a.speed"],
+    ["s.cars.1.speed","車両Bの初期速度","km/h",0,160,.1,"b.speed"]
+  ];
+  const grid = document.createElement("div");
+  grid.className = "scene-conditions";
+  grid.innerHTML = '<h3 class="section-title">推定の条件</h3><div class="fields">' +
+    limits.map(([path,label,unit,min,max,step,lock]) => {
+      // The scene form mirrors settings without sharing element IDs.
+      return numberField(path,label,unit,min,max,step,{lock})
+        .replace(`id="${path}"`,`id="scene-${path}"`)
+        .replace(`for="${path}"`,`for="scene-${path}"`);
+    }).join("") + '</div>';
+  byId("scene-controls").append(grid);
+}
+function syncPath(path, source) {
+  document.querySelectorAll(`[data-bind="${path}"]`).forEach(input => {
+    if (input === source) return;
+    const value = readPath(path);
+    if (input.type === "checkbox") input.checked = value;
+    else input.value = value == null ? "" : input.dataset.angle ? angleLabel(value) :
+      typeof value === "number" ? rounded(value) : value;
+  });
+  if (path === "s.mu") byId("quick-mu").textContent = format(s.mu,2);
+}
+function notify(text) {
+  const message = byId("message");
+  message.textContent = text;
+  message.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { message.hidden = true; }, 3000);
+}
+function resultMetric(label,value,unit="",tone="") {
+  return `<div class="metric"><dt>${label}</dt><dd class="${tone}">${value}${unit ? ` <small>${unit}</small>` : ""}</dd></div>`;
+}
+function renderForward() {
+  const hit = forwardResult.collision;
+  const limit = forwardResult.limited || forwardResult.cars.some(car => car.limited);
+  const status = hit?.initialOverlap ? "初期位置で重なり" : hit ? "衝突あり" : limit ? "計算範囲内で衝突なし" : "衝突なし";
+  const brake = forwardResult.cars.map(car=>format(car.brakingDistance));
+  const info = hit ? [
+    `衝突地点 X ${format(hit.x)} m、Y ${format(hit.y)} m。車体の向き A ${angleLabel(hit.angleA)}° / B ${angleLabel(hit.angleB)}°。`,
+    `衝突直前の速度 A ${format(hit.before[0])} / B ${format(hit.before[1])} km/h。衝突直後 A ${format(hit.after[0])} / B ${format(hit.after[1])} km/h。`
+  ] : ["この設定での車両の通過・停止と衝突の有無を図面に表示しています。"];
+  if (hit?.initialOverlap) info.unshift("車体が重なった状態から計算しています。図面または座標入力で初期位置を離してください。");
+  if (limit && hit) info.push("計算時間内にすべての車両が停止しませんでした。");
+  forwardResult.cars.forEach((car,index) => {
+    const seen = car.seen ? `${format(car.seen.t,2)} 秒で発見` : "発見記録なし";
+    const braking = car.brake ? `${format(car.brake.t,2)} 秒で制動開始（制動 ${brake[index]} m）` : "衝突前の制動なし";
+    if (!hit && !car.brake) info.push(`${names[index]}　${seen}、制動なし。`);
+    else info.push(`${names[index]}　${seen}、${braking}。`);
+    if (hit && car.end) info.push(`${names[index]}の最終位置 X ${format(car.end.x)} m、Y ${format(car.end.y)} m、車体角度 ${angleLabel(car.end.angle)}°。`);
+  });
+  const metrics = document.createElement("dl");
+  metrics.className = "metrics";
+  metrics.style.margin = "0";
+  metrics.innerHTML = [
+    resultMetric("検証結果",status,"",hit ? "bad" : "good"),
+    hit ? resultMetric("衝突まで",format(hit.t,2),"秒") : resultMetric("初期速度 A / B",s.cars.map(c=>format(c.speed)).join(" / "),"km/h"),
+    hit ? resultMetric("衝突時の相対速度",format(hit.deltaV),"km/h") : resultMetric("車両Aの制動距離",brake[0],"m"),
+    hit ? resultMetric("変形などの損失",format(hit.energy / 1000),"kJ") : resultMetric("車両Bの制動距離",brake[1],"m")
+  ].join("");
+  const panel = byId("forward-result");
+  let details = panel.querySelector("details");
+  if (!details) {
+    details = document.createElement("details");
+    details.className = "result-details";
+  }
+  details.innerHTML = "<summary>車両ごとの計算結果</summary>" + info.map(item=>`<p>${item}</p>`).join("");
+  panel.replaceChildren(metrics,details);
+}
+function renderInverse() {
+  const result = inverseResult;
+  const main = result.value == null ? "条件内で算出できません" :
+    `${result.atBound ? "" : "約 "}${format(result.value,result.unit === "" || result.unit === "s" || result.unit === "秒" ? 2 : 1)}${result.unit ? " "+escapeText(result.unit) : ""}`;
+  const alternatives = (result.alternatives || []).map(a => {
+    const same = Math.abs(a.min - a.max) < .00001;
+    const places = !a.unit || a.unit === "s" || a.unit === "秒" ? 2 : 1;
+    return `<p>${format(a.min,places)}${same ? "" : " 〜 "+format(a.max,places)} ${escapeText(a.unit)}　${escapeText(a.detail)}</p>`;
+  }).join("");
+  const label = result.atBound ? inverseTypes[inverse.key]+"（探索範囲内）" : inverseTypes[inverse.key];
+  const stopping = result.stopLimit && Math.abs(result.stopLimit.value-result.value) > .001
+    ? resultMetric("手前に停止できる境界", "約 "+format(result.stopLimit.value,2),escapeText(result.stopLimit.unit)) : "";
+  byId("inverse-result").innerHTML = `<dl class="metrics" style="margin:0">${resultMetric(label,main,"",result.value == null ? "" : "good")}${stopping}</dl>
+    <p>${escapeText(result.detail)}</p>${alternatives ? `<details><summary>衝突しない条件の範囲</summary>${alternatives}</details>` : ""}`;
+}
+function renderSceneResults() {
+  const traceInfo = sceneEstimate.traces.map((trace,i)=>trace ? `<p class="trace-info"><strong>${names[i]}</strong>　痕跡 ${format(trace.length)} m　制動開始時の推定下限 ${format(trace.lower)} km/h${Number.isFinite(trace.radius) ? `　代表曲率半径 ${format(trace.radius)} m` : ""}</p>` : "").join("");
+  const candidates = sceneEstimate.candidates.map((candidate,index) => `
+    <button type="button" class="candidate" data-action="candidate" data-index="${index}" aria-pressed="${selected===index}">
+      <strong>候補 ${index+1} <small>　適合度 ${format(candidate.score,0)}</small></strong>
+      <small>${escapeText(candidate.label)}</small>
+      <span>衝突直前 A ${format(candidate.speeds[0])} / B ${format(candidate.speeds[1])} km/h</span>
+      <small>初期速度 A ${format(candidate.startSpeeds[0])} / B ${format(candidate.startSpeeds[1])} km/h</small>
+      <small>摩擦係数 ${format(candidate.mu,2)}　反発係数 ${format(candidate.restitution,2)}</small>
+    </button>`).join("");
+  const values = sceneEstimate.candidates;
+  const ranges = values.length > 1 ? names.map((name,index)=>{
+    const speeds = values.map(candidate=>candidate.speeds[index]);
+    return name+" "+format(Math.min(...speeds))+"–"+format(Math.max(...speeds))+" km/h";
+  }).join("　") : "";
+  const active = sceneEstimate.candidates[selected];
+  const stopText = active?.stops?.map((stop,index)=>`
+    <p class="trace-info candidate-stop">${names[index]}の停止候補　X ${format(stop.x)} m / Y ${format(stop.y)} m、車体 ${angleLabel(stop.angle)}°、移動方向 ${angleLabel(stop.heading)}°</p>`).join("") || "";
+  byId("scene-result").innerHTML = traceInfo + `<p class="mode-copy">${escapeText(sceneEstimate.detail)}</p>` +
+    (candidates ? `${ranges ? `<p class="trace-info">候補間の衝突直前速度の幅　${ranges}</p>` : ""}<div class="candidates">${candidates}</div>${stopText}` : "");
+}
+function view() {
+  return {mode, result:mode==="inverse" && !pointer ? inverseResult?.result : forwardResult,
+    scene,estimate:sceneEstimate,selected,zoom,selection};
+}
+function draw() {
+  const scenario = mode === "inverse" && !pointer && inverseResult?.scenario ? inverseResult.scenario : s;
+  diagram.draw(scenario,view());
+  byId("zoom-value").textContent = Math.round(zoom*100) + "%";
+}
+function update() {
+  pendingFrame = 0;
+  if (renderedConfigVersion !== configVersion) {
+    forwardResult = simulate(s);
+    renderedConfigVersion = configVersion;
+  }
+  if (mode === "inverse") {
+    if (pointer) {
+      byId("inverse-result").textContent = "位置を調整中です。ドラッグを終えると逆算結果を更新します。";
+    } else {
+      inverseResult = solveInverse(s,inverse.car,inverse.key);
+      renderInverse();
+    }
+  } else if (mode === "scene") {
+    sceneEstimate = estimateScene(s,scene);
+    selected = clamp(selected,0,Math.max(0,sceneEstimate.candidates.length-1));
+    renderSceneResults();
+  } else {
+    renderForward();
+  }
+  draw();
+}
+function schedule(configChanged=false) {
+  if (configChanged) configVersion++;
+  if (!pendingFrame) pendingFrame = requestAnimationFrame(update);
+}
+function flush() {
+  if (pendingFrame) cancelAnimationFrame(pendingFrame);
+  update();
+}
+function syncToolbar() {
+  document.querySelectorAll('[data-action^="scene-"][aria-pressed]').forEach(button => {
+    button.setAttribute("aria-pressed",button.dataset.action === "scene-"+sceneTool);
+  });
+  plan.classList.toggle("drawing",mode === "scene" && sceneTool !== "move");
+  byId("diagram-hint").textContent = mode !== "scene" ? "車両をドラッグして初期位置を調整" : sceneTool === "move"
+    ? "停止マーカーをドラッグして位置を調整" : names[sceneTool === "trace-a" ? 0 : 1]+"の痕跡を走行順になぞる";
+  byId("scene-toolbar").querySelector('[data-action="scene-clear"]').disabled = sceneTool === "move" ||
+    scene.traces[sceneTool==="trace-a" ? 0 : 1].length === 0;
+}
+function setMode(nextMode) {
+  mode = nextMode;
+  selected = 0;
+  document.querySelectorAll("[data-mode]").forEach(button => button.setAttribute("aria-pressed",button.dataset.mode === mode));
+  byId("forward-result").hidden = mode !== "forward";
+  byId("inverse-panel").hidden = mode !== "inverse";
+  byId("scene-panel").hidden = mode !== "scene";
+  byId("scene-toolbar").hidden = mode !== "scene";
+  byId("disclaimer").textContent = disclaimer + (mode === "scene" ? " "+uncertainty : "");
+  byId("legend").innerHTML = names.map((label,index)=>`<span class="legend-item"><i class="swatch" style="--swatch:${colors[index]}"></i>${label}</span>`).join("")+
+    (mode === "scene" ? '<span class="legend-item"><i class="line-sample"></i>推定ルート</span><span class="legend-item"><i class="swatch" style="--swatch:#e86b7d"></i>衝突候補</span>'
+      : '<span class="legend-item"><i class="line-sample"></i>制動・スリップ軌跡</span><span class="legend-item"><i class="swatch" style="--swatch:#e86b7d"></i>衝突地点</span>');
+  syncToolbar();
+  schedule();
+}
+
+function applyInput(target) {
+  const path = target.dataset.bind;
+  if (!path) return;
+  let value = target.value;
+  if (target.type === "number") {
+    if (target.validity.badInput) return;
+    if (value === "" && !target.dataset.optional) return;
+    value = value === "" ? null : clamp(Number(value),Number(target.min),Number(target.max));
+    if (value !== null && Number(target.step) === 1) value = Math.round(value);
+    if (target.dataset.angle) value = radians(value);
+  } else if (target.type === "checkbox") {
+    value = target.checked;
+  } else if (path === "inverse.car") {
+    value = Number(value);
+  }
+  if (readPath(path) === value) return;
+  writePath(path,value);
+  syncPath(path,target);
+  if (path === "s.surface" && value !== "custom") {
+    s.mu = surfaces[value].mu;
+    syncPath("s.mu");
+  } else if (path === "s.mu") {
+    s.surface = "custom";
+    syncPath("s.surface");
+  }
+  const carMatch = /^s\.cars\.(\d)\.(\w+)$/.exec(path);
+  if (carMatch) {
+    const [,index,property] = carMatch;
+    const car = s.cars[index], base = `s.cars.${index}.`;
+    if (property === "preset" && value !== "custom") {
+      const {mass,length,width} = presets[value];
+      Object.assign(car,{mass,length,width});
+      ["mass","length","width"].forEach(key=>syncPath(base+key));
+    } else if (["mass","length","width"].includes(property)) {
+      car.preset = "custom";
+      syncPath(base+"preset");
+    }
+  }
+  if (path.startsWith("scene.stopEnabled")) {
+    target.parentElement.nextElementSibling.hidden = !value;
+  }
+  selected = 0;
+  schedule(path.startsWith("s."));
+}
+document.addEventListener("input", event => {
+  const target = event.target;
+  if (target.type==="number") applyInput(target);
+});
+document.addEventListener("change", event => {
+  const target = event.target;
+  if (target.dataset.pin) {
+    const section = target.dataset.pin;
+    pinned[section] = target.checked;
+    try { localStorage.setItem(pinKey,JSON.stringify(pinned)); }
+    catch { notify("このブラウザでは開閉設定を保存できません。"); }
+    return;
+  }
+  applyInput(target);
+  if (target.type === "number" && target.dataset.bind) syncPath(target.dataset.bind);
+});
+document.querySelectorAll("[data-section]").forEach(details => {
+  details.open = !!pinned[details.dataset.section];
+  details.addEventListener("toggle", () => {
+    if (pinned[details.dataset.section] && !details.open) details.open = true;
+  });
+});
+
+function seedScene() {
+  flush();
+  if (!forwardResult.collision) {
+    notify("検証結果に衝突がありません。");
+    return;
+  }
+  forwardResult.cars.forEach((car,index) => {
+    const key = index ? "b" : "a";
+    const post = forwardResult.collision.postVelocity?.[index];
+    const heading = post ? Math.atan2(post.y,post.x) : car.end.angle;
+    const values = {x:car.end.x,y:car.end.y,angle:car.end.angle,heading};
+    Object.keys(values).forEach(field => {
+      if (!scene.locks[key+"."+field]) scene.stops[index][field] = values[field];
+    });
+    scene.stopEnabled[index] = true;
+  });
+  selected = 0;
+  renderSceneControls();
+  schedule();
+}
+function fitDiagram() {
+  flush();
+  const scenario = mode === "inverse" && !pointer && inverseResult?.scenario ? inverseResult.scenario : s;
+  zoom = clamp(diagram.fitZoom(scenario,view()),.005,3);
+  draw();
+}
+document.addEventListener("click", event => {
+  const button = event.target.closest("button");
+  if (!button) return;
+  const {action,lock,mode:targetMode,index} = button.dataset;
+  if (targetMode) return setMode(targetMode);
+  if (lock) {
+    const locked = !scene.locks[lock];
+    scene.locks[lock] = locked;
+    button.textContent = locked ? "🔒" : "🔓";
+    button.title = locked ? "固定を解除" : "この値を固定";
+    button.setAttribute("aria-pressed",locked);
+    selected = 0;
+    schedule();
+  }
+  if (action === "zoom-fit") fitDiagram();
+  if (action === "zoom-in" || action === "zoom-out") {
+    zoom = clamp(zoom*(action==="zoom-in" ? 1.22 : 1/1.22),.005,3);
+    draw();
+  }
+  if (action === "candidate") {
+    selected = Number(index);
+    byId("scene-result").querySelectorAll(".candidate").forEach(item => item.setAttribute("aria-pressed",item===button));
+    const active = sceneEstimate.candidates[selected];
+    const lines = byId("scene-result").querySelectorAll(".candidate-stop");
+    lines.forEach((line,i)=>{
+      const stop = active.stops[i];
+      line.textContent = `${names[i]}の停止候補　X ${format(stop.x)} m / Y ${format(stop.y)} m、車体 ${angleLabel(stop.angle)}°、移動方向 ${angleLabel(stop.heading)}°`;
+    });
+    draw();
+  }
+  if (action === "scene-move" || action === "scene-trace-a" || action === "scene-trace-b") {
+    sceneTool = action.slice(6);
+    syncToolbar();
+  }
+  if (action === "scene-clear") {
+    scene.traces[sceneTool==="trace-a" ? 0 : 1] = [];
+    syncToolbar();
+    selected = 0;
+    schedule();
+  }
+  if (action === "seed-scene") seedScene();
+  if (action === "add-obstacle") {
+    if (s.obstacles.length >= 12) return notify("遮蔽物は12個まで設置できます。");
+    const offset = 2*(s.obstacles.length%5);
+    s.obstacles.push({x:10+offset,y:-10,w:5,h:5});
+    renderObstacles();
+    document.querySelector(`[data-bind="s.obstacles.${s.obstacles.length-1}.x"]`)?.focus();
+    schedule(true);
+  }
+  if (action === "remove-obstacle") {
+    s.obstacles.splice(Number(index),1);
+    renderObstacles();
+    schedule(true);
+  }
+  if (action === "reset") {
+    if (!window.confirm("車両・道路の設定と入力した現場の痕跡を初期状態に戻しますか？")) return;
+    s = defaultConfig();
+    scene = defaultScene();
+    inverse = {car:0,key:"speed"};
+    zoom = 1;
+    selected = 0;
+    sceneTool = "move";
+    renderControls();
+    syncToolbar();
+    schedule(true);
+    notify("初期設定に戻しました。");
+  }
+});
+plan.addEventListener("pointerdown", event => {
+  if (!event.isPrimary || event.button !== 0) return;
+  const point = diagram.point(event);
+  let kind, index, offsetX = 0, offsetY = 0;
+  if (mode === "scene" && sceneTool !== "move") {
+    kind = "trace";
+    index = sceneTool === "trace-a" ? 0 : 1;
+    scene.traces[index] = [{x:rounded(point.x),y:rounded(point.y)}];
+    selected = 0;
+  } else {
+    const hit = diagram.hit(point,s,view());
+    if (!hit) return;
+    ({kind,index} = hit);
+    const object = kind === "stop" ? scene.stops[index] : kind === "car" ? s.cars[index] : s.obstacles[index];
+    offsetX = object.x-point.x;
+    offsetY = object.y-point.y;
+    selection = hit;
+  }
+  pointer = {id:event.pointerId,kind,index,offsetX,offsetY};
+  plan.setPointerCapture(event.pointerId);
+  if (kind !== "trace") plan.classList.add("dragging");
+  schedule();
+});
+plan.addEventListener("pointermove", event => {
+  if (pointer?.id !== event.pointerId) return;
+  const point = diagram.point(event);
+  const {kind,index,offsetX,offsetY} = pointer;
+  if (kind === "trace") {
+    const trace = scene.traces[index];
+    const last = trace.at(-1);
+    if (trace.length < 1000 && Math.hypot(point.x-last.x,point.y-last.y) >= .13) {
+      trace.push({x:rounded(point.x),y:rounded(point.y)});
+      schedule();
+    }
+    return;
+  }
+  const path = kind === "stop" ? `scene.stops.${index}` : kind === "car" ? `s.cars.${index}` : `s.obstacles.${index}`;
+  const size = kind === "obstacle" ? 100 : 150;
+  const object = readPath(path);
+  const prefix = index ? "b." : "a.";
+  if (kind !== "stop" || !scene.locks[prefix+"x"]) object.x = rounded(clamp(point.x+offsetX,-size,size));
+  if (kind !== "stop" || !scene.locks[prefix+"y"]) object.y = rounded(clamp(point.y+offsetY,-size,size));
+  syncPath(path+".x");
+  syncPath(path+".y");
+  if (kind === "stop") selected = 0;
+  schedule(kind !== "stop");
+});
+function endPointer(event) {
+  if (pointer?.id !== event.pointerId) return;
+  if (pointer.kind === "trace" && scene.traces[pointer.index].length < 2) scene.traces[pointer.index] = [];
+  if (plan.hasPointerCapture(event.pointerId)) plan.releasePointerCapture(event.pointerId);
+  pointer = null;
+  selection = null;
+  plan.classList.remove("dragging");
+  syncToolbar();
+  schedule();
+}
+plan.addEventListener("pointerup",endPointer);
+plan.addEventListener("pointercancel",endPointer);
+plan.addEventListener("lostpointercapture",endPointer);
+new ResizeObserver(() => draw()).observe(plan);
+
+function download(blob,filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function saveSettings() {
+  const data = {version:1,mode,settings:clone(s),inverse:{...inverse},scene:clone(scene)};
+  download(new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),"sofia-settings.json");
+  notify("設定を JSON で保存しました。");
+}
+function savePng() {
+  flush();
+  const image = document.createElement("canvas");
+  const width = Math.max(900, plan.width), margin = Math.round(width * .035);
+  const chartHeight = Math.round(width*plan.height/plan.width);
+  const active = sceneEstimate?.candidates[selected];
+  const report = mode === "scene" ? (active ? `候補 ${selected+1}　衝突直前 A ${format(active.speeds[0])} / B ${format(active.speeds[1])} km/h` : "現場推定")
+    : mode === "inverse" ? `${inverseTypes[inverse.key]}　${inverseResult.value == null ? "算出条件なし" : format(inverseResult.value,inverseResult.unit ? 1 : 2)+" "+inverseResult.unit}`
+    : forwardResult.collision ? `衝突あり　${format(forwardResult.collision.t,2)} 秒　相対速度 ${format(forwardResult.collision.deltaV)} km/h` : "計算範囲内で衝突なし";
+  const font = Math.max(15,Math.round(width*.019)), header = font*5, footer = font*(mode==="scene" ? 6 : 5);
+  image.width = width;
+  image.height = chartHeight+header+footer;
+  const ctx = image.getContext("2d");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0,0,image.width,image.height);
+  ctx.fillStyle = "#152237";
+  ctx.font = `bold ${font*1.55}px sans-serif`;
+  ctx.fillText("机上の空論GP",margin,font*2);
+  ctx.font = `${font}px sans-serif`;
+  ctx.fillText(modeNames[mode]+"　"+report,margin,font*3.8);
+  ctx.drawImage(plan,0,header,width,chartHeight);
+  ctx.fillStyle = "#354964";
+  const legendText = mode === "scene" ? "車両A（青緑）・車両B（黄）　破線は推定ルート" : "車両A（青緑）・車両B（黄）　赤は衝突地点";
+  const printed = [legendText,disclaimer,...(mode === "scene" ? [uncertainty] : [])];
+  printed.forEach((line,index)=>ctx.fillText(line,margin,header+chartHeight+font*(1.7+index*1.35),width-margin*2));
+  image.toBlob(blob => {
+    if (!blob) return notify("PNG を保存できませんでした。");
+    download(blob,`sofia-${mode}.png`);
+    notify("図面を PNG で保存しました。");
+  },"image/png");
+}
+byId("export-settings").addEventListener("click",saveSettings);
+byId("export-png").addEventListener("click",savePng);
+renderControls();
+setMode("forward");
+
+</script>
+</body>
+</html>

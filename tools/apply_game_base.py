@@ -41,6 +41,7 @@ TARGETS = [
     'cinema/index.html',
     'utility/index.html',
     'yawaraka/index.html',
+    'yawaraka/bust/index.html',
     'anzan-tensei/index.html',
     'redline/play/index.html',
     'redline/play/template.html',
@@ -48,6 +49,7 @@ TARGETS = [
     'fantasy/index.html',
     'lumina/index.html',
     'shoko/index.html',
+    'kijou-no-keisan-c/index.html',
     'jiko-sim/index.html',
 ]
 PWA_META = (
