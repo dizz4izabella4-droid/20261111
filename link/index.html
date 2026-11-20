@@ -50,6 +50,7 @@ html,body{height:100%;background:var(--bg);color:var(--ink);overflow:hidden;
 #dots i{width:6px;height:6px;border-radius:50%;background:#4a3f31;transition:background .2s}
 #dots i.on{background:var(--lamp)}
 </style>
+<script>window.IZLINK_HOST = 1; // 連携の外枠であることを部品に知らせる</script>
 <!--IZ-LINK-BRIDGE:START--><script id="izlink-bridge">
 /* izlink bridge v1 — 連携アプリの共通データ層とイベント
  *
@@ -87,6 +88,17 @@ html,body{height:100%;background:var(--bg);color:var(--ink);overflow:hidden;
   var listeners = {};
   var visListeners = [];
   var isTop = global.parent === global;
+  // 外枠（link/）は、部品より先に window.IZLINK_HOST = 1 を置く。
+  // 祖先に外枠がいるときだけ「連携中」とみなす（単体の端末の中のディスクなどは連携しない）
+  var hostWin = null;
+  (function () {
+    var w = global;
+    for (var i = 0; i < 6; i++) {
+      try { if (w.IZLINK_HOST) { hostWin = w; return; } } catch (e) { return; }
+      if (w.parent === w) return;
+      w = w.parent;
+    }
+  })();
 
   function read(key, fallback) {
     try {
@@ -157,23 +169,24 @@ html,body{height:100%;background:var(--bg);color:var(--ink);overflow:hidden;
   }
 
   var selfId = Math.random().toString(36).slice(2);
+  // 窓の木（外枠 → 各アプリ → その中のディスク …）に沿って、送り元以外の隣へ流す
+  function neighbors() {
+    var out = [];
+    if (!isTop) out.push(global.parent);
+    var frames = global.document ? global.document.querySelectorAll('iframe') : [];
+    Array.prototype.forEach.call(frames, function (f) { if (f.contentWindow) out.push(f.contentWindow); });
+    return out;
+  }
+  function relay(msg, exceptWin) {
+    neighbors().forEach(function (w) {
+      if (w === exceptWin) return;
+      try { w.postMessage(msg, '*'); } catch (e) {}
+    });
+  }
   function emit(type, payload) {
     deliver(type, payload, 'self');
-    var msg = { izlink: 1, kind: 'event', type: type, payload: payload || {}, from: selfId };
-    if (!isTop) {
-      try { global.parent.postMessage(msg, '*'); } catch (e) {}
-    } else {
-      broadcastToFrames(msg, null);
-    }
-  }
-  // 外枠だけが使う：各枠へ配る（送り元には返さない）
-  function broadcastToFrames(msg, exceptWin) {
-    var frames = global.document ? global.document.querySelectorAll('iframe') : [];
-    Array.prototype.forEach.call(frames, function (f) {
-      if (f.contentWindow && f.contentWindow !== exceptWin) {
-        try { f.contentWindow.postMessage(msg, '*'); } catch (e) {}
-      }
-    });
+    if (!hostWin) return; // 連携していないときは自分の中だけ
+    relay({ izlink: 1, kind: 'event', type: type, payload: payload || {}, from: selfId }, null);
   }
 
   global.addEventListener('message', function (e) {
@@ -181,23 +194,24 @@ html,body{height:100%;background:var(--bg);color:var(--ink);overflow:hidden;
     if (!d) return;
     // 外枠からの表示通知（link/ の既存形式）
     if (d.type === 'izlink.visibility') {
-      visListeners.slice().forEach(function (cb) { try { cb(!!d.visible); } catch (er) {} });
+      if (e.source === global.parent) visListeners.slice().forEach(function (cb) { try { cb(!!d.visible); } catch (er) {} });
       return;
     }
-    if (d.izlink !== 1 || d.kind !== 'event' || d.from === selfId) return;
-    if (isTop) {
-      // 外枠：子の emit を受けて、自分にも届け、他の枠へ中継する
-      deliver(d.type, d.payload, 'frame');
-      broadcastToFrames(d, e.source);
-    } else if (e.source === global.parent) {
-      deliver(d.type, d.payload, 'frame');
+    if (d.izlink !== 1 || d.kind !== 'event' || d.from === selfId || !hostWin) return;
+    var known = e.source === global.parent && !isTop;
+    if (!known) {
+      var frames = global.document ? global.document.querySelectorAll('iframe') : [];
+      for (var i = 0; i < frames.length; i++) if (frames[i].contentWindow === e.source) { known = true; break; }
     }
+    if (!known) return;
+    deliver(d.type, d.payload, 'frame');
+    relay(d, e.source);
   });
 
   var api = {
     version: 1,
-    linked: !isTop,
-    isFrame: isTop,
+    linked: !!hostWin && hostWin !== global,
+    isFrame: hostWin === global,
     brand: function () { return meta().settings.brand; },
     setting: function (k) { return meta().settings[k]; },
     meta: meta,
@@ -211,7 +225,7 @@ html,body{height:100%;background:var(--bg);color:var(--ink);overflow:hidden;
     _keys: { prefix: PREFIX, meta: META_KEY }
   };
   global.IzLink = api;
-  if (!isTop) {
+  if (api.linked) {
     try { global.parent.postMessage({ type: 'izlink.ready' }, '*'); } catch (e) {}
   }
 })(window);
@@ -326,6 +340,13 @@ IzLink.on('mark.added', function(p){
 
 function papersCase(id){ return findCase(id) || CATALOG.cases[0]; } // 新聞データの無い事件は仮にAの紙面
 IzLink.on('article.pinned', function(p){
+  if (!p.caseId || !p.articleId) return;
+  if (p.title) { // 本物の端末のディスクから（記事の見出しと日付が付いてくる）
+    IzLink.update(function(d){
+      addBoardItem(d, { id:'article:'+p.articleId, kind:'article', ref:p.articleId, title:p.title, date:p.date || '', source:p.source || '' });
+    }, p.caseId);
+    return;
+  }
   var c = papersCase(p.caseId); if (!c) return;
   var art = null;
   Object.keys(c.papers).forEach(function(date){

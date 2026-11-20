@@ -203,6 +203,185 @@ body.running #chip{display:flex}
   .pick,.lever,.snd::before{transition:none}.cur,.bay.drop::after{animation:none}.screen.on .txt,.screen.flick .txt{animation:none}
 }
 </style>
+<!--IZ-LINK-BRIDGE:START--><script id="izlink-bridge">
+/* izlink bridge v1 — 連携アプリの共通データ層とイベント
+ *
+ * 各アプリ（保管庫・レッドライン・iz2611）と外枠（link/）に埋め込む小さな部品。
+ * 埋め込みは tools/apply_link_bridge.py で行う（作品は1ファイル完結のため）。
+ *
+ * 保存先（同一ドメインの localStorage）
+ *   izlink.v1.meta      : { caseId, settings:{ brand, stringsForFloppy } }
+ *   izlink.v1.<caseId>  : { marks:[], floppies:{}, terminal:{}, board:{items:[],pins:[],strings:[]}, truth:null }
+ *
+ * API（window.IzLink）
+ *   IzLink.linked                 外枠の中で動いているか（単体起動なら false）
+ *   IzLink.brand()                端末名（既定 'iz2611'）
+ *   IzLink.setting(key)           設定値
+ *   IzLink.caseId()               現在の事件ID
+ *   IzLink.meta() / setMeta(fn)   メタの読み出し・更新
+ *   IzLink.get(caseId?)           事件データ（無ければ空の形で返す）
+ *   IzLink.update(fn, caseId?)    事件データを fn(data) で書き換えて保存し、'data.changed' を流す
+ *   IzLink.on(type, cb)           イベント受信（自分・他の画面・外枠のどこから来たものも）。戻り値で解除
+ *   IzLink.emit(type, payload)    イベント送信（自分にも届く。外枠経由で他の画面へも届く）
+ *   IzLink.onVisibility(cb)       表示・非表示の通知（外枠が送る）
+ *
+ * 主なイベント
+ *   case.selected {caseId}  mark.added {docId,...}  string.added {stringId}
+ *   floppy.found {caseId}   floppy.inserted {caseId}  article.pinned {articleId}
+ *   evidence.found {...}    truth.revealed {...}      data.changed {caseId}
+ */
+(function (global) {
+  'use strict';
+  if (global.IzLink) return;
+
+  var PREFIX = 'izlink.v1.';
+  var META_KEY = PREFIX + 'meta';
+  var DEFAULT_SETTINGS = { brand: 'iz2611', stringsForFloppy: 3 };
+  var listeners = {};
+  var visListeners = [];
+  var isTop = global.parent === global;
+  // 外枠（link/）は、部品より先に window.IZLINK_HOST = 1 を置く。
+  // 祖先に外枠がいるときだけ「連携中」とみなす（単体の端末の中のディスクなどは連携しない）
+  var hostWin = null;
+  (function () {
+    var w = global;
+    for (var i = 0; i < 6; i++) {
+      try { if (w.IZLINK_HOST) { hostWin = w; return; } } catch (e) { return; }
+      if (w.parent === w) return;
+      w = w.parent;
+    }
+  })();
+
+  function read(key, fallback) {
+    try {
+      var s = global.localStorage.getItem(key);
+      return s ? JSON.parse(s) : fallback;
+    } catch (e) { return fallback; }
+  }
+  function write(key, value) {
+    try { global.localStorage.setItem(key, JSON.stringify(value)); return true; }
+    catch (e) { return false; }
+  }
+
+  function emptyCase() {
+    return { marks: [], floppies: {}, terminal: {}, board: { items: [], pins: [], strings: [] }, truth: null };
+  }
+  function normalizeCase(d) {
+    var e = emptyCase();
+    if (!d || typeof d !== 'object') return e;
+    for (var k in e) if (!(k in d)) d[k] = e[k];
+    if (!d.board || typeof d.board !== 'object') d.board = e.board;
+    ['items', 'pins', 'strings'].forEach(function (k) { if (!Array.isArray(d.board[k])) d.board[k] = []; });
+    return d;
+  }
+
+  function meta() {
+    var m = read(META_KEY, null) || {};
+    m.settings = m.settings || {};
+    for (var k in DEFAULT_SETTINGS) if (!(k in m.settings)) m.settings[k] = DEFAULT_SETTINGS[k];
+    if (!('caseId' in m)) m.caseId = null;
+    return m;
+  }
+  function setMeta(fn) {
+    var m = meta();
+    var r = fn(m);
+    write(META_KEY, r || m);
+    return r || m;
+  }
+
+  function caseId() { return meta().caseId; }
+  function get(id) {
+    id = id || caseId();
+    if (!id) return emptyCase();
+    return normalizeCase(read(PREFIX + id, null));
+  }
+  function update(fn, id) {
+    id = id || caseId();
+    if (!id) return null;
+    var d = get(id);
+    var r = fn(d);
+    d = normalizeCase(r || d);
+    write(PREFIX + id, d);
+    emit('data.changed', { caseId: id });
+    return d;
+  }
+
+  function deliver(type, payload, origin) {
+    var ev = { type: type, payload: payload || {}, origin: origin };
+    (listeners[type] || []).slice().forEach(function (cb) { try { cb(ev.payload, ev); } catch (e) { console.error(e); } });
+    (listeners['*'] || []).slice().forEach(function (cb) { try { cb(ev.payload, ev); } catch (e) { console.error(e); } });
+  }
+  function on(type, cb) {
+    (listeners[type] = listeners[type] || []).push(cb);
+    return function () {
+      var a = listeners[type] || [];
+      var i = a.indexOf(cb);
+      if (i >= 0) a.splice(i, 1);
+    };
+  }
+
+  var selfId = Math.random().toString(36).slice(2);
+  // 窓の木（外枠 → 各アプリ → その中のディスク …）に沿って、送り元以外の隣へ流す
+  function neighbors() {
+    var out = [];
+    if (!isTop) out.push(global.parent);
+    var frames = global.document ? global.document.querySelectorAll('iframe') : [];
+    Array.prototype.forEach.call(frames, function (f) { if (f.contentWindow) out.push(f.contentWindow); });
+    return out;
+  }
+  function relay(msg, exceptWin) {
+    neighbors().forEach(function (w) {
+      if (w === exceptWin) return;
+      try { w.postMessage(msg, '*'); } catch (e) {}
+    });
+  }
+  function emit(type, payload) {
+    deliver(type, payload, 'self');
+    if (!hostWin) return; // 連携していないときは自分の中だけ
+    relay({ izlink: 1, kind: 'event', type: type, payload: payload || {}, from: selfId }, null);
+  }
+
+  global.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d) return;
+    // 外枠からの表示通知（link/ の既存形式）
+    if (d.type === 'izlink.visibility') {
+      if (e.source === global.parent) visListeners.slice().forEach(function (cb) { try { cb(!!d.visible); } catch (er) {} });
+      return;
+    }
+    if (d.izlink !== 1 || d.kind !== 'event' || d.from === selfId || !hostWin) return;
+    var known = e.source === global.parent && !isTop;
+    if (!known) {
+      var frames = global.document ? global.document.querySelectorAll('iframe') : [];
+      for (var i = 0; i < frames.length; i++) if (frames[i].contentWindow === e.source) { known = true; break; }
+    }
+    if (!known) return;
+    deliver(d.type, d.payload, 'frame');
+    relay(d, e.source);
+  });
+
+  var api = {
+    version: 1,
+    linked: !!hostWin && hostWin !== global,
+    isFrame: hostWin === global,
+    brand: function () { return meta().settings.brand; },
+    setting: function (k) { return meta().settings[k]; },
+    meta: meta,
+    setMeta: setMeta,
+    caseId: caseId,
+    get: get,
+    update: update,
+    on: on,
+    emit: emit,
+    onVisibility: function (cb) { visListeners.push(cb); },
+    _keys: { prefix: PREFIX, meta: META_KEY }
+  };
+  global.IzLink = api;
+  if (api.linked) {
+    try { global.parent.postMessage({ type: 'izlink.ready' }, '*'); } catch (e) {}
+  }
+})(window);
+</script><!--IZ-LINK-BRIDGE:END-->
 <!--IZ-GAME-BASE:START-->
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black">
 <script>
@@ -478,6 +657,25 @@ const DISKS=[
   {id:'elena', path:'works/elena/', name:'CLOCK TOWER', ja:'時計塔の密室', label:'時計塔の密室（脚本：Elena）', for:'both', color:'orange', box:'A', start:'2026-11-16', upd:'2026-11-16', ver:'1.0'},
   {id:'olivia', path:'works/olivia/', name:'DUSK CLOCKTOWER', ja:'黄昏のクロックタワー', label:'黄昏のクロックタワー（脚本：Olivia）', for:'both', color:'mint', box:'A', start:'2026-11-16', upd:'2026-11-16', ver:'1.0'},
 ];
+/* ===== 連携アプリ（link/）の中で動くとき（単体で開いたときは何も変わらない） =====
+   ・端末名は共通設定から取る（既定 iz2611）。画面に出る端末名は TERM だけを使う
+   ・ディスクケースには、保管庫で手に取った事件の専用フロッピーだけを並べる
+   ・CASE_DISKS … 事件ID → 専用フロッピー（cases/<id>/ に1ファイル完結で置く） */
+const LINKED=!!(window.IzLink&&IzLink.linked);
+const TERM=LINKED?{model:IzLink.brand(),title:IzLink.brand()}:{model:'iz-98',title:'PC98 NOVEL'};
+const CASE_DISKS={
+  'X-01':{path:'cases/x-01/',name:'CASE FILE X-01',ja:'テスト事件（試作）'}
+};
+function linkDisks(){
+  const out=[];
+  Object.keys(CASE_DISKS).forEach(cid=>{
+    const f=IzLink.get(cid).floppies[cid]; if(!f||!f.taken) return;
+    const c=CASE_DISKS[cid];
+    out.push({id:'case-'+cid.toLowerCase(),path:c.path,name:c.name,ja:c.ja,label:c.ja,for:'both',color:'red',box:'A',ver:'1.0',caseId:cid});
+  });
+  return out;
+}
+if(LINKED) DISKS.splice(0,DISKS.length,...linkDisks());
 /* 実験室へ入る・戻るはタブで行う。BOXの名前 */
 const BOXES={A:{key:'A:',ja:'おもちゃ箱'},B:{key:'B:',ja:'実験室'}};
 
@@ -599,21 +797,22 @@ function menuHTML(d){
     inf='<div class="kv"><span>VOLUME</span><b>'+esc(vol(d.id))+'</b></div><div class="kv"><span>TITLE</span><b class="yl">'+esc(d.name)+'</b></div>'+
       '<div class="kv"><span>NOTE</span><b>'+esc(d.ja)+'</b></div><div class="kv"><span>FOR</span><b>'+(d.for==='pc'?'PC':d.for==='mobile'?'SMARTPHONE':'PC / SMARTPHONE')+'</b></div>'+
       '<div class="kv"><span>VER</span><b>'+esc(d.ver||'-')+(d.start?'   START '+fd(d.start):'')+(d.upd?'   UPD '+fd(d.upd):'')+'</b></div>';
-  } else inf='<div class="hint">SELECT A FLOPPY DISK FROM THE DISK CASE.<br>TAP / CLICK TO INSERT.<br><span class="dm">(PC: DRAG A DISK TO DRIVE A:)</span></div>';
-  return '<div class="menu"><div class="bar"><span>iz-98 FD MONITOR</span><span>Ver 1.0</span></div><div class="ttl">PC98 NOVEL</div><div class="sub">D I S K &nbsp; O P E R A T I N G &nbsp; M E N U</div>'+
+  } else if(LINKED&&!DISKS.length) inf='<div class="hint">NO CASE DISK.<br>専用フロッピーは保管庫で見つかる。</div>';
+  else inf='<div class="hint">SELECT A FLOPPY DISK FROM THE DISK CASE.<br>TAP / CLICK TO INSERT.<br><span class="dm">(PC: DRAG A DISK TO DRIVE A:)</span></div>';
+  return '<div class="menu"><div class="bar"><span>'+esc(TERM.model)+' FD MONITOR</span><span>Ver 1.0</span></div><div class="ttl">'+esc(TERM.title)+'</div><div class="sub">D I S K &nbsp; O P E R A T I N G &nbsp; M E N U</div>'+
     '<div class="pr">A&gt; <span class="cy">INSERT A DISK</span><i class="cur"></i></div><div class="inf">'+inf+'</div>'+
     '<div class="ft"><span>DRIVE A: [NO DISK]</span><span>WORKS:'+DISKS.length+'</span></div></div>';
 }
 function showMenu(d){ if(!st.power) return; setScreen(menuHTML(d||null)); }
 function peek(d){ st.peek=d; if(st.phase==='empty'&&!st.busy&&st.power&&!st.posting) showMenu(d); }
-function msgScreen(lines){ setScreen('<div class="menu"><div class="bar"><span>iz-98 FD MONITOR</span><span>Ver 1.0</span></div><div class="boot" style="top:24px">'+lines.map(l=>'<div class="ln '+(l[1]||'')+'">'+esc(l[0])+'</div>').join('')+'</div></div>'); }
+function msgScreen(lines){ setScreen('<div class="menu"><div class="bar"><span>'+esc(TERM.model)+' FD MONITOR</span><span>Ver 1.0</span></div><div class="boot" style="top:24px">'+lines.map(l=>'<div class="ln '+(l[1]||'')+'">'+esc(l[0])+'</div>').join('')+'</div></div>'); }
 function setLed(id,on){ $(id).classList.toggle('on',!!on); }
 function blinkAcc(n){ let i=0; const f=()=>{ setLed('acc',i%2===0); if(++i<(n||4)*2) setTimeout(f,55); else setLed('acc',st.phase==='in'&&st.reading); }; f(); }
 
 /* 電源を入れたときの画面（BIOS風。クリックで飛ばせる） */
 async function post(){
   st.posting=true; screenEl.classList.remove('off'); screenEl.classList.remove('on'); void screenEl.offsetWidth; screenEl.classList.add('on');
-  const L=[['iz-98 BIOS  Ver 1.00','cy'],['',''],['MEMORY CHECK','']];
+  const L=[[TERM.model+' BIOS  Ver 1.00','cy'],['',''],['MEMORY CHECK','']];
   const draw=m=>setScreen('<div class="boot">'+L.map(l=>'<div class="ln '+l[1]+'">'+esc(l[0])+'</div>').join('')+(m||'')+'</div>');
   draw(); await sleep(260);
   for(let k=0;k<=640&&!st.skip;k+=160){ L[2][0]='MEMORY CHECK  '+k+'KB'; draw(); await sleep(90); }
@@ -666,10 +865,10 @@ addEventListener('message',e=>{
 /* ---------- 起動画面 ---------- */
 async function bootSeq(d,ready){
   st.reading=true; setLed('acc',true); sfx.motorOn(); st.skip=false;
-  const L=[['iz-98 DISK LOADER  Ver 1.0','cy'],['',''],['DRIVE A: ......... READY',''],['VOLUME : '+vol(d.id),''],['TITLE  : '+d.name,'yl'],
+  const L=[[TERM.model+' DISK LOADER  Ver 1.0','cy'],['',''],['DRIVE A: ......... READY',''],['VOLUME : '+vol(d.id),''],['TITLE  : '+d.name,'yl'],
            ['VER    : '+(d.ver||'-')+(d.upd?'   '+fd(d.upd):''),''],['','']];
   let shown=0, barN=0; const CELLS=32;
-  const draw=extra=>{ setScreen('<div class="menu"><div class="bar"><span>iz-98 FD MONITOR</span><span>Ver 1.0</span></div><div class="boot" style="top:24px">'+
+  const draw=extra=>{ setScreen('<div class="menu"><div class="bar"><span>'+esc(TERM.model)+' FD MONITOR</span><span>Ver 1.0</span></div><div class="boot" style="top:24px">'+
     L.slice(0,shown).map(l=>'<div class="ln '+(l[1]||'')+'">'+esc(l[0])+'</div>').join('')+
     (shown>=L.length?'<div class="ln">LOADING <span class="barw">'+Array.from({length:CELLS},(_,i)=>'<i'+(i<barN?' class="f"':'')+'></i>').join('')+'</span></div>':'')+(extra||'')+
     '</div><div class="hintskip">TAP TO SKIP</div></div>'); };
@@ -726,8 +925,9 @@ async function _insert(d,startRect,fromDrag){
   if(st.mode==='embed'&&!st.pushed){ try{ st.histBase=history.length; history.pushState({izdisk:d.id},''); st.pushed=true; }catch(e){} }
   const ready=st.mode==='embed'?loadFrame(d):Promise.resolve();
   const ok=await bootSeq(d,ready);
-  if(!ok){ msgScreen([['iz-98 DISK LOADER  Ver 1.0','cy'],['',''],['DISK READ ERROR','rd'],['PLEASE EJECT THE DISK.','']]); sfx.off(); await sleep(1800); pendingEjectSoon(); return; }
+  if(!ok){ msgScreen([[TERM.model+' DISK LOADER  Ver 1.0','cy'],['',''],['DISK READ ERROR','rd'],['PLEASE EJECT THE DISK.','']]); sfx.off(); await sleep(1800); pendingEjectSoon(); return; }
   if(st.mode==='page'){ try{ sessionStorage.setItem('izTop.page',d.id); }catch(e){} await sleep(200); location.href=d.path; return; }
+  if(LINKED&&d.caseId) IzLink.emit('floppy.inserted',{caseId:d.caseId});
   await zoomIn();
 }
 function pendingEjectSoon(){ st.pendingEject=true; }
@@ -843,6 +1043,20 @@ const drag={on:false,id:null,swallow:false};
 })();
 
 /* ---------- 起動 ---------- */
+$('stagebox').setAttribute('aria-label',TERM.model);
+document.querySelectorAll('.mname,.badge').forEach(el=>{ if(el.firstChild&&el.firstChild.nodeType===3) el.firstChild.textContent=TERM.model; });
+if(LINKED){
+  document.title=TERM.title;
+  // 保管庫でフロッピーを手に取ったら、ディスクケースを並べ直す（ドライブが空のときだけ）
+  IzLink.on('data.changed',()=>{
+    const nd=linkDisks();
+    if(nd.map(d=>d.id).join()===DISKS.map(d=>d.id).join()||st.phase!=='empty'||st.busy) return;
+    DISKS.splice(0,DISKS.length,...nd);
+    Object.keys(byId).forEach(k=>delete byId[k]); DISKS.forEach((d,i)=>{ d.i=i; byId[d.id]=d; });
+    shelves.A.replaceChildren(); shelves.B.replaceChildren(); Object.keys(slots).forEach(k=>delete slots[k]);
+    buildCase(); if(!st.posting) showMenu(st.peek);
+  });
+}
 buildCase(); syncSnd(); fit();
 addEventListener('pageshow',e=>{ if(e.persisted) location.reload(); });
 (function init(){
