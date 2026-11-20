@@ -429,4 +429,5 @@ function renderAll(){renderShelf();renderCatalog();renderReader();updateDeskCoun
 function viewDesk(toDesk){state.view=toDesk?'desk':'archive';renderAll();if(toDesk)switchScreen('desk');else switchScreen(innerWidth<=850?'shelf':'catalog')}
 el('showArchive').addEventListener('click',()=>viewDesk(false));el('showDesk').addEventListener('click',()=>viewDesk(true));el('order').addEventListener('change',e=>{state.sort=e.target.value;renderCatalog()});document.querySelectorAll('.mobile-nav button').forEach(b=>b.addEventListener('click',()=>switchScreen(b.dataset.target)));document.addEventListener('keydown',e=>{if(e.key==='Escape' && innerWidth<=850 && state.screen==='reader'){switchScreen('catalog')}});state.active=(byId(state.active)&&currentShelf().folderIds.includes(byId(state.active).folder))?state.active:'';renderAll();if(innerWidth>850)el('workspace').dataset.screen='reader';
 </script>
+<script src="./guide.js"></script>
 </body></html>
