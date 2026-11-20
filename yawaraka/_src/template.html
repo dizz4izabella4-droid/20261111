@@ -69,6 +69,15 @@
   #bakeBtn { flex: 2.4; background: var(--ink); color: #fbfaf5; font-size: 22px; display: flex; align-items: center; justify-content: center; gap: 8px; }
   #bakeBtn:active { transform: scale(.97); filter: brightness(1.15); }
   #relaxBtn { flex: 1; }
+
+  #pal { flex-direction: column; align-items: flex-start; gap: 8px; overflow: visible; }
+  .subrow { display: flex; gap: 6px; align-items: center; max-width: 100%; overflow-x: auto; scrollbar-width: none; padding: 2px; }
+  .subrow::-webkit-scrollbar { display: none; }
+  .subrow > button:not(.sw) { flex: none; border: 2px solid var(--ink); background: #fbfaf5; color: var(--ink); border-radius: 999px; min-height: 34px; padding: 4px 10px; font-size: 12px; font-weight: bold; font-family: inherit; }
+  .subrow > button.on { background: var(--ink); color: #fbfaf5; }
+  .subrow .sw { flex: none; width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--ink); padding: 0; cursor: pointer; }
+  .subrow .rainbow { position: relative; overflow: hidden; background: conic-gradient(#f44, #fd4, #4d6, #4cf, #84f, #f4a, #f44); }
+  .subrow .rainbow input { position: absolute; inset: -6px; width: 60px; height: 60px; opacity: 0; cursor: pointer; }
 </style>
 </head>
 <body>

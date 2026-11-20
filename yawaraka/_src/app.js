@@ -71,7 +71,7 @@ function withOutline(mesh, th = 0.035) {
 const cat = new THREE.Group();     // 床からの位置（ジャンプ・持ち上げ）
 scene.add(cat);
 let squish = null;                 // ぷにぷに変形用（キャラごとに作り直す）
-let faceMask = null;
+let faceMask = null, itemAll = false;
 const PROT = 0.6;
 let colorBase = null, scorch = null, bodyCol = 0xffffff, itemCol = null;
 let curKey = 'mebae', gs = { x: 1, y: 1, z: 1 }, flashT = -1;
@@ -401,9 +401,9 @@ function buildMebae() {
     head.add(grabBall);
     plant.traverse(o => { o.frustumCulled = false; });
     sw.f = 0; sw.fv = 0;
-    if (itemCol !== null) tintMain(itemCol);
+    if (itemCol !== null) tintMain(itemCol, itemAll);
   }
-  function tintMain(hex) { head.traverse(o => { if (o.isMesh && o.material.userData.main) o.material.color.set(hex); }); }
+  function tintMain(hex, all) { head.traverse(o => { if (o.isMesh && o.material.isMeshToonMaterial) { const m = o.material; if (m.userData.orig === undefined) m.userData.orig = m.color.getHex(); m.color.setHex(all || m.userData.main ? hex : m.userData.orig); } }); }
   function applyStretch(o) {
     // 茎：根元は動かず、上へいくほど大きく動く（先端＝つまんだ所が指についてくる）
     const A = stem.geometry.attributes.position.array;
@@ -916,7 +916,13 @@ canvas.addEventListener('pointerdown', e => {
   if (!h) return;
   // つかむ（伸びたままの所をもう一度つかんでもOK）
   const localHit = body.worldToLocal(h.point.clone());
-  if (pull.active && !pull.held && RET.hold && !pull.relax) commitPose(false);   // 別の場所をつかむ前に、いまの形を確定
+  if (pull.active && !pull.held && localHit.distanceTo(pull.grab.clone().add(pull.off)) > 0.6) {   // 遠い場所をつかみなおしたら、焼いていない形は捨てる
+    pull.off.set(0, 0, 0); pull.vel.set(0, 0, 0); pull.active = false; DF.ox = DF.oy = DF.oz = 0;
+    pos.array.set(basePos); pos.needsUpdate = true; bodyGeo.computeVertexNormals();
+    riders.forEach(r => { if (r.o.parent === squish) r.o.position.fromArray(r.base); });
+    faceVerts.forEach(f => { f.attr.array.set(f.base); f.attr.needsUpdate = true; });
+    faceCaps.forEach(c => c.o.position.fromArray(c.base));
+  }
   pull.relax = false;
   if (!pull.active) pull.off.set(0, 0, 0);
   pull.grab.copy(localHit).sub(pull.off);
@@ -1673,18 +1679,30 @@ ui('ret').oninput = e => setReturn(parseFloat(e.target.value));
 setReturn(4.2);
 
 // ---- 色
-const BODY_COLS = ['#ffffff', '#ffd6e0', '#d7f0d9', '#d4e6ff', '#e6d9ff', '#fff1b8', '#ffd9b0', '#cfcac0', '#8a8f9c'];
-const ITEM_COLS = ['#e5584f', '#ee6f86', '#f2c744', '#5aa9e6', '#8cc87a', '#b48cf2', '#ffffff', '#2b2b33', '#f0a050'];
+const BODY_COLS = ['#ffffff', '#ffd6e0', '#d7f0d9', '#d4e6ff', '#ffe9a8'];
+const ITEM_COLS = ['#e5584f', '#f2c744', '#5aa9e6', '#2b2b33'];
 const pal = ui('pal');
-function addSw(label, cols, fn) {
-  const l = document.createElement('span'); l.className = 'lab'; l.textContent = label; pal.appendChild(l);
+function addSw(label, cols, fn, extra) {
+  const row = document.createElement('div'); row.className = 'subrow'; pal.appendChild(row);
+  const l = document.createElement('span'); l.className = 'lab'; l.textContent = label; row.appendChild(l);
+  if (extra) row.appendChild(extra);
   for (const c of cols) {
     const b = document.createElement('button'); b.className = 'sw'; b.style.background = c; b.setAttribute('aria-label', label + ' ' + c);
-    b.onclick = () => fn(c); pal.appendChild(b);
+    b.onclick = () => fn(c); row.appendChild(b);
   }
+  // いちばん右：自由に色を選ぶ
+  const pick = document.createElement('label'); pick.className = 'sw rainbow'; pick.title = 'custom';
+  const inp = document.createElement('input'); inp.type = 'color'; inp.value = '#ff8800';
+  inp.oninput = () => fn(inp.value);
+  pick.appendChild(inp); row.appendChild(pick);
 }
-addSw('BODY', BODY_COLS, c => { bodyCol = new THREE.Color(c).getHex(); bodyMat.color.set(bodyCol); sfx.poke(); });
-addSw('ITEM', ITEM_COLS, c => { itemCol = new THREE.Color(c).getHex(); if (current.rt.tint) current.rt.tint(itemCol); sfx.poke(); });
+const applyItem = () => { if (itemCol !== null && current.rt.tint) current.rt.tint(itemCol, itemAll); };
+addSw('BODY', BODY_COLS, c => { bodyCol = new THREE.Color(c).getHex(); bodyMat.color.set(bodyCol); });
+{
+  const all = document.createElement('button'); all.id = 'itemAll'; all.textContent = 'ALL'; all.title = 'recolor every part of the item';
+  all.onclick = () => { itemAll = !itemAll; all.classList.toggle('on', itemAll); applyItem(); sfx.poke(); };
+  addSw('ITEM', ITEM_COLS, c => { itemCol = new THREE.Color(c).getHex(); applyItem(); }, all);
+}
 
 let startKey = 'mebae';
 try { startKey = localStorage.getItem('mochi-char') || 'mebae'; } catch (e) {}
