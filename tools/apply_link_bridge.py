@@ -18,8 +18,8 @@ GAME_BASE_START = '<!--IZ-GAME-BASE:START-->'
 TARGETS = [
     'link/index.html',
     'shoko/index.html',
-    'pc98-novel/index.html',
-    'pc98-novel/cases/x-01/index.html',
+    'iz2611/index.html',
+    'iz2611/cases/x-01/index.html',
 ]
 
 

@@ -15,7 +15,7 @@ dirs = {w['path'].strip('/') for w in works if w.get('category') != 'tool'}
 files = set()
 for d in dirs:
     for f in (ROOT/d).rglob('*.html'): files.add(f)
-for extra in ['pc98-novel/_engine/template.html']:
+for extra in ['iz2611/_engine/template.html']:
     if (ROOT/extra).exists(): files.add(ROOT/extra)
 n = 0
 for f in sorted(files):

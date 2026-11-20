@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head><script>/*iz-guard v1: ダブルタップ拡大の防止／iPhoneのマナーモードに従う*/try{navigator.audioSession&&(navigator.audioSession.type='ambient')}catch(e){}(function(){try{var s=document.createElement('style');s.textContent='html{-webkit-text-size-adjust:100%}*{touch-action:manipulation}';document.documentElement.appendChild(s);['gesturestart','gesturechange','gestureend','dblclick'].forEach(function(n){document.addEventListener(n,function(e){e.preventDefault()},{passive:false})});}catch(e){}})();</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<title>CASE FILE X-01</title>
+<!--
+  事件 X-01 の専用フロッピー（連携アプリの試作用ダミー）。端末のドライブに挿して動かす。
+  中身：新聞縮刷版の日付検索、記事を「ボードに貼る」。当日の再現（追体験）は手順5で足す。
+  本物の事件ができたら、このファイルを写して PAPERS と CASE を書き換える。
+-->
+<style>
+:root{--bg:#000;--fg:#e8e8e8;--cy:#5ff;--yl:#ff5;--gn:#5f5;--rd:#f55;--dm:#888;--line:#2a6;--paper:#e9e2cf;--ink:#222}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--fg);overflow:hidden}
+body{font-family:"MS Gothic","Osaka-Mono","Noto Sans Mono CJK JP",ui-monospace,monospace;font-size:15px;line-height:1.5;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+#scr{position:absolute;inset:0;display:flex;flex-direction:column;padding:calc(10px + env(safe-area-inset-top)) 14px calc(10px + env(safe-area-inset-bottom))}
+/* 端末のドライブの中では、左上の EJECT・右上の全画面ボタンと重ならないよう下げる */
+body.hosted #scr{padding-top:calc(58px + env(safe-area-inset-top))}
+#scr:after{content:"";position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(transparent 0 2px,rgba(0,0,0,.22) 2px 3px)}
+.bar{display:flex;justify-content:space-between;background:var(--cy);color:#000;padding:2px 8px;font-weight:bold;flex:0 0 auto}
+.main{flex:1 1 auto;overflow:auto;padding:12px 2px;-webkit-overflow-scrolling:touch}
+.cy{color:var(--cy)}.yl{color:var(--yl)}.gn{color:var(--gn)}.rd{color:var(--rd)}.dm{color:var(--dm)}
+h1{font-size:20px;color:var(--yl);letter-spacing:.15em;margin:6px 0 2px}
+.menu{list-style:none;margin:16px 0}
+.menu button{display:block;width:100%;text-align:left;background:none;border:1px solid #444;color:var(--fg);font:inherit;padding:12px;margin:8px 0;cursor:pointer}
+.menu button:hover,.menu button:focus{border-color:var(--cy);outline:none}
+.menu button:disabled{color:var(--dm);border-style:dashed}
+.menu b{color:var(--cy);margin-right:10px}
+.field{display:flex;align-items:center;gap:6px;margin:14px 0 8px;font-size:22px;letter-spacing:.08em}
+.field .d{display:inline-block;min-width:1ch;border-bottom:2px solid #555;text-align:center}
+.field .d.on{border-color:var(--yl);animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{border-color:transparent}}
+.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-width:320px;margin-top:10px}
+.keys button{font:inherit;font-size:20px;padding:10px 0;background:#111;border:1px solid #555;color:var(--fg);cursor:pointer}
+.keys button:active{background:#333}
+.keys .go{color:#000;background:var(--cy);border-color:var(--cy)}
+.keys .bs{color:var(--yl)}
+.msg{min-height:1.5em;margin-top:8px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.btn{font:inherit;padding:8px 14px;background:#111;border:1px solid var(--cy);color:var(--cy);cursor:pointer}
+.btn:disabled{border-color:#444;color:var(--dm)}
+.btn.pin{background:var(--rd);border-color:var(--rd);color:#fff}
+.btn.pin:disabled{background:#300;border-color:#533;color:#a88}
+/* 紙面 */
+.paper{background:var(--paper);color:var(--ink);font-family:"Yu Mincho","Hiragino Mincho ProN",serif;padding:12px 12px 16px;margin-top:8px;
+  box-shadow:0 0 0 2px #555;filter:contrast(1.05) saturate(.6)}
+.mast{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px double var(--ink);padding-bottom:4px;margin-bottom:8px}
+.mast b{font-size:22px;letter-spacing:.2em}
+.mast small{font-size:11px;text-align:right;line-height:1.3}
+.cols{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.art{cursor:pointer;border-top:1px solid #0004;padding-top:6px;overflow:hidden}
+.art:active{background:#0001}
+.art h3{font-weight:bold;line-height:1.3;margin-bottom:4px}
+.art p{font-size:12px;line-height:1.6;max-height:6.4em;overflow:hidden}
+.art.L{grid-column:span 6}.art.L h3{font-size:22px}
+.art.M{grid-column:span 3}.art.M h3{font-size:15px}
+.art.S{grid-column:span 2}.art.S h3{font-size:11px}.art.S p{font-size:10px;max-height:5.2em}
+.art.pinned h3:after{content:" ◆";color:#b3261e;font-size:.7em}
+/* 記事の拡大 */
+#pop{position:fixed;inset:0;background:#000c;display:none;align-items:center;justify-content:center;padding:18px;z-index:5}
+#pop.on{display:flex}
+#pop .box{background:var(--paper);color:var(--ink);font-family:"Yu Mincho","Hiragino Mincho ProN",serif;max-width:560px;width:100%;max-height:100%;overflow:auto;padding:16px 18px}
+#pop h3{font-size:19px;line-height:1.35;margin:6px 0 10px}
+#pop .src{font-size:11px;color:#555}
+#pop p{font-size:14px;line-height:1.85;white-space:pre-wrap}
+#pop .btns{justify-content:flex-end}
+#pop .btn{font-family:ui-monospace,monospace}
+</style>
+<!--IZ-LINK-BRIDGE:START--><script id="izlink-bridge">
+/* izlink bridge v1 — 連携アプリの共通データ層とイベント
+ *
+ * 各アプリ（保管庫・レッドライン・iz2611）と外枠（link/）に埋め込む小さな部品。
+ * 埋め込みは tools/apply_link_bridge.py で行う（作品は1ファイル完結のため）。
+ *
+ * 保存先（同一ドメインの localStorage）
+ *   izlink.v1.meta      : { caseId, settings:{ brand, stringsForFloppy } }
+ *   izlink.v1.<caseId>  : { marks:[], floppies:{}, terminal:{}, board:{items:[],pins:[],strings:[]}, truth:null }
+ *
+ * API（window.IzLink）
+ *   IzLink.linked                 外枠の中で動いているか（単体起動なら false）
+ *   IzLink.brand()                端末名（既定 'iz2611'）
+ *   IzLink.setting(key)           設定値
+ *   IzLink.caseId()               現在の事件ID
+ *   IzLink.meta() / setMeta(fn)   メタの読み出し・更新
+ *   IzLink.get(caseId?)           事件データ（無ければ空の形で返す）
+ *   IzLink.update(fn, caseId?)    事件データを fn(data) で書き換えて保存し、'data.changed' を流す
+ *   IzLink.on(type, cb)           イベント受信（自分・他の画面・外枠のどこから来たものも）。戻り値で解除
+ *   IzLink.emit(type, payload)    イベント送信（自分にも届く。外枠経由で他の画面へも届く）
+ *   IzLink.onVisibility(cb)       表示・非表示の通知（外枠が送る）
+ *
+ * 主なイベント
+ *   case.selected {caseId}  mark.added {docId,...}  string.added {stringId}
+ *   floppy.found {caseId}   floppy.inserted {caseId}  article.pinned {articleId}
+ *   evidence.found {...}    truth.revealed {...}      data.changed {caseId}
+ */
+(function (global) {
+  'use strict';
+  if (global.IzLink) return;
+
+  var PREFIX = 'izlink.v1.';
+  var META_KEY = PREFIX + 'meta';
+  var DEFAULT_SETTINGS = { brand: 'iz2611', stringsForFloppy: 3 };
+  var listeners = {};
+  var visListeners = [];
+  var isTop = global.parent === global;
+  // 外枠（link/）は、部品より先に window.IZLINK_HOST = 1 を置く。
+  // 祖先に外枠がいるときだけ「連携中」とみなす（単体の端末の中のディスクなどは連携しない）
+  var hostWin = null;
+  (function () {
+    var w = global;
+    for (var i = 0; i < 6; i++) {
+      try { if (w.IZLINK_HOST) { hostWin = w; return; } } catch (e) { return; }
+      if (w.parent === w) return;
+      w = w.parent;
+    }
+  })();
+
+  function read(key, fallback) {
+    try {
+      var s = global.localStorage.getItem(key);
+      return s ? JSON.parse(s) : fallback;
+    } catch (e) { return fallback; }
+  }
+  function write(key, value) {
+    try { global.localStorage.setItem(key, JSON.stringify(value)); return true; }
+    catch (e) { return false; }
+  }
+
+  function emptyCase() {
+    return { marks: [], floppies: {}, terminal: {}, board: { items: [], pins: [], strings: [] }, truth: null };
+  }
+  function normalizeCase(d) {
+    var e = emptyCase();
+    if (!d || typeof d !== 'object') return e;
+    for (var k in e) if (!(k in d)) d[k] = e[k];
+    if (!d.board || typeof d.board !== 'object') d.board = e.board;
+    ['items', 'pins', 'strings'].forEach(function (k) { if (!Array.isArray(d.board[k])) d.board[k] = []; });
+    return d;
+  }
+
+  function meta() {
+    var m = read(META_KEY, null) || {};
+    m.settings = m.settings || {};
+    for (var k in DEFAULT_SETTINGS) if (!(k in m.settings)) m.settings[k] = DEFAULT_SETTINGS[k];
+    if (!('caseId' in m)) m.caseId = null;
+    return m;
+  }
+  function setMeta(fn) {
+    var m = meta();
+    var r = fn(m);
+    write(META_KEY, r || m);
+    return r || m;
+  }
+
+  function caseId() { return meta().caseId; }
+  function get(id) {
+    id = id || caseId();
+    if (!id) return emptyCase();
+    return normalizeCase(read(PREFIX + id, null));
+  }
+  function update(fn, id) {
+    id = id || caseId();
+    if (!id) return null;
+    var d = get(id);
+    var r = fn(d);
+    d = normalizeCase(r || d);
+    write(PREFIX + id, d);
+    emit('data.changed', { caseId: id });
+    return d;
+  }
+
+  function deliver(type, payload, origin) {
+    var ev = { type: type, payload: payload || {}, origin: origin };
+    (listeners[type] || []).slice().forEach(function (cb) { try { cb(ev.payload, ev); } catch (e) { console.error(e); } });
+    (listeners['*'] || []).slice().forEach(function (cb) { try { cb(ev.payload, ev); } catch (e) { console.error(e); } });
+  }
+  function on(type, cb) {
+    (listeners[type] = listeners[type] || []).push(cb);
+    return function () {
+      var a = listeners[type] || [];
+      var i = a.indexOf(cb);
+      if (i >= 0) a.splice(i, 1);
+    };
+  }
+
+  var selfId = Math.random().toString(36).slice(2);
+  // 窓の木（外枠 → 各アプリ → その中のディスク …）に沿って、送り元以外の隣へ流す
+  function neighbors() {
+    var out = [];
+    if (!isTop) out.push(global.parent);
+    var frames = global.document ? global.document.querySelectorAll('iframe') : [];
+    Array.prototype.forEach.call(frames, function (f) { if (f.contentWindow) out.push(f.contentWindow); });
+    return out;
+  }
+  function relay(msg, exceptWin) {
+    neighbors().forEach(function (w) {
+      if (w === exceptWin) return;
+      try { w.postMessage(msg, '*'); } catch (e) {}
+    });
+  }
+  function emit(type, payload) {
+    deliver(type, payload, 'self');
+    if (!hostWin) return; // 連携していないときは自分の中だけ
+    relay({ izlink: 1, kind: 'event', type: type, payload: payload || {}, from: selfId }, null);
+  }
+
+  global.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d) return;
+    // 外枠からの表示通知（link/ の既存形式）
+    if (d.type === 'izlink.visibility') {
+      if (e.source === global.parent) visListeners.slice().forEach(function (cb) { try { cb(!!d.visible); } catch (er) {} });
+      return;
+    }
+    if (d.izlink !== 1 || d.kind !== 'event' || d.from === selfId || !hostWin) return;
+    var known = e.source === global.parent && !isTop;
+    if (!known) {
+      var frames = global.document ? global.document.querySelectorAll('iframe') : [];
+      for (var i = 0; i < frames.length; i++) if (frames[i].contentWindow === e.source) { known = true; break; }
+    }
+    if (!known) return;
+    deliver(d.type, d.payload, 'frame');
+    relay(d, e.source);
+  });
+
+  var api = {
+    version: 1,
+    linked: !!hostWin && hostWin !== global,
+    isFrame: hostWin === global,
+    brand: function () { return meta().settings.brand; },
+    setting: function (k) { return meta().settings[k]; },
+    meta: meta,
+    setMeta: setMeta,
+    caseId: caseId,
+    get: get,
+    update: update,
+    on: on,
+    emit: emit,
+    onVisibility: function (cb) { visListeners.push(cb); },
+    _keys: { prefix: PREFIX, meta: META_KEY }
+  };
+  global.IzLink = api;
+  if (api.linked) {
+    try { global.parent.postMessage({ type: 'izlink.ready' }, '*'); } catch (e) {}
+  }
+})(window);
+</script><!--IZ-LINK-BRIDGE:END-->
+</head>
+<body>
+<div id="scr">
+  <div class="bar"><span id="brand">FD</span><span>CASE FILE X-01</span></div>
+  <div class="main" id="main"></div>
+</div>
+<div id="pop" role="dialog" aria-modal="true"><div class="box" id="popBox"></div></div>
+
+<script>
+/* izdisk-client v1（iz2611/izdisk-client.js の写し） */
+(function () {
+  'use strict';
+  var P = window.parent, hosted = !!P && P !== window;
+  var O = (location.protocol === 'file:' || location.origin === 'null') ? '*' : location.origin;
+  var beforeEject = null;
+  function send(t) { if (!hosted) return; try { P.postMessage({ izdisk: 1, type: t }, O); } catch (e) {} }
+  window.IZDISK = {
+    hosted: hosted,
+    ready: function () { send('ready'); },
+    access: function () { send('access'); },
+    eject: function () { send('eject'); },
+    onBeforeEject: function (fn) { beforeEject = fn; }
+  };
+  addEventListener('message', function (e) {
+    if (!hosted || e.source !== P) return;
+    var m = e.data; if (!m || m.izdisk !== 1) return;
+    if (m.type === 'before-eject') { try { if (beforeEject) beforeEject(); } catch (x) {} send('saved'); }
+  });
+})();
+</script>
+<script>
+(function(){
+'use strict';
+
+/* ===== このディスクの中身（試作用ダミー） ===== */
+var CASE = { id:'X-01', title:'テスト事件（試作）' };
+var RANGE = { from:'19870101', to:'19870331', label:'北嶺新報 縮刷版 1987年 第1巻（1月〜3月）' };
+// 紙面：日付(YYYYMMDD) → 記事。size … L（大見出し）/ M / S（小さな記事。見落としやすい）
+var PAPERS = {
+  '19870214': { ed:'朝刊 14版', arts:[
+    { id:'a1', size:'L', head:'県道 雪崩で全面通行止め　白樺地区の山荘など孤立',
+      body:'十三日夕、県道北嶺線の峠付近で雪崩が発生し、全面通行止めとなった。けが人はいない。\n県土木事務所によると、除雪と安全確認に少なくとも二日かかる見込み。この影響で白樺地区の山荘・別荘など数軒が孤立している。電話は通じている。' },
+    { id:'a2', size:'M', head:'高原スキー場 週末は家族連れでにぎわう',
+      body:'北嶺高原スキー場は今冬一番の積雪となり、週末は家族連れなどでにぎわった。リフト待ちは最長で四十分。' },
+    { id:'a3', size:'S', head:'猟銃の盗難届　北嶺町で',
+      body:'北嶺町の男性方から、物置に保管していた猟銃一丁が盗まれたと届けがあった。施錠はされていたという。北嶺署が調べている。' }
+  ]},
+  '19870215': { ed:'朝刊 14版', arts:[
+    { id:'b1', size:'L', head:'孤立の山荘で宿泊客死亡　北嶺署が経緯調べる',
+      body:'十五日朝、雪崩で孤立している白樺地区の山荘「白樺荘」で、宿泊客の男性（四二）が食堂で倒れているのを管理人の妻が見つけた。男性はすでに死亡していた。\n道路が不通のため、北嶺署員の到着は通報から二時間半後となった。署は事故と事件の両面で調べている。' },
+    { id:'b2', size:'M', head:'地元高校 合唱コンクールで金賞',
+      body:'北嶺高校合唱部が県合唱コンクールで金賞を受賞した。三年ぶり。' },
+    { id:'b3', size:'S', head:'白樺地区で未明に停電　約一時間',
+      body:'北嶺電力によると、十五日午前一時十分ごろから約一時間、白樺地区の一部で停電があった。雪の重みで電線が切れたためで、午前二時すぎに復旧した。' }
+  ]},
+  '19870216': { ed:'朝刊 14版', arts:[
+    { id:'c1', size:'L', head:'山荘死亡　グラスに薬物反応か　北嶺署',
+      body:'白樺荘で宿泊客の男性が死亡した件で、北嶺署は、食堂のテーブルにあったグラスを鑑定に回した。関係者によると、一部から薬物の反応が出たという。署は宿泊客らから事情を聴いている。' },
+    { id:'c2', size:'S', head:'暖炉の灰の始末に注意を　北嶺消防',
+      body:'北嶺消防署は、暖炉やストーブの灰を夜のうちに外へ出すと、残り火で火災になるおそれがあるとして注意を呼びかけている。' },
+    { id:'c3', size:'M', head:'県道北嶺線 あす午後に開通見込み',
+      body:'雪崩で不通となっている県道北嶺線は、十七日午後に通行止めが解除される見込み。' }
+  ]}
+};
+
+/* ===== 基本 ===== */
+var $ = function(id){ return document.getElementById(id); };
+var main = $('main'), pop = $('pop'), popBox = $('popBox');
+var LINKED = !!(window.IzLink && IzLink.linked);
+if (window.IZDISK && IZDISK.hosted) document.body.classList.add('hosted');
+var BRAND = LINKED ? IzLink.brand() : 'iz2611';
+$('brand').textContent = BRAND + ' FD';
+function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function fmt(d){ return d.slice(0,4)+'.'+d.slice(4,6)+'.'+d.slice(6,8); }
+function jdate(d){ return (+d.slice(0,4))+'年'+(+d.slice(4,6))+'月'+(+d.slice(6,8))+'日'; }
+function pinned(date, id){
+  if (!LINKED) return false;
+  var d = IzLink.get(CASE.id);
+  return d.board.items.some(function(it){ return it.id === 'article:' + date + ':' + id; });
+}
+
+/* ===== メニュー ===== */
+function menu(){
+  main.innerHTML =
+    '<div class="cy">A&gt; RUN CASEFILE.EXE</div>' +
+    '<h1>CASE FILE X-01</h1><div class="dm">' + esc(CASE.title) + '</div>' +
+    '<div class="menu">' +
+      '<button type="button" data-go="search"><b>1</b>新聞縮刷版 検索</button>' +
+      '<button type="button" disabled><b>2</b>当日の再現　<span class="dm">（準備中）</span></button>' +
+    '</div>' +
+    (LINKED ? '' : '<div class="dm">※ 連携アプリの外では「ボードに貼る」は使えない</div>');
+}
+
+/* ===== 日付検索 ===== */
+var digits = '', lastMsg = '';
+function search(){
+  var cells = '';
+  for (var i = 0; i < 8; i++) {
+    cells += '<span class="d' + (i === digits.length ? ' on' : '') + '">' + (digits[i] || '&nbsp;') + '</span>';
+    if (i === 3 || i === 5) cells += '<span class="dm">.</span>';
+  }
+  var keys = '';
+  ['1','2','3','4','5','6','7','8','9','BS','0','GO'].forEach(function(k){
+    keys += '<button type="button" data-key="' + k + '" class="' + (k === 'GO' ? 'go' : k === 'BS' ? 'bs' : '') + '">' + (k === 'BS' ? '←' : k === 'GO' ? '検索' : k) + '</button>';
+  });
+  main.innerHTML =
+    '<div class="cy">新聞縮刷版 検索</div><div class="dm">' + esc(RANGE.label) + '</div>' +
+    '<div class="dm">日付を8桁で入力（例 19870101）</div>' +
+    '<div class="field">' + cells + '</div>' +
+    '<div class="keys">' + keys + '</div>' +
+    '<div class="msg">' + lastMsg + '</div>' +
+    '<div class="btns"><button type="button" class="btn" data-go="menu">メニューへ</button></div>';
+}
+function key(k){
+  if (k === 'BS') digits = digits.slice(0, -1);
+  else if (k === 'GO') { find(); return; }
+  else if (digits.length < 8) digits += k;
+  lastMsg = '';
+  search();
+}
+function find(){
+  if (digits.length !== 8) { lastMsg = '<span class="rd">日付は8桁で入れてください。</span>'; search(); return; }
+  if (digits < RANGE.from || digits > RANGE.to) { lastMsg = '<span class="rd">この縮刷版には収録されていません（' + fmt(RANGE.from) + '〜' + fmt(RANGE.to) + '）。</span>'; search(); return; }
+  if (!PAPERS[digits]) { lastMsg = '<span class="yl">' + fmt(digits) + '　該当する記事は見つかりませんでした。</span>'; search(); return; }
+  if (window.IZDISK) IZDISK.access();
+  page(digits);
+}
+
+/* ===== 紙面 ===== */
+var curDate = null;
+function page(date, keep){
+  curDate = date;
+  var y = main.scrollTop;
+  var p = PAPERS[date];
+  var arts = p.arts.map(function(a){
+    return '<div class="art ' + a.size + (pinned(date, a.id) ? ' pinned' : '') + '" data-art="' + a.id + '"><h3>' + esc(a.head) + '</h3><p>' + esc(a.body) + '</p></div>';
+  }).join('');
+  main.innerHTML =
+    '<div class="cy">' + fmt(date) + '　' + esc(p.ed) + '　<span class="dm">記事をタップで拡大</span></div>' +
+    '<div class="paper"><div class="mast"><b>北嶺新報</b><small>' + jdate(date) + '<br>' + esc(p.ed) + '</small></div>' +
+    '<div class="cols">' + arts + '</div></div>' +
+    '<div class="btns"><button type="button" class="btn" data-go="search">別の日付</button><button type="button" class="btn" data-go="menu">メニューへ</button></div>';
+  main.scrollTop = keep ? y : 0;
+}
+function openArt(id){
+  var a = PAPERS[curDate].arts.filter(function(x){ return x.id === id; })[0]; if (!a) return;
+  var on = pinned(curDate, id);
+  popBox.innerHTML =
+    '<div class="src">北嶺新報　' + jdate(curDate) + '　' + esc(PAPERS[curDate].ed) + '</div>' +
+    '<h3>' + esc(a.head) + '</h3><p>' + esc(a.body) + '</p>' +
+    '<div class="btns">' +
+      (LINKED ? '<button type="button" class="btn pin" data-pin="' + id + '"' + (on ? ' disabled' : '') + '>' + (on ? 'ボードに貼った' : 'ボードに貼る') + '</button>' : '') +
+      '<button type="button" class="btn" data-close="1">閉じる</button></div>';
+  pop.classList.add('on');
+}
+function pin(id){
+  var a = PAPERS[curDate].arts.filter(function(x){ return x.id === id; })[0]; if (!a || !LINKED) return;
+  IzLink.emit('article.pinned', { caseId:CASE.id, articleId:curDate + ':' + id, title:a.head, date:fmt(curDate), source:'北嶺新報' });
+  if (window.IZDISK) IZDISK.access();
+}
+
+/* ===== 操作 ===== */
+document.addEventListener('click', function(e){
+  var b = e.target.closest('button, .art'); if (!b) { if (e.target === pop) pop.classList.remove('on'); return; }
+  if (b.dataset.go === 'menu') menu();
+  else if (b.dataset.go === 'search') { lastMsg = ''; search(); }
+  else if (b.dataset.key) key(b.dataset.key);
+  else if (b.dataset.art) openArt(b.dataset.art);
+  else if (b.dataset.pin) pin(b.dataset.pin);
+  else if (b.dataset.close) pop.classList.remove('on');
+});
+document.addEventListener('keydown', function(e){
+  if (!main.querySelector('.keys')) return;
+  if (/^[0-9]$/.test(e.key)) key(e.key);
+  else if (e.key === 'Backspace') key('BS');
+  else if (e.key === 'Enter') key('GO');
+});
+if (LINKED) IzLink.on('data.changed', function(p){
+  if (p && p.caseId && p.caseId !== CASE.id) return;
+  if (pop.classList.contains('on')) { var b = popBox.querySelector('[data-pin]'); if (b) openArt(b.dataset.pin); }
+  if (curDate && main.querySelector('.paper')) page(curDate, true);
+});
+
+menu();
+if (window.IZDISK) IZDISK.ready();
+})();
+</script>
+</body>
+</html>

@@ -18,7 +18,7 @@
 | 農業所得 経費判定ドリル（実用の部屋。帳簿から算入できない経費を見分ける練習） | `nogyo-keihi-drill/` | スマホ・PC |
 | WHERE WHICH（ひらがなを教える育成アプリ） | `where-which/` | スマホ・PC |
 | Noche sin Luna（フラメンコの音ゲー。test ver.） | `noche-sin-luna/` | スマホ・PC |
-| PC98 NOVEL（PC-98ふうノベルゲームエンジンの土台。サンプル「零時の記録」つき。test ver.） | `pc98-novel/` | スマホ・PC |
+| iz2611（レトロPCふうノベルゲームエンジンの土台。サンプル「零時の記録」つき。test ver.） | `iz2611/` | スマホ・PC |
 | ファンタジー（ローポリ3Dキャラを2D背景で歩かせた試作の記録。実験室。test ver.） | `fantasy/` | スマホ・PC |
 
 作品を増やすときは、フォルダを作って中に `index.html` を置き、`python3 tools/build_history.py --add-stubs` で `data/works.json`（作品台帳）に仮登録して題名などを直し、`python3 tools/build_history.py` で日付を集計します。詳しくは [docs/site-guide.md](docs/site-guide.md) を見てください。
