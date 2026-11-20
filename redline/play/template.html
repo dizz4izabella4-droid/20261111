@@ -974,10 +974,7 @@ function drawLines(){
          '<path d="'+cpath(a,b)+'" fill="none" stroke="'+col+'" stroke-width="3.2" stroke-linecap="round"'+(sel&&sel.type==='string'&&sel.id===s.id?' stroke-dasharray="6 5"':'')+'/>'; });
   }
   if(B&&checking&&T){ var R=checkResult();
-    R.missing.forEach(function(m){ var a=itemCenter(m[0]), b=itemCenter(m[1]); if(!a||!b) return;
-      h+='<path d="M'+a.x+' '+a.y+' L'+b.x+' '+b.y+'" stroke="#6b6b6b" stroke-width="2.5" stroke-dasharray="3 7" stroke-linecap="round" fill="none" opacity=".8"/>'+
-         '<circle cx="'+((a.x+b.x)/2)+'" cy="'+((a.y+b.y)/2)+'" r="10" fill="#fff" stroke="#888" stroke-width="2" stroke-dasharray="2 3"/>'+
-         '<text x="'+((a.x+b.x)/2)+'" y="'+((a.y+b.y)/2+4)+'" text-anchor="middle" font-size="12" font-weight="700" fill="#777">?</text>'; });
+    // 答えは見せない：まだ張られていない正しいつながりは、数だけ出す
     R.res.forEach(function(r){ var c=curve(r.a,r.b), mx=.25*r.a.x+.5*c.cx+.25*r.b.x, my=.25*r.a.y+.5*c.cy+.25*r.b.y, col=r.ok?'#2e8b3e':'#c0281c';
       h+='<circle cx="'+mx+'" cy="'+my+'" r="13" fill="'+col+'" stroke="#fff" stroke-width="3"/>'+
          '<text x="'+mx+'" y="'+(my+5)+'" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">'+(r.ok?'✓':'✗')+'</text>'+
@@ -992,7 +989,6 @@ function drawLines(){
 
 /* ---------- 答え合わせ（真相のつながり ⇔ ボードの紐） ---------- */
 function pairKey(a,b){ return a<b?a+'|'+b:b+'|'+a; }
-function itemCenter(id){ var it=itemById(id); if(!it) return null; var s=size(it); return {x:it.x+s.w/2,y:it.y+s.h/2}; }
 function checkResult(){
   var want={}; T.pairs.forEach(function(p){ want[pairKey(p[0],p[1])]=p; });
   var pm={}; B.pins.forEach(function(p){ pm[p.id]=p; });
@@ -1009,8 +1005,11 @@ function truthDialog(){
   var pm={}; B.pins.forEach(function(p){ pm[p.id]=p; });
   B.strings.forEach(function(s){ var a=pm[s.a], b=pm[s.b]; if(a&&b&&a.itemId&&b.itemId) got[pairKey(a.itemId,b.itemId)]=1; });
   function name(id){ var it=itemById(id); return it?(it.title||it.text||id):'（まだボードにない）'; }
-  var list=T.pairs.map(function(p){ var k=got[pairKey(p[0],p[1])];
-    return '<div class="pr"><b class="'+(k?'ok':'ms')+'">'+(k?'✓':'？')+'</b><div><div>'+esc(p[2]||'')+'</div><div class="k">'+esc(name(p[0]))+' — '+esc(name(p[1]))+'</div></div></div>'; }).join('');
+  // 見つけたつながりだけ中身を出す。まだのものは数だけ（答えは見せない）
+  var found=T.pairs.filter(function(p){ return got[pairKey(p[0],p[1])]; }), rest=T.pairs.length-found.length;
+  var list=found.map(function(p){
+    return '<div class="pr"><b class="ok">✓</b><div><div>'+esc(p[2]||'')+'</div><div class="k">'+esc(name(p[0]))+' — '+esc(name(p[1]))+'</div></div></div>'; }).join('')+
+    (rest?'<div class="pr"><b class="ms">？</b><div class="ms">まだ見つかっていないつながりが '+rest+' 本ある。</div></div>':'');
   dialog('<div class="k">TRUTH</div><div class="sum">'+esc(T.summary||'')+'</div>'+list,[['CLOSE',null]]);
 }
 
