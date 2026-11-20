@@ -82,6 +82,7 @@ const ui = id => document.getElementById(id);
 let current = null, body, bodyGeo, basePos, face, floorY = 0, lift = 0, pos;
 let riders = [], faceVerts = [], faceCaps = [];
 let mochi = false, layout = 'free';
+let SOFT = 0.55, SF = 0.6 + 1.2 * SOFT;   // やわらかさ：最初は少し柔らかめ（SF=1がこれまでの標準）
 
 // 餅形の体を作る（底はぺたっと、すそはむにっと）
 function makeBody(sh, colorFn) {
@@ -999,7 +1000,7 @@ canvas.addEventListener('pointermove', e => {
   const a = body.worldToLocal(pull.startW.clone()), b = body.worldToLocal(p);
   const o = b.sub(a).add(pull.startOff);
   // 伸びすぎない（ゴムっぽく頭打ち）
-  const L = o.length(), MAX = o.y > 0 ? 2.2 : 1.4;
+  const L = o.length(), MAX = (o.y > 0 ? 2.2 : 1.4) * (0.7 + 0.3 * SF);
   if (L > 0) o.multiplyScalar((MAX * Math.tanh(L / MAX)) / L);
   pull.off.copy(o);
 });
@@ -1759,6 +1760,8 @@ function setReturn(T) {
   ui('retv').textContent = RET.hold ? 'HOLD' : T.toFixed(2).replace(/0$/, '') + 's';
 }
 ui('ret').oninput = e => setReturn(parseFloat(e.target.value));
+function setSoft(v) { SOFT = v; SF = 0.6 + 1.2 * v; ui('softv').textContent = v < 0.2 ? 'FIRM' : v < 0.45 ? 'NORMAL' : v < 0.7 ? 'SOFT' : 'SUPER SOFT'; }
+ui('soft').oninput = e => setSoft(parseFloat(e.target.value)); ui('soft').value = SOFT; setSoft(SOFT);
 setReturn(4.2);
 
 // ---- 色
@@ -1980,7 +1983,7 @@ renderer.setAnimationLoop(() => {
   const dt = Math.min(t - last, 1 / 30); last = t;
 
   // ばね（やわらかめ・減衰ひかえめ＝ぷるぷる）
-  const K = anim.on ? 85 : 90, D = anim.on ? 3.9 : 5.5;   // 鑑賞中はよりやわらかく
+  const K = (anim.on ? 85 : 90) / SF, D = (anim.on ? 3.9 : 5.5) / Math.sqrt(SF);   // 鑑賞中はよりやわらかく
   for (const k of ['sq', 'sx', 'sz']) {
     const a = -K * spring[k] - D * spring[k + 'V'];
     spring[k + 'V'] += a * dt;
@@ -2071,7 +2074,7 @@ renderer.setAnimationLoop(() => {
     // つまんだ所は床より下へは行かない（離した後のはね返りでも）
     if (g.y + o.y < floorY + 0.06) o.y = floorY + 0.06 - g.y;
     const L = o.length();
-    const sig = 0.42 + L * 0.25, sig2 = sig * sig;
+    const sig = (0.42 + L * 0.25) * (0.8 + 0.2 * SF), sig2 = sig * sig;
     DF.ox = o.x; DF.oy = o.y; DF.oz = o.z; DF.gx = g.x; DF.gy = g.y; DF.gz = g.z;
     DF.sig2 = sig2; DF.sideK = Math.min(Math.abs(o.x) / (L + 1e-6), 1);
     { const n = pull.n; const inw = n ? THREE.MathUtils.clamp(-(o.x * n.x + o.y * n.y + o.z * n.z) / (L + 1e-6), 0, 1) : 0; DF.shell = 1 - 0.8 * inw; }   // 押しこむときは凹ませてよい
