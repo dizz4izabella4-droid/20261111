@@ -433,6 +433,7 @@ function buildMebae() {
   setPlant('grass');
   return {
     mouths: [mouthN, mouthS],
+    get root() { return sprout; },
     get leafMeshes() { return sp.mode === 'on' ? [grabBall] : []; },
     tint: tintMain,
     clear() { sp.held = false; sp.active = false; sp.off.set(0, 0, 0); sp.vel.set(0, 0, 0); if (sprout.parent) sprout.parent.remove(sprout); sp.mode = 'empty'; },
@@ -897,13 +898,32 @@ function setNdc(e) {
   ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(ndc, camera);
 }
-let leafDrag = false, waitUp = false;
+let leafDrag = false, waitUp = false, pl = false;
+const _tri = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()], _bc = new THREE.Vector3();
+// アイテムを、さわった体の表面の場所へ移して固定する
+function placeItem() {
+  const h = ray.intersectObject(body, false)[0]; if (!h) return;
+  const r = riders.find(q => q.o === current.rt.root); if (!r) return;
+  const f = h.face, P = pos.array, lp = body.worldToLocal(h.point.clone());
+  [f.a, f.b, f.c].forEach((v, i) => _tri[i].set(P[v * 3], P[v * 3 + 1], P[v * 3 + 2]));
+  THREE.Triangle.getBarycoord(lp, _tri[0], _tri[1], _tri[2], _bc);
+  const w = [_bc.x, _bc.y, _bc.z], idx = [f.a, f.b, f.c], b = [0, 0, 0];
+  for (let i = 0; i < 3; i++) for (let k = 0; k < 3; k++) b[k] += basePos[idx[i] * 3 + k] * w[i];
+  r.base.set(b); r.ctr = b.slice(); r.bind = bindPoints(r.ctr);
+  evalBind(r.bind, r.base, _tmp3, false); r.o.position.fromArray(_tmp3);
+}
 canvas.addEventListener('pointerdown', e => {
   if (anim.on || mode === 'camera') return;               // 鑑賞中・カメラモード中は引っぱらない
   setNdc(e);
   {   // 重なっている中から、さわった子を選ぶ
     const vis = insts.filter(i => i.cat.visible);
     if (vis.length > 1) { const hh = ray.intersectObjects(vis.map(i => i.body), false)[0]; if (hh && hh.object.userData.inst !== curInst) selectInst(hh.object.userData.inst); }
+  }
+  if (mode === 'place') {
+    if (!current.rt.leafMeshes.length) { toast('No item to move · plant one first'); return; }
+    if (!ray.intersectObject(body, false)[0]) return;
+    pushUndo(); pl = true; controls.enabled = false; sfx.grab(); canvas.setPointerCapture(e.pointerId);
+    placeItem(); return;
   }
   if (mode === 'move') {
     if (stageOn) { toast('Turn STAGE off to move'); return; }
@@ -948,6 +968,7 @@ canvas.addEventListener('pointerdown', e => {
 });
 let leafPrev = 0, leafPrevT = 0;
 canvas.addEventListener('pointermove', e => {
+  if (pl) { setNdc(e); placeItem(); return; }
   if (mv) {
     setNdc(e); const p = ray.ray.intersectPlane(floorPlane, new THREE.Vector3());
     if (p) { cat.position.x = Math.max(-6.5, Math.min(6.5, p.x + mv.dx)); cat.position.z = Math.max(-5, Math.min(4, p.z + mv.dz)); }
@@ -981,6 +1002,7 @@ canvas.addEventListener('pointermove', e => {
   pull.off.copy(o);
 });
 function release() {
+  if (pl) { pl = false; controls.enabled = true; sfx.boing(0.3); return; }
   if (mv) { mv = null; controls.enabled = true; return; }
   if (waitUp) { waitUp = false; controls.enabled = true; return; }
   if (leafDrag) {
@@ -1689,11 +1711,11 @@ function setMode(m) {
   const cam = m === 'camera';
   controls.enableRotate = cam; controls.enablePan = false;
   controls.autoRotate = cam ? spinSaved : false; ui('spin').classList.toggle('on', controls.autoRotate);
-  ui('modeBtn').classList.toggle('on', !cam); ui('modeBtn').textContent = { sculpt: 'STRETCH', move: 'MOVE', camera: 'CAMERA' }[m];
-  ui('hint').textContent = { sculpt: 'Pull the body, then press BAKE', move: 'Drag a character to place it', camera: 'Drag to rotate · pinch to zoom' }[m];
+  ui('modeBtn').classList.toggle('on', !cam); ui('modeBtn').textContent = { sculpt: 'STRETCH', place: 'PLACE', move: 'MOVE', camera: 'CAMERA' }[m];
+  ui('hint').textContent = { sculpt: 'Pull the body, then press BAKE', place: 'Drag on the body to move the item', move: 'Drag a character to place it', camera: 'Drag to rotate · pinch to zoom' }[m];
   canvas.style.cursor = cam ? 'move' : 'grab';
 }
-ui('modeBtn').onclick = () => setMode({ sculpt: 'move', move: 'camera', camera: 'sculpt' }[mode]);
+ui('modeBtn').onclick = () => setMode({ sculpt: 'place', place: 'move', move: 'camera', camera: 'sculpt' }[mode]);
 setMode('sculpt');
 
 // ---- 戻るまでの時間
