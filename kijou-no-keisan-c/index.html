@@ -64,13 +64,10 @@ main { padding:34px 0 26px; }
 .zoom output { min-width:44px; text-align:center; color:var(--muted); font-size:.8125rem; font-variant-numeric:tabular-nums; }
 canvas { display:block; width:100%; height:clamp(370px, 38vw, 482px); background:#101a2a; touch-action:none; cursor:grab; }
 canvas.dragging { cursor:grabbing; }
-canvas.drawing { cursor:crosshair; }
 .legend { display:flex; flex-wrap:wrap; gap:7px 20px; align-items:center; min-height:46px; padding:8px 17px; color:var(--muted); font-size:.8125rem; }
 .legend-item { display:inline-flex; gap:7px; align-items:center; }
 .swatch { width:10px; height:10px; border-radius:3px; background:var(--swatch); display:inline-block; }
 .line-sample { width:19px; border-top:2px dashed #657890; }
-.scene-toolbar { padding:9px 17px; background:#f7f9fc; border-top:1px solid var(--line); display:flex; flex-wrap:wrap; gap:7px; align-items:center; }
-.scene-toolbar button[aria-pressed=true] { border-color:#7ca0d7; background:var(--pale); color:var(--blue-dark); }
 .note { display:flex; align-items:baseline; gap:8px; font-size:.8125rem; line-height:1.65; color:var(--muted); margin:14px 1px; }
 .note::before { content:"ⓘ"; color:var(--blue); font-weight:700; }
 .result { margin:15px 0 22px; padding:15px 17px; }
@@ -148,7 +145,7 @@ select { appearance:none; padding-right:29px; background:
 .candidate { display:grid; text-align:left; align-content:start; gap:4px; padding:9px; line-height:1.45; }
 .candidate[aria-pressed=true] { background:var(--pale); border-color:#85a7da; }
 .candidate small { color:var(--muted); }
-.trace-info { font-size:.875rem; margin-top:5px; }
+.scene-info { font-size:.875rem; margin-top:5px; }
 .action-row { display:flex; justify-content:flex-end; padding-top:12px; }
 .status { position:fixed; right:18px; bottom:18px; z-index:3; max-width:calc(100% - 36px); border-radius:9px; background:#183457; padding:9px 13px; color:white; font-size:.875rem; box-shadow:0 4px 15px #112b4540; }
 @media(max-width:800px) {
@@ -431,12 +428,6 @@ select { appearance:none; padding-right:29px; background:
     </div>
     <canvas id="plan" aria-label="交差点と車両の軌跡を示す平面図">初期位置や停止位置は下の入力欄で設定できます。</canvas>
     <div id="legend" class="legend" aria-label="図面の凡例"></div>
-    <div id="scene-toolbar" class="scene-toolbar" hidden>
-      <button type="button" data-action="scene-move" aria-pressed="true">停止地点を移動</button>
-      <button type="button" data-action="scene-trace-a" aria-pressed="false">車両Aの痕跡</button>
-      <button type="button" data-action="scene-trace-b" aria-pressed="false">車両Bの痕跡</button>
-      <button type="button" data-action="scene-clear" disabled>痕跡を消去</button>
-    </div>
   </section>
   <section id="forward-result" class="card result" aria-label="検証結果" aria-live="polite"></section>
   <section id="inverse-panel" class="card mode-panel" aria-labelledby="inverse-title" hidden>
@@ -445,8 +436,8 @@ select { appearance:none; padding-right:29px; background:
     <div id="inverse-result" class="result-details" aria-live="polite"></div>
   </section>
   <section id="scene-panel" class="card mode-panel" aria-labelledby="scene-title" hidden>
-    <h2 class="section-title" id="scene-title">現場の痕跡と停止位置</h2>
-    <p class="mode-copy">痕跡は走行順に図面をなぞって描きます。停止地点と車体の向き、衝突後に移動した方向を入力すると候補が更新されます。鍵で固定した値は推定中も保持されます。</p>
+    <h2 class="section-title" id="scene-title">現場の停止位置</h2>
+    <p class="mode-copy">停止地点と車体の向き、衝突後に移動した方向を入力すると候補が更新されます。鍵で固定した値は推定中も保持されます。</p>
     <div id="scene-controls"></div>
     <div id="scene-result" aria-live="polite"></div>
     <div class="action-row"><button type="button" data-action="seed-scene">検証の衝突結果を停止位置に入力</button></div>
@@ -1170,79 +1161,6 @@ const estimateScene = (() => {
   const angleDifference = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
   const lerp = (a, b, fraction) => a + (b - a) * fraction;
 
-  function traceGeometry(input) {
-    const raw = [];
-    for (const point of input || []) {
-      if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) continue;
-      if (!raw.length || gap(raw.at(-1), point) >= .08) raw.push(point);
-    }
-    if (raw.length < 2) return null;
-
-    const cumulative = [0];
-    for (let i = 1; i < raw.length; i++) cumulative.push(cumulative[i - 1] + gap(raw[i - 1], raw[i]));
-    const sampleCount = clamp(Math.ceil(cumulative.at(-1) / .65) + 1, 2, 180);
-    const samples = [];
-    let segment = 1;
-    for (let i = 0; i < sampleCount; i++) {
-      const position = cumulative.at(-1) * i / (sampleCount - 1);
-      while (cumulative[segment] < position && segment < cumulative.length - 1) segment++;
-      const fraction = (position - cumulative[segment - 1]) / (cumulative[segment] - cumulative[segment - 1]);
-      samples.push({ x: lerp(raw[segment - 1].x, raw[segment].x, fraction),
-        y: lerp(raw[segment - 1].y, raw[segment].y, fraction) });
-    }
-
-    // Keep the endpoints and damp the small kinks introduced by touch sampling.
-    const points = samples.map((point, i) => {
-      if (i === 0 || i === samples.length - 1) return point;
-      return { x: (samples[i - 1].x + 2 * point.x + samples[i + 1].x) / 4,
-        y: (samples[i - 1].y + 2 * point.y + samples[i + 1].y) / 4 };
-    });
-    const lengths = points.slice(1).map((point, i) => gap(point, points[i]));
-    const length = lengths.reduce((total, step) => total + step, 0);
-    if (length < .25) return null;
-
-    const curvatures = points.map((b, i) => {
-      if (i === 0 || i === points.length - 1) return 0;
-      const a = points[Math.max(0, i - 2)];
-      const c = points[Math.min(i + 2, points.length - 1)];
-      const cross = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-      const sides = gap(a, b) * gap(b, c) * gap(a, c);
-      return sides > .02 ? 2 * Math.abs(cross) / sides : 0;
-    });
-    let lowerSqPerMu = 0;
-    let totalCurvature = 0;
-    for (let i = lengths.length - 1; i >= 0; i--) {
-      const curvature = (curvatures[i] + curvatures[i + 1]) / 2;
-      const distance = lengths[i];
-      totalCurvature += curvature * distance;
-      // q = v², dq/dx = 2 sqrt((μg)² − (κq)²) while tracing backward.
-      if (curvature < 1e-5) {
-        lowerSqPerMu += 2 * gravity * distance;
-        continue;
-      }
-      const cap = gravity / curvature;
-      if (lowerSqPerMu < cap) {
-        const phase = Math.asin(lowerSqPerMu / cap) + 2 * curvature * distance;
-        lowerSqPerMu = cap * Math.sin(Math.min(Math.PI / 2, phase));
-      }
-    }
-
-    const tangent = (a, b) => {
-      const norm = gap(a, b);
-      return norm > .01 ? { x: (b.x - a.x) / norm, y: (b.y - a.y) / norm } : { x: 0, y: 0 };
-    };
-    const first = points[0];
-    const last = points.at(-1);
-    const offset = Math.min(3, points.length - 1);
-    return { points, first, last, length, lowerSqPerMu,
-      radius: totalCurvature > .009 ? length / totalCurvature : null,
-      firstTangent: tangent(first, points[offset]), lastTangent: tangent(points.at(-1 - offset), last) };
-  }
-
-  function offsetPoint(point, tangent, distance, phase) {
-    return { x: point.x + tangent.x * distance, y: point.y + tangent.y * distance, phase };
-  }
-
   function contactGeometry(cars, axis, phase, contactFraction) {
     const [a, b] = cars;
     const [aDirection, bDirection] = cars.map(car => directions[car.dir]);
@@ -1267,27 +1185,6 @@ const estimateScene = (() => {
     const maxX = Math.min(first.x + a.length / 2, second.x + b.width / 2);
     return { positions, impact: { x: lerp(minX, maxX, .5 + contactFraction * .43),
       y: second.y + bDirection[1] * b.length / 2 }, nx: 0, ny: -bDirection[1] };
-  }
-
-  function traceApproach(trace, position, direction, car) {
-    if (!trace) return false;
-    const deltaX = trace.last.x - trace.first.x;
-    const deltaY = trace.last.y - trace.first.y;
-    const progress = deltaX * direction[0] + deltaY * direction[1];
-    const endX = trace.last.x - position.x;
-    const endY = trace.last.y - position.y;
-    const endProgress = endX * direction[0] + endY * direction[1];
-    const endAcross = Math.abs(endX * direction[1] - endY * direction[0]);
-    return progress > trace.length * .4 && endProgress <= car.length * .55 && endAcross <= car.width * 1.6;
-  }
-
-  function pointToSegmentDistance(point, a, b) {
-    const x = b.x - a.x;
-    const y = b.y - a.y;
-    const magnitude = x * x + y * y;
-    if (magnitude < .0001) return gap(point, a);
-    const fraction = clamp(((point.x - a.x) * x + (point.y - a.y) * y) / magnitude, 0, 1);
-    return Math.hypot(point.x - a.x - x * fraction, point.y - a.y - y * fraction);
   }
 
   function momentumFit(cars, carData, contact, speed, mu, restitution, tangency) {
@@ -1357,20 +1254,8 @@ const estimateScene = (() => {
     }));
     const locks = scene.locks || {};
     const evidence = cars.map((_, i) => scene.stopEnabled?.[i] ? scene.stops?.[i] : null);
-    const geometries = cars.map((_, i) => traceGeometry(scene.traces?.[i]));
-    const traces = geometries.map((trace, i) => {
-      if (!trace) return null;
-      const lower = Math.sqrt(trace.lowerSqPerMu * s.mu) * 3.6;
-      const startExtension = clamp(lower / 3.6 * cars[i].reaction, 2, 22);
-      const endExtension = clamp(trace.length * .35, 2, 10);
-      return { length: trace.length, lower, radius: trace.radius, route: [
-        offsetPoint(trace.first, trace.firstTangent, -startExtension, 'approach'),
-        ...trace.points.map(point => ({ ...point, phase: 'brake' })),
-        offsetPoint(trace.last, trace.lastTangent, endExtension, 'slide')
-      ] };
-    });
-    if (![...evidence, ...traces].some(Boolean)) {
-      return { traces, candidates: [], detail: '痕跡を描くか、停止位置を入力すると候補を更新します。' };
+    if (!evidence.some(Boolean)) {
+      return { candidates: [], detail: '停止位置を入力すると候補を更新します。' };
     }
 
     const stopFields = ['x', 'y', 'angle', 'heading'];
@@ -1388,11 +1273,7 @@ const estimateScene = (() => {
       const [phase, mu, restitution, aStart, bStart, tangent, contactFraction] = values;
       const contact = contactGeometry(cars, axis, phase, contactFraction);
       const startSpeeds = [aStart, bStart];
-      const preImpactTrace = geometries.map((trace, i) => traceApproach(trace, contact.positions[i], carData[i].direction, cars[i]));
-      const energySpeedSq = geometries.map((trace, i) => preImpactTrace[i] ? trace.lowerSqPerMu * mu : 0);
-      const speedSq = startSpeeds.map((speed, i) => sq(speed / 3.6) - energySpeedSq[i]);
-      if (speedSq.some(value => value < -1e-8)) return null;
-      const before = speedSq.map(value => Math.sqrt(Math.max(0, value)));
+      const before = startSpeeds.map(speed => speed / 3.6);
       const predictedStops = momentumFit(cars, carData, contact, before, mu, restitution, tangent);
       if (!predictedStops) return null;
 
@@ -1414,26 +1295,9 @@ const estimateScene = (() => {
             evidenceTerms++;
           }
         }
-        const trace = geometries[i];
-        if (!trace) return;
-        const position = contact.positions[i];
-        let fit;
-        if (preImpactTrace[i]) {
-          const direction = carData[i].direction;
-          const lateral = (trace.last.x - position.x) * direction[1] - (trace.last.y - position.y) * direction[0];
-          fit = .3 * sq(gap(trace.last, position) / 9) + .45 * sq(lateral / 3);
-        } else {
-          const midpoint = trace.points[Math.floor(trace.points.length / 2)];
-          const miss = (pointToSegmentDistance(trace.first, position, predictedStops[i])
-            + 2 * pointToSegmentDistance(midpoint, position, predictedStops[i])
-            + pointToSegmentDistance(trace.last, position, predictedStops[i])) / 4;
-          fit = sq(miss / 3);
-        }
-        scoreCost += fit;
-        evidenceTerms++;
       });
 
-      return { axis, values, contact, startSpeeds, before, predictedStops, scoreCost, evidenceTerms, feasible, preImpactTrace };
+      return { axis, values, contact, startSpeeds, before, predictedStops, scoreCost, evidenceTerms, feasible };
     }
 
     function refine(axis, seed) {
@@ -1477,9 +1341,7 @@ const estimateScene = (() => {
         addSeed([phase, ...base.slice(1, 3), ...cars.map((car, i) => {
           const { direction } = carData[i];
           const projected = (postMomentum[0] * direction[0] + postMomentum[1] * direction[1]) / car.mass;
-          const preTrace = traceApproach(geometries[i], contact.positions[i], direction, car);
-          const traceLoss = preTrace ? geometries[i].lowerSqPerMu * s.mu : 0;
-          return Math.sqrt(sq(Math.max(0, projected)) + traceLoss) * 3.6 || car.speed;
+          return Math.max(0, projected) * 3.6 || car.speed;
         }), .55, 0]);
       }
 
@@ -1511,13 +1373,9 @@ const estimateScene = (() => {
       const routes = cars.map((car, i) => {
         const position = contact.positions[i];
         const initial = { x: car.x, y: car.y, phase: 'approach' };
-        const trace = geometries[i];
         const end = { x: stops[i].x, y: stops[i].y, phase: 'slide' };
         const impact = { ...position, phase: 'slide' };
-        if (!fit.preImpactTrace[i]) return [initial, impact, end];
-        const distance = startSpeeds[i] / 3.6 * car.reaction;
-        const reactionStart = offsetPoint(trace.first, trace.firstTangent, -distance, 'approach');
-        return [reactionStart, ...trace.points.map(point => ({ ...point, phase: 'brake' })), impact, end];
+        return [initial, impact, end];
       });
       candidates.push({
         label: fit.axis === 0 ? 'Aの前面とBの側面' : 'Bの前面とAの側面',
@@ -1530,9 +1388,9 @@ const estimateScene = (() => {
       if (candidates.length === 5) break;
     }
 
-    let detail = '停止時の位置と向き、痕跡を手がかりに、接触と摩擦滑走を近似しました。推定速度には幅があります。痕跡からの下限は、描いた順に路面の摩擦限界で滑り、終端の速度を0とした場合の概算です。';
-    if (candidates.length === 0) detail = 'この接触モデルで条件に合う候補が見つかりませんでした。ロックした値と観測点を確認してください。痕跡からの下限は、路面の摩擦限界で終端まで滑った場合の概算です。';
-    return { traces, candidates, detail };
+    let detail = '停止時の位置と向きを手がかりに、接触と摩擦滑走を近似しました。推定速度には幅があります。';
+    if (candidates.length === 0) detail = 'この接触モデルで条件に合う候補が見つかりませんでした。ロックした値と観測点を確認してください。';
+    return { candidates, detail };
   };
 })();
 /* Intersection plan, coordinate conversion, and pointer hit testing. */
@@ -1857,22 +1715,9 @@ function createDiagram(canvas) {
   }
 
   function sceneOverlay(cars, view) {
-    const traceInfo = view.estimate?.traces || [];
     const candidate = view.estimate?.candidates?.[view.selected ?? 0];
     candidate?.routes?.forEach((route, i) => {
       if (route) worldStroke(route, carColors[i] + '91', 1.55, [5, 4]);
-    });
-    view.scene?.traces?.forEach((route, i) => {
-      if (traceInfo[i]?.route) worldStroke(traceInfo[i].route, carColors[i] + '93', 1.6, [3, 4]);
-      if (route) {
-        worldStroke(route, carColors[i], 2.65);
-        if (route.length > 1) {
-          const first = screen(route[0]);
-          const last = screen(route.at(-1));
-          disk(first.x, first.y, 3.2, ink, carColors[i], 1.5);
-          disk(last.x, last.y, 3.2, carColors[i], ink);
-        }
-      }
     });
     candidate?.positions?.forEach((pose, i) => {
       vehicle(pose, cars[i], pose.angle ?? headings[cars[i].dir], carColors[i], 'impact');
@@ -2008,9 +1853,6 @@ function createDiagram(canvas) {
       points.push({x:ob.x-ob.w/2,y:ob.y-ob.h/2}, {x:ob.x+ob.w/2,y:ob.y+ob.h/2});
     }
     if (scene) {
-      view.scene?.traces?.forEach(trace => {
-        for (const p of trace || []) points.push(p);
-      });
       view.scene?.stops?.forEach((stop, i) => {
         if (stop && view.scene.stopEnabled?.[i] !== false) points.push(stop);
       });
@@ -2086,7 +1928,7 @@ function defaultConfig() {
 }
 function defaultScene() {
   return {
-    traces:[[],[]], stopEnabled:[false,false], locks:{},
+    stopEnabled:[false,false], locks:{},
     stops:[{x:11,y:5,angle:radians(22),heading:radians(15)},{x:4,y:12,angle:radians(60),heading:radians(65)}]
   };
 }
@@ -2098,7 +1940,7 @@ let s = defaultConfig();
 let scene = defaultScene();
 let inverse = {car:0,key:"speed"};
 const pinned = readPins();
-let mode = "forward", selected = 0, zoom = 1, sceneTool = "move";
+let mode = "forward", selected = 0, zoom = 1;
 let forwardResult, inverseResult, sceneEstimate, pointer, selection, pendingFrame = 0, toastTimer;
 let configVersion = 0, renderedConfigVersion = -1;
 const plan = byId("plan");
@@ -2309,7 +2151,6 @@ function renderInverse() {
     <p>${escapeText(result.detail)}</p>${alternatives ? `<details><summary>衝突しない条件の範囲</summary>${alternatives}</details>` : ""}`;
 }
 function renderSceneResults() {
-  const traceInfo = sceneEstimate.traces.map((trace,i)=>trace ? `<p class="trace-info"><strong>${names[i]}</strong>　痕跡 ${format(trace.length)} m　制動開始時の推定下限 ${format(trace.lower)} km/h${Number.isFinite(trace.radius) ? `　代表曲率半径 ${format(trace.radius)} m` : ""}</p>` : "").join("");
   const candidates = sceneEstimate.candidates.map((candidate,index) => `
     <button type="button" class="candidate" data-action="candidate" data-index="${index}" aria-pressed="${selected===index}">
       <strong>候補 ${index+1} <small>　適合度 ${format(candidate.score,0)}</small></strong>
@@ -2325,9 +2166,9 @@ function renderSceneResults() {
   }).join("　") : "";
   const active = sceneEstimate.candidates[selected];
   const stopText = active?.stops?.map((stop,index)=>`
-    <p class="trace-info candidate-stop">${names[index]}の停止候補　X ${format(stop.x)} m / Y ${format(stop.y)} m、車体 ${angleLabel(stop.angle)}°、移動方向 ${angleLabel(stop.heading)}°</p>`).join("") || "";
-  byId("scene-result").innerHTML = traceInfo + `<p class="mode-copy">${escapeText(sceneEstimate.detail)}</p>` +
-    (candidates ? `${ranges ? `<p class="trace-info">候補間の衝突直前速度の幅　${ranges}</p>` : ""}<div class="candidates">${candidates}</div>${stopText}` : "");
+    <p class="scene-info candidate-stop">${names[index]}の停止候補　X ${format(stop.x)} m / Y ${format(stop.y)} m、車体 ${angleLabel(stop.angle)}°、移動方向 ${angleLabel(stop.heading)}°</p>`).join("") || "";
+  byId("scene-result").innerHTML = `<p class="mode-copy">${escapeText(sceneEstimate.detail)}</p>` +
+    (candidates ? `${ranges ? `<p class="scene-info">候補間の衝突直前速度の幅　${ranges}</p>` : ""}<div class="candidates">${candidates}</div>${stopText}` : "");
 }
 function view() {
   return {mode, result:mode==="inverse" && !pointer ? inverseResult?.result : forwardResult,
@@ -2369,14 +2210,7 @@ function flush() {
   update();
 }
 function syncToolbar() {
-  document.querySelectorAll('[data-action^="scene-"][aria-pressed]').forEach(button => {
-    button.setAttribute("aria-pressed",button.dataset.action === "scene-"+sceneTool);
-  });
-  plan.classList.toggle("drawing",mode === "scene" && sceneTool !== "move");
-  byId("diagram-hint").textContent = mode !== "scene" ? "車両をドラッグして初期位置を調整" : sceneTool === "move"
-    ? "停止マーカーをドラッグして位置を調整" : names[sceneTool === "trace-a" ? 0 : 1]+"の痕跡を走行順になぞる";
-  byId("scene-toolbar").querySelector('[data-action="scene-clear"]').disabled = sceneTool === "move" ||
-    scene.traces[sceneTool==="trace-a" ? 0 : 1].length === 0;
+  byId("diagram-hint").textContent = mode !== "scene" ? "車両をドラッグして初期位置を調整" : "停止マーカーをドラッグして位置を調整";
 }
 function setMode(nextMode) {
   mode = nextMode;
@@ -2385,7 +2219,6 @@ function setMode(nextMode) {
   byId("forward-result").hidden = mode !== "forward";
   byId("inverse-panel").hidden = mode !== "inverse";
   byId("scene-panel").hidden = mode !== "scene";
-  byId("scene-toolbar").hidden = mode !== "scene";
   byId("disclaimer").textContent = disclaimer + (mode === "scene" ? " "+uncertainty : "");
   byId("legend").innerHTML = names.map((label,index)=>`<span class="legend-item"><i class="swatch" style="--swatch:${colors[index]}"></i>${label}</span>`).join("")+
     (mode === "scene" ? '<span class="legend-item"><i class="line-sample"></i>推定ルート</span><span class="legend-item"><i class="swatch" style="--swatch:#e86b7d"></i>衝突候補</span>'
@@ -2517,16 +2350,6 @@ document.addEventListener("click", event => {
     });
     draw();
   }
-  if (action === "scene-move" || action === "scene-trace-a" || action === "scene-trace-b") {
-    sceneTool = action.slice(6);
-    syncToolbar();
-  }
-  if (action === "scene-clear") {
-    scene.traces[sceneTool==="trace-a" ? 0 : 1] = [];
-    syncToolbar();
-    selected = 0;
-    schedule();
-  }
   if (action === "seed-scene") seedScene();
   if (action === "add-obstacle") {
     if (s.obstacles.length >= 12) return notify("遮蔽物は12個まで設置できます。");
@@ -2542,13 +2365,12 @@ document.addEventListener("click", event => {
     schedule(true);
   }
   if (action === "reset") {
-    if (!window.confirm("車両・道路の設定と入力した現場の痕跡を初期状態に戻しますか？")) return;
+    if (!window.confirm("車両・道路の設定と入力した現場の停止位置を初期状態に戻しますか？")) return;
     s = defaultConfig();
     scene = defaultScene();
     inverse = {car:0,key:"speed"};
     zoom = 1;
     selected = 0;
-    sceneTool = "move";
     renderControls();
     syncToolbar();
     schedule(true);
@@ -2559,38 +2381,22 @@ plan.addEventListener("pointerdown", event => {
   if (!event.isPrimary || event.button !== 0) return;
   const point = diagram.point(event);
   let kind, index, offsetX = 0, offsetY = 0;
-  if (mode === "scene" && sceneTool !== "move") {
-    kind = "trace";
-    index = sceneTool === "trace-a" ? 0 : 1;
-    scene.traces[index] = [{x:rounded(point.x),y:rounded(point.y)}];
-    selected = 0;
-  } else {
-    const hit = diagram.hit(point,s,view());
-    if (!hit) return;
-    ({kind,index} = hit);
-    const object = kind === "stop" ? scene.stops[index] : kind === "car" ? s.cars[index] : s.obstacles[index];
-    offsetX = object.x-point.x;
-    offsetY = object.y-point.y;
-    selection = hit;
-  }
+  const hit = diagram.hit(point,s,view());
+  if (!hit) return;
+  ({kind,index} = hit);
+  const object = kind === "stop" ? scene.stops[index] : kind === "car" ? s.cars[index] : s.obstacles[index];
+  offsetX = object.x-point.x;
+  offsetY = object.y-point.y;
+  selection = hit;
   pointer = {id:event.pointerId,kind,index,offsetX,offsetY};
   plan.setPointerCapture(event.pointerId);
-  if (kind !== "trace") plan.classList.add("dragging");
+  plan.classList.add("dragging");
   schedule();
 });
 plan.addEventListener("pointermove", event => {
   if (pointer?.id !== event.pointerId) return;
   const point = diagram.point(event);
   const {kind,index,offsetX,offsetY} = pointer;
-  if (kind === "trace") {
-    const trace = scene.traces[index];
-    const last = trace.at(-1);
-    if (trace.length < 1000 && Math.hypot(point.x-last.x,point.y-last.y) >= .13) {
-      trace.push({x:rounded(point.x),y:rounded(point.y)});
-      schedule();
-    }
-    return;
-  }
   const path = kind === "stop" ? `scene.stops.${index}` : kind === "car" ? `s.cars.${index}` : `s.obstacles.${index}`;
   const size = kind === "obstacle" ? 100 : 150;
   const object = readPath(path);
@@ -2604,7 +2410,6 @@ plan.addEventListener("pointermove", event => {
 });
 function endPointer(event) {
   if (pointer?.id !== event.pointerId) return;
-  if (pointer.kind === "trace" && scene.traces[pointer.index].length < 2) scene.traces[pointer.index] = [];
   if (plan.hasPointerCapture(event.pointerId)) plan.releasePointerCapture(event.pointerId);
   pointer = null;
   selection = null;

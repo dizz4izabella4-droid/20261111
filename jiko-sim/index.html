@@ -684,25 +684,13 @@ const PHYS = (() => {
     return { item, xs, col, bounds };
   }
 
-  /* ---------- 現場推定：停止位置・痕跡から衝突直前の状態を逆算 ---------- */
+  /* ---------- 現場推定：停止位置から衝突直前の状態を逆算 ---------- */
   // oA・oB：ぶつかった面のどこが当たったか（面の中央=0、端=±0.5）。画面には出さない内部の調整値
   const PNAMES = ['ix', 'iy', 'vA', 'vB', 'hA', 'hB', 'mu', 'oA', 'oB'];
   const PARTS = { front: v2(0.5, 0), rear: v2(-0.5, 0), left: v2(0, 0.5), right: v2(0, -0.5) };
   function contactLocal(part, vp, o = 0) {
     const q = PARTS[part] || PARTS.front;
     return q.x !== 0 ? v2(q.x * vp.L, o * vp.W) : v2(o * vp.L, q.y * vp.W);
-  }
-
-  // 痕跡上をブレーキ方向と逆にたどって、ブレーキ開始時の速度を出す（摩擦円込み）
-  function backIntegrate(trace, sEnd, vEnd, mu, eff) {
-    const amax = mu * G * eff; let v2s = vEnd * vEnd; const ds = 0.1;
-    for (let s = sEnd; s > 0; s -= ds) {
-      const k = s <= trace.total ? trace.at(s).k : 0;
-      const lat = v2s * Math.abs(k);
-      const a = Math.sqrt(Math.max(amax * amax * 0.0025, amax * amax - lat * lat));
-      v2s += 2 * a * Math.min(ds, s);
-    }
-    return Math.sqrt(v2s);
   }
 
   function sceneModel(sc) {
@@ -726,13 +714,6 @@ const PHYS = (() => {
           const ud = R.dirOn ? dir(R.dir) : unit(sub(rc, c));
           o.u = u; o.uvel = mul(ud, u); o.dpost = d;
           o.w = Math.sqrt(2 * Etot * (1 - share) / vp.I);
-        }
-        const T = sc.traces[i];
-        if (T) {
-          const pr = projectS(T, c);
-          o.sI = pr.s; o.traceLen = T.total;
-          o.vb = backIntegrate(T, Math.max(0, pr.s), VV[i], mu, vp.eff);
-          o.vbMin = backIntegrate(T, Math.min(Math.max(0, pr.s), T.total), 0, mu, vp.eff);
         }
         out.veh.push(o);
       }
@@ -760,16 +741,9 @@ const PHYS = (() => {
       }
       [oA, oB].forEach(o => { o = o || 0; r.push(0.4 * o, Math.abs(o) > 0.5 ? 6 * (Math.abs(o) - 0.5) : 0); });
       for (let i = 0; i < 2; i++) {
-        const T = sc.traces[i], h = i ? hB : hA;
-        if (T) {
-          const pr = projectS(T, d.veh[i].c);
-          const sEnd = Math.min(T.total, Math.max(0, pr.s));
-          const q = T.at(sEnd);
-          r.push(8 * angN(h - q.th));                          // 衝突直前の向き ≒ 痕跡の向き
-          r.push(1.5 * pr.d);                                  // 衝突時の車の中心は痕跡（の延長）の上
-          r.push(pr.s < 0 ? 0.5 * pr.s : 0);
-        } else if (sc.hint && sc.hint[i] != null) {
-          r.push(0.5 * angN(h - sc.hint[i]));                 // 痕跡がなければ検証モードの進む向きを目安に
+        const h = i ? hB : hA;
+        if (sc.hint && sc.hint[i] != null) {
+          r.push(0.5 * angN(h - sc.hint[i]));                 // 検証モードの進む向きを目安に
         } else {
           r.push(2 * angN(h - prior.h[i]));
         }
@@ -822,37 +796,26 @@ const PHYS = (() => {
   // sc.locks: {名前: 固定値}（ロックしていない項目は含めない）
   function sceneSolve(sc) {
     const model = sceneModel(sc);
-    const hasTrace = sc.traces.map(t => !!t);
-    if (!model.momentum && !hasTrace[0] && !hasTrace[1]) return { cands: [], model, reason: '停止位置（2台分）か痕跡を入れると推定できます。' };
-    const free = PNAMES.filter(k => !(k in sc.locks) && (model.momentum || (k !== 'vA' && k !== 'vB')));
-    const fixedSpeeds = !model.momentum;
+    if (!model.momentum) return { cands: [], model, reason: '停止位置（2台分）を入れると推定できます。' };
+    const free = PNAMES.filter(k => !(k in sc.locks));
     const ROAD = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
     // 初期値の候補
     const Is = [v2(0, 0)];
-    if (hasTrace[0] && hasTrace[1]) {
-      const ea = sc.traces[0].at(sc.traces[0].total), eb = sc.traces[1].at(sc.traces[1].total);
-      const da = dir(ea.th), db = dir(eb.th), den = crs(da, db);
-      if (Math.abs(den) > 0.1) { const t = crs(sub(eb.p, ea.p), db) / den; Is.push(add(ea.p, mul(da, t))); }
-      Is.push(mul(add(ea.p, eb.p), 0.5));
-    } else {
-      sc.traces.forEach(T => { if (T) { const e = T.at(T.total); Is.push(add(e.p, mul(dir(e.th), 2))); } });
-    }
     if (sc.rest[0].on && sc.rest[1].on) Is.push(v2((sc.rest[0].x + sc.rest[1].x) / 4, (sc.rest[0].y + sc.rest[1].y) / 4));
-    const hOpts = [0, 1].map(i => hasTrace[i] ? [sc.traces[i].at(sc.traces[i].total).th] : (sc.hint && sc.hint[i] != null ? [sc.hint[i], ...ROAD.filter(r => Math.abs(angN(r - sc.hint[i])) > 0.1)] : ROAD));
+    const hOpts = [0, 1].map(i => (sc.hint && sc.hint[i] != null ? [sc.hint[i], ...ROAD.filter(r => Math.abs(angN(r - sc.hint[i])) > 0.1)] : ROAD));
     const starts = [];
     for (const I0 of Is) for (const ha of hOpts[0]) for (const hb of hOpts[1]) {
-      if (Math.abs(Math.sin(ha - hb)) < 0.2 && !(hasTrace[0] && hasTrace[1])) continue;   // 平行は出会い頭ではない
+      if (Math.abs(Math.sin(ha - hb)) < 0.2) continue;   // 平行は出会い頭ではない
       starts.push({ I0, ha, hb });
     }
     const cands = [];
     for (const st of starts) {
       const prior = { h: [st.ha, st.hb] };
       const base = { ix: st.I0.x, iy: st.I0.y, vA: 10, vB: 10, hA: st.ha, hB: st.hb, mu: sc.mu0, oA: 0, oB: 0, ...sc.locks };
-      if (fixedSpeeds) { base.vA = sc.locks.vA ?? 0; base.vB = sc.locks.vB ?? 0; }
       const pack = x => { const o = { ...base }; free.forEach((k, i) => o[k] = x[i]); return PNAMES.map(k => o[k]); };
       const f = x => model.resid(pack(x), prior);
       // 速度の初期値は運動量の連立から
-      if (model.momentum && free.includes('vA') && free.includes('vB')) {
+      if (free.includes('vA') && free.includes('vB')) {
         const d0 = model.derive(PNAMES.map(k => base[k]));
         const P1 = add(mul(d0.veh[0].uvel, sc.veh[0].m), mul(d0.veh[1].uvel, sc.veh[1].m));
         const a = mul(dir(base.hA), sc.veh[0].m), b = mul(dir(base.hB), sc.veh[1].m), den = crs(a, b);
@@ -875,14 +838,14 @@ const PHYS = (() => {
       uniq.push(c);
       if (uniq.length >= 8) break;
     }
-    return { cands: uniq, model, fixedSpeeds };
+    return { cands: uniq, model };
   }
 
   return {
     G, v2, add, sub, mul, dot, crs, len, unit, dir, angN, rotL,
     VEH_PRESETS, ROAD_PRESETS, REV_ITEMS, PNAMES,
     makePath, straightPath, projectS, obb, sat, obbGap, canSee, eyePos, conflictS,
-    simulate, postCrash, impact, reverseGen, sceneSolve, sceneModel, backIntegrate, contactLocal,
+    simulate, postCrash, impact, reverseGen, sceneSolve, sceneModel, contactLocal,
   };
 })();
 </script>
@@ -896,7 +859,7 @@ const PHYS = (() => {
   const D2R = Math.PI / 180, R2D = 180 / Math.PI;
   const LS_STATE = 'jikoSim.state.v1', LS_PINS = 'jikoSim.pins.v1';
   const NOTE = 'この数値は理論上の計算であり、実際の事故を完全に再現するものではありません。';
-  const NOTE_SCENE = '現場推定の値は、停止位置・痕跡・摩擦係数の仮定から逆算した推定値で、幅があります。';
+  const NOTE_SCENE = '現場推定の値は、停止位置・摩擦係数の仮定から逆算した推定値で、幅があります。';
   const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
   const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 
@@ -904,7 +867,7 @@ const PHYS = (() => {
   function vehFromPreset(key, extra) {
     const p = P.VEH_PRESETS[key];
     return { preset: key, m: p.m, L: p.L, W: p.W, wb: p.wb, tr: p.tr, eyeF: p.eyeF, eyeR: p.eyeR, k: p.k, eff: Math.round(p.eff * 100),
-      Ifac: 1.0, v0: 40, react: 0.75, rise: 0.1, abs: false, post: 'lock', brake: 'auto', D: 30, x: 0, y: 0, hdg: 0, path: null, ...extra };
+      Ifac: 1.0, v0: 40, react: 0.75, rise: 0.1, post: 'lock', brake: 'auto', D: 30, x: 0, y: 0, hdg: 0, path: null, ...extra };
   }
   function defaultState() {
     return {
@@ -915,7 +878,6 @@ const PHYS = (() => {
       veh: [vehFromPreset('car', { v0: 50, x: -38, y: 1.5, hdg: 0 }), vehFromPreset('car', { v0: 30, x: -1.5, y: -25, hdg: 90 })],
       rev: { item: 'speed', who: 0, drawAt: 'limit' },
       scene: {
-        traces: [[], []],
         rest: [{ on: true, x: 9, y: 9, th: 70, dirOn: false, dir: 45 }, { on: true, x: 7, y: 13, th: 140, dirOn: false, dir: 60 }],
         part: ['front', 'left'], fpost: 0.8, dmu: 0.10, locks: {}, sel: 0,
       },
@@ -928,7 +890,7 @@ const PHYS = (() => {
     const o = { ...d, ...j, road: { ...d.road, ...(j.road || {}) }, coll: { ...d.coll, ...(j.coll || {}) }, rev: { ...d.rev, ...(j.rev || {}) }, scene: { ...d.scene, ...(j.scene || {}) } };
     o.veh = [0, 1].map(i => ({ ...d.veh[i], ...((j.veh || [])[i] || {}) }));
     o.scene.rest = [0, 1].map(i => ({ ...d.scene.rest[i], ...((o.scene.rest || [])[i] || {}) }));
-    if (!Array.isArray(o.scene.traces) || o.scene.traces.length !== 2) o.scene.traces = [[], []];
+    delete o.scene.traces; o.veh.forEach(v => { delete v.abs; });
     if (!Array.isArray(o.obstacles)) o.obstacles = d.obstacles;
     return o;
   }
@@ -950,7 +912,7 @@ const PHYS = (() => {
   }
   function vehParams(v) {
     return { m: v.m, L: v.L, W: v.W, wb: v.wb, tr: v.tr, I: v.m * (v.L * v.L + v.W * v.W) / 12 * v.Ifac, eyeF: v.eyeF, eyeR: v.eyeR, k: v.k,
-      v0: v.v0 / 3.6, react: v.react, eff: v.eff / 100, rise: v.rise, abs: v.abs, post: v.post, brake: v.brake, D: v.D };
+      v0: v.v0 / 3.6, react: v.react, eff: v.eff / 100, rise: v.rise, post: v.post, brake: v.brake, D: v.D };
   }
   function obstaclesN() { return S.obstacles.map(o => ({ x1: Math.min(o.x1, o.x2), x2: Math.max(o.x1, o.x2), y1: Math.min(o.y1, o.y2), y2: Math.max(o.y1, o.y2), label: o.label })); }
   function buildCfg() {
@@ -1050,17 +1012,6 @@ const PHYS = (() => {
   }
 
   /* ---------- 現場推定 ---------- */
-  const traceCache = [null, null];
-  function tracePath(i) {
-    const t = S.scene.traces[i];
-    if (!t || t.length < 2) return null;
-    let total = 0; for (let k = 1; k < t.length; k++) total += Math.hypot(t[k][0] - t[k - 1][0], t[k][1] - t[k - 1][1]);
-    if (total < 0.5) return null;
-    const key = JSON.stringify(t);
-    if (traceCache[i] && traceCache[i].key === key) return traceCache[i].p;
-    const p = P.makePath(t.map(q => v2(q[0], q[1])), { h: 0.25, smooth: 4 });
-    traceCache[i] = { key, p }; return p;
-  }
   function sceneInput(lockOverride) {
     const vp = S.veh.map(v => vehParams(v));
     const locks = {};
@@ -1072,7 +1023,7 @@ const PHYS = (() => {
     return {
       veh: vp, mu0: S.road.mu, fpost: S.scene.fpost, part: S.scene.part,
       rest: S.scene.rest.map(r => ({ on: r.on, x: r.x, y: r.y, th: r.th * D2R, dirOn: r.dirOn, dir: r.dir * D2R })),
-      traces: [tracePath(0), tracePath(1)], locks, box: Math.max(wx, wy) / 2 + 6,
+      locks, box: Math.max(wx, wy) / 2 + 6,
       hint: S.veh.map(v => vehStart(v).th),
     };
   }
@@ -1114,7 +1065,6 @@ const PHYS = (() => {
     const pts = [v2(-8, -8), v2(8, 8)];
     if (S.mode === 'scene') {
       S.scene.rest.forEach(r => { if (r.on) pts.push(v2(r.x, r.y)); });
-      S.scene.traces.forEach(t => (t || []).forEach(q => pts.push(v2(q[0], q[1]))));
       const c = sceneRes && sceneRes.cands[S.scene.sel]; if (c) pts.push(c.d.I);
     } else {
       S.veh.forEach(v => pts.push(vehStart(v).c));
@@ -1250,12 +1200,6 @@ const PHYS = (() => {
     for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? r * 0.45 : r; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
     g.closePath(); g.fillStyle = col; g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.stroke();
   }
-  function wheelLine(path, s0, s1, vp, off) {
-    const pts = [];
-    for (let s = s0; s <= s1 + 1e-6; s += 0.5) { const q = path.at(Math.min(s, s1)), f = dir(q.th), l = v2(-f.y, f.x); pts.push(add(add(q.p, mul(f, -vp.wb / 2)), mul(l, off))); }
-    return pts;
-  }
-
   function drawSimResult(g, T, sc, cfg, res, o) {
     const sts = S.veh.map(vehStart);
     // 経路（予定）
@@ -1271,14 +1215,10 @@ const PHYS = (() => {
       drawCar(g, T, sc, v.seeAt.self.c, v.seeAt.self.th, cfg.veh[i], vcol(i), { fill: false, dash: [3, 2], lw: 1, front: false });
       tag(g, T, v.seeAt.self.c, `${vname(i)} 発見 ${v.tSee.toFixed(2)}s`, vcol(i), 8, 16);
     });
-    // ブレーキ痕
+    // ブレーキ開始位置の表示
     res.veh.forEach((v, i) => {
       if (v.sBrake == null) return;
-      const vp = cfg.veh[i], end = res.collided ? res.coll.pre[i].s : (v.sStop ?? v.sEnd);
-      if (end - v.sBrake < 0.05) return;
-      const offs = vp.tr > 0 ? [vp.tr / 2, -vp.tr / 2] : [0];
-      offs.forEach(off => polyline(g, T, wheelLine(vp.path, v.sBrake, end, vp, off), vp.abs ? 'rgba(40,40,40,.35)' : 'rgba(20,20,20,.85)', Math.max(1.5, 0.22 * sc), vp.abs ? [5, 4] : null));
-      const q = vp.path.at(v.sBrake);
+      const q = cfg.veh[i].path.at(v.sBrake);
       tag(g, T, q.p, `${vname(i)} ブレーキ ${(v.vBrake * 3.6).toFixed(0)}km/h`, vcol(i), 8, -10);
     });
     // 出発位置
@@ -1324,17 +1264,6 @@ const PHYS = (() => {
 
   function drawSceneMode(g, T, sc) {
     const sv = S.scene;
-    // 痕跡
-    [0, 1].forEach(i => {
-      const t = sv.traces[i]; if (!t || t.length < 2) return;
-      polyline(g, T, t.map(q => v2(q[0], q[1])), 'rgba(20,20,20,.85)', Math.max(2, 0.25 * sc));
-      polyline(g, T, t.map(q => v2(q[0], q[1])), vcol(i), Math.max(1, 0.08 * sc));
-      const a = t[t.length - 2], b = t[t.length - 1], ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
-      const tip = v2(b[0], b[1]); const [x, y] = T(tip);
-      g.save(); g.translate(x, y); g.rotate(-ang); g.fillStyle = vcol(i); g.beginPath(); g.moveTo(4, 0); g.lineTo(-7, 5); g.lineTo(-7, -5); g.closePath(); g.fill(); g.restore();
-      tag(g, T, v2(t[0][0], t[0][1]), `${vname(i)} 痕跡`, vcol(i), 6, -6);
-    });
-    if (drawing && drawing.pts.length > 1) polyline(g, T, drawing.pts.map(q => v2(q[0], q[1])), vcol(drawing.i), 2.5);
     const r = sceneRes, c = r && r.cands[S.scene.sel];
     // 停止位置
     [0, 1].forEach(i => {
@@ -1349,16 +1278,7 @@ const PHYS = (() => {
     [0, 1].forEach(i => {
       const o = d.veh[i], vp = vehParams(S.veh[i]);
       // 推定ルート（衝突前）
-      const T_ = r.inp.traces[i];
-      if (T_) {
-        const back = (o.vb || 0) * vp.react + 15;
-        const pre = [T_.at(-back).p, T_.at(0).p];
-        polyline(g, T, pre, vcol(i), 1.6, [6, 4]);
-        if (o.sI > T_.total) polyline(g, T, [T_.at(T_.total).p, d.I], vcol(i), 1.6, [6, 4]);
-        tag(g, T, T_.at(-back).p, `${vname(i)} 推定ルート`, vcol(i), 6, 14);
-      } else {
-        polyline(g, T, [sub(o.c, mul(dir(o.th), 30)), o.c], vcol(i), 1.6, [6, 4]);
-      }
+      polyline(g, T, [sub(o.c, mul(dir(o.th), 30)), o.c], vcol(i), 1.6, [6, 4]);
       // 衝突後の移動
       if (o.uvel) polyline(g, T, [o.c, v2(sv.rest[i].x, sv.rest[i].y)], vcol(i), 1.4, [2, 3]);
       drawCar(g, T, sc, o.c, o.th, vp, vcol(i), { alpha: 0.5, lw: 2, label: vname(i) });
@@ -1373,9 +1293,9 @@ const PHYS = (() => {
     drawScene(ctx, cssW, cssH, view);
   }
 
-  /* ---------- 図の操作（ドラッグ・ピンチ・痕跡の手描き） ---------- */
+  /* ---------- 図の操作（ドラッグ・ピンチ） ---------- */
   const toWorld = (x, y) => v2((x - cssW / 2) / view.scale + view.cx, -(y - cssH / 2) / view.scale + view.cy);
-  let drag = null, drawing = null, drawTool = -1;
+  let drag = null;
   const ptrs = new Map();
   function hitTest(w) {
     if (S.mode === 'scene') {
@@ -1406,9 +1326,8 @@ const PHYS = (() => {
   cv.addEventListener('pointerdown', e => {
     cv.setPointerCapture(e.pointerId);
     ptrs.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
-    if (ptrs.size === 2) { drag = null; drawing = null; const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), scale: view.scale, mid: toWorld((a.x + b.x) / 2, (a.y + b.y) / 2) }; return; }
+    if (ptrs.size === 2) { drag = null; const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), scale: view.scale, mid: toWorld((a.x + b.x) / 2, (a.y + b.y) / 2) }; return; }
     const w = toWorld(e.offsetX, e.offsetY);
-    if (S.mode === 'scene' && drawTool >= 0) { drawing = { i: drawTool, pts: [[round2(w.x), round2(w.y)]] }; return; }
     const h = hitTest(w);
     drag = h ? { ...h } : { kind: 'pan', sx: e.offsetX, sy: e.offsetY, cx: view.cx, cy: view.cy };
   });
@@ -1425,7 +1344,6 @@ const PHYS = (() => {
       draw(); return;
     }
     const w = toWorld(e.offsetX, e.offsetY);
-    if (drawing) { const l = drawing.pts[drawing.pts.length - 1]; if (Math.hypot(w.x - l[0], w.y - l[1]) > 0.2) { drawing.pts.push([round2(w.x), round2(w.y)]); draw(); } return; }
     if (!drag) return;
     if (drag.kind === 'pan') { view.cx = drag.cx - (e.offsetX - drag.sx) / view.scale; view.cy = drag.cy + (e.offsetY - drag.sy) / view.scale; draw(); return; }
     const p = add(w, drag.off || v2(0, 0));
@@ -1446,10 +1364,6 @@ const PHYS = (() => {
   const endPtr = e => {
     ptrs.delete(e.pointerId);
     if (ptrs.size < 2) pinch = null;
-    if (drawing) {
-      if (drawing.pts.length > 2) { S.scene.traces[drawing.i] = drawing.pts; drawTool = -1; renderPanel(); }
-      drawing = null; schedule(0);
-    }
     if (drag && drag.kind !== 'pan') { if (drag.kind === 'impact') renderPanel(); schedule(0); }
     drag = null;
   };
@@ -1513,7 +1427,7 @@ const PHYS = (() => {
   }
   const presetOpts = Object.entries(P.VEH_PRESETS).map(([k, v]) => [k, v.label]);
   const roadOpts = [...Object.entries(P.ROAD_PRESETS).map(([k, v]) => [k, `${v.label}（μ${v.mu}）`]), ['custom', '手入力']];
-  function applyPreset(i, key) { const v = S.veh[i], keep = { v0: v.v0, x: v.x, y: v.y, hdg: v.hdg, path: v.path, react: v.react, brake: v.brake, D: v.D, rise: v.rise, abs: v.abs, post: v.post, Ifac: v.Ifac }; S.veh[i] = vehFromPreset(key, keep); }
+  function applyPreset(i, key) { const v = S.veh[i], keep = { v0: v.v0, x: v.x, y: v.y, hdg: v.hdg, path: v.path, react: v.react, brake: v.brake, D: v.D, rise: v.rise, post: v.post, Ifac: v.Ifac }; S.veh[i] = vehFromPreset(key, keep); }
   function applyRoadPreset(k) { S.road.preset = k; if (P.ROAD_PRESETS[k]) S.road.mu = P.ROAD_PRESETS[k].mu; }
   const HDG = [['0', '東向き →'], ['90', '北向き ↑'], ['180', '西向き ←'], ['-90', '南向き ↓']];
 
@@ -1535,7 +1449,7 @@ const PHYS = (() => {
       g.append(el('span', { class: 'l' }, 'y（北+）m'), ...[0, 1].map(i => num(() => vehStart(S.veh[i]).c.y, x => S.veh[i].y = x, { dec: 1, disabled: pathed(i) })));
       g.append(el('span', { class: 'l' }, '進む向き'), ...[0, 1].map(i => sel(() => S.veh[i].hdg, x => S.veh[i].hdg = +x, HDG, { disabled: pathed(i) })));
       box.append(g);
-      if (S.veh.some(v => v.path)) box.append(el('div', { class: 'warnline' }, '曲線の経路（現場推定から送ったもの）を使っている車両があります。ドラッグで経路ごと動きます。直進に戻すには「車両」の「経路」から。'));
+      if (S.veh.some(v => v.path)) box.append(el('div', { class: 'warnline' }, '現場推定から送った経路を使っている車両があります。ドラッグで経路ごと動きます。直進に戻すには「車両」の「経路」から。'));
     }
     return box;
   }
@@ -1554,7 +1468,6 @@ const PHYS = (() => {
     row('運転者の反応時間', '秒（空走時間）', n('react', { min: 0, max: 5, step: 0.05 }));
     row('ブレーキの効き', '%（路面μに対して）', n('eff', { min: 5, max: 120, step: 1 }));
     row('ブレーキ立ち上がり', '秒', n('rise', { min: 0, max: 1, step: 0.05 }));
-    row('ABS', '痕跡の残り方', i => chk(() => S.veh[i].abs, x => S.veh[i].abs = x, 'あり'));
     row('相手の発見', '', i => sel(() => S.veh[i].brake, x => S.veh[i].brake = x, [['auto', '見えた時（見通し判定）'], ['distance', '衝突地点の手前Dmで'], ['never', '発見しない（ブレーキなし）']], { after: refreshValues }));
     row('発見距離 D', 'm（上で「手前Dm」のとき）', i => num(() => S.veh[i].D, x => S.veh[i].D = x, { min: 0, step: 1, disabled: () => S.veh[i].brake !== 'distance' }));
     row('運転席の位置', 'm（前端から後ろへ）', n('eyeF', { min: 0, step: 0.1 }));
@@ -1656,17 +1569,6 @@ const PHYS = (() => {
   const candVal = (c, k) => { if (!c) return null; const i = P.PNAMES.indexOf(k), v = c.p[i]; return (k === 'vA' || k === 'vB') ? v * 3.6 : (k === 'hA' || k === 'hB') ? v * R2D : v; };
   function sceneSection() {
     const sv = S.scene, out = [];
-    const tools = el('div', { class: 'card' }, el('h2', {}, '痕跡ライン（ブレーキ痕・スリップ痕）'));
-    const trow = i => {
-      const T = tracePath(i);
-      return el('div', { class: 'row' },
-        el('button', { class: `btn ${i ? 'b' : 'a'}${drawTool === i ? ' on' : ''}`, onclick: () => { drawTool = drawTool === i ? -1 : i; renderPanel(); updateHint(); } }, drawTool === i ? `${vname(i)}：図をなぞる…` : `${vname(i)} の痕跡を描く`),
-        el('button', { class: 'btn', disabled: !T, onclick: () => { sv.traces[i] = sv.traces[i].slice().reverse(); schedule(0); } }, '向きを反転'),
-        el('button', { class: 'btn', disabled: !T, onclick: () => { sv.traces[i] = []; renderPanel(); schedule(0); } }, '消す'),
-        el('span', { class: 'small' }, T ? `長さ ${T.total.toFixed(1)} m` : 'なし'));
-    };
-    tools.append(trow(0), trow(1), el('div', { class: 'note' }, '進んだ向きに指でなぞります（曲線も可）。終わりの矢印が進行方向です。痕跡の終わり側を延長して衝突地点・停止位置へ、始まり側を延長してブレーキ前の走行ルートを推定します。'));
-    out.push(tools);
     const rest = el('div', { class: 'card' }, el('h2', {}, '事故直後の停止位置（図でドラッグ）'));
     const g = el('div', { class: 'grid2' }, el('span'), el('span', { class: 'h a' }, 'A'), el('span', { class: 'h b' }, 'B'));
     const row = (label, sub, mk) => g.append(el('span', { class: 'l' }, label, sub ? el('small', {}, sub) : null), mk(0), mk(1));
@@ -1703,7 +1605,7 @@ const PHYS = (() => {
     lk.append(lt, el('div', { class: 'note' }, '向きは東=0°・北=90°・西=180°・南=-90°。衝突地点は図の★をドラッグしてもロックできます。'));
     out.push(lk);
     out.push(el('div', { class: 'row' }, el('button', { class: 'btn pri', disabled: !c, onclick: sendToVerify }, 'この推定を検証モードへ送る'),
-      el('span', { class: 'small' }, '推定ルート（曲線も）と速度を車両経路として使います')));
+      el('span', { class: 'small' }, '推定した向きと速度で、両車が直進する経路を作ります')));
     return out;
   }
   const lockInputs = {};
@@ -1833,17 +1735,13 @@ const PHYS = (() => {
     const c = r.cands[S.scene.sel], d = c.d;
     const bad = d.dE != null && d.dE < -500;
     h.push(`<span class="badge ${bad ? 'warn' : 'ok'}">候補 ${S.scene.sel + 1} ／ 整合度 ${c.score.toFixed(0)}</span>`);
-    if (r.fixedSpeeds) h.push('<div class="warnline">停止位置が2台分そろっていないため、衝突直前の速度は運動量からは決まりません（痕跡からの最低速度のみ）。</div>');
     const rg = r.range;
-    const rangeTxt = (i) => { if (!rg || r.fixedSpeeds) return ''; const vs = rg.map(x => x.p[2 + i] * 3.6); return `<br><span class="small">幅 ${Math.min(...vs).toFixed(0)}〜${Math.max(...vs).toFixed(0)}</span>`; };
+    const rangeTxt = (i) => { if (!rg) return ''; const vs = rg.map(x => x.p[2 + i] * 3.6); return `<br><span class="small">幅 ${Math.min(...vs).toFixed(0)}〜${Math.max(...vs).toFixed(0)}</span>`; };
     h.push('<div class="kv"><span></span><span class="h a">A</span><span class="h b">B</span>');
-    h.push(row3('衝突直前の速度', r.fixedSpeeds ? '—' : kmh(d.veh[0].v) + ' km/h' + rangeTxt(0), r.fixedSpeeds ? '—' : kmh(d.veh[1].v) + ' km/h' + rangeTxt(1)));
+    h.push(row3('衝突直前の速度', kmh(d.veh[0].v) + ' km/h' + rangeTxt(0), kmh(d.veh[1].v) + ' km/h' + rangeTxt(1)));
     h.push(row3('衝突直後の速度', d.veh[0].u != null ? kmh(d.veh[0].u) + ' km/h' : '—', d.veh[1].u != null ? kmh(d.veh[1].u) + ' km/h' : '—'));
     h.push(row3('衝突直前の向き', f1(d.veh[0].th * R2D, 0) + '°', f1(d.veh[1].th * R2D, 0) + '°'));
     h.push(row3('衝突後の移動', d.veh[0].dpost != null ? f1(d.veh[0].dpost) + ' m' : '—', d.veh[1].dpost != null ? f1(d.veh[1].dpost) + ' m' : '—'));
-    const vb = i => { const o = d.veh[i]; if (o.vb == null) return '痕跡なし'; return r.fixedSpeeds ? `${kmh(o.vbMin)} 以上` : `${kmh(o.vb)} km/h`; };
-    h.push(row3('ブレーキ開始時の速度', vb(0), vb(1)));
-    h.push(row3('痕跡だけからの最低速度', d.veh[0].vbMin != null ? kmh(d.veh[0].vbMin) + ' 以上' : '—', d.veh[1].vbMin != null ? kmh(d.veh[1].vbMin) + ' 以上' : '—'));
     h.push('</div>');
     if (d.dE != null) {
       h.push('<div class="kv2">');
@@ -1857,11 +1755,11 @@ const PHYS = (() => {
     if (r.cands.length > 1) {
       h.push(`<div style="margin-top:10px;font-weight:700;font-size:12.5px">解の候補（${r.cands.length}件・整合度の高い順。タップで図に描きます）</div><div class="cands">`);
       r.cands.forEach((cc, k) => {
-        h.push(`<button class="cand${k === S.scene.sel ? ' on' : ''}" data-cand="${k}"><b>${k + 1}.</b> 整合度 <b>${cc.score.toFixed(0)}</b> ／ A ${r.fixedSpeeds ? '—' : kmh(cc.p[2])} km/h ${f1(cc.p[4] * R2D, 0)}° ／ B ${r.fixedSpeeds ? '—' : kmh(cc.p[3])} km/h ${f1(cc.p[5] * R2D, 0)}° ／ 地点 (${f1(cc.p[0])}, ${f1(cc.p[1])})</button>`);
+        h.push(`<button class="cand${k === S.scene.sel ? ' on' : ''}" data-cand="${k}"><b>${k + 1}.</b> 整合度 <b>${cc.score.toFixed(0)}</b> ／ A ${kmh(cc.p[2])} km/h ${f1(cc.p[4] * R2D, 0)}° ／ B ${kmh(cc.p[3])} km/h ${f1(cc.p[5] * R2D, 0)}° ／ 地点 (${f1(cc.p[0])}, ${f1(cc.p[1])})</button>`);
       });
       h.push('</div>');
     }
-    h.push(`<div class="note">${NOTE} ${NOTE_SCENE} 速度の幅は摩擦係数を ±${S.scene.dmu} 動かしたときの値。痕跡だけでは衝突でどれだけ減速したか分からないため、痕跡からの速度は「最低でもこの速度以上」として示します。衝突後の移動は直線で滑ったと近似し、回転は角度の変化から別に見積もっています。</div></div>`);
+    h.push(`<div class="note">${NOTE} ${NOTE_SCENE} 速度の幅は摩擦係数を ±${S.scene.dmu} 動かしたときの値。衝突後の移動は直線で滑ったと近似し、回転は角度の変化から別に見積もっています。</div></div>`);
     return h.join('');
   }
 
@@ -1870,56 +1768,25 @@ const PHYS = (() => {
     const r = sceneRes, c = r && r.cands[S.scene.sel]; if (!c) return;
     const d = c.d, paths = [];
     for (const i of [0, 1]) {
-      const o = d.veh[i], vp = vehParams(S.veh[i]), T = r.inp.traces[i];
-      const v0 = r.fixedSpeeds ? (o.vbMin || 8) : (o.vb != null ? o.vb : o.v);
-      let pts, sPerceive = null;
-      if (T) {
-        const back = v0 * vp.react + 20;
-        pts = [T.at(-back).p];
-        for (let k = 0; k < T.P.length; k += 4) pts.push(T.P[k]);
-        pts.push(T.P[T.P.length - 1]);
-        const endS = Math.max(o.sI, T.total);
-        if (o.sI > T.total + 0.3) pts.push(T.at(o.sI).p);
-        const e = T.at(endS); pts.push(add(e.p, mul(dir(e.th), 60)));
-        sPerceive = 20;
-      } else {
-        pts = [sub(o.c, mul(dir(o.th), 40)), add(o.c, mul(dir(o.th), 60))];
-      }
-      paths.push({ pts, v0, sPerceive, hasT: !!T });
+      const o = d.veh[i];
+      paths.push({ pts: [sub(o.c, mul(dir(o.th), 40)), add(o.c, mul(dir(o.th), 60))], v0: o.v });
     }
-    // 両車が同じ時刻に衝突地点へ着くよう、早く着く方の出発点を後ろへ延ばす
-    const mu = S.road.mu;
-    const tArrive = (path, vp, p, sTarget) => {
-      if (!p.hasT) return sTarget / Math.max(0.1, p.v0);
-      const sB = p.sPerceive + p.v0 * vp.react; let s = 0, v = p.v0, t = 0, tb = -1; const dt = 0.002;
-      while (s < sTarget && t < 60) {
-        let a = 0;
-        if (s >= sB) { if (tb < 0) tb = t; const amax = mu * P.G * vp.eff, lat = v * v * Math.abs(path.at(s).k); a = Math.min(amax * (vp.rise > 0 ? Math.min(1, (t - tb) / vp.rise) : 1), Math.sqrt(Math.max(0, amax * amax - lat * lat))); }
-        const v1 = Math.max(0.05, v - a * dt); s += (v + v1) / 2 * dt; v = v1; t += dt;
-      }
-      return t;
-    };
-    let built = paths.map(p => P.makePath(p.pts, { h: 0.25 }));
-    const tt = [0, 1].map(i => tArrive(built[i], vehParams(S.veh[i]), paths[i], P.projectS(built[i], d.veh[i].c).s));
+    // 両車が同じ時刻に衝突地点へ着くよう、早く着く方の出発点を後ろへ延ばす（どちらも一定速度の直進）
+    const built = paths.map(p => P.makePath(p.pts, { h: 0.25 }));
+    const tt = [0, 1].map(i => P.projectS(built[i], d.veh[i].c).s / Math.max(0.1, paths[i].v0));
     const early = tt[0] < tt[1] ? 0 : 1, gap = Math.abs(tt[0] - tt[1]);
     if (gap > 1e-3) {
       const p = paths[early], b = built[early], ext = gap * p.v0;
       p.pts = [sub(b.at(0).p, mul(dir(b.at(0).th), ext)), ...p.pts];
-      if (p.sPerceive != null) p.sPerceive += ext;
-      built = paths.map(q => P.makePath(q.pts, { h: 0.25 }));
     }
     for (const i of [0, 1]) {
       const v = S.veh[i], p = paths[i];
       v.path = p.pts.map(q => [round2(q.x), round2(q.y)]);
       v.v0 = Math.round(p.v0 * 3.6 * 10) / 10;
-      if (p.hasT) {
-        const sConf = P.conflictS(built[i], built[1 - i]);
-        if (isFinite(sConf)) { v.brake = 'distance'; v.D = round1(Math.max(0, sConf - (p.sPerceive + v.L / 2))); }
-        else v.brake = 'auto';
-      } else v.brake = 'never';
+      v.brake = 'never';
     }
     S.mode = 'verify'; renderAll();
-    alert('推定したルートと速度を検証モードへ送りました。\n・痕跡のある車：痕跡の始まりでブレーキが始まるよう「衝突地点の手前Dmで発見」に設定\n・痕跡のない車：ブレーキなしで設定\n衝突後の動きが停止位置と合うか確かめてください。');
+    alert('推定したルートと速度を検証モードへ送りました。\n・両車ともブレーキなしで設定\n衝突後の動きが停止位置と合うか確かめてください。');
   }
 
   /* ---------- 出力 ---------- */
@@ -1942,9 +1809,9 @@ const PHYS = (() => {
       L.push(`逆算: ${P.REV_ITEMS[it].label}（${vname(S.rev.who)}）= ${s}`);
     } else if (S.mode === 'scene' && sceneRes && sceneRes.cands.length) {
       const c = sceneRes.cands[S.scene.sel], d = c.d;
-      L.push(`推定（候補${S.scene.sel + 1}・整合度${c.score.toFixed(0)}）: 衝突地点(${d.I.x.toFixed(1)},${d.I.y.toFixed(1)}) A ${sceneRes.fixedSpeeds ? '—' : kmh(d.veh[0].v)} km/h ${(d.veh[0].th * R2D).toFixed(0)}° ／ B ${sceneRes.fixedSpeeds ? '—' : kmh(d.veh[1].v)} km/h ${(d.veh[1].th * R2D).toFixed(0)}°`);
+      L.push(`推定（候補${S.scene.sel + 1}・整合度${c.score.toFixed(0)}）: 衝突地点(${d.I.x.toFixed(1)},${d.I.y.toFixed(1)}) A ${kmh(d.veh[0].v)} km/h ${(d.veh[0].th * R2D).toFixed(0)}° ／ B ${kmh(d.veh[1].v)} km/h ${(d.veh[1].th * R2D).toFixed(0)}°`);
       S.scene.rest.forEach((R, i) => { if (R.on) L.push(`${vname(i)} 停止位置 (${R.x},${R.y}) 角度${R.th}°`); });
-      if (sceneRes.range && !sceneRes.fixedSpeeds) { const a = sceneRes.range.map(x => x.p[2] * 3.6), b = sceneRes.range.map(x => x.p[3] * 3.6); L.push(`速度の幅（μ±${S.scene.dmu}）: A ${Math.min(...a).toFixed(0)}〜${Math.max(...a).toFixed(0)} ／ B ${Math.min(...b).toFixed(0)}〜${Math.max(...b).toFixed(0)} km/h`); }
+      if (sceneRes.range) { const a = sceneRes.range.map(x => x.p[2] * 3.6), b = sceneRes.range.map(x => x.p[3] * 3.6); L.push(`速度の幅（μ±${S.scene.dmu}）: A ${Math.min(...a).toFixed(0)}〜${Math.max(...a).toFixed(0)} ／ B ${Math.min(...b).toFixed(0)}〜${Math.max(...b).toFixed(0)} km/h`); }
     }
     L.push('注：' + NOTE + (S.mode === 'scene' ? ' ' + NOTE_SCENE : ''));
     return L;
@@ -1991,11 +1858,11 @@ const PHYS = (() => {
   function updateHint() {
     const h = document.getElementById('hint');
     h.textContent = S.mode === 'scene'
-      ? (drawTool >= 0 ? `${vname(drawTool)} の痕跡：進んだ向きに指でなぞってください` : '停止車両・★（衝突地点）・建物をドラッグ ／ 2本指で拡大・移動')
+      ? '停止車両・★（衝突地点）・建物をドラッグ ／ 2本指で拡大・移動'
       : '車・建物をドラッグして配置 ／ 何もない所をドラッグで移動、2本指（ホイール）で拡大';
   }
   function renderAll() { renderPanel(); compute(); }
-  document.getElementById('tabs').addEventListener('click', e => { const m = e.target.dataset && e.target.dataset.m; if (!m || m === S.mode) return; S.mode = m; drawTool = -1; renderAll(); fit(); });
+  document.getElementById('tabs').addEventListener('click', e => { const m = e.target.dataset && e.target.dataset.m; if (!m || m === S.mode) return; S.mode = m; renderAll(); fit(); });
   document.getElementById('bFit').onclick = fit;
   document.getElementById('bPng').onclick = exportPng;
   window.addEventListener('resize', resize);
