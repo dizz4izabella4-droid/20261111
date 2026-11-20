@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0d0c0a">
+<title>連携アプリ（試作）</title>
+<style>
+:root{
+  --bg:#0d0c0a; --wall:#16130f; --edge:#2a241c; --paper:#d9cfbb;
+  --ink:#e8dfcc; --dim:#8a7f6c; --red:#b3261e; --lamp:#f0c674;
+  --tab-w:22px; --strip-w:26px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);overflow:hidden;
+  font-family:"Hiragino Mincho ProN","Yu Mincho",serif;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  overscroll-behavior:none;touch-action:none}
+#viewport{position:fixed;inset:0;overflow:hidden;
+  background:radial-gradient(ellipse at 50% 0%,#221d16 0%,var(--bg) 70%)}
+#track{position:absolute;top:0;left:0;height:100%;display:flex;will-change:transform}
+#track.anim{transition:transform .32s cubic-bezier(.2,.8,.2,1)}
+.pane{position:relative;height:100%;flex:0 0 auto;
+  padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+.pane iframe{display:block;width:100%;height:100%;border:0;background:#000}
+.pane .loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  color:var(--dim);font-size:13px;letter-spacing:.2em;pointer-events:none}
+
+/* 左右端のスワイプ受付帯（iframeの上に重ねる） */
+.strip{position:fixed;top:0;bottom:0;width:var(--strip-w);z-index:10;touch-action:none}
+.strip.l{left:0}
+.strip.r{right:0}
+
+/* 補助タブ（常時表示） */
+.tab{position:fixed;top:50%;z-index:11;width:var(--tab-w);height:120px;margin-top:-60px;white-space:nowrap;padding-top:10px;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(180deg,#3a3127,#251f18);border:1px solid #4a3f31;
+  color:var(--paper);font-size:11px;line-height:1.15;flex-direction:column;text-align:center;font-family:system-ui,"Hiragino Sans",sans-serif;
+  box-shadow:0 2px 8px rgba(0,0,0,.6);cursor:pointer;opacity:.85;
+  transition:opacity .2s,transform .2s}
+.tab:active{opacity:1}
+.tab.l{left:0;border-left:0;border-radius:0 6px 6px 0}
+.tab.r{right:0;border-right:0;border-radius:6px 0 0 6px}
+.tab.hide{opacity:0;pointer-events:none;transform:scaleX(0)}
+.tab::before{content:"";position:absolute;top:8px;width:4px;height:4px;border-radius:50%;background:var(--red)}
+
+/* 現在位置のしるし */
+#dots{position:fixed;left:50%;bottom:calc(6px + env(safe-area-inset-bottom));transform:translateX(-50%);
+  z-index:12;display:flex;gap:8px;pointer-events:none}
+#dots i{width:6px;height:6px;border-radius:50%;background:#4a3f31;transition:background .2s}
+#dots i.on{background:var(--lamp)}
+</style>
+</head>
+<body>
+<div id="viewport"><div id="track"></div></div>
+<div class="strip l" id="stripL"></div>
+<div class="strip r" id="stripR"></div>
+<div class="tab l" id="tabL"></div>
+<div class="tab r" id="tabR"></div>
+<div id="dots"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ===== 設定（1か所で管理） ===== */
+var CONFIG = {
+  brand: 'iz2611',            // 端末名。画面に出る表記はここから取る
+  stringsForFloppy: 3,        // フロッピー出現に必要な紐の本数
+  startIndex: 1,              // 起動時の画面（0:左 1:中央 2:右）
+  panes: [
+    { id:'shoko',   label:'資料保管庫', real:'../shoko/index.html' },
+    { id:'redline', label:'レッドライン', real:'../redline/play/index.html' },
+    { id:'term',    label:'{brand}',    real:'../pc98-novel/index.html' }
+  ]
+};
+// ?real=1 で本物のアプリを読み込む（既定はダミー）
+var USE_REAL = /[?&]real=1\b/.test(location.search);
+
+function label(p){ return p.label.replace('{brand}', CONFIG.brand); }
+
+/* ===== ダミー画面 ===== */
+function dummyDoc(p, i){
+  var themes = [
+    {bg:'#2b241b', fg:'#e8dfcc', accent:'#b3261e', font:'serif',     note:'書類・調書の棚。マーカーを引くとボードに載る（予定）。'},
+    {bg:'#3b2a20', fg:'#f3ead8', accent:'#c0392b', font:'serif',     note:'コルクのボード。資料・メモ・ピン・紐（予定）。'},
+    {bg:'#000a00', fg:'#7cff7c', accent:'#7cff7c', font:'monospace', note:'フロッピーを挿すと起動する端末（予定）。'}
+  ];
+  var t = themes[i];
+  return '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">'+
+  '<meta name="viewport" content="width=device-width,initial-scale=1">'+
+  '<style>*{box-sizing:border-box;margin:0}html,body{height:100%}'+
+  'body{background:'+t.bg+';color:'+t.fg+';font-family:'+t.font+';display:flex;flex-direction:column;'+
+  'align-items:center;justify-content:center;gap:18px;padding:40px;text-align:center}'+
+  'h1{font-size:26px;letter-spacing:.2em;border-bottom:2px solid '+t.accent+';padding-bottom:8px}'+
+  'p{font-size:13px;opacity:.75;line-height:1.8;max-width:22em}'+
+  '#t{font-family:monospace;font-size:40px;letter-spacing:.05em}'+
+  '#s{font-size:11px;opacity:.6;letter-spacing:.15em}'+
+  'input{width:80%;max-width:280px;height:6px;accent-color:'+t.accent+'}'+
+  '</style></head><body>'+
+  '<h1>'+label(p)+'</h1>'+
+  '<p>ダミー画面（'+['左','中央','右'][i]+'）<br>'+t.note+'</p>'+
+  '<div id="t">0.0</div><div id="s">停止中</div>'+
+  '<p>↓ 画面内の横スクロール操作がスワイプと競合しないかの確認用</p><input type="range">'+
+  '<script>'+
+  'var active=false,sec=0,last=0;'+
+  'function loop(ts){if(active){if(last)sec+=(ts-last)/1000;last=ts;document.getElementById("t").textContent=sec.toFixed(1);}requestAnimationFrame(loop);}'+
+  'requestAnimationFrame(loop);'+
+  'addEventListener("message",function(e){var d=e.data;if(!d||d.type!=="izlink.visibility")return;'+
+  'active=d.visible;last=0;document.getElementById("s").textContent=active?"表示中（動作中）":"停止中";});'+
+  'parent.postMessage({type:"izlink.ready",id:"'+p.id+'"},"*");'+
+  '<\/script></body></html>';
+}
+
+/* ===== 組み立て ===== */
+var track = document.getElementById('track');
+var dotsEl = document.getElementById('dots');
+var tabL = document.getElementById('tabL'), tabR = document.getElementById('tabR');
+var N = CONFIG.panes.length;
+var frames = [];
+var index = CONFIG.startIndex;
+
+CONFIG.panes.forEach(function(p, i){
+  var pane = document.createElement('div');
+  pane.className = 'pane';
+  var ld = document.createElement('div');
+  ld.className = 'loading'; ld.textContent = '読み込み中…';
+  pane.appendChild(ld);
+  track.appendChild(pane);
+  var dot = document.createElement('i');
+  dotsEl.appendChild(dot);
+  frames.push({pane:pane, loading:ld, iframe:null, loaded:false, p:p, i:i});
+});
+
+function loadFrame(f){
+  if (f.iframe) return;
+  var ifr = document.createElement('iframe');
+  ifr.title = label(f.p);
+  ifr.setAttribute('allow', 'autoplay; fullscreen');
+  ifr.addEventListener('load', function(){
+    f.loaded = true;
+    f.loading.remove();
+    sendVisibility();
+  });
+  if (USE_REAL) ifr.src = f.p.real; else ifr.srcdoc = dummyDoc(f.p, f.i);
+  f.pane.insertBefore(ifr, f.loading);
+  f.iframe = ifr;
+}
+
+/* 中央（起動画面）を先に、残りは後から */
+loadFrame(frames[index]);
+setTimeout(function(){ frames.forEach(loadFrame); }, 800);
+
+/* ===== 表示制御 ===== */
+var W = 0, dragX = 0;
+function layout(){
+  W = window.innerWidth;
+  track.style.width = (W * N) + 'px';
+  frames.forEach(function(f){ f.pane.style.width = W + 'px'; });
+  apply(false);
+}
+function apply(anim){
+  track.classList.toggle('anim', !!anim);
+  track.style.transform = 'translate3d(' + (-index * W + dragX) + 'px,0,0)';
+}
+function setTab(el, p){ // 1文字ずつ縦に積む（縦書き指定はフォントにより崩れるため）
+  el.textContent = '';
+  if (!p) return;
+  Array.from(label(p)).forEach(function(c){
+    var s = document.createElement('span'); s.textContent = c; s.style.display = 'block';
+    el.appendChild(s);
+  });
+}
+function updateChrome(){
+  var prev = CONFIG.panes[index - 1], next = CONFIG.panes[index + 1];
+  setTab(tabL, prev); setTab(tabR, next);
+  tabL.classList.toggle('hide', !prev);
+  tabR.classList.toggle('hide', !next);
+  document.getElementById('stripL').style.display = prev ? '' : 'none';
+  document.getElementById('stripR').style.display = next ? '' : 'none';
+  Array.prototype.forEach.call(dotsEl.children, function(d, i){ d.classList.toggle('on', i === index); });
+}
+/* 見えない枠は音と動きを止める：各アプリへ通知 */
+function sendVisibility(){
+  frames.forEach(function(f){
+    if (!f.iframe || !f.loaded) return;
+    try { f.iframe.contentWindow.postMessage({type:'izlink.visibility', visible: f.i === index}, '*'); } catch(e){}
+  });
+}
+function go(i){
+  i = Math.max(0, Math.min(N - 1, i));
+  var changed = i !== index;
+  index = i; dragX = 0;
+  apply(true);
+  updateChrome();
+  if (changed) sendVisibility();
+}
+
+/* ===== エッジスワイプ ===== */
+function bindStrip(el, dir){ // dir: -1=左端（前の画面へ） +1=右端（次の画面へ）
+  var sx = 0, sy = 0, t0 = 0, id = null, moved = false;
+  el.addEventListener('pointerdown', function(e){
+    id = e.pointerId; sx = e.clientX; sy = e.clientY; t0 = performance.now(); moved = false;
+    el.setPointerCapture(id);
+    track.classList.remove('anim');
+  });
+  el.addEventListener('pointermove', function(e){
+    if (e.pointerId !== id) return;
+    var dx = e.clientX - sx;
+    // 左端は右へ、右端は左へ引いたときだけ追従
+    var pull = dir < 0 ? Math.max(0, dx) : Math.min(0, dx);
+    if (Math.abs(pull) > 4) moved = true;
+    dragX = pull;
+    apply(false);
+  });
+  function end(e){
+    if (e.pointerId !== id) return;
+    id = null;
+    var dx = dragX, dt = performance.now() - t0;
+    var fast = Math.abs(dx) / Math.max(dt, 1) > 0.4;
+    if (moved && (Math.abs(dx) > W * 0.25 || fast)) go(index + dir);
+    else go(index);
+  }
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', end);
+}
+bindStrip(document.getElementById('stripL'), -1);
+bindStrip(document.getElementById('stripR'), +1);
+
+/* ===== 補助タブ ===== */
+tabL.addEventListener('click', function(){ go(index - 1); });
+tabR.addEventListener('click', function(){ go(index + 1); });
+
+/* キーボード（PC確認用） */
+window.addEventListener('keydown', function(e){
+  if (e.key === 'ArrowLeft' && e.altKey) go(index - 1);
+  if (e.key === 'ArrowRight' && e.altKey) go(index + 1);
+});
+
+/* 子アプリからの通知（今後 link-bridge が使う） */
+window.addEventListener('message', function(e){
+  var d = e.data;
+  if (!d || typeof d.type !== 'string' || d.type.indexOf('izlink.') !== 0) return;
+  if (d.type === 'izlink.ready') sendVisibility();
+  if (d.type === 'izlink.go' && typeof d.index === 'number') go(d.index);
+});
+
+window.addEventListener('resize', layout);
+layout();
+updateChrome();
+
+// 確認用に公開
+window.IZLINK = { config: CONFIG, go: go, get index(){ return index; } };
+})();
+</script>
+</body>
+</html>
