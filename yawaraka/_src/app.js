@@ -81,6 +81,7 @@ const insts = [];
 const ui = id => document.getElementById(id);
 let current = null, body, bodyGeo, basePos, face, floorY = 0, lift = 0, pos;
 let riders = [], faceVerts = [], faceCaps = [];
+let mochi = false, layout = 'free';
 
 // 餅形の体を作る（底はぺたっと、すそはむにっと）
 function makeBody(sh, colorFn) {
@@ -706,6 +707,7 @@ function buildCharacter(key, opts = {}) {
   body.receiveShadow = false; body.userData.inst = curInst;
   squish.add(body);
   face = new THREE.Group();
+  face.visible = !mochi;
   squish.add(face);
   current.rt = c.build() || {};
   // 眉間のシワ（ぷんぷん用）：短い線2本、ふだんは隠しておく
@@ -929,7 +931,7 @@ canvas.addEventListener('pointerdown', e => {
     if (stageOn) { toast('Turn STAGE off to move'); return; }
     if (!ray.intersectObject(body, false)[0]) return;
     const p = ray.ray.intersectPlane(floorPlane, new THREE.Vector3()); if (!p) return;
-    mv = { dx: cat.position.x - p.x, dz: cat.position.z - p.z };
+    mv = { dx: cat.position.x - p.x, dz: cat.position.z - p.z }; if (layout !== 'free') setFree();
     controls.enabled = false; sfx.grab(); canvas.setPointerCapture(e.pointerId);
     return;
   }
@@ -1042,6 +1044,28 @@ function doJump() {
   if (jump.phase !== 'idle' || pull.held) return;
   sfx.unlock();
   jump.phase = 'crouch'; jump.t = 0;
+  hopOthers();
+}
+// ほかの子も同時にジャンプ（ため→跳ぶ→着地でむにゅ）
+function hopOthers() { for (const I of insts) if (I !== curInst && I.cat.visible) I.hop = { phase: 'crouch', t: 0, y: 0, vy: 0, sq: 0, sqV: 0 }; }
+function stepHop(I, dt) {
+  const h = I.hop;
+  if (!h) return;
+  let jsq = 0;
+  if (h.phase === 'crouch') {
+    h.t += dt; const k = Math.min(h.t / 0.16, 1); jsq = -0.28 * Math.sin(k * Math.PI * 0.5);
+    if (k >= 1) { h.phase = 'air'; h.vy = 5.2; h.y = 0; h.sqV = 5; }
+  } else if (h.phase === 'air') {
+    h.vy -= 14 * dt; h.y += h.vy * dt; jsq = Math.max(-0.1, Math.min(h.vy * 0.025, 0.14));
+    if (h.y <= 0 && h.vy < 0) { h.sqV -= -h.vy * 1.6; h.y = 0; h.phase = 'idle'; }
+  }
+  h.sqV += (-170 * h.sq - 9 * h.sqV) * dt; h.sq += h.sqV * dt;
+  const dsy = jsq + h.sq * 0.18, syC = 1 + (dsy > 0 ? 0.35 * Math.tanh(dsy / 0.35) : 0.28 * Math.tanh(dsy / 0.28)), sxz = 1 / Math.sqrt(syC), f = I.floorY;
+  I.squish.matrix.set(sxz, 0, 0, 0, 0, syC, 0, f * (1 - syC), 0, 0, sxz, 0, 0, 0, 0, 1);
+  I.squish.matrixWorldNeedsUpdate = true;
+  I.cat.position.y = I.lift + (I.sy || 0) + h.y;
+  if (I.rt && I.rt.update) I.rt.update(dt, { shx: 0, shz: 0, sy: syC, vy: h.phase === 'air' ? h.vy : 0, pullX: 0 });
+  if (h.phase === 'idle' && Math.abs(h.sq) < 0.004 && Math.abs(h.sqV) < 0.04) { I.hop = null; I.squish.matrix.identity(); I.cat.position.y = I.lift + (I.sy || 0); }
 }
 document.getElementById('jump').onclick = doJump;
 addEventListener('keydown', e => { if (e.code === 'Space' && !anim.on) { e.preventDefault(); doJump(); } });
@@ -1116,7 +1140,7 @@ function setAnim(on) {
 animBtn.onclick = () => setAnim(!anim.on);
 document.querySelectorAll('.anims .chip').forEach(b => b.onclick = () => {
   anim.kind = b.dataset.anim;
-  resetAnimMotion();
+  resetAnimMotion(); hopOthers();
   document.querySelectorAll('.anims .chip').forEach(x => x.classList.toggle('on', x === b));
 });
 
@@ -1581,8 +1605,8 @@ function applyStage() {
   const on = stageOn && !anim.on;
   ped.visible = on; ground.position.y = on ? -PH : 0;
   ui('multi').style.display = stageOn ? 'none' : 'flex';
-  ui('cnt').textContent = insts.length + ' / 6';
-  for (const I of insts) I.cat.visible = !(on || anim.on) || I === curInst;
+  ui('cnt').textContent = insts.length + ' / 12';
+  for (const I of insts) I.cat.visible = !stageOn || I === curInst;
 }
 let stageBackup = null;
 let toastT = 0;
@@ -1809,7 +1833,8 @@ function updateOverlaps(dt) {
     for (const B of vis) if (B !== A) {
       const dx = A.cat.position.x - B.cat.position.x, dz = A.cat.position.z - B.cat.position.z;
       const R = Math.max(A.bound.rx, A.bound.rz) + Math.max(B.bound.rx, B.bound.rz);
-      if (dx * dx + dz * dz < R * R) others.push(B);
+      const dy = (A.bound.cy + A.lift + (A.sy || 0)) - (B.bound.cy + B.lift + (B.sy || 0)), RY = A.bound.ry + B.bound.ry;
+      if (dx * dx + dz * dz < R * R && Math.abs(dy) < RY) others.push(B);
     }
     if (!others.length && !A.ovAct) continue;
     const D = A.ovD, BP = A.basePos, FM = A.faceMask, n = BP.length / 3;
@@ -1861,7 +1886,7 @@ function selectInst(I) {
   leafDrag = false; sfx.grab();
 }
 function copyActive() {
-  if (insts.length >= 6) { toast('MAX 6'); return; }
+  if (insts.length >= 12) { toast('MAX 12'); return; }
   cancelPose();
   const s = snap();
   const src = { key: curKey, bodyCol, itemCol, itemAll, plant: current.rt.plantKind, px: cat.position.x, pz: cat.position.z, sy: curInst.sy || 0 };
@@ -1876,6 +1901,7 @@ function copyActive() {
   cat.position.x = src.px; cat.position.z = src.pz + 0.03 * (insts.length - 1); curInst.sy = src.sy;   // 基本は今の位置
   undoStack = []; updateButtons();
   syncInst(); applyStage(); sfx.sprout(); toast('COPIED at the same spot · ROW / STACK / MOVE to arrange');
+  if (layout !== 'free') arrange(layout, true);
 }
 function removeActive() {
   if (insts.length < 2) { toast('Last one stays'); return; }
@@ -1893,7 +1919,7 @@ function fitView(L) {
   for (const I of L) { const b = I.bound; x0 = Math.min(x0, I.cat.position.x + b.cx - b.rx); x1 = Math.max(x1, I.cat.position.x + b.cx + b.rx); y1 = Math.max(y1, b.cy + b.ry + I.lift + (I.sy || 0)); z1 = Math.max(z1, I.cat.position.z + b.cz + b.rz); }
   const cx = (x0 + x1) / 2, cy = y1 * 0.5, W = (x1 - x0) / 2 + 0.5, H = y1 / 2 + 0.6;
   const vf = THREE.MathUtils.degToRad(camera.fov) / 2, hf = Math.atan(Math.tan(vf) * camera.aspect);
-  const d = Math.max(W / Math.tan(hf), H / Math.tan(vf), 8.4) * 1.3 + z1 * 0.5;
+  const d = Math.max(W / Math.tan(hf), H / Math.tan(vf), 8.4) * 1.5 + z1 * 0.5;
   const dir = camera.position.clone().sub(controls.target).normalize();
   const t0 = controls.target.clone(), p0 = camera.position.clone(), t1 = new THREE.Vector3(cx, cy - d * 0.12, 0), p1 = t1.clone().addScaledVector(dir, d);
   const st = performance.now();
@@ -1904,8 +1930,9 @@ function fitView(L) {
   })();
 }
 // 並べかた：ROW=横並び、STACK=縦積み
-function arrange(kind) {
+function arrange(kind, quiet) {
   const L = insts.filter(i => i.cat.visible); if (L.length < 2) { toast('COPY first'); return; }
+  layout = kind; ui('rowBtn').classList.toggle('on', kind === 'row'); ui('stackBtn').classList.toggle('on', kind === 'stack');
   cancelPose();
   if (kind === 'row') {
     const w = L.map(i => 2 * Math.max(i.bound.rx, i.bound.rz) + 0.12), tot = w.reduce((a, b) => a + b, 0);
@@ -1921,9 +1948,14 @@ function arrange(kind) {
   }
   for (const I of L) I.ovDirty = true;
   fitView(L);
-  sfx.sprout(); toast(kind === 'row' ? 'Lined up' : 'Stacked');
+  if (!quiet) { sfx.sprout(); toast(kind === 'row' ? 'Lined up · COPY adds to the row' : 'Stacked · COPY keeps stacking'); }
 }
-ui('rowBtn').onclick = () => arrange('row'); ui('stackBtn').onclick = () => arrange('stack');
+function setFree() { layout = 'free'; ui('rowBtn').classList.remove('on'); ui('stackBtn').classList.remove('on'); }
+ui('rowBtn').onclick = () => layout === 'row' ? (setFree(), toast('Free layout')) : arrange('row');
+ui('stackBtn').onclick = () => layout === 'stack' ? (setFree(), toast('Free layout')) : arrange('stack');
+// もちモード：目・鼻・口を消す（全員）
+function applyMochi() { for (const I of insts) if (I.face) I.face.visible = !mochi; if (face) face.visible = !mochi; ui('mochi').classList.toggle('on', mochi); }
+ui('mochi').onclick = () => { mochi = !mochi; applyMochi(); sfx.poke(); toast(mochi ? 'MOCHI MODE · no face' : 'Face back'); };
 ui('delBtn').onclick = removeActive;
 // 床の上でつかんで動かす
 let mv = null;
@@ -2035,11 +2067,12 @@ renderer.setAnimationLoop(() => {
     if (flashT > 0.6) { flashT = -1; bodyMat.color.set(bodyCol); }
   }
   cat.position.y = lift + (stageOn ? 0 : curInst.sy || 0) + pullLift + jump.y + (anim.on ? anim.y + (anim.dy || 0) : 0);
+  for (const I of insts) if (I !== curInst && I.cat.visible && I.hop) stepHop(I, dt);
   if (insts.length > 1 && !anim.on && !stageOn) {
     updateOverlaps(dt);
     for (const I of insts) {
       if (!I.cat.visible) continue;
-      if (I !== curInst) { I.cat.position.y = I.lift + (I.sy || 0); I.rt.update && I.rt.update(dt, { shx: 0, shz: 0, sy: 1, vy: 0, pullX: 0 }); }
+      if (I !== curInst && !I.hop) { I.cat.position.y = I.lift + (I.sy || 0); I.rt.update && I.rt.update(dt, { shx: 0, shz: 0, sy: 1, vy: 0, pullX: 0 }); }
       if (I.ovAct || I.ovDirty) { I.ovDirty = false; if (I === curInst) { if (!pull.active) refreshMesh(false); } else runOn(I, () => refreshMesh(false)); }
     }
   }
