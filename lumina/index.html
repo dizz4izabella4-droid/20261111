@@ -40,13 +40,6 @@
     .audio-toggle:focus-visible { outline: 2px solid #fff0c8; outline-offset: 3px; }
     .tap-hint { position: fixed; right: 76px; bottom: 29px; z-index: 5; margin: 0; color: #ffe6ad; font: 500 13px/1 sans-serif; letter-spacing: .08em; pointer-events: none; text-shadow: 0 1px 4px #182d33; }
     @media (prefers-reduced-motion: reduce) { .hands { transition: none; } }
-    .title { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; background: #182d33; cursor: pointer; transition: opacity 500ms ease; }
-    .title.leave { opacity: 0; pointer-events: none; }
-    .title-box { position: relative; width: min(100vw, calc(100svh * 4 / 3)); aspect-ratio: 4 / 3; overflow: hidden; }
-    .title-box img { display: block; width: 100%; height: 100%; object-fit: cover; }
-    .title-box::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top left, rgba(10,22,18,.6), rgba(10,22,18,0) 42%); pointer-events: none; }
-    .title-name { position: absolute; right: 4%; bottom: 5%; z-index: 1; margin: 0; color: #fff2cf; font: 700 clamp(30px, 8vw, 76px)/1 "Yu Gothic", "游ゴシック", "Hiragino Sans", "Hiragino Kaku Gothic ProN", Meiryo, "Noto Sans JP", sans-serif; letter-spacing: .18em; padding-left: .18em; text-shadow: 0 2px 10px rgba(10,22,18,.8), 0 0 24px rgba(10,22,18,.6); }
-    @media (prefers-reduced-motion: reduce) { .title { transition: none; } }
   </style>
 <!--IZ-GAME-BASE:START-->
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -437,18 +430,6 @@
       syncScene();
       syncMusicTrack();
     }, 1000);
-  </script>
-  <div class="title" role="button" tabindex="0" aria-label="LUMINA">
-    <div class="title-box"><img src="assets/title.webp" alt=""><p class="title-name">LUMINA</p></div>
-  </div>
-  <script>
-    (() => {
-      const t = document.querySelector('.title');
-      const close = () => { t.classList.add('leave'); setTimeout(() => t.remove(), 600); };
-      t.addEventListener('click', close);
-      t.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); close(); } });
-      t.focus();
-    })();
   </script>
 </body>
 </html>
