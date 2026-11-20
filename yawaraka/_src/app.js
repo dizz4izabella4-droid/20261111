@@ -956,7 +956,7 @@ canvas.addEventListener('pointerdown', e => {
   if (pull.active && !pull.held && localHit.distanceTo(pull.grab.clone().add(pull.off)) > 0.6) {   // 遠い場所をつかみなおしたら、焼いていない形は捨てる
     cancelPose();
   }
-  pull.relax = false;
+  pull.relax = false; pull.rl = null;
   if (!pull.active) pull.off.set(0, 0, 0);
   pull.grab.copy(localHit).sub(pull.off);
   pull.vel.set(0, 0, 0);
@@ -1682,7 +1682,7 @@ function commitPose(burn) {
     faceVerts.forEach((f, i) => f.base.set(nfv[i]));
     faceCaps.forEach((c, i) => c.base.set(nfc[i]));
     riders.forEach((r, i) => { for (let k = 0; k < 3; k++) r.ctr[k] += nrd[i][k] - r.base[k]; r.base.set(nrd[i]); });
-    pull.active = pull.held = false; pull.relax = false; pull.off.set(0, 0, 0); pull.vel.set(0, 0, 0); pull.prevOff = null; pullLift = 0;
+    pull.active = pull.held = false; pull.relax = false; pull.rl = null; pull.off.set(0, 0, 0); pull.vel.set(0, 0, 0); pull.prevOff = null; pullLift = 0;
     DF.ox = DF.oy = DF.oz = 0; DF.shell = 1;
     controls.enabled = true; sfx.stretch(0, 0);
     commitBases();
@@ -1755,14 +1755,14 @@ setMode('sculpt');
 
 // ---- 戻るまでの時間
 function setReturn(T) {
-  RET.hold = T >= 4.15; T = Math.min(T, 4);
+  RET.hold = T >= 4.15; T = Math.min(T, 4); RET.T = T;
   RET.k = 140 * Math.pow(0.5 / T, 2); RET.d = 7 * (0.5 / T);
   ui('retv').textContent = RET.hold ? 'HOLD' : T.toFixed(2).replace(/0$/, '') + 's';
 }
 ui('ret').oninput = e => setReturn(parseFloat(e.target.value));
 function setSoft(v) { SOFT = v; SF = 0.6 + 1.2 * v; ui('softv').textContent = v < 0.2 ? 'FIRM' : v < 0.45 ? 'NORMAL' : v < 0.7 ? 'SOFT' : 'SUPER SOFT'; }
 ui('soft').oninput = e => setSoft(parseFloat(e.target.value)); ui('soft').value = SOFT; setSoft(SOFT);
-setReturn(4.2);
+setReturn(4); ui('ret').value = 4;
 
 // ---- 色
 const BODY_COLS = ['#ffffff', '#ffd6e0', '#d7f0d9', '#d4e6ff', '#ffe9a8'];
@@ -1887,7 +1887,7 @@ function applyCharUI(c, key) {
 }
 function cancelPose() {
   if (!pull.active) return;
-  pull.off.set(0, 0, 0); pull.vel.set(0, 0, 0); pull.active = pull.held = false; pull.relax = false; pullLift = 0;
+  pull.off.set(0, 0, 0); pull.vel.set(0, 0, 0); pull.active = pull.held = false; pull.relax = false; pull.rl = null; pullLift = 0;
   refreshMesh(false);
 }
 function selectInst(I) {
@@ -2053,7 +2053,13 @@ renderer.setAnimationLoop(() => {
 
   // 引っ張り：離したら行きすぎながら戻る
   if (pull.active) {
-    if (!pull.held && (!RET.hold || pull.relax)) {
+    if (!pull.held && pull.relax) {   // RELAX：ゆっくり動きだして、なめらかに元の形へ（最初はほとんど動かない）
+      if (!pull.rl) { pull.rl = { t: 0, o0: pull.off.clone(), dur: Math.max(1, RET.T) }; pull.vel.set(0, 0, 0); }
+      pull.rl.t += dt;
+      const u = Math.min(pull.rl.t / pull.rl.dur, 1), e = u * u * (3 - 2 * u);
+      pull.off.copy(pull.rl.o0).multiplyScalar(1 - e);
+      if (u >= 1) { pull.off.set(0, 0, 0); pull.rl = null; spring.sqV += 2.5; }
+    } else if (!pull.held && !RET.hold) {
       const K2 = RET.k, D2 = RET.d;
       const acc = pull.off.clone().multiplyScalar(-K2).addScaledVector(pull.vel, -D2);
       pull.vel.addScaledVector(acc, dt);
@@ -2080,7 +2086,7 @@ renderer.setAnimationLoop(() => {
     { const n = pull.n; const inw = n ? THREE.MathUtils.clamp(-(o.x * n.x + o.y * n.y + o.z * n.z) / (L + 1e-6), 0, 1) : 0; DF.shell = 1 - 0.8 * inw; }   // 押しこむときは凹ませてよい
     refreshMesh(true);
     if (!pull.held && pull.off.length() < 0.002 && pull.vel.length() < 0.01) {
-      pullLift = 0; pull.active = false; pull.relax = false;
+      pullLift = 0; pull.active = false; pull.relax = false; pull.rl = null;
       refreshMesh(false);
     }
   }
