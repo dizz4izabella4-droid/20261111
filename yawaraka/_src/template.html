@@ -43,7 +43,11 @@
   .row button.on { background: var(--ink); color: #fbfaf5; }
   .row button:disabled { opacity: .35; }
   .row button i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; border: 1.5px solid var(--ink); vertical-align: -1px; }
-  #tray { display: none; }
+  #tray, #pal { display: none; }
+  #pal.open { display: flex; }
+  .lab { align-self: center; font-size: 11px; font-weight: bold; color: var(--ink); padding: 0 4px; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+  .row button.sw { width: 28px; height: 28px; padding: 0; border-radius: 50%; border-width: 2px; }
+  #ret { width: 140px; accent-color: var(--ink); }
   #tray.open { display: flex; }
   .toast { position: fixed; top: 74px; left: 0; right: 0; text-align: center; color: var(--ink); font-size: 13px; font-weight: bold; pointer-events: none; opacity: 0; transition: opacity .3s; }
   .toast.on { opacity: 1; }
@@ -109,17 +113,21 @@
     </button>
   </div>
 </div>
-<div class="hint">Pull it · Drag around to rotate</div>
+<div class="hint" id="hint">Pull it · Drag around to rotate</div>
 <div class="dock">
-  <div class="row" id="tray" aria-label="plant"></div>
+  <div class="row" id="tray" aria-label="item"></div>
+  <div class="row" id="pal" aria-label="color"></div>
   <div class="row" id="tools">
-    <button id="bakeMode" title="Release = keep the shape">BAKE</button>
+    <button id="modeBtn" class="on">MODE: STRETCH</button>
+    <button id="bakeMode" class="on" title="Release = keep the shape (and toast it a little)">BAKE</button>
     <button id="undo">UNDO</button>
     <button id="reset">RESET</button>
     <button id="hp">TALL</button><button id="hm">SHORT</button><button id="wp">WIDE</button><button id="wm">SLIM</button>
     <button id="stage" class="on">STAGE</button>
-    <button id="plantBtn">PLANT</button>
+    <button id="plantBtn">ITEM</button>
+    <button id="colorBtn">COLOR</button>
   </div>
+  <div class="row" id="opts"><label class="lab">RETURN <input type="range" id="ret" min="0.2" max="4" step="0.05" value="0.5"> <span id="retv">0.5s</span></label></div>
 <div class="ui">
     <button id="spin" class="on">SPIN</button>
     <button id="line" class="on">LINE</button>

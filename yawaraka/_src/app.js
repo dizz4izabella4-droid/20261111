@@ -71,6 +71,7 @@ function withOutline(mesh, th = 0.035) {
 const cat = new THREE.Group();     // 床からの位置（ジャンプ・持ち上げ）
 scene.add(cat);
 let squish = null;                 // ぷにぷに変形用（キャラごとに作り直す）
+let colorBase = null, scorch = null, bodyCol = 0xffffff, itemCol = null;
 let curKey = 'mebae', gs = { x: 1, y: 1, z: 1 }, flashT = -1;
 const undoStack = [];
 const ui = id => document.getElementById(id);
@@ -98,10 +99,10 @@ function makeBody(sh, colorFn) {
   }
   g.computeVertexNormals();
   const fy = FLOOR * B - (1 + FLOOR) * B * flat;
-  if (colorFn) {
+  {
     const col = new Float32Array(p.count * 3), c = new THREE.Color();
     for (let i = 0; i < p.count; i++) {
-      colorFn(p.getX(i), p.getY(i), p.getZ(i), fy, c);
+      if (colorFn) colorFn(p.getX(i), p.getY(i), p.getZ(i), fy, c); else c.setRGB(1, 1, 1);
       col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
     }
     g.setAttribute('color', new THREE.BufferAttribute(col, 3));
@@ -209,6 +210,16 @@ function blob(parent, rx, ry, rz, color, x = 0, y = 0, z = 0, rot = [0, 0, 0], t
   m.position.set(x, y, z); m.rotation.set(rot[0], rot[1], rot[2]);
   parent.add(m); return m;
 }
+function lathe(parent, pts, color, x = 0, y = 0, z = 0, th = 0.022) {
+  const g = new THREE.LatheGeometry(pts.map(([r, h]) => new THREE.Vector2(r, h)), 40);
+  const m = withOutline(new THREE.Mesh(g, tm(color)), th);
+  m.position.set(x, y, z); parent.add(m); return m;
+}
+function cone(parent, r, h, color, x, y, z, rot = [0, 0, 0]) {
+  const g = new THREE.ConeGeometry(r, h, 16, 1); g.translate(0, h / 2, 0);
+  const m = withOutline(new THREE.Mesh(g, tm(color)), 0.016);
+  m.position.set(x, y, z); m.rotation.set(rot[0], rot[1], rot[2]); parent.add(m); return m;
+}
 function extr(parent, shape, depth, bevel, color, x = 0, y = 0, z = 0) {
   let g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 4, curveSegments: 18 });
   g.deleteAttribute('normal'); g.deleteAttribute('uv');
@@ -217,7 +228,7 @@ function extr(parent, shape, depth, bevel, color, x = 0, y = 0, z = 0) {
   m.position.set(x, y, z); parent.add(m); return m;
 }
 const PLANTS = {
-  grass: { h: 0.3, grab: 0.14, make(head) {
+  grass: { main: 0xc5e3c8, h: 0.3, grab: 0.14, make(head) {
     const mat = tm(0xc5e3c8), leaves = [];
     for (const side of [-1, 1]) {
       const pivot = new THREE.Group();
@@ -228,12 +239,12 @@ const PLANTS = {
     }
     return { leaves };
   } },
-  tulip: { h: 0.36, grab: 0.2, gy: 0.16, make(h) {
+  tulip: { main: 0xee6f86, h: 0.36, grab: 0.2, gy: 0.16, make(h) {
     blob(h, 0.17, 0.22, 0.17, 0xee6f86, 0, 0.17, 0);
-    blob(h, 0.08, 0.2, 0.06, 0xf48aa0, -0.1, 0.17, 0.04, [0, 0, 0.28]);
-    blob(h, 0.08, 0.2, 0.06, 0xf48aa0, 0.1, 0.17, 0.04, [0, 0, -0.28]);
+    blob(h, 0.08, 0.2, 0.06, 0xee6f86, -0.1, 0.17, 0.04, [0, 0, 0.28]);
+    blob(h, 0.08, 0.2, 0.06, 0xee6f86, 0.1, 0.17, 0.04, [0, 0, -0.28]);
   } },
-  daisy: { h: 0.42, grab: 0.24, gy: 0.16, make(h) {
+  daisy: { main: 0xffffff, h: 0.42, grab: 0.24, gy: 0.16, make(h) {
     const f = new THREE.Group(); f.position.y = 0.16; f.rotation.x = -0.5; h.add(f);
     for (let i = 0; i < 8; i++) {
       const p = new THREE.Group(); p.rotation.z = i * Math.PI / 4; f.add(p);
@@ -241,38 +252,70 @@ const PLANTS = {
     }
     blob(f, 0.11, 0.11, 0.07, 0xf2c744, 0, 0, 0.03);
   } },
-  mushroom: { h: 0.16, grab: 0.28, gy: 0.14, make(h) {
+  mushroom: { main: 0xe5584f, h: 0.16, grab: 0.28, gy: 0.14, make(h) {
     blob(h, 0.1, 0.16, 0.1, 0xf4ecd8, 0, 0.02, 0);
     blob(h, 0.3, 0.2, 0.3, 0xe5584f, 0, 0.14, 0);
     for (const [a, t] of [[0.3, 0.7], [2.0, 0.8], [3.6, 0.65], [4.8, 0.85], [1.1, 0.25]]) {
       blob(h, 0.06, 0.035, 0.06, 0xffffff, 0.3 * Math.sin(t) * Math.cos(a) * 0.96, 0.14 + 0.2 * Math.cos(t) * 0.96, 0.3 * Math.sin(t) * Math.sin(a) * 0.96, [0, 0, 0], 0.012);
     }
   } },
-  star: { h: 0.42, grab: 0.26, gy: 0.18, make(h) {
+  star: { main: 0xffd34e, h: 0.42, grab: 0.26, gy: 0.18, make(h) {
     const sh = new THREE.Shape();
     for (let i = 0; i < 10; i++) { const r = i % 2 ? 0.11 : 0.25, a = Math.PI / 2 + i * Math.PI / 5; const x = Math.cos(a) * r, y = Math.sin(a) * r; i ? sh.lineTo(x, y) : sh.moveTo(x, y); }
     sh.closePath();
     extr(h, sh, 0.06, 0.03, 0xffd34e, 0, 0.18, 0);
   } },
-  flag: { h: 0.6, grab: 0.2, gx: 0.2, gy: 0.14, make(h) {
+  flag: { main: 0xe86a5e, h: 0.6, grab: 0.2, gx: 0.2, gy: 0.14, make(h) {
     const sh = new THREE.Shape(); sh.moveTo(0, 0.28); sh.lineTo(0.46, 0.2); sh.lineTo(0.46, 0.0); sh.lineTo(0, 0.0); sh.closePath();
     extr(h, sh, 0.03, 0.02, 0xe86a5e, 0.02, -0.03, 0);
     blob(h, 0.05, 0.05, 0.05, 0xfff6d8, 0, 0.0, 0, [0, 0, 0], 0.02);
   } },
-  heart: { h: 0.4, grab: 0.24, gy: 0.18, make(h) {
+  heart: { main: 0xff7a98, h: 0.4, grab: 0.24, gy: 0.18, make(h) {
     const sh = new THREE.Shape();
     for (let i = 0; i <= 48; i++) { const t = i / 48 * Math.PI * 2; const x = 16 * Math.pow(Math.sin(t), 3) * 0.0135, y = (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) * 0.0135; i ? sh.lineTo(x, y) : sh.moveTo(x, y); }
     extr(h, sh, 0.07, 0.03, 0xff7a98, 0, 0.17, 0);
   } },
-  sakura: { h: 0.36, grab: 0.28, gy: 0.18, make(h) {
-    const cols = [0xffc2d4, 0xffb0c8, 0xffd2e0];
+  sakura: { main: 0xffc2d4, h: 0.36, grab: 0.28, gy: 0.18, make(h) {
+    const cols = [0xffc2d4, 0xffc2d4, 0xffc2d4];
     [[0, 0.22, 0], [-0.15, 0.12, 0.03], [0.15, 0.13, -0.02], [-0.07, 0.3, -0.05], [0.09, 0.32, 0.05], [0.0, 0.1, 0.12]].forEach(([x, y, z], i) => blob(h, 0.13, 0.12, 0.13, cols[i % 3], x, y, z, [0, 0, 0], 0.022));
   } },
-  leek: { h: 0.12, grab: 0.22, gy: 0.28, make(h) {
+  leek: { main: 0x8cc87a, h: 0.12, grab: 0.22, gy: 0.28, make(h) {
     blob(h, 0.075, 0.12, 0.065, 0xf4f1e6, 0, 0.0, 0);
     blob(h, 0.05, 0.3, 0.04, 0x8cc87a, -0.06, 0.28, 0, [0, 0, 0.22]);
-    blob(h, 0.05, 0.36, 0.04, 0x79bb6a, 0.01, 0.34, 0.02, [0, 0, -0.05]);
+    blob(h, 0.05, 0.36, 0.04, 0x8cc87a, 0.01, 0.34, 0.02, [0, 0, -0.05]);
     blob(h, 0.05, 0.27, 0.04, 0x8cc87a, 0.09, 0.25, -0.01, [0, 0, -0.3]);
+  } },
+  // ---- 帽子・かざり
+  tophat: { main: 0x2b2b33, nostem: true, h: 0.0, grab: 0.3, gy: 0.2, make(h) {
+    lathe(h, [[0, -0.05], [0.34, -0.05], [0.36, -0.03], [0.34, 0.0], [0.2, 0.02], [0.19, 0.3], [0.17, 0.34], [0, 0.35]], 0x2b2b33);
+    lathe(h, [[0.19, 0.03], [0.205, 0.035], [0.205, 0.11], [0.19, 0.115]], 0xc0392b, 0, 0, 0, 0.012);
+  } },
+  party: { main: 0xff8fb1, nostem: true, h: 0.0, grab: 0.28, gy: 0.2, make(h) {
+    lathe(h, [[0, 0.52], [0.04, 0.46], [0.21, 0.0], [0.23, -0.04], [0, -0.04]], 0xff8fb1);
+    blob(h, 0.07, 0.07, 0.07, 0xffe36e, 0, 0.53, 0, [0, 0, 0], 0.018);
+  } },
+  crown: { main: 0xf2c744, nostem: true, h: 0.0, grab: 0.28, gy: 0.15, make(h) {
+    lathe(h, [[0.2, -0.04], [0.26, -0.04], [0.27, -0.02], [0.27, 0.1], [0.26, 0.12], [0.2, 0.12], [0.19, 0.1], [0.19, -0.02]], 0xf2c744);
+    for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; cone(h, 0.055, 0.17, 0xf2c744, Math.cos(a) * 0.23, 0.1, Math.sin(a) * 0.23); }
+    blob(h, 0.04, 0.04, 0.04, 0xe5584f, 0, 0.04, 0.27, [0, 0, 0], 0.012);
+  } },
+  beanie: { main: 0x5aa9e6, nostem: true, h: 0.0, grab: 0.3, gy: 0.14, make(h) {
+    blob(h, 0.3, 0.24, 0.3, 0x5aa9e6, 0, 0.06, 0);
+    lathe(h, [[0.27, -0.05], [0.32, -0.05], [0.33, -0.02], [0.33, 0.07], [0.32, 0.1], [0.27, 0.1]], 0xf4f1e6);
+    blob(h, 0.08, 0.08, 0.08, 0xf4f1e6, 0, 0.32, 0, [0, 0, 0], 0.018);
+  } },
+  straw: { main: 0xe8cf8a, nostem: true, h: 0.0, grab: 0.34, gy: 0.1, make(h) {
+    lathe(h, [[0, -0.03], [0.52, -0.03], [0.54, -0.005], [0.5, 0.02], [0.22, 0.04], [0.2, 0.15], [0.15, 0.2], [0, 0.21]], 0xe8cf8a);
+    lathe(h, [[0.205, 0.04], [0.215, 0.045], [0.215, 0.09], [0.205, 0.095]], 0xd9534f, 0, 0, 0, 0.01);
+  } },
+  chef: { main: 0xffffff, nostem: true, h: 0.0, grab: 0.3, gy: 0.22, make(h) {
+    lathe(h, [[0, -0.05], [0.2, -0.05], [0.21, -0.03], [0.21, 0.15], [0, 0.15]], 0xffffff);
+    [[-0.12, 0.3, 0], [0.12, 0.3, 0], [0, 0.34, 0.1], [0, 0.34, -0.1], [0, 0.4, 0]].forEach(([x, y, z]) => blob(h, 0.15, 0.14, 0.15, 0xffffff, x, y, z, [0, 0, 0], 0.02));
+  } },
+  bow: { main: 0xff6b9a, nostem: true, h: 0.0, grab: 0.26, gy: 0.08, make(h) {
+    blob(h, 0.17, 0.1, 0.05, 0xff6b9a, -0.16, 0.06, 0, [0, 0, 0.3], 0.02);
+    blob(h, 0.17, 0.1, 0.05, 0xff6b9a, 0.16, 0.06, 0, [0, 0, -0.3], 0.02);
+    blob(h, 0.07, 0.07, 0.06, 0xff6b9a, 0, 0.05, 0.01, [0, 0, 0], 0.02);
   } },
 };
 
@@ -348,13 +391,17 @@ function buildMebae() {
     JUNC.set(0, stemH, 0);
     head = new THREE.Group(); head.position.copy(JUNC); plant.add(head);
     const built = def.make(head);
+    head.traverse(o => { if (o.isMesh && o.material.isMeshToonMaterial && o.material.color.getHex() === def.main) o.material.userData.main = true; });
+    stem.visible = !def.nostem;
     leaves = (built && built.leaves) || [];
     grabBall = new THREE.Mesh(new THREE.SphereGeometry(def.grab, 16, 12), hitMat);
     grabBall.position.set(def.gx || 0, def.gy || 0, 0);
     head.add(grabBall);
     plant.traverse(o => { o.frustumCulled = false; });
     sw.f = 0; sw.fv = 0;
+    if (itemCol !== null) tintMain(itemCol);
   }
+  function tintMain(hex) { head.traverse(o => { if (o.isMesh && o.material.userData.main) o.material.color.set(hex); }); }
   function applyStretch(o) {
     // 茎：根元は動かず、上へいくほど大きく動く（先端＝つまんだ所が指についてくる）
     const A = stem.geometry.attributes.position.array;
@@ -383,6 +430,7 @@ function buildMebae() {
   return {
     mouths: [mouthN, mouthS],
     get leafMeshes() { return sp.mode === 'on' ? [grabBall] : []; },
+    tint: tintMain,
     get plantKind() { return sp.mode === 'empty' ? null : kindNow; },
     setEyesClosed(v) {
       if (closedEyes[0].visible === v) return;
@@ -628,7 +676,7 @@ function buildCharacter(key) {
   // 色
   INK = c.ink;
   grad.image.data.set(c.grad); grad.needsUpdate = true;
-  bodyMat = new THREE.MeshToonMaterial({ color: c.body, gradientMap: grad, vertexColors: !!c.color });
+  bodyMat = new THREE.MeshToonMaterial({ color: c.body, gradientMap: grad, vertexColors: true });
   inkMat = new THREE.MeshBasicMaterial({ color: c.ink });
 
   // 組み立て（シーンに入れる前に原点で作る）
@@ -636,6 +684,8 @@ function buildCharacter(key) {
   squish.matrixAutoUpdate = false;
   const made = makeBody(c.shape, c.color);
   bodyGeo = made.geo; floorY = made.floorY;
+  colorBase = Float32Array.from(bodyGeo.attributes.color.array); scorch = new Float32Array(bodyGeo.attributes.position.count);
+  bodyCol = c.body; itemCol = null;
   body = withOutline(new THREE.Mesh(bodyGeo, bodyMat), 0.04);
   body.receiveShadow = false;
   squish.add(body);
@@ -820,7 +870,7 @@ function setNdc(e) {
 }
 let leafDrag = false, waitUp = false;
 canvas.addEventListener('pointerdown', e => {
-  if (anim.on) return;               // 鑑賞中はさわれない
+  if (anim.on || mode !== 'sculpt') return;               // 鑑賞中・カメラモード中は引っぱらない
   setNdc(e);
   // んちょめちょぽの葉っぱを先に判定
   const rt = current.rt;
@@ -1465,8 +1515,15 @@ function toast(msg) {
 }
 let onPlucked = () => {};
 
-// 焼き付け：今の形を「元の形」にする（顔・耳・芽も貼りつけ直す）
-let bakeOn = false;
+// 焼き付け：今の形を「元の形」にして、少し焼き色もつく（顔・耳・芽も貼りつけ直す）
+let bakeOn = true;
+const SCORCH = [0.62, 0.36, 0.14];
+function applyScorch() {
+  const C = bodyGeo.attributes.color.array;
+  for (let i = 0; i < scorch.length; i++) { const k = scorch[i]; for (let j = 0; j < 3; j++) C[i * 3 + j] = colorBase[i * 3 + j] * (1 - k) + SCORCH[j] * k; }
+  bodyGeo.attributes.color.needsUpdate = true;
+}
+const RET = { k: 140, d: 7 };
 function rebind() {
   prepSurface(current.shape);
   for (const f of faceVerts) f.bind = bindPoints(f.base);
@@ -1483,14 +1540,14 @@ function commitBases() {
 }
 function snap() {
   return { base: basePos.slice(), fv: faceVerts.map(f => f.base.slice()), fc: faceCaps.map(c => c.base.slice()),
-           rd: riders.map(r => ({ b: r.base.slice(), c: r.ctr.slice() })), gs: { ...gs } };
+           rd: riders.map(r => ({ b: r.base.slice(), c: r.ctr.slice() })), gs: { ...gs }, sc: scorch.slice() };
 }
 function applySnap(s) {
   basePos.set(s.base);
   faceVerts.forEach((f, i) => f.base.set(s.fv[i]));
   faceCaps.forEach((c, i) => c.base.set(s.fc[i]));
   riders.forEach((r, i) => { r.base.set(s.rd[i].b); r.ctr = s.rd[i].c.slice(); });
-  gs = { ...s.gs };
+  gs = { ...s.gs }; scorch.set(s.sc); applyScorch();
   commitBases();
 }
 function pushUndo() { undoStack.push(snap()); if (undoStack.length > 30) undoStack.shift(); updateButtons(); }
@@ -1499,6 +1556,11 @@ function bakeNow() {
   if (!pull.active) return false;
   pushUndo();
   const nb = Float32Array.from(pos.array);
+  for (let i = 0; i < scorch.length; i++) {      // 焼き色：のびた所ほどよく焼ける
+    const dx = nb[i * 3] - basePos[i * 3], dy = nb[i * 3 + 1] - basePos[i * 3 + 1], dz = nb[i * 3 + 2] - basePos[i * 3 + 2];
+    scorch[i] = Math.min(0.9, scorch[i] + 0.06 + 0.18 * Math.min(Math.hypot(dx, dy, dz) / 0.7, 1));
+  }
+  applyScorch();
   const nfv = faceVerts.map(f => { const o = new Float32Array(f.base.length); evalBind(f.bind, f.base, o); return o; });
   const nfc = faceCaps.map(c => { const o = new Float32Array(3); evalBind(c.bind, c.base, o); return o; });
   const nrd = riders.map(r => { const o = new Float32Array(3); evalBind(r.bind, r.base, o, false); return o; });
@@ -1527,7 +1589,7 @@ function scaleShape(ax, ay, az) {
 }
 ui('bakeMode').onclick = () => {
   bakeOn = !bakeOn; ui('bakeMode').classList.toggle('on', bakeOn);
-  toast(bakeOn ? 'BAKE ON: let go to fix the shape' : 'BAKE OFF: it springs back');
+  toast(bakeOn ? 'BAKE ON: let go to fix the shape (and toast it)' : 'BAKE OFF: it springs back');
 };
 ui('undo').onclick = () => { if (pull.active || !undoStack.length) return; applySnap(undoStack.pop()); updateButtons(); sfx.poke(); };
 ui('reset').onclick = () => { buildCharacter(curKey); sfx.poke(); spring.sqV = -3; toast('RESET'); };
@@ -1538,7 +1600,8 @@ ui('wm').onclick = () => scaleShape(1 / 1.12, 1, 1 / 1.12);
 ui('stage').onclick = () => { stageOn = !stageOn; ui('stage').classList.toggle('on', stageOn); applyStage(); };
 
 // 植え替え
-const PLANT_LIST = [['grass', 'GRASS', '#c5e3c8'], ['tulip', 'TULIP', '#ee6f86'], ['daisy', 'DAISY', '#ffffff'], ['mushroom', 'MUSHROOM', '#e5584f'],
+const PLANT_LIST = [['tophat', 'TOP HAT', '#2b2b33'], ['party', 'PARTY', '#ff8fb1'], ['crown', 'CROWN', '#f2c744'], ['beanie', 'BEANIE', '#5aa9e6'], ['straw', 'STRAW', '#e8cf8a'], ['chef', 'CHEF', '#ffffff'], ['bow', 'BOW', '#ff6b9a'],
+  ['grass', 'GRASS', '#c5e3c8'], ['tulip', 'TULIP', '#ee6f86'], ['daisy', 'DAISY', '#ffffff'], ['mushroom', 'MUSHROOM', '#e5584f'],
   ['star', 'STAR', '#ffd34e'], ['flag', 'FLAG', '#e86a5e'], ['heart', 'HEART', '#ff7a98'], ['sakura', 'SAKURA', '#ffc2d4'], ['leek', 'LEEK', '#8cc87a']];
 const tray = ui('tray');
 for (const [k, label, col] of PLANT_LIST) {
@@ -1547,9 +1610,49 @@ for (const [k, label, col] of PLANT_LIST) {
   b.onclick = () => { if (current.rt.plant) current.rt.plant(k); };
   tray.appendChild(b);
 }
-function trayOpen(v) { tray.classList.toggle('open', v); ui('plantBtn').classList.toggle('on', v); }
+function trayOpen(v) { tray.classList.toggle('open', v); ui('plantBtn').classList.toggle('on', v); if (v) palOpen(false); }
 ui('plantBtn').onclick = () => trayOpen(!tray.classList.contains('open'));
 onPlucked = () => { trayOpen(true); toast('Pulled out! Pick something to plant'); };
+// ---- モード：のばす / カメラ
+let mode = 'sculpt', spinSaved = true;
+function setMode(m) {
+  if (m === mode && ui('modeBtn').dataset.init) return;
+  ui('modeBtn').dataset.init = '1';
+  if (mode === 'camera') spinSaved = controls.autoRotate;
+  mode = m;
+  const sc = m === 'sculpt';
+  controls.enableRotate = !sc; controls.enablePan = false;
+  controls.autoRotate = sc ? false : spinSaved; ui('spin').classList.toggle('on', controls.autoRotate);
+  ui('modeBtn').classList.toggle('on', sc); ui('modeBtn').textContent = sc ? 'MODE: STRETCH' : 'MODE: CAMERA';
+  ui('hint').textContent = sc ? 'Pull the body · BAKE fixes the shape' : 'Drag to rotate · pinch to zoom';
+  canvas.style.cursor = sc ? 'grab' : 'move';
+}
+ui('modeBtn').onclick = () => setMode(mode === 'sculpt' ? 'camera' : 'sculpt');
+setMode('sculpt');
+
+// ---- 戻るまでの時間
+function setReturn(T) {
+  RET.k = 140 * Math.pow(0.5 / T, 2); RET.d = 7 * (0.5 / T);
+  ui('retv').textContent = T.toFixed(2).replace(/0$/, '') + 's';
+}
+ui('ret').oninput = e => setReturn(parseFloat(e.target.value));
+setReturn(0.5);
+
+// ---- 色
+const BODY_COLS = ['#ffffff', '#ffd6e0', '#d7f0d9', '#d4e6ff', '#e6d9ff', '#fff1b8', '#ffd9b0', '#cfcac0', '#8a8f9c'];
+const ITEM_COLS = ['#e5584f', '#ee6f86', '#f2c744', '#5aa9e6', '#8cc87a', '#b48cf2', '#ffffff', '#2b2b33', '#f0a050'];
+const pal = ui('pal');
+function addSw(label, cols, fn) {
+  const l = document.createElement('span'); l.className = 'lab'; l.textContent = label; pal.appendChild(l);
+  for (const c of cols) {
+    const b = document.createElement('button'); b.className = 'sw'; b.style.background = c; b.setAttribute('aria-label', label + ' ' + c);
+    b.onclick = () => fn(c); pal.appendChild(b);
+  }
+}
+addSw('BODY', BODY_COLS, c => { bodyCol = new THREE.Color(c).getHex(); bodyMat.color.set(bodyCol); sfx.poke(); });
+addSw('ITEM', ITEM_COLS, c => { itemCol = new THREE.Color(c).getHex(); if (current.rt.tint) current.rt.tint(itemCol); sfx.poke(); });
+function palOpen(v) { pal.classList.toggle('open', v); ui('colorBtn').classList.toggle('on', v); if (v) trayOpen(false); }
+ui('colorBtn').onclick = () => palOpen(!pal.classList.contains('open'));
 
 let startKey = 'mebae';
 try { startKey = localStorage.getItem('mochi-char') || 'mebae'; } catch (e) {}
@@ -1620,7 +1723,7 @@ renderer.setAnimationLoop(() => {
   // 引っ張り：離したら行きすぎながら戻る
   if (pull.active) {
     if (!pull.held) {
-      const K2 = 140, D2 = 7;
+      const K2 = RET.k, D2 = RET.d;
       const acc = pull.off.clone().multiplyScalar(-K2).addScaledVector(pull.vel, -D2);
       pull.vel.addScaledVector(acc, dt);
       pull.off.addScaledVector(pull.vel, dt);
@@ -1668,8 +1771,8 @@ renderer.setAnimationLoop(() => {
 
   if (flashT >= 0) {
     flashT += dt; const k = Math.max(0, 1 - flashT / 0.6);
-    bodyMat.color.set(current.body).lerp(new THREE.Color(0xffa561), k * 0.7);
-    if (flashT > 0.6) { flashT = -1; bodyMat.color.set(current.body); }
+    bodyMat.color.set(bodyCol).lerp(new THREE.Color(0xffa561), k * 0.7);
+    if (flashT > 0.6) { flashT = -1; bodyMat.color.set(bodyCol); }
   }
   cat.position.y = lift + pullLift + jump.y + (anim.on ? anim.y + (anim.dy || 0) : 0);
 
