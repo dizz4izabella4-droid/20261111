@@ -41,6 +41,7 @@ TARGETS = [
     'cinema/index.html',
     'utility/index.html',
     'yawaraka/index.html',
+    'yawaraka/bust/index.html',
     'anzan-tensei/index.html',
     'redline/play/index.html',
     'redline/play/template.html',
