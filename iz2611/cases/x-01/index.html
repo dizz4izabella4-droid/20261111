@@ -6,7 +6,7 @@
 <title>CASE FILE X-01</title>
 <!--
   事件 X-01 の専用フロッピー（連携アプリの試作用ダミー）。端末のドライブに挿して動かす。
-  中身：新聞縮刷版の日付検索、記事を「ボードに貼る」。当日の再現（追体験）は手順5で足す。
+  中身：新聞縮刷版の日付検索、記事を「ボードに貼る」。当日の再現（追体験）で新証拠と真相（ボードの答え合わせ用）。
   本物の事件ができたら、このファイルを写して PAPERS と CASE を書き換える。
 -->
 <style>
@@ -67,6 +67,23 @@ h1{font-size:20px;color:var(--yl);letter-spacing:.15em;margin:6px 0 2px}
 #pop p{font-size:14px;line-height:1.85;white-space:pre-wrap}
 #pop .btns{justify-content:flex-end}
 #pop .btn{font-family:ui-monospace,monospace}
+/* 当日の再現 */
+.scene{position:relative;height:150px;margin:8px 0 10px;border:2px solid #446;background:linear-gradient(#1a1630 0 55%,#2b2116 55%);overflow:hidden}
+.scene .win{position:absolute;left:14%;top:12%;width:22%;height:36%;background:linear-gradient(#cfd8f0,#8fa0c8);border:3px solid #111;box-shadow:inset 0 0 0 2px #333}
+.scene .win:after{content:"";position:absolute;left:50%;top:0;bottom:0;border-left:3px solid #111}
+.scene .fire{position:absolute;right:10%;top:30%;width:22%;height:42%;background:#3a2a20;border:3px solid #111}
+.scene .fire:after{content:"";position:absolute;left:18%;right:18%;bottom:0;height:45%;background:#111}
+.scene .table{position:absolute;left:38%;top:58%;width:30%;height:10%;background:#5a3b22;border:2px solid #111}
+.scene .man{position:absolute;left:30%;top:78%;width:26%;height:9%;background:#222;border-radius:40% 50% 30% 40%}
+.scene.dim{filter:brightness(.55) saturate(.6)}
+.log{min-height:5.5em;white-space:pre-wrap;line-height:1.7;margin-bottom:6px}
+.log .ev{color:var(--yl)}
+.acts button{display:block;width:100%;text-align:left;background:none;border:1px solid #444;color:var(--fg);font:inherit;padding:9px 12px;margin:6px 0;cursor:pointer}
+.acts button:hover{border-color:var(--cy)}
+.acts button.done{color:var(--dm)}
+.acts button.key{border-color:var(--yl);color:var(--yl)}
+.truth{border:2px solid var(--yl);padding:10px 12px;margin:8px 0;line-height:1.8;white-space:pre-wrap}
+.alt{border:1px dashed var(--gn);color:var(--gn);padding:8px 10px;margin:8px 0;white-space:pre-wrap;line-height:1.7}
 </style>
 <!--IZ-LINK-BRIDGE:START--><script id="izlink-bridge">
 /* izlink bridge v1 — 連携アプリの共通データ層とイベント
@@ -335,7 +352,7 @@ function menu(){
     '<h1>CASE FILE X-01</h1><div class="dm">' + esc(CASE.title) + '</div>' +
     '<div class="menu">' +
       '<button type="button" data-go="search"><b>1</b>新聞縮刷版 検索</button>' +
-      '<button type="button" disabled><b>2</b>当日の再現　<span class="dm">（準備中）</span></button>' +
+      '<button type="button" data-go="reenact"><b>2</b>当日の再現　<span class="dm">1987.02.15 06:30 食堂</span></button>' +
     '</div>' +
     (LINKED ? '' : '<div class="dm">※ 連携アプリの外では「ボードに貼る」は使えない</div>');
 }
@@ -417,6 +434,8 @@ document.addEventListener('click', function(e){
   else if (b.dataset.art) openArt(b.dataset.art);
   else if (b.dataset.pin) pin(b.dataset.pin);
   else if (b.dataset.close) pop.classList.remove('on');
+  else if (b.dataset.go === 'reenact') reenact();
+  else if (b.dataset.act) act(b.dataset.act);
 });
 document.addEventListener('keydown', function(e){
   if (!main.querySelector('.keys')) return;
@@ -429,6 +448,82 @@ if (LINKED) IzLink.on('data.changed', function(p){
   if (pop.classList.contains('on')) { var b = popBox.querySelector('[data-pin]'); if (b) openArt(b.dataset.pin); }
   if (curDate && main.querySelector('.paper')) page(curDate, true);
 });
+
+/* ===== 当日の再現（追体験） =====
+   最初の発見の朝、1場面だけ。調べると新証拠が見つかり、自動でボードに載る。
+   介入しても現実（記録）は変わらないが、iz2611 の中では救いがある。真相がボードの答え合わせになる。 */
+var EVIDENCE = {
+  e1: { title:'暖炉の燃え残り（手紙の切れ端）', note:'灰の下に焦げた便箋。「…白樺荘にて、会社の件で二人きりで…」と読める。' },
+  e2: { title:'廊下の蝋のしずく', note:'食堂から客室三号（会社員の部屋）の前まで、点々と蝋が落ちている。停電の間、誰かが蝋燭を手に歩いた。' }
+};
+// 真相：ボードの物どうしの「正しいつながり」（無向）。id はボードの物の id
+var TRUTH = {
+  summary: '停電（午前1時10分〜2時すぎ）の闇にまぎれ、会社員の男は蝋燭を手に食堂へ戻った。\n呼び出しの手紙を暖炉で燃やし、自分のグラスを洗って部屋へ帰った。\n「朝まで部屋を出ていない」という証言は、停電に気づいていたことと食い違う。',
+  pairs: [
+    ['doc:X-01-004', 'article:19870215:b3', '停電に気づいていた＝夜中に起きていた'],
+    ['doc:X-01-002', 'evidence:x01-e2', '夜中の足音は、蝋燭を持って歩いた者'],
+    ['doc:X-01-003', 'evidence:x01-e1', '少ない灰の正体は、燃やされた手紙'],
+    ['evidence:x01-e1', 'doc:X-01-004', '手紙は会社員を呼び出したもの']
+  ]
+};
+var ACTS = [
+  { id:'fire',  label:'暖炉を調べる',   text:'火は消えている。灰がきれいに掃き寄せられている。\n……灰の下に、紙の燃え残りがある。', ev:'e1' },
+  { id:'win',   label:'窓を調べる',     text:'掛け金は内側から掛かっている。外は一面の雪で、足跡はない。' },
+  { id:'table', label:'テーブルを調べる', text:'グラスが二つ。一つは酒の跡が残り、もう一つは洗われて、まだ水滴がついている。' },
+  { id:'hall',  label:'廊下へ出る',     text:'暗い廊下の床に、白い点が続いている。指でこすると、蝋だ。\n点は客室三号の前で途切れている。', ev:'e2' },
+  { id:'man',   label:'倒れている男に近づく', text:'男は床にうつぶせている。まだ、かすかに体が温かい気がする。' }
+];
+function rstate(){
+  if (!LINKED) return window.__rs || (window.__rs = { seen:[], ev:[], saved:false, truth:false });
+  var t = IzLink.get(CASE.id).terminal.reenact; return t || { seen:[], ev:[], saved:false, truth:false };
+}
+function rsave(fn){
+  var r = rstate(); fn(r);
+  if (LINKED) IzLink.update(function(d){ d.terminal.reenact = r; }, CASE.id); else window.__rs = r;
+}
+var lastLog = '';
+function reenact(){
+  var r = rstate();
+  var keyReady = r.ev.indexOf('e1') >= 0 && r.ev.indexOf('e2') >= 0;
+  var acts = ACTS.map(function(a){
+    return '<button type="button" data-act="' + a.id + '" class="' + (r.seen.indexOf(a.id) >= 0 ? 'done' : '') + '">' + esc(a.label) + '</button>';
+  }).join('');
+  if (r.seen.indexOf('man') >= 0 && !r.saved) acts += '<button type="button" data-act="pulse">男の脈をとる　<span class="dm">（介入）</span></button>';
+  if (keyReady) acts += '<button type="button" data-act="truth" class="key">記録を照合する</button>';
+  main.innerHTML =
+    '<div class="cy">当日の再現　1987.02.15　06:30　白樺荘・食堂</div>' +
+    '<div class="scene' + (r.truth ? '' : ' dim') + '"><div class="win"></div><div class="fire"></div><div class="table"></div>' + (r.saved ? '' : '<div class="man"></div>') + '</div>' +
+    '<div class="log">' + (lastLog || 'まだ薄暗い。管理人の妻が食堂に入ってくるまで、あと三十分。') + '</div>' +
+    (r.saved ? '<div class="alt">' + esc(SAVED_TEXT) + '</div>' : '') +
+    (r.truth ? '<div class="truth">' + esc(TRUTH.summary) + '</div><div class="yl">▶ レッドラインのボードで「CHECK」を押すと、紐と真相を照合できる。</div>' : '') +
+    '<div class="acts">' + acts + '</div>' +
+    '<div class="dm">見つけた証拠 ' + r.ev.length + ' / ' + Object.keys(EVIDENCE).length + '</div>' +
+    '<div class="btns"><button type="button" class="btn" data-go="menu">メニューへ</button></div>';
+}
+var SAVED_TEXT = '脈がある。あなたは声を上げ、男を暖炉の前へ運んだ。\niz2611 の中の白樺荘では、男は朝の光の中で目を開けた。\n――これは端末の中だけの出来事。記録は何も変わらない。';
+function act(id){
+  if (id === 'pulse') { rsave(function(r){ r.saved = true; }); lastLog = '（介入）'; if (window.IZDISK) IZDISK.access(); reenact(); return; }
+  if (id === 'truth') {
+    rsave(function(r){ r.truth = true; });
+    lastLog = '記録と、いま見たものを照らし合わせる……';
+    if (LINKED) IzLink.emit('truth.revealed', { caseId:CASE.id, truth:TRUTH });
+    if (window.IZDISK) IZDISK.access();
+    reenact(); return;
+  }
+  var a = ACTS.filter(function(x){ return x.id === id; })[0]; if (!a) return;
+  var text = a.text;
+  rsave(function(r){
+    if (r.seen.indexOf(id) < 0) r.seen.push(id);
+    if (a.ev && r.ev.indexOf(a.ev) < 0) {
+      r.ev.push(a.ev);
+      var e = EVIDENCE[a.ev];
+      text += '\n<span class="ev">▶ 新しい証拠：' + esc(e.title) + (LINKED ? '（ボードに記録した）' : '') + '</span>';
+      if (LINKED) IzLink.emit('evidence.found', { caseId:CASE.id, id:'x01-' + a.ev, title:e.title, note:e.note });
+    }
+  });
+  lastLog = text.indexOf('<span') >= 0 ? esc(text.split('\n<span')[0]) + '\n<span' + text.split('\n<span')[1] : esc(text);
+  reenact();
+}
 
 menu();
 if (window.IZDISK) IZDISK.ready();

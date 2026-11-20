@@ -369,6 +369,20 @@ IzLink.on('string.added', function(p){
   }
 });
 
+// 追体験で見つけた新証拠は、自動でボードへ
+IzLink.on('evidence.found', function(p){
+  if (!p.caseId || !p.id) return;
+  IzLink.update(function(d){
+    addBoardItem(d, { id:'evidence:'+p.id, kind:'evidence', ref:p.id, title:p.title || p.id, note:p.note || '' });
+  }, p.caseId);
+});
+
+// 追体験でわかった真相（ボードの答え合わせに使う）
+IzLink.on('truth.revealed', function(p){
+  if (!p.caseId || !p.truth) return;
+  IzLink.update(function(d){ d.truth = { summary:p.truth.summary || '', pairs:p.truth.pairs || [], at:Date.now() }; }, p.caseId);
+});
+
 IzLink.on('floppy.inserted', function(p){
   IzLink.update(function(d){ d.terminal.inserted = p.caseId; d.terminal.at = Date.now(); }, p.caseId);
 });

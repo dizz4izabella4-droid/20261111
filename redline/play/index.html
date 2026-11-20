@@ -914,6 +914,10 @@ si=save.cur||0; build();
 .fbI.article .src{font-size:9px;color:#555;letter-spacing:.08em}
 .fbI.article .t{font:700 15px/1.35 "Yu Mincho","Hiragino Mincho ProN",serif;margin-top:4px}
 .fbI.article .cols{height:40px;margin-top:6px;background:repeating-linear-gradient(90deg,transparent 0 46px,#0002 46px 47px),repeating-linear-gradient(0deg,#0000 0 4px,#0001 4px 5px)}
+.fbI.evidence{width:200px;background:#fff;padding:9px 9px 12px;border:1px solid #ddd}
+.fbI.evidence .ph{height:70px;background:linear-gradient(135deg,#3a3430,#6b5d50 60%,#2b2622);position:relative}
+.fbI.evidence .ph:after{content:"EVIDENCE";position:absolute;left:6px;bottom:5px;font:700 9px Arial;letter-spacing:.2em;color:#f1d36b}
+.fbI.evidence .t{font:600 13px/1.4 "Yu Mincho","Hiragino Mincho ProN",serif;margin-top:7px}
 .fbI.memo{width:150px;min-height:90px;background:#fff7b0;padding:12px;font:15px/1.5 "Segoe Print","Bradley Hand","Hiragino Maru Gothic ProN",cursive;white-space:pre-wrap;word-break:break-word}
 .fbI.sel{outline:3px solid #d9a23a;outline-offset:2px}
 .fbP{position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;
@@ -926,7 +930,7 @@ si=save.cur||0; build();
 #fbBar{position:absolute;left:0;right:0;bottom:0;padding:8px 32px calc(10px + env(safe-area-inset-bottom));
   display:flex;gap:6px;justify-content:center;flex-wrap:wrap;background:linear-gradient(transparent,rgba(30,22,16,.55) 35%,rgba(30,22,16,.8))}
 #fbBar button{font:700 11px/1 Arial,sans-serif;letter-spacing:.08em;color:#f3ebdd;background:#3b2d22;border:1px solid #6b5640;
-  border-radius:4px;padding:10px 10px;min-width:48px;cursor:pointer}
+  border-radius:4px;padding:10px 8px;min-width:44px;cursor:pointer}
 #fbBar button.on{background:#b3261e;border-color:#e2675c;color:#fff}
 #fbBar .sw{min-width:34px;padding:10px 0;position:relative}
 #fbBar .sw i{display:block;width:16px;height:16px;border-radius:50%;margin:0 auto;border:2px solid #fff8}
@@ -944,6 +948,14 @@ si=save.cur||0; build();
 #fbDlg .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
 #fbDlg .row button{font:700 12px Arial,sans-serif;letter-spacing:.08em;padding:9px 14px;border:0;border-radius:3px;background:#3b2d22;color:#f3ebdd}
 #fbDlg .row button.p{background:#b3261e}
+#fbChk{position:absolute;left:50%;transform:translateX(-50%);top:calc(48px + env(safe-area-inset-top));display:none;gap:10px;align-items:center;
+  background:rgba(25,20,16,.88);color:#f3ebdd;padding:7px 12px;border-radius:4px;font:700 12px Arial,"Hiragino Sans",sans-serif;letter-spacing:.06em;white-space:nowrap}
+#fbChk.on{display:flex}
+#fbChk .ok{color:#7fd38b}#fbChk .ng{color:#ff8a7a}#fbChk .ms{color:#cfc6b8}
+#fbChk button{font:700 11px Arial,sans-serif;letter-spacing:.1em;background:#b3261e;color:#fff;border:0;border-radius:3px;padding:6px 9px}
+#fbDlg .pr{display:flex;gap:8px;align-items:flex-start;font-size:13px;line-height:1.55;padding:6px 0;border-top:1px solid #0001}
+#fbDlg .pr b{width:1.4em;flex:0 0 auto}#fbDlg .pr .ok{color:#2e8b3e}#fbDlg .pr .ms{color:#999}
+#fbDlg .sum{white-space:pre-wrap;font:14px/1.85 "Yu Mincho","Hiragino Mincho ProN",serif;margin:6px 0 10px}
 #fbOpen{position:absolute;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:5;font:700 12px Arial,sans-serif;letter-spacing:.15em;
   color:#f3ebdd;background:rgba(40,28,20,.8);border:1px solid #c3271d;padding:10px 14px;border-radius:3px}
 </style>
@@ -951,6 +963,7 @@ si=save.cur||0; build();
   <div id="fbStage"><div id="fbWorld"><div id="fbItems"></div><svg id="fbSvg" width="1" height="1"></svg><div id="fbPins"></div></div></div>
   <div id="fbHud"><b id="fbTitle">FREE BOARD</b><span id="fbCount">STRINGS 0</span></div>
   <div id="fbMsg"></div>
+  <div id="fbChk"><span class="ok" id="fbOk"></span><span class="ng" id="fbNg"></span><span class="ms" id="fbMs"></span><button type="button" id="fbTruth">TRUTH</button></div>
   <div id="fbBar">
     <button data-mode="move" class="on">MOVE</button>
     <button data-mode="pin">PIN</button>
@@ -964,6 +977,7 @@ si=save.cur||0; build();
     <button class="sw" data-color="black" aria-label="black"><i style="background:#1d1d1d"></i></button>
     <span class="gap"></span>
     <button data-act="fit">FIT</button>
+    <button data-act="check" id="fbCheck" style="display:none">CHECK</button>
     <button data-act="cases" id="fbCases">CASES</button>
   </div>
   <div id="fbDlg"><div class="box" id="fbDlgBox"></div></div>
@@ -976,7 +990,7 @@ var LINKED=IzLink.linked, LOCAL_CASE='redline-free';
 var COLORS={red:'#b3261e',blue:'#2e5fa8',black:'#1d1d1d'};
 var $=function(id){return document.getElementById(id);};
 var root=$('fb'), stage=$('fbStage'), world=$('fbWorld'), itemsEl=$('fbItems'), pinsEl=$('fbPins'), svg=$('fbSvg');
-var mode='move', color='red', cid=null, B=null, cam={x:40,y:60,k:1}, sel=null, elOf={};
+var mode='move', color='red', cid=null, B=null, T=null, checking=false, cam={x:40,y:60,k:1}, sel=null, elOf={};
 var NS='http://www.w3.org/2000/svg';
 function uid(p){return p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
@@ -985,7 +999,7 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return
 function caseNow(){ return LINKED?IzLink.caseId():LOCAL_CASE; }
 function load(){
   cid=caseNow(); if(!cid){ B=null; return; }
-  var d=IzLink.get(cid); B=d.board; if(!Array.isArray(B.strokes)) B.strokes=[];
+  var d=IzLink.get(cid); B=d.board; T=d.truth&&d.truth.pairs&&d.truth.pairs.length?d.truth:null; if(!T) checking=false; if(!Array.isArray(B.strokes)) B.strokes=[];
   $('fbTitle').textContent=LINKED?(d.title||cid):'FREE BOARD';
   try{ var v=JSON.parse(localStorage.getItem('redline.fb.view.'+cid)||'null'); if(v&&v.k) cam=v; }catch(e){}
 }
@@ -1012,6 +1026,7 @@ function itemHTML(it){
   var lines=(it.lines||[]).map(function(l){return '<div class="note">'+esc(l.quote)+'</div>';}).join('');
   if(it.kind==='article') return '<div class="src">'+esc((it.source||'NEWSPAPER')+' '+(it.date||''))+'</div><div class="t">'+esc(it.title)+'</div><div class="cols"></div>';
   if(it.kind==='memo') return esc(it.text||'');
+  if(it.kind==='evidence') return '<div class="ph"></div><div class="t">'+esc(it.title)+'</div>';
   return '<div class="k">DOCUMENT '+esc(it.ref||'')+'</div><div class="t">'+esc(it.title)+'</div><div class="ph"></div>'+(lines?'<div class="notes">'+lines+'</div>':'');
 }
 function render(){
@@ -1027,6 +1042,7 @@ function render(){
   });
   placePins(); drawLines(); applyCam();
   $('fbCount').textContent='STRINGS '+B.strings.length;
+  $('fbCheck').style.display=T?'':'none'; $('fbCheck').classList.toggle('on',checking);
 }
 function placePins(){
   pinsEl.innerHTML='';
@@ -1047,9 +1063,45 @@ function drawLines(){
       h+='<path d="'+cpath(a,b)+'" fill="none" stroke="#0003" stroke-width="5" transform="translate(1.5 3)"/>'+
          '<path d="'+cpath(a,b)+'" fill="none" stroke="'+col+'" stroke-width="3.2" stroke-linecap="round"'+(sel&&sel.type==='string'&&sel.id===s.id?' stroke-dasharray="6 5"':'')+'/>'; });
   }
+  if(B&&checking&&T){ var R=checkResult();
+    R.missing.forEach(function(m){ var a=itemCenter(m[0]), b=itemCenter(m[1]); if(!a||!b) return;
+      h+='<path d="M'+a.x+' '+a.y+' L'+b.x+' '+b.y+'" stroke="#6b6b6b" stroke-width="2.5" stroke-dasharray="3 7" stroke-linecap="round" fill="none" opacity=".8"/>'+
+         '<circle cx="'+((a.x+b.x)/2)+'" cy="'+((a.y+b.y)/2)+'" r="10" fill="#fff" stroke="#888" stroke-width="2" stroke-dasharray="2 3"/>'+
+         '<text x="'+((a.x+b.x)/2)+'" y="'+((a.y+b.y)/2+4)+'" text-anchor="middle" font-size="12" font-weight="700" fill="#777">?</text>'; });
+    R.res.forEach(function(r){ var c=curve(r.a,r.b), mx=.25*r.a.x+.5*c.cx+.25*r.b.x, my=.25*r.a.y+.5*c.cy+.25*r.b.y, col=r.ok?'#2e8b3e':'#c0281c';
+      h+='<circle cx="'+mx+'" cy="'+my+'" r="13" fill="'+col+'" stroke="#fff" stroke-width="3"/>'+
+         '<text x="'+mx+'" y="'+(my+5)+'" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">'+(r.ok?'✓':'✗')+'</text>'+
+         (r.ok&&r.label?'<text x="'+mx+'" y="'+(my+30)+'" text-anchor="middle" font-size="12" font-weight="700" fill="#1f5f2a" paint-order="stroke" stroke="#fff" stroke-width="4">'+esc(r.label)+'</text>':''); });
+    $('fbOk').textContent='✓ '+R.ok; $('fbNg').textContent='✗ '+R.ng; $('fbMs').textContent='見つかっていない '+R.missing.length+' / '+T.pairs.length;
+  }
+  $('fbChk').classList.toggle('on',!!(B&&checking&&T));
   if(tmp&&tmp.kind==='string') h+='<path d="'+cpath(tmp.a,tmp.b)+'" fill="none" stroke="'+COLORS[color]+'" stroke-width="3" stroke-dasharray="2 6" stroke-linecap="round"/>';
   if(tmp&&tmp.kind==='pen'&&tmp.pts.length>1) h+='<polyline points="'+tmp.pts.map(function(p){return p[0]+','+p[1];}).join(' ')+'" fill="none" stroke="'+COLORS[color]+'" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>';
   svg.innerHTML=h;
+}
+
+/* ---------- 答え合わせ（真相のつながり ⇔ ボードの紐） ---------- */
+function pairKey(a,b){ return a<b?a+'|'+b:b+'|'+a; }
+function itemCenter(id){ var it=itemById(id); if(!it) return null; var s=size(it); return {x:it.x+s.w/2,y:it.y+s.h/2}; }
+function checkResult(){
+  var want={}; T.pairs.forEach(function(p){ want[pairKey(p[0],p[1])]=p; });
+  var pm={}; B.pins.forEach(function(p){ pm[p.id]=p; });
+  var got={}, res=[], ok=0, ng=0;
+  B.strings.forEach(function(s){ var pa=pm[s.a], pb=pm[s.b]; if(!pa||!pb) return; var a=pinPos(pa), b=pinPos(pb); if(!a||!b) return;
+    var k=(pa.itemId&&pb.itemId&&pa.itemId!==pb.itemId)?pairKey(pa.itemId,pb.itemId):null, hit=k&&want[k];
+    if(hit){ ok++; got[k]=1; } else ng++;
+    res.push({a:a,b:b,ok:!!hit,label:hit?hit[2]:''}); });
+  var missing=T.pairs.filter(function(p){ return !got[pairKey(p[0],p[1])]; });
+  return {res:res,ok:ok,ng:ng,missing:missing};
+}
+function truthDialog(){
+  var R=checkResult(), got={};
+  var pm={}; B.pins.forEach(function(p){ pm[p.id]=p; });
+  B.strings.forEach(function(s){ var a=pm[s.a], b=pm[s.b]; if(a&&b&&a.itemId&&b.itemId) got[pairKey(a.itemId,b.itemId)]=1; });
+  function name(id){ var it=itemById(id); return it?(it.title||it.text||id):'（まだボードにない）'; }
+  var list=T.pairs.map(function(p){ var k=got[pairKey(p[0],p[1])];
+    return '<div class="pr"><b class="'+(k?'ok':'ms')+'">'+(k?'✓':'？')+'</b><div><div>'+esc(p[2]||'')+'</div><div class="k">'+esc(name(p[0]))+' — '+esc(name(p[1]))+'</div></div></div>'; }).join('');
+  dialog('<div class="k">TRUTH</div><div class="sum">'+esc(T.summary||'')+'</div>'+list,[['CLOSE',null]]);
 }
 
 /* ---------- 当たり判定（ワールド座標） ---------- */
@@ -1175,8 +1227,8 @@ function dialog(html,buttons){
 function openItem(it){
   if(it.kind==='memo'){ memoDialog(it); return; }
   var notes=(it.lines||[]).map(function(l){return '<div class="note">'+esc(l.quote)+'</div>';}).join('');
-  var k=it.kind==='article'?esc((it.source||'NEWSPAPER')+' '+(it.date||'')):'DOCUMENT '+esc(it.ref||'');
-  dialog('<div class="k">'+k+'</div><h3>'+esc(it.title)+'</h3>'+(notes?'<div class="k">MARKED</div>'+notes:''),[['CLOSE',null]]);
+  var k=it.kind==='article'?esc((it.source||'NEWSPAPER')+' '+(it.date||'')):it.kind==='evidence'?'EVIDENCE':'DOCUMENT '+esc(it.ref||'');
+  dialog('<div class="k">'+k+'</div><h3>'+esc(it.title)+'</h3>'+(it.note?'<p style="font-size:14px;line-height:1.8">'+esc(it.note)+'</p>':'')+(notes?'<div class="k">MARKED</div>'+notes:''),[['CLOSE',null]]);
 }
 function memoDialog(it,w){
   dialog('<div class="k">MEMO</div><textarea id="fbMemo" placeholder="メモ">'+esc(it?it.text:'')+'</textarea>',
@@ -1187,6 +1239,8 @@ function memoDialog(it,w){
   setTimeout(function(){ var t=$('fbMemo'); if(t) t.focus(); },50);
 }
 $('fbDlg').addEventListener('pointerdown',function(e){ e.stopPropagation(); });
+$('fbChk').addEventListener('pointerdown',function(e){ e.stopPropagation(); });
+$('fbTruth').addEventListener('click',truthDialog);
 $('fbDlg').addEventListener('click',function(e){ if(e.target===$('fbDlg')) $('fbDlg').classList.remove('on'); });
 
 /* ---------- 道具の帯 ---------- */
@@ -1203,6 +1257,7 @@ $('fbBar').addEventListener('click',function(e){
   if(b.dataset.mode) setMode(b.dataset.mode);
   else if(b.dataset.color){ color=b.dataset.color; Array.prototype.forEach.call(document.querySelectorAll('#fbBar .sw'),function(x){x.classList.toggle('on',x===b);}); }
   else if(b.dataset.act==='fit') fit();
+  else if(b.dataset.act==='check'){ checking=!checking; render(); }
   else if(b.dataset.act==='cases') close();
 });
 
