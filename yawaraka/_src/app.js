@@ -1103,7 +1103,7 @@ const anim = { on: false, kind: 'hop', phase: 'crouch', pt: 0, y: 0, vy: 0, x: 0
 const HOP = { crouch: 0.13, air: 0.48, rest: 0.08, h: 0.38, step: 0.65 };
 HOP.g = 8 * HOP.h / (HOP.air * HOP.air);
 const animBtn = document.getElementById('animBtn'), animIcon = document.getElementById('animIcon');
-let animPos = { x: 0, z: 0 };
+let animPos = { x: 0, z: 0 }, animFit = { m: 1, ty: 0.6, cx: 0 };
 function setAnim(on) {
   anim.on = on; applyStage();
   document.body.classList.toggle('anim', on);
@@ -1113,6 +1113,11 @@ function setAnim(on) {
     sfx.unlock();
     // 引っ張り中などは解除
     release(); animPos = { x: cat.position.x, z: cat.position.z };
+    {   // 全員いっしょに動く：元の場所を覚え、全員が画面に入るようにカメラを決める
+      let x0 = 1e9, x1 = -1e9, y1 = 0;
+      for (const I of insts) { I.hop = null; if (!I.cat.visible) continue; I.home = { x: I.cat.position.x, z: I.cat.position.z }; const b = I.bound; x0 = Math.min(x0, I.cat.position.x - b.rx); x1 = Math.max(x1, I.cat.position.x + b.rx); y1 = Math.max(y1, b.cy + b.ry + I.lift + (I.sy || 0)); }
+      animFit = { m: Math.min(3.2, Math.max(1, (x1 - x0) / 5.2, y1 / 2.6)), ty: 0.6 + Math.max(0, y1 - 2.2) * 0.35, cx: (x0 + x1) / 2 - animPos.x };
+    }
     anim.saved = { pos: camera.position.clone(), target: controls.target.clone(), auto: controls.autoRotate };
     controls.autoRotate = false;
     controls.enabled = false;
@@ -1121,6 +1126,10 @@ function setAnim(on) {
   } else {
     cat.position.x = animPos.x; cat.position.z = animPos.z;
     cat.rotation.set(0, 0, 0);
+    for (const I of insts) if (I !== curInst && I.home) {
+      I.cat.position.x = I.home.x; I.cat.position.z = I.home.z; I.cat.rotation.set(0, 0, 0); I.squish.matrix.identity(); I.cat.position.y = I.lift + (I.sy || 0);
+      I.rt.setEyesClosed && I.rt.setEyesClosed(false); I.rt.setBrow(false); I.rt.setSmile(false);
+    }
     dotFloor.visible = false;
     ground.position.x = 0;
     sun.position.set(3, 6, 4); sun.target.position.set(0, 0, 0); sun.target.updateMatrixWorld();
@@ -1140,7 +1149,7 @@ function setAnim(on) {
 animBtn.onclick = () => setAnim(!anim.on);
 document.querySelectorAll('.anims .chip').forEach(b => b.onclick = () => {
   anim.kind = b.dataset.anim;
-  resetAnimMotion(); hopOthers();
+  resetAnimMotion();
   document.querySelectorAll('.anims .chip').forEach(x => x.classList.toggle('on', x === b));
 });
 
@@ -1578,8 +1587,9 @@ function updateAnim(dt) {
 
   // カメラはキャラを真ん中に、斜め前・少し上からなめらかについていく（跳ねても揺れないよう床基準）
   anim.camX += (anim.x - anim.camX) * (1 - Math.exp(-dt * 6));
-  controls.target.set(anim.camX, 0.6, 0);
-  camera.position.set(anim.camX + 6.4, 3.6, 6.6);
+  const AF = animFit;
+  controls.target.set(anim.camX + AF.cx, AF.ty, 0);
+  camera.position.set(anim.camX + AF.cx + 6.4 * AF.m, AF.ty + 3.0 * AF.m, 6.6 * AF.m);
   camera.lookAt(controls.target);
   // 影と床もいっしょに
   sun.position.set(anim.camX + 3, 6, 4); sun.target.position.set(anim.camX, 0, 0); sun.target.updateMatrixWorld();
@@ -2026,6 +2036,17 @@ renderer.setAnimationLoop(() => {
   squish.matrix.copy(m);
   squish.matrixWorldNeedsUpdate = true;
   if (current.rt.update) current.rt.update(dt, { shx, shz, sy: syC, vy: jump.phase === 'air' ? jump.vy : 0, pullX: pull.active ? pull.off.x : 0 });
+  if (anim.on) for (const I of insts) {   // アクションは全員いっしょに
+    if (I === curInst || !I.cat.visible) continue;
+    const h = I.home || { x: 0, z: 0 };
+    I.cat.rotation.order = 'YXZ'; I.cat.rotation.y = cat.rotation.y; I.cat.rotation.x = cat.rotation.x;
+    I.cat.position.x = h.x - animPos.x + cat.position.x; I.cat.position.z = h.z - animPos.z + cat.position.z;
+    I.cat.position.y = I.lift + (I.sy || 0) + anim.y + (anim.dy || 0);
+    I.squish.matrix.copy(squish.matrix); I.squish.matrixWorldNeedsUpdate = true;
+    if (I.rt.setEyesClosed) I.rt.setEyesClosed(anim.kind === 'sleep');
+    I.rt.setBrow(anim.kind === 'angry' && anim.phase !== 'deflate'); I.rt.setSmile(anim.kind === 'happy');
+    if (I.rt.update) I.rt.update(dt, { shx, shz, sy: syC, vy: jump.phase === 'air' ? jump.vy : 0, pullX: 0 });
+  }
 
   // 引っ張り：離したら行きすぎながら戻る
   if (pull.active) {
@@ -2067,7 +2088,7 @@ renderer.setAnimationLoop(() => {
     if (flashT > 0.6) { flashT = -1; bodyMat.color.set(bodyCol); }
   }
   cat.position.y = lift + (stageOn ? 0 : curInst.sy || 0) + pullLift + jump.y + (anim.on ? anim.y + (anim.dy || 0) : 0);
-  for (const I of insts) if (I !== curInst && I.cat.visible && I.hop) stepHop(I, dt);
+  if (!anim.on) for (const I of insts) if (I !== curInst && I.cat.visible && I.hop) stepHop(I, dt);
   if (insts.length > 1 && !anim.on && !stageOn) {
     updateOverlaps(dt);
     for (const I of insts) {
