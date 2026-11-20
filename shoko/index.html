@@ -43,6 +43,172 @@
 .header-end{margin-right:40px}@media (max-width:850px){.header{padding-right:52px}}
 .book-pages{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid #b2a487;padding:20px 0 0;margin-top:28px}.book-pages .tool-btn{background:#e8dec8;color:#3e3a2f;border:1px solid #a99b7c;padding:9px 12px}.book-pages .tool-btn:disabled{opacity:.32;cursor:default}.book-pages-count{font:12px sans-serif;color:#685b46;white-space:nowrap}@media(max-width:430px){.book-pages .tool-btn{padding:8px;font-size:12px}}
 </style>
+<!--IZ-LINK-BRIDGE:START--><script id="izlink-bridge">
+/* izlink bridge v1 — 連携アプリの共通データ層とイベント
+ *
+ * 各アプリ（保管庫・レッドライン・iz2611）と外枠（link/）に埋め込む小さな部品。
+ * 埋め込みは tools/apply_link_bridge.py で行う（作品は1ファイル完結のため）。
+ *
+ * 保存先（同一ドメインの localStorage）
+ *   izlink.v1.meta      : { caseId, settings:{ brand, stringsForFloppy } }
+ *   izlink.v1.<caseId>  : { marks:[], floppies:{}, terminal:{}, board:{items:[],pins:[],strings:[]}, truth:null }
+ *
+ * API（window.IzLink）
+ *   IzLink.linked                 外枠の中で動いているか（単体起動なら false）
+ *   IzLink.brand()                端末名（既定 'iz2611'）
+ *   IzLink.setting(key)           設定値
+ *   IzLink.caseId()               現在の事件ID
+ *   IzLink.meta() / setMeta(fn)   メタの読み出し・更新
+ *   IzLink.get(caseId?)           事件データ（無ければ空の形で返す）
+ *   IzLink.update(fn, caseId?)    事件データを fn(data) で書き換えて保存し、'data.changed' を流す
+ *   IzLink.on(type, cb)           イベント受信（自分・他の画面・外枠のどこから来たものも）。戻り値で解除
+ *   IzLink.emit(type, payload)    イベント送信（自分にも届く。外枠経由で他の画面へも届く）
+ *   IzLink.onVisibility(cb)       表示・非表示の通知（外枠が送る）
+ *
+ * 主なイベント
+ *   case.selected {caseId}  mark.added {docId,...}  string.added {stringId}
+ *   floppy.found {caseId}   floppy.inserted {caseId}  article.pinned {articleId}
+ *   evidence.found {...}    truth.revealed {...}      data.changed {caseId}
+ */
+(function (global) {
+  'use strict';
+  if (global.IzLink) return;
+
+  var PREFIX = 'izlink.v1.';
+  var META_KEY = PREFIX + 'meta';
+  var DEFAULT_SETTINGS = { brand: 'iz2611', stringsForFloppy: 3 };
+  var listeners = {};
+  var visListeners = [];
+  var isTop = global.parent === global;
+
+  function read(key, fallback) {
+    try {
+      var s = global.localStorage.getItem(key);
+      return s ? JSON.parse(s) : fallback;
+    } catch (e) { return fallback; }
+  }
+  function write(key, value) {
+    try { global.localStorage.setItem(key, JSON.stringify(value)); return true; }
+    catch (e) { return false; }
+  }
+
+  function emptyCase() {
+    return { marks: [], floppies: {}, terminal: {}, board: { items: [], pins: [], strings: [] }, truth: null };
+  }
+  function normalizeCase(d) {
+    var e = emptyCase();
+    if (!d || typeof d !== 'object') return e;
+    for (var k in e) if (!(k in d)) d[k] = e[k];
+    if (!d.board || typeof d.board !== 'object') d.board = e.board;
+    ['items', 'pins', 'strings'].forEach(function (k) { if (!Array.isArray(d.board[k])) d.board[k] = []; });
+    return d;
+  }
+
+  function meta() {
+    var m = read(META_KEY, null) || {};
+    m.settings = m.settings || {};
+    for (var k in DEFAULT_SETTINGS) if (!(k in m.settings)) m.settings[k] = DEFAULT_SETTINGS[k];
+    if (!('caseId' in m)) m.caseId = null;
+    return m;
+  }
+  function setMeta(fn) {
+    var m = meta();
+    var r = fn(m);
+    write(META_KEY, r || m);
+    return r || m;
+  }
+
+  function caseId() { return meta().caseId; }
+  function get(id) {
+    id = id || caseId();
+    if (!id) return emptyCase();
+    return normalizeCase(read(PREFIX + id, null));
+  }
+  function update(fn, id) {
+    id = id || caseId();
+    if (!id) return null;
+    var d = get(id);
+    var r = fn(d);
+    d = normalizeCase(r || d);
+    write(PREFIX + id, d);
+    emit('data.changed', { caseId: id });
+    return d;
+  }
+
+  function deliver(type, payload, origin) {
+    var ev = { type: type, payload: payload || {}, origin: origin };
+    (listeners[type] || []).slice().forEach(function (cb) { try { cb(ev.payload, ev); } catch (e) { console.error(e); } });
+    (listeners['*'] || []).slice().forEach(function (cb) { try { cb(ev.payload, ev); } catch (e) { console.error(e); } });
+  }
+  function on(type, cb) {
+    (listeners[type] = listeners[type] || []).push(cb);
+    return function () {
+      var a = listeners[type] || [];
+      var i = a.indexOf(cb);
+      if (i >= 0) a.splice(i, 1);
+    };
+  }
+
+  var selfId = Math.random().toString(36).slice(2);
+  function emit(type, payload) {
+    deliver(type, payload, 'self');
+    var msg = { izlink: 1, kind: 'event', type: type, payload: payload || {}, from: selfId };
+    if (!isTop) {
+      try { global.parent.postMessage(msg, '*'); } catch (e) {}
+    } else {
+      broadcastToFrames(msg, null);
+    }
+  }
+  // 外枠だけが使う：各枠へ配る（送り元には返さない）
+  function broadcastToFrames(msg, exceptWin) {
+    var frames = global.document ? global.document.querySelectorAll('iframe') : [];
+    Array.prototype.forEach.call(frames, function (f) {
+      if (f.contentWindow && f.contentWindow !== exceptWin) {
+        try { f.contentWindow.postMessage(msg, '*'); } catch (e) {}
+      }
+    });
+  }
+
+  global.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d) return;
+    // 外枠からの表示通知（link/ の既存形式）
+    if (d.type === 'izlink.visibility') {
+      visListeners.slice().forEach(function (cb) { try { cb(!!d.visible); } catch (er) {} });
+      return;
+    }
+    if (d.izlink !== 1 || d.kind !== 'event' || d.from === selfId) return;
+    if (isTop) {
+      // 外枠：子の emit を受けて、自分にも届け、他の枠へ中継する
+      deliver(d.type, d.payload, 'frame');
+      broadcastToFrames(d, e.source);
+    } else if (e.source === global.parent) {
+      deliver(d.type, d.payload, 'frame');
+    }
+  });
+
+  var api = {
+    version: 1,
+    linked: !isTop,
+    isFrame: isTop,
+    brand: function () { return meta().settings.brand; },
+    setting: function (k) { return meta().settings[k]; },
+    meta: meta,
+    setMeta: setMeta,
+    caseId: caseId,
+    get: get,
+    update: update,
+    on: on,
+    emit: emit,
+    onVisibility: function (cb) { visListeners.push(cb); },
+    _keys: { prefix: PREFIX, meta: META_KEY }
+  };
+  global.IzLink = api;
+  if (!isTop) {
+    try { global.parent.postMessage({ type: 'izlink.ready' }, '*'); } catch (e) {}
+  }
+})(window);
+</script><!--IZ-LINK-BRIDGE:END-->
 <!--IZ-GAME-BASE:START-->
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black">
 <script>
@@ -429,5 +595,100 @@ function renderAll(){renderShelf();renderCatalog();renderReader();updateDeskCoun
 function viewDesk(toDesk){state.view=toDesk?'desk':'archive';renderAll();if(toDesk)switchScreen('desk');else switchScreen(innerWidth<=850?'shelf':'catalog')}
 el('showArchive').addEventListener('click',()=>viewDesk(false));el('showDesk').addEventListener('click',()=>viewDesk(true));el('order').addEventListener('change',e=>{state.sort=e.target.value;renderCatalog()});document.querySelectorAll('.mobile-nav button').forEach(b=>b.addEventListener('click',()=>switchScreen(b.dataset.target)));document.addEventListener('keydown',e=>{if(e.key==='Escape' && innerWidth<=850 && state.screen==='reader'){switchScreen('catalog')}});state.active=(byId(state.active)&&currentShelf().folderIds.includes(byId(state.active).folder))?state.active:'';renderAll();if(innerWidth>850)el('workspace').dataset.screen='reader';
 </script>
+<script id="shoko-link-data">
+// 連携アプリ（link/）の中で開いたときだけ有効。単体の書庫には何も足さない。
+// X-01 は連携の試作用ダミー事件。本物の事件（館の連続殺人）ができたら差し替える。
+(function(){
+ if(!(window.IzLink&&IzLink.linked))return;
+ const CASE={id:'X-01',name:'テスト事件（試作）',sub:'再捜査・ダミー資料'};
+ const DOCS=[
+  ['1987-02-15','初動報告：山荘での死亡事案','所轄署・刑事課','二月十五日午前七時十分ごろ、山荘「白樺荘」の管理人から通報があった。宿泊客の男性一名が食堂で倒れているとのこと。\n前夜からの降雪で県道は不通となっており、現場到着は午前九時四十分となった。\n\n到着時、食堂の暖炉の火は消えていた。窓は内側から施錠されていた。\n宿泊客は男性三名、女性二名、ほかに管理人夫妻。全員が館内にいたと申し立てている。'],
+  ['1987-02-15','聴取：第一発見者（管理人の妻）','所轄署・刑事課','朝食の支度のため午前六時半ごろ食堂に入ったが、そのときは暗くて気づかなかった。\n午前七時ごろ、カーテンを開けたところで床に倒れている人を見つけた。\n\n前夜は午後十一時に台所の火を落として休んだ。夜中に一度、廊下を歩く足音を聞いた気がするが、時刻は分からない。\n食堂の鍵は夫が管理しており、自分は持っていない。'],
+  ['1987-02-15','写真台帳：食堂の見取図','鑑識係','写真一　食堂全景（入口から）\n写真二　暖炉前の床面。灰が掃き寄せられた跡あり\n写真三　窓の掛け金。内側から掛かった状態\n写真四　テーブル上のグラス二客。うち一客は洗われている\n\n備考：暖炉の灰の量は、一晩焚いた量としては少ない。'],
+  ['1987-02-16','聴取：宿泊客（会社員の男性）','所轄署・刑事課','前夜は午後十時ごろまで食堂で被害者と酒を飲んでいた。その後は自室に戻り、朝まで出ていない。\n被害者とは仕事上の付き合いで、この山荘に誘ったのは被害者のほうだった。\n\n夜中に停電があったと思う。枕元の時計が止まっていたが、何時に止まったかは見ていない。']
+ ];
+ FOLDERS.push(CASE);
+ SHELVES.unshift({id:'reinvest',code:'00',name:'再捜査',sub:'再捜査の対象となった事件',folderIds:[CASE.id]});
+ DOCS.forEach((d,i)=>docs.push({folder:CASE.id,date:d[0],title:d[1],issuer:d[2],body:d[3],id:CASE.id+'-'+String(i+1).padStart(3,'0'),type:/写真|見取図/.test(d[1])?'photo':'paper'}));
+ window.SHOKO_LINK_CASES={[CASE.id]:CASE.name};
+})();
+</script>
 <script src="./guide.js"></script>
+<script id="shoko-link-ui">
+// 連携アプリの中での追加機能：事件印、「この事件を開く」、ライン→ボード、フロッピー
+(function(){
+ if(!(window.IzLink&&IzLink.linked))return;
+ const CASES=window.SHOKO_LINK_CASES||{};
+ const isCase=f=>Object.prototype.hasOwnProperty.call(CASES,f);
+ const st=document.createElement('style');
+ st.textContent=
+  '.drawer.izl-case{position:relative;box-shadow:inset 6px 0 0 #b3261e}'+
+  '.izl-stamp{position:absolute;right:8px;top:6px;border:2px solid #b3261e;color:#c8392e;font:700 10px/1.3 sans-serif;padding:1px 4px;transform:rotate(-8deg);letter-spacing:.1em;background:#f4ead6cc}'+
+  '.izl-case-box{margin:0 0 12px;padding:12px 14px;border:1px solid #b3261e88;border-left:6px solid #b3261e;background:#2a1c18;color:#f1e6d0;font:13px/1.6 sans-serif}'+
+  '.izl-case-box .izl-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}'+
+  '.izl-case-box .izl-row+.izl-row{margin-top:10px;padding-top:10px;border-top:1px solid #ffffff22}'+
+  '.izl-case-box button{background:#8c2a1f;color:#fff3e0;border:0;padding:9px 14px;font:inherit;cursor:pointer}'+
+  '.izl-case-box button:disabled{opacity:.5}'+
+  '.izl-case-box small{opacity:.7}'+
+  '.izl-floppy{display:inline-block;width:22px;height:22px;background:#222;border:2px solid #555;border-radius:2px;position:relative;vertical-align:middle;margin-right:8px}'+
+  '.izl-floppy:after{content:"";position:absolute;left:4px;right:4px;top:0;height:7px;background:#aaa}'+
+  '.paper.izl-paper{position:relative}'+
+  '.izl-paper-stamp{position:absolute;right:28px;top:22px;border:3px solid #b3261e;color:#b3261e;font:700 18px/1.2 serif;padding:3px 10px;transform:rotate(-10deg);letter-spacing:.2em;opacity:.8;pointer-events:none}';
+ document.head.append(st);
+
+ // タイトル画面を省いて資料室から始める
+ document.body.dataset.shokoStage='room';
+ const backBtn=document.querySelector('.shoko-back');if(backBtn)backBtn.style.display='none';
+
+ // ラインを引いたら、その資料ごとボードへ（通知はしない）
+ ShokoLines.onAdd(({doc,page,line,replaced})=>{
+  if(!isCase(doc.folder))return;
+  IzLink.emit('mark.added',{caseId:doc.folder,caseTitle:CASES[doc.folder],docId:doc.id,title:doc.title,
+   quote:line.quote,page,lineId:line.id,replaced:(replaced||[]).map(x=>x.id)});
+ });
+
+ const pS=renderShelf;
+ renderShelf=function(){
+  pS();
+  document.querySelectorAll('#folderDrawers .drawer').forEach(b=>{
+   const code=b.querySelector('.drawer-code');
+   if(code&&isCase(code.textContent)){b.classList.add('izl-case');if(!b.querySelector('.izl-stamp'))b.append(node('span','izl-stamp','再捜査'))}
+  });
+ };
+
+ const pC=renderCatalog;
+ renderCatalog=function(){
+  pC();
+  const f=state.folder;if(!isCase(f))return;
+  const d=IzLink.get(f),cur=IzLink.caseId()===f,box=node('div','izl-case-box');
+  const r1=node('div','izl-row'),t1=node('div');
+  t1.append(node('strong','',CASES[f]),document.createElement('br'),node('small','',cur?'捜査中の事件':'再捜査の対象'));
+  const open=node('button','','この事件を開く');open.type='button';
+  open.addEventListener('click',()=>IzLink.emit('case.selected',{caseId:f,title:CASES[f]}));
+  r1.append(t1,open);box.append(r1);
+  const fl=d.floppies[f];
+  if(fl&&fl.found){
+   const r2=node('div','izl-row'),t2=node('div');
+   t2.append(node('span','izl-floppy'),document.createTextNode('専用フロッピー（'+IzLink.brand()+'用）'));
+   const take=node('button','',fl.taken?'手に取った':'手に取る');take.type='button';take.disabled=!!fl.taken;
+   take.addEventListener('click',()=>IzLink.update(x=>{x.floppies[f].taken=true},f));
+   r2.append(t2,take);box.append(r2);
+  }
+  el('fileList').prepend(box);
+ };
+
+ const pR=renderReader;
+ renderReader=function(){
+  pR();
+  const doc=byId(state.active);
+  if(state.view!=='archive'||!doc||!isCase(doc.folder))return;
+  const paper=document.querySelector('#readerContent .paper');
+  if(paper){paper.classList.add('izl-paper');paper.append(node('div','izl-paper-stamp','再捜査'))}
+ };
+
+ IzLink.on('data.changed',p=>{if(isCase(state.folder)&&(!p||!p.caseId||p.caseId===state.folder))renderCatalog()});
+ IzLink.onVisibility(()=>{});
+ renderAll();
+})();
+</script>
 </body></html>

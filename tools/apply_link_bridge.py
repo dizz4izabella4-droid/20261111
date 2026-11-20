@@ -5,7 +5,7 @@
   python3 tools/apply_link_bridge.py --check  # 最新でないファイルがあれば一覧して終了コード1
 
 埋め込み位置は、HTML 内の <!--IZ-LINK-BRIDGE:START--> と <!--IZ-LINK-BRIDGE:END--> の間。
-目印が無いファイルには </head> の直前に目印ごと入れる。
+共通ゲーム基盤のブロックがあればその手前、無ければ </head> の直前に入れる。
 連携するアプリ（保管庫・レッドライン・端末）を増やすときは TARGETS に足す。
 """
 import os, sys
@@ -14,8 +14,10 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 SRC = os.path.join(ROOT, 'link', 'link-bridge.js')
 START = '<!--IZ-LINK-BRIDGE:START-->'
 END = '<!--IZ-LINK-BRIDGE:END-->'
+GAME_BASE_START = '<!--IZ-GAME-BASE:START-->'
 TARGETS = [
     'link/index.html',
+    'shoko/index.html',
 ]
 
 
@@ -26,13 +28,20 @@ def block():
 
 
 def apply(html, blk):
+    # 既存ブロックを外してから入れ直す（何度実行しても同じ結果）
     s = html.find(START)
     if s >= 0:
         e = html.find(END, s)
         if e < 0:
             raise ValueError('END marker missing')
-        return html[:s] + blk + html[e + len(END):]
-    i = html.find('</head>')
+        tail = html[e + len(END):]
+        if tail.startswith('\n'):
+            tail = tail[1:]
+        html = html[:s] + tail
+    # 共通ゲーム基盤（apply_game_base.py）のブロックは常に </head> の直前に置かれるので、その手前に入れる
+    i = html.find(GAME_BASE_START)
+    if i < 0:
+        i = html.find('</head>')
     if i < 0:
         raise ValueError('</head> not found')
     return html[:i] + blk + '\n' + html[i:]

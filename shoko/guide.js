@@ -10,6 +10,13 @@ let highlights={};
 try{const o=JSON.parse(localStorage.getItem(HIGHLIGHT_KEY)||'{}');if(o&&typeof o==='object'&&!Array.isArray(o))highlights=o;}catch(e){}
 const $=id=>document.getElementById(id);
 const make=(tag,cls,txt)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n};
+const TRACE_KEY='shoko.traceLine.v1'+(window.IzLink&&IzLink.linked?'.linked':'');
+// なぞってラインの既定：連携中（外枠の中）は ON、単体では OFF。切り替えは保存する
+let traceOn=!!(window.IzLink&&IzLink.linked);
+try{const t=localStorage.getItem(TRACE_KEY);if(t==='1'||t==='0')traceOn=t==='1'}catch(e){}
+// ラインが引かれたときの通知（連携層などが使う）
+const lineListeners=[];
+window.ShokoLines={onAdd:cb=>{lineListeners.push(cb)},all:()=>highlights};
 function save(){try{localStorage.setItem(HIGHLIGHT_KEY,JSON.stringify(highlights))}catch(e){console.warn('ライン保存失敗',e)}}
 function inMode(folder){return mode==='guide'?TUTORIAL_IDS.has(folder):!TUTORIAL_IDS.has(folder)}
 function lineTotal(){return Object.values(highlights).reduce((n,x)=>n+(Array.isArray(x)?x.length:0),0)}
@@ -133,24 +140,71 @@ function adjust(text,a,b,kind){
  const end=[...seg].reverse().find(x=>x.index<b&&x.index+x.segment.length>=b)||[...seg].reverse().find(x=>x.index<b);
  return[start.index,end?Math.max(b,end.index+end.segment.length):b];
 }
+// 指の位置 → 本文の先頭からの文字数（findSelection と同じ数え方）
+function offsetAt(body,x,y){
+ let n=null,o=0;
+ if(document.caretPositionFromPoint){const p=document.caretPositionFromPoint(x,y);if(p){n=p.offsetNode;o=p.offset}}
+ else if(document.caretRangeFromPoint){const r=document.caretRangeFromPoint(x,y);if(r){n=r.startContainer;o=r.startOffset}}
+ if(!n||!body.contains(n))return null;
+ const q=document.createRange();q.selectNodeContents(body);
+ try{q.setEnd(n,o)}catch(e){return null}
+ return q.toString().length;
+}
 function lineTools(doc,content,page,body){
  const box=make('div','shoko-line-tools'),intro=make('p','','本文をダブルクリック・長押し・ドラッグで選択。単語は一語に、文節は選んだ語句の両端を語の境目に自動調整します。');
  const buttons=make('div'),info=make('div','shoko-line-status','ラインは自動保存され、上部の「ライン一覧」から見返せます。');
  function capture(){const r=findSelection(body,doc,page);if(r){pending=r;info.textContent=content.slice(r.from,r.to).replace(/\s+/g,' ').slice(0,65)+' を選択中'}}
- function add(kind){
-  capture();
-  if(!pending||pending.id!==doc.id||pending.page!==page){info.textContent='先に本文の文字を選択してください。';return}
-  let [from,to]=adjust(content,pending.from,pending.to,kind);
+ function commit(from,to,kind){
+  [from,to]=adjust(content,from,to,kind);
   if(from>=to||to-from>260){info.textContent='1〜260文字以内の範囲を選んでください。';return}
   const current=Array.isArray(highlights[doc.id])?highlights[doc.id]:[];
   const overlap=current.filter(x=>x.page===page&&x.from<to&&x.to>from);
   if(overlap.length){from=Math.min(from,...overlap.map(x=>x.from));to=Math.max(to,...overlap.map(x=>x.to))}
-  highlights[doc.id]=current.filter(x=>!overlap.includes(x)).concat([{id:Date.now()+'-'+Math.random(),page,from,to,quote:content.slice(from,to)}]);
+  const line={id:Date.now()+'-'+Math.random(),page,from,to,quote:content.slice(from,to)};
+  highlights[doc.id]=current.filter(x=>!overlap.includes(x)).concat([line]);
   pending=null;getSelection()?.removeAllRanges();save();renderReader();updateCounts();
+  lineListeners.forEach(cb=>{try{cb({doc,page,line,replaced:overlap})}catch(e){console.error(e)}});
+ }
+ function add(kind){
+  capture();
+  if(!pending||pending.id!==doc.id||pending.page!==page){info.textContent='先に本文の文字を選択してください。';return}
+  commit(pending.from,pending.to,kind);
  }
  for(const [label,kind] of [['単語にライン','word'],['選択した文節にライン','phrase']]){
   const btn=make('button','',label);btn.type='button';btn.addEventListener('pointerdown',capture);btn.addEventListener('click',()=>add(kind));buttons.append(btn)
  }
+ // 指でなぞってラインを引く（ON の間は本文の上でスクロールしない）
+ const traceBtn=make('button','shoko-trace-btn');traceBtn.type='button';
+ function syncTrace(){traceBtn.textContent='なぞってライン：'+(traceOn?'ON':'OFF');traceBtn.classList.toggle('on',traceOn);body.classList.toggle('shoko-tracing',traceOn)}
+ traceBtn.addEventListener('click',()=>{traceOn=!traceOn;try{localStorage.setItem(TRACE_KEY,traceOn?'1':'0')}catch(e){}syncTrace()});
+ buttons.prepend(traceBtn);syncTrace();
+ let drag=null;
+ function existing(){return(Array.isArray(highlights[doc.id])?highlights[doc.id]:[]).filter(x=>x.page===page)}
+ function preview(a,b){
+  const from=Math.min(a,b),to=Math.max(a,b);
+  const rs=existing().filter(x=>!(x.from<to&&x.to>from)).map(x=>({...x,kind:'user'}));
+  if(to>from)rs.push({from,to,kind:'user'});
+  markBody(body,content,rs);
+ }
+ body.addEventListener('pointerdown',e=>{
+  if(!traceOn||e.button>0)return;
+  const o=offsetAt(body,e.clientX,e.clientY);if(o==null)return;
+  e.preventDefault();drag={id:e.pointerId,a:o,b:o};
+  try{body.setPointerCapture(e.pointerId)}catch(er){}
+ });
+ body.addEventListener('pointermove',e=>{
+  if(!drag||e.pointerId!==drag.id)return;
+  const o=offsetAt(body,e.clientX,e.clientY);if(o==null||o===drag.b)return;
+  drag.b=o;preview(drag.a,drag.b);
+  info.textContent=content.slice(Math.min(drag.a,drag.b),Math.max(drag.a,drag.b)).replace(/\s+/g,' ').slice(0,65);
+ });
+ function endDrag(e){
+  if(!drag||e.pointerId!==drag.id)return;
+  const d=drag;drag=null;
+  if(Math.abs(d.b-d.a)<2){preview(0,0);return}
+  commit(Math.min(d.a,d.b),Math.max(d.a,d.b),'phrase');
+ }
+ body.addEventListener('pointerup',endDrag);body.addEventListener('pointercancel',endDrag);
  body.addEventListener('mouseup',capture);body.addEventListener('touchend',()=>setTimeout(capture,30));
  // ページ移動後に古い本文への選択を使わない。
  box.append(intro,buttons,info);return box;
@@ -236,5 +290,7 @@ $('shoko-room').addEventListener('click',()=>setMode('room'));
 $('showArchive').addEventListener('click',()=>linesBtn.classList.remove('active'));
 $('showDesk').addEventListener('click',()=>linesBtn.classList.remove('active'));
 document.body.dataset.shokoStage='home';document.body.dataset.shokoMode='room';
+const traceStyle=make('style');traceStyle.textContent='.paper-body.shoko-tracing{touch-action:none;-webkit-user-select:none;user-select:none;cursor:crosshair}.shoko-line-tools button.shoko-trace-btn.on{background:#8c2a1f}';
+document.head.append(traceStyle);
 setMode('room');document.body.dataset.shokoStage='home';
 })();
