@@ -16,6 +16,7 @@
 | 消費税を学ぶ（実用の部屋。自治体職員向け入門講義・6コース46レッスン） | `shohizei-nyumon/` | スマホ・PC |
 | 損益通算・繰越控除（実用の部屋。24案件と10講義で学ぶ研修） | `sonneki-tsusan/` | スマホ・PC |
 | 農業所得 経費判定ドリル（実用の部屋。帳簿から算入できない経費を見分ける練習） | `nogyo-keihi-drill/` | スマホ・PC |
+| 交通事故シミュレーション（実用の部屋。十字路の出会い頭事故を検証・逆算・現場推定。test ver.） | `jiko-sim/` | スマホ・PC |
 | WHERE WHICH（ひらがなを教える育成アプリ） | `where-which/` | スマホ・PC |
 | Noche sin Luna（フラメンコの音ゲー。test ver.） | `noche-sin-luna/` | スマホ・PC |
 | PC98 NOVEL（PC-98ふうノベルゲームエンジンの土台。サンプル「零時の記録」つき。test ver.） | `pc98-novel/` | スマホ・PC |

@@ -1,0 +1,2009 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<title>交通事故シミュレーション</title>
+<script>window.IZ_BASE={pos:'br'};</script>
+<meta name="description" content="信号のない十字路での出会い頭事故を、摩擦係数・速度・見通しなどの数値から検証・逆算・現場推定する上空図シミュレーター">
+<style>
+:root{
+  --bg:#ffffff; --ink:#1d2228; --sub:#5d6670; --line:#d9dde2; --soft:#f3f5f7; --card:#ffffff;
+  --accent:#2457c5; --A:#2563d9; --B:#e0522a; --ok:#1f8a4c; --ng:#c62f2f; --warn:#b7791f;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+  font:14px/1.5 "Hiragino Sans","Yu Gothic","Meiryo","Noto Sans JP",system-ui,sans-serif;-webkit-text-size-adjust:100%}
+body{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+button,input,select{font:inherit;color:inherit}
+header.top{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--line);background:#fff;flex:none;padding-top:max(6px,env(safe-area-inset-top))}
+header.top a.back{color:var(--sub);text-decoration:none;font-size:13px;white-space:nowrap}
+header.top h1{font-size:15px;margin:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.tabs{display:flex;gap:2px;background:var(--soft);border-radius:9px;padding:2px;flex:none}
+.tabs button{border:0;background:none;padding:5px 9px;border-radius:7px;font-size:13px;cursor:pointer;white-space:nowrap}
+@media (max-width:430px){header.top h1{font-size:0;flex:1}header.top h1::after{content:"事故シミュ";font-size:14px}.tabs button{padding:5px 7px;font-size:12.5px}}
+.tabs button.on{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.15);font-weight:700;color:var(--accent)}
+#app{flex:1;display:flex;flex-direction:column;min-height:0}
+#stage{position:relative;flex:none;height:46dvh;min-height:240px;border-bottom:1px solid var(--line);background:#f4f4f0}
+#cv{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+.stagebar{position:absolute;right:6px;top:6px;display:flex;gap:4px}
+.stagebar button{border:1px solid var(--line);background:rgba(255,255,255,.92);border-radius:8px;padding:3px 8px;font-size:12px;cursor:pointer}
+.stagebar button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+#hint{position:absolute;left:6px;bottom:6px;right:6px;font-size:11px;color:var(--sub);pointer-events:none;text-shadow:0 0 3px #fff,0 0 3px #fff}
+#panel{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:10px 12px 40px}
+@media (min-width:900px){
+  #app{flex-direction:row}
+  #stage{flex:1;height:auto;border-bottom:0;border-right:1px solid var(--line)}
+  #panel{flex:none;width:440px}
+}
+.card{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:0 0 10px;background:var(--card)}
+.card h2{font-size:13px;margin:0 0 6px;color:var(--sub);font-weight:700;letter-spacing:.02em}
+.badge{display:inline-block;padding:2px 10px;border-radius:999px;font-weight:700;font-size:14px;color:#fff}
+.badge.ng{background:var(--ng)} .badge.ok{background:var(--ok)} .badge.warn{background:var(--warn)} .badge.gray{background:#8a939c}
+.kv{display:grid;grid-template-columns:auto 1fr 1fr;gap:2px 10px;font-size:13px;margin-top:6px}
+.kv .h{font-weight:700;font-size:12px}
+.kv .k{color:var(--sub)}
+.kv .a{color:var(--A)} .kv .b{color:var(--B)}
+.kv2{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:13px;margin-top:6px}
+.kv2 .k{color:var(--sub)}
+.note{font-size:11.5px;color:var(--sub);margin-top:8px;line-height:1.55}
+.small{font-size:12px;color:var(--sub)}
+.row{display:flex;align-items:center;gap:8px;margin:6px 0;flex-wrap:wrap}
+.row label{min-width:5.5em;color:var(--sub);font-size:13px}
+.grid2{display:grid;grid-template-columns:minmax(6.5em,auto) 1fr 1fr;gap:5px 8px;align-items:center}
+.grid2 .h{font-size:12px;font-weight:700;text-align:center;padding:2px 0;border-radius:6px}
+.grid2 .h.a{background:#e7efff;color:var(--A)} .grid2 .h.b{background:#ffece5;color:var(--B)}
+.grid2 .l{font-size:12.5px;color:var(--sub);line-height:1.3}
+.grid2 .l small{display:block;font-size:10.5px;color:#8a939c}
+input[type=number],input[type=text],select{width:100%;min-width:0;padding:5px 7px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:14px}
+input[type=number]{font-variant-numeric:tabular-nums}
+input[type=range]{width:100%}
+input:disabled,select:disabled{background:var(--soft);color:var(--sub)}
+.btn{border:1px solid var(--line);background:#fff;border-radius:9px;padding:6px 11px;cursor:pointer;font-size:13px}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.on{background:#222;color:#fff;border-color:#222}
+.btn.a{border-color:var(--A);color:var(--A)} .btn.a.on{background:var(--A);color:#fff}
+.btn.b{border-color:var(--B);color:var(--B)} .btn.b.on{background:var(--B);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{border:0;background:#fff;padding:5px 12px;cursor:pointer;font-size:13px}
+.seg button.on{background:var(--accent);color:#fff}
+.basic .vrow{display:grid;grid-template-columns:2.2em 1fr 6.2em;gap:6px;align-items:center;margin:5px 0}
+.tagA,.tagB{display:inline-flex;align-items:center;justify-content:center;width:2em;height:2em;border-radius:7px;font-weight:800;color:#fff}
+.tagA{background:var(--A)} .tagB{background:var(--B)}
+.unitin{display:flex;align-items:center;gap:4px}
+.unitin span{font-size:12px;color:var(--sub);white-space:nowrap}
+.acc{border:1px solid var(--line);border-radius:12px;margin:0 0 8px;background:#fff;overflow:hidden}
+.acc-h{display:flex;align-items:center}
+.acc-h .t{flex:1;border:0;background:none;text-align:left;padding:10px 12px;font-weight:700;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.acc-h .t::before{content:"";width:7px;height:7px;border-right:2px solid #889;border-bottom:2px solid #889;transform:rotate(-45deg);transition:transform .15s}
+.acc.open .acc-h .t::before{transform:rotate(45deg)}
+.acc-h .pin{border:1px solid var(--line);background:#fff;border-radius:999px;font-size:11px;padding:2px 8px;margin-right:8px;cursor:pointer;color:var(--sub);white-space:nowrap}
+.acc-h .pin.on{background:#fff4d6;border-color:#e2b53d;color:#7a5a00;font-weight:700}
+.acc-b{display:none;padding:4px 12px 12px;border-top:1px solid var(--line)}
+.acc.open .acc-b{display:block}
+.lock{border:1px solid var(--line);background:#fff;border-radius:8px;width:2.4em;height:2.1em;cursor:pointer;font-size:15px;line-height:1}
+.lock.on{background:#fff4d6;border-color:#e2b53d}
+.ltab{display:grid;grid-template-columns:1fr 6.8em 2.4em;gap:5px 6px;align-items:center}
+.ltab .l{font-size:12.5px;color:var(--sub)}
+.cands{display:flex;flex-direction:column;gap:5px;margin-top:6px}
+.cand{border:1px solid var(--line);border-radius:9px;padding:6px 9px;cursor:pointer;font-size:12.5px;background:#fff;text-align:left}
+.cand.on{border-color:var(--accent);box-shadow:0 0 0 2px rgba(36,87,197,.18)}
+.cand b{font-variant-numeric:tabular-nums}
+.strip{display:flex;height:16px;border-radius:5px;overflow:hidden;margin:6px 0 2px;border:1px solid var(--line)}
+.strip i{flex:1}
+.strip i.c{background:#f1b5b5} .strip i.n{background:#b9e2c8}
+.stripax{display:flex;justify-content:space-between;font-size:10.5px;color:var(--sub)}
+.obs{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 2em;gap:4px;align-items:center;margin:4px 0}
+.obs input{padding:4px 5px;font-size:13px}
+.warnline{color:var(--warn);font-size:12px;margin-top:4px}
+hr.sep{border:0;border-top:1px solid var(--line);margin:10px 0}
+.big{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+</style>
+<!--IZ-GAME-BASE:START-->
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black">
+<script>
+/* iz-game-base v1 — 全ゲーム共通の基本設計
+ *  1. iOS の「ダブルタップで拡大」「ピンチ拡大」を無効にする
+ *  2. 全画面表示の切り替え（Fullscreen API。iPhone は非対応のため「ホーム画面に追加」を案内）
+ *  3. 画面の向き（自動 / 縦 / 横）の選択（Androidは全画面時に固定、非対応端末は回転の案内を出す）
+ * 各作品の <head> へ tools/apply_game_base.py が埋め込む（作品は1ファイル完結のため、外部読み込みはしない）。
+ * 位置を変えたいときは、この前に window.IZ_BASE={pos:'tr'|'tl'|'br'|'bl'} を書く。
+ */
+(function () {
+  'use strict';
+  if (window.__izGameBase) return;
+  window.__izGameBase = 1;
+  var D = document, W = window, DE = D.documentElement;
+  var KEY = 'izGameBase.orient';
+  var cfg = W.IZ_BASE || {};
+  /* 表示文言。作品側で window.IZ_BASE={lang:'en'} を書くと英語になる（既定は日本語） */
+  var T = cfg.lang === 'en'
+    ? { set: 'Display settings', scr: 'SCREEN', fs: 'Go full screen', fsOff: 'Exit full screen', ori: 'ORIENTATION', auto: 'Auto', port: 'Portrait', land: 'Landscape', close: 'Close', nAuto: 'Follows your device orientation.', nFix: 'Locks the orientation in full screen. If it cannot be locked, please rotate your device.', rot: function (m) { return '\u21bb Please turn your device to ' + (m === 'land' ? 'landscape' : 'portrait'); } }
+    : { set: '表示設定', scr: '画面', fs: '全画面にする', fsOff: '全画面をやめる', ori: '向き', auto: '自動', port: '縦', land: '横', close: '閉じる', nAuto: '端末の向きに合わせます。', nFix: '全画面のときに向きを固定します。固定できない場合は、端末を回してください。', rot: function (m) { return '\u21bb 端末を' + (m === 'land' ? '横' : '縦') + '向きにしてください'; } };
+
+  /* ---------- 1. 拡大の無効化 ---------- */
+  function fixViewport() {
+    var m = D.querySelector('meta[name="viewport"]');
+    if (!m) {
+      m = D.createElement('meta');
+      m.name = 'viewport';
+      (D.head || DE).appendChild(m);
+      m.content = 'width=device-width,initial-scale=1,viewport-fit=cover';
+    }
+    var c = m.getAttribute('content') || '';
+    c = c.replace(/(^|,)\s*(maximum-scale|minimum-scale|user-scalable)\s*=\s*[^,]*/gi, '').replace(/^,/, '');
+    m.setAttribute('content', c + ',maximum-scale=1,user-scalable=no');
+  }
+  fixViewport();
+
+  var st = D.createElement('style');
+  st.textContent = 'html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}';
+  (D.head || DE).appendChild(st);
+
+  // iOS Safari はピンチを gesture イベントで受ける
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (t) {
+    D.addEventListener(t, function (e) { e.preventDefault(); }, { passive: false });
+  });
+  // 2本指の拡大（scale が 1 から動いたとき）だけを止める。マルチタッチ操作そのものは妨げない
+  D.addEventListener('touchmove', function (e) {
+    if (e.touches && e.touches.length > 1 && e.scale && e.scale !== 1) e.preventDefault();
+  }, { passive: false });
+  // ダブルタップ拡大の保険。ボタン・入力欄などは click を壊さないよう除外し、CSS の touch-action に任せる
+  var lastEnd = 0;
+  var SKIP = 'input,textarea,select,button,a,label,summary,video,audio,[contenteditable],[role="button"],[data-iz-base-ui]';
+  D.addEventListener('touchend', function (e) {
+    var now = Date.now();
+    var t = e.target;
+    var skip = t && t.closest && t.closest(SKIP);
+    if (!skip && now - lastEnd < 350 && e.cancelable) e.preventDefault();
+    lastEnd = now;
+  }, { passive: false });
+
+  /* ---------- 2・3. 全画面と向き ---------- */
+  var fsEl = DE;
+  var fsReq = fsEl.requestFullscreen || fsEl.webkitRequestFullscreen || fsEl.msRequestFullscreen;
+  var fsOk = !!fsReq && (D.fullscreenEnabled !== false) && (D.webkitFullscreenEnabled !== false);
+  function isFs() { return !!(D.fullscreenElement || D.webkitFullscreenElement); }
+  function standalone() {
+    return !!(navigator.standalone || (W.matchMedia && W.matchMedia('(display-mode: standalone)').matches));
+  }
+  function enterFs() {
+    try {
+      var p = fsReq.call(fsEl, { navigationUI: 'hide' });
+      if (p && p.catch) p.catch(function () {});
+      return p;
+    } catch (e) { return null; }
+  }
+  function exitFs() {
+    var f = D.exitFullscreen || D.webkitExitFullscreen || D.msExitFullscreen;
+    try { var p = f && f.call(D); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+  }
+  function lockApi() { return W.screen && screen.orientation && screen.orientation.lock; }
+  // 変更できない機能は表示しない（iPhone は両方とも不可なので、ボタン自体を出さない）
+  var orOk = !!lockApi() && (navigator.maxTouchPoints > 0);
+  var uiOk = fsOk || orOk;
+  function applyOrient(mode, wantFs) {
+    // 戻り値は使わず、結果は banner() が画面の向きで判定する
+    if (mode === 'auto') {
+      try { if (W.screen && screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (e) {}
+      return;
+    }
+    var tgt = mode === 'land' ? 'landscape' : 'portrait';
+    function lock() {
+      if (!lockApi()) return;
+      try { var p = screen.orientation.lock(tgt); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+    }
+    if (isFs() || standalone()) lock();
+    else if (wantFs && fsOk) {
+      var p = enterFs();
+      if (p && p.then) p.then(lock, function () {}); else lock();
+    }
+  }
+  var mode = 'auto';
+  try { mode = localStorage.getItem(KEY) || 'auto'; } catch (e) {}
+  if ((mode !== 'land' && mode !== 'port') || !orOk) mode = 'auto';
+
+  /* ---------- UI ---------- */
+  var ui, btn, panel, banner, bT;
+  var pos = cfg.pos || 'tr';
+  function build() {
+    if (ui || !D.body || !uiOk) return;
+    var css = D.createElement('style');
+    css.textContent =
+      '#izb{position:fixed;z-index:2147483646;font:12px/1.4 "Hiragino Sans","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;color:#fff;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}' +
+      '#izb *{box-sizing:border-box}' +
+      '#izb.tr{top:calc(6px + env(safe-area-inset-top,0px));right:calc(6px + env(safe-area-inset-right,0px))}' +
+      '#izb.tl{top:calc(6px + env(safe-area-inset-top,0px));left:calc(6px + env(safe-area-inset-left,0px))}' +
+      '#izb.br{bottom:calc(6px + env(safe-area-inset-bottom,0px));right:calc(6px + env(safe-area-inset-right,0px))}' +
+      '#izb.bl{bottom:calc(6px + env(safe-area-inset-bottom,0px));left:calc(6px + env(safe-area-inset-left,0px))}' +
+      '#izb button{font:inherit;color:inherit;border:0;margin:0;cursor:pointer;-webkit-appearance:none;appearance:none}' +
+      '#izb .iz-b{width:30px;height:30px;border-radius:8px;background:rgba(20,20,24,.45);border:1px solid rgba(255,255,255,.25);font-size:16px;line-height:28px;text-align:center;padding:0;opacity:.45;transition:opacity .2s}' +
+      '#izb .iz-b:active,#izb.open .iz-b{opacity:1}' +
+      '#izb .iz-p{display:none;position:absolute;width:210px;padding:10px;border-radius:10px;background:rgba(18,18,22,.94);border:1px solid rgba(255,255,255,.22);box-shadow:0 4px 18px rgba(0,0,0,.5)}' +
+      '#izb.open .iz-p{display:block}' +
+      '#izb.tr .iz-p,#izb.tl .iz-p{top:36px}#izb.br .iz-p,#izb.bl .iz-p{bottom:36px}' +
+      '#izb.tr .iz-p,#izb.br .iz-p{right:0}#izb.tl .iz-p,#izb.bl .iz-p{left:0}' +
+      '#izb .iz-h{font-size:11px;color:#aab;margin:0 0 5px}' +
+      '#izb .iz-r{display:flex;gap:4px;margin-bottom:9px}' +
+      '#izb .iz-r button{flex:1;padding:8px 0;border-radius:7px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);font-size:13px}' +
+      '#izb .iz-r button.on{background:#e8c13a;color:#111;border-color:#e8c13a;font-weight:700}' +
+      '#izb .iz-r button[disabled]{opacity:.4}' +
+      '#izb .iz-n{font-size:10.5px;color:#9a9aa8;margin:-3px 0 6px}' +
+      '#izb .iz-x{display:block;width:100%;padding:6px 0;border-radius:7px;background:transparent;border:1px solid rgba(255,255,255,.18);font-size:12px;color:#ccd}' +
+      '#izbn{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:2147483645;padding:7px 14px;border-radius:18px;background:rgba(18,18,22,.88);border:1px solid rgba(255,255,255,.25);color:#fff;font:13px/1.3 "Hiragino Sans","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;pointer-events:none;display:none;white-space:nowrap}';
+    (D.head || DE).appendChild(css);
+
+    ui = D.createElement('div');
+    ui.id = 'izb';
+    ui.className = pos;
+    ui.setAttribute('data-iz-base-ui', '');
+    ui.innerHTML =
+      '<button type="button" class="iz-b" tabindex="-1" aria-label="' + T.set + '">⛶</button>' +
+      '<div class="iz-p">' +
+      (fsOk ? '<div class="iz-h">' + T.scr + '</div><div class="iz-r"><button type="button" tabindex="-1" data-fs="1">' + T.fs + '</button></div>' : '') +
+      (orOk ? '<div class="iz-h">' + T.ori + '</div><div class="iz-r" id="izor"><button type="button" tabindex="-1" data-o="auto">' + T.auto + '</button><button type="button" tabindex="-1" data-o="port">' + T.port + '</button><button type="button" tabindex="-1" data-o="land">' + T.land + '</button></div><div class="iz-n" id="izon"></div>' : '') +
+      '<button type="button" class="iz-x" tabindex="-1" data-close="1">' + T.close + '</button>' +
+      '</div>';
+    D.body.appendChild(ui);
+    btn = ui.querySelector('.iz-b');
+    panel = ui.querySelector('.iz-p');
+
+    banner = D.createElement('div');
+    banner.id = 'izbn';
+    D.body.appendChild(banner);
+
+    // UI 上の操作はゲーム側へ伝えない
+    ['touchstart', 'touchend', 'pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'dblclick', 'keydown', 'keyup'].forEach(function (t) {
+      ui.addEventListener(t, function (e) { e.stopPropagation(); });
+    });
+    ui.addEventListener('click', function (e) {
+      var t = e.target.closest('button');
+      if (!t) return;
+      if (t === btn) { ui.classList.toggle('open'); refresh(); }
+      else if (t.getAttribute('data-close')) ui.classList.remove('open');
+      else if (t.getAttribute('data-fs')) { isFs() ? exitFs() : enterFs(); setTimeout(refresh, 250); }
+      else if (t.getAttribute('data-o')) setMode(t.getAttribute('data-o'), true);
+      if (t.blur) t.blur();
+    });
+    refresh();
+  }
+  function setMode(m, fromUser) {
+    mode = m;
+    try { localStorage.setItem(KEY, m); } catch (e) {}
+    applyOrient(m, fromUser);
+    refresh();
+    setTimeout(banner_, 400);
+  }
+  function refresh() {
+    if (!ui) return;
+    var fb = ui.querySelector('[data-fs]');
+    if (fb) fb.textContent = isFs() ? T.fsOff : T.fs;
+    var bs = ui.querySelectorAll('[data-o]');
+    for (var i = 0; i < bs.length; i++) bs[i].classList.toggle('on', bs[i].getAttribute('data-o') === mode);
+    var on = ui.querySelector('#izon');
+    if (on) on.textContent = mode === 'auto' ? T.nAuto : T.nFix;
+  }
+  function banner_() {
+    if (!banner) return;
+    var land = W.innerWidth > W.innerHeight;
+    var bad = (mode === 'land' && !land) || (mode === 'port' && land);
+    if (bad) {
+      banner.textContent = T.rot(mode);
+      banner.style.display = 'block';
+      clearTimeout(bT);
+      bT = setTimeout(function () { banner.style.display = 'none'; }, 6000);
+    } else banner.style.display = 'none';
+  }
+  function onChange() { refresh(); setTimeout(banner_, 300); }
+  D.addEventListener('fullscreenchange', onChange);
+  D.addEventListener('webkitfullscreenchange', onChange);
+  W.addEventListener('orientationchange', onChange);
+  W.addEventListener('resize', function () { setTimeout(banner_, 300); });
+
+  function init() {
+    build();
+    if (mode !== 'auto') { applyOrient(mode, false); setTimeout(banner_, 600); }
+  }
+  if (D.body) init(); else D.addEventListener('DOMContentLoaded', init);
+
+  W.IZBase = { fullscreen: function (on) { on === false ? exitFs() : enterFs(); }, orientation: setMode, get mode() { return mode; } };
+})();
+</script>
+<!--IZ-GAME-BASE:END-->
+</head>
+<body>
+<header class="top">
+  <a class="back" href="../?cat=tool">← 一覧</a>
+  <h1>交通事故シミュレーション</h1>
+  <div class="tabs" id="tabs">
+    <button data-m="verify">①検証</button><button data-m="reverse">②逆算</button><button data-m="scene">③現場推定</button>
+  </div>
+</header>
+<div id="app">
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div class="stagebar"><button id="bFit">全体表示</button><button id="bPng">PNG</button></div>
+    <div id="hint"></div>
+  </div>
+  <div id="panel"></div>
+</div>
+
+<!-- ============================================================
+     計算部分（物理モデル）。DOM に触れない純粋な関数だけを置く。
+     単位はすべて SI（m, s, kg, rad）。座標は上空図で x=東, y=北。
+     ============================================================ -->
+<script id="phys">
+const PHYS = (() => {
+  const G = 9.80665;
+  const v2 = (x, y) => ({ x, y });
+  const add = (a, b) => v2(a.x + b.x, a.y + b.y);
+  const sub = (a, b) => v2(a.x - b.x, a.y - b.y);
+  const mul = (a, k) => v2(a.x * k, a.y * k);
+  const dot = (a, b) => a.x * b.x + a.y * b.y;
+  const crs = (a, b) => a.x * b.y - a.y * b.x;
+  const len = a => Math.hypot(a.x, a.y);
+  const unit = a => { const l = len(a); return l > 1e-12 ? mul(a, 1 / l) : v2(1, 0); };
+  const dir = th => v2(Math.cos(th), Math.sin(th));
+  const angN = a => { a = (a + Math.PI) % (2 * Math.PI); if (a < 0) a += 2 * Math.PI; return a - Math.PI; };
+  const wx = (w, r) => v2(-w * r.y, w * r.x);           // ω × r（平面）
+  const rotL = (p, th) => { const c = Math.cos(th), s = Math.sin(th); return v2(p.x * c - p.y * s, p.x * s + p.y * c); };
+
+  /* ---------- プリセット ---------- */
+  const VEH_PRESETS = {
+    kei:    { label: '軽自動車',        m: 900,   L: 3.40, W: 1.48, wb: 2.45, tr: 1.30, eyeF: 1.7, eyeR: 0.30, k: 900,  eff: 1.00 },
+    car:    { label: '普通乗用車',      m: 1400,  L: 4.60, W: 1.78, wb: 2.70, tr: 1.53, eyeF: 2.1, eyeR: 0.35, k: 1200, eff: 1.00 },
+    suv:    { label: 'SUV・ミニバン',   m: 1850,  L: 4.80, W: 1.85, wb: 2.85, tr: 1.60, eyeF: 2.0, eyeR: 0.37, k: 1500, eff: 1.00 },
+    truckS: { label: '小型トラック(2t)', m: 3500,  L: 4.70, W: 1.70, wb: 2.50, tr: 1.40, eyeF: 0.8, eyeR: 0.35, k: 1800, eff: 0.90 },
+    truckL: { label: '大型トラック',    m: 12000, L: 11.0, W: 2.49, wb: 6.00, tr: 2.00, eyeF: 0.9, eyeR: 0.50, k: 3500, eff: 0.85 },
+    bike:   { label: 'バイク(250cc)',   m: 230,   L: 2.10, W: 0.80, wb: 1.40, tr: 0,    eyeF: 1.1, eyeR: 0.00, k: 300,  eff: 0.85 },
+  };
+  const ROAD_PRESETS = {
+    dry:    { label: '乾燥アスファルト', mu: 0.75 },
+    wet:    { label: '湿ったアスファルト', mu: 0.55 },
+    rain:   { label: '雨（水たまり）', mu: 0.40 },
+    gravel: { label: '砂利道', mu: 0.55 },
+    snow:   { label: '圧雪', mu: 0.25 },
+    ice:    { label: '凍結路', mu: 0.10 },
+  };
+
+  /* ---------- 経路（折れ線を等間隔に取り直し、位置・向き・曲率を引けるようにする） ---------- */
+  function makePath(pts, opt = {}) {
+    const h = opt.h || 0.25, smooth = opt.smooth || 0;
+    const raw = [v2(pts[0].x, pts[0].y)];
+    for (const p of pts) if (len(sub(p, raw[raw.length - 1])) > 1e-6) raw.push(v2(p.x, p.y));
+    if (raw.length < 2) raw.push(add(raw[0], v2(1, 0)));
+    const cs = [0];
+    for (let i = 1; i < raw.length; i++) cs.push(cs[i - 1] + len(sub(raw[i], raw[i - 1])));
+    const total = cs[cs.length - 1];
+    const n = Math.max(2, Math.ceil(total / h) + 1), step = total / (n - 1);
+    let P = []; let j = 0;
+    for (let k = 0; k < n; k++) {
+      const s = Math.min(total, k * step);
+      while (j < raw.length - 2 && cs[j + 1] < s) j++;
+      const t = (s - cs[j]) / ((cs[j + 1] - cs[j]) || 1);
+      P.push(add(raw[j], mul(sub(raw[j + 1], raw[j]), t)));
+    }
+    if (smooth > 0 && n > 2 * smooth + 2) {   // 手描きの揺れを均す（端点は固定）
+      const Q = P.map(p => v2(p.x, p.y));
+      for (let k = 1; k < n - 1; k++) {
+        const w = Math.min(smooth, k, n - 1 - k); let sx = 0, sy = 0;
+        for (let d = -w; d <= w; d++) { sx += P[k + d].x; sy += P[k + d].y; }
+        Q[k] = v2(sx / (2 * w + 1), sy / (2 * w + 1));
+      }
+      P = Q;
+    }
+    const th = new Array(n);
+    for (let k = 0; k < n; k++) {
+      const a = P[Math.max(0, k - 1)], b = P[Math.min(n - 1, k + 1)];
+      const raw_th = Math.atan2(b.y - a.y, b.x - a.x);
+      th[k] = k === 0 ? raw_th : th[k - 1] + angN(raw_th - th[k - 1]);
+    }
+    let kap = new Array(n).fill(0);
+    for (let k = 1; k < n - 1; k++) kap[k] = (th[k + 1] - th[k - 1]) / (2 * step);
+    if (smooth > 0) { const K = kap.slice(); for (let k = 2; k < n - 2; k++) K[k] = (kap[k - 2] + kap[k - 1] + kap[k] + kap[k + 1] + kap[k + 2]) / 5; kap = K; }
+    function at(s) {
+      if (s <= 0) return { p: add(P[0], mul(dir(th[0]), s)), th: th[0], k: 0 };
+      if (s >= total) return { p: add(P[n - 1], mul(dir(th[n - 1]), s - total)), th: th[n - 1], k: 0 };
+      const x = s / step, i = Math.min(n - 2, Math.floor(x)), f = x - i;
+      return { p: add(P[i], mul(sub(P[i + 1], P[i]), f)), th: th[i] + (th[i + 1] - th[i]) * f, k: kap[i] + (kap[i + 1] - kap[i]) * f };
+    }
+    return { P, th, kap, total, step, at, src: raw };
+  }
+  function straightPath(p, th, length = 400) { return makePath([p, add(p, mul(dir(th), length))], { h: 2 }); }
+
+  // 点を経路へ投影した弧長（始点より前・終点より先は接線を延長して扱う）
+  function projectS(path, q) {
+    let best = Infinity, bs = 0;
+    const P = path.P;
+    for (let i = 0; i < P.length - 1; i++) {
+      const a = P[i], d = sub(P[i + 1], a), L2 = dot(d, d) || 1e-9;
+      const t = Math.max(0, Math.min(1, dot(sub(q, a), d) / L2));
+      const pt = add(a, mul(d, t)), dd = len(sub(q, pt));
+      if (dd < best) { best = dd; bs = (i + t) * path.step; }
+    }
+    if (bs <= 1e-6) { const s = dot(sub(q, P[0]), dir(path.th[0])); if (s < 0) return { s, d: Math.abs(crs(dir(path.th[0]), sub(q, P[0]))) }; }
+    if (bs >= path.total - 1e-6) { const e = P[P.length - 1], s = dot(sub(q, e), dir(path.th[path.th.length - 1])); if (s > 0) return { s: path.total + s, d: Math.abs(crs(dir(path.th[path.th.length - 1]), sub(q, e))) }; }
+    return { s: bs, d: best };
+  }
+
+  /* ---------- 幾何：回転する長方形 ---------- */
+  function obb(c, th, L, W) {
+    const f = dir(th), l = v2(-f.y, f.x), hl = L / 2, hw = W / 2;
+    return { c, th, f, l, hl, hw, pts: [add(add(c, mul(f, hl)), mul(l, hw)), add(sub(c, mul(l, hw)), mul(f, hl)), sub(sub(c, mul(f, hl)), mul(l, hw)), add(sub(c, mul(f, hl)), mul(l, hw))] };
+  }
+  function sat(A, B) {
+    const d = sub(B.c, A.c);
+    if (len(d) > Math.hypot(A.hl, A.hw) + Math.hypot(B.hl, B.hw)) return null;
+    let best = null;
+    for (const ax of [A.f, A.l, B.f, B.l]) {
+      const rA = A.hl * Math.abs(dot(A.f, ax)) + A.hw * Math.abs(dot(A.l, ax));
+      const rB = B.hl * Math.abs(dot(B.f, ax)) + B.hw * Math.abs(dot(B.l, ax));
+      const pd = dot(d, ax), o = rA + rB - Math.abs(pd);
+      if (o <= 0) return null;
+      if (!best || o < best.depth) best = { depth: o, n: pd >= 0 ? ax : mul(ax, -1) };
+    }
+    return best;   // n は A → B の向き
+  }
+  const inObb = (p, O) => { const d = sub(p, O.c); return Math.abs(dot(d, O.f)) <= O.hl + 1e-9 && Math.abs(dot(d, O.l)) <= O.hw + 1e-9; };
+  function segX(p1, p2, q1, q2) {
+    const r = sub(p2, p1), s = sub(q2, q1), den = crs(r, s);
+    if (Math.abs(den) < 1e-12) return null;
+    const t = crs(sub(q1, p1), s) / den, u = crs(sub(q1, p1), r) / den;
+    return (t >= 0 && t <= 1 && u >= 0 && u <= 1) ? { p: add(p1, mul(r, t)), t, u } : null;
+  }
+  function contactPoint(A, B) {
+    const pts = [];
+    A.pts.forEach(p => { if (inObb(p, B)) pts.push(p); });
+    B.pts.forEach(p => { if (inObb(p, A)) pts.push(p); });
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { const x = segX(A.pts[i], A.pts[(i + 1) % 4], B.pts[j], B.pts[(j + 1) % 4]); if (x) pts.push(x.p); }
+    if (!pts.length) return mul(add(A.c, B.c), 0.5);
+    return mul(pts.reduce((s, p) => add(s, p), v2(0, 0)), 1 / pts.length);
+  }
+  function segPtDist(p, a, b) { const d = sub(b, a), t = Math.max(0, Math.min(1, dot(sub(p, a), d) / (dot(d, d) || 1e-9))); return len(sub(p, add(a, mul(d, t)))); }
+  function obbGap(A, B) {
+    if (sat(A, B)) return 0;
+    let m = Infinity;
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
+      m = Math.min(m, segPtDist(A.pts[i], B.pts[j], B.pts[(j + 1) % 4]), segPtDist(B.pts[i], A.pts[j], A.pts[(j + 1) % 4]));
+    }
+    return m;
+  }
+
+  /* ---------- 見通し ---------- */
+  function segHitsRect(p, q, r) {   // Liang–Barsky
+    let t0 = 0, t1 = 1; const dx = q.x - p.x, dy = q.y - p.y;
+    const chk = (pp, qq) => { if (Math.abs(pp) < 1e-12) return qq >= 0; const t = qq / pp; if (pp < 0) { if (t > t1) return false; if (t > t0) t0 = t; } else { if (t < t0) return false; if (t < t1) t1 = t; } return true; };
+    return chk(-dx, p.x - r.x1) && chk(dx, r.x2 - p.x) && chk(-dy, p.y - r.y1) && chk(dy, r.y2 - p.y) && t1 > t0;
+  }
+  const FOV_COS = Math.cos(110 * Math.PI / 180);
+  function canSee(eye, fwd, target, obstacles) {
+    for (const p of [target.c, ...target.pts]) {
+      const d = sub(p, eye);
+      if (dot(unit(d), fwd) < FOV_COS) continue;
+      if (!obstacles.some(r => segHitsRect(eye, p, r))) return { p };
+    }
+    return null;
+  }
+  const eyePos = (c, th, vp) => { const f = dir(th), right = v2(f.y, -f.x); return add(add(c, mul(f, vp.L / 2 - vp.eyeF)), mul(right, vp.eyeR)); };
+
+  /* ---------- 2本の経路の交わり（「衝突地点の手前 D m で発見」に使う） ---------- */
+  const confCache = new WeakMap();
+  function conflictS(pa, pb) {
+    let m = confCache.get(pa); if (!m) { m = new WeakMap(); confCache.set(pa, m); }
+    if (m.has(pb)) return m.get(pb);
+    let res = Infinity;
+    const A = pa.P, B = pb.P, sa = Math.max(1, Math.round(1 / pa.step)), sb = Math.max(1, Math.round(1 / pb.step));
+    outer: for (let i = 0; i + sa < A.length; i += sa) {
+      for (let j = 0; j + sb < B.length; j += sb) {
+        const x = segX(A[i], A[i + sa], B[j], B[j + sb]);
+        if (x) { res = (i + x.t * sa) * pa.step; break outer; }
+      }
+    }
+    m.set(pb, res); return res;
+  }
+
+  /* ---------- 衝突（撃力・反発係数・車両間摩擦） ---------- */
+  function impact(pre, P, n, cfg) {
+    const [a, b] = pre, pa = cfg.veh[0], pb = cfg.veh[1];
+    const rA = sub(P, a.c), rB = sub(P, b.c);
+    const vrel = sub(add(b.vel, wx(b.w, rB)), add(a.vel, wx(a.w, rA)));
+    let vn = dot(vrel, n); const vnUsed = Math.min(vn, -1e-3);
+    const Kn = 1 / pa.m + 1 / pb.m + crs(rA, n) ** 2 / pa.I + crs(rB, n) ** 2 / pb.I;
+    const jn = -(1 + cfg.e) * vnUsed / Kn;
+    const vt = sub(vrel, mul(n, vn)); let J = mul(n, jn), jt = 0;
+    if (len(vt) > 1e-6) {
+      const t = unit(vt);
+      const Kt = 1 / pa.m + 1 / pb.m + crs(rA, t) ** 2 / pa.I + crs(rB, t) ** 2 / pb.I;
+      jt = Math.max(-cfg.muc * jn, Math.min(cfg.muc * jn, -dot(vrel, t) / Kt));
+      J = add(J, mul(t, jt));
+    }
+    const post = [
+      { c: a.c, th: a.th, vel: sub(a.vel, mul(J, 1 / pa.m)), w: a.w - crs(rA, J) / pa.I },
+      { c: b.c, th: b.th, vel: add(b.vel, mul(J, 1 / pb.m)), w: b.w + crs(rB, J) / pb.I },
+    ];
+    const ke = (s, p) => 0.5 * p.m * dot(s.vel, s.vel) + 0.5 * p.I * s.w * s.w;
+    const E0 = ke(a, pa) + ke(b, pb), E1 = ke(post[0], pa) + ke(post[1], pb), dE = Math.max(0, E0 - E1);
+    const kA = pa.k * 1000, kB = pb.k * 1000, keff = kA * kB / (kA + kB);
+    const dTot = Math.sqrt(2 * dE / keff), F = keff * dTot;
+    return {
+      P, n, pre, post, J, jn, jt, dE, E0, E1,
+      dv: [len(J) / pa.m, len(J) / pb.m],
+      closing: -vn, vrel: len(vrel),
+      crush: [F / kA, F / kB], force: F,
+    };
+  }
+
+  /* ---------- 衝突後：4輪（バイクは2輪）の摩擦で滑って止まるまで ---------- */
+  function postCrash(vp, st, mu, opt = {}) {
+    const dt = 0.001, tMax = opt.tMax || 20;
+    const wheels = vp.tr > 0
+      ? [v2(vp.wb / 2, vp.tr / 2), v2(vp.wb / 2, -vp.tr / 2), v2(-vp.wb / 2, vp.tr / 2), v2(-vp.wb / 2, -vp.tr / 2)]
+      : [v2(vp.wb / 2, 0), v2(-vp.wb / 2, 0)];
+    const N = vp.m * G / wheels.length, locked = vp.post !== 'roll', cr = 0.015;
+    let c = st.c, th = st.th, vel = st.vel, w = st.w, t = 0;
+    const path = [{ c, th, t: 0 }], tracks = wheels.map(() => []), frames = [{ c, th, t: 0 }];
+    let dist = 0, k = 0;
+    while (t < tMax) {
+      let F = v2(0, 0), M = 0;
+      const f = dir(th), lat = v2(-f.y, f.x);
+      for (const wl of wheels) {
+        const r = rotL(wl, th), vw = add(vel, wx(w, r));
+        let fw;
+        if (locked) {
+          const sp = len(vw); fw = mul(vw, -mu * N / Math.max(sp, 0.05));
+        } else {
+          const vl = dot(vw, f), vt = dot(vw, lat);
+          const fl = -cr * N * vl / Math.max(Math.abs(vl), 0.05), ft = -mu * N * vt / Math.max(Math.abs(vt), 0.05);
+          fw = add(mul(f, fl), mul(lat, ft));
+          const mag = len(fw); if (mag > mu * N) fw = mul(fw, mu * N / mag);
+        }
+        F = add(F, fw); M += crs(r, fw);
+      }
+      vel = add(vel, mul(F, dt / vp.m)); w += M / vp.I * dt;
+      const dc = mul(vel, dt); c = add(c, dc); th += w * dt; dist += len(dc); t += dt; k++;
+      if (k % 20 === 0) {
+        path.push({ c, th, t });
+        wheels.forEach((wl, i) => tracks[i].push(add(c, rotL(wl, th))));
+      }
+      if (k % 250 === 0) frames.push({ c, th, t });
+      if (len(vel) < 0.03 && Math.abs(w) < 0.03) break;
+      if (!locked && len(vel) < 0.3 && Math.abs(w) < 0.05) break;
+    }
+    path.push({ c, th, t });
+    return { path, tracks, frames, rest: { c, th }, t, dist, rot: th - st.th };
+  }
+
+  /* ---------- 衝突前：直進（経路に沿う）＋発見→反応→ブレーキ ---------- */
+  function simulate(cfg, opt = {}) {
+    const lite = !!opt.lite, dt = opt.dt || (lite ? 0.004 : 0.002), tMax = opt.tMax || 30;
+    const V = cfg.veh.map(p => ({ p, path: p.path, s: 0, v: p.v0, tSee: -1, sSee: null, seeAt: null, tBrake: -1, sBrake: null, vBrake: null, tStop: -1, sStop: null, slip: false }));
+    const sConf = [0, 1].map(i => (V[i].p.brake === 'distance') ? conflictS(V[i].path, V[1 - i].path) : Infinity);
+    const recs = [], seeEvery = Math.max(1, Math.round(0.01 / dt));
+    const state = a => { const q = a.path.at(a.s); return { c: q.p, th: q.th, k: q.k }; };
+    let t = 0, coll = null, minGap = Infinity, minGapT = 0, lastD = Infinity, grew = 0, step = 0;
+    let prevS = V.map(a => a.s);
+    while (t <= tMax) {
+      const S = V.map(state), O = S.map((q, i) => obb(q.c, q.th, V[i].p.L, V[i].p.W));
+      const hit = sat(O[0], O[1]);
+      if (hit) {
+        // 直前の時刻との間を二分して、最初に触れた瞬間を求める
+        let lo = 0, hi = 1; const curS = V.map(a => a.s);
+        for (let it = 0; it < 14; it++) {
+          const m = (lo + hi) / 2;
+          V.forEach((a, i) => a.s = prevS[i] + (curS[i] - prevS[i]) * m);
+          const Sm = V.map(state), Om = Sm.map((q, i) => obb(q.c, q.th, V[i].p.L, V[i].p.W));
+          if (sat(Om[0], Om[1])) hi = m; else lo = m;
+        }
+        V.forEach((a, i) => a.s = prevS[i] + (curS[i] - prevS[i]) * hi);
+        const Sh = V.map(state), Oh = Sh.map((q, i) => obb(q.c, q.th, V[i].p.L, V[i].p.W));
+        const h2 = sat(Oh[0], Oh[1]) || hit;
+        const P = contactPoint(Oh[0], Oh[1]);
+        const pre = Sh.map((q, i) => ({ c: q.c, th: q.th, vel: mul(dir(q.th), V[i].v), w: V[i].v * q.k, v: V[i].v, s: V[i].s }));
+        coll = impact(pre, P, h2.n, cfg);
+        coll.t = t - dt * (1 - hi);
+        break;
+      }
+      if (!lite && step % 25 === 0) {
+        recs.push({ t, st: S.map((q, i) => ({ c: q.c, th: q.th, v: V[i].v })) });
+        const gp = obbGap(O[0], O[1]); if (gp < minGap) { minGap = gp; minGapT = t; }
+      }
+      // 発見
+      for (let i = 0; i < 2; i++) {
+        const a = V[i];
+        if (a.tSee >= 0) continue;
+        if (a.p.brake === 'auto') {
+          if (step % seeEvery === 0) {
+            const vis = canSee(eyePos(S[i].c, S[i].th, a.p), dir(S[i].th), O[1 - i], cfg.obstacles);
+            if (vis) { a.tSee = t; a.sSee = a.s; a.seeAt = { eye: eyePos(S[i].c, S[i].th, a.p), tgt: vis.p, self: { c: S[i].c, th: S[i].th }, other: { c: S[1 - i].c, th: S[1 - i].th } }; }
+          }
+        } else if (a.p.brake === 'distance') {
+          if (sConf[i] - (a.s + a.p.L / 2) <= a.p.D) { a.tSee = t; a.sSee = a.s; a.seeAt = { eye: eyePos(S[i].c, S[i].th, a.p), tgt: S[1 - i].c, self: { c: S[i].c, th: S[i].th }, other: { c: S[1 - i].c, th: S[1 - i].th } }; }
+        }
+      }
+      // 走行（摩擦円：曲がりながらのブレーキは横方向の分だけ弱くなる）
+      prevS = V.map(a => a.s);
+      for (let i = 0; i < 2; i++) {
+        const a = V[i]; let acc = 0;
+        const lat = a.v * a.v * Math.abs(S[i].k);
+        if (lat > cfg.mu * G * 1.001) a.slip = true;
+        if (a.tSee >= 0 && t >= a.tSee + a.p.react && a.v > 0) {
+          if (a.tBrake < 0) { a.tBrake = t; a.sBrake = a.s; a.vBrake = a.v; }
+          const ramp = a.p.rise > 0 ? Math.min(1, (t - a.tBrake) / a.p.rise) : 1;
+          const amax = cfg.mu * G * a.p.eff;
+          acc = Math.min(amax * ramp, Math.sqrt(Math.max(0, amax * amax - lat * lat)));
+        }
+        const v1 = Math.max(0, a.v - acc * dt);
+        a.s += (a.v + v1) / 2 * dt;
+        if (a.v > 0 && v1 === 0) { a.tStop = t; a.sStop = a.s; }
+        a.v = v1;
+      }
+      t += dt; step++;
+      // 終了判定：両方停止、または互いに離れていく
+      const d = len(sub(S[0].c, S[1].c));
+      if (d > lastD + 1e-9) grew++; else grew = 0;
+      lastD = d;
+      if (V[0].v === 0 && V[1].v === 0) break;
+      if (grew > 50 && d > V[0].p.L + V[1].p.L + 25) break;
+      if ((V[0].v === 0 || V[1].v === 0) && grew > 50) break;
+    }
+    const res = {
+      collided: !!coll, coll, recs, minGap, minGapT, sConf, tEnd: t,
+      veh: V.map(a => ({ tSee: a.tSee, sSee: a.sSee, seeAt: a.seeAt, tBrake: a.tBrake, sBrake: a.sBrake, vBrake: a.vBrake, tStop: a.tStop, sStop: a.sStop, sEnd: a.s, vEnd: a.v, slip: a.slip })),
+    };
+    if (coll && !opt.noPost) res.post = [0, 1].map(i => postCrash(cfg.veh[i], coll.post[i], cfg.mu));
+    if (!coll) res.final = V.map(a => { const q = a.path.at(a.s); return { c: q.p, th: q.th }; });
+    return res;
+  }
+
+  /* ---------- 逆算：衝突しなくなる境界を走査＋二分探索で求める ---------- */
+  const REV_ITEMS = {
+    speed:    { label: '限界速度（回避できる最大速度）', lo: 0, hi: 160 / 3.6, n: 65 },
+    mu:       { label: '必要な制動距離・最低摩擦係数', lo: 0.05, hi: 1.20, n: 47 },
+    reaction: { label: '反応時間の限界', lo: 0, hi: 3.0, n: 61 },
+    discover: { label: '発見地点の限界距離', lo: 0, hi: 120, n: 61 },
+  };
+  function* reverseGen(build, item) {
+    const R = REV_ITEMS[item], xs = [], col = [];
+    for (let i = 0; i < R.n; i++) {
+      const x = R.lo + (R.hi - R.lo) * i / (R.n - 1);
+      xs.push(x); col.push(simulate(build(x), { lite: true, noPost: true }).collided);
+      yield i / (R.n + 20);
+    }
+    const bounds = [];
+    for (let i = 1; i < xs.length; i++) {
+      if (col[i] === col[i - 1]) continue;
+      let a = xs[i - 1], b = xs[i]; const ca = col[i - 1];
+      for (let it = 0; it < 14; it++) {
+        const m = (a + b) / 2, cm = simulate(build(m), { lite: true, noPost: true }).collided;
+        if (cm === ca) a = m; else b = m;
+        yield 0.9;
+      }
+      bounds.push({ x: ca ? b : a, from: ca, to: !ca });  // x は衝突しない側の値。to=true は「x を超えると衝突」
+    }
+    return { item, xs, col, bounds };
+  }
+
+  /* ---------- 現場推定：停止位置・痕跡から衝突直前の状態を逆算 ---------- */
+  // oA・oB：ぶつかった面のどこが当たったか（面の中央=0、端=±0.5）。画面には出さない内部の調整値
+  const PNAMES = ['ix', 'iy', 'vA', 'vB', 'hA', 'hB', 'mu', 'oA', 'oB'];
+  const PARTS = { front: v2(0.5, 0), rear: v2(-0.5, 0), left: v2(0, 0.5), right: v2(0, -0.5) };
+  function contactLocal(part, vp, o = 0) {
+    const q = PARTS[part] || PARTS.front;
+    return q.x !== 0 ? v2(q.x * vp.L, o * vp.W) : v2(o * vp.L, q.y * vp.W);
+  }
+
+  // 痕跡上をブレーキ方向と逆にたどって、ブレーキ開始時の速度を出す（摩擦円込み）
+  function backIntegrate(trace, sEnd, vEnd, mu, eff) {
+    const amax = mu * G * eff; let v2s = vEnd * vEnd; const ds = 0.1;
+    for (let s = sEnd; s > 0; s -= ds) {
+      const k = s <= trace.total ? trace.at(s).k : 0;
+      const lat = v2s * Math.abs(k);
+      const a = Math.sqrt(Math.max(amax * amax * 0.0025, amax * amax - lat * lat));
+      v2s += 2 * a * Math.min(ds, s);
+    }
+    return Math.sqrt(v2s);
+  }
+
+  function sceneModel(sc) {
+    const m = sc.veh.map(v => v.m);
+    const momentum = sc.rest[0].on && sc.rest[1].on;
+    function derive(p) {
+      const [ix, iy, vA, vB, hA, hB, mu, oA, oB] = p, I = v2(ix, iy), H = [hA, hB], VV = [vA, vB], OO = [oA || 0, oB || 0];
+      const out = { I, veh: [] };
+      for (let i = 0; i < 2; i++) {
+        const vp = sc.veh[i], c = sub(I, rotL(contactLocal(sc.part[i], vp, OO[i]), H[i]));
+        const o = { c, th: H[i], v: VV[i], vel: mul(dir(H[i]), VV[i]) };
+        const R = sc.rest[i];
+        if (R.on) {
+          // 滑りと回転は同じ摩擦で止まる：車輪の平均の滑り距離 ≒ √(移動² + (r·回転角)²) に摩擦力を掛けた仕事を、
+          // 移動と回転に（距離の2乗の比で）分ける
+          const rc = v2(R.x, R.y), d = len(sub(rc, c));
+          o.dth = angN(R.th - H[i]);
+          const ravg = 0.5 * Math.hypot(vp.wb, vp.tr), dr = ravg * Math.abs(o.dth);
+          const Etot = mu * vp.m * G * sc.fpost * Math.hypot(d, dr), share = (d * d + dr * dr) > 1e-9 ? d * d / (d * d + dr * dr) : 1;
+          const u = Math.sqrt(2 * Etot * share / vp.m);
+          const ud = R.dirOn ? dir(R.dir) : unit(sub(rc, c));
+          o.u = u; o.uvel = mul(ud, u); o.dpost = d;
+          o.w = Math.sqrt(2 * Etot * (1 - share) / vp.I);
+        }
+        const T = sc.traces[i];
+        if (T) {
+          const pr = projectS(T, c);
+          o.sI = pr.s; o.traceLen = T.total;
+          o.vb = backIntegrate(T, Math.max(0, pr.s), VV[i], mu, vp.eff);
+          o.vbMin = backIntegrate(T, Math.min(Math.max(0, pr.s), T.total), 0, mu, vp.eff);
+        }
+        out.veh.push(o);
+      }
+      if (momentum) {
+        const [a, b] = out.veh;
+        const E0 = 0.5 * m[0] * a.v * a.v + 0.5 * m[1] * b.v * b.v;
+        const E1 = 0.5 * m[0] * a.u * a.u + 0.5 * m[1] * b.u * b.u + 0.5 * sc.veh[0].I * a.w * a.w + 0.5 * sc.veh[1].I * b.w * b.w;
+        out.E0 = E0; out.E1 = E1; out.dE = E0 - E1;
+        const relPre = sub(b.vel, a.vel), relPost = sub(b.uvel, a.uvel), nn = unit(relPre);
+        out.eApp = len(relPre) > 0.1 ? -dot(relPost, nn) / dot(relPre, nn) : NaN;
+        out.closing = len(relPre);
+        out.dv = [len(sub(a.uvel, a.vel)), len(sub(b.uvel, b.vel))];
+      }
+      return out;
+    }
+    function resid(p, prior) {
+      const d = derive(p), r = [];
+      const [, , vA, vB, hA, hB, mu, oA, oB] = p;
+      if (momentum) {
+        const M = m[0] + m[1];
+        const P0 = add(mul(d.veh[0].vel, m[0]), mul(d.veh[1].vel, m[1]));
+        const P1 = add(mul(d.veh[0].uvel, m[0]), mul(d.veh[1].uvel, m[1]));
+        r.push(3 * (P0.x - P1.x) / M, 3 * (P0.y - P1.y) / M);
+        r.push(d.dE < 0 ? -3 * Math.sqrt(-2 * d.dE / M) : 0);  // 衝突でエネルギーは増えない
+      }
+      [oA, oB].forEach(o => { o = o || 0; r.push(0.4 * o, Math.abs(o) > 0.5 ? 6 * (Math.abs(o) - 0.5) : 0); });
+      for (let i = 0; i < 2; i++) {
+        const T = sc.traces[i], h = i ? hB : hA;
+        if (T) {
+          const pr = projectS(T, d.veh[i].c);
+          const sEnd = Math.min(T.total, Math.max(0, pr.s));
+          const q = T.at(sEnd);
+          r.push(8 * angN(h - q.th));                          // 衝突直前の向き ≒ 痕跡の向き
+          r.push(1.5 * pr.d);                                  // 衝突時の車の中心は痕跡（の延長）の上
+          r.push(pr.s < 0 ? 0.5 * pr.s : 0);
+        } else if (sc.hint && sc.hint[i] != null) {
+          r.push(0.5 * angN(h - sc.hint[i]));                 // 痕跡がなければ検証モードの進む向きを目安に
+        } else {
+          r.push(2 * angN(h - prior.h[i]));
+        }
+      }
+      r.push(25 * (mu - sc.mu0));
+      r.push(vA < 0 ? 5 * vA : 0, vB < 0 ? 5 * vB : 0);
+      const ext = Math.max(0, Math.abs(d.I.x) - sc.box, Math.abs(d.I.y) - sc.box);
+      r.push(0.3 * ext);
+      return r;
+    }
+    return { derive, resid, momentum };
+  }
+
+  function solveLin(A, b) {
+    const n = b.length, M = A.map((r, i) => [...r, b[i]]);
+    for (let c = 0; c < n; c++) {
+      let piv = c; for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[piv][c])) piv = r;
+      [M[c], M[piv]] = [M[piv], M[c]];
+      if (Math.abs(M[c][c]) < 1e-14) return null;
+      for (let r = 0; r < n; r++) if (r !== c) { const f = M[r][c] / M[c][c]; for (let k = c; k <= n; k++) M[r][k] -= f * M[c][k]; }
+    }
+    return M.map((r, i) => r[n] / r[i]);
+  }
+  function lm(f, x0, iters = 80) {
+    let x = x0.slice(), r = f(x), c = r.reduce((s, v) => s + v * v, 0), lam = 1e-2;
+    const n = x.length;
+    if (!n) return { x, cost: c };
+    for (let it = 0; it < iters; it++) {
+      const J = [];
+      for (let j = 0; j < n; j++) {
+        const h = 1e-6 * Math.max(1, Math.abs(x[j])), xp = x.slice(); xp[j] += h;
+        const rp = f(xp); J.push(rp.map((v, k) => (v - r[k]) / h));
+      }
+      const A = [...Array(n)].map((_, i) => [...Array(n)].map((_, j) => J[i].reduce((s, v, k) => s + v * J[j][k], 0)));
+      const g = [...Array(n)].map((_, i) => J[i].reduce((s, v, k) => s + v * r[k], 0));
+      let improved = false;
+      while (lam < 1e9) {
+        const Ad = A.map((row, i) => row.map((v, j) => i === j ? v * (1 + lam) + 1e-9 : v));
+        const dx = solveLin(Ad, g.map(v => -v));
+        if (!dx) { lam *= 10; continue; }
+        const xn = x.map((v, i) => v + dx[i]), rn = f(xn), cn = rn.reduce((s, v) => s + v * v, 0);
+        if (cn < c) { const gain = c - cn; x = xn; r = rn; c = cn; lam = Math.max(1e-7, lam * 0.3); improved = true; if (gain < 1e-12) it = iters; break; }
+        lam *= 10;
+      }
+      if (!improved) break;
+    }
+    return { x, cost: c };
+  }
+
+  // sc.locks: {名前: 固定値}（ロックしていない項目は含めない）
+  function sceneSolve(sc) {
+    const model = sceneModel(sc);
+    const hasTrace = sc.traces.map(t => !!t);
+    if (!model.momentum && !hasTrace[0] && !hasTrace[1]) return { cands: [], model, reason: '停止位置（2台分）か痕跡を入れると推定できます。' };
+    const free = PNAMES.filter(k => !(k in sc.locks) && (model.momentum || (k !== 'vA' && k !== 'vB')));
+    const fixedSpeeds = !model.momentum;
+    const ROAD = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
+    // 初期値の候補
+    const Is = [v2(0, 0)];
+    if (hasTrace[0] && hasTrace[1]) {
+      const ea = sc.traces[0].at(sc.traces[0].total), eb = sc.traces[1].at(sc.traces[1].total);
+      const da = dir(ea.th), db = dir(eb.th), den = crs(da, db);
+      if (Math.abs(den) > 0.1) { const t = crs(sub(eb.p, ea.p), db) / den; Is.push(add(ea.p, mul(da, t))); }
+      Is.push(mul(add(ea.p, eb.p), 0.5));
+    } else {
+      sc.traces.forEach(T => { if (T) { const e = T.at(T.total); Is.push(add(e.p, mul(dir(e.th), 2))); } });
+    }
+    if (sc.rest[0].on && sc.rest[1].on) Is.push(v2((sc.rest[0].x + sc.rest[1].x) / 4, (sc.rest[0].y + sc.rest[1].y) / 4));
+    const hOpts = [0, 1].map(i => hasTrace[i] ? [sc.traces[i].at(sc.traces[i].total).th] : (sc.hint && sc.hint[i] != null ? [sc.hint[i], ...ROAD.filter(r => Math.abs(angN(r - sc.hint[i])) > 0.1)] : ROAD));
+    const starts = [];
+    for (const I0 of Is) for (const ha of hOpts[0]) for (const hb of hOpts[1]) {
+      if (Math.abs(Math.sin(ha - hb)) < 0.2 && !(hasTrace[0] && hasTrace[1])) continue;   // 平行は出会い頭ではない
+      starts.push({ I0, ha, hb });
+    }
+    const cands = [];
+    for (const st of starts) {
+      const prior = { h: [st.ha, st.hb] };
+      const base = { ix: st.I0.x, iy: st.I0.y, vA: 10, vB: 10, hA: st.ha, hB: st.hb, mu: sc.mu0, oA: 0, oB: 0, ...sc.locks };
+      if (fixedSpeeds) { base.vA = sc.locks.vA ?? 0; base.vB = sc.locks.vB ?? 0; }
+      const pack = x => { const o = { ...base }; free.forEach((k, i) => o[k] = x[i]); return PNAMES.map(k => o[k]); };
+      const f = x => model.resid(pack(x), prior);
+      // 速度の初期値は運動量の連立から
+      if (model.momentum && free.includes('vA') && free.includes('vB')) {
+        const d0 = model.derive(PNAMES.map(k => base[k]));
+        const P1 = add(mul(d0.veh[0].uvel, sc.veh[0].m), mul(d0.veh[1].uvel, sc.veh[1].m));
+        const a = mul(dir(base.hA), sc.veh[0].m), b = mul(dir(base.hB), sc.veh[1].m), den = crs(a, b);
+        if (Math.abs(den) > 1e-6) { base.vA = Math.max(1, crs(P1, b) / den); base.vB = Math.max(1, crs(a, P1) / den); }
+      }
+      const x0 = free.map(k => base[k]);
+      const res = lm(f, x0);
+      const p = pack(res.x);
+      if (p[2] < -0.5 || p[3] < -0.5) continue;
+      if (!isFinite(res.cost)) continue;
+      cands.push({ p, cost: res.cost, prior });
+    }
+    cands.sort((a, b) => a.cost - b.cost);
+    const uniq = [];
+    for (const c of cands) {
+      if (uniq.some(u => Math.hypot(u.p[0] - c.p[0], u.p[1] - c.p[1]) < 0.6 && Math.abs(u.p[2] - c.p[2]) < 0.6 && Math.abs(u.p[3] - c.p[3]) < 0.6 && Math.abs(angN(u.p[4] - c.p[4])) < 0.12 && Math.abs(angN(u.p[5] - c.p[5])) < 0.12)) continue;
+      c.p[4] = angN(c.p[4]); c.p[5] = angN(c.p[5]);
+      c.d = model.derive(c.p);
+      c.score = 100 / (1 + c.cost);
+      uniq.push(c);
+      if (uniq.length >= 8) break;
+    }
+    return { cands: uniq, model, fixedSpeeds };
+  }
+
+  return {
+    G, v2, add, sub, mul, dot, crs, len, unit, dir, angN, rotL,
+    VEH_PRESETS, ROAD_PRESETS, REV_ITEMS, PNAMES,
+    makePath, straightPath, projectS, obb, sat, obbGap, canSee, eyePos, conflictS,
+    simulate, postCrash, impact, reverseGen, sceneSolve, sceneModel, backIntegrate, contactLocal,
+  };
+})();
+</script>
+
+<!-- ============================================================
+     画面部分（状態・描画・入力パネル）
+     ============================================================ -->
+<script id="ui">
+(() => {
+  const P = PHYS, { v2, add, sub, mul, len, dir, angN } = P;
+  const D2R = Math.PI / 180, R2D = 180 / Math.PI;
+  const LS_STATE = 'jikoSim.state.v1', LS_PINS = 'jikoSim.pins.v1';
+  const NOTE = 'この数値は理論上の計算であり、実際の事故を完全に再現するものではありません。';
+  const NOTE_SCENE = '現場推定の値は、停止位置・痕跡・摩擦係数の仮定から逆算した推定値で、幅があります。';
+  const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+
+  /* ---------- 状態 ---------- */
+  function vehFromPreset(key, extra) {
+    const p = P.VEH_PRESETS[key];
+    return { preset: key, m: p.m, L: p.L, W: p.W, wb: p.wb, tr: p.tr, eyeF: p.eyeF, eyeR: p.eyeR, k: p.k, eff: Math.round(p.eff * 100),
+      Ifac: 1.0, v0: 40, react: 0.75, rise: 0.1, abs: false, post: 'lock', brake: 'auto', D: 30, x: 0, y: 0, hdg: 0, path: null, ...extra };
+  }
+  function defaultState() {
+    return {
+      mode: 'verify',
+      road: { xLanes: 2, xLaneW: 3.0, yLanes: 2, yLaneW: 3.0, priority: 'x', stop: true, snap: true, preset: 'dry', mu: 0.75 },
+      obstacles: [{ x1: -30, y1: -30, x2: -4.5, y2: -4.5, label: '建物' }],
+      coll: { e: 0.10, muc: 0.40 },
+      veh: [vehFromPreset('car', { v0: 50, x: -38, y: 1.5, hdg: 0 }), vehFromPreset('car', { v0: 30, x: -1.5, y: -25, hdg: 90 })],
+      rev: { item: 'speed', who: 0, drawAt: 'limit' },
+      scene: {
+        traces: [[], []],
+        rest: [{ on: true, x: 9, y: 9, th: 70, dirOn: false, dir: 45 }, { on: true, x: 7, y: 13, th: 140, dirOn: false, dir: 60 }],
+        part: ['front', 'left'], fpost: 0.8, dmu: 0.10, locks: {}, sel: 0,
+      },
+    };
+  }
+  let S = defaultState();
+  try { const j = JSON.parse(lsGet(LS_STATE) || 'null'); if (j && j.veh) S = mergeState(j); } catch (e) {}
+  function mergeState(j) {
+    const d = defaultState();
+    const o = { ...d, ...j, road: { ...d.road, ...(j.road || {}) }, coll: { ...d.coll, ...(j.coll || {}) }, rev: { ...d.rev, ...(j.rev || {}) }, scene: { ...d.scene, ...(j.scene || {}) } };
+    o.veh = [0, 1].map(i => ({ ...d.veh[i], ...((j.veh || [])[i] || {}) }));
+    o.scene.rest = [0, 1].map(i => ({ ...d.scene.rest[i], ...((o.scene.rest || [])[i] || {}) }));
+    if (!Array.isArray(o.scene.traces) || o.scene.traces.length !== 2) o.scene.traces = [[], []];
+    if (!Array.isArray(o.obstacles)) o.obstacles = d.obstacles;
+    return o;
+  }
+  let pins = {}; try { pins = JSON.parse(lsGet(LS_PINS) || '{}') || {}; } catch (e) {}
+  const openNow = {};
+  const saveState = () => lsSet(LS_STATE, JSON.stringify(S));
+
+  /* ---------- 計算用の設定を組み立てる ---------- */
+  const pathCache = new Map();
+  function vehPath(v) {
+    const key = v.path ? 'p' + JSON.stringify(v.path) : `s${v.x},${v.y},${v.hdg}`;
+    let p = pathCache.get(key);
+    if (!p) {
+      p = v.path ? P.makePath(v.path.map(q => v2(q[0], q[1])), { h: 0.25, smooth: 0 }) : P.straightPath(v2(v.x, v.y), v.hdg * D2R);
+      if (pathCache.size > 200) pathCache.clear();
+      pathCache.set(key, p);
+    }
+    return p;
+  }
+  function vehParams(v) {
+    return { m: v.m, L: v.L, W: v.W, wb: v.wb, tr: v.tr, I: v.m * (v.L * v.L + v.W * v.W) / 12 * v.Ifac, eyeF: v.eyeF, eyeR: v.eyeR, k: v.k,
+      v0: v.v0 / 3.6, react: v.react, eff: v.eff / 100, rise: v.rise, abs: v.abs, post: v.post, brake: v.brake, D: v.D };
+  }
+  function obstaclesN() { return S.obstacles.map(o => ({ x1: Math.min(o.x1, o.x2), x2: Math.max(o.x1, o.x2), y1: Math.min(o.y1, o.y2), y2: Math.max(o.y1, o.y2), label: o.label })); }
+  function buildCfg() {
+    return { mu: S.road.mu, obstacles: obstaclesN(), e: S.coll.e, muc: S.coll.muc, veh: S.veh.map(v => ({ ...vehParams(v), path: vehPath(v) })) };
+  }
+  const roadW = () => ({ wx: S.road.xLanes * S.road.xLaneW, wy: S.road.yLanes * S.road.yLaneW });
+  function vehStart(v) { if (v.path) { const p = vehPath(v), q = p.at(0); return { c: q.p, th: q.th }; } return { c: v2(v.x, v.y), th: v.hdg * D2R }; }
+
+  /* ---------- 結果 ---------- */
+  let simRes = null, simCfg = null, avoid = null, revRes = null, revSim = null, sceneRes = null;
+  let job = null, jobGen = 0;
+  function runSim() { simCfg = buildCfg(); simRes = P.simulate(simCfg); }
+  function startJob(gen, onDone, onProg) {
+    const my = ++jobGen; job = my;
+    const tick = () => {
+      if (job !== my) return;
+      const t0 = performance.now();
+      while (performance.now() - t0 < 14) {
+        const r = gen.next();
+        if (r.done) { job = null; onDone(r.value); return; }
+        if (onProg) onProg(r.value);
+      }
+      setTimeout(tick, 0);
+    };
+    setTimeout(tick, 0);
+  }
+  function revBuilder(item, who) {
+    const base = buildCfg();
+    return x => {
+      const c = { ...base, veh: base.veh.map(v => ({ ...v })) };
+      if (item === 'speed') c.veh[who].v0 = x;
+      else if (item === 'mu') c.mu = x;
+      else if (item === 'reaction') c.veh[who].react = x;
+      else if (item === 'discover') { c.veh[who].brake = 'distance'; c.veh[who].D = x; }
+      return c;
+    };
+  }
+  // 検証モードの「回避できたか」：両車の限界速度を後回しで計算
+  function* avoidGen() {
+    const out = [];
+    for (const who of [0, 1]) {
+      if (S.veh[who].brake === 'never') { out.push(null); continue; }
+      const r = yield* P.reverseGen(revBuilder('speed', who), 'speed');
+      out.push(r);
+    }
+    return out;
+  }
+  function interpretSpeed(r) {
+    if (!r) return null;
+    if (!r.col[0] && !r.bounds.length) return { all: true };
+    if (r.col[0]) return { none: true, r };
+    return { vmax: r.bounds[0].x, r };
+  }
+
+  /* ---------- 計算の実行（変更のたびに） ---------- */
+  let schedT = 0;
+  function schedule(delay = 40) { clearTimeout(schedT); schedT = setTimeout(compute, delay); }
+  function compute() {
+    saveState();
+    jobGen++; job = null;
+    if (S.mode === 'verify') {
+      runSim(); avoid = null; renderResult(); draw();
+      if (simRes.collided) {
+        avoid = { busy: true };
+        startJob(avoidGen(), out => { avoid = { out, lim: out.map(interpretSpeed) }; renderResult(); draw(); });
+      }
+    } else if (S.mode === 'reverse') {
+      runSim(); revRes = { busy: true, prog: 0 }; revSim = null; renderResult(); draw();
+      const { item, who } = S.rev;
+      const builder = revBuilder(item, who);
+      startJob(P.reverseGen(builder, item), r => {
+        revRes = interpretRev(r);
+        if (revRes.limit != null && S.rev.drawAt === 'limit') { const c = builder(revRes.limit); revSim = { cfg: c, res: P.simulate(c) }; }
+        renderResult(); draw();
+      }, p => { revRes.prog = p; const el = document.getElementById('revprog'); if (el) el.textContent = Math.round(p * 100) + '%'; });
+    } else {
+      computeScene(); renderResult(); draw();
+    }
+  }
+  function interpretRev(r) {
+    const o = { r, item: r.item };
+    const noColAt = x => { // x での衝突の有無（走査結果から）
+      let i = r.xs.findIndex(v => v >= x); if (i < 0) i = r.xs.length - 1; return !r.col[i];
+    };
+    if (r.item === 'speed' || r.item === 'reaction') {
+      if (r.col[0]) { o.limit = null; o.msg = r.item === 'speed' ? '速度0でも衝突します（相手側の条件だけで衝突）。' : '反応時間0でも衝突します。'; }
+      else if (!r.bounds.length) { o.limit = r.xs[r.xs.length - 1]; o.all = true; }
+      else o.limit = r.bounds[0].x;
+    } else {
+      const last = r.col[r.col.length - 1];
+      if (last) { o.limit = null; o.msg = r.item === 'mu' ? '摩擦係数をどこまで上げても衝突します。' : 'どれだけ手前で発見しても衝突します。'; }
+      else if (!r.col[0] && !r.bounds.length) { o.limit = r.xs[0]; o.all = true; }
+      else o.limit = r.bounds[r.bounds.length - 1].x;
+    }
+    o.noColAt = noColAt;
+    return o;
+  }
+
+  /* ---------- 現場推定 ---------- */
+  const traceCache = [null, null];
+  function tracePath(i) {
+    const t = S.scene.traces[i];
+    if (!t || t.length < 2) return null;
+    let total = 0; for (let k = 1; k < t.length; k++) total += Math.hypot(t[k][0] - t[k - 1][0], t[k][1] - t[k - 1][1]);
+    if (total < 0.5) return null;
+    const key = JSON.stringify(t);
+    if (traceCache[i] && traceCache[i].key === key) return traceCache[i].p;
+    const p = P.makePath(t.map(q => v2(q[0], q[1])), { h: 0.25, smooth: 4 });
+    traceCache[i] = { key, p }; return p;
+  }
+  function sceneInput(lockOverride) {
+    const vp = S.veh.map(v => vehParams(v));
+    const locks = {};
+    for (const [k, v] of Object.entries(lockOverride || S.scene.locks)) {
+      if (v == null || !isFinite(v)) continue;
+      locks[k] = (k === 'vA' || k === 'vB') ? v / 3.6 : (k === 'hA' || k === 'hB') ? v * D2R : v;
+    }
+    const { wx, wy } = roadW();
+    return {
+      veh: vp, mu0: S.road.mu, fpost: S.scene.fpost, part: S.scene.part,
+      rest: S.scene.rest.map(r => ({ on: r.on, x: r.x, y: r.y, th: r.th * D2R, dirOn: r.dirOn, dir: r.dir * D2R })),
+      traces: [tracePath(0), tracePath(1)], locks, box: Math.max(wx, wy) / 2 + 6,
+      hint: S.veh.map(v => vehStart(v).th),
+    };
+  }
+  function computeScene() {
+    const inp = sceneInput();
+    const r = P.sceneSolve(inp);
+    // 幅：摩擦係数を ±dmu 動かして解き直す（選択中の候補に近い解を採る）
+    r.range = null;
+    if (r.cands.length && S.scene.dmu > 0) {
+      const sel = r.cands[Math.min(S.scene.sel, r.cands.length - 1)];
+      const vals = [];
+      for (const dm of [-S.scene.dmu, S.scene.dmu]) {
+        const mu = Math.max(0.05, S.road.mu + dm);
+        const L2 = { ...S.scene.locks, mu };
+        const r2 = P.sceneSolve(sceneInput(L2));
+        if (!r2.cands.length) continue;
+        let best = r2.cands[0], bd = Infinity;
+        for (const c of r2.cands) { const d = Math.hypot(c.p[0] - sel.p[0], c.p[1] - sel.p[1]) + Math.abs(angN(c.p[4] - sel.p[4])) * 5 + Math.abs(angN(c.p[5] - sel.p[5])) * 5; if (d < bd) { bd = d; best = c; } }
+        vals.push(best);
+      }
+      if (vals.length) r.range = vals;
+    }
+    r.inp = inp;
+    sceneRes = r;
+    if (S.scene.sel >= r.cands.length) S.scene.sel = 0;
+  }
+
+  /* ---------- 描画 ---------- */
+  const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+  const view = { cx: 0, cy: 0, scale: 8 };   // 世界座標(cx,cy)が画面中央、scale は px/m
+  let cssW = 300, cssH = 300, dpr = 1;
+  function resize() {
+    const r = cv.getBoundingClientRect(); dpr = Math.min(3, window.devicePixelRatio || 1);
+    cssW = Math.max(50, r.width); cssH = Math.max(50, r.height);
+    cv.width = Math.round(cssW * dpr); cv.height = Math.round(cssH * dpr);
+    draw();
+  }
+  function fitPoints() {
+    const pts = [v2(-8, -8), v2(8, 8)];
+    if (S.mode === 'scene') {
+      S.scene.rest.forEach(r => { if (r.on) pts.push(v2(r.x, r.y)); });
+      S.scene.traces.forEach(t => (t || []).forEach(q => pts.push(v2(q[0], q[1]))));
+      const c = sceneRes && sceneRes.cands[S.scene.sel]; if (c) pts.push(c.d.I);
+    } else {
+      S.veh.forEach(v => pts.push(vehStart(v).c));
+      const r = S.mode === 'reverse' && revSim ? revSim.res : simRes;
+      if (r && r.collided && r.post) r.post.forEach(pc => pts.push(pc.rest.c));
+      if (r && r.final) r.final.forEach(f => pts.push(f.c));
+    }
+    return pts;
+  }
+  function fit() {
+    const pts = fitPoints();
+    const x1 = Math.min(...pts.map(p => p.x)), x2 = Math.max(...pts.map(p => p.x)), y1 = Math.min(...pts.map(p => p.y)), y2 = Math.max(...pts.map(p => p.y));
+    view.scale = clamp(Math.min(cssW / (x2 - x1 + 10), (cssH - 30) / (y2 - y1 + 10)), 1.5, 40);
+    view.cx = (x1 + x2) / 2; view.cy = (y1 + y2) / 2 - 12 / view.scale;
+    draw();
+  }
+  const COL = { A: '#2563d9', B: '#e0522a', road: '#cfd2d6', ground: '#f4f4f0', line: '#ffffff', center: '#e2a100', edge: '#7b8187', obs: '#9aa1a8' };
+  const vcol = i => i ? COL.B : COL.A;
+  const vname = i => i ? 'B' : 'A';
+
+  function drawScene(g, W, H, vw, opts = {}) {
+    const T = p => [W / 2 + (p.x - vw.cx) * vw.scale, H / 2 - (p.y - vw.cy) * vw.scale];
+    const sc = vw.scale;
+    placed = []; fk = opts.export ? 1.7 : 1;
+    g.save();
+    g.fillStyle = COL.ground; g.fillRect(0, 0, W, H);
+    // 方眼（5 m）
+    const wl = (0 - W / 2) / sc + vw.cx, wr = (W - W / 2) / sc + vw.cx, wt = vw.cy + H / 2 / sc, wbm = vw.cy - H / 2 / sc;
+    const gs = sc > 5 ? 5 : sc > 1.5 ? 10 : 50;
+    g.strokeStyle = 'rgba(0,0,0,.05)'; g.lineWidth = 1; g.beginPath();
+    for (let x = Math.ceil(wl / gs) * gs; x <= wr; x += gs) { const [X] = T(v2(x, 0)); g.moveTo(X, 0); g.lineTo(X, H); }
+    for (let y = Math.ceil(wbm / gs) * gs; y <= wt; y += gs) { const [, Y] = T(v2(0, y)); g.moveTo(0, Y); g.lineTo(W, Y); }
+    g.stroke();
+    drawRoads(g, T, sc);
+    // 障害物
+    for (const o of obstaclesN()) {
+      const [x1, y1] = T(v2(o.x1, o.y2)), [x2, y2] = T(v2(o.x2, o.y1));
+      g.fillStyle = 'rgba(120,128,138,.55)'; g.fillRect(x1, y1, x2 - x1, y2 - y1);
+      g.save(); g.beginPath(); g.rect(x1, y1, x2 - x1, y2 - y1); g.clip();
+      g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 1; g.beginPath();
+      for (let d = -Math.abs(y2 - y1); d < Math.abs(x2 - x1); d += 9) { g.moveTo(x1 + d, y2); g.lineTo(x1 + d + (y2 - y1), y1); }
+      g.stroke(); g.restore();
+      g.strokeStyle = '#6b737b'; g.lineWidth = 1.2; g.strokeRect(x1, y1, x2 - x1, y2 - y1);
+      if (o.label) { g.fillStyle = '#3e454c'; g.font = '600 11px system-ui,sans-serif'; g.textAlign = 'center'; g.fillText(o.label, (x1 + x2) / 2, (y1 + y2) / 2 + 4); }
+    }
+    if (S.mode === 'scene') drawSceneMode(g, T, sc);
+    else if (S.mode === 'reverse') { if (revSim) drawSimResult(g, T, sc, revSim.cfg, revSim.res, { label: '限界値' }); else if (simRes) drawSimResult(g, T, sc, simCfg, simRes, {}); }
+    else if (simRes) drawSimResult(g, T, sc, simCfg, simRes, { avoid: true });
+    // 方位と縮尺
+    g.fillStyle = '#444'; g.font = '700 12px system-ui,sans-serif'; g.textAlign = 'center';
+    g.beginPath(); g.moveTo(W - 18, 40); g.lineTo(W - 24, 54); g.lineTo(W - 18, 50); g.lineTo(W - 12, 54); g.closePath(); g.fill();
+    g.fillText('N', W - 18, 36);
+    const bar = gs * (sc * gs < 40 ? 2 : 1), bx = 12, by = H - (opts.export ? 14 : 26);
+    g.strokeStyle = '#333'; g.lineWidth = 2; g.beginPath(); g.moveTo(bx, by); g.lineTo(bx + bar * sc, by); g.moveTo(bx, by - 4); g.lineTo(bx, by + 4); g.moveTo(bx + bar * sc, by - 4); g.lineTo(bx + bar * sc, by + 4); g.stroke();
+    g.fillStyle = '#333'; g.textAlign = 'left'; g.font = '11px system-ui,sans-serif'; g.fillText(bar + ' m', bx + bar * sc + 5, by + 4);
+    g.restore();
+  }
+  function drawRoads(g, T, sc) {
+    const { wx, wy } = roadW(), R = 400, r = S.road;
+    const rect = (x1, y1, x2, y2) => { const [a, b] = T(v2(x1, y2)), [c, d] = T(v2(x2, y1)); g.fillRect(a, b, c - a, d - b); };
+    g.fillStyle = COL.road; rect(-R, -wx / 2, R, wx / 2); rect(-wy / 2, -R, wy / 2, R);
+    const line = (a, b, w, col, dash) => { const [x1, y1] = T(a), [x2, y2] = T(b); g.strokeStyle = col; g.lineWidth = Math.max(1, w * sc); g.setLineDash(dash ? dash.map(d => d * sc) : []); g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); g.setLineDash([]); };
+    // 端の線（交差点内は描かない）
+    const ex = wy / 2, ey = wx / 2;
+    for (const s of [-1, 1]) {
+      line(v2(-R, s * ey), v2(-ex, s * ey), 0.12, COL.edge); line(v2(ex, s * ey), v2(R, s * ey), 0.12, COL.edge);
+      line(v2(s * ex, -R), v2(s * ex, -ey), 0.12, COL.edge); line(v2(s * ex, ey), v2(s * ex, R), 0.12, COL.edge);
+    }
+    // 車線の区切り
+    const lanes = (axis) => {
+      const n = axis === 'x' ? r.xLanes : r.yLanes, lw = axis === 'x' ? r.xLaneW : r.yLaneW, w = n * lw;
+      const through = r.priority === axis, edge = axis === 'x' ? ex : ey;
+      for (let k = 1; k < n; k++) {
+        const o = -w / 2 + k * lw, center = k === n / 2;
+        const segs = through && center ? [[-R, R]] : [[-R, -edge], [edge, R]];
+        for (const [a, b] of segs) {
+          const p1 = axis === 'x' ? v2(a, o) : v2(o, a), p2 = axis === 'x' ? v2(b, o) : v2(o, b);
+          if (center) line(p1, p2, 0.15, COL.center); else line(p1, p2, 0.12, COL.line, [3, 4.5]);
+        }
+      }
+    };
+    lanes(r.priority === 'x' ? 'y' : 'x'); lanes(r.priority === 'x' ? 'x' : 'y');
+    // 一時停止
+    if (r.stop && r.priority !== 'none') {
+      const minor = r.priority === 'x' ? 'y' : 'x';
+      g.font = `700 ${Math.max(8, 1.1 * sc)}px system-ui,sans-serif`; g.fillStyle = '#fff'; g.textAlign = 'center';
+      if (minor === 'y') {
+        const yl = ey + 1.5;
+        line(v2(-wy / 2, -yl), v2(0, -yl), 0.45, '#fff'); line(v2(0, yl), v2(wy / 2, yl), 0.45, '#fff');
+        if (sc > 4) { const [a, b] = T(v2(-wy / 4, -yl - 3.5)); g.fillText('止まれ', a, b); const [c, d] = T(v2(wy / 4, yl + 3.5)); g.save(); g.translate(c, d); g.rotate(Math.PI); g.fillText('止まれ', 0, 0); g.restore(); }
+      } else {
+        const xl = ex + 1.5;
+        line(v2(-xl, 0), v2(-xl, wx / 2), 0.45, '#fff'); line(v2(xl, -wx / 2), v2(xl, 0), 0.45, '#fff');
+        if (sc > 4) { const [a, b] = T(v2(-xl - 3.5, wx / 4)); g.save(); g.translate(a, b); g.rotate(Math.PI / 2); g.fillText('止まれ', 0, 0); g.restore(); const [c, d] = T(v2(xl + 3.5, -wx / 4)); g.save(); g.translate(c, d); g.rotate(-Math.PI / 2); g.fillText('止まれ', 0, 0); g.restore(); }
+      }
+    }
+  }
+  function drawCar(g, T, sc, c, th, vp, col, o = {}) {
+    const O = P.obb(c, th, vp.L, vp.W);
+    g.beginPath(); O.pts.forEach((p, i) => { const [x, y] = T(p); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.closePath();
+    if (o.fill !== false) { g.globalAlpha = o.alpha ?? 0.85; g.fillStyle = o.fillCol || col; g.fill(); g.globalAlpha = 1; }
+    g.strokeStyle = o.stroke || col; g.lineWidth = o.lw || 1.6; g.setLineDash(o.dash || []); g.stroke(); g.setLineDash([]);
+    // 前を示す三角
+    if (o.front !== false) {
+      const f = dir(th), l = v2(-f.y, f.x), tip = add(c, mul(f, vp.L / 2 - 0.15)), b1 = add(add(c, mul(f, vp.L / 2 - Math.min(1.2, vp.L * 0.3))), mul(l, vp.W * 0.32)), b2 = sub(add(c, mul(f, vp.L / 2 - Math.min(1.2, vp.L * 0.3))), mul(l, vp.W * 0.32));
+      g.beginPath(); [tip, b1, b2].forEach((p, i) => { const [x, y] = T(p); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.closePath();
+      g.fillStyle = o.fill === false ? (o.stroke || col) : 'rgba(255,255,255,.85)'; g.globalAlpha = o.fill === false ? 0.6 : 1; g.fill(); g.globalAlpha = 1;
+    }
+    if (o.label) { const [x, y] = T(c); g.fillStyle = o.fill === false ? (o.stroke || col) : '#fff'; g.font = `800 ${Math.max(10, Math.min(16, vp.W * sc * 0.7))}px system-ui,sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(o.label, x, y); g.textBaseline = 'alphabetic'; }
+  }
+  function polyline(g, T, pts, col, w, dash) {
+    if (pts.length < 2) return;
+    g.strokeStyle = col; g.lineWidth = w; g.setLineDash(dash || []); g.beginPath();
+    pts.forEach((p, i) => { const [x, y] = T(p); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke(); g.setLineDash([]);
+  }
+  let placed = [], fk = 1;   // 描いたラベルの範囲（重なったら下へずらす）／文字の倍率（画像保存のとき大きく）
+  function tag(g, T, p, text, col, dx = 6, dy = -6) {
+    if (!text) return;
+    const [x, y] = T(p); g.font = `600 ${11 * fk}px system-ui,sans-serif`; g.textAlign = 'left';
+    const w = g.measureText(text).width + 6 * fk, h = 15 * fk;
+    let bx = x + dx * fk - 3 * fk, by = y + dy * fk - 11 * fk;
+    for (let k = 0; k < 8; k++) {
+      const hit = placed.find(r => bx < r.x + r.w && bx + w > r.x && by < r.y + r.h && by + h > r.y);
+      if (!hit) break;
+      by = hit.y + hit.h + 1;
+    }
+    placed.push({ x: bx, y: by, w, h });
+    g.fillStyle = 'rgba(255,255,255,.88)'; g.fillRect(bx, by, w, h);
+    g.fillStyle = col; g.fillText(text, bx + 3 * fk, by + 11 * fk);
+  }
+  function star(g, T, p, r = 9, col = '#d4121b') {
+    const [x, y] = T(p); g.beginPath();
+    for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? r * 0.45 : r; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
+    g.closePath(); g.fillStyle = col; g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.stroke();
+  }
+  function wheelLine(path, s0, s1, vp, off) {
+    const pts = [];
+    for (let s = s0; s <= s1 + 1e-6; s += 0.5) { const q = path.at(Math.min(s, s1)), f = dir(q.th), l = v2(-f.y, f.x); pts.push(add(add(q.p, mul(f, -vp.wb / 2)), mul(l, off))); }
+    return pts;
+  }
+
+  function drawSimResult(g, T, sc, cfg, res, o) {
+    const sts = S.veh.map(vehStart);
+    // 経路（予定）
+    cfg.veh.forEach((vp, i) => {
+      const end = res.collided ? res.coll.pre[i].s : res.veh[i].sEnd;
+      const pts = []; for (let s = 0; s <= end; s += 1) pts.push(vp.path.at(s).p); pts.push(vp.path.at(end).p);
+      polyline(g, T, pts, vcol(i), 1.2, [4, 4]);
+    });
+    // 発見の視線
+    res.veh.forEach((v, i) => {
+      if (!v.seeAt) return;
+      polyline(g, T, [v.seeAt.eye, v.seeAt.tgt], vcol(i), 1, [2, 3]);
+      drawCar(g, T, sc, v.seeAt.self.c, v.seeAt.self.th, cfg.veh[i], vcol(i), { fill: false, dash: [3, 2], lw: 1, front: false });
+      tag(g, T, v.seeAt.self.c, `${vname(i)} 発見 ${v.tSee.toFixed(2)}s`, vcol(i), 8, 16);
+    });
+    // ブレーキ痕
+    res.veh.forEach((v, i) => {
+      if (v.sBrake == null) return;
+      const vp = cfg.veh[i], end = res.collided ? res.coll.pre[i].s : (v.sStop ?? v.sEnd);
+      if (end - v.sBrake < 0.05) return;
+      const offs = vp.tr > 0 ? [vp.tr / 2, -vp.tr / 2] : [0];
+      offs.forEach(off => polyline(g, T, wheelLine(vp.path, v.sBrake, end, vp, off), vp.abs ? 'rgba(40,40,40,.35)' : 'rgba(20,20,20,.85)', Math.max(1.5, 0.22 * sc), vp.abs ? [5, 4] : null));
+      const q = vp.path.at(v.sBrake);
+      tag(g, T, q.p, `${vname(i)} ブレーキ ${(v.vBrake * 3.6).toFixed(0)}km/h`, vcol(i), 8, -10);
+    });
+    // 出発位置
+    cfg.veh.forEach((vp, i) => { const q = vp.path.at(0); drawCar(g, T, sc, q.p, q.th, vp, vcol(i), { alpha: 0.35, label: vname(i), lw: 1.2 }); });
+    if (res.collided) {
+      const C = res.coll;
+      // 衝突後の滑り跡と軌跡
+      res.post.forEach((pc, i) => {
+        pc.tracks.forEach(tk => polyline(g, T, tk, 'rgba(60,60,60,.55)', Math.max(1, 0.12 * sc)));
+        polyline(g, T, pc.path.map(q => q.c), vcol(i), 1.6, [6, 3]);
+        pc.frames.slice(1, -1).forEach(f => drawCar(g, T, sc, f.c, f.th, cfg.veh[i], vcol(i), { fill: false, lw: 0.6, front: false }));
+      });
+      C.pre.forEach((st, i) => drawCar(g, T, sc, st.c, st.th, cfg.veh[i], vcol(i), { alpha: 0.55, lw: 2, label: vname(i) }));
+      res.post.forEach((pc, i) => {
+        drawCar(g, T, sc, pc.rest.c, pc.rest.th, cfg.veh[i], vcol(i), { alpha: 0.95, lw: 2, label: vname(i), stroke: '#111' });
+        tag(g, T, pc.rest.c, `${vname(i)} 停止`, vcol(i), 10, 4);
+      });
+      star(g, T, C.P);
+      tag(g, T, C.P, `衝突 ${(C.vrel * 3.6).toFixed(0)}km/h差`, '#b0101a', 10, -8);
+    } else {
+      res.final.forEach((f, i) => drawCar(g, T, sc, f.c, f.th, cfg.veh[i], vcol(i), { alpha: 0.9, lw: 2, label: vname(i), stroke: '#111' }));
+      // 最接近
+      if (res.recs.length) {
+        let best = null; for (const r of res.recs) if (Math.abs(r.t - res.minGapT) < 1e-9) best = r;
+        if (best) best.st.forEach((q, i) => drawCar(g, T, sc, q.c, q.th, cfg.veh[i], vcol(i), { fill: false, lw: 1, dash: [2, 2], front: false }));
+      }
+    }
+    // 回避判定：限界速度で走っていたら止まる位置
+    if (o.avoid && avoid && avoid.lim) {
+      avoid.lim.forEach((L, i) => {
+        if (!L || L.vmax == null) return;
+        const vp = cfg.veh[i], v = res.veh[i];
+        if (v.sBrake == null && v.sSee == null) return;
+        const vlim = L.vmax, sSee = v.sSee ?? 0;
+        // 限界速度での停止位置（発見位置は同じと仮定した目安）
+        const dStop = vlim * vp.react + vlim * vp.rise / 2 + vlim * vlim / (2 * cfg.mu * P.G * vp.eff);
+        const q = vp.path.at(sSee + dStop);
+        drawCar(g, T, sc, q.p, q.th, vp, '#1f8a4c', { fill: false, dash: [5, 3], lw: 1.4, stroke: '#1f8a4c' });
+        tag(g, T, q.p, `${vname(i)} ${(vlim * 3.6).toFixed(0)}km/hなら停止`, '#1f8a4c', 8, -12);
+      });
+    }
+  }
+
+  function drawSceneMode(g, T, sc) {
+    const sv = S.scene;
+    // 痕跡
+    [0, 1].forEach(i => {
+      const t = sv.traces[i]; if (!t || t.length < 2) return;
+      polyline(g, T, t.map(q => v2(q[0], q[1])), 'rgba(20,20,20,.85)', Math.max(2, 0.25 * sc));
+      polyline(g, T, t.map(q => v2(q[0], q[1])), vcol(i), Math.max(1, 0.08 * sc));
+      const a = t[t.length - 2], b = t[t.length - 1], ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+      const tip = v2(b[0], b[1]); const [x, y] = T(tip);
+      g.save(); g.translate(x, y); g.rotate(-ang); g.fillStyle = vcol(i); g.beginPath(); g.moveTo(4, 0); g.lineTo(-7, 5); g.lineTo(-7, -5); g.closePath(); g.fill(); g.restore();
+      tag(g, T, v2(t[0][0], t[0][1]), `${vname(i)} 痕跡`, vcol(i), 6, -6);
+    });
+    if (drawing && drawing.pts.length > 1) polyline(g, T, drawing.pts.map(q => v2(q[0], q[1])), vcol(drawing.i), 2.5);
+    const r = sceneRes, c = r && r.cands[S.scene.sel];
+    // 停止位置
+    [0, 1].forEach(i => {
+      const R = sv.rest[i]; if (!R.on) return;
+      const vp = vehParams(S.veh[i]);
+      drawCar(g, T, sc, v2(R.x, R.y), R.th * D2R, vp, vcol(i), { alpha: 0.95, stroke: '#111', lw: 2, label: vname(i) });
+      tag(g, T, v2(R.x, R.y), `${vname(i)} 停止位置`, vcol(i), 10, 4);
+      if (R.dirOn) { const q = add(v2(R.x, R.y), mul(dir(R.dir * D2R), 3)); polyline(g, T, [v2(R.x, R.y), q], vcol(i), 2); }
+    });
+    if (!c) return;
+    const d = c.d;
+    [0, 1].forEach(i => {
+      const o = d.veh[i], vp = vehParams(S.veh[i]);
+      // 推定ルート（衝突前）
+      const T_ = r.inp.traces[i];
+      if (T_) {
+        const back = (o.vb || 0) * vp.react + 15;
+        const pre = [T_.at(-back).p, T_.at(0).p];
+        polyline(g, T, pre, vcol(i), 1.6, [6, 4]);
+        if (o.sI > T_.total) polyline(g, T, [T_.at(T_.total).p, d.I], vcol(i), 1.6, [6, 4]);
+        tag(g, T, T_.at(-back).p, `${vname(i)} 推定ルート`, vcol(i), 6, 14);
+      } else {
+        polyline(g, T, [sub(o.c, mul(dir(o.th), 30)), o.c], vcol(i), 1.6, [6, 4]);
+      }
+      // 衝突後の移動
+      if (o.uvel) polyline(g, T, [o.c, v2(sv.rest[i].x, sv.rest[i].y)], vcol(i), 1.4, [2, 3]);
+      drawCar(g, T, sc, o.c, o.th, vp, vcol(i), { alpha: 0.5, lw: 2, label: vname(i) });
+    });
+    star(g, T, d.I);
+    tag(g, T, d.I, '推定衝突地点', '#b0101a', 10, -8);
+  }
+
+  function draw() {
+    if (!cv.width) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawScene(ctx, cssW, cssH, view);
+  }
+
+  /* ---------- 図の操作（ドラッグ・ピンチ・痕跡の手描き） ---------- */
+  const toWorld = (x, y) => v2((x - cssW / 2) / view.scale + view.cx, -(y - cssH / 2) / view.scale + view.cy);
+  let drag = null, drawing = null, drawTool = -1;
+  const ptrs = new Map();
+  function hitTest(w) {
+    if (S.mode === 'scene') {
+      for (const i of [0, 1]) { const R = S.scene.rest[i]; if (!R.on) continue; const vp = S.veh[i]; const O = P.obb(v2(R.x, R.y), R.th * D2R, Math.max(vp.L, 2), Math.max(vp.W, 1.4)); if (inO(w, O)) return { kind: 'rest', i, off: sub(v2(R.x, R.y), w) }; }
+      if (sceneRes && sceneRes.cands[S.scene.sel]) { const I = sceneRes.cands[S.scene.sel].d.I; if (len(sub(I, w)) < 14 / view.scale + 0.5) return { kind: 'impact', off: sub(I, w) }; }
+    } else {
+      for (const i of [0, 1]) { const v = S.veh[i], st = vehStart(v); const O = P.obb(st.c, st.th, Math.max(v.L, 2.5), Math.max(v.W, 1.6) + 0.6); if (inO(w, O)) return { kind: 'veh', i, off: sub(st.c, w) }; }
+    }
+    const obs = S.obstacles;
+    for (let k = obs.length - 1; k >= 0; k--) { const o = obs[k]; if (w.x >= Math.min(o.x1, o.x2) && w.x <= Math.max(o.x1, o.x2) && w.y >= Math.min(o.y1, o.y2) && w.y <= Math.max(o.y1, o.y2)) return { kind: 'obs', k, start: w, orig: { ...o } }; }
+    return null;
+  }
+  const inO = (p, O) => { const d = sub(p, O.c); return Math.abs(P.dot(d, O.f)) <= O.hl && Math.abs(P.dot(d, O.l)) <= O.hw; };
+  function snapVeh(v, p) {
+    const { wx, wy } = roadW(), r = S.road;
+    if (!r.snap) { v.x = round1(p.x); v.y = round1(p.y); return; }
+    if (Math.abs(p.x) >= Math.abs(p.y)) {
+      const hd = p.x < 0 ? 0 : 180, n = r.xLanes / 2, lw = r.xLaneW;
+      const centers = [...Array(Math.max(1, n))].map((_, k) => hd === 0 ? wx / 2 - lw * (k + 0.5) : -wx / 2 + lw * (k + 0.5));
+      v.hdg = hd; v.x = round1(p.x); v.y = centers.reduce((b, c) => Math.abs(c - p.y) < Math.abs(b - p.y) ? c : b, centers[0]);
+    } else {
+      const hd = p.y < 0 ? 90 : -90, n = r.yLanes / 2, lw = r.yLaneW;
+      const centers = [...Array(Math.max(1, n))].map((_, k) => hd === 90 ? -wy / 2 + lw * (k + 0.5) : wy / 2 - lw * (k + 0.5));
+      v.hdg = hd; v.y = round1(p.y); v.x = centers.reduce((b, c) => Math.abs(c - p.x) < Math.abs(b - p.x) ? c : b, centers[0]);
+    }
+  }
+  const round1 = x => Math.round(x * 10) / 10;
+  cv.addEventListener('pointerdown', e => {
+    cv.setPointerCapture(e.pointerId);
+    ptrs.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
+    if (ptrs.size === 2) { drag = null; drawing = null; const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), scale: view.scale, mid: toWorld((a.x + b.x) / 2, (a.y + b.y) / 2) }; return; }
+    const w = toWorld(e.offsetX, e.offsetY);
+    if (S.mode === 'scene' && drawTool >= 0) { drawing = { i: drawTool, pts: [[round2(w.x), round2(w.y)]] }; return; }
+    const h = hitTest(w);
+    drag = h ? { ...h } : { kind: 'pan', sx: e.offsetX, sy: e.offsetY, cx: view.cx, cy: view.cy };
+  });
+  let pinch = null;
+  const round2 = x => Math.round(x * 100) / 100;
+  cv.addEventListener('pointermove', e => {
+    if (!ptrs.has(e.pointerId)) return;
+    ptrs.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
+    if (pinch && ptrs.size >= 2) {
+      const [a, b] = [...ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
+      view.scale = clamp(pinch.scale * d / pinch.d, 0.5, 80);
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      view.cx = pinch.mid.x - (mx - cssW / 2) / view.scale; view.cy = pinch.mid.y + (my - cssH / 2) / view.scale;
+      draw(); return;
+    }
+    const w = toWorld(e.offsetX, e.offsetY);
+    if (drawing) { const l = drawing.pts[drawing.pts.length - 1]; if (Math.hypot(w.x - l[0], w.y - l[1]) > 0.2) { drawing.pts.push([round2(w.x), round2(w.y)]); draw(); } return; }
+    if (!drag) return;
+    if (drag.kind === 'pan') { view.cx = drag.cx - (e.offsetX - drag.sx) / view.scale; view.cy = drag.cy + (e.offsetY - drag.sy) / view.scale; draw(); return; }
+    const p = add(w, drag.off || v2(0, 0));
+    if (drag.kind === 'veh') {
+      const v = S.veh[drag.i];
+      if (v.path) { const st = vehStart(v), d = sub(p, st.c); v.path = v.path.map(q => [round2(q[0] + d.x), round2(q[1] + d.y)]); }
+      else snapVeh(v, p);
+      quickRedraw();
+    } else if (drag.kind === 'rest') { const R = S.scene.rest[drag.i]; R.x = round1(p.x); R.y = round1(p.y); quickRedraw(); }
+    else if (drag.kind === 'impact') { S.scene.locks.ix = round1(p.x); S.scene.locks.iy = round1(p.y); quickRedraw(); }
+    else if (drag.kind === 'obs') {
+      const o = S.obstacles[drag.k], dx = round1(w.x - drag.start.x), dy = round1(w.y - drag.start.y);
+      o.x1 = round1(drag.orig.x1 + dx); o.x2 = round1(drag.orig.x2 + dx); o.y1 = round1(drag.orig.y1 + dy); o.y2 = round1(drag.orig.y2 + dy); quickRedraw();
+    }
+  });
+  let qr = 0;
+  function quickRedraw() { refreshValues(); if (!qr) qr = requestAnimationFrame(() => { qr = 0; compute(); }); }
+  const endPtr = e => {
+    ptrs.delete(e.pointerId);
+    if (ptrs.size < 2) pinch = null;
+    if (drawing) {
+      if (drawing.pts.length > 2) { S.scene.traces[drawing.i] = drawing.pts; drawTool = -1; renderPanel(); }
+      drawing = null; schedule(0);
+    }
+    if (drag && drag.kind !== 'pan') { if (drag.kind === 'impact') renderPanel(); schedule(0); }
+    drag = null;
+  };
+  cv.addEventListener('pointerup', endPtr); cv.addEventListener('pointercancel', endPtr);
+  cv.addEventListener('wheel', e => {
+    e.preventDefault(); const w = toWorld(e.offsetX, e.offsetY);
+    view.scale = clamp(view.scale * Math.exp(-e.deltaY * 0.0015), 0.5, 80);
+    view.cx = w.x - (e.offsetX - cssW / 2) / view.scale; view.cy = w.y + (e.offsetY - cssH / 2) / view.scale; draw();
+  }, { passive: false });
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+
+  /* ---------- パネル ---------- */
+  const panel = document.getElementById('panel');
+  let binds = [];
+  const el = (tag, attrs = {}, ...kids) => {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) { if (k === 'class') e.className = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'html') e.innerHTML = v; else if (v !== undefined && v !== null && v !== false) e.setAttribute(k, v === true ? '' : v); }
+    for (const c of kids.flat()) if (c != null && c !== false) e.append(c.nodeType ? c : document.createTextNode(String(c)));
+    return e;
+  };
+  function num(get, set, o = {}) {
+    const i = el('input', { type: 'number', step: o.step ?? 'any', min: o.min, max: o.max, inputmode: 'decimal' });
+    i.value = fmtIn(get(), o.dec);
+    i.addEventListener('input', () => { const v = parseFloat(i.value); if (!isFinite(v)) return; set(o.min != null ? Math.max(o.min, o.max != null ? Math.min(o.max, v) : v) : v); if (o.after) o.after(); schedule(o.delay ?? 120); });
+    i.addEventListener('change', () => refreshValues());
+    binds.push({ el: i, get: () => fmtIn(get(), o.dec), dis: o.disabled });
+    if (o.disabled) i.disabled = o.disabled();
+    return o.unit ? el('div', { class: 'unitin' }, i, el('span', {}, o.unit)) : i;
+  }
+  const fmtIn = (v, dec) => v == null || !isFinite(v) ? '' : (dec != null ? (+v).toFixed(dec) : String(Math.round(v * 1000) / 1000));
+  function sel(get, set, opts, o = {}) {
+    const s = el('select', {}, opts.map(([v, l]) => el('option', { value: v }, l)));
+    s.value = String(get());
+    s.addEventListener('change', () => { set(s.value); if (o.after) o.after(); schedule(0); });
+    binds.push({ el: s, get: () => String(get()), dis: o.disabled });
+    if (o.disabled) s.disabled = o.disabled();
+    return s;
+  }
+  function chk(get, set, label, o = {}) {
+    const c = el('input', { type: 'checkbox' }); c.checked = !!get();
+    c.addEventListener('change', () => { set(c.checked); if (o.after) o.after(); schedule(0); });
+    binds.push({ el: c, get: () => !!get(), check: true });
+    return el('label', { style: 'display:inline-flex;align-items:center;gap:5px;cursor:pointer;font-size:13px' }, c, label);
+  }
+  function refreshValues() {
+    for (const b of binds) {
+      if (b.dis) b.el.disabled = b.dis();
+      if (b.el === document.activeElement) continue;
+      if (b.check) b.el.checked = b.get(); else b.el.value = b.get();
+    }
+  }
+  function acc(id, title, body) {
+    const pinned = !!pins[id], open = pinned || !!openNow[id];
+    const box = el('div', { class: 'acc' + (open ? ' open' : '') });
+    const pinB = el('button', { class: 'pin' + (pinned ? ' on' : ''), title: 'いつも開いた状態にする（全モード共通・この端末に保存）' }, pinned ? '📌 常に開く' : '常に開く');
+    pinB.onclick = () => { pins[id] = !pins[id]; if (!pins[id]) delete pins[id]; lsSet(LS_PINS, JSON.stringify(pins)); if (pins[id]) openNow[id] = true; renderPanel(); };
+    const t = el('button', { class: 't' }, title);
+    t.onclick = () => { if (pins[id]) return; openNow[id] = !box.classList.contains('open'); box.classList.toggle('open', openNow[id]); };
+    box.append(el('div', { class: 'acc-h' }, t, pinB), el('div', { class: 'acc-b' }, body));
+    return box;
+  }
+  const presetOpts = Object.entries(P.VEH_PRESETS).map(([k, v]) => [k, v.label]);
+  const roadOpts = [...Object.entries(P.ROAD_PRESETS).map(([k, v]) => [k, `${v.label}（μ${v.mu}）`]), ['custom', '手入力']];
+  function applyPreset(i, key) { const v = S.veh[i], keep = { v0: v.v0, x: v.x, y: v.y, hdg: v.hdg, path: v.path, react: v.react, brake: v.brake, D: v.D, rise: v.rise, abs: v.abs, post: v.post, Ifac: v.Ifac }; S.veh[i] = vehFromPreset(key, keep); }
+  function applyRoadPreset(k) { S.road.preset = k; if (P.ROAD_PRESETS[k]) S.road.mu = P.ROAD_PRESETS[k].mu; }
+  const HDG = [['0', '東向き →'], ['90', '北向き ↑'], ['180', '西向き ←'], ['-90', '南向き ↓']];
+
+  function basicSection() {
+    const box = el('div', { class: 'card basic' }, el('h2', {}, '基本'));
+    const showSpeed = S.mode !== 'scene';
+    [0, 1].forEach(i => {
+      const v = S.veh[i];
+      box.append(el('div', { class: 'vrow' }, el('span', { class: i ? 'tagB' : 'tagA' }, vname(i)),
+        sel(() => S.veh[i].preset, k => applyPreset(i, k), presetOpts, { after: refreshValues }),
+        showSpeed ? num(() => S.veh[i].v0, x => S.veh[i].v0 = x, { min: 0, max: 300, unit: 'km/h', step: 1 }) : el('span', { class: 'small' }, '')));
+    });
+    box.append(el('div', { class: 'row' }, el('label', {}, '路面'), el('div', { style: 'flex:1' }, sel(() => S.road.preset, applyRoadPreset, roadOpts, { after: refreshValues }))));
+    if (S.mode !== 'scene') {
+      box.append(el('div', { class: 'small', style: 'margin:6px 0 2px' }, '初期位置（図の車をドラッグして配置。車線に吸い付きます）'));
+      const g = el('div', { class: 'grid2' }, el('span'), el('span', { class: 'h a' }, 'A'), el('span', { class: 'h b' }, 'B'));
+      const pathed = i => () => !!S.veh[i].path;
+      g.append(el('span', { class: 'l' }, 'x（東+）m'), ...[0, 1].map(i => num(() => vehStart(S.veh[i]).c.x, x => S.veh[i].x = x, { dec: 1, disabled: pathed(i) })));
+      g.append(el('span', { class: 'l' }, 'y（北+）m'), ...[0, 1].map(i => num(() => vehStart(S.veh[i]).c.y, x => S.veh[i].y = x, { dec: 1, disabled: pathed(i) })));
+      g.append(el('span', { class: 'l' }, '進む向き'), ...[0, 1].map(i => sel(() => S.veh[i].hdg, x => S.veh[i].hdg = +x, HDG, { disabled: pathed(i) })));
+      box.append(g);
+      if (S.veh.some(v => v.path)) box.append(el('div', { class: 'warnline' }, '曲線の経路（現場推定から送ったもの）を使っている車両があります。ドラッグで経路ごと動きます。直進に戻すには「車両」の「経路」から。'));
+    }
+    return box;
+  }
+
+  function vehicleAcc() {
+    const g = el('div', { class: 'grid2' }, el('span'), el('span', { class: 'h a' }, 'A'), el('span', { class: 'h b' }, 'B'));
+    const row = (label, sub, mk) => g.append(el('span', { class: 'l' }, label, sub ? el('small', {}, sub) : null), mk(0), mk(1));
+    const n = (key, o = {}) => i => num(() => S.veh[i][key], x => { S.veh[i][key] = x; }, o);
+    row('質量', 'kg（乗員・積荷込み）', n('m', { min: 50, step: 10 }));
+    row('全長', 'm', n('L', { min: 0.5, step: 0.05 }));
+    row('全幅', 'm', n('W', { min: 0.3, step: 0.05 }));
+    row('ホイールベース', 'm（前後の車軸間）', n('wb', { min: 0.3, step: 0.05 }));
+    row('トレッド', 'm（左右の車輪間。バイクは0）', n('tr', { min: 0, step: 0.05 }));
+    row('慣性モーメント係数', '直方体の値に掛ける', n('Ifac', { min: 0.2, max: 3, step: 0.05 }));
+    g.append(el('span', { class: 'l' }, '→ 慣性モーメント', el('small', {}, 'kg·m²')), ...[0, 1].map(i => { const s = el('span', { class: 'small' }); binds.push({ el: { set value(x) { s.textContent = x; }, get value() { return s.textContent; } }, get: () => Math.round(vehParams(S.veh[i]).I).toLocaleString() }); s.textContent = Math.round(vehParams(S.veh[i]).I).toLocaleString(); return s; }));
+    row('運転者の反応時間', '秒（空走時間）', n('react', { min: 0, max: 5, step: 0.05 }));
+    row('ブレーキの効き', '%（路面μに対して）', n('eff', { min: 5, max: 120, step: 1 }));
+    row('ブレーキ立ち上がり', '秒', n('rise', { min: 0, max: 1, step: 0.05 }));
+    row('ABS', '痕跡の残り方', i => chk(() => S.veh[i].abs, x => S.veh[i].abs = x, 'あり'));
+    row('相手の発見', '', i => sel(() => S.veh[i].brake, x => S.veh[i].brake = x, [['auto', '見えた時（見通し判定）'], ['distance', '衝突地点の手前Dmで'], ['never', '発見しない（ブレーキなし）']], { after: refreshValues }));
+    row('発見距離 D', 'm（上で「手前Dm」のとき）', i => num(() => S.veh[i].D, x => S.veh[i].D = x, { min: 0, step: 1, disabled: () => S.veh[i].brake !== 'distance' }));
+    row('運転席の位置', 'm（前端から後ろへ）', n('eyeF', { min: 0, step: 0.1 }));
+    row('運転席の横位置', 'm（中心から右へ）', n('eyeR', { step: 0.05 }));
+    row('衝突後のタイヤ', '', i => sel(() => S.veh[i].post, x => S.veh[i].post = x, [['lock', 'ロック（ブレーキ継続）'], ['roll', '転がる（ブレーキ解除）']]));
+    row('車体の剛性', 'kN/m（つぶれ量の目安）', n('k', { min: 10, step: 50 }));
+    row('経路', '', i => S.veh[i].path ? el('button', { class: 'btn', onclick: () => { const st = vehStart(S.veh[i]); S.veh[i].path = null; S.veh[i].x = round1(st.c.x); S.veh[i].y = round1(st.c.y); S.veh[i].hdg = snapHdg(st.th); renderPanel(); schedule(0); } }, '直進に戻す') : el('span', { class: 'small' }, '直進'));
+    return acc('veh', '車両', [g, el('div', { class: 'note' }, '寸法は図の大きさだけでなく、衝突判定（回転する長方形）・衝突後の回転（慣性モーメント）・見通し（運転席の位置）に使います。')]);
+  }
+  const snapHdg = th => { const d = Math.round(angN(th) * R2D / 90) * 90; return d === -180 ? 180 : d; };
+  function roadAcc() {
+    const body = [
+      el('div', { class: 'row' }, el('label', {}, 'プリセット'), el('div', { style: 'flex:1' }, sel(() => S.road.preset, applyRoadPreset, roadOpts, { after: refreshValues }))),
+      el('div', { class: 'row' }, el('label', {}, '摩擦係数 μ'), el('div', { style: 'flex:1' }, num(() => S.road.mu, x => { S.road.mu = x; S.road.preset = 'custom'; }, { min: 0.02, max: 1.5, step: 0.01, after: refreshValues }))),
+    ];
+    if (S.mode === 'scene') {
+      body.push(el('div', { class: 'row' }, el('label', {}, '衝突後の減速'), el('div', { style: 'flex:1' }, num(() => S.scene.fpost, x => S.scene.fpost = x, { min: 0.1, max: 1.5, step: 0.05, unit: '× μg' }))));
+      body.push(el('div', { class: 'row' }, el('label', {}, 'μ の幅 ±'), el('div', { style: 'flex:1' }, num(() => S.scene.dmu, x => S.scene.dmu = x, { min: 0, max: 0.5, step: 0.01 }))));
+      body.push(el('div', { class: 'note' }, '衝突後の減速：衝突後は車輪が回ったり車体が回転したりするため、μg より弱いことが多い（目安 0.6〜0.9）。μ の幅：推定速度の幅を出すときに摩擦係数を上下させる量。'));
+    }
+    body.push(el('div', { class: 'note' }, '勾配は対象外です（平坦な路面として計算）。'));
+    return acc('road', '路面', body);
+  }
+  function geomAcc() {
+    const g = el('div', { class: 'grid2' }, el('span'), el('span', { class: 'h', style: 'background:#eef0f2' }, '横の道（東西）'), el('span', { class: 'h', style: 'background:#eef0f2' }, '縦の道（南北）'));
+    g.append(el('span', { class: 'l' }, '車線数', el('small', {}, '両方向の合計')),
+      sel(() => S.road.xLanes, x => S.road.xLanes = +x, [['2', '2車線'], ['4', '4車線'], ['6', '6車線']]),
+      sel(() => S.road.yLanes, x => S.road.yLanes = +x, [['2', '2車線'], ['4', '4車線'], ['6', '6車線']]));
+    g.append(el('span', { class: 'l' }, '1車線の幅', el('small', {}, 'm')), num(() => S.road.xLaneW, x => S.road.xLaneW = x, { min: 1.5, max: 6, step: 0.25 }), num(() => S.road.yLaneW, x => S.road.yLaneW = x, { min: 1.5, max: 6, step: 0.25 }));
+    return acc('geom', '道路形状', [g,
+      el('div', { class: 'row' }, el('label', {}, '優先道路'), el('div', { style: 'flex:1' }, sel(() => S.road.priority, x => S.road.priority = x, [['x', '横の道（東西）が優先'], ['y', '縦の道（南北）が優先'], ['none', 'どちらでもない']]))),
+      el('div', { class: 'row' }, chk(() => S.road.stop, x => S.road.stop = x, '優先でない側に一時停止の規制あり')),
+      el('div', { class: 'row' }, chk(() => S.road.snap, x => S.road.snap = x, '車をドラッグしたとき車線に吸い付ける（左側通行）')),
+      el('div', { class: 'note' }, '信号のない十字路だけを扱います。直線道路（追突・正面衝突）は次の段階で追加予定。'),
+    ]);
+  }
+  function sightAcc() {
+    const list = el('div');
+    list.append(el('div', { class: 'obs small' }, el('span', {}, 'x1'), el('span', {}, 'y1'), el('span', {}, 'x2'), el('span', {}, 'y2'), el('span')));
+    S.obstacles.forEach((o, k) => {
+      list.append(el('div', { class: 'obs' }, ...['x1', 'y1', 'x2', 'y2'].map(key => num(() => S.obstacles[k][key], x => S.obstacles[k][key] = x, { step: 0.5 })),
+        el('button', { class: 'btn', style: 'padding:4px 0', title: '削除', onclick: () => { S.obstacles.splice(k, 1); renderPanel(); schedule(0); } }, '×')));
+      const lab = el('input', { type: 'text', value: o.label || '', placeholder: '名前（建物・塀など）', style: 'margin:0 0 6px' });
+      lab.addEventListener('input', () => { S.obstacles[k].label = lab.value; schedule(100); });
+      list.append(lab);
+    });
+    return acc('sight', '見通し', [
+      el('div', { class: 'small' }, '見通しを遮る物（建物・塀・駐車車両など）を、対角の2点の座標（m）で置きます。図でドラッグして動かすこともできます。'),
+      list,
+      el('div', { class: 'row' },
+        el('button', { class: 'btn', onclick: () => { const { wx, wy } = roadW(); S.obstacles.push({ x1: wy / 2 + 1.5, y1: wx / 2 + 1.5, x2: wy / 2 + 20, y2: wx / 2 + 20, label: '塀' }); renderPanel(); schedule(0); } }, '＋ 追加'),
+        el('button', { class: 'btn', onclick: () => { const { wx, wy } = roadW(), m = 1.5; S.obstacles = [{ x1: -30, y1: -30, x2: -wy / 2 - m, y2: -wx / 2 - m, label: '建物' }]; renderPanel(); schedule(0); } }, '南西の角だけにする')),
+      el('div', { class: 'note' }, '運転者の目の位置（運転席）から相手の車の角か中心のどこかが見えた時点を「発見」とします。視野は前方左右110°まで。'),
+    ]);
+  }
+  function collAcc() {
+    return acc('coll', '衝突', [
+      el('div', { class: 'row' }, el('label', {}, '反発係数 e'), el('div', { style: 'flex:1' }, num(() => S.coll.e, x => S.coll.e = x, { min: 0, max: 1, step: 0.01 }))),
+      el('div', { class: 'row' }, el('label', {}, '車両間の摩擦'), el('div', { style: 'flex:1' }, num(() => S.coll.muc, x => S.coll.muc = x, { min: 0, max: 1.5, step: 0.05 }))),
+      el('div', { class: 'note' }, '反発係数：0＝くっつく（完全非弾性）、1＝はね返る。車同士の衝突は 0〜0.2 程度が多い。変形（つぶれ量）は、失われたエネルギーを両車の剛性（バネ）で分け合うとして目安を出します。'),
+    ]);
+  }
+  function outAcc() {
+    const file = el('input', { type: 'file', accept: 'application/json,.json', style: 'display:none' });
+    file.addEventListener('change', async () => { const f = file.files[0]; if (!f) return; try { const j = JSON.parse(await f.text()); S = mergeState(j.settings || j); renderAll(); } catch (e) { alert('読み込めませんでした：' + e.message); } file.value = ''; });
+    return acc('out', '出力・保存', [
+      el('div', { class: 'row' },
+        el('button', { class: 'btn pri', onclick: exportPng }, '図を画像(PNG)で保存'),
+        el('button', { class: 'btn', onclick: exportJson }, '設定値を保存(JSON)'),
+        el('button', { class: 'btn', onclick: () => file.click() }, '設定値を読み込む'), file),
+      el('div', { class: 'row' },
+        el('button', { class: 'btn', onclick: copyText }, '設定値と結果をテキストでコピー'),
+        el('button', { class: 'btn', onclick: () => { if (confirm('すべての設定を初期値に戻しますか？')) { S = defaultState(); renderAll(); } } }, '初期値に戻す')),
+      el('div', { class: 'note' }, '入力中の設定はこの端末のブラウザに自動で保存されます。折りたたみの開閉（常に開く）は設定値の出力に含めません。'),
+    ]);
+  }
+
+  /* ---- 逆算モードの入力 ---- */
+  function reverseSection() {
+    return el('div', { class: 'card' }, el('h2', {}, '逆算'),
+      el('div', { class: 'row' }, el('label', {}, '逆算する項目'), el('div', { style: 'flex:1' }, sel(() => S.rev.item, x => S.rev.item = x, Object.entries(P.REV_ITEMS).map(([k, v]) => [k, v.label])))),
+      el('div', { class: 'row' }, el('label', {}, '対象の車両'), segBtns([['0', 'A'], ['1', 'B']], () => String(S.rev.who), x => { S.rev.who = +x; })),
+      el('div', { class: 'row' }, el('label', {}, '図に描く'), segBtns([['limit', '限界値で'], ['now', '現在値で']], () => S.rev.drawAt, x => { S.rev.drawAt = x; })),
+      el('div', { class: 'note' }, 'ほかの条件はそのままにして対象の値だけを動かし、衝突する／しないの境目を探します（走査＋二分探索）。'));
+  }
+  function segBtns(opts, get, set) {
+    const box = el('div', { class: 'seg' });
+    opts.forEach(([v, l]) => { const b = el('button', { class: get() === v ? 'on' : '' }, l); b.onclick = () => { set(v); [...box.children].forEach(c => c.classList.remove('on')); b.classList.add('on'); schedule(0); }; box.append(b); });
+    return box;
+  }
+
+  /* ---- 現場推定モードの入力 ---- */
+  const LOCKS = [
+    ['ix', '衝突地点 x', 'm', 1], ['iy', '衝突地点 y', 'm', 1],
+    ['vA', 'A 衝突直前の速度', 'km/h', 1], ['vB', 'B 衝突直前の速度', 'km/h', 1],
+    ['hA', 'A 衝突直前の向き', '°', 0], ['hB', 'B 衝突直前の向き', '°', 0],
+    ['mu', '路面の摩擦係数', 'μ', 2],
+  ];
+  const candVal = (c, k) => { if (!c) return null; const i = P.PNAMES.indexOf(k), v = c.p[i]; return (k === 'vA' || k === 'vB') ? v * 3.6 : (k === 'hA' || k === 'hB') ? v * R2D : v; };
+  function sceneSection() {
+    const sv = S.scene, out = [];
+    const tools = el('div', { class: 'card' }, el('h2', {}, '痕跡ライン（ブレーキ痕・スリップ痕）'));
+    const trow = i => {
+      const T = tracePath(i);
+      return el('div', { class: 'row' },
+        el('button', { class: `btn ${i ? 'b' : 'a'}${drawTool === i ? ' on' : ''}`, onclick: () => { drawTool = drawTool === i ? -1 : i; renderPanel(); updateHint(); } }, drawTool === i ? `${vname(i)}：図をなぞる…` : `${vname(i)} の痕跡を描く`),
+        el('button', { class: 'btn', disabled: !T, onclick: () => { sv.traces[i] = sv.traces[i].slice().reverse(); schedule(0); } }, '向きを反転'),
+        el('button', { class: 'btn', disabled: !T, onclick: () => { sv.traces[i] = []; renderPanel(); schedule(0); } }, '消す'),
+        el('span', { class: 'small' }, T ? `長さ ${T.total.toFixed(1)} m` : 'なし'));
+    };
+    tools.append(trow(0), trow(1), el('div', { class: 'note' }, '進んだ向きに指でなぞります（曲線も可）。終わりの矢印が進行方向です。痕跡の終わり側を延長して衝突地点・停止位置へ、始まり側を延長してブレーキ前の走行ルートを推定します。'));
+    out.push(tools);
+    const rest = el('div', { class: 'card' }, el('h2', {}, '事故直後の停止位置（図でドラッグ）'));
+    const g = el('div', { class: 'grid2' }, el('span'), el('span', { class: 'h a' }, 'A'), el('span', { class: 'h b' }, 'B'));
+    const row = (label, sub, mk) => g.append(el('span', { class: 'l' }, label, sub ? el('small', {}, sub) : null), mk(0), mk(1));
+    row('停止位置を使う', '', i => chk(() => sv.rest[i].on, x => sv.rest[i].on = x, 'はい', { after: refreshValues }));
+    row('x（東+）', 'm', i => num(() => sv.rest[i].x, x => sv.rest[i].x = x, { dec: 1, disabled: () => !sv.rest[i].on }));
+    row('y（北+）', 'm', i => num(() => sv.rest[i].y, x => sv.rest[i].y = x, { dec: 1, disabled: () => !sv.rest[i].on }));
+    row('車体の角度', '°（東=0・北=90）', i => num(() => sv.rest[i].th, x => sv.rest[i].th = x, { step: 5, disabled: () => !sv.rest[i].on }));
+    row('止まる直前の進行方向', '指定するとき', i => chk(() => sv.rest[i].dirOn, x => sv.rest[i].dirOn = x, '指定', { after: refreshValues }));
+    row('　進行方向', '°', i => num(() => sv.rest[i].dir, x => sv.rest[i].dir = x, { step: 5, disabled: () => !sv.rest[i].dirOn || !sv.rest[i].on }));
+    row('衝突した部位', '', i => sel(() => sv.part[i], x => sv.part[i] = x, [['front', '前部'], ['left', '左側面'], ['right', '右側面'], ['rear', '後部']]));
+    rest.append(g);
+    out.push(rest);
+    // ロック
+    const c = sceneRes && sceneRes.cands[sv.sel];
+    const lk = el('div', { class: 'card' }, el('h2', {}, '推定値（🔒で仮確定。ロックしていない値が自動で調整されます）'));
+    const lt = el('div', { class: 'ltab' });
+    LOCKS.forEach(([k, label, unit, dec]) => {
+      const locked = k in sv.locks;
+      const inp = el('input', { type: 'number', step: 'any', inputmode: 'decimal' });
+      const shown = locked ? sv.locks[k] : candVal(c, k);
+      inp.value = shown == null ? '' : (+shown).toFixed(dec);
+      inp.disabled = !locked;
+      inp.addEventListener('input', () => { const v = parseFloat(inp.value); if (isFinite(v)) { sv.locks[k] = v; schedule(150); } });
+      const b = el('button', { class: 'lock' + (locked ? ' on' : ''), title: locked ? 'ロック解除' : 'ロック（この値で固定）' }, locked ? '🔒' : '🔓');
+      b.onclick = () => {
+        const cc = sceneRes && sceneRes.cands[sv.sel];
+        if (k in sv.locks) delete sv.locks[k];
+        else { const v = candVal(cc, k); sv.locks[k] = v != null ? +(+v).toFixed(dec) : (k === 'mu' ? S.road.mu : 0); }
+        compute(); renderPanel();
+      };
+      lt.append(el('span', { class: 'l' }, `${label}（${unit}）`), inp, b);
+      lockInputs[k] = inp;
+    });
+    lk.append(lt, el('div', { class: 'note' }, '向きは東=0°・北=90°・西=180°・南=-90°。衝突地点は図の★をドラッグしてもロックできます。'));
+    out.push(lk);
+    out.push(el('div', { class: 'row' }, el('button', { class: 'btn pri', disabled: !c, onclick: sendToVerify }, 'この推定を検証モードへ送る'),
+      el('span', { class: 'small' }, '推定ルート（曲線も）と速度を車両経路として使います')));
+    return out;
+  }
+  const lockInputs = {};
+  function refreshLockInputs() {
+    const c = sceneRes && sceneRes.cands[S.scene.sel];
+    for (const [k, , , dec] of LOCKS) {
+      const inp = lockInputs[k]; if (!inp || !inp.isConnected || k in S.scene.locks || inp === document.activeElement) continue;
+      const v = candVal(c, k); inp.value = v == null ? '' : (+v).toFixed(dec);
+    }
+  }
+
+  /* ---------- 結果表示 ---------- */
+  const resBox = el('div', { id: 'result' });
+  const kmh = v => v == null || !isFinite(v) ? '—' : Math.max(0, v * 3.6).toFixed(1);
+  const f1 = (v, d = 1) => v == null || !isFinite(v) ? '—' : (+v).toFixed(d).replace(/^-(0(\.0+)?)$/, '$1');
+  function vehStats(cfg, res, i) {
+    const v = res.veh[i], vp = cfg.veh[i];
+    const o = {};
+    o.see = v.tSee >= 0 ? `${v.tSee.toFixed(2)} s` : 'なし';
+    o.free = v.sBrake != null && v.sSee != null ? (v.sBrake - v.sSee) : null;
+    const endS = res.collided ? res.coll.pre[i].s : (v.sStop ?? v.sEnd);
+    o.brakeD = v.sBrake != null ? endS - v.sBrake : null;
+    o.stopFull = vp.v0 * vp.react + vp.v0 * vp.rise / 2 + vp.v0 * vp.v0 / (2 * cfg.mu * P.G * vp.eff);
+    return o;
+  }
+  function renderResult() {
+    const h = [];
+    if (S.mode === 'verify' && simRes) {
+      const r = simRes, cfg = simCfg;
+      if (r.collided) {
+        const C = r.coll;
+        h.push(`<div class="card"><h2>結果</h2><span class="badge ng">衝突する</span> <span class="small">出発から ${C.t.toFixed(2)} 秒後</span>`);
+        h.push(`<div class="kv"><span></span><span class="h a">A</span><span class="h b">B</span>`);
+        h.push(row3('衝突時の速度', kmh(C.pre[0].v) + ' km/h', kmh(C.pre[1].v) + ' km/h'));
+        h.push(row3('速度変化 ΔV', kmh(C.dv[0]) + ' km/h', kmh(C.dv[1]) + ' km/h'));
+        h.push(row3('推定つぶれ量', f1(C.crush[0] * 100, 0) + ' cm', f1(C.crush[1] * 100, 0) + ' cm'));
+        h.push(row3('衝突後の移動', f1(r.post[0].dist) + ' m', f1(r.post[1].dist) + ' m'));
+        h.push(row3('衝突後の回転', f1(r.post[0].rot * R2D, 0) + '°', f1(r.post[1].rot * R2D, 0) + '°'));
+        const st = [0, 1].map(i => vehStats(cfg, r, i));
+        h.push(row3('相手の発見', st[0].see, st[1].see));
+        h.push(row3('空走距離', st[0].free != null ? f1(st[0].free) + ' m' : '—', st[1].free != null ? f1(st[1].free) + ' m' : '—'));
+        h.push(row3('衝突までの制動', st[0].brakeD != null ? f1(st[0].brakeD) + ' m' : 'ブレーキ前', st[1].brakeD != null ? f1(st[1].brakeD) + ' m' : 'ブレーキ前'));
+        h.push('</div><div class="kv2">');
+        h.push(`<span class="k">衝突速度差（相対速度）</span><span><b>${kmh(C.vrel)} km/h</b></span>`);
+        h.push(`<span class="k">接触面に垂直な接近速度</span><span>${kmh(C.closing)} km/h</span>`);
+        h.push(`<span class="k">変形エネルギー</span><span><b>${f1(C.dE / 1000)} kJ</b>（衝突前の運動エネルギーの ${f1(C.dE / C.E0 * 100, 0)}%）</span>`);
+        h.push('</div>');
+        h.push(avoidHtml());
+      } else {
+        h.push(`<div class="card"><h2>結果</h2><span class="badge ok">衝突しない</span> <span class="small">最接近 ${f1(r.minGap, 2)} m（${f1(r.minGapT, 2)} 秒後）</span>`);
+        const st = [0, 1].map(i => vehStats(cfg, r, i));
+        h.push(`<div class="kv"><span></span><span class="h a">A</span><span class="h b">B</span>`);
+        h.push(row3('相手の発見', st[0].see, st[1].see));
+        h.push(row3('空走距離', st[0].free != null ? f1(st[0].free) + ' m' : '—', st[1].free != null ? f1(st[1].free) + ' m' : '—'));
+        h.push(row3('制動距離', st[0].brakeD != null ? f1(st[0].brakeD) + ' m' : '—', st[1].brakeD != null ? f1(st[1].brakeD) + ' m' : '—'));
+        h.push(row3('停止', r.veh[0].tStop >= 0 ? `${r.veh[0].tStop.toFixed(2)} s` : '止まらず通過', r.veh[1].tStop >= 0 ? `${r.veh[1].tStop.toFixed(2)} s` : '止まらず通過'));
+        h.push('</div>');
+      }
+      h.push(warnHtml(r) + legalHtml() + `<div class="note">${NOTE}</div></div>`);
+    } else if (S.mode === 'reverse') {
+      h.push(`<div class="card"><h2>逆算の結果（${P.REV_ITEMS[S.rev.item].label}・${vname(S.rev.who)}）</h2>`);
+      if (!revRes || revRes.busy) h.push(`<span class="badge gray">計算中 <span id="revprog">${revRes ? Math.round((revRes.prog || 0) * 100) : 0}%</span></span>`);
+      else h.push(revHtml(revRes));
+      h.push(`<div class="note">${NOTE}</div></div>`);
+    } else if (S.mode === 'scene') {
+      h.push(sceneHtml());
+    }
+    resBox.innerHTML = h.join('');
+    resBox.querySelectorAll('[data-cand]').forEach(b => b.addEventListener('click', () => { S.scene.sel = +b.dataset.cand; compute(); refreshLockInputs(); }));
+    refreshLockInputs();
+  }
+  const row3 = (k, a, b) => `<span class="k">${k}</span><span class="a">${a}</span><span class="b">${b}</span>`;
+  function avoidHtml() {
+    if (!avoid) return '';
+    if (avoid.busy) return '<div class="kv2"><span class="k">回避の可能性</span><span class="small">計算中…</span></div>';
+    const parts = avoid.lim.map((L, i) => {
+      const v = S.veh[i];
+      if (v.brake === 'never') return `<span class="k">${vname(i)}</span><span>ブレーキなしの設定（判定しない）</span>`;
+      if (!L) return '';
+      if (L.all) return `<span class="k">${vname(i)}</span><span>どの速度でも衝突しない</span>`;
+      if (L.none) return `<span class="k">${vname(i)}</span><span>速度を落としても衝突（相手側の条件による）</span>`;
+      const vp = vehParams(v), mu = S.road.mu, vl = L.vmax;
+      const dStop = vl * vp.react + vl * vp.rise / 2 + vl * vl / (2 * mu * P.G * vp.eff);
+      return `<span class="k">${vname(i)}</span><span>時速 <b>${(vl * 3.6).toFixed(1)} km</b> 以下なら回避（その速度での停止距離 ${dStop.toFixed(1)} m）</span>`;
+    });
+    return `<div style="margin-top:8px;font-weight:700;font-size:12.5px">回避の可能性（ほかの条件は同じで、その車の速度だけ下げた場合）</div><div class="kv2">${parts.join('')}</div>`;
+  }
+  function warnHtml(r) {
+    const w = [];
+    r.veh.forEach((v, i) => { if (v.slip) w.push(`${vname(i)}：経路のカーブがきつく、横方向の摩擦の限界を超えています（実際には曲がり切れない可能性）。`); });
+    if (r.post) r.post.forEach((pc, i) => { if (pc.t >= 19.9) w.push(`${vname(i)}：衝突後 20 秒で計算を打ち切りました（まだ動いています。「衝突後のタイヤ」が「転がる」のときに起きやすい）。`); });
+    r.veh.forEach((v, i) => { if (S.veh[i].brake === 'auto' && v.tSee < 0) w.push(`${vname(i)}：最後まで相手が見えませんでした（ブレーキなし）。`); });
+    return w.map(s => `<div class="warnline">${s}</div>`).join('');
+  }
+  function legalHtml() {
+    const r = S.road; if (r.priority === 'none') return '';
+    const major = r.priority === 'x' ? '横の道（東西）' : '縦の道（南北）';
+    const minorVeh = S.veh.map((v, i) => { const th = vehStart(v).th, horiz = Math.abs(Math.cos(th)) > 0.7; return ((r.priority === 'x') !== horiz) ? vname(i) : null; }).filter(Boolean);
+    return `<div class="note">道路：${major}が優先${r.stop ? '、反対側に一時停止の規制' : ''}。${minorVeh.length ? `優先でない側を走るのは ${minorVeh.join('・')}。` : ''}（この計算は一時停止での停止を自動では入れません）</div>`;
+  }
+  function revHtml(o) {
+    const it = o.item, who = S.rev.who, v = S.veh[who], vp = vehParams(v), mu = S.road.mu;
+    let main = '';
+    if (o.limit == null) main = `<span class="badge ng">${o.msg}</span>`;
+    else if (it === 'speed') {
+      const vl = o.limit, dStop = vl * vp.react + vl * vp.rise / 2 + vl * vl / (2 * mu * P.G * vp.eff);
+      main = `<div>回避できる最大速度</div><div class="big">${(vl * 3.6).toFixed(1)} km/h${o.all ? ' 以上でも可' : ''}</div><div class="small">現在 ${v.v0} km/h ／ この速度での停止距離 ${dStop.toFixed(1)} m（空走 ${(vl * vp.react).toFixed(1)} m を含む）</div>`;
+      const others = o.r.bounds.slice(1);
+      if (others.length) main += `<div class="small">ほかの境目：${others.map(b => (b.x * 3.6).toFixed(1) + ' km/h' + (b.to ? 'を超えると衝突' : '以上で衝突しない')).join('、')}（速く通り過ぎて衝突しない帯があります）</div>`;
+    } else if (it === 'mu') {
+      const muMin = o.limit, v0 = vp.v0;
+      const need = v0 * v0 / (2 * muMin * P.G * vp.eff), now = v0 * v0 / (2 * mu * P.G * vp.eff);
+      main = `<div>最低摩擦係数</div><div class="big">μ ${muMin.toFixed(3)}</div><div class="small">そのときの制動距離（${v.v0} km/h から）<b>${need.toFixed(1)} m</b> 以下が必要 ／ 現在の路面（μ${mu}）では ${now.toFixed(1)} m</div><div class="small">摩擦係数は両車に共通で動かしています。</div>`;
+    } else if (it === 'reaction') {
+      main = `<div>反応時間の限界</div><div class="big">${o.limit.toFixed(2)} 秒${o.all ? ' 以上でも可' : ''}</div><div class="small">現在 ${v.react} 秒。これより遅れると衝突します。</div>`;
+    } else if (it === 'discover') {
+      main = `<div>発見地点の限界距離</div><div class="big">衝突地点の ${o.limit.toFixed(1)} m 手前</div><div class="small">これより手前で発見すれば回避できます（${vname(who)} の前端から、両車の進路が交わる点までの距離）。</div>`;
+    }
+    const R = P.REV_ITEMS[it], unit = it === 'speed' ? 'km/h' : it === 'mu' ? 'μ' : it === 'reaction' ? '秒' : 'm', sc = it === 'speed' ? 3.6 : 1;
+    const strip = `<div class="strip">${o.r.col.map(c => `<i class="${c ? 'c' : 'n'}"></i>`).join('')}</div><div class="stripax"><span>${(R.lo * sc).toFixed(it === 'mu' ? 2 : 0)} ${unit}</span><span><span style="color:#c62f2f">■</span>衝突 <span style="color:#1f8a4c">■</span>回避</span><span>${(R.hi * sc).toFixed(it === 'mu' ? 2 : 0)} ${unit}</span></div>`;
+    return main + strip;
+  }
+  function sceneHtml() {
+    const r = sceneRes, h = ['<div class="card"><h2>現場推定の結果</h2>'];
+    if (!r) return '';
+    if (!r.cands.length) { h.push(`<span class="badge gray">${r.reason || '解が見つかりません。ロックを外すか、入力を見直してください。'}</span><div class="note">${NOTE} ${NOTE_SCENE}</div></div>`); return h.join(''); }
+    const c = r.cands[S.scene.sel], d = c.d;
+    const bad = d.dE != null && d.dE < -500;
+    h.push(`<span class="badge ${bad ? 'warn' : 'ok'}">候補 ${S.scene.sel + 1} ／ 整合度 ${c.score.toFixed(0)}</span>`);
+    if (r.fixedSpeeds) h.push('<div class="warnline">停止位置が2台分そろっていないため、衝突直前の速度は運動量からは決まりません（痕跡からの最低速度のみ）。</div>');
+    const rg = r.range;
+    const rangeTxt = (i) => { if (!rg || r.fixedSpeeds) return ''; const vs = rg.map(x => x.p[2 + i] * 3.6); return `<br><span class="small">幅 ${Math.min(...vs).toFixed(0)}〜${Math.max(...vs).toFixed(0)}</span>`; };
+    h.push('<div class="kv"><span></span><span class="h a">A</span><span class="h b">B</span>');
+    h.push(row3('衝突直前の速度', r.fixedSpeeds ? '—' : kmh(d.veh[0].v) + ' km/h' + rangeTxt(0), r.fixedSpeeds ? '—' : kmh(d.veh[1].v) + ' km/h' + rangeTxt(1)));
+    h.push(row3('衝突直後の速度', d.veh[0].u != null ? kmh(d.veh[0].u) + ' km/h' : '—', d.veh[1].u != null ? kmh(d.veh[1].u) + ' km/h' : '—'));
+    h.push(row3('衝突直前の向き', f1(d.veh[0].th * R2D, 0) + '°', f1(d.veh[1].th * R2D, 0) + '°'));
+    h.push(row3('衝突後の移動', d.veh[0].dpost != null ? f1(d.veh[0].dpost) + ' m' : '—', d.veh[1].dpost != null ? f1(d.veh[1].dpost) + ' m' : '—'));
+    const vb = i => { const o = d.veh[i]; if (o.vb == null) return '痕跡なし'; return r.fixedSpeeds ? `${kmh(o.vbMin)} 以上` : `${kmh(o.vb)} km/h`; };
+    h.push(row3('ブレーキ開始時の速度', vb(0), vb(1)));
+    h.push(row3('痕跡だけからの最低速度', d.veh[0].vbMin != null ? kmh(d.veh[0].vbMin) + ' 以上' : '—', d.veh[1].vbMin != null ? kmh(d.veh[1].vbMin) + ' 以上' : '—'));
+    h.push('</div>');
+    if (d.dE != null) {
+      h.push('<div class="kv2">');
+      h.push(`<span class="k">衝突速度差（相対速度）</span><span><b>${kmh(d.closing)} km/h</b></span>`);
+      h.push(`<span class="k">変形エネルギー</span><span>${f1(d.dE / 1000)} kJ</span>`);
+      h.push(`<span class="k">運動エネルギー</span><span>衝突前 ${f1(d.E0 / 1000)} → 衝突後 ${f1(d.E1 / 1000)} kJ</span>`);
+      h.push(`<span class="k">速度変化 ΔV</span><span>A ${kmh(d.dv[0])} ／ B ${kmh(d.dv[1])} km/h</span>`);
+      h.push('</div>');
+      if (d.dE < -500) h.push('<div class="warnline">衝突後のエネルギーが衝突前より大きくなっています。停止位置・摩擦係数・ロック値のどこかが合っていません。</div>');
+    }
+    if (r.cands.length > 1) {
+      h.push(`<div style="margin-top:10px;font-weight:700;font-size:12.5px">解の候補（${r.cands.length}件・整合度の高い順。タップで図に描きます）</div><div class="cands">`);
+      r.cands.forEach((cc, k) => {
+        h.push(`<button class="cand${k === S.scene.sel ? ' on' : ''}" data-cand="${k}"><b>${k + 1}.</b> 整合度 <b>${cc.score.toFixed(0)}</b> ／ A ${r.fixedSpeeds ? '—' : kmh(cc.p[2])} km/h ${f1(cc.p[4] * R2D, 0)}° ／ B ${r.fixedSpeeds ? '—' : kmh(cc.p[3])} km/h ${f1(cc.p[5] * R2D, 0)}° ／ 地点 (${f1(cc.p[0])}, ${f1(cc.p[1])})</button>`);
+      });
+      h.push('</div>');
+    }
+    h.push(`<div class="note">${NOTE} ${NOTE_SCENE} 速度の幅は摩擦係数を ±${S.scene.dmu} 動かしたときの値。痕跡だけでは衝突でどれだけ減速したか分からないため、痕跡からの速度は「最低でもこの速度以上」として示します。衝突後の移動は直線で滑ったと近似し、回転は角度の変化から別に見積もっています。</div></div>`);
+    return h.join('');
+  }
+
+  /* ---------- 現場推定 → 検証モード ---------- */
+  function sendToVerify() {
+    const r = sceneRes, c = r && r.cands[S.scene.sel]; if (!c) return;
+    const d = c.d, paths = [];
+    for (const i of [0, 1]) {
+      const o = d.veh[i], vp = vehParams(S.veh[i]), T = r.inp.traces[i];
+      const v0 = r.fixedSpeeds ? (o.vbMin || 8) : (o.vb != null ? o.vb : o.v);
+      let pts, sPerceive = null;
+      if (T) {
+        const back = v0 * vp.react + 20;
+        pts = [T.at(-back).p];
+        for (let k = 0; k < T.P.length; k += 4) pts.push(T.P[k]);
+        pts.push(T.P[T.P.length - 1]);
+        const endS = Math.max(o.sI, T.total);
+        if (o.sI > T.total + 0.3) pts.push(T.at(o.sI).p);
+        const e = T.at(endS); pts.push(add(e.p, mul(dir(e.th), 60)));
+        sPerceive = 20;
+      } else {
+        pts = [sub(o.c, mul(dir(o.th), 40)), add(o.c, mul(dir(o.th), 60))];
+      }
+      paths.push({ pts, v0, sPerceive, hasT: !!T });
+    }
+    // 両車が同じ時刻に衝突地点へ着くよう、早く着く方の出発点を後ろへ延ばす
+    const mu = S.road.mu;
+    const tArrive = (path, vp, p, sTarget) => {
+      if (!p.hasT) return sTarget / Math.max(0.1, p.v0);
+      const sB = p.sPerceive + p.v0 * vp.react; let s = 0, v = p.v0, t = 0, tb = -1; const dt = 0.002;
+      while (s < sTarget && t < 60) {
+        let a = 0;
+        if (s >= sB) { if (tb < 0) tb = t; const amax = mu * P.G * vp.eff, lat = v * v * Math.abs(path.at(s).k); a = Math.min(amax * (vp.rise > 0 ? Math.min(1, (t - tb) / vp.rise) : 1), Math.sqrt(Math.max(0, amax * amax - lat * lat))); }
+        const v1 = Math.max(0.05, v - a * dt); s += (v + v1) / 2 * dt; v = v1; t += dt;
+      }
+      return t;
+    };
+    let built = paths.map(p => P.makePath(p.pts, { h: 0.25 }));
+    const tt = [0, 1].map(i => tArrive(built[i], vehParams(S.veh[i]), paths[i], P.projectS(built[i], d.veh[i].c).s));
+    const early = tt[0] < tt[1] ? 0 : 1, gap = Math.abs(tt[0] - tt[1]);
+    if (gap > 1e-3) {
+      const p = paths[early], b = built[early], ext = gap * p.v0;
+      p.pts = [sub(b.at(0).p, mul(dir(b.at(0).th), ext)), ...p.pts];
+      if (p.sPerceive != null) p.sPerceive += ext;
+      built = paths.map(q => P.makePath(q.pts, { h: 0.25 }));
+    }
+    for (const i of [0, 1]) {
+      const v = S.veh[i], p = paths[i];
+      v.path = p.pts.map(q => [round2(q.x), round2(q.y)]);
+      v.v0 = Math.round(p.v0 * 3.6 * 10) / 10;
+      if (p.hasT) {
+        const sConf = P.conflictS(built[i], built[1 - i]);
+        if (isFinite(sConf)) { v.brake = 'distance'; v.D = round1(Math.max(0, sConf - (p.sPerceive + v.L / 2))); }
+        else v.brake = 'auto';
+      } else v.brake = 'never';
+    }
+    S.mode = 'verify'; renderAll();
+    alert('推定したルートと速度を検証モードへ送りました。\n・痕跡のある車：痕跡の始まりでブレーキが始まるよう「衝突地点の手前Dmで発見」に設定\n・痕跡のない車：ブレーキなしで設定\n衝突後の動きが停止位置と合うか確かめてください。');
+  }
+
+  /* ---------- 出力 ---------- */
+  function summaryLines() {
+    const L = [];
+    const modeName = { verify: '①検証', reverse: '②逆算', scene: '③現場推定' }[S.mode];
+    L.push(`交通事故シミュレーション（${modeName}）  ${new Date().toLocaleString('ja-JP')}`);
+    L.push(`路面 μ=${S.road.mu}（${(P.ROAD_PRESETS[S.road.preset] || { label: '手入力' }).label}）／ 反発係数 ${S.coll.e} ／ 車両間摩擦 ${S.coll.muc}`);
+    S.veh.forEach((v, i) => {
+      const st = vehStart(v);
+      L.push(`${vname(i)}: ${P.VEH_PRESETS[v.preset]?.label || ''} ${v.m}kg ${v.L}×${v.W}m 速度${v.v0}km/h 反応${v.react}s 効き${v.eff}% 位置(${st.c.x.toFixed(1)},${st.c.y.toFixed(1)}) 向き${(st.th * R2D).toFixed(0)}° 発見:${{ auto: '見通し', distance: '手前' + v.D + 'm', never: 'なし' }[v.brake]}${v.path ? ' 経路:曲線' : ''}`);
+    });
+    if (S.mode === 'verify' && simRes) {
+      if (simRes.collided) { const C = simRes.coll; L.push(`結果: 衝突 ${C.t.toFixed(2)}s 衝突速度 A${kmh(C.pre[0].v)} B${kmh(C.pre[1].v)} km/h 相対${kmh(C.vrel)}km/h 変形エネルギー${(C.dE / 1000).toFixed(1)}kJ ΔV A${kmh(C.dv[0])} B${kmh(C.dv[1])}`); }
+      else L.push(`結果: 衝突しない（最接近 ${simRes.minGap.toFixed(2)} m）`);
+      if (avoid && avoid.lim) avoid.lim.forEach((x, i) => { if (x && x.vmax != null) L.push(`回避: ${vname(i)} は ${(x.vmax * 3.6).toFixed(1)} km/h 以下なら回避`); });
+    } else if (S.mode === 'reverse' && revRes && !revRes.busy) {
+      const o = revRes, it = o.item; let s = o.msg || '';
+      if (o.limit != null) s = it === 'speed' ? `${(o.limit * 3.6).toFixed(1)} km/h` : it === 'mu' ? `μ ${o.limit.toFixed(3)}` : it === 'reaction' ? `${o.limit.toFixed(2)} 秒` : `手前 ${o.limit.toFixed(1)} m`;
+      L.push(`逆算: ${P.REV_ITEMS[it].label}（${vname(S.rev.who)}）= ${s}`);
+    } else if (S.mode === 'scene' && sceneRes && sceneRes.cands.length) {
+      const c = sceneRes.cands[S.scene.sel], d = c.d;
+      L.push(`推定（候補${S.scene.sel + 1}・整合度${c.score.toFixed(0)}）: 衝突地点(${d.I.x.toFixed(1)},${d.I.y.toFixed(1)}) A ${sceneRes.fixedSpeeds ? '—' : kmh(d.veh[0].v)} km/h ${(d.veh[0].th * R2D).toFixed(0)}° ／ B ${sceneRes.fixedSpeeds ? '—' : kmh(d.veh[1].v)} km/h ${(d.veh[1].th * R2D).toFixed(0)}°`);
+      S.scene.rest.forEach((R, i) => { if (R.on) L.push(`${vname(i)} 停止位置 (${R.x},${R.y}) 角度${R.th}°`); });
+      if (sceneRes.range && !sceneRes.fixedSpeeds) { const a = sceneRes.range.map(x => x.p[2] * 3.6), b = sceneRes.range.map(x => x.p[3] * 3.6); L.push(`速度の幅（μ±${S.scene.dmu}）: A ${Math.min(...a).toFixed(0)}〜${Math.max(...a).toFixed(0)} ／ B ${Math.min(...b).toFixed(0)}〜${Math.max(...b).toFixed(0)} km/h`); }
+    }
+    L.push('注：' + NOTE + (S.mode === 'scene' ? ' ' + NOTE_SCENE : ''));
+    return L;
+  }
+  function download(name, blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
+  const stamp = () => { const d = new Date(), z = n => String(n).padStart(2, '0'); return `${d.getFullYear()}${z(d.getMonth() + 1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}`; };
+  function exportPng() {
+    const W = 1200, Hd = 1000, lines = summaryLines();
+    const c = document.createElement('canvas'), g = c.getContext('2d');
+    g.font = '18px system-ui,sans-serif';
+    const wrap = [];
+    for (const l of lines) { let s = ''; for (const ch of l) { if (g.measureText(s + ch).width > W - 40) { wrap.push(s); s = ''; } s += ch; } wrap.push(s); }
+    const Ht = 30 + wrap.length * 26;
+    c.width = W; c.height = Hd + Ht;
+    const k = W / cssW, vw = { cx: view.cx, cy: view.cy, scale: view.scale * Math.min(k, Hd / cssH) };
+    drawScene(g, W, Hd, vw, { export: true });
+    g.fillStyle = '#fff'; g.fillRect(0, Hd, W, Ht); g.fillStyle = '#ccc'; g.fillRect(0, Hd, W, 1);
+    g.fillStyle = '#222'; g.font = '18px system-ui,sans-serif'; g.textAlign = 'left';
+    wrap.forEach((l, i) => g.fillText(l, 20, Hd + 30 + i * 26));
+    c.toBlob(b => download(`jiko-sim-${stamp()}.png`, b), 'image/png');
+  }
+  function exportJson() {
+    const out = { app: 'jiko-sim', version: 1, saved: new Date().toISOString(), settings: S, summary: summaryLines() };
+    download(`jiko-sim-${stamp()}.json`, new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' }));
+  }
+  async function copyText() {
+    const t = summaryLines().join('\n');
+    try { await navigator.clipboard.writeText(t); alert('コピーしました。'); } catch (e) { prompt('コピーしてください', t); }
+  }
+
+  /* ---------- 組み立て ---------- */
+  function renderPanel() {
+    binds = [];
+    const st = panel.scrollTop;
+    panel.innerHTML = '';
+    panel.append(resBox);
+    if (S.mode === 'reverse') panel.append(reverseSection());
+    if (S.mode === 'scene') panel.append(...sceneSection());
+    panel.append(basicSection(), vehicleAcc(), roadAcc(), geomAcc(), sightAcc(), collAcc(), outAcc());
+    panel.scrollTop = st;
+    document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.m === S.mode));
+    updateHint();
+  }
+  function updateHint() {
+    const h = document.getElementById('hint');
+    h.textContent = S.mode === 'scene'
+      ? (drawTool >= 0 ? `${vname(drawTool)} の痕跡：進んだ向きに指でなぞってください` : '停止車両・★（衝突地点）・建物をドラッグ ／ 2本指で拡大・移動')
+      : '車・建物をドラッグして配置 ／ 何もない所をドラッグで移動、2本指（ホイール）で拡大';
+  }
+  function renderAll() { renderPanel(); compute(); }
+  document.getElementById('tabs').addEventListener('click', e => { const m = e.target.dataset && e.target.dataset.m; if (!m || m === S.mode) return; S.mode = m; drawTool = -1; renderAll(); fit(); });
+  document.getElementById('bFit').onclick = fit;
+  document.getElementById('bPng').onclick = exportPng;
+  window.addEventListener('resize', resize);
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(cv);
+  resize();
+  renderAll(); fit();
+  window.__jiko = { S: () => S, compute, P, sceneRes: () => sceneRes, simRes: () => simRes, revRes: () => revRes };
+})();
+</script>
+</body>
+</html>

@@ -48,6 +48,7 @@ TARGETS = [
     'fantasy/index.html',
     'lumina/index.html',
     'shoko/index.html',
+    'jiko-sim/index.html',
 ]
 PWA_META = (
     '<meta name="apple-mobile-web-app-capable" content="yes">'
