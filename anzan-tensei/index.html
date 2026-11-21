@@ -671,6 +671,10 @@
   .skills-wrap { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--dim); }
   .skills-wrap .skills { margin-top: 0; padding-top: 0; border-top: 0; }
   #result-screen { z-index: 58; }
+  #notice-screen { z-index: 57; justify-content: center; }
+  #notice-text { font-size: 1rem; line-height: 1.9; text-align: center; padding: 0 18px; }
+  .res-btns { display: flex; justify-content: space-between; align-items: center; gap: 16px; width: min(92vw, 420px); margin-top: 18px; }
+  .res-btns .menu-btn { margin: 0; }
   #diff-screen { z-index: 59; }
   #noise-screen { position: fixed; inset: 0; z-index: 70; display: none; background: #000; pointer-events: all; }
   #noise-canvas { width: 100%; height: 100%; image-rendering: pixelated; display: block; }
@@ -727,11 +731,11 @@
   #ending-screen { position: absolute; inset: 0; z-index: 80; display: none; overflow: hidden; background: #000; color: #e9e3d2; }
   #ending-screen::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 120%, rgba(255,120,60,0.18), transparent 60%), radial-gradient(ellipse at 50% -10%, rgba(120,140,255,0.12), transparent 55%); }
   #end-roll { position: absolute; left: 0; right: 0; top: 0; text-align: center; will-change: transform; transition: opacity 2s; }
-  #end-roll .big { margin-top: 12px; }
-  #end-roll .bigsub { margin: 10px 0 120px; opacity: 0.6; }
+  #end-roll .big { margin-top: 12px; font-size: 2.1rem; letter-spacing: 0.3em; text-indent: 0.3em; }
+  #end-roll .bigsub { margin: 10px 0 120px; opacity: 0.6; font-size: 1rem; letter-spacing: 0.4em; text-indent: 0.4em; }
   #end-roll .blk { margin: 0 0 96px; }
   #end-roll .role { margin-bottom: 14px; opacity: 0.8; color: #c9a35a; font-family: var(--font); font-size: 0.8rem; letter-spacing: 0.28em; text-transform: uppercase; }
-  #end-roll .name { margin: 8px 0; }
+  #end-roll .name { margin: 8px 0; font-size: 1.05rem; letter-spacing: 0.12em; }
   .gw { display: inline-block; margin: 0 7px; white-space: nowrap; }
   .gl { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; margin: 0 1.5px; vertical-align: middle; }
   .name .gl { width: 15px; height: 21px; }
@@ -741,7 +745,7 @@
   #end-fin.on { opacity: 1; }
   #end-hint { position: absolute; left: 0; right: 0; bottom: 14%; text-align: center; font-size: 0.8rem; opacity: 0; transition: opacity 1.4s; }
   #end-hint.on { opacity: 0.6; }
-  #end-skip { position: absolute; top: 8px; right: 8px; font-family: var(--font); font-size: 0.7rem; color: #e9e3d2; background: rgba(255,255,255,0.08); border: 0; border-radius: 2px; padding: 5px 12px; opacity: 0.55; cursor: pointer; }
+  #end-skip { position: absolute; top: 12px; right: 12px; font-family: var(--font); font-size: 1.05rem; letter-spacing: 0.1em; color: #e9e3d2; background: rgba(255,255,255,0.14); border: 1px solid rgba(233,227,210,0.45); border-radius: 2px; padding: 12px 24px; opacity: 0.9; cursor: pointer; z-index: 2; }
   .proto-note { margin: 4px 16px 14px; padding: 8px 12px; max-width: 360px; font-size: 0.74rem; line-height: 1.6; text-align: center; border: 1px dashed var(--main); border-radius: 2px; opacity: 0.85; }
   #result-stats { line-height: 1.9; }
   .stat-card { background: var(--surface); border-radius: 2px; padding: 10px 12px; }
@@ -1139,9 +1143,15 @@
   <div id="result-screen" class="overlay" style="display:none;">
     <div class="title-logo">STAGE CLEAR</div>
     <div class="title-sub" id="result-stats"></div>
-    <div class="proto-note">現在システム面の製作中であり、セリフはAI任せです。</div>
-    <button class="menu-btn" id="btn-record-result">[ RECORD ]</button>
-    <button class="menu-btn" id="btn-result-back">[ 輪廻へ ]</button>
+    <div class="res-btns">
+      <button class="menu-btn" id="btn-result-back">[ 生き返る ]</button>
+      <button class="menu-btn" id="btn-record-result">[ RECORD ]</button>
+    </div>
+  </div>
+  <!-- 装備入手のお知らせ／復活後の仲間加入の説明 -->
+  <div id="notice-screen" class="overlay" style="display:none;">
+    <div id="notice-text" class="title-sub"></div>
+    <button class="menu-btn" id="btn-notice">[ OK ]</button>
   </div>
 
   <!-- エンディング：読めない文字のスタッフロール。曲が終わるまで流れ、終わったら fin. -->
@@ -1959,7 +1969,19 @@
     else if (next > 0) addLog('右を向いた。教室の引き戸が並んでいる。机の影が見える。');
   }
 
+  // === お知らせ（装備入手／仲間加入）===
+  function showNotice(html, opt) {
+    opt = opt || {};
+    const sc = document.getElementById('notice-screen'), bt = document.getElementById('btn-notice');
+    document.getElementById('notice-text').innerHTML = html;
+    bt.style.display = opt.btn ? '' : 'none';
+    sc.style.display = 'flex';
+    const done = () => { sc.style.display = 'none'; if (opt.cb) opt.cb(); };
+    if (opt.btn) bt.onclick = () => { SFX.beep(); done(); };
+    else setTimeout(done, opt.ms || 2400);
+  }
   // === クリア（リザルト） ===
+  // 流れ：クリア → 装備入手のお知らせ → 即死亡 → スタッフロール → STAGE CLEAR（踏破回数のみ）→「生き返る」→ 復活 → 仲間加入の説明
   function showResult() {
     SFX.clear();
     state.clears = (state.clears || 0) + 1;
@@ -1973,13 +1995,16 @@
     const inv2 = loadRec().inv;
     const newG = JOIN_IDS.find(id => !inv2.joined.includes(id) && (soloMode || !roster.includes(id)));
     let joinTxt = '仲間の女神は、全員そろっている';
+    state.pendingJoin = null;
     if (newG) {
       inv2.joined.push(newG);
       const gd = GODDESS_POOL.find(x => x.id === newG);
       if (!soloMode) roster.push(newG);
       joinTxt = `新たな女神「${gd.name}」が仲間に加わった！` + (soloMode ? '（デスでは同行しない）' : '（召喚画面から呼べる）');
       addLog(joinTxt);
-      addLog(`${gd.name}「${pickLine(SUMMON_LINES[newG])}」`);
+      const gline = pickLine(SUMMON_LINES[newG]);
+      addLog(`${gd.name}「${gline}」`);
+      state.pendingJoin = `新たな女神<br><b>「${gd.name}」</b><br>が仲間に加わった！<br><br>` + (soloMode ? 'デスでは同行しない。' : '召喚画面から呼べるようになった。') + `<br><br>${gd.name}「${gline}」`;
     }
     saveRec();
     const totalNo = recordClear();
@@ -1991,10 +2016,10 @@
     updateUI();
     resultOpen = true;
     state.paused = true;
-    document.getElementById('result-stats').innerHTML =
-      `難易度: ${diffName}<br>踏破 ${state.clears} 回目<br>到達LV: ${state.hero.lv}<br>歩数: ${state.steps}歩<br>撃破: ${state.kills || 0}体<br>HP 全回復<br>周回: 今回 ${state.clears} 周目 ／ 通算 ${totalNo} 周<br>称号: ${curTitle(totalNo)}<br>入手: ${gain}<br>仲間: ${joinTxt}${state.lastBest && state.lastBest.length ? '<br>自己ベスト更新: ' + state.lastBest.join(' ／ ') : ''}`;
-    // 先にエンディング（スタッフロール → fin.）。終わったらリザルトを出す
-    setTimeout(() => startEnding(() => playClearDeath(() => { document.getElementById('result-screen').style.display = 'flex'; })), 900);
+    document.getElementById('result-stats').innerHTML = `踏破 ${state.clears} 回`;
+    if (state.lastBest && state.lastBest.length) addLog('自己ベスト更新: ' + state.lastBest.join(' ／ '));
+    // 装備入手のお知らせ → 即死亡 → スタッフロール → リザルト
+    showNotice(gain.replace('を手に入れた', '<br>を手に入れた'), { ms: 2400, cb: () => playClearDeath(() => startEnding(() => { document.getElementById('result-screen').style.display = 'flex'; })) });
   }
 
   // === エンディング：スタッフロール（曲が終わるまで流れ、最後に fin.） ===
@@ -2042,8 +2067,8 @@
     const fin = document.getElementById('end-fin'), hint = document.getElementById('end-hint');
     fin.classList.remove('on'); hint.classList.remove('on');
     roll.style.transition = 'none'; roll.style.opacity = 1;
-    roll.innerHTML = `<div class="big">${glyphs('暗算輪廻')}</div><div class="bigsub">${glyphs('Rebuild')}</div>` +
-      STAFF.map(([role, names]) => `<div class="blk"><div class="role">${role.replace(/&/g, '&amp;')}</div>` + names.map(n => `<div class="name">${glyphs(n)}</div>`).join('') + '</div>').join('');
+    roll.innerHTML = `<div class="big">暗算輪廻</div><div class="bigsub">Rebuild</div>` +
+      STAFF.map(([role, names]) => `<div class="blk"><div class="role">${role.replace(/&/g, '&amp;')}</div>` + names.map(n => `<div class="name">${n.replace(/&/g, '&amp;')}</div>`).join('') + '</div>').join('');
     sc.style.display = 'block';
     endAudio = new Audio('ending.mp3');
     endAudio.volume = 0.85;
@@ -2151,7 +2176,8 @@
       rv.classList.remove('on');
       rvMain.textContent = mainOrig;
       rebirthBusy = false;
-      closeResult();
+      if (state.pendingJoin) { const t = state.pendingJoin; state.pendingJoin = null; showNotice(t, { btn: true, cb: closeResult }); }
+      else closeResult();
     }, 3600);
   }
   document.getElementById('btn-result-back').onclick = startRebirth;
