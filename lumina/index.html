@@ -10,12 +10,16 @@
     * { box-sizing: border-box; }
     html, body { margin: 0; min-height: 100%; }
     body { min-height: 100svh; display: grid; place-items: center; overflow: hidden; background: #182d33; }
-    .clock { position: relative; width: min(100vw, calc(100svh * 4 / 3)); aspect-ratio: 4 / 3; overflow: hidden; touch-action: manipulation; outline: none; cursor: pointer; }
-    .scene, .overlay, .hands { position: absolute; inset: 0; width: 100%; height: 100%; }
-    .scene { z-index: 1; inset: 0 auto auto 0; width: 512px; height: 384px; max-width: none; object-fit: fill; transform-origin: top left; }
-    .day { position: absolute; z-index: 1; left: 0; top: 0; width: 512px; height: 384px; overflow: hidden; display: none; --off: 0s; }
+    html.round, html.round body { background: transparent; }
+    .clock { position: relative; width: min(100vw, calc(100svh * 4 / 3)); aspect-ratio: 4 / 3; overflow: hidden; --u: 1px; }
+    /* 丸窓モード（Rキー / ?round）：文字盤の円だけを切り抜き、背景は透明にする */
+    .clock.round { width: calc(min(100vw, 100svh) * 1.4394); transform: translate(.28%, 2.1%); clip-path: circle(calc(var(--u) * 503) at calc(var(--u) * 720) calc(var(--u) * 520)); }
+    .scene, .scene-bg, .day, .winfx { position: absolute; left: 0; top: 0; width: 512px; height: 384px; max-width: none; }
+    .scene-bg { z-index: 1; object-fit: cover; filter: blur(12px) brightness(.62) saturate(1.1); transform: scale(1.12); }
+    .scene { z-index: 1; object-fit: contain; }
+    .day { z-index: 1; overflow: hidden; display: none; --off: 0s; }
     .clock.day-mode .day { display: block; }
-    .clock.day-mode .scene { display: none; }
+    .clock.day-mode .scene, .clock.day-mode .scene-bg { display: none; }
     .day img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform-origin: 50% 55%; animation: day-drift 40s linear infinite; will-change: opacity, transform; }
     .day img:nth-child(1) { animation-delay: var(--off); }
     .day img:nth-child(2) { animation-delay: calc(var(--off) + 10s); }
@@ -29,17 +33,23 @@
       100% { opacity: 0; transform: scale(1.09) translate(-1.2%, -.8%); }
     }
     @media (prefers-reduced-motion: reduce) { .day img { animation-duration: 120s; } }
-    .overlay { z-index: 2; pointer-events: none; }
+    /* 窓の中だけにかかる演出：時間帯の色味と、切り替え時の暗転 */
+    .winfx { z-index: 1; overflow: hidden; pointer-events: none; }
+    .tint, .veil { position: absolute; inset: 0; }
+    .tint { opacity: 0; transition: opacity 3s ease, background-color 3s ease; }
+    .veil { background: #0d1a1e; opacity: 0; transition: opacity .9s ease; }
+    .clock.veil-on .veil { opacity: 1; }
+    .overlay, .walkers { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; transition: filter 1.5s ease; }
+    .overlay { z-index: 2; }
+    .walkers { z-index: 3; overflow: visible; }
     .clock.night-mode .overlay { filter: brightness(.68) saturate(.78); }
-    .clock.night-mode .hands { filter: brightness(.8); }
-    .hands { z-index: 3; overflow: visible; pointer-events: none; opacity: 0; transition: opacity 150ms ease; }
-    .clock.hands-visible .hands { opacity: 1; }
-    .clock:focus-visible { outline: 3px solid #f6d68e; outline-offset: -4px; }
-    .audio-toggle { position: fixed; right: 18px; bottom: 18px; z-index: 5; width: 46px; height: 46px; display: grid; place-items: center; padding: 0; border: 1px solid rgba(255,230,173,.6); border-radius: 50%; color: #ffe6ad; background: rgba(24,45,51,.83); cursor: pointer; }
-    .audio-toggle svg { width: 21px; height: 21px; fill: currentColor; }
+    .clock.night-mode .walkers { filter: brightness(.8); }
+    .audio-toggle { position: fixed; right: 12px; bottom: 12px; z-index: 5; width: clamp(30px, 9vmin, 46px); height: clamp(30px, 9vmin, 46px); display: grid; place-items: center; padding: 0; border: 1px solid rgba(255,230,173,.6); border-radius: 50%; color: #ffe6ad; background: rgba(24,45,51,.83); cursor: pointer; }
+    html.round .audio-toggle { opacity: .35; }
+    html.round .audio-toggle:hover, html.round .audio-toggle:focus-visible { opacity: 1; }
+    .audio-toggle svg { width: 46%; height: 46%; fill: currentColor; }
     .audio-toggle:focus-visible { outline: 2px solid #fff0c8; outline-offset: 3px; }
-    .tap-hint { position: fixed; right: 76px; bottom: 29px; z-index: 5; margin: 0; color: #ffe6ad; font: 500 13px/1 sans-serif; letter-spacing: .08em; pointer-events: none; text-shadow: 0 1px 4px #182d33; }
-    @media (prefers-reduced-motion: reduce) { .hands { transition: none; } }
+    @media (prefers-reduced-motion: reduce) { .overlay, .walkers, .tint, .veil { transition: none; } }
   </style>
 <!--IZ-GAME-BASE:START-->
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -254,7 +264,8 @@
 <!--IZ-GAME-BASE:END-->
 </head>
 <body>
-  <main class="clock" role="button" tabindex="0" aria-label="時計の針を表示または非表示にする" aria-pressed="false">
+  <main class="clock" role="img" aria-label="LUMINA からくり時計">
+    <img class="scene-bg" alt="" aria-hidden="true">
     <img class="scene" alt="焚き火を囲む旅人たち">
     <div class="day" aria-hidden="true">
       <img src="assets/day-frames/frame-0.jpeg" alt="">
@@ -262,39 +273,80 @@
       <img src="assets/day-frames/frame-2.jpeg" alt="">
       <img src="assets/day-frames/frame-3.jpeg" alt="">
     </div>
+    <div class="winfx" aria-hidden="true"><div class="tint"></div><div class="veil"></div></div>
     <img class="overlay" src="assets/clock_overlay_window_4x3.png" alt="">
-    <svg class="hands" viewBox="0 0 1448 1086" aria-hidden="true">
-      <defs><linearGradient id="metal" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#563c24"/><stop offset=".3" stop-color="#b9853c"/><stop offset=".52" stop-color="#ffe7a5"/><stop offset=".75" stop-color="#b9853c"/><stop offset="1" stop-color="#563c24"/></linearGradient></defs>
-      <g id="minute-hand"><path d="M696 538 L699 340 L704 138 L709 340 L712 538 Z" fill="url(#metal)" stroke="#50351e" stroke-width="2"/></g>
-      <g id="hour-hand"><path d="M694 538 L695 379 L704 232 L713 379 L714 538 Z" fill="url(#metal)" stroke="#50351e" stroke-width="2"/></g>
-      <g><circle cx="704" cy="516" r="22" fill="#53331e" stroke="#dfb76c" stroke-width="5"/><circle cx="704" cy="516" r="14" fill="#ac762e"/><circle cx="704" cy="516" r="7" fill="#ffe1a4"/></g>
+    <svg class="walkers" viewBox="0 0 1448 1086" aria-hidden="true">
+      <!-- 短針：小さな旅人（ドワーフ） -->
+      <g id="hour-walker">
+        <ellipse cx="0" cy="2" rx="14" ry="4" fill="#2a1a0c" opacity=".3"/>
+        <g transform="translate(0 -18)"><g><animateTransform attributeName="transform" type="rotate" values="-28;28;-28" dur="0.7s" repeatCount="indefinite"/><rect x="-4.5" y="0" width="9" height="18" rx="4.5" fill="#5a3b24" stroke="#2f1d10" stroke-width="2.5"/></g></g>
+        <g transform="translate(0 -18)"><g><animateTransform attributeName="transform" type="rotate" values="28;-28;28" dur="0.7s" repeatCount="indefinite"/><rect x="-4.5" y="0" width="9" height="18" rx="4.5" fill="#6a4529" stroke="#2f1d10" stroke-width="2.5"/></g></g>
+        <line x1="-10" y1="-30" x2="-19" y2="-58" stroke="#7a4a22" stroke-width="4" stroke-linecap="round"/>
+        <path d="M-19 -58 L-31 -63 L-28 -48 Z" fill="#b8bec8" stroke="#2f1d10" stroke-width="2.5" stroke-linejoin="round"/>
+        <rect x="-14" y="-40" width="28" height="24" rx="9" fill="#7b5230" stroke="#2f1d10" stroke-width="3"/>
+        <path d="M-14 -37 Q0 -29 14 -37" stroke="#dccaa6" stroke-width="5" stroke-linecap="round" fill="none"/>
+        <rect x="-14" y="-26" width="28" height="4.5" fill="#d1a845" stroke="#2f1d10" stroke-width="1.5"/>
+        <path d="M-10 -46 Q-12 -20 0 -16 Q12 -20 10 -46 Z" fill="#cc6a2c" stroke="#2f1d10" stroke-width="2.5" stroke-linejoin="round"/>
+        <circle cx="1" cy="-49" r="10" fill="#f0c49c" stroke="#2f1d10" stroke-width="2.5"/>
+        <circle cx="8" cy="-47" r="3" fill="#e0a07a"/>
+        <circle cx="5" cy="-50" r="1.6" fill="#2f1d10"/>
+        <path d="M-10 -53 Q-9 -67 1 -67 Q11 -67 11 -53 Z" fill="#aab1bb" stroke="#2f1d10" stroke-width="2.5" stroke-linejoin="round"/>
+        <rect x="-12" y="-55" width="24" height="3.5" rx="1.7" fill="#8c93a0" stroke="#2f1d10" stroke-width="2"/>
+        <path d="M4 -34 L13 -27" stroke="#2f1d10" stroke-width="8" stroke-linecap="round"/>
+        <path d="M4 -34 L13 -27" stroke="#7b5230" stroke-width="4.5" stroke-linecap="round"/>
+        <rect x="11" y="-32" width="8" height="9" rx="2" fill="#b8bec8" stroke="#2f1d10" stroke-width="2"/>
+      </g>
+      <!-- 長針：大きな旅人（エルフ） -->
+      <g id="minute-walker">
+        <ellipse cx="0" cy="2" rx="18" ry="4.5" fill="#2a1a0c" opacity=".3"/>
+        <g transform="translate(0 -30)"><g><animateTransform attributeName="transform" type="rotate" values="-26;26;-26" dur="0.9s" repeatCount="indefinite"/><rect x="-4.5" y="0" width="9" height="30" rx="4.5" fill="#6a4529" stroke="#2f1d10" stroke-width="2.5"/></g></g>
+        <g transform="translate(0 -30)"><g><animateTransform attributeName="transform" type="rotate" values="26;-26;26" dur="0.9s" repeatCount="indefinite"/><rect x="-4.5" y="0" width="9" height="30" rx="4.5" fill="#7a5233" stroke="#2f1d10" stroke-width="2.5"/></g></g>
+        <line x1="21" y1="-84" x2="21" y2="0" stroke="#7a4a22" stroke-width="4.5" stroke-linecap="round"/>
+        <circle cx="21" cy="-90" r="6.5" fill="#6fb7ff" stroke="#2f1d10" stroke-width="2.5"/>
+        <path d="M-12 -80 Q-14 -98 0 -98 Q14 -98 12 -80 L16 -50 Q8 -56 6 -68 L-6 -68 Q-8 -56 -16 -50 Z" fill="#f0cc5e" stroke="#2f1d10" stroke-width="2.5" stroke-linejoin="round"/>
+        <path d="M-15 -28 L-11 -64 Q0 -70 11 -64 L16 -28 Z" fill="#3b55b3" stroke="#2f1d10" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M-15 -28 L16 -28" stroke="#f0c040" stroke-width="4" stroke-linecap="round"/>
+        <path d="M3 -60 L20 -46" stroke="#2f1d10" stroke-width="9" stroke-linecap="round"/>
+        <path d="M3 -60 L20 -46" stroke="#3b55b3" stroke-width="5.5" stroke-linecap="round"/>
+        <circle cx="21" cy="-46" r="4.5" fill="#f8dcb8" stroke="#2f1d10" stroke-width="2"/>
+        <circle cx="0" cy="-77" r="11.5" fill="#f8dcb8" stroke="#2f1d10" stroke-width="2.5"/>
+        <path d="M9 -80 L22 -86 L11 -73 Z" fill="#f8dcb8" stroke="#2f1d10" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M-11.5 -80 Q-4 -92 11 -83 Q2 -84 -3 -78 Q-8 -83 -11.5 -80 Z" fill="#f0cc5e"/>
+        <circle cx="5" cy="-76" r="1.8" fill="#2f1d10"/>
+      </g>
     </svg>
   </main>
-  <p class="tap-hint" aria-hidden="true">タップ</p>
-  <button class="audio-toggle" type="button" aria-label="時間帯の曲を再生" aria-pressed="false" title="時間帯の曲を再生する">
+  <button class="audio-toggle" type="button" aria-label="時間帯の曲を再生" aria-pressed="false" title="時間帯の曲を再生する（Mキー）">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
   </button>
   <audio id="music" preload="none" loop></audio>
   <script>
+    const root = document.documentElement;
     const clock = document.querySelector('.clock');
     const scene = document.querySelector('.scene');
+    const sceneBg = document.querySelector('.scene-bg');
     const day = document.querySelector('.day');
-    day.style.setProperty('--off', `-${(Math.random() * 40).toFixed(1)}s`);
-    const minuteHand = document.querySelector('#minute-hand');
-    const hourHand = document.querySelector('#hour-hand');
+    const winfx = document.querySelector('.winfx');
+    const tint = document.querySelector('.tint');
+    const walkersSvg = document.querySelector('.walkers');
+    const minuteWalker = document.querySelector('#minute-walker');
+    const hourWalker = document.querySelector('#hour-walker');
     const audio = document.querySelector('#music');
     const audioButton = document.querySelector('.audio-toggle');
-    const PIVOT = '704 516';
+    day.style.setProperty('--off', `-${(Math.random() * 40).toFixed(1)}s`);
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) walkersSvg.pauseAnimations();
+
+    // 文字盤の外周の枠（枠画像 1448x1086 上の座標）。旅人は枠の上に足をつけ、頭を中心に向けて時計回りに歩く。
+    const RING = { cx: 720, cy: 520, rx: 494, ry: 469 };
     function fitLayers() {
-      const scale = clock.clientWidth / 1448;
-      scene.style.left = `${448 * scale}px`;
-      scene.style.top = `${324 * scale}px`;
-      scene.style.width = `${512 * scale}px`;
-      scene.style.height = `${384 * scale}px`;
-      day.style.width = `${512 * scale}px`;
-      day.style.height = `${384 * scale}px`;
-      day.style.left = `${448 * scale}px`;
-      day.style.top = `${324 * scale}px`;
+      const s = clock.clientWidth / 1448;
+      clock.style.setProperty('--u', `${s}px`);
+      for (const el of [scene, sceneBg, day, winfx]) {
+        el.style.left = `${448 * s}px`;
+        el.style.top = `${324 * s}px`;
+        el.style.width = `${512 * s}px`;
+        el.style.height = `${384 * s}px`;
+      }
     }
     const tracks = {
       morning: ['assets/morning.mp3', 'assets/morning-alt.mp3'],
@@ -302,11 +354,11 @@
       midnight: ['assets/midnight.mp3']
     };
     const scenes = {
-      campfire: 'assets/campfire_random_80ms.gif',
+      campfire: 'assets/campfire_travelers.webp',
       sleeping: 'assets/LUMINA_sleeping_campfire_4frames_80ms.gif'
     };
     let activeScene = '';
-    let hideTimer;
+    let sceneReady = false;
     let activeTrack = '';
     let musicEnabled = false;
 
@@ -316,26 +368,58 @@
       }).formatToParts(new Date());
       return Object.fromEntries(parts.filter(part => part.type !== 'literal').map(part => [part.type, Number(part.value)]));
     }
-    function updateHands() {
+
+    /* ---- 針の代わりに、旅人が円周を歩く ---- */
+    function place(el, deg) {
+      const a = deg * Math.PI / 180;
+      const x = RING.cx + RING.rx * Math.sin(a);
+      const y = RING.cy - RING.ry * Math.cos(a);
+      el.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${(deg + 180).toFixed(2)}) scale(-1.2 1.2)`);
+    }
+    let lastLabelMinute = -1;
+    function updateWalkers() {
       const { hour, minute, second } = tokyoTime();
-      const minuteAngle = (minute + second / 60) * 6;
-      const hourAngle = ((hour % 12) + minute / 60 + second / 3600) * 30;
-      minuteHand.setAttribute('transform', `rotate(${minuteAngle} ${PIVOT})`);
-      hourHand.setAttribute('transform', `rotate(${hourAngle} ${PIVOT})`);
+      place(minuteWalker, (minute + second / 60) * 6);
+      place(hourWalker, ((hour % 12) + minute / 60 + second / 3600) * 30);
+      if (minute !== lastLabelMinute) {
+        lastLabelMinute = minute;
+        clock.setAttribute('aria-label', `LUMINA からくり時計　現在 ${hour}時${minute}分`);
+      }
     }
-    function hideHands() {
-      clearTimeout(hideTimer);
-      clock.classList.remove('hands-visible');
-      clock.setAttribute('aria-pressed', 'false');
+
+    /* ---- 時間帯の色味（朝焼け・夕焼け） ---- */
+    function updateTint({ hour, minute }) {
+      const h = hour + minute / 60;
+      const bump = (c, w) => Math.max(0, 1 - Math.abs(h - c) / w);
+      const dusk = bump(18, 1.8), dawn = bump(6, 1.3);
+      if (dusk >= dawn) { tint.style.backgroundColor = 'rgb(255,140,60)'; tint.style.opacity = (dusk * .22).toFixed(3); }
+      else { tint.style.backgroundColor = 'rgb(255,170,190)'; tint.style.opacity = (dawn * .16).toFixed(3); }
     }
-    function toggleHands() {
-      if (clock.classList.contains('hands-visible')) return hideHands();
-      clearTimeout(hideTimer);
-      updateHands();
-      clock.classList.add('hands-visible');
-      clock.setAttribute('aria-pressed', 'true');
-      hideTimer = setTimeout(hideHands, 5000);
+
+    /* ---- 場面の切り替え：窓の中をいったん暗転させてから入れ替える ---- */
+    function sceneKeyForTime({ hour }) {
+      if (hour < 5) return 'sleeping';
+      if (hour < 17) return 'day';
+      return 'campfire';
     }
+    function applyScene(key) {
+      clock.classList.toggle('night-mode', key === 'sleeping');
+      clock.classList.toggle('day-mode', key === 'day');
+      if (key !== 'day') { scene.src = scenes[key]; sceneBg.src = scenes[key]; }
+    }
+    function syncScene(time) {
+      const key = sceneKeyForTime(time);
+      if (key === activeScene) return;
+      activeScene = key;
+      if (!sceneReady) { sceneReady = true; applyScene(key); return; }
+      clock.classList.add('veil-on');
+      setTimeout(() => {
+        applyScene(key);
+        setTimeout(() => clock.classList.remove('veil-on'), 150);
+      }, 950);
+    }
+
+    /* ---- 音楽：曲の切り替えと再生・停止をフェードで行う ---- */
     function trackForTime({ hour }) {
       if (hour >= 0 && hour < 5) return ['midnight', tracks.midnight[0]];
       if (hour >= 17) return ['evening', tracks.evening[0]];
@@ -343,93 +427,90 @@
       // 午後は夕方の曲を静かに継続し、時間帯ごとの空白を作らない。
       return ['evening', tracks.evening[0]];
     }
-    function daytimeSceneForTime({ hour }) {
-      if (hour >= 5 && hour < 12) return 'morning';
-      if (hour >= 12 && hour < 17) return 'day';
-      return '';
+    let fadeTimer;
+    function fadeTo(target, ms, done) {
+      clearInterval(fadeTimer);
+      const from = audio.volume, t0 = performance.now();
+      fadeTimer = setInterval(() => {
+        const p = Math.min(1, (performance.now() - t0) / ms);
+        audio.volume = from + (target - from) * p;
+        if (p >= 1) { clearInterval(fadeTimer); if (done) done(); }
+      }, 50);
     }
-    function syncScene() {
-      const time = tokyoTime();
-      if (time.hour < 5) {
-        clock.classList.remove('day-mode');
-        if (activeScene !== 'sleeping') {
-          activeScene = 'sleeping';
-          clock.classList.add('night-mode');
-          scene.src = scenes.sleeping;
-        }
-        return;
-      }
-      clock.classList.remove('night-mode');
-      if (daytimeSceneForTime(time)) {
-        // 日中は静止画1枚ではなく、4枚の絵をゆっくり重ねて動かす（CSSアニメーション）。
-        if (activeScene !== 'day') {
-          activeScene = 'day';
-          clock.classList.add('day-mode');
-        }
-        return;
-      }
-      clock.classList.remove('day-mode');
-      if (activeScene !== 'campfire') {
-        activeScene = 'campfire';
-        scene.src = scenes.campfire;
-      }
-    }
-    function syncMusicTrack() {
-      const [key, source] = trackForTime(tokyoTime());
+    function syncMusicTrack(time) {
+      const [key, source] = trackForTime(time);
       if (!musicEnabled || !source || key === activeTrack) return;
+      const fresh = !activeTrack || audio.paused;
       activeTrack = key;
-      audio.src = source;
-      audio.play().catch(() => {
-        musicEnabled = false;
-        activeTrack = '';
-        updateAudioButton();
-      });
+      const start = () => {
+        audio.src = source;
+        audio.volume = 0;
+        audio.play().then(() => fadeTo(1, 2500)).catch(() => {
+          musicEnabled = false;
+          activeTrack = '';
+          updateAudioButton();
+        });
+      };
+      if (fresh) start(); else fadeTo(0, 1800, start);
     }
     function updateAudioButton() {
       const playing = musicEnabled && !audio.paused;
       audioButton.setAttribute('aria-pressed', String(playing));
       audioButton.setAttribute('aria-label', playing ? '音楽を停止' : '音楽を再生');
-      audioButton.title = playing ? '音楽を停止する' : '時間帯の音楽を再生する';
+      audioButton.title = playing ? '音楽を停止する（Mキー）' : '時間帯の音楽を再生する（Mキー）';
       audioButton.innerHTML = playing
         ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>'
         : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
     }
-    clock.addEventListener('click', toggleHands);
-    new ResizeObserver(fitLayers).observe(clock);
-    fitLayers();
-    clock.addEventListener('keydown', event => {
-      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleHands(); }
-    });
-    audioButton.addEventListener('click', async () => {
+    function toggleMusic() {
       if (musicEnabled && !audio.paused) {
-        audio.pause(); musicEnabled = false; activeTrack = ''; updateAudioButton(); return;
+        musicEnabled = false; activeTrack = '';
+        fadeTo(0, 800, () => audio.pause());
+        updateAudioButton();
+        return;
       }
       musicEnabled = true;
       activeTrack = '';
-      syncMusicTrack();
+      syncMusicTrack(tokyoTime());
       updateAudioButton();
+    }
+
+    /* ---- 丸窓モード ---- */
+    function setRound(on) {
+      clock.classList.toggle('round', on);
+      root.classList.toggle('round', on);
+      try { localStorage.setItem('lumina.round', on ? '1' : '0'); } catch (e) {}
+    }
+    let round = false;
+    try { round = new URLSearchParams(location.search).has('round') || localStorage.getItem('lumina.round') === '1'; } catch (e) {}
+    setRound(round);
+
+    audioButton.addEventListener('click', toggleMusic);
+    document.addEventListener('keydown', event => {
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.key === 'r' || event.key === 'R') setRound(!clock.classList.contains('round'));
+      if (event.key === 'm' || event.key === 'M') toggleMusic();
     });
     audio.addEventListener('ended', () => {
       // 念のため、曲が終わった場合も現在の時間帯の曲を再開する。
       activeTrack = '';
-      syncMusicTrack();
+      syncMusicTrack(tokyoTime());
     });
     audio.addEventListener('play', updateAudioButton);
     audio.addEventListener('pause', updateAudioButton);
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) {
-        if (clock.classList.contains('hands-visible')) updateHands();
-        syncScene();
-        syncMusicTrack();
-      }
-    });
-    updateHands();
-    syncScene();
-    setInterval(() => {
-      if (clock.classList.contains('hands-visible')) updateHands();
-      syncScene();
-      syncMusicTrack();
-    }, 1000);
+    new ResizeObserver(fitLayers).observe(clock);
+    fitLayers();
+
+    function tick() {
+      const time = tokyoTime();
+      updateWalkers();
+      updateTint(time);
+      syncScene(time);
+      syncMusicTrack(time);
+    }
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
+    tick();
+    setInterval(tick, 1000);
   </script>
 </body>
 </html>
