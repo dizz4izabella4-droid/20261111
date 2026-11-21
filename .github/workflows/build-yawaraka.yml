@@ -18,9 +18,65 @@ jobs:
         with:
           node-version: '22'
       - name: Install build tools
-        run: npm install --no-save --no-package-lock three@0.160.1 esbuild
+        run: npm install --no-save --no-package-lock three@0.160.1 esbuild puppeteer-core
       - name: Build
         run: cd yawaraka/_src && YAW_NODE_MODULES="$GITHUB_WORKSPACE/node_modules" python3 build.py
+      - name: Browser smoke test (real Chromium, WebGL + controls)
+        run: |
+          python3 -m http.server 8123 --bind 127.0.0.1 > /tmp/yawaraka-http.log 2>&1 &
+          server=$!
+          trap 'kill "$server" || true' EXIT
+          node --input-type=module <<'JS'
+          import puppeteer from 'puppeteer-core';
+          import { existsSync } from 'node:fs';
+
+          const chrome = [process.env.CHROME_PATH, '/usr/bin/google-chrome',
+            '/usr/bin/chromium', '/opt/google/chrome/chrome'].find(p => p && existsSync(p));
+          if (!chrome) throw new Error('No Chromium browser installed on runner');
+          const browser = await puppeteer.launch({
+            executablePath: chrome,
+            headless: true,
+            args: ['--no-sandbox','--disable-dev-shm-usage','--enable-webgl',
+              '--enable-unsafe-swiftshader','--use-gl=angle','--use-angle=swiftshader']
+          });
+          try {
+            const page = await browser.newPage();
+            page.setDefaultTimeout(30000);
+            await page.setViewport({ width: 1180, height: 780 });
+            const jsErrors = [];
+            page.on('pageerror', e => jsErrors.push(e.message));
+            await page.goto('http://127.0.0.1:8123/yawaraka/', { waitUntil: 'load', timeout: 30000 });
+            await page.waitForFunction(() => {
+              const c = document.getElementById('c');
+              return c && c.width > 0 && c.height > 0 && typeof document.getElementById('bakeBtn').onclick === 'function';
+            }, { timeout: 30000 });
+            const start = await page.evaluate(() => ({
+              mode:document.getElementById('modeBtn').textContent,
+              outline:document.getElementById('line').classList.contains('on'),
+              canvasWidth:document.getElementById('c').width
+            }));
+            if(start.mode !== 'のばす' || start.outline || start.canvasWidth < 100)
+              throw new Error('Bad startup UI: '+JSON.stringify(start));
+            await page.click('#tShape');
+            await page.click('#hp');
+            await page.click('#relaxBtn');
+            await page.waitForFunction(() =>
+              document.getElementById('toast').textContent.includes('もとの かたちに もどりました'),
+              { timeout: 20000 });
+            await page.click('#tMore');
+            await page.click('#yawaraka-lang');
+            await page.waitForFunction(() => document.getElementById('tMore').textContent === '詳細設定');
+            await page.click('#yawaraka-lang');
+            await page.waitForFunction(() => document.getElementById('tMore').textContent === 'くわしく');
+            await page.click('#sendWW');
+            await page.waitForFunction(() => {
+              try { return JSON.parse(localStorage.getItem('brain-friends-gallery-v1')||'[]').length > 0; }
+              catch (e) { return false; }
+            }, { timeout: 15000 });
+            if (jsErrors.length) throw new Error('Page errors: '+jsErrors.join(' / '));
+            console.log('PASS: startup, WebGL canvas, default hiragana, outline off, relax, language toggle, gallery');
+          } finally { await browser.close(); }
+          JS
       - name: Commit built HTML
         run: |
           git config user.name "github-actions[bot]"
