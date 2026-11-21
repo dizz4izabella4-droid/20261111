@@ -3990,5 +3990,134 @@ Zt("sendWW").onclick=()=>{
 };
 var Qi=null,Ml=new en(new R(0,1,0),0),Sf="mebae";try{Sf=localStorage.getItem("mochi-char")||"mebae"}catch{}Ca(Sf);var ju=0;Zs.setAnimationLoop(()=>{let i=Tx.getElapsedTime(),t=Math.min(i-ju,1/30);ju=i;stepRelaxMorph();let e=(L.on?85:90)/Fr,n=(L.on?3.9:5.5)/Math.sqrt(Fr);for(let y of["sq","sx","sz"]){let _=-e*Et[y]-n*Et[y+"V"];Et[y+"V"]+=_*t,Et[y]+=Et[y+"V"]*t}let s=0;if(L.on&&Wx(t),he.phase==="crouch"){he.t+=t;let y=Math.min(he.t/.16,1);s=-.28*Math.sin(y*Math.PI*.5),y>=1&&(he.phase="air",he.vy=5.2,he.y=0,Et.sq=-.28/.18*.6,Et.sqV=5,wt.hop())}else if(he.phase==="air"&&(he.vy-=14*t,he.y+=he.vy*t,s=Math.max(-.1,Math.min(he.vy*.025,.14)),he.y<=0&&he.vy<0)){let y=-he.vy;he.y=0,he.phase="idle",Et.sqV-=y*1.6,Et.sxV+=(Math.random()-.5)*y*1.2,Et.szV+=(Math.random()-.5)*y*.8,_a=.06+y*.012,Dr=0,wt.thud(y)}let r=he.phase==="idle"?Math.sin(i*1.8)*.018:0,a=1+(L.on?0:r)+Et.sq*.18+s+(L.on?L.sq:0),o=L.on?L.kind==="melt"?.58:.34:.28,c=L.on?L.kind==="stretch"?.6:.4:.35,l=a-1,h=1+(l>0?c*Math.tanh(l/c):o*Math.tanh(l/o)),u=1/Math.sqrt(h),f=.3*Math.tanh((Et.sx*.12+(L.on&&L.shx||0))/.3),m=.3*Math.tanh((Et.sz*.12+(L.on&&L.sh||0))/.3),g=new de;g.makeTranslation(0,yn,0);let x=L.on?1+(L.puff||0):1,d=new de().set(u*x,f*x,0,0,0,h*x,0,0,0,m*x,u*x,0,0,0,0,1);if(g.multiply(d).multiply(new de().makeTranslation(0,-yn,0)),_e.matrix.copy(g),_e.matrixWorldNeedsUpdate=!0,Ft.rt.update&&Ft.rt.update(t,{shx:f,shz:m,sy:h,vy:he.phase==="air"?he.vy:0,pullX:Q.active?Q.off.x:0}),L.on)for(let y of Le){if(y===xe||!y.cat.visible)continue;let _=y.home||{x:0,z:0};y.cat.rotation.order="YXZ",y.cat.rotation.y=Wt.rotation.y,y.cat.rotation.x=Wt.rotation.x,y.cat.position.x=_.x-Hs.x+Wt.position.x,y.cat.position.z=_.z-Hs.z+Wt.position.z,y.cat.position.y=y.lift+(y.sy||0)+L.y+(L.dy||0),y.squish.matrix.copy(_e.matrix),y.squish.matrixWorldNeedsUpdate=!0,y.rt.setEyesClosed&&y.rt.setEyesClosed(L.kind==="sleep"),y.rt.setBrow(L.kind==="angry"&&L.phase!=="deflate"),y.rt.setSmile(L.kind==="happy"),y.rt.update&&y.rt.update(t,{shx:f,shz:m,sy:h,vy:he.phase==="air"?he.vy:0,pullX:0})}if(Q.active){if(!Q.held&&Q.relax){Q.rl||(Q.rl={t:0,o0:Q.off.clone(),dur:4},Q.vel.set(0,0,0)),Q.rl.t+=t;let I=Math.min(Q.rl.t/Q.rl.dur,1),v=I*I*(3-2*I);Q.off.copy(Q.rl.o0).multiplyScalar(1-v),I>=1&&(Q.off.set(0,0,0),Q.rl=null,Et.sqV+=2.5)}else if(!Q.held&&!oi.hold){let I=oi.k,v=oi.d,b=Q.off.clone().multiplyScalar(-I).addScaledVector(Q.vel,-v);Q.vel.addScaledVector(b,t),Q.off.addScaledVector(Q.vel,t)}let y=Math.max(0,Q.off.y)*(oi.hold?0:.5);if(qs=y,Q.held){let I=Q.prevOff||Q.off.clone();wt.stretch(Q.off.length(),I.distanceTo(Q.off)/Math.max(t,.001)),Q.prevOff=Q.off.clone()}else Q.prevOff=null,Q.wasLifted&&Q.off.y<0&&(wt.land(),Q.wasLifted=!1);let _=Q.off.clone();_.y-=y;let S=Q.grab;S.y+_.y<yn+.06&&(_.y=yn+.06-S.y);let P=_.length(),A=(.42+P*.25)*(.8+.2*Fr),w=A*A;ue.ox=_.x,ue.oy=_.y,ue.oz=_.z,ue.gx=S.x,ue.gy=S.y,ue.gz=S.z,ue.sig2=w,ue.sideK=Math.min(Math.abs(_.x)/(P+1e-6),1);{let I=Q.n,v=I?Oe.clamp(-(_.x*I.x+_.y*I.y+_.z*I.z)/(P+1e-6),0,1):0;ue.shell=1-.8*v}Or(!0),!Q.held&&Q.off.length()<.002&&Q.vel.length()<.01&&(qs=0,Q.active=!1,Q.relax=!1,Q.rl=null,Or(!1))}if(Yi>=0){Yi+=t;let y=Math.max(0,1-Yi/.6);li.color.set(Vn).lerp(new Vt(16754017),y*.7),Yi>.6&&(Yi=-1,li.color.set(Vn))}if(Wt.position.y=ci+(Ju?0:xe.sy||0)+qs+he.y+(L.on?L.y+(L.dy||0):0),!L.on)for(let y of Le)y!==xe&&y.cat.visible&&y.hop&&wx(y,t);if(Le.length>1&&!L.on&&!Ju){ty(t);for(let y of Le)y.cat.visible&&(y!==xe&&!y.hop&&(y.cat.position.y=y.lift+(y.sy||0),y.rt.update&&y.rt.update(t,{shx:0,shz:0,sy:1,vy:0,pullX:0})),(y.ovAct||y.ovDirty)&&(y.ovDirty=!1,y===xe?Q.active||Or(!1):Qx(y,()=>Or(!1))))}if(Dr>=0){Dr+=t;let y=Dr/.45;$i.scale.setScalar(1.3+y*.5),$i.material.opacity=.25*(1-y),y>=1&&(Dr=-1,$i.material.opacity=0)}Pa(),te.update();let p=null;_a>.001&&(p=new R(Math.random()-.5,Math.random()-.5,0).multiplyScalar(_a),we.position.add(p),_a*=Math.pow(5e-4,t)),Zs.render(Te,we),p&&we.position.sub(p)});})();
 </script>
+<script>
+(function () {
+  "use strict";
+  const KEY = "yawaraka-ui-language-v1";
+  const labels = {
+    copyBtn: ["ふやす", "複製"], delBtn: ["けす", "削除"],
+    rowBtn: ["ならべる", "整列"], stackBtn: ["かさねる", "積み重ね"],
+    hp: ["たかく", "高く"], hm: ["ひくく", "低く"], wp: ["ひろく", "広く"], wm: ["ほそく", "細く"],
+    tShape: ["かたち", "形"], plantBtn: ["かざり", "装飾"], colorBtn: ["いろ", "色"], tMore: ["くわしく", "詳細設定"],
+    undo: ["ひとつもどす", "元に戻す"], reset: ["はじめから", "初期化"],
+    mochi: ["かおなし", "顔を消す"], line: ["せん", "輪郭線"], snd: ["おと", "音"],
+    poke: ["ぷるぷる", "揺らす"], photoSave: ["しゃしんにほぞん", "写真に保存"],
+    sendWW: ["なかまに とうろく", "WHERE WHICHに登録"],
+    relaxBtn: ["ゆっくりもどす", "元の形に戻す"],
+    itemAll: ["ぜんぶ", "全体"],
+    bakeBtn: ["かためる", "固定する"]
+  };
+  const modes = {sculpt:["のばす","伸ばす"],place:["おく","配置"],move:["うごかす","移動"],camera:["みまわす","視点"]};
+  const hint = {
+    sculpt:["からだを ひっぱってから「かためる」","体を引っ張ってから「固定する」"],
+    place:["かざりを さわって うごかす","装飾をドラッグして移動"],
+    move:["こを うごかして ばしょを きめる","キャラをドラッグして配置"],
+    camera:["さわって まわす・ひろげて ちかづく","ドラッグで回転・ピンチで拡大"]
+  };
+  const titles = {
+    "TOP HAT":["たかいぼうし","シルクハット"],"PARTY":["ぱーてぃーぼう","パーティー帽"],
+    "CROWN":["かんむり","王冠"],"BEANIE":["にっとぼう","ニット帽"],"STRAW":["むぎわらぼう","麦わら帽"],
+    "CHEF":["こっくぼう","コック帽"],"BOW":["りぼん","リボン"],"GRASS":["くさ","草"],
+    "TULIP":["ちゅーりっぷ","チューリップ"],"DAISY":["はな","花"],"MUSHROOM":["きのこ","キノコ"],
+    "STAR":["ほし","星"],"FLAG":["はた","旗"],"HEART":["はーと","ハート"],
+    "SAKURA":["さくら","桜"],"LEEK":["ねぎ","長ネギ"]
+  };
+  const groups = {
+    "EDIT":["へんしゅう","編集"],"SCENE":["みため","表示"],
+    "PLAY":["あそぶ","遊ぶ"],"PHOTO / WHERE WHICH":["ほぞん と なかま","保存と連携"]
+  };
+  const toasts = {
+    "BAKED: this is the new base shape":["いまの かたちで かためました","今の形で固定しました"],
+    "BAKED a little":["かためました","固定しました"],
+    "LIMIT":["これいじょう かえられません","変更できる範囲を超えています"],
+    "RESET":["はじめの かたちに もどしました","初期状態に戻しました"],
+    "Pulled out! Pick something to plant":["かざりを えらんでね","装飾を選んでください"],
+    "MAX 12":["12こまで ふやせます","最大12体です"],
+    "COPIED at the same spot · ROW / STACK / MOVE to arrange":["ふやしました。ならべかたを えらんでね","複製しました。配置を選んでください"],
+    "Last one stays":["さいごの ひとつは のこります","最後の1体は削除できません"],
+    "ITEM COPIED":["かざりを ふやしました","装飾を複製しました"],
+    "COPY first":["さきに こを ふやしてね","先にキャラを複製してください"],
+    "Lined up · COPY adds to the row":["ならべました","整列しました"],
+    "Stacked · COPY keeps stacking":["かさねました","積み重ねました"],
+    "Free layout":["じゆうに おけます","自由配置にしました"],
+    "MOCHI MODE · no face":["かおを かくしました","顔を非表示にしました"],
+    "Face back":["かおを もどしました","顔を表示しました"],
+    "PNG DOWNLOAD":["しゃしんを ほぞんしました","PNGを保存しました"],
+    "PHOTO SAVE FAILED":["しゃしんを ほぞんできません","写真を保存できませんでした"],
+    "REGISTER FAILED: 保存領域を確認":["とうろくできません。ほぞんりょういきを かくにん","登録できません。保存領域をご確認ください"],
+    "WHERE WHICHへ登録しました":["なかまに とうろくしました","WHERE WHICHに登録しました"],
+    "写真は共有メニューから保存できます":["きょうゆう から しゃしんを ほぞんしてね","共有メニューから写真を保存できます"],
+    "24キャラまで登録できます":["とうろくは 24こまでです","登録上限は24体です"]
+  };
+  let mode = "hiragana",running = false;
+  try { mode = localStorage.getItem(KEY)==="kanji"?"kanji":"hiragana"; }catch(e){}
+  const $ = id => document.getElementById(id);
+  function replaceText(el, text, preserveIcon){
+    if(!el) return;
+    if(preserveIcon){
+      const txt=[...el.childNodes].find(n=>n.nodeType===Node.TEXT_NODE);
+      if(txt){if(txt.nodeValue!==text)txt.nodeValue=text;}
+      else el.appendChild(document.createTextNode(text));
+    } else if(el.textContent!==text)el.textContent=text;
+  }
+  function directText(el, text){
+    const txt=[...el.childNodes].find(n=>n.nodeType===Node.TEXT_NODE);
+    if(txt && txt.nodeValue.trim()!==text)txt.nodeValue=text+" ";
+  }
+  function translateFree(el, dictionary){
+    if(!el) return;
+    const found=Object.keys(dictionary).find(k=>el.textContent.trim()===k || dictionary[k].includes(el.textContent.trim()));
+    if(found)replaceText(el,dictionary[found][mode==="kanji"?1:0]);
+  }
+  function redraw(){
+    running=false;
+    const k=mode==="kanji"?1:0;
+    for(const [id,pair] of Object.entries(labels))replaceText($(id),pair[k],id==="bakeBtn");
+    const which=$("modeBtn")?.dataset.m || "sculpt";
+    replaceText($("modeBtn"),modes[which][k]);
+    replaceText($("hint"),hint[which][k]);
+    const val=$("soft")?parseFloat($("soft").value):.55;
+    replaceText($("softv"),([["かたい","硬い"],["ふつう","普通"],["やわらかい","柔らかい"],["とてもやわらかい","非常に柔らかい"]])[val<.2?0:val<.45?1:val<.7?2:3][k]);
+    const sec=$("ret")?Number($("ret").value):4;
+    replaceText($("retv"),sec>=4.15?["そのまま","保持"][k]:(Math.min(sec,4).toFixed(2).replace(/0$/,"")+" "+["びょう","秒"][k]));
+    for(const [i,title] of [...document.querySelectorAll("#tray button")].entries()){
+      const entry=titles[Object.keys(titles)[i]];
+      if(entry)replaceText(title,entry[k],true);
+    }
+    for(const el of document.querySelectorAll("#pal .lab")){
+      const idx=el.closest(".subrow")===document.querySelector("#pal .subrow")?0:1;
+      replaceText(el,idx?["かざり","装飾"][k]:["からだ","本体"][k]);
+    }
+    document.querySelectorAll("#pMore .grp").forEach(el=>translateFree(el,groups));
+    const lab=$("soft")?.closest("label");if(lab)directText(lab,["やわらかさ","柔らかさ"][k]);
+    const lab2=$("ret")?.closest("label");if(lab2)directText(lab2,["もどるはやさ","復元時間"][k]);
+    const lang=$("yawaraka-lang");if(lang)lang.textContent=["ことば：ひらがな（おして かんじへ）","表示言語：漢字（押すとひらがな）"][k];
+    if($("toast"))translateFree($("toast"),toasts);
+    const photo=$("photoSave"),send=$("sendWW");
+    if(photo)photo.title=["とうめいな しゃしんを ほぞん","透明PNG画像を保存"][k];
+    if(send)send.title=["なかまに とうろく","WHERE WHICHへ登録"][k];
+  }
+  function schedule(){if(!running){running=true;queueMicrotask(redraw);}}
+  function init(){
+    const more=$("pMore");
+    if(!more)return;
+    const heading=document.createElement("span");heading.className="grp";heading.textContent="ことばの せってい";
+    heading.id="yawaraka-lang-heading";
+    const btn=document.createElement("button");btn.id="yawaraka-lang";btn.type="button";
+    btn.onclick=()=>{
+      mode=mode==="hiragana"?"kanji":"hiragana";
+      try{localStorage.setItem(KEY,mode);}catch(e){}
+      redraw();
+    };
+    more.append(heading,btn);
+    const dock=document.querySelector(".dock");
+    if(dock)new MutationObserver(schedule).observe(dock,{subtree:true,childList:true,characterData:true});
+    for(const id of ["hint","toast"]){const el=$(id);if(el)new MutationObserver(schedule).observe(el,{childList:true,characterData:true});}
+    redraw();
+  }
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});
+  else init();
+})();
+</script>
 </body>
 </html>
