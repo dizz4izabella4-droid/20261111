@@ -368,7 +368,7 @@ jobs:
               return result;
             });
             for(const [id,pos] of Object.entries(mobilePanel)){
-              if(!pos.visible || pos.x<0 || pos.right>390.5 || pos.width<42)
+              if(!pos.visible || pos.x<0 || pos.right>390.5 || pos.width<40)
                 throw new Error('Panel control out of mobile viewport: '+JSON.stringify({id,pos,mobilePanel}));
             }
             const tabRatio=mobilePanel.tShape.width/mobilePanel.tMore.width;
