@@ -4022,6 +4022,20 @@ var Qi=null,Ml=new en(new R(0,1,0),0),Sf="mebae";try{Sf=localStorage.getItem("mo
     "STAR":["ほし","星"],"FLAG":["はた","旗"],"HEART":["はーと","ハート"],
     "SAKURA":["さくら","桜"],"LEEK":["ねぎ","長ネギ"]
   };
+  const animations = {
+    hop:["ぴょんぴょん うごく","ぴょんぴょん移動"],
+    dance:["ゆらゆら おどる","ゆらゆらダンス"],
+    spin:["くるっと とぶ","回転ジャンプ"],
+    melt:["とろーん","とろける"],
+    surprise:["びっくり","驚く"],
+    bow:["おじぎ","お辞儀"],
+    sleep:["すやすや","睡眠"],
+    look:["きょろきょろ","見回す"],
+    happy:["うれしい","喜ぶ"],
+    shake:["ぶるぶる","震える"],
+    angry:["ぷんぷん","怒る"],
+    stretch:["のびー","伸びる"]
+  };
   const groups = {
     "EDIT":["へんしゅう","編集"],"SCENE":["みため","表示"],
     "PLAY":["あそぶ","遊ぶ"],"PHOTO / WHERE WHICH":["ほぞん と なかま","保存と連携"]
@@ -4080,6 +4094,17 @@ var Qi=null,Ml=new en(new R(0,1,0),0),Sf="mebae";try{Sf=localStorage.getItem("mo
     replaceText($("softv"),([["かたい","硬い"],["ふつう","普通"],["やわらかい","柔らかい"],["とてもやわらかい","非常に柔らかい"]])[val<.2?0:val<.45?1:val<.7?2:3][k]);
     const sec=$("ret")?Number($("ret").value):4;
     replaceText($("retv"),sec>=4.15?["そのまま","保持"][k]:(Math.min(sec,4).toFixed(2).replace(/0$/,"")+" "+["びょう","秒"][k]));
+    for(const chip of document.querySelectorAll(".anims .chip[data-anim]")){
+      const row=animations[chip.dataset.anim];
+      if(row)replaceText(chip,row[k],true);
+    }
+    const animButton=$("animBtn");
+    if(animButton){
+      animButton.title=["あにめを みる","アニメーションを再生"][k];
+      animButton.setAttribute("aria-label",animButton.title);
+    }
+    const heading=$("yawaraka-lang-heading");
+    if(heading)heading.textContent=["ことばの せってい","表示言語の設定"][k];
     for(const [i,title] of [...document.querySelectorAll("#tray button")].entries()){
       const entry=titles[Object.keys(titles)[i]];
       if(entry)replaceText(title,entry[k],true);
