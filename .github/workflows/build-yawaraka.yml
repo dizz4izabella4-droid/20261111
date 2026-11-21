@@ -181,15 +181,24 @@ jobs:
             const lightRect=await page.$eval('#lightHandle',el=>{
               const r=el.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};
             });
+            const lightHit=await page.evaluate(({x,y})=>({
+              point:document.elementFromPoint(x,y)?.id,
+              markerRect:document.getElementById('lightHandle').getBoundingClientRect().toJSON(),
+              enabled:document.getElementById('lightMoveBtn').getAttribute('aria-pressed')
+            }),lightRect);
             await page.mouse.move(lightRect.x,lightRect.y);
             await page.mouse.down();
             await page.mouse.move(lightRect.x+100,lightRect.y+68,{steps:5});
             await page.mouse.up();
-            await page.waitForFunction(old=>{
-              const el=document.getElementById('lightHandle');
-              return Math.abs(Number(el.dataset.x)-old.x)>.05 &&
-                     Math.abs(Number(el.dataset.y)-old.y)>.05;
-            },{timeout:10000},lightBefore);
+            await new Promise(resolve=>setTimeout(resolve,200));
+            const dragNow=await page.$eval('#lightHandle',el=>({
+              x:Number(el.dataset.x),y:Number(el.dataset.y),
+              left:el.style.left,top:el.style.top,hidden:el.hidden
+            }));
+            if (Math.abs(dragNow.x-lightBefore.x)<=.05 ||
+                Math.abs(dragNow.y-lightBefore.y)<=.05)
+              throw new Error('Direct light drag did not change both light axes: '+
+                JSON.stringify({lightBefore,lightRect,lightHit,dragNow}));
             const lightAfter=await page.$eval('#lightHandle',el=>({x:Number(el.dataset.x),y:Number(el.dataset.y)}));
             const lightSlider=await page.$eval('#lightX',el=>Number(el.value));
             if (Math.abs(lightAfter.x-lightSlider)>.15)
