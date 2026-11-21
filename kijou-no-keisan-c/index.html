@@ -32,7 +32,7 @@ h1,h2,h3,p { margin: 0; }
 .topbar { background: var(--white); border-bottom: 1px solid var(--line); }
 .topbar .shell { display:flex; min-height:66px; align-items:center; justify-content:space-between; gap:12px; }
 .identity { display:flex; align-items:center; gap:11px; white-space:nowrap; }
-.brand { font-family: system-ui,sans-serif; font-size:1.48rem; font-weight:790; letter-spacing:-.085em; }
+.brand { font-family: system-ui,sans-serif; font-size:1.2rem; font-weight:790; letter-spacing:0; white-space:nowrap; }
 .brand-mark {
   width:32px; height:32px; background:#1d4885; border-radius:9px; display:grid; place-items:center;
 }
@@ -444,7 +444,7 @@ select { appearance:none; padding-right:29px; background:
 <body>
 <header class="topbar">
   <div class="shell">
-    <div class="identity"><span class="brand-mark" aria-hidden="true"></span><span class="brand">sofia</span><span class="identity-caption">事故再現ツール</span></div>
+    <div class="identity"><span class="brand">机上の空論GP</span><span class="identity-caption">事故再現ツール</span></div>
     <div class="top-actions">
       <button id="export-settings" type="button"><span class="download-icon" aria-hidden="true"></span>設定を保存</button>
       <button id="export-png" class="primary" type="button"><span class="download-icon" aria-hidden="true"></span>PNGを保存</button>
@@ -2511,7 +2511,7 @@ function download(blob,filename) {
 }
 function saveSettings() {
   const data = {version:1,mode,settings:clone(s),inverse:{...inverse},scene:clone(scene)};
-  download(new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),"sofia-settings.json");
+  download(new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),"kijou-gp-settings.json");
   notify("設定を JSON で保存しました。");
 }
 function savePng() {
@@ -2541,7 +2541,7 @@ function savePng() {
   printed.forEach((line,index)=>ctx.fillText(line,margin,header+chartHeight+font*(1.7+index*1.35),width-margin*2));
   image.toBlob(blob => {
     if (!blob) return notify("PNG を保存できませんでした。");
-    download(blob,`sofia-${mode}.png`);
+    download(blob,`kijou-gp-${mode}.png`);
     notify("図面を PNG で保存しました。");
   },"image/png");
 }
