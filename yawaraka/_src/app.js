@@ -28,6 +28,12 @@ controls.autoRotateSpeed = 1.2;
 // ---- ライト（トゥーン調）
 scene.add(new THREE.HemisphereLight(0xffffff, 0xd8d4c8, 1.6));
 const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+const LIGHT_POS = { x: 3, y: 6, z: 4 };
+function updateLightPosition(cx = 0) {
+  sun.position.set(cx + LIGHT_POS.x, LIGHT_POS.y, LIGHT_POS.z);
+  sun.target.position.set(cx, 0, 0);
+  sun.target.updateMatrixWorld();
+}
 sun.position.set(3, 6, 4);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
@@ -74,6 +80,8 @@ let squish = null;                 // ぷにぷに変形用（キャラごとに
 let faceMask = null, itemAll = false;
 const PROT = 0.6;
 let colorBase = null, scorch = null, bodyCol = 0xffffff, itemCol = null;
+let patternKey = 'none';
+let pendingPhotoTexture = null;
 let curKey = 'mebae', gs = { x: 1, y: 1, z: 1 }, flashT = -1;
 let undoStack = [];
 let relaxMorph = null;
@@ -84,6 +92,18 @@ const ui = id => document.getElementById(id);
 let current = null, body, bodyGeo, basePos, face, floorY = 0, lift = 0, pos;
 let riders = [], faceVerts = [], faceCaps = [];
 let mochi = false, layout = 'free';
+const selectedArrow = document.getElementById('selectedArrow');
+function updateSelectionArrow() {
+  if (!selectedArrow) return;
+  if (insts.length < 2 || anim.on || !curInst || !curInst.bound || !curInst.cat.visible) { selectedArrow.hidden = true; return; }
+  const b = curInst.bound;
+  const world = curInst.cat.localToWorld(new THREE.Vector3(b.cx, b.cy + b.ry + .45, b.cz));
+  const point = world.project(camera), rect = canvas.getBoundingClientRect();
+  if (point.z > 1 || Math.abs(point.x) > 1.25 || Math.abs(point.y) > 1.25) { selectedArrow.hidden = true; return; }
+  selectedArrow.hidden = false;
+  selectedArrow.style.left = rect.left + (point.x + 1) * rect.width / 2 + 'px';
+  selectedArrow.style.top = rect.top + (1 - point.y) * rect.height / 2 + 'px';
+}
 let SOFT = 0.55, SF = 0.6 + 1.2 * SOFT;   // やわらかさ：最初は少し柔らかめ（SF=1がこれまでの標準）
 
 // 餅形の体を作る（底はぺたっと、すそはむにっと）
@@ -374,6 +394,8 @@ function buildMebae() {
   // うれしい用：両はしがほんの少しだけ上がる
   const mouthS = strokeOnFace([[-0.06, 0.322], [-0.03, 0.305], [0, 0.3], [0.03, 0.305], [0.06, 0.322]], 0.02, 0.018);
   mouthS.visible = false; face.add(mouthS);
+  const mouthPull = strokeOnFace([[-0.07, 0.31], [-0.05, 0.27], [0, 0.245], [0.05, 0.27], [0.07, 0.31], [0.04, 0.335], [0, 0.344], [-0.04, 0.335]], 0.019, 0.022, true);
+  mouthPull.visible = false; face.add(mouthPull);
 
   // 芽（植え替えできる）：根もとのグループ(sprout)は体のこの場所に固定。中身(plant)を差し替える
   const top = onTop(0, 0.05);
@@ -437,6 +459,14 @@ function buildMebae() {
   setPlant('grass');
   return {
     mouths: [mouthN, mouthS],
+    pulled: false,
+    setPulled(v) {
+      if (this.pulled === v) return;
+      this.pulled = v;
+      mouthPull.visible = v;
+      if (v) { mouthN.visible = false; mouthS.visible = false; }
+      else mouthN.visible = !mouthS.visible;
+    },
     get root() { return sprout; },
     get leafMeshes() { return sp.mode === 'on' ? [grabBall] : []; },
     tint: tintMain,
@@ -722,7 +752,7 @@ function buildCharacter(key, opts = {}) {
       m.visible = false; face.add(m); brows.push(m);
     }
     const [mN, mS] = current.rt.mouths;
-    current.rt.setSmile = v => { if (mS.visible !== v) { mS.visible = v; mN.visible = !v; } };
+    current.rt.setSmile = v => { if (current.rt.pulled) return; if (mS.visible !== v) { mS.visible = v; mN.visible = !v; } };
     current.rt.setBrow = v => { if (brows[0].visible !== v) brows.forEach(m => m.visible = v); };
   }
 
@@ -1144,7 +1174,7 @@ function setAnim(on) {
     }
     dotFloor.visible = false;
     ground.position.x = 0;
-    sun.position.set(3, 6, 4); sun.target.position.set(0, 0, 0); sun.target.updateMatrixWorld();
+    updateLightPosition();
     anim.y = 0; anim.sq = 0; anim.dy = 0; anim.sh = 0; anim.shV = 0; anim.shx = 0; anim.shxV = 0; anim.spin = 0; anim.puff = 0;
     clearFx();
     if (current.rt.setEyesClosed) current.rt.setEyesClosed(false);
@@ -1604,7 +1634,7 @@ function updateAnim(dt) {
   camera.position.set(anim.camX + AF.cx + 6.4 * AF.m, AF.ty + 3.0 * AF.m, 6.6 * AF.m);
   camera.lookAt(controls.target);
   // 影と床もいっしょに
-  sun.position.set(anim.camX + 3, 6, 4); sun.target.position.set(anim.camX, 0, 0); sun.target.updateMatrixWorld();
+  updateLightPosition(anim.camX);
   ground.position.x = anim.camX;
   dotFloor.position.x = Math.floor(anim.camX / DOT) * DOT;
 }
@@ -1906,6 +1936,12 @@ ui('ret').oninput = e => setReturn(parseFloat(e.target.value));
 function setSoft(v) { SOFT = v; SF = 0.6 + 1.2 * v; ui('softv').textContent = v < 0.2 ? 'かたい' : v < 0.45 ? 'ふつう' : v < 0.7 ? 'やわらかい' : 'とてもやわらかい'; }
 ui('soft').oninput = e => setSoft(parseFloat(e.target.value)); ui('soft').value = SOFT; setSoft(SOFT);
 setReturn(4); ui('ret').value = 4;
+for (const [axis, id] of [['x','lightX'],['y','lightY'],['z','lightZ']]) {
+  ui(id).oninput = e => {
+    LIGHT_POS[axis] = Number(e.target.value);
+    updateLightPosition(anim.on ? anim.camX : 0);
+  };
+}
 
 // ---- 色
 const BODY_COLS = ['#ffffff', '#ffd6e0', '#d7f0d9', '#d4e6ff', '#ffe9a8'];
@@ -2268,6 +2304,11 @@ renderer.setAnimationLoop(() => {
   m.multiply(shear).multiply(new THREE.Matrix4().makeTranslation(0, -floorY, 0));
   squish.matrix.copy(m);
   squish.matrixWorldNeedsUpdate = true;
+  if (current.rt.setPulled && !anim.on) {
+    const strained = pull.held || extraPulls.size > 0;
+    current.rt.setPulled(strained);
+    current.rt.setBrow(strained);
+  }
   if (current.rt.update) current.rt.update(dt, { shx, shz, sy: syC, vy: jump.phase === 'air' ? jump.vy : 0, pullX: pull.active ? pull.off.x : 0 });
   if (anim.on) for (const I of insts) {   // アクションは全員いっしょに
     if (I === curInst || !I.cat.visible) continue;
@@ -2356,6 +2397,7 @@ renderer.setAnimationLoop(() => {
     camera.position.add(sh);
     shake *= Math.pow(0.0005, dt);   // すぐ収まる
   }
+  updateSelectionArrow();
   renderer.render(scene, camera);
   if (sh) camera.position.sub(sh);
 });
