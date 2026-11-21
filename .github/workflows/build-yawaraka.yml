@@ -116,6 +116,8 @@ jobs:
             if (retired.length) throw new Error('Retired controls still in DOM: '+retired);
             if (await page.$eval('#mochi',el=>el.textContent) !== 'おもち')
               throw new Error('Mochi control was not renamed');
+            // Close the taller details panel so camera gestures hit the canvas.
+            await page.click('#tMore');
             // Three independent buttons, not an opaque cycling toggle.
             await page.click('#modeCamera');
             await page.waitForFunction(() =>
