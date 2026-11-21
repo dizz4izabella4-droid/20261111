@@ -1,0 +1,32 @@
+name: Build YAWARAKA
+on:
+  push:
+    paths:
+      - 'yawaraka/_src/**'
+      - '.github/workflows/build-yawaraka.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install build tools
+        run: npm install --no-save --no-package-lock three@0.160.1 esbuild
+      - name: Build
+        run: cd yawaraka/_src && YAW_NODE_MODULES="$GITHUB_WORKSPACE/node_modules" python3 build.py
+      - name: Commit built HTML
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add yawaraka/index.html
+          if ! git diff --cached --quiet; then
+            git commit -m "Build YAWARAKA public HTML"
+            git push
+          fi
