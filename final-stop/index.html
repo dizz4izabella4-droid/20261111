@@ -1497,6 +1497,7 @@ const CORE = (function () {
       if (!VFX_ON || !pulse.power || points.length < 3) return;
       // A restrained, face-local pass makes beacon light travel across polygon planes.
       const center = points.reduce((a, p) => [a[0] + p[0] / points.length, a[1] + p[1] / points.length, a[2] + p[2] / points.length], [0,0,0]);
+      if (Math.abs(center[0]-S.px)>26 || Math.abs(center[2]-17)>64) return;
       const [a,b,c] = points, ux=b[0]-a[0], uy=b[1]-a[1], uz=b[2]-a[2], vx=c[0]-a[0], vy=c[1]-a[1], vz=c[2]-a[2];
       const nx=uy*vz-uz*vy, ny=uz*vx-ux*vz, nz=ux*vy-uy*vx, nm=Math.hypot(nx,ny,nz)||1;
       const lx=S.px-center[0], lz=17-center[2], lm=Math.hypot(lx,lz)||1;
@@ -2670,7 +2671,7 @@ const CORE = (function () {
     };
     // Road lamps are evaluated from the same positions used by street lighting.
     const lampId=Math.floor(scroll/LAMP_SPAN);
-    for(let i=lampId-1;i<=lampId+5;i++)for(const side of SIDES){
+    for(let i=lampId-1;i<=lampId+2;i++)for(const side of SIDES){
       const z=streetLamp(side,i); if(z<STREET_NEAR+2||z>155||crossesJunction(z-3,z+3))continue;
       const p=proj(side*6.42,z,camX), y=p.y-6.0*p.k;
       halo(p.x,y,Math.min(19,3.6+p.k*.017),'255,202,133',.27*(1-z/180));
@@ -2692,7 +2693,7 @@ const CORE = (function () {
     for(const p of FX.parts){
       if(p.k!=='spark'&&!(p.k==='glass'&&p.t>p.shineAt&&p.t<p.shineAt+.08))continue;
       halo(p.x,p.y,p.k==='spark'?Math.max(4,p.size*2.2):5,p.k==='spark'?'255,191,108':'205,235,255',Math.min(.68,1-p.t/p.life));
-      if(++n>=14)break;
+      if(++n>=6)break;
     }
     worldCtx.save(); worldCtx.setTransform(1,0,0,1,0,0); worldCtx.globalCompositeOperation='screen'; worldCtx.globalAlpha=.9;
     worldCtx.drawImage(bloom,0,0); worldCtx.restore();
