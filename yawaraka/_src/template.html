@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>YAWARAKA</title>
 <style>
+  /* iOS Safari: suppress double-tap smart zoom without disabling pinch zoom.
+     The WebGL surface and photo crop already own their multi-touch gestures. */
+  html, body { touch-action: manipulation; }
+  button, input, label, a, .row, .dock, .tabs { touch-action: manipulation; }
   html, body { margin: 0; height: 100%; overflow: hidden; background: #eeece4; font-family: "Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI","游ゴシック",YuGothic,Meiryo,"Noto Sans JP",sans-serif; }
   #c { display: block; width: 100%; height: 100%; touch-action: none; }
   :root { --ink: #3a3aa8; }
