@@ -1674,6 +1674,7 @@
     return [null, { isHero: true, ref: state.hero }, null, null, null, null];
   }
 
+  const SWARM_MULT = 1;   // 敵の数の倍率（1＝計算数×1.5体。遊んでみて増減する）
   const ASSUMED_HITS = 1.5; // 敵HPの計算に使う、1回の正解あたりの想定ヒット数（1〜3回）
   const ENEMY_POOL = [
     { name: 'ぷにスライム',   calcs: 3, baseAtk: 4, exp: 6,  isFlying: false, shape: 'slime' },
@@ -1900,7 +1901,7 @@
 
     // 敵HUD
     if (state.enemy) {
-      document.getElementById('enemy-name').textContent = state.enemy.name;
+      document.getElementById('enemy-name').textContent = state.enemy.name + (state.swarm && state.swarm.left > 1 ? ' ×' + state.swarm.left : '');
       document.getElementById('enemy-type').textContent = state.enemy.isFlying ? '[飛行:銃有効]' : '[地上:剣有効]';
       const hpRatio = Math.max(0, Math.min(1, state.enemy.hp / state.enemy.maxHp));
       const hpFill = document.getElementById('enemy-hp-fill');
@@ -2193,8 +2194,11 @@
     const scale = 1 + (state.hero.lv - 1) * 0.35;
     // 敵HP＝「倒すのに必要な計算数」が一定になるよう、主人公の攻撃力から逆算する
     // （1回の計算で平均 ASSUMED_HITS 回ヒットする想定。calcs は敵ごとの目標計算数）
-    const avgHit = state.hero.atk + 1;           // 1ヒットの平均ダメージ（atk + 0〜2）
-    const enemyHp = Math.max(1, Math.round(avgHit * ASSUMED_HITS * base.calcs * 2));   // 敵の体力は2倍
+    // 敵は小さな群れ。1体の体力＝主人公の攻撃力×2（通常の正解2回、迅速なら1回で倒れる。神速は一撃）
+    // 数は、これまでの「敵1体の体力（計算数×1.5ヒット）」を1体ぶんの体力で割った数のおよそ2倍（SWARM_MULT）
+    const enemyHp = 2 * state.hero.atk;
+    state.swarm = { total: Math.max(2, Math.round(base.calcs * 1.5 * SWARM_MULT)), left: 0 };
+    state.swarm.left = state.swarm.total;
     state.enemy = {
       name: base.name,
       hp: enemyHp,
@@ -2206,7 +2210,7 @@
     };
 
     dexNote(base.name, 'seen');
-    addLog(`${state.enemy.name} が現れた！`);
+    addLog(`${state.enemy.name} の群れが現れた！（${state.swarm.total}体）`);
     if (!say('enemy', 0.5)) say('start', 0.6);
     beginBattle();
   }
@@ -2506,7 +2510,8 @@
     updateUI();
 
     if (state.enemy.hp <= 0) {
-      winBattle(isCritical);
+      if (state.swarm && state.swarm.left > 1) nextSwarmEnemy(isCritical);
+      else winBattle(isCritical);
     } else {
       generateProblem();
     }
@@ -2753,10 +2758,24 @@
     state.deathAt = 0;
   }
 
+  // 先頭の1体を倒したあと、次の1体が前へ出てくる（EXPは群れを全滅させたときにまとめて入る）
+  function nextSwarmEnemy(crit) {
+    fxEnemyDie(!!crit);
+    state.kills = (state.kills || 0) + 1;
+    dexNote(state.enemy.name, 'killed');
+    state.swarm.left--;
+    state.enemy.hp = state.enemy.maxHp = 2 * state.hero.atk;
+    delete state.enemy.seed;
+    fx.advance = 1;
+    addLog(`${state.enemy.name} を撃破！ 残り ${state.swarm.left}体`);
+    updateUI();
+    generateProblem();
+  }
   function winBattle(crit) {
     fxEnemyDie(!!crit);
     const gainedExp = state.enemy.exp;
-    addLog(`${state.enemy.name} を撃破！ EXP ${gainedExp} を獲得。`);
+    addLog(`${state.enemy.name} の群れを全滅させた！（${state.swarm ? state.swarm.total : 1}体） EXP ${gainedExp} を獲得。`);
+    state.swarm = null;
     state.hero.exp += gainedExp;
     state.kills = (state.kills || 0) + 1;
     dexNote(state.enemy.name, 'killed');
@@ -2814,7 +2833,7 @@
   };
   const fx = { atmos: ATMOS['中辛'], streak: 0, combo: 0, pops: [], ghosts: [], covers: [], circles: [],
                glitch: 0, burst: 0, flash: 0, flashCol: '#ff3a3a', hurt: 0, summonSlot: -1, summonSnap: [],
-               hold: 0, enemyHit: 0, sparks: [], dying: null, critKill: false };
+               hold: 0, enemyHit: 0, sparks: [], dying: null, critKill: false, advance: 0 };
   let autoAmber = false;   // 電卓で自動的に琥珀色にした場合だけ、ほかの難易度で緑に戻す（手で切り替えたら尊重）
   let vigCache = { key: '', g: null };
 
@@ -2836,7 +2855,7 @@
     fxStreakSet(0);
     fx.pops = []; fx.ghosts = []; fx.covers = []; fx.circles = [];
     fx.glitch = fx.burst = fx.flash = fx.hurt = 0; fx.summonSlot = -1;
-    fx.hold = 0; fx.enemyHit = 0; fx.sparks = []; fx.dying = null;
+    fx.hold = 0; fx.enemyHit = 0; fx.sparks = []; fx.dying = null; fx.advance = 0;
   }
   function fxStreakSet(n) {
     if (n > fx.streak) fx.combo = 1;
@@ -2875,9 +2894,31 @@
   }
   function fxEnemyDie(crit) {
     if (!state.enemy) return;
-    fx.dying = { shape: state.enemy.shape, t: 0, dur: crit ? 760 : 540, crit, sc: enemyApproach };
+    fx.dying = { shape: state.enemy.shape, t: 0, dur: crit ? 760 : 540, crit, sc: enemyApproach * ENEMY_SCALE };
     spawnSparks(crit ? 30 : 14, crit ? 1.6 : 1.1);
     if (crit) { fx.flash = Math.max(fx.flash, 0.3); fx.flashCol = BONE; }
+  }
+  const ENEMY_SCALE = 0.6;   // 敵1体の大きさ（群れにするため小さく）
+  // 先頭の後ろに並ぶ、残りの群れ（小さく・暗く。数が多いときは列を重ねる）
+  function drawSwarm(ecx, ecy, mainCol) {
+    const q = state.swarm ? state.swarm.left - 1 : 0;
+    if (q <= 0) return;
+    const rows = [[ecy - 50, 0.28, 6], [ecy - 66, 0.22, 7], [ecy - 78, 0.17, 8]];
+    const col = mixHex(mainCol, '#000000', 0.4), shown = Math.min(q, 21);
+    let k = 0;
+    ctx.save(); ctx.globalAlpha = 0.85;
+    for (const [y, sc, cap] of rows) {
+      const cnt = Math.min(cap, shown - k); if (cnt <= 0) break;
+      for (let i = 0; i < cnt; i++) {
+        const x = ecx + (i - (cnt - 1) / 2) * 150 * sc;
+        ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc); ctx.translate(-x, -y);
+        drawEnemy(x, y, state.enemy.shape, col);
+        ctx.restore();
+      }
+      k += cnt;
+    }
+    ctx.restore();
+    if (q > shown) { ctx.save(); ctx.fillStyle = BONE; ctx.globalAlpha = 0.8; ctx.font = '12px monospace'; ctx.textAlign = 'center'; ctx.fillText('+' + (q - shown), ecx + 70, ecy - 84); ctx.restore(); }
   }
   function drawDying(w, h, dt, mainCol) {
     const d = fx.dying; if (!d) return;
@@ -3359,7 +3400,7 @@
         ctx.restore();
         const near = Math.max(0, Math.min(1, (enemyApproach - 1) / 2.4));   // 0=遠い … 1=目の前
         const sy = ecy + 50 * enemyApproach;                                 // 足もとの高さ
-        const rx = 58 * enemyApproach, ry = Math.max(5, rx * 0.2);
+        const rx = 58 * enemyApproach * ENEMY_SCALE, ry = Math.max(5, rx * 0.2);
         const ring = `rgba(${Math.round(51 + 204 * near)},${Math.round(255 - 205 * near)},${Math.round(102 - 60 * near)},0.95)`;
         const eg = edge(Math.min(sy, h));
         ctx.save();
@@ -3371,10 +3412,14 @@
         ctx.strokeStyle = ring; ctx.lineWidth = 2; ctx.stroke();
         ctx.restore();
       }
+      drawSwarm(ecx, ecy, mainCol);
+      fx.advance = Math.max(0, fx.advance - dt * 0.005);
       ctx.save();
       ctx.translate(ecx, ecy);
-      ctx.scale(enemyApproach, enemyApproach);
+      const es = enemyApproach * ENEMY_SCALE * (1 - 0.35 * fx.advance);   // 次の1体が奥から前へ出てくる
+      ctx.scale(es, es);
       ctx.translate(-ecx, -ecy);
+      if (fx.advance > 0) ctx.globalAlpha = 1 - 0.6 * fx.advance;
       if (fx.enemyHit > 0) fx.enemyHit = Math.max(0, fx.enemyHit - dt * 0.006);
       const hj = fx.enemyHit;
       if (hj > 0) ctx.translate((Math.random() - 0.5) * 16 * hj, (Math.random() - 0.5) * 9 * hj);
