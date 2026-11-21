@@ -14,7 +14,7 @@
   var CATS = {
     game: { ja: 'ゲーム', en: 'GAME', cls: 'c-game' },
     tool: { ja: '実用', en: 'UTILITY', cls: 'c-tool' },
-    lab:  { ja: '実験中', en: 'LAB', cls: 'c-lab' }
+    lab:  { ja: '実験', en: 'LAB', cls: 'c-lab' }
   };
   var STATUS = {
     stable: null,
@@ -74,7 +74,7 @@
           var ok = !!(h && h.status === 'ok' && h.first);
           var o = {
             id: w.id, title: w.title, titleEn: w.titleEn || '', summary: w.summary || '',
-            category: CATS[w.category] ? w.category : 'lab', status: w.status || 'stable', statusNote: w.statusNote || '', sticker: w.sticker || '',
+            category: CATS[w.category] ? w.category : 'lab', status: w.status || 'stable', statusNote: w.statusNote || '', version: w.version || '', sticker: w.sticker || '',
             devices: w.devices || [], icon: w.icon, gallery: w.gallery !== false, order: i,
             url: new URL(w.path, ROOT).href, path: w.path,
             history: h, dateState: !h ? 'pending' : (h.status === 'ok' ? 'ok' : (h.status === 'none' ? 'none' : 'unverified')),
