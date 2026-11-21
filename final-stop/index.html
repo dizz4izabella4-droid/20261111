@@ -49,7 +49,8 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;overscroll-behavi
 #cmdbtn .btn{position:static;width:110px;height:42px}
 .ov{inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;pointer-events:none}
 #title{background:rgba(5,8,20,.55)}
-#title.blk{background:#000}
+#title.blk{background:#000;overflow-y:auto;pointer-events:auto;padding:14px 12px;box-sizing:border-box;justify-content:flex-start}
+#alert.mic{gap:10px;overflow-y:auto;padding:14px 12px;box-sizing:border-box}
 #title h1{margin:0;font:800 40px ui-monospace,Menlo,monospace;letter-spacing:.12em;text-shadow:0 0 16px #ff2a3a,0 0 28px #2a6bff}
 #title .btn,#end .btn{position:static;width:150px;height:52px;font-size:18px}
 #micnote,#micerr{font:600 13px/1.55 'Hiragino Sans','Yu Gothic','Meiryo','Noto Sans JP',sans-serif;text-align:center;max-width:300px;padding:0 8px;text-shadow:0 1px 4px #000}
@@ -57,7 +58,7 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;overscroll-behavi
 #micerr{color:#ff9a9a;font-size:11.5px;line-height:1.5;text-align:left;max-height:34vh;overflow:auto;pointer-events:auto}
 #micerr b{color:#ffe9b0}
 #micdiag{display:none;margin:0;max-width:330px;white-space:pre-wrap;word-break:break-all;text-align:left;font:10.5px/1.45 ui-monospace,Menlo,monospace;color:#9fe8ff;background:rgba(0,0,0,.55);padding:6px 8px;border-radius:6px;pointer-events:auto;user-select:text}
-#vmic{width:210px!important;height:44px!important;font-size:15px!important;display:none;align-items:center;justify-content:center;flex:none}
+#vmic{width:210px!important;height:44px!important;font-size:15px!important;display:flex;align-items:center;justify-content:center;flex:none}
 #title{gap:10px}
 #jpsub{left:12px;top:300px;width:300px;box-sizing:border-box;text-align:left;font:700 14px/1.45 'Hiragino Sans','Yu Gothic','Meiryo','Noto Sans JP',sans-serif;color:#fff;background:rgba(10,16,36,.86);border:1px solid #8fb4ff;border-radius:10px;padding:6px 10px;text-shadow:0 1px 2px #000;opacity:0;transition:opacity .2s;pointer-events:none}
 #jpsub::after{content:'';position:absolute;left:var(--tx,40px);bottom:-8px;margin-left:-7px;border:7px solid transparent;border-top-color:#8fb4ff;border-bottom:0}
@@ -328,8 +329,8 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;overscroll-behavi
   <button id="vmicbtn" class="ui hide" aria-label="mic"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3" fill="#fff"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/></svg><span class="lab">HOLD TO TALK</span></button>
   <button id="dbgb" aria-label="debug"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="8" height="11" rx="4"/><path d="M12 8V6M9 8 7 5M15 8l2-3M8 12H4M16 12h4M8 16l-3 2M16 16l3 2M10 5.2a2 2 0 0 1 4 0"/></svg></button>
   <div id="dbgp"></div>
-  <div id="alert" class="ui"><div class="lr"></div><div class="lb"></div><div class="t1" id="alertt1">緊急無線</div><div class="t2" id="alertt2" style="visibility:hidden">強盗事件発生中</div><div class="t3" id="alerttx" style="visibility:hidden"></div><div class="t4" id="alertt4">タップして受信</div><button id="alertgo" class="btn" style="position:static;display:none;width:230px;height:52px;font-size:17px;font-family:inherit;pointer-events:auto;align-items:center;justify-content:center">同意してスタート</button></div>
-  <div id="title" class="ui ov"><h1>HANDS UP</h1><button class="btn" data-iz-base-ui data-b="start" style="pointer-events:auto">START</button><button id="voicebtn" class="btn" data-iz-base-ui data-b="voice" style="pointer-events:auto;position:static;width:150px;height:36px">VOICE ON</button><div id="micnote">申し訳ありませんが、マイクをオンにしないとクリアできません。</div><div id="micerr"></div><pre id="micdiag"></pre><button id="vmic" class="btn" data-iz-base-ui data-b="vmic" style="pointer-events:auto">心のマイクを使う</button></div>
+  <div id="alert" class="ui"><div class="lr"></div><div class="lb"></div><div class="t1" id="alertt1">緊急無線</div><div class="t2" id="alertt2" style="visibility:hidden">強盗事件発生中</div><div class="t3" id="alerttx" style="visibility:hidden"></div><div class="t4" id="alertt4">タップして受信</div><button id="alertgo" class="btn" style="position:static;display:none;width:230px;height:52px;font-size:17px;font-family:inherit;pointer-events:auto;align-items:center;justify-content:center">マイクを使う</button><button id="alertvmic" class="btn" style="position:static;display:none;width:230px;height:52px;font-size:16px;font-family:inherit;pointer-events:auto;align-items:center;justify-content:center">心のマイクを使う</button></div>
+  <div id="title" class="ui ov"><h1>HANDS UP</h1><button class="btn" data-iz-base-ui data-b="start" style="pointer-events:auto">マイクを使う</button><button id="voicebtn" class="btn" data-iz-base-ui data-b="voice" style="pointer-events:auto;position:static;width:150px;height:36px">VOICE ON</button><div id="micnote">操作方法を選んでください。心のマイクは画面のボタンを押して声の代わりに使います。</div><div id="micerr"></div><pre id="micdiag"></pre><button id="vmic" class="btn" data-iz-base-ui data-b="vmic" style="pointer-events:auto">心のマイクを使う</button></div>
   <div id="end" class="ui ov hide"><h2>ARRESTED</h2><button class="btn" data-iz-base-ui data-b="replay" style="pointer-events:auto">REPLAY</button></div>
   <div id="resume" class="ui ov hide">TAP TO RESUME</div>
   <div id="dbg" class="ui hide"></div>
@@ -356,7 +357,7 @@ const CONFIG = Object.freeze({
   EVENT_RADIO: 'Dispatch, suspect vehicle stopped.',
   PARTNER: 'REYES',
   ALERT_RADIO_JA: '全ユニットへ。強盗事件発生。容疑者は赤いセダンで北へ逃走中。付近のユニットは直ちに追跡せよ。',
-  MIC_NOTICE_JA: 'このゲームはマイクを使います。マイクをオンにしないとクリアできません。同意するとマイクの許可を求めます。',
+  MIC_NOTICE_JA: 'マイクを使うか、心のマイクを使うかを選んでください。マイクを使う場合は端末から許可を求められます。心のマイクは画面のボタンを押している間が声の代わりになります。',
   ALERT_RADIO: 'All units, all units. Robbery in progress. Suspect is fleeing north in a red sedan. Nearby units, pursue.',
   // 相棒 REYES のセリフ：英語（音声あり＝say）と日本語字幕を併記。日本語の音声はタイトル前の無線デモだけ
   JP: {
@@ -1061,18 +1062,46 @@ const CORE = (function () {
   }
   function onTap() { if (paused) return; wake(); speakIfPreview(); pend.tap = true; }
   function beginGame() { pend.button = 'start'; }
+  const micErrorCode = raw => {
+    const name = String(raw || '').split('/')[0];
+    const codes = {
+      NotAllowedError: 'MIC-01', PermissionDeniedError: 'MIC-01',
+      SecurityError: 'MIC-02',
+      NotFoundError: 'MIC-03', DevicesNotFoundError: 'MIC-03',
+      NotReadableError: 'MIC-04', TrackStartError: 'MIC-04',
+      AbortError: 'MIC-05', InvalidStateError: 'MIC-06',
+      OverconstrainedError: 'MIC-07', TypeError: 'MIC-08',
+      unsupported: 'MIC-09', busy: 'MIC-10'
+    };
+    return codes[name] || 'MIC-99';
+  };
+  let micStartTry = 0;
   function startWithMic() {
+    if (MICV.busy) return;
+    const thisTry = ++micStartTry;
+    MICV.virtual = false; MICV.fallback = false;
     const er = $('micerr'); er.textContent = ''; $('micdiag').style.display = 'none';
-    MICV.acquire().then(ok => { endAlert(); if (ok) { MICV.release(); AUDIO.kick(); beginGame(); } else {
-        const n = MICV.err, nm = n.split('/')[0], ios = /iPhone|iPad|iPod/.test(navigator.userAgent), safari = ios && !/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
-        const why = nm === 'NotAllowedError' ? 'マイクが許可されていません。' : nm === 'NotFoundError' ? 'マイクが見つかりません。' : nm === 'InvalidStateError' ? 'マイクの準備に失敗しました（他のアプリがマイクを使用中、または再読み込みで直ることがあります）。' : nm === 'unsupported' || nm === 'SecurityError' ? 'このページではマイクを使えません。' : 'マイクを使えませんでした。';
-        let h = why + '（' + n + '）';
-        if (safari) h += '<br><b>iPhone（Safari）の設定</b><br>① アドレスバー左の「ぁあ」をタップ<br>② 「Webサイトの設定」→「マイク」を「許可」<br>③ ページを再読み込みして START<br><br>「ぁあ」が見つからないとき：設定アプリ→Safari（iOS 18 は 設定→アプリ→Safari）→「マイク」を「許可」または「確認」';
-        else if (ios) h += '<br><b>設定方法</b><br>設定アプリ→使っているブラウザ→「マイク」を許可して、再読み込みしてください。';
-        else h += '<br>ブラウザのアドレスバー付近のマイク許可を「許可」にして、再読み込みしてください。';
-        h += '<br>それでも使えないときは、下の「心のマイクを使う」で進めます。'; $('title').classList.add('blk');
-        er.innerHTML = h; setTimeout(() => { const pd = $('micdiag'); pd.textContent = (MICV.diag || []).join('\n'); pd.style.display = 'block'; }, 900); $('vmic').style.display = 'flex';
-      } });
+    MICV.acquire().then(ok => {
+      endAlert();
+      if (ok) {
+        MICV.release(); AUDIO.kick(); $('title').classList.remove('blk'); beginGame();
+      } else {
+        const n = MICV.err || 'unknown', nm = n.split('/')[0];
+        const ios = /iPhone|iPad|iPod/.test(navigator.userAgent), safari = ios && !/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
+        const why = nm === 'NotAllowedError' || nm === 'PermissionDeniedError' ? 'マイクが許可されていません。' : nm === 'NotFoundError' || nm === 'DevicesNotFoundError' ? 'マイクが見つかりません。' : nm === 'NotReadableError' || nm === 'TrackStartError' ? 'マイクを使用できません（別アプリや端末の設定を確認してください）。' : nm === 'InvalidStateError' ? 'マイクの準備に失敗しました。再読み込みしてお試しください。' : nm === 'unsupported' || nm === 'SecurityError' ? 'このページではマイクを使えません。' : 'マイクを使えませんでした。';
+        let h = why;
+        if (safari) h += '<br><b>iPhone（Safari）の設定</b><br>① アドレスバー左のWebサイト設定を開く<br>② 「マイク」を「許可」<br>③ ページを再読み込みして「マイクを使う」を選ぶ<br><br>見つからないとき：設定アプリ→アプリ→Safari→「マイク」を確認';
+        else if (ios) h += '<br><b>設定方法</b><br>設定アプリ→使用中のブラウザ→「マイク」を許可して、再読み込みしてください。';
+        else h += '<br>ブラウザのサイト設定でマイクを許可し、再読み込みしてください。';
+        h += '<br>再試行する場合は「マイクを使う」、代わりに遊ぶ場合は「心のマイクを使う」を選んでください。';
+        $('title').classList.add('blk');
+        er.innerHTML = '<b>エラーコード：' + micErrorCode(n) + '</b><br>' + h;
+        const detail = document.createElement('div'); detail.textContent = '技術情報：' + n; er.appendChild(detail);
+        setTimeout(() => { if (micStartTry !== thisTry || MICV.virtual || S.phase !== 'TITLE') return;
+          const pd = $('micdiag'); pd.textContent = (MICV.diag || []).join('\n'); pd.style.display = 'block';
+        }, 900);
+      }
+    });
   }
   stage.querySelectorAll('[data-b]').forEach(b => {
     b.addEventListener('pointerdown', e => e.stopPropagation());
@@ -1083,7 +1112,7 @@ const CORE = (function () {
       if (k === 'start' && (NOMIC || AUTO)) AUDIO.init();
       if (!(k === 'start' && !NOMIC && !AUTO)) wake();
       if (k === 'voice') { VOICE.toggle(); refreshVoiceBtn(); return; }
-      if (k === 'vmic') { MICV.virtual = true; $('micerr').textContent = ''; $('vmic').style.display = 'none'; beginGame(); return; }
+      if (k === 'vmic') { MICV.virtual = true; MICV.fallback = false; $('micerr').textContent = ''; $('micdiag').style.display = 'none'; $('title').classList.remove('blk'); AUDIO.init(); beginGame(); return; }
       if (k === 'start' && !NOMIC && !AUTO) { AUDIO.init(); startWithMic(); return; }      /* 音は先に（タッチの中で）用意してからマイクを開く */
       if (k === 'next') { speakIfPreview(); }
       if (k === 'start' && !AUTO) { beginGame(); return; }
@@ -1143,8 +1172,8 @@ const CORE = (function () {
   // 段階：①緊急無線（日本語・全部流れるまで）→ ②マイクの注意書き → ③同意でマイク許可を求めてゲームスタート
   function alertMicStep() {
     alertStep = 2; const A = $('alert'); A.classList.add('mic');
-    $('alertt1').textContent = 'マイクについて'; $('alertt2').textContent = 'マイクを使います'; $('alerttx').textContent = CONFIG.MIC_NOTICE_JA;
-    $('alertt4').style.display = 'none'; $('alertgo').style.display = 'flex';
+    $('alertt1').textContent = 'マイクについて'; $('alertt2').textContent = '操作方法を選択'; $('alerttx').textContent = CONFIG.MIC_NOTICE_JA;
+    $('alertt4').style.display = 'none'; $('alertgo').style.display = 'flex'; $('alertvmic').style.display = 'flex';
   }
   $('alert').addEventListener('click', e => {
     e.stopPropagation();      // 無線の間は AudioContext を作らない（iOSで読み上げが途中で切れる・ザラつく原因になる）。作るのは「同意してスタート」から
@@ -1178,8 +1207,15 @@ const CORE = (function () {
   $('alertgo').addEventListener('click', e => {
     e.stopPropagation(); AUDIO.init(); wake(); VOICE.cancel();
     if (NOMIC || AUTO) { endAlert(); beginGame(); return; }
-    $('alertgo').style.display = 'none'; $('alerttx').textContent = 'マイクの許可を確認しています…';
+    $('alertgo').style.display = 'none'; $('alertvmic').style.display = 'none'; $('alerttx').textContent = 'マイクの許可を確認しています…';
     startWithMic();
+  });
+  $('alertvmic').addEventListener('pointerdown', e => e.stopPropagation());
+  $('alertvmic').addEventListener('click', e => {
+    e.stopPropagation(); AUDIO.init(); wake(); VOICE.cancel();
+    MICV.virtual = true; MICV.fallback = false;
+    $('micerr').textContent = ''; $('micdiag').style.display = 'none'; $('title').classList.remove('blk');
+    endAlert(); beginGame();
   });
   function setUI(k, v, fn) { if (ui[k] !== v) { ui[k] = v; fn(v); } }
   function updateUI(dt) {
@@ -1204,7 +1240,7 @@ const CORE = (function () {
     if (ph === 'CMD') {
       const t = (S.sub === 'COACH' || S.sub === 'PREVIEW') ? '' : CONFIG.CMDS[Math.min(S.cmd.i, CONFIG.CMDS.length - 1)].text;      // お手本のセリフは LISTEN を押して声が出るまで見せない
       setUI('cmdtext', t, v => { el.cmdtext.textContent = v; });
-      const hint = S.sub === 'COACH' ? (S.coachN === 0 ? 'よくやった、ボウズ。' : 'リピート・アフター・ミー（私のあとに続けて言え）') : S.sub === 'PREVIEW' ? 'PRESS LISTEN: REYES SHOWS HOW' : S.sub === 'SPEAK' ? 'LISTEN...' : S.sub === 'YOURTURN' ? 'マイクを押しながら、英語で言え！' : '';
+      const hint = S.sub === 'COACH' ? (S.coachN === 0 ? 'よくやった、ボウズ。' : 'リピート・アフター・ミー（私のあとに続けて言え）') : S.sub === 'PREVIEW' ? 'PRESS LISTEN: REYES SHOWS HOW' : S.sub === 'SPEAK' ? 'LISTEN...' : S.sub === 'YOURTURN' ? (MICV.fallback && MICV.err ? 'マイクエラー ' + micErrorCode(MICV.err) + '：心のマイクに切替。ボタンを押し続けろ！' : MICV.virtual ? '心のマイク：ボタンを押し続けろ！' : 'マイクを押しながら、英語で言え！') : '';
       setUI('cmdhint', hint, v => { el.cmdhint.textContent = v; });
     }
     // 日本語のセリフ（相棒 REYES）：場面が変わるたびに出す
