@@ -298,6 +298,39 @@ jobs:
             await page.click('#modeSculpt');
             if (await page.$eval('#toolModes',el=>el.dataset.m) !== 'sculpt')
               throw new Error('Touch-sized mode buttons did not return to default sculpt');
+            // iOS Safari smart zoom fix: mobile-style double-taps must not zoom the UI.
+            // Chromium touch emulation validates the CSS gesture contract; physical
+            // iOS Safari is a separate device test and is not claimed here.
+            const touchPolicy = await page.evaluate(() => ({
+              html:getComputedStyle(document.documentElement).touchAction,
+              body:getComputedStyle(document.body).touchAction,
+              button:getComputedStyle(document.getElementById('modeSculpt')).touchAction,
+              copy:getComputedStyle(document.getElementById('copyBtn')).touchAction,
+              canvas:getComputedStyle(document.getElementById('c')).touchAction,
+              crop:getComputedStyle(document.getElementById('cropCanvas')).touchAction
+            }));
+            if (touchPolicy.html !== 'manipulation' ||
+                touchPolicy.body !== 'manipulation' ||
+                touchPolicy.button !== 'manipulation' ||
+                touchPolicy.copy !== 'manipulation' ||
+                touchPolicy.canvas !== 'none' ||
+                touchPolicy.crop !== 'none')
+              throw new Error('Incorrect double-tap touch policy: '+JSON.stringify(touchPolicy));
+            const uiRect=await page.$eval('#modeSculpt',el=>{
+              const r=el.getBoundingClientRect();
+              return {x:r.left+r.width/2,y:r.top+r.height/2};
+            });
+            const scaleBefore=await page.evaluate(()=>window.visualViewport?.scale||1);
+            await page.touchscreen.tap(uiRect.x,uiRect.y);
+            await page.touchscreen.tap(uiRect.x,uiRect.y);
+            await new Promise(resolve=>setTimeout(resolve,450));
+            const doubleTapInfo=await page.evaluate(()=>({
+              zoom:window.visualViewport?.scale||1,
+              mode:document.getElementById('toolModes').dataset.m
+            }));
+            if (doubleTapInfo.zoom > scaleBefore * 1.03 || doubleTapInfo.mode !== 'sculpt')
+              throw new Error('UI double-tap caused zoom or left default mode: '+JSON.stringify({scaleBefore,doubleTapInfo}));
+            console.log('PASS: double-tap suppressed on mobile UI; pinch zoom not globally disabled');
             console.log('PASS: touch viewport 390x844 persistent mode buttons');
             if (jsErrors.length) throw new Error('Page errors: '+jsErrors.join(' / '));
             console.log('PASS: startup, WebGL canvas, default hiragana, outline off, relax, language toggle, gallery');
