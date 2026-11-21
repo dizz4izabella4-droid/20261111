@@ -725,7 +725,7 @@ function buildCharacter(key, opts = {}) {
   current = c; curKey = key;
   undoStack = []; gs = { x: 1, y: 1, z: 1 }; flashT = -1;
   // 状態リセット
-  pull.active = pull.held = false; pull.off.set(0, 0, 0); pull.vel.set(0, 0, 0); pullLift = 0;
+  pull.active = pull.held = false; extraPulls.clear(); primaryPointerId = null; gesturePointerId = null; pull.off.set(0, 0, 0); pull.vel.set(0, 0, 0); pullLift = 0;
   jump.phase = 'idle'; jump.y = 0; jump.vy = 0;
   for (const k in spring) spring[k] = 0;
   controls.enabled = true;
@@ -1765,6 +1765,16 @@ function syncPullDeformationForBake() {
     ? THREE.MathUtils.clamp(-(o.x * n.x + o.y * n.y + o.z * n.z) / (L + 1e-6), 0, 1)
     : 0;
   DF.shell = 1 - 0.8 * inward;
+  DF.extra = [];
+  for (const p of extraPulls.values()) {
+    const off = p.off.clone(), anchor = p.grab;
+    if (anchor.y + off.y < floorY + 0.06) off.y = floorY + 0.06 - anchor.y;
+    const len = off.length(), width = (0.42 + len * 0.25) * (0.8 + 0.2 * SF);
+    const inwards = p.n ? THREE.MathUtils.clamp(-off.dot(p.n) / (len + 1e-6), 0, 1) : 0;
+    DF.extra.push({gx:anchor.x,gy:anchor.y,gz:anchor.z,
+      ox:off.x,oy:off.y,oz:off.z,sig2:width*width,
+      sideK:Math.min(Math.abs(off.x)/(len+1e-6),1),shell:1-0.8*inwards});
+  }
   refreshMesh(true);
 }
 function finishBakeSettle() {
@@ -1817,7 +1827,7 @@ function commitPose(burn) {
   finishBakeSettle();
   relaxMorph = null;
   pushUndo();
-  const hasPose = pull.active;
+  const hasPose = pull.active || extraPulls.size > 0;
   let beforeBake = null;
   if (hasPose) {
     // Preserve the last displayed frame only for the short post-bake correction.
@@ -1845,8 +1855,8 @@ function commitPose(burn) {
     faceVerts.forEach((f, i) => f.base.set(nfv[i]));
     faceCaps.forEach((c, i) => c.base.set(nfc[i]));
     riders.forEach((r, i) => { for (let k = 0; k < 3; k++) r.ctr[k] += nrd[i][k] - r.base[k]; r.base.set(nrd[i]); });
-    pull.active = pull.held = false; pull.relax = false; pull.rl = null; pull.off.set(0, 0, 0); pull.vel.set(0, 0, 0); pull.prevOff = null; pullLift = 0;
-    DF.ox = DF.oy = DF.oz = 0; DF.shell = 1;
+    pull.active = pull.held = false; extraPulls.clear(); primaryPointerId = null; gesturePointerId = null; pull.relax = false; pull.rl = null; pull.off.set(0, 0, 0); pull.vel.set(0, 0, 0); pull.prevOff = null; pullLift = 0;
+    DF.ox = DF.oy = DF.oz = 0; DF.shell = 1; DF.extra = [];
     controls.enabled = true; sfx.stretch(0, 0);
     commitBases();
   }
@@ -2042,7 +2052,7 @@ function computeBound() {
 }
 // 体・顔・芽をいまの状態（つまみ＋重なり）に合わせて作り直す
 function refreshMesh(usePull) {
-  if (!usePull) { DF.ox = DF.oy = DF.oz = 0; DF.shell = 1; }
+  if (!usePull) { DF.ox = DF.oy = DF.oz = 0; DF.shell = 1; DF.extra = []; }
   const P = pos.array, n = pos.count;
   for (let i = 0; i < n; i++) {
     const j = i * 3;
@@ -2107,7 +2117,8 @@ function applyCharUI(c, key) {
   for (const k in CHARS) document.getElementById('ch-' + k).classList.toggle('on', k === key);
 }
 function cancelPose() {
-  if (!pull.active) return;
+  if (!pull.active && extraPulls.size === 0) return;
+  extraPulls.clear(); primaryPointerId = null; gesturePointerId = null;
   pull.off.set(0, 0, 0); pull.vel.set(0, 0, 0); pull.active = pull.held = false; pull.relax = false; pull.rl = null; pullLift = 0;
   refreshMesh(false);
 }
@@ -2372,7 +2383,7 @@ renderer.setAnimationLoop(() => {
       const u = Math.min(pull.rl.t / pull.rl.dur, 1), e = u * u * (3 - 2 * u);
       pull.off.copy(pull.rl.o0).multiplyScalar(1 - e);
       if (u >= 1) { pull.off.set(0, 0, 0); pull.rl = null; spring.sqV += 2.5; }
-    } else if (!pull.held && !RET.hold) {
+    } else if (!pull.held && extraPulls.size === 0 && !RET.hold) {
       const K2 = RET.k, D2 = RET.d;
       const acc = pull.off.clone().multiplyScalar(-K2).addScaledVector(pull.vel, -D2);
       pull.vel.addScaledVector(acc, dt);
@@ -2380,7 +2391,7 @@ renderer.setAnimationLoop(() => {
     }
     const lifted = Math.max(0, pull.off.y) * (RET.hold ? 0 : 0.5);          // 上に引くと体ごと持ち上がる
     pullLift = lifted;
-    if (pull.held) {
+    if (pull.held || extraPulls.size > 0) {
       const prev = pull.prevOff || pull.off.clone();
       sfx.stretch(pull.off.length(), prev.distanceTo(pull.off) / Math.max(dt, 1e-3));
       pull.prevOff = pull.off.clone();
@@ -2388,17 +2399,8 @@ renderer.setAnimationLoop(() => {
       pull.prevOff = null;
       if (pull.wasLifted && pull.off.y < 0) { sfx.land(); pull.wasLifted = false; }
     }
-    const o = pull.off.clone(); o.y -= lifted;
-    const g = pull.grab;
-    // つまんだ所は床より下へは行かない（離した後のはね返りでも）
-    if (g.y + o.y < floorY + 0.06) o.y = floorY + 0.06 - g.y;
-    const L = o.length();
-    const sig = (0.42 + L * 0.25) * (0.8 + 0.2 * SF), sig2 = sig * sig;
-    DF.ox = o.x; DF.oy = o.y; DF.oz = o.z; DF.gx = g.x; DF.gy = g.y; DF.gz = g.z;
-    DF.sig2 = sig2; DF.sideK = Math.min(Math.abs(o.x) / (L + 1e-6), 1);
-    { const n = pull.n; const inw = n ? THREE.MathUtils.clamp(-(o.x * n.x + o.y * n.y + o.z * n.z) / (L + 1e-6), 0, 1) : 0; DF.shell = 1 - 0.8 * inw; }   // 押しこむときは凹ませてよい
-    refreshMesh(true);
-    if (!pull.held && pull.off.length() < 0.002 && pull.vel.length() < 0.01) {
+    syncPullDeformationForBake(); // Same deformation used by the live preview and BAKE.
+    if (!pull.held && extraPulls.size === 0 && pull.off.length() < 0.002 && pull.vel.length() < 0.01) {
       pullLift = 0; pull.active = false; pull.relax = false; pull.rl = null;
       refreshMesh(false);
     }
