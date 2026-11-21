@@ -661,22 +661,31 @@ function evalBind(b, base, out, withNormal = true) {
 const _tmp3 = new Float32Array(3);
 
 // 体の変形を「なめらかな関数」として共通化（体の頂点も顔パーツも同じ式で動かす → ずれない）
-const DF = { ox: 0, oy: 0, oz: 0, gx: 0, gy: 0, gz: 0, sig2: 1, sideK: 0, shell: 1 };
+const DF = { ox: 0, oy: 0, oz: 0, gx: 0, gy: 0, gz: 0, sig2: 1, sideK: 0, shell: 1, extra: [] };
 const _d = [0, 0, 0];
 function deformPoint(bx, by, bz, rBase, mask = 0) {
   const dx = bx - DF.gx, dy = by - DF.gy, dz = bz - DF.gz, d2 = dx * dx + dy * dy + dz * dz;
-  const plant = Math.min(Math.max((by - floorY) / 0.35, 0), 1);              // 底は床にくっついたまま
-  const front = Math.min(Math.max(bz / shapeN.C, 0), 1);                     // 横に引くと正面（顔）を少し広めに
-  const w = Math.max(Math.exp(-d2 / DF.sig2), Math.exp(-d2 / (DF.sig2 * 1.8)) * 0.35 * DF.sideK * front) * plant * (1 - PROT * mask);
+  const plant = Math.min(Math.max((by - floorY) / 0.35, 0), 1);
+  const front = Math.min(Math.max(bz / shapeN.C, 0), 1);
+  const keep = plant * (1 - PROT * mask);
+  const w = Math.max(Math.exp(-d2 / DF.sig2),
+    Math.exp(-d2 / (DF.sig2 * 1.8)) * 0.35 * DF.sideK * front) * keep;
   let x = bx + DF.ox * w, y = by + DF.oy * w, z = bz + DF.oz * w;
-  if (w > 1e-4) {
-    // めり込み防止：元の体の殻より内側に入った点は外へ押し戻す
+  let affected = w > 1e-4, shell = DF.shell, magnitude = w;
+  for (const p of DF.extra) {
+    const ox = bx - p.gx, oy = by - p.gy, oz = bz - p.gz;
+    const dis = ox * ox + oy * oy + oz * oz;
+    const h = Math.max(Math.exp(-dis / p.sig2),
+      Math.exp(-dis / (p.sig2 * 1.8)) * 0.35 * p.sideK * front) * keep;
+    x += p.ox * h; y += p.oy * h; z += p.oz * h;
+    if (h > 1e-4) { affected = true; shell = Math.min(shell, p.shell); magnitude = Math.max(magnitude, h); }
+  }
+  if (affected) {
     const xn = x / shapeN.A, yn = y / shapeN.B, zn = z / shapeN.C, r = Math.hypot(xn, yn, zn) || 1e-6;
     const bin = Math.min(89, Math.max(0, Math.floor((Math.asin(THREE.MathUtils.clamp(yn / r, -1, 1)) / Math.PI + 0.5) * 90)));
-    const rMin = Math.min(elevMax[bin], rBase * 1.2) * 0.985 * DF.shell;
+    const rMin = Math.min(elevMax[bin], rBase * 1.2) * 0.985 * shell;
     if (r < rMin) { const k = rMin / r; x *= k; y *= k; z *= k; }
-    // 床より下には絶対に出さない（輪郭線のぶんも少しすき間をあける）
-    const minY = floorY + 0.04 * Math.min(w * 3, 1);
+    const minY = floorY + 0.04 * Math.min(magnitude * 3, 1);
     if (y < minY) y = minY;
   }
   _d[0] = x; _d[1] = y; _d[2] = z;
@@ -929,6 +938,18 @@ const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 // 引っ張り：つかんだ点・引っ張り量(ローカル)・速度
 const pull = { active: false, held: false, grab: new THREE.Vector3(), off: new THREE.Vector3(), vel: new THREE.Vector3(),
                plane: new THREE.Plane(), startW: new THREE.Vector3() };
+const extraPulls = new Map(); // Additional independent touch points on the selected んちょ.
+let primaryPointerId = null, gesturePointerId = null;
+function setGrabOffset(g, e) {
+  setNdc(e);
+  const pt = ray.ray.intersectPlane(g.plane, new THREE.Vector3());
+  if (!pt) return;
+  const from = body.worldToLocal(g.startW.clone()), to = body.worldToLocal(pt);
+  const offset = to.sub(from).add(g.startOff);
+  const len = offset.length(), cap = (offset.y > 0 ? 2.2 : 1.4) * (0.7 + 0.3 * SF);
+  if (len > 0) offset.multiplyScalar(cap * Math.tanh(len / cap) / len);
+  g.off.copy(offset);
+}
 
 function setNdc(e) {
   const r = canvas.getBoundingClientRect();
@@ -950,8 +971,28 @@ function placeItem() {
   evalBind(r.bind, r.base, _tmp3, false); r.o.position.fromArray(_tmp3);
 }
 canvas.addEventListener('pointerdown', e => {
-  if (anim.on || mode === 'camera') return;               // 鑑賞中・カメラモード中は引っぱらない
+  if (anim.on || mode === 'camera') return;
+  // Each new fingertip gets its own local anchor; the first keeps its pose
+  // even while another finger touches the bake button outside the canvas.
+  if (mode === 'sculpt' && (pull.held || extraPulls.size)) {
+    if (e.pointerId === primaryPointerId || extraPulls.has(e.pointerId)) return;
+    setNdc(e);
+    const hit = ray.intersectObject(body, false)[0];
+    if (!hit || extraPulls.size >= 3) return;
+    const g = { grab: body.worldToLocal(hit.point.clone()), startW: hit.point.clone(),
+      startOff: new THREE.Vector3(), off: new THREE.Vector3(), n: hit.face.normal.clone(),
+      plane: new THREE.Plane() };
+    g.plane.setFromNormalAndCoplanarPoint(camera.getWorldDirection(new THREE.Vector3()).negate(), hit.point);
+    extraPulls.set(e.pointerId, g);
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+    return;
+  }
   setNdc(e);
+  if (pendingPhotoTexture) {
+    const hit = ray.intersectObject(body, false)[0];
+    if (hit) { addPhotoSticker(hit, pendingPhotoTexture); pendingPhotoTexture = null; toast('しゃしんを はりました'); }
+    return;
+  }
   {   // 重なっている中から、さわった子を選ぶ
     const vis = insts.filter(i => i.cat.visible);
     if (vis.length > 1) { const hh = ray.intersectObjects(vis.map(i => i.body), false)[0]; if (hh && hh.object.userData.inst !== curInst) selectInst(hh.object.userData.inst); }
@@ -962,12 +1003,12 @@ canvas.addEventListener('pointerdown', e => {
     if (!bodyHit && !itemHits.length) return;
     if (itemHits.length && (!bodyHit || itemHits[0].distance < bodyHit.distance)) {
       selectedItem = riders.find(r => { let p = itemHits[0].object; while (p) { if (p === r.o) return true; p = p.parent; } return false; }) || null;
-      if (selectedItem) { pushUndo(); pl = true; controls.enabled = false; canvas.setPointerCapture(e.pointerId); placeItem(); }
+      if (selectedItem) { pushUndo(); pl = true; gesturePointerId = e.pointerId; controls.enabled = false; canvas.setPointerCapture(e.pointerId); placeItem(); }
     } else {
       const p = ray.ray.intersectPlane(floorPlane, new THREE.Vector3()); if (!p) return;
       mv = { dx: cat.position.x - p.x, dz: cat.position.z - p.z };
       if (layout !== 'free') setFree();
-      controls.enabled = false; canvas.setPointerCapture(e.pointerId);
+      gesturePointerId = e.pointerId; controls.enabled = false; canvas.setPointerCapture(e.pointerId);
     }
     sfx.grab(); return;
   }
@@ -975,7 +1016,7 @@ canvas.addEventListener('pointerdown', e => {
     if (!ray.intersectObject(body, false)[0]) return;
     const p = ray.ray.intersectPlane(floorPlane, new THREE.Vector3()); if (!p) return;
     mv = { dx: cat.position.x - p.x, dz: cat.position.z - p.z }; if (layout !== 'free') setFree();
-    controls.enabled = false; sfx.grab(); canvas.setPointerCapture(e.pointerId);
+    gesturePointerId = e.pointerId; controls.enabled = false; sfx.grab(); canvas.setPointerCapture(e.pointerId);
     return;
   }
   // んちょめちょぽの葉っぱを先に判定
@@ -984,7 +1025,7 @@ canvas.addEventListener('pointerdown', e => {
     const lh = ray.intersectObjects(rt.leafMeshes, false)[0];
     const bh = ray.intersectObject(body, false)[0];
     if (lh && (!bh || lh.distance <= bh.distance) && rt.leafGrab(lh)) {
-      leafDrag = true;
+      leafDrag = true; gesturePointerId = e.pointerId;
       controls.enabled = false;
       sfx.grab();
       canvas.setPointerCapture(e.pointerId);
@@ -1003,6 +1044,7 @@ canvas.addEventListener('pointerdown', e => {
   pull.grab.copy(localHit).sub(pull.off);
   pull.vel.set(0, 0, 0);
   pull.active = pull.held = true;
+  primaryPointerId = e.pointerId;
   sfx.grab();
   pull.n = h.face.normal.clone();
   pull.startW.copy(h.point);
@@ -1013,6 +1055,8 @@ canvas.addEventListener('pointerdown', e => {
 });
 let leafPrev = 0, leafPrevT = 0;
 canvas.addEventListener('pointermove', e => {
+  if (extraPulls.has(e.pointerId)) { setGrabOffset(extraPulls.get(e.pointerId), e); return; }
+  if ((pl || mv || leafDrag) && gesturePointerId !== e.pointerId) return;
   if (pl) { setNdc(e); placeItem(); return; }
   if (mv) {
     setNdc(e); const p = ray.ray.intersectPlane(floorPlane, new THREE.Vector3());
@@ -1035,23 +1079,29 @@ canvas.addEventListener('pointermove', e => {
     leafPrev = L; leafPrevT = now;
     return;
   }
-  if (!pull.held) return;
-  setNdc(e);
-  const p = ray.ray.intersectPlane(pull.plane, new THREE.Vector3());
-  if (!p) return;
-  const a = body.worldToLocal(pull.startW.clone()), b = body.worldToLocal(p);
-  const o = b.sub(a).add(pull.startOff);
-  // 伸びすぎない（ゴムっぽく頭打ち）
-  const L = o.length(), MAX = (o.y > 0 ? 2.2 : 1.4) * (0.7 + 0.3 * SF);
-  if (L > 0) o.multiplyScalar((MAX * Math.tanh(L / MAX)) / L);
-  pull.off.copy(o);
+  if (!pull.held || e.pointerId !== primaryPointerId) return;
+  setGrabOffset(pull, e);
 });
-function release() {
-  if (pl) { pl = false; controls.enabled = true; sfx.boing(0.3); return; }
-  if (mv) { mv = null; controls.enabled = true; return; }
-  if (waitUp) { waitUp = false; controls.enabled = true; return; }
+function release(e) {
+  const pid = e && e.pointerId;
+  if (pid !== undefined) {
+    if (extraPulls.has(pid)) {
+      extraPulls.delete(pid);
+      if (!pull.held && extraPulls.size === 0) {
+        controls.enabled = true;
+        sfx.stretch(0, 0); sfx.boing(pull.off.length());
+      }
+      return;
+    }
+    if (pl || mv || waitUp || leafDrag) {
+      if (gesturePointerId !== pid) return;
+    } else if (primaryPointerId !== pid) return;
+  }
+  if (pl) { pl = false; gesturePointerId = null; controls.enabled = true; sfx.boing(0.3); return; }
+  if (mv) { mv = null; gesturePointerId = null; controls.enabled = true; return; }
+  if (waitUp) { waitUp = false; gesturePointerId = null; controls.enabled = true; return; }
   if (leafDrag) {
-    leafDrag = false;
+    leafDrag = false; gesturePointerId = null;
     controls.enabled = true;
     sfx.stretch(0, 0);
     const L = current.rt.leafRelease();
@@ -1060,25 +1110,17 @@ function release() {
     return;
   }
   if (!pull.held) return;
-  pull.held = false;
+  pull.held = false; primaryPointerId = null;
   controls.enabled = true;
-  sfx.stretch(0, 0);
-  sfx.boing(pull.off.length());
+  if (extraPulls.size > 0) return;
+  sfx.stretch(0, 0); sfx.boing(pull.off.length());
   pull.wasLifted = pull.off.y > 0.25;
-  // 離した瞬間にぷるんっ
   spring.sqV += 2 + pull.off.length() * 3;
   spring.sxV += pull.off.x * 2.5;
   spring.szV += pull.off.z * 2.5;
 }
 addEventListener('pointerup', release);
 addEventListener('pointercancel', release);
-
-document.getElementById('poke').onclick = () => {
-  sfx.poke();
-  spring.sqV -= 4.5;
-  spring.sxV += (Math.random() - 0.5) * 3;
-  spring.szV += (Math.random() - 0.5) * 2;
-};
 
 // ---- ジャンプ
 const jump = { phase: 'idle', t: 0, y: 0, vy: 0 };
