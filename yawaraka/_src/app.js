@@ -721,6 +721,7 @@ const CHARS = {
 function buildCharacter(key, opts = {}) {
   finishBakeSettle();
   const c = CHARS[key] || CHARS.neko;
+  selectedItem = null;
   if (!curInst) { curInst = { cat }; insts.push(curInst); }
   if (current && current.rt && current.rt.dispose) current.rt.dispose();
   current = c; curKey = key;
@@ -958,6 +959,38 @@ function setNdc(e) {
   ray.setFromCamera(ndc, camera);
 }
 let leafDrag = false, waitUp = false, pl = false, selectedItem = null;
+const accessoryPanel=ui('accessoryPanel');
+const accessoryInputs={size:ui('accessorySize'),x:ui('accessoryX'),y:ui('accessoryY')};
+function syncAccessoryControls() {
+  const show=mode==='place' && !!selectedItem &&
+     selectedItem.o.parent===squish && selectedItem.o===current.rt.root;
+  accessoryPanel.classList.toggle('open',show);
+  if(!show)return;
+  accessoryInputs.size.value=String(selectedItem.o.userData.sizeFactor||selectedItem.o.scale.x||1);
+  accessoryInputs.x.value=String(selectedItem.offsetX||0);
+  accessoryInputs.y.value=String(selectedItem.offsetY||0);
+}
+for (const [kind,input] of Object.entries(accessoryInputs)) {
+  input.addEventListener('input',e=>{
+    if(!selectedItem || selectedItem.o.parent!==squish)return;
+    const r=selectedItem, value=Number(e.target.value);
+    if(!Number.isFinite(value))return;
+    if(!r.adjusting){pushUndo();r.adjusting=true;}
+    if(kind==='size') {
+      r.o.userData.sizeFactor=value;
+      r.o.scale.setScalar(value);
+    } else {
+      const prop=kind==='x'?'offsetX':'offsetY';
+      const index=kind==='x'?0:1;
+      r.base[index]+=value-(r[prop]||0);
+      r[prop]=value;
+      refreshMesh(!!pull.active);
+    }
+  });
+  input.addEventListener('change',()=>{
+    if(selectedItem)selectedItem.adjusting=false;
+  });
+}
 const _tri = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()], _bc = new THREE.Vector3();
 // アイテムを、さわった体の表面の場所へ移して固定する
 function placeItem() {
@@ -1958,7 +1991,13 @@ const tray = ui('tray');
 for (const [k, label, col] of PLANT_LIST) {
   const b = document.createElement('button');
   b.innerHTML = '<i style="background:' + col + '"></i>' + label;
-  b.onclick = () => { if (current.rt.plant) current.rt.plant(k); };
+  b.onclick = () => {
+    if (!current.rt.plant) return;
+    current.rt.plant(k);
+    selectedItem = riders.find(r=>r.o===current.rt.root) || null;
+    setMode('place');
+    syncAccessoryControls();
+  };
   tray.appendChild(b);
 }
 const PANELS = { shape: ['tShape', 'pShape'], item: ['plantBtn', 'tray'], color: ['colorBtn', 'pal'], more: ['tMore', 'pMore'] };
@@ -1995,6 +2034,7 @@ function setMode(m) {
     camera: 'さわって まわす・ひろげて ちかづく'
   }[m];
   canvas.style.cursor = cam ? 'move' : 'grab';
+  syncAccessoryControls();
 }
 for (const [key,id] of Object.entries(modeControls)) ui(id).onclick = () => setMode(key);
 setMode('sculpt');
