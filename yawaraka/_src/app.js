@@ -1016,19 +1016,13 @@ canvas.addEventListener('pointerdown', e => {
       selectedItem = riders.find(r => { let p = itemHits[0].object; while (p) { if (p === r.o) return true; p = p.parent; } return false; }) || null;
       if (selectedItem) { pushUndo(); pl = true; gesturePointerId = e.pointerId; controls.enabled = false; canvas.setPointerCapture(e.pointerId); placeItem(); }
     } else {
+      selectedItem = null;
       const p = ray.ray.intersectPlane(floorPlane, new THREE.Vector3()); if (!p) return;
       mv = { dx: cat.position.x - p.x, dz: cat.position.z - p.z };
       if (layout !== 'free') setFree();
       gesturePointerId = e.pointerId; controls.enabled = false; canvas.setPointerCapture(e.pointerId);
     }
     sfx.grab(); return;
-  }
-  if (mode === 'move') {
-    if (!ray.intersectObject(body, false)[0]) return;
-    const p = ray.ray.intersectPlane(floorPlane, new THREE.Vector3()); if (!p) return;
-    mv = { dx: cat.position.x - p.x, dz: cat.position.z - p.z }; if (layout !== 'free') setFree();
-    gesturePointerId = e.pointerId; controls.enabled = false; sfx.grab(); canvas.setPointerCapture(e.pointerId);
-    return;
   }
   // んちょめちょぽの葉っぱを先に判定
   const rt = current.rt;
@@ -1980,21 +1974,35 @@ function trayOpen(v) { if (v) openPanel('item'); else if (panelNow === 'item') o
 for (const k in PANELS) ui(PANELS[k][0]).onclick = () => openPanel(panelNow === k ? null : k);
 openPanel(null);
 onPlucked = () => { trayOpen(true); toast('かざりを えらんでね'); };
-// ---- モード：のばす / カメラ
+// Explicit modes: body deformation is the default. "おく" moves んちょ and decorations.
 let mode = 'sculpt', spinSaved = true;
+const modeControls = {sculpt: 'modeSculpt', place: 'modePlace', camera: 'modeCamera'};
 function setMode(m) {
-  if (m !== 'sculpt') { extraPulls.clear(); primaryPointerId=null; }
-  if (m === mode && ui('modeBtn').dataset.init) return;
-  ui('modeBtn').dataset.init = '1';
+  if (!modeControls[m]) return;
+  if (m !== 'sculpt') {
+    if (pull.held) release();
+    extraPulls.clear(); primaryPointerId = null;
+  }
   mode = m;
   const cam = m === 'camera';
-  controls.enableRotate = cam; controls.enablePan = false;
-  controls.autoRotate = false; ui('modeBtn').dataset.m = m;
-  ui('modeBtn').classList.toggle('on', !cam); ui('modeBtn').textContent = { sculpt: 'のばす', place: 'おく', move: 'うごかす', camera: 'みまわす' }[m];
-  ui('hint').textContent = { sculpt: 'からだを ひっぱって「かためる」を おしてね', place: 'かざりを さわって うごかす', move: 'こを うごかして ばしょを きめる', camera: 'さわって まわす・ひろげて ちかづく' }[m];
+  controls.enableRotate = cam;
+  controls.enablePan = false;
+  controls.autoRotate = false;
+  controls.enabled = cam || (!pull.held && !pl && !mv && !leafDrag);
+  ui('toolModes').dataset.m = m;
+  for (const [key,id] of Object.entries(modeControls)) {
+    const on = key === m;
+    ui(id).classList.toggle('on', on);
+    ui(id).setAttribute('aria-pressed', String(on));
+  }
+  ui('hint').textContent = {
+    sculpt: 'からだを ひっぱって「かためる」を おしてね',
+    place: 'んちょ や かざりを うごかしてね',
+    camera: 'さわって まわす・ひろげて ちかづく'
+  }[m];
   canvas.style.cursor = cam ? 'move' : 'grab';
 }
-ui('modeBtn').onclick = () => setMode({ sculpt: 'place', place: 'move', move: 'camera', camera: 'sculpt' }[mode]);
+for (const [key,id] of Object.entries(modeControls)) ui(id).onclick = () => setMode(key);
 setMode('sculpt');
 
 // ---- 戻るまでの時間
@@ -2329,7 +2337,7 @@ function copyActive() {
   }
   cat.position.x = best[0]; cat.position.z = best[1]; curInst.sy = 0;
   undoStack = []; updateButtons();
-  syncInst(); applyStage(); setFree(); setMode('move');
+  syncInst(); applyStage(); setFree(); setMode('place');
   fitView(insts.filter(i=>i.cat.visible)); sfx.sprout();
   toast('べつの ばしょに ふやしました。うごかしてね');
 }
