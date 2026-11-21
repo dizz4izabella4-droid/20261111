@@ -347,9 +347,10 @@ const VehicleMesh = (() => {
     visible.sort((a, b) => (b.average - b.f.layer) - (a.average - a.f.layer));
     const pulse = o.strobe?.power || 0, blue = !!o.strobe?.blue;
     const light = o.light || 0;
+    const illumination = o.vfx ? o.illumination : null;
     const haze = isSide ? 0 : Math.max(0, Math.min(.58, (depth - 65) / 300));
     for (const { f, points, n } of visible) {
-      const c = faceColor(f, n, o, light, pulse, blue, haze);
+      const c = faceColor(f, n, o, light, pulse, blue, haze, illumination);
       paintPath(ctx, points, c);
       if (f.fracture && o.k > 20) {
         ctx.strokeStyle = '#88a2b2';
@@ -359,7 +360,7 @@ const VehicleMesh = (() => {
     }
   }
 
-  function faceColor(f, n, o, light, pulse, blue, haze) {
+  function faceColor(f, n, o, light, pulse, blue, haze, illumination) {
     let base = f.color;
     if (base === '$tailL' || base === '$tailR') {
       if (o.glass?.tail[base === '$tailL' ? 'L' : 'R']) return '#351723';
@@ -390,8 +391,16 @@ const VehicleMesh = (() => {
     const red = (blue ? 30 : 156) * bounce + 13 * light;
     const green = (blue ? 72 : 8) * bounce + 7 * light;
     const b = (blue ? 143 : 36) * bounce;
-    const channel = (value, glow, fog) => Math.max(0, Math.min(255, Math.round((value * shade + glow) * (1 - haze) + fog * haze)));
-    return `rgb(${channel(hex >> 16, red, 73)},${channel(hex >> 8 & 255, green, 69)},${channel(hex & 255, b, 90)})`;
+    const illum = illumination && illumination.power > 0 ? illumination : null;
+    const dir = illum?.direction || [0,0,-1];
+    const facing = illum ? Math.max(0,(n[0]*dir[0]+n[1]*dir[1]+n[2]*dir[2])/magnitude) : 0;
+    const amount = illum ? illum.power * (0.12*facing + 0.34*Math.pow(facing,5)) : 0;
+    const lr = amount * (illum?.blue ? 38 : 146), lg = amount * (illum?.blue ? 82 : 12), lb = amount * (illum?.blue ? 156 : 42);
+    const warm=o.vfx&&o.warmLight?.power?o.warmLight:null, wd=warm?.direction||[0,0,1];
+    const warmFacing=warm?Math.max(0,(n[0]*wd[0]+n[1]*wd[1]+n[2]*wd[2])/magnitude):0;
+    const warmAmount=warm?warm.power*(.08+.22*warmFacing):0;
+    const channel = (value, glow, fog, add) => Math.max(0, Math.min(255, Math.round((value * shade + glow + add) * (1 - haze) + fog * haze)));
+    return `rgb(${channel(hex >> 16, red, 73,lr+warmAmount*34)},${channel(hex >> 8 & 255, green, 69,lg+warmAmount*19)},${channel(hex & 255, b, 90,lb+warmAmount*6)})`;
   }
 
   return { draw };
