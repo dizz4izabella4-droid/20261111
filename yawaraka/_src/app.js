@@ -5,7 +5,7 @@ import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 let INK = 0x3a3aa8;            // 線の色（キャラごとに変わる）
 
 const canvas = document.getElementById('c');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -57,7 +57,7 @@ function outlineMat(th) {
   });
 }
 let outlines = [];
-let lineOn = true;
+let lineOn = false;
 function withOutline(mesh, th = 0.035) {
   const o = new THREE.Mesh(mesh.geometry, outlineMat(th));
   o.visible = lineOn;
@@ -76,6 +76,7 @@ const PROT = 0.6;
 let colorBase = null, scorch = null, bodyCol = 0xffffff, itemCol = null;
 let curKey = 'mebae', gs = { x: 1, y: 1, z: 1 }, flashT = -1;
 let undoStack = [];
+let relaxMorph = null;
 let ovD = null, bound = null, curInst = null;
 const insts = [];
 const ui = id => document.getElementById(id);
@@ -774,6 +775,8 @@ function buildCharacter(key, opts = {}) {
   if (typeof anim !== 'undefined' && anim.on) controls.enabled = false;
   try { localStorage.setItem('mochi-char', key); } catch (e) {}
   syncInst();
+  curInst.relaxInitial = snap();
+  relaxMorph = null;
 }
 for (const k in CHARS) document.getElementById('ch-' + k).onclick = () => { if (CHARS[k] !== current) { buildCharacter(k); sfx.poke(); spring.sqV = -3; } };
 
@@ -782,6 +785,7 @@ const ground = new THREE.Mesh(new THREE.CircleGeometry(14, 96), new THREE.Shadow
 ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
+ground.visible = false; // Do not display the old ground plane.
 
 // ---- UI
 const lineBtn = document.getElementById('line');
@@ -1126,7 +1130,7 @@ function setAnim(on) {
     anim.saved = { pos: camera.position.clone(), target: controls.target.clone(), auto: controls.autoRotate };
     controls.autoRotate = false;
     controls.enabled = false;
-    dotFloor.visible = true;
+    dotFloor.visible = false;
     resetAnimMotion(); anim.x = 0; anim.lean = 0; anim.vx = 0; anim.camX = 0; anim.sq = 0; anim.sh = 0; anim.shV = 0; anim.shx = 0; anim.shxV = 0; anim.yaw = anim.kind === 'hop' ? Math.PI / 2 : FACE;
   } else {
     cat.position.x = animPos.x; cat.position.z = animPos.z;
@@ -1604,7 +1608,7 @@ function updateAnim(dt) {
 
 // ================= 台座・焼き付け・植え替え =================
 const PH = 1.35;
-const ped = new THREE.Group(); scene.add(ped);
+const ped = new THREE.Group(); scene.add(ped); ped.visible = false;
 const pedOutlines = [];
 const pedLine = outlineMat(0.04);
 {
@@ -1668,6 +1672,7 @@ function applySnap(s) {
 function pushUndo() { undoStack.push(snap()); if (undoStack.length > 30) undoStack.shift(); updateButtons(); }
 function updateButtons() { ui('undo').disabled = !undoStack.length; }
 function commitPose(burn) {
+  relaxMorph = null;
   pushUndo();
   const hasPose = pull.active;
   const nb = hasPose ? Float32Array.from(pos.array) : basePos;
@@ -1691,15 +1696,16 @@ function commitPose(burn) {
     controls.enabled = true; sfx.stretch(0, 0);
     commitBases();
   }
-  if (burn) { flashT = 0; sfx.thud(3); spring.sqV -= 2.5; toast(hasPose ? 'BAKED: this is the new base shape' : 'BAKED a little'); }
+  if (burn) { flashT = 0; sfx.thud(3); spring.sqV -= 2.5; toast(hasPose ? 'いまの かたちで かためました' : 'かためました'); }
 }
 // まるごと のばす・ちぢめる（床を基準に）
 function scaleShape(ax, ay, az) {
   if (anim.on) return;
+  relaxMorph = null;
   if (pull.active) commitPose(false);
   const nx = gs.x * ax, ny = gs.y * ay, nz = gs.z * az;
   const ok = v => v >= 0.55 && v <= 2.2;
-  if (!ok(nx) || !ok(ny) || !ok(nz)) { toast('LIMIT'); return; }
+  if (!ok(nx) || !ok(ny) || !ok(nz)) { toast('これいじょう かえられません'); return; }
   pushUndo();
   const T = a => { for (let i = 0; i < a.length; i += 3) { a[i] *= ax; a[i + 1] = floorY + (a[i + 1] - floorY) * ay; a[i + 2] *= az; } };
   T(basePos); faceVerts.forEach(f => T(f.base)); faceCaps.forEach(c => T(c.base)); riders.forEach(r => { T(r.base); T(r.ctr); });
@@ -1708,9 +1714,53 @@ function scaleShape(ax, ay, az) {
   sfx.boing(0.5); spring.sqV += ay > 1 ? 2 : -2;
 }
 ui('bakeBtn').onclick = () => { if (!anim.on) commitPose(true); };
-ui('relaxBtn').onclick = () => { if (pull.held) release(); pull.active = true; pull.held = false; pull.relax = true; pull.rl = null; pull.vel.set(0,0,0); sfx.boing(0.5); };
-ui('undo').onclick = () => { if (pull.active && !pull.held) { pull.relax = true; return; } if (pull.active || !undoStack.length) return; applySnap(undoStack.pop()); updateButtons(); sfx.poke(); };
-ui('reset').onclick = () => { buildCharacter(curKey); sfx.poke(); spring.sqV = -3; toast('RESET'); };
+// RELAX restores the original geometry gradually even after a shape was baked.
+function advanceRelax() {
+  const r = relaxMorph;
+  if (!r) return;
+  if (curInst !== r.actor || pull.held || anim.on) { relaxMorph = null; return; }
+  const now = performance.now(), t = Math.min(1, (now - r.started) / r.duration);
+  if (t < 1 && r.last && now - r.last < 38) return;
+  r.last = now;
+  const k = t * t * (3 - 2 * t), rev = 1 - k;
+  for (let n = 0; n < basePos.length; n++) basePos[n] = r.from.base[n] * rev + r.target.base[n] * k;
+  for (let j = 0; j < faceVerts.length; j++)
+    for (let n = 0; n < faceVerts[j].base.length; n++)
+      faceVerts[j].base[n] = r.from.fv[j][n] * rev + r.target.fv[j][n] * k;
+  for (let j = 0; j < faceCaps.length; j++)
+    for (let n = 0; n < faceCaps[j].base.length; n++)
+      faceCaps[j].base[n] = r.from.fc[j][n] * rev + r.target.fc[j][n] * k;
+  for (let n = 0; n < scorch.length; n++) scorch[n] = r.from.sc[n] * rev + r.target.sc[n] * k;
+  gs = {x:r.from.gs.x*rev+r.target.gs.x*k,y:r.from.gs.y*rev+r.target.gs.y*k,
+        z:r.from.gs.z*rev+r.target.gs.z*k};
+  applyScorch();
+  pos.array.set(basePos); pos.needsUpdate = true;
+  bodyGeo.computeVertexNormals(); bodyGeo.computeBoundingSphere();
+  faceVerts.forEach(f => { f.attr.array.set(f.base); f.attr.needsUpdate = true; });
+  faceCaps.forEach(c => c.o.position.fromArray(c.base));
+  if (t >= 1) { relaxMorph = null; commitBases(); syncInst(); toast('もとの かたちに もどりました'); }
+}
+ui('relaxBtn').onclick = () => {
+  if (anim.on) { toast('あにめを とめてから もどしてね'); return; }
+  if (pull.held) release();
+  if (pull.active) commitPose(false);
+  const from = snap(), target = curInst.relaxInitial;
+  if (!target || from.base.length !== target.base.length ||
+      from.fv.length !== target.fv.length || from.fc.length !== target.fc.length) {
+    toast('もとの かたちを みつけられません'); return;
+  }
+  let delta = 0;
+  for (let n = 0; n < from.base.length; n++) delta = Math.max(delta, Math.abs(from.base[n] - target.base[n]));
+  for (let n = 0; n < from.sc.length; n++) delta = Math.max(delta, Math.abs(from.sc[n] - target.sc[n]));
+  for (const axis of ['x', 'y', 'z']) delta = Math.max(delta, Math.abs(from.gs[axis] - target.gs[axis]));
+  if (delta < 0.0001) { toast('すでに もとの かたちです'); return; }
+  pushUndo();
+  relaxMorph = {actor:curInst, from, target, started:performance.now(),
+    duration:Math.max(300,Math.min(4200,Number(ui('ret').value)*1000||4000))};
+  sfx.boing(0.3); toast('ゆっくり もとに もどります');
+};
+ui('undo').onclick = () => { relaxMorph = null; if (pull.active && !pull.held) { pull.relax = true; return; } if (pull.active || !undoStack.length) return; applySnap(undoStack.pop()); updateButtons(); sfx.poke(); };
+ui('reset').onclick = () => { buildCharacter(curKey); sfx.poke(); spring.sqV = -3; toast('はじめの かたちに もどしました'); };
 ui('hp').onclick = () => scaleShape(1, 1.12, 1);
 ui('hm').onclick = () => scaleShape(1, 1 / 1.12, 1);
 ui('wp').onclick = () => scaleShape(1.12, 1, 1.12);
@@ -1718,9 +1768,9 @@ ui('wm').onclick = () => scaleShape(1 / 1.12, 1, 1 / 1.12);
 
 
 // 植え替え
-const PLANT_LIST = [['tophat', 'TOP HAT', '#2b2b33'], ['party', 'PARTY', '#ff8fb1'], ['crown', 'CROWN', '#f2c744'], ['beanie', 'BEANIE', '#5aa9e6'], ['straw', 'STRAW', '#e8cf8a'], ['chef', 'CHEF', '#ffffff'], ['bow', 'BOW', '#ff6b9a'],
-  ['grass', 'GRASS', '#c5e3c8'], ['tulip', 'TULIP', '#ee6f86'], ['daisy', 'DAISY', '#ffffff'], ['mushroom', 'MUSHROOM', '#e5584f'],
-  ['star', 'STAR', '#ffd34e'], ['flag', 'FLAG', '#e86a5e'], ['heart', 'HEART', '#ff7a98'], ['sakura', 'SAKURA', '#ffc2d4'], ['leek', 'LEEK', '#8cc87a']];
+const PLANT_LIST = [['tophat', 'たかいぼうし', '#2b2b33'], ['party', 'ぱーてぃーぼう', '#ff8fb1'], ['crown', 'かんむり', '#f2c744'], ['beanie', 'にっとぼう', '#5aa9e6'], ['straw', 'むぎわらぼう', '#e8cf8a'], ['chef', 'こっくぼう', '#ffffff'], ['bow', 'りぼん', '#ff6b9a'],
+  ['grass', 'くさ', '#c5e3c8'], ['tulip', 'ちゅーりっぷ', '#ee6f86'], ['daisy', 'はな', '#ffffff'], ['mushroom', 'きのこ', '#e5584f'],
+  ['star', 'ほし', '#ffd34e'], ['flag', 'はた', '#e86a5e'], ['heart', 'はーと', '#ff7a98'], ['sakura', 'さくら', '#ffc2d4'], ['leek', 'ねぎ', '#8cc87a']];
 const tray = ui('tray');
 for (const [k, label, col] of PLANT_LIST) {
   const b = document.createElement('button');
@@ -1734,7 +1784,7 @@ function openPanel(n) { panelNow = n; for (const k in PANELS) { ui(PANELS[k][1])
 function trayOpen(v) { if (v) openPanel('item'); else if (panelNow === 'item') openPanel(null); }
 for (const k in PANELS) ui(PANELS[k][0]).onclick = () => openPanel(panelNow === k ? null : k);
 openPanel(null);
-onPlucked = () => { trayOpen(true); toast('Pulled out! Pick something to plant'); };
+onPlucked = () => { trayOpen(true); toast('かざりを えらんでね'); };
 // ---- モード：のばす / カメラ
 let mode = 'sculpt', spinSaved = true;
 function setMode(m) {
@@ -1744,8 +1794,8 @@ function setMode(m) {
   const cam = m === 'camera';
   controls.enableRotate = cam; controls.enablePan = false;
   controls.autoRotate = false; ui('modeBtn').dataset.m = m;
-  ui('modeBtn').classList.toggle('on', !cam); ui('modeBtn').textContent = { sculpt: 'STRETCH', place: 'PLACE', move: 'MOVE', camera: 'CAMERA' }[m];
-  ui('hint').textContent = { sculpt: 'Pull the body, then press BAKE', place: 'Drag on the body to move the item', move: 'Drag a character to place it', camera: 'Drag to rotate · pinch to zoom' }[m];
+  ui('modeBtn').classList.toggle('on', !cam); ui('modeBtn').textContent = { sculpt: 'のばす', place: 'おく', move: 'うごかす', camera: 'みまわす' }[m];
+  ui('hint').textContent = { sculpt: 'からだを ひっぱって「かためる」を おしてね', place: 'かざりを さわって うごかす', move: 'こを うごかして ばしょを きめる', camera: 'さわって まわす・ひろげて ちかづく' }[m];
   canvas.style.cursor = cam ? 'move' : 'grab';
 }
 ui('modeBtn').onclick = () => setMode({ sculpt: 'place', place: 'move', move: 'camera', camera: 'sculpt' }[mode]);
@@ -1755,10 +1805,10 @@ setMode('sculpt');
 function setReturn(T) {
   RET.hold = T >= 4.15; T = Math.min(T, 4); RET.T = T;
   RET.k = 140 * Math.pow(0.5 / T, 2); RET.d = 7 * (0.5 / T);
-  ui('retv').textContent = RET.hold ? 'HOLD' : T.toFixed(2).replace(/0$/, '') + 's';
+  ui('retv').textContent = RET.hold ? 'そのまま' : T.toFixed(2).replace(/0$/, '') + ' びょう';
 }
 ui('ret').oninput = e => setReturn(parseFloat(e.target.value));
-function setSoft(v) { SOFT = v; SF = 0.6 + 1.2 * v; ui('softv').textContent = v < 0.2 ? 'FIRM' : v < 0.45 ? 'NORMAL' : v < 0.7 ? 'SOFT' : 'SUPER SOFT'; }
+function setSoft(v) { SOFT = v; SF = 0.6 + 1.2 * v; ui('softv').textContent = v < 0.2 ? 'かたい' : v < 0.45 ? 'ふつう' : v < 0.7 ? 'やわらかい' : 'とてもやわらかい'; }
 ui('soft').oninput = e => setSoft(parseFloat(e.target.value)); ui('soft').value = SOFT; setSoft(SOFT);
 setReturn(4); ui('ret').value = 4;
 
@@ -1775,17 +1825,17 @@ function addSw(label, cols, fn, extra) {
     b.onclick = () => fn(c); row.appendChild(b);
   }
   // いちばん右：自由に色を選ぶ
-  const pick = document.createElement('label'); pick.className = 'sw rainbow'; pick.title = 'custom';
+  const pick = document.createElement('label'); pick.className = 'sw rainbow'; pick.title = 'すきないろ';
   const inp = document.createElement('input'); inp.type = 'color'; inp.value = '#ff8800';
   inp.oninput = () => fn(inp.value);
   pick.appendChild(inp); row.appendChild(pick);
 }
 const applyItem = () => { if (itemCol !== null && current.rt.tint) current.rt.tint(itemCol, itemAll); };
-addSw('BODY', BODY_COLS, c => { bodyCol = new THREE.Color(c).getHex(); bodyMat.color.set(bodyCol); });
+addSw('からだ', BODY_COLS, c => { bodyCol = new THREE.Color(c).getHex(); bodyMat.color.set(bodyCol); });
 {
-  const all = document.createElement('button'); all.id = 'itemAll'; all.textContent = 'ALL'; all.title = 'recolor every part of the item';
+  const all = document.createElement('button'); all.id = 'itemAll'; all.textContent = 'ぜんぶ'; all.title = 'かざりの いろを ぜんぶ かえる';
   all.onclick = () => { itemAll = !itemAll; all.classList.toggle('on', itemAll); applyItem(); sfx.poke(); };
-  addSw('ITEM', ITEM_COLS, c => { itemCol = new THREE.Color(c).getHex(); applyItem(); }, all);
+  addSw('かざり', ITEM_COLS, c => { itemCol = new THREE.Color(c).getHex(); applyItem(); }, all);
 }
 
 // ================= 増量モード（ステージを消すと、コピーして好きに置ける） =================
@@ -1897,7 +1947,7 @@ function selectInst(I) {
   leafDrag = false; sfx.grab();
 }
 function copyActive() {
-  if (insts.length >= 12) { toast('MAX 12'); return; }
+  if (insts.length >= 12) { toast('12こまで ふやせます'); return; }
   cancelPose();
   const s = snap();
   const src = { key: curKey, bodyCol, itemCol, itemAll, plant: current.rt.plantKind, px: cat.position.x, pz: cat.position.z, sy: curInst.sy || 0 };
@@ -1911,11 +1961,11 @@ function copyActive() {
   if (rt.plant) { if (src.plant === null) rt.clear(); else rt.plant(src.plant); if (itemCol !== null) rt.tint(itemCol, itemAll); }
   cat.position.x = src.px; cat.position.z = src.pz + 0.03 * (insts.length - 1); curInst.sy = src.sy;   // 基本は今の位置
   undoStack = []; updateButtons();
-  syncInst(); applyStage(); sfx.sprout(); toast('COPIED at the same spot · ROW / STACK / MOVE to arrange');
+  syncInst(); applyStage(); sfx.sprout(); toast('ふやしました。ならべかたを えらんでね');
   if (layout !== 'free') arrange(layout, true);
 }
 function removeActive() {
-  if (insts.length < 2) { toast('Last one stays'); return; }
+  if (insts.length < 2) { toast('さいごの ひとつは のこります'); return; }
   const I = curInst, idx = insts.indexOf(I), next = insts[idx ? idx - 1 : 1];
   cancelPose();
   if (current.rt.dispose) current.rt.dispose();
@@ -1935,7 +1985,7 @@ ui('copyBtn').onclick = () => {
     const rider = { o: duplicate, base, ctr, bind: bindPoints(ctr) };
     riders.push(rider);
     duplicate.traverse(o => { if (o.isMesh) { o.frustumCulled = false; current.rt.leafMeshes.push(o); } });
-    selectedItem = rider; syncInst(); sfx.sprout(); toast('ITEM COPIED');
+    selectedItem = rider; syncInst(); sfx.sprout(); toast('かざりを ふやしました');
     return;
   }
   copyActive();
@@ -1958,7 +2008,7 @@ function fitView(L) {
 }
 // 並べかた：ROW=横並び、STACK=縦積み
 function arrange(kind, quiet) {
-  const L = insts.filter(i => i.cat.visible); if (L.length < 2) { toast('COPY first'); return; }
+  const L = insts.filter(i => i.cat.visible); if (L.length < 2) { toast('さきに こを ふやしてね'); return; }
   layout = kind; ui('rowBtn').classList.toggle('on', kind === 'row'); ui('stackBtn').classList.toggle('on', kind === 'stack');
   cancelPose();
   if (kind === 'row') {
@@ -1975,15 +2025,83 @@ function arrange(kind, quiet) {
   }
   for (const I of L) I.ovDirty = true;
   fitView(L);
-  if (!quiet) { sfx.sprout(); toast(kind === 'row' ? 'Lined up · COPY adds to the row' : 'Stacked · COPY keeps stacking'); }
+  if (!quiet) { sfx.sprout(); toast(kind === 'row' ? 'ならべました' : 'かさねました'); }
 }
 function setFree() { layout = 'free'; ui('rowBtn').classList.remove('on'); ui('stackBtn').classList.remove('on'); }
-ui('rowBtn').onclick = () => layout === 'row' ? (setFree(), toast('Free layout')) : arrange('row');
-ui('stackBtn').onclick = () => layout === 'stack' ? (setFree(), toast('Free layout')) : arrange('stack');
+ui('rowBtn').onclick = () => layout === 'row' ? (setFree(), toast('じゆうに おけます')) : arrange('row');
+ui('stackBtn').onclick = () => layout === 'stack' ? (setFree(), toast('じゆうに おけます')) : arrange('stack');
 // もちモード：目・鼻・口を消す（全員）
 function applyMochi() { for (const I of insts) if (I.face) I.face.visible = !mochi; if (face) face.visible = !mochi; ui('mochi').classList.toggle('on', mochi); }
-ui('mochi').onclick = () => { mochi = !mochi; applyMochi(); sfx.poke(); toast(mochi ? 'MOCHI MODE · no face' : 'Face back'); };
+ui('mochi').onclick = () => { mochi = !mochi; applyMochi(); sfx.poke(); toast(mochi ? 'かおを かくしました' : 'かおを もどしました'); };
 ui('delBtn').onclick = removeActive;
+/* YAWARAKA -> WHERE WHICH: capture only the selected character as a transparent sprite. */
+const YY_GALLERY_KEY="brain-friends-gallery-v1";
+function yySnapshot(){
+  const size=512, previous=scene.children.map(o=>[o,o.visible]);
+  const oldBg=scene.background, oldClear=renderer.getClearColor(new THREE.Color).clone(), oldAlpha=renderer.getClearAlpha();
+  const oldW=canvas.clientWidth||innerWidth, oldH=canvas.clientHeight||innerHeight, oldDpr=renderer.getPixelRatio();
+  const oldPos=camera.position.clone(), oldQuat=camera.quaternion.clone(), oldAspect=camera.aspect, oldFov=camera.fov;
+  try {
+    for(const [o] of previous) if(o!==cat&&!o.isLight) o.visible=false;
+    scene.background=null;renderer.setClearColor(0,0);
+    renderer.setPixelRatio(1);renderer.setSize(size,size,false);
+    camera.aspect=1;camera.fov=35;
+    const cy=cat.position.y+Math.max(.65,current.shape.B*.5);
+    const angle=cat.rotation.y||0;
+    camera.position.set(cat.position.x+Math.sin(angle)*6.4,cy+.35,cat.position.z+Math.cos(angle)*6.4);
+    camera.lookAt(cat.position.x,cy,cat.position.z);camera.updateProjectionMatrix();
+    renderer.render(scene,camera);
+    const gl=renderer.getContext(), src=new Uint8Array(size*size*4);
+    gl.readPixels(0,0,size,size,gl.RGBA,gl.UNSIGNED_BYTE,src);
+    const out=document.createElement("canvas");out.width=out.height=size;
+    const ctx=out.getContext("2d"), im=ctx.createImageData(size,size);
+    for(let y=0;y<size;y++)im.data.set(src.subarray((size-y-1)*size*4,(size-y)*size*4),y*size*4);
+    ctx.putImageData(im,0,0);
+    if(!im.data.some((a,i)=>i%4===3&&a===0))throw Error("TRANSPARENCY");
+    return out;
+  } finally {
+    scene.background=oldBg;renderer.setClearColor(oldClear,oldAlpha);
+    for(const [o,visible] of previous)o.visible=visible;
+    renderer.setPixelRatio(oldDpr);renderer.setSize(oldW,oldH,false);
+    camera.position.copy(oldPos);camera.quaternion.copy(oldQuat);
+    camera.aspect=oldAspect;camera.fov=oldFov;camera.updateProjectionMatrix();
+  }
+}
+function yyGalleryImage(canvas){
+  const out=document.createElement("canvas");out.width=out.height=320;
+  out.getContext("2d").drawImage(canvas,0,0,320,320);
+  return out.toDataURL("image/webp",.83);
+}
+ui("photoSave").onclick=async()=>{
+  try{
+    const png=yySnapshot().toDataURL("image/png");
+    const raw=atob(png.split(",")[1]),bytes=new Uint8Array(raw.length);
+    for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
+    const filename="yawaraka-"+Date.now()+".png";
+    const file=new File([bytes],filename,{type:"image/png"});
+    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+      try{await navigator.share({files:[file],title:"YAWARAKA"});toast("きょうゆう から しゃしんを ほぞんしてね");return;}
+      catch(err){if(err.name==="AbortError")return;}
+    }
+    const a=document.createElement("a");a.href=png;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+    toast("しゃしんを ほぞんしました");
+  }catch(err){console.error(err);toast("しゃしんを ほぞんできません");}
+};
+ui("sendWW").onclick=()=>{
+  try{
+    const image=yyGalleryImage(yySnapshot());
+    const raw=localStorage.getItem(YY_GALLERY_KEY);
+    const gallery=raw?JSON.parse(raw):[];
+    if(!Array.isArray(gallery))throw Error("INVALID GALLERY");
+    if(gallery.length>=24){toast("とうろくは 24こまでです");return;}
+    gallery.push({id:"yw-"+Date.now()+"-"+Math.random().toString(36).slice(2,8),
+      name:current.name||"んちょ",source:"yawaraka",image:image,createdAt:Date.now()});
+    localStorage.setItem(YY_GALLERY_KEY,JSON.stringify(gallery));
+    toast("なかまに とうろくしました");
+  }catch(err){console.error(err);toast("とうろくできません。ほぞんりょういきを かくにん");}
+};
+
+
 // 床の上でつかんで動かす
 let mv = null;
 const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
@@ -1994,6 +2112,7 @@ let last = 0;
 renderer.setAnimationLoop(() => {
   const t = clock.getElapsedTime();
   const dt = Math.min(t - last, 1 / 30); last = t;
+  advanceRelax();
 
   // ばね（やわらかめ・減衰ひかえめ＝ぷるぷる）
   const K = (anim.on ? 85 : 90) / SF, D = (anim.on ? 3.9 : 5.5) / Math.sqrt(SF);   // 鑑賞中はよりやわらかく

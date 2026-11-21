@@ -95,33 +95,31 @@
   #undo, #reset { --pc: #8a5a2b; }
   #bakeBtn { flex: 2.4; height: 66px; border-radius: 33px; background: var(--c-bake); border: 3px solid #8f2412; color: #fff; font-size: 25px; box-shadow: 0 6px 16px rgba(224,68,42,.45); }
   #relaxBtn { flex: 1; height: 52px; align-self: center; background: #fbfaf5; border: 2px solid var(--c-more); color: var(--c-more); font-size: 14px; }
-/* YAWARAKA is dedicated to んちょ; hide alternate character choices. */
-.chars { display: none !important; }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div class="name" id="cname"></div>
 <div class="anims">
-  <button class="main" id="animBtn" title="アニメーションを見る" aria-label="アニメーションを見る">
+  <button class="main" id="animBtn" title="あにめを みる" aria-label="あにめを みる">
     <svg id="animIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l10.5-6.5z"/></svg>
   </button>
   <div class="list">
     <button class="chip on" data-anim="hop">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 19 q3.5 -9 7 0 q3.5 -9 7 0 q2.5 -6 6 -2"/><path d="M19 15 l3 2 l-1 -3.5"/></svg>
-      ぴょんぴょん移動
+      ぴょんぴょん うごく
     </button>
     <button class="chip" data-anim="dance">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 8 q4 -4 8 0 q4 4 8 0"/><path d="M4 16 q4 -4 8 0 q4 4 8 0"/></svg>
-      ゆらゆらダンス
+      ゆらゆら おどる
     </button>
     <button class="chip" data-anim="spin">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 12 a8 8 0 1 1 -3 -6.2"/><path d="M17.5 2.5 l-0.5 3.8 l3.8 0.3"/></svg>
-      くるりんジャンプ
+      くるっと とぶ
     </button>
     <button class="chip" data-anim="melt">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 19 q0 -5 9 -5 q9 0 9 5 z"/><path d="M12 4 v5 M9.5 7 l2.5 2.5 l2.5 -2.5"/></svg>
-      とろ〜ん
+      とろーん
     </button>
     <button class="chip" data-anim="surprise">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 3 v12"/><circle cx="12" cy="20" r="1.2" fill="currentColor"/></svg>
@@ -153,36 +151,39 @@
     </button>
     <button class="chip" data-anim="stretch">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 21 V4 M7.5 8 L12 3.5 L16.5 8"/><path d="M5 21 h14"/></svg>
-      のび〜
+      のびー
     </button>
   </div>
 </div>
-<div class="hint" id="hint">Pull it · Drag around to rotate</div>
+<div class="hint" id="hint">からだを ひっぱって かたちを かえてね</div>
 <div class="dock">
-  <div class="row" id="multi"><button id="copyBtn">COPY</button><button id="delBtn">DELETE</button><button id="rowBtn">ROW</button><button id="stackBtn">STACK</button><span class="lab" id="cnt">1 / 6</span></div>
-  <div class="row panel" id="pShape"><button id="hp">TALL</button><button id="hm">SHORT</button><button id="wp">WIDE</button><button id="wm">SLIM</button></div>
+  <div class="row" id="multi"><button id="copyBtn">ふやす</button><button id="delBtn">けす</button><button id="rowBtn">ならべる</button><button id="stackBtn">かさねる</button><span class="lab" id="cnt">1 / 6</span></div>
+  <div class="row panel" id="pShape"><button id="hp">たかく</button><button id="hm">ひくく</button><button id="wp">ひろく</button><button id="wm">ほそく</button></div>
   <div class="row panel" id="tray" aria-label="item"></div>
   <div class="row panel" id="pal" aria-label="color"></div>
   <div class="row panel" id="pMore">
-    <label class="lab" style="flex-basis:100%">SOFTNESS <input type="range" id="soft" min="0" max="1" step="0.05" value="0.55"> <span id="softv">SOFT</span></label>
-    <label class="lab" style="flex-basis:100%">RETURN TIME <input type="range" id="ret" min="0.2" max="4.2" step="0.05" value="4"> <span id="retv">4s</span></label>
-    <span class="grp">EDIT</span>
-    <button id="undo">UNDO</button><button id="reset">RESET</button>
-    <span class="grp">SCENE</span>
-    <button id="mochi">MOCHI</button><button id="line" class="on">LINE</button><button id="snd" class="on">SOUND</button>
-    <span class="grp">PLAY</span>
-    <button id="poke">WOBBLE</button>
+    <label class="lab" style="flex-basis:100%">やわらかさ <input type="range" id="soft" min="0" max="1" step="0.05" value="0.55"> <span id="softv">やわらかい</span></label>
+    <label class="lab" style="flex-basis:100%">もどるはやさ <input type="range" id="ret" min="0.2" max="4.2" step="0.05" value="4"> <span id="retv">4 びょう</span></label>
+    <span class="grp">へんしゅう</span>
+    <button id="undo">ひとつもどす</button><button id="reset">はじめから</button>
+    <span class="grp">みため</span>
+    <button id="mochi">かおなし</button><button id="line">せん</button><button id="snd" class="on">おと</button>
+    <span class="grp">あそぶ</span>
+    <button id="poke">ぷるぷる</button>
+    <span class="grp">ほぞん と なかま</span>
+    <button id="photoSave" type="button" title="つくった こを しゃしんに ほぞん">しゃしんにほぞん</button>
+    <button id="sendWW" type="button" title="なかまに とうろく">なかまに とうろく</button>
   </div>
   <div class="row tabs">
-    <button id="modeBtn" class="on">STRETCH</button><button id="tShape">SHAPE</button><button id="plantBtn">ITEM</button><button id="colorBtn">COLOR</button><button id="tMore">MORE</button>
+    <button id="modeBtn" class="on">のばす</button><button id="tShape">かたち</button><button id="plantBtn">かざり</button><button id="colorBtn">いろ</button><button id="tMore">くわしく</button>
   </div>
   <div class="big">
-    <button id="bakeBtn"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-4-1-6 1-10z"/></svg>BAKE</button>
-    <button id="relaxBtn">RELAX</button>
+    <button id="bakeBtn"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-4-1-6 1-10z"/></svg>かためる</button>
+    <button id="relaxBtn">ゆっくりもどす</button>
   </div>
 </div>
 <div class="toast" id="toast"></div>
-<div class="chars" aria-label="キャラクター選択">
+<div class="chars" aria-label="こを えらぶ">
   <button id="ch-neko" title="ぬおん" aria-label="ぬおん">
     <svg viewBox="0 0 48 48" fill="none" stroke="#3a3aa8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M9 21 L10 10 L17 15 M31 15 L38 10 L39 21" fill="#fbf8ef"/>
@@ -204,5 +205,159 @@
   </button>
 </div>
 <script>/*@@APP@@*/</script>
+<script>
+(function () {
+  "use strict";
+  const KEY = "yawaraka-ui-language-v2";
+  const labels = {
+    copyBtn: ["ふやす", "複製"], delBtn: ["けす", "削除"],
+    rowBtn: ["ならべる", "整列"], stackBtn: ["かさねる", "積み重ね"],
+    hp: ["たかく", "高く"], hm: ["ひくく", "低く"], wp: ["ひろく", "広く"], wm: ["ほそく", "細く"],
+    tShape: ["かたち", "形"], plantBtn: ["かざり", "装飾"], colorBtn: ["いろ", "色"], tMore: ["くわしく", "詳細設定"],
+    undo: ["ひとつもどす", "元に戻す"], reset: ["はじめから", "初期化"],
+    mochi: ["かおなし", "顔を消す"], line: ["せん", "輪郭線"], snd: ["おと", "音"],
+    poke: ["ぷるぷる", "揺らす"], photoSave: ["しゃしんにほぞん", "写真に保存"],
+    sendWW: ["なかまに とうろく", "WHERE WHICHに登録"],
+    relaxBtn: ["ゆっくりもどす", "元の形に戻す"],
+    itemAll: ["ぜんぶ", "全体"],
+    bakeBtn: ["かためる", "固定する"]
+  };
+  const modes = {sculpt:["のばす","伸ばす"],place:["おく","配置"],move:["うごかす","移動"],camera:["みまわす","視点"]};
+  const hint = {
+    sculpt:["からだを ひっぱってから「かためる」","体を引っ張ってから「固定する」"],
+    place:["かざりを さわって うごかす","装飾をドラッグして移動"],
+    move:["こを うごかして ばしょを きめる","キャラをドラッグして配置"],
+    camera:["さわって まわす・ひろげて ちかづく","ドラッグで回転・ピンチで拡大"]
+  };
+  const titles = {
+    "TOP HAT":["たかいぼうし","シルクハット"],"PARTY":["ぱーてぃーぼう","パーティー帽"],
+    "CROWN":["かんむり","王冠"],"BEANIE":["にっとぼう","ニット帽"],"STRAW":["むぎわらぼう","麦わら帽"],
+    "CHEF":["こっくぼう","コック帽"],"BOW":["りぼん","リボン"],"GRASS":["くさ","草"],
+    "TULIP":["ちゅーりっぷ","チューリップ"],"DAISY":["はな","花"],"MUSHROOM":["きのこ","キノコ"],
+    "STAR":["ほし","星"],"FLAG":["はた","旗"],"HEART":["はーと","ハート"],
+    "SAKURA":["さくら","桜"],"LEEK":["ねぎ","長ネギ"]
+  };
+  const animations = {
+    hop:["ぴょんぴょん うごく","ぴょんぴょん移動"],
+    dance:["ゆらゆら おどる","ゆらゆらダンス"],
+    spin:["くるっと とぶ","回転ジャンプ"],
+    melt:["とろーん","とろける"],
+    surprise:["びっくり","驚く"],
+    bow:["おじぎ","お辞儀"],
+    sleep:["すやすや","睡眠"],
+    look:["きょろきょろ","見回す"],
+    happy:["うれしい","喜ぶ"],
+    shake:["ぶるぶる","震える"],
+    angry:["ぷんぷん","怒る"],
+    stretch:["のびー","伸びる"]
+  };
+  const groups = {
+    "EDIT":["へんしゅう","編集"],"SCENE":["みため","表示"],
+    "PLAY":["あそぶ","遊ぶ"],"PHOTO / WHERE WHICH":["ほぞん と なかま","保存と連携"]
+  };
+  const toasts = {
+    "BAKED: this is the new base shape":["いまの かたちで かためました","今の形で固定しました"],
+    "BAKED a little":["かためました","固定しました"],
+    "LIMIT":["これいじょう かえられません","変更できる範囲を超えています"],
+    "RESET":["はじめの かたちに もどしました","初期状態に戻しました"],
+    "Pulled out! Pick something to plant":["かざりを えらんでね","装飾を選んでください"],
+    "MAX 12":["12こまで ふやせます","最大12体です"],
+    "COPIED at the same spot · ROW / STACK / MOVE to arrange":["ふやしました。ならべかたを えらんでね","複製しました。配置を選んでください"],
+    "Last one stays":["さいごの ひとつは のこります","最後の1体は削除できません"],
+    "ITEM COPIED":["かざりを ふやしました","装飾を複製しました"],
+    "COPY first":["さきに こを ふやしてね","先にキャラを複製してください"],
+    "Lined up · COPY adds to the row":["ならべました","整列しました"],
+    "Stacked · COPY keeps stacking":["かさねました","積み重ねました"],
+    "Free layout":["じゆうに おけます","自由配置にしました"],
+    "MOCHI MODE · no face":["かおを かくしました","顔を非表示にしました"],
+    "Face back":["かおを もどしました","顔を表示しました"],
+    "PNG DOWNLOAD":["しゃしんを ほぞんしました","PNGを保存しました"],
+    "PHOTO SAVE FAILED":["しゃしんを ほぞんできません","写真を保存できませんでした"],
+    "REGISTER FAILED: 保存領域を確認":["とうろくできません。ほぞんりょういきを かくにん","登録できません。保存領域をご確認ください"],
+    "WHERE WHICHへ登録しました":["なかまに とうろくしました","WHERE WHICHに登録しました"],
+    "写真は共有メニューから保存できます":["きょうゆう から しゃしんを ほぞんしてね","共有メニューから写真を保存できます"],
+    "24キャラまで登録できます":["とうろくは 24こまでです","登録上限は24体です"]
+  };
+  let mode = "hiragana",running = false;
+  try { mode = localStorage.getItem(KEY)==="kanji"?"kanji":"hiragana"; }catch(e){}
+  const $ = id => document.getElementById(id);
+  function replaceText(el, text, preserveIcon){
+    if(!el) return;
+    if(preserveIcon){
+      const txt=[...el.childNodes].find(n=>n.nodeType===Node.TEXT_NODE);
+      if(txt){if(txt.nodeValue!==text)txt.nodeValue=text;}
+      else el.appendChild(document.createTextNode(text));
+    } else if(el.textContent!==text)el.textContent=text;
+  }
+  function directText(el, text){
+    const txt=[...el.childNodes].find(n=>n.nodeType===Node.TEXT_NODE);
+    if(txt && txt.nodeValue.trim()!==text)txt.nodeValue=text+" ";
+  }
+  function translateFree(el, dictionary){
+    if(!el) return;
+    const found=Object.keys(dictionary).find(k=>el.textContent.trim()===k || dictionary[k].includes(el.textContent.trim()));
+    if(found)replaceText(el,dictionary[found][mode==="kanji"?1:0]);
+  }
+  function redraw(){
+    running=false;
+    const k=mode==="kanji"?1:0;
+    for(const [id,pair] of Object.entries(labels))replaceText($(id),pair[k],id==="bakeBtn");
+    const which=$("modeBtn")?.dataset.m || "sculpt";
+    replaceText($("modeBtn"),modes[which][k]);
+    replaceText($("hint"),hint[which][k]);
+    const val=$("soft")?parseFloat($("soft").value):.55;
+    replaceText($("softv"),([["かたい","硬い"],["ふつう","普通"],["やわらかい","柔らかい"],["とてもやわらかい","非常に柔らかい"]])[val<.2?0:val<.45?1:val<.7?2:3][k]);
+    const sec=$("ret")?Number($("ret").value):4;
+    replaceText($("retv"),sec>=4.15?["そのまま","保持"][k]:(Math.min(sec,4).toFixed(2).replace(/0$/,"")+" "+["びょう","秒"][k]));
+    for(const chip of document.querySelectorAll(".anims .chip[data-anim]")){
+      const row=animations[chip.dataset.anim];
+      if(row)replaceText(chip,row[k],true);
+    }
+    const animButton=$("animBtn");
+    if(animButton){
+      animButton.title=["あにめを みる","アニメーションを再生"][k];
+      animButton.setAttribute("aria-label",animButton.title);
+    }
+    const heading=$("yawaraka-lang-heading");
+    if(heading)heading.textContent=["ことばの せってい","表示言語の設定"][k];
+    for(const [i,title] of [...document.querySelectorAll("#tray button")].entries()){
+      const entry=titles[Object.keys(titles)[i]];
+      if(entry)replaceText(title,entry[k],true);
+    }
+    for(const el of document.querySelectorAll("#pal .lab")){
+      const idx=el.closest(".subrow")===document.querySelector("#pal .subrow")?0:1;
+      replaceText(el,idx?["かざり","装飾"][k]:["からだ","本体"][k]);
+    }
+    document.querySelectorAll("#pMore .grp").forEach(el=>translateFree(el,groups));
+    const lab=$("soft")?.closest("label");if(lab)directText(lab,["やわらかさ","柔らかさ"][k]);
+    const lab2=$("ret")?.closest("label");if(lab2)directText(lab2,["もどるはやさ","復元時間"][k]);
+    const lang=$("yawaraka-lang");if(lang)lang.textContent=["ことば：ひらがな（おして かんじへ）","表示言語：漢字（押すとひらがな）"][k];
+    if($("toast"))translateFree($("toast"),toasts);
+    const photo=$("photoSave"),send=$("sendWW");
+    if(photo)photo.title=["とうめいな しゃしんを ほぞん","透明PNG画像を保存"][k];
+    if(send)send.title=["なかまに とうろく","WHERE WHICHへ登録"][k];
+  }
+  function schedule(){if(mode!=="kanji")return;if(!running){running=true;queueMicrotask(redraw);}}
+  function init(){
+    const more=$("pMore");
+    if(!more)return;
+    const heading=document.createElement("span");heading.className="grp";heading.textContent="ことばの せってい";
+    heading.id="yawaraka-lang-heading";
+    const btn=document.createElement("button");btn.id="yawaraka-lang";btn.type="button";
+    btn.onclick=()=>{
+      mode=mode==="hiragana"?"kanji":"hiragana";
+      try{localStorage.setItem(KEY,mode);}catch(e){}
+      redraw();
+    };
+    more.append(heading,btn);
+    const dock=document.querySelector(".dock");
+    if(dock)new MutationObserver(schedule).observe(dock,{subtree:true,childList:true,characterData:true});
+    for(const id of ["hint","toast"]){const el=$(id);if(el)new MutationObserver(schedule).observe(el,{childList:true,characterData:true});}
+    redraw();
+  }
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});
+  else init();
+})();
+</script>
 </body>
 </html>
