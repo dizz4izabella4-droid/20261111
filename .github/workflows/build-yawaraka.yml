@@ -74,28 +74,34 @@ jobs:
               try { return JSON.parse(localStorage.getItem('brain-friends-gallery-v1')||'[]').length > 0; }
               catch (e) { return false; }
             }, { timeout: 15000 });
-            // Simulate a pointer moving and BAKE firing in the SAME JS task.
-            // No animation frame can catch up, reproducing a late-frame solidification.
-            const dragAt = await page.evaluate(() => {
-              const rect = document.getElementById('c').getBoundingClientRect();
-              return { x:rect.left + rect.width * 0.50, y:rect.top + rect.height * 0.50 };
+            // Reproduce a slow frame: pointerdown + pointermove + BAKE all in
+            // one JS task (without a render frame). Search the visible body.
+            const bakeInfo = await page.evaluate(() => {
+              const canvas = document.getElementById('c'), rect = canvas.getBoundingClientRect();
+              const saveCapture = canvas.setPointerCapture;
+              const results = [];
+              let captured = false;
+              canvas.setPointerCapture = () => { captured = true; };
+              const event = (type, x, y) => new PointerEvent(type, {
+                bubbles: true, pointerId:3, pointerType:'touch',
+                buttons: type === 'pointerup' ? 0 : 1, clientX:x, clientY:y
+              });
+              try {
+                for (const yy of [.43,.5,.36,.57,.29,.64]) for (const xx of [.5,.45,.55,.4,.6]) {
+                  const x=rect.left+rect.width*xx, y=rect.top+rect.height*yy;
+                  captured=false;
+                  canvas.dispatchEvent(event('pointerdown',x,y));
+                  canvas.dispatchEvent(event('pointermove',x+150,y-80));
+                  document.getElementById('bakeBtn').click();
+                  const refining=document.getElementById('bakeBtn').dataset.refining;
+                  results.push({xx,yy,captured,refining:refining||''});
+                  window.dispatchEvent(event('pointerup',x,y));
+                  if (refining === 'true') return {passed:true,results};
+                }
+                return {passed:false,results};
+              } finally {canvas.setPointerCapture=saveCapture;}
             });
-            await page.mouse.move(dragAt.x, dragAt.y);
-            await page.mouse.down();
-            const bakeInfo = await page.evaluate(({x, y}) => {
-              const canvas = document.getElementById('c');
-              canvas.dispatchEvent(new PointerEvent('pointermove', {
-                bubbles:true, pointerId:1, pointerType:'mouse', buttons:1, button:0,
-                clientX:x+165, clientY:y-85
-              }));
-              document.getElementById('bakeBtn').click();
-              return {
-                refining:document.getElementById('bakeBtn').dataset.refining,
-                toast:document.getElementById('toast').textContent
-              };
-            }, dragAt);
-            await page.mouse.up();
-            if (bakeInfo.refining !== 'true')
+            if (!bakeInfo.passed)
               throw new Error('BAKE did not start the frame-lag refinement: '+JSON.stringify(bakeInfo));
             await page.waitForFunction(() => !document.getElementById('bakeBtn').dataset.refining, {timeout:15000});
             await page.click('#undo');
