@@ -94,6 +94,7 @@ let riders = [], faceVerts = [], faceCaps = [];
 let mochi = false, layout = 'free';
 const selectedArrow = document.getElementById('selectedArrow');
 function updateSelectionArrow() {
+  canvas.dataset.dragPoints = String((pull.held ? 1 : 0) + extraPulls.size);
   if (!selectedArrow) return;
   if (insts.length < 2 || anim.on || !curInst || !curInst.bound || !curInst.cat.visible) { selectedArrow.hidden = true; return; }
   const b = curInst.bound;
@@ -101,6 +102,7 @@ function updateSelectionArrow() {
   const point = world.project(camera), rect = canvas.getBoundingClientRect();
   if (point.z > 1 || Math.abs(point.x) > 1.25 || Math.abs(point.y) > 1.25) { selectedArrow.hidden = true; return; }
   selectedArrow.hidden = false;
+  selectedArrow.dataset.worldPosition = [curInst.cat.position.x.toFixed(2),curInst.cat.position.z.toFixed(2)].join(',');
   selectedArrow.style.left = rect.left + (point.x + 1) * rect.width / 2 + 'px';
   selectedArrow.style.top = rect.top + (1 - point.y) * rect.height / 2 + 'px';
 }
@@ -991,6 +993,12 @@ canvas.addEventListener('pointerdown', e => {
   }
   setNdc(e);
   if (pendingPhotoTexture) {
+    const all = insts.filter(i=>i.cat.visible);
+    const tapped = ray.intersectObjects(all.map(i=>i.body),false)[0];
+    if (tapped && tapped.object.userData.inst !== curInst) {
+      selectInst(tapped.object.userData.inst);
+      setNdc(e);
+    }
     const hit = ray.intersectObject(body, false)[0];
     if (hit) { addPhotoSticker(hit, pendingPhotoTexture); pendingPhotoTexture = null; toast('しゃしんを はりました'); }
     return;
@@ -1974,6 +1982,7 @@ onPlucked = () => { trayOpen(true); toast('かざりを えらんでね'); };
 // ---- モード：のばす / カメラ
 let mode = 'sculpt', spinSaved = true;
 function setMode(m) {
+  if (m !== 'sculpt') { extraPulls.clear(); primaryPointerId=null; }
   if (m === mode && ui('modeBtn').dataset.init) return;
   ui('modeBtn').dataset.init = '1';
   mode = m;
@@ -2272,6 +2281,7 @@ function selectInst(I) {
   finishBakeSettle();
   cancelPose(); cat.position.y = lift;
   syncInst(); loadState(I);
+  applyBodyPattern(patternKey);
   applyCharUI(current, curKey);
   jump.phase = 'idle'; jump.y = 0; for (const k in spring) spring[k] = 0;
   leafDrag = false; sfx.grab();
