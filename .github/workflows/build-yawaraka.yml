@@ -22,6 +22,7 @@ jobs:
       - name: Build
         run: cd yawaraka/_src && YAW_NODE_MODULES="$GITHUB_WORKSPACE/node_modules" python3 build.py
       - name: Browser smoke test (real Chromium, WebGL + controls)
+        timeout-minutes: 4
         run: |
           python3 -m http.server 8123 --bind 127.0.0.1 > /tmp/yawaraka-http.log 2>&1 &
           server=$!

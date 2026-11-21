@@ -319,7 +319,7 @@
       animButton.setAttribute("aria-label",animButton.title);
     }
     const heading=$("yawaraka-lang-heading");
-    if(heading)heading.textContent=["ことばの せってい","表示言語の設定"][k];
+    if(heading){const label=["ことばの せってい","表示言語の設定"][k];if(heading.textContent!==label)heading.textContent=label;}
     for(const [i,title] of [...document.querySelectorAll("#tray button")].entries()){
       const entry=titles[Object.keys(titles)[i]];
       if(entry)replaceText(title,entry[k],true);
@@ -331,13 +331,13 @@
     document.querySelectorAll("#pMore .grp").forEach(el=>translateFree(el,groups));
     const lab=$("soft")?.closest("label");if(lab)directText(lab,["やわらかさ","柔らかさ"][k]);
     const lab2=$("ret")?.closest("label");if(lab2)directText(lab2,["もどるはやさ","復元時間"][k]);
-    const lang=$("yawaraka-lang");if(lang)lang.textContent=["ことば：ひらがな（おして かんじへ）","表示言語：漢字（押すとひらがな）"][k];
+    const lang=$("yawaraka-lang");if(lang){const label=["ことば：ひらがな（おして かんじへ）","表示言語：漢字（押すとひらがな）"][k];if(lang.textContent!==label)lang.textContent=label;}
     if($("toast"))translateFree($("toast"),toasts);
     const photo=$("photoSave"),send=$("sendWW");
     if(photo)photo.title=["とうめいな しゃしんを ほぞん","透明PNG画像を保存"][k];
     if(send)send.title=["なかまに とうろく","WHERE WHICHへ登録"][k];
   }
-  function schedule(){if(mode!=="kanji")return;if(!running){running=true;queueMicrotask(redraw);}}
+  function schedule(){if(mode!=="kanji")return;requestAnimationFrame(redraw);}
   function init(){
     const more=$("pMore");
     if(!more)return;
@@ -351,8 +351,8 @@
     };
     more.append(heading,btn);
     const dock=document.querySelector(".dock");
-    if(dock)new MutationObserver(schedule).observe(dock,{subtree:true,childList:true,characterData:true});
-    for(const id of ["hint","toast"]){const el=$(id);if(el)new MutationObserver(schedule).observe(el,{childList:true,characterData:true});}
+    if(dock)dock.addEventListener("click",schedule);
+    for(const id of ["ret","soft"]){const el=$(id);if(el)el.addEventListener("input",schedule);}
     redraw();
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});
