@@ -95,6 +95,7 @@ let mochi = false, layout = 'free';
 const selectedArrow = document.getElementById('selectedArrow');
 function updateSelectionArrow() {
   canvas.dataset.dragPoints = String((pull.held ? 1 : 0) + extraPulls.size);
+  canvas.dataset.strained = current && current.rt && current.rt.pulled ? 'true' : 'false';
   if (!selectedArrow) return;
   if (insts.length < 2 || anim.on || !curInst || !curInst.bound || !curInst.cat.visible) { selectedArrow.hidden = true; return; }
   const b = curInst.bound;
