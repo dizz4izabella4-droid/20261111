@@ -719,8 +719,10 @@ const CHARS = {
 
 function buildCharacter(key, opts = {}) {
   finishBakeSettle();
+  patternKey = 'none';
   const c = CHARS[key] || CHARS.neko;
   if (!curInst) { curInst = { cat }; insts.push(curInst); }
+  curInst.photoStickers = [];
   if (current && current.rt && current.rt.dispose) current.rt.dispose();
   current = c; curKey = key;
   undoStack = []; gs = { x: 1, y: 1, z: 1 }; flashT = -1;
@@ -1733,11 +1735,18 @@ function commitBases() {
   rebind(); computeBound();
 }
 function snap() {
-  return { base: basePos.slice(), fv: faceVerts.map(f => f.base.slice()), fc: faceCaps.map(c => c.base.slice()),
+  return { pattern:patternKey, stickerCount:(curInst.photoStickers||[]).length, base: basePos.slice(), fv: faceVerts.map(f => f.base.slice()), fc: faceCaps.map(c => c.base.slice()),
            rd: riders.map(r => ({ b: r.base.slice(), c: r.ctr.slice() })), gs: { ...gs }, sc: scorch.slice() };
 }
 function applySnap(s) {
   finishBakeSettle();
+  const stickers = curInst.photoStickers || [];
+  while (stickers.length > (s.stickerCount||0)) {
+    const photo = stickers.pop(), i = riders.findIndex(r=>r.o===photo);
+    if (i !== -1) riders.splice(i,1);
+    squish.remove(photo); photo.geometry.dispose(); photo.material.dispose();
+  }
+  applyBodyPattern(s.pattern || 'none');
   basePos.set(s.base);
   faceVerts.forEach((f, i) => f.base.set(s.fv[i]));
   faceCaps.forEach((c, i) => c.base.set(s.fc[i]));
@@ -2025,6 +2034,7 @@ addSw('からだ', BODY_COLS, c => { bodyCol = new THREE.Color(c).getHex(); body
 const attached = o => { for (let p = o; p; p = p.parent) if (p === scene) return true; return false; };
 function syncInst() {
   const I = curInst;
+  I.photoStickers = I.photoStickers || []; I.patternKey = patternKey;
   I.cat = cat; I.squish = squish; I.body = body; I.bodyGeo = bodyGeo; I.basePos = basePos; I.pos = pos; I.face = face;
   I.faceVerts = faceVerts; I.faceCaps = faceCaps; I.riders = riders; I.baseNrm = baseNrm; I.baseR = baseR; I.elevMax = elevMax; I.hash = hash; I.shapeN = shapeN;
   I.colorBase = colorBase; I.scorch = scorch; I.faceMask = faceMask; I.bodyMat = bodyMat; I.inkMat = inkMat; I.floorY = floorY; I.lift = lift; I.gs = gs;
@@ -2034,7 +2044,7 @@ function loadState(I) {
   cat = I.cat; squish = I.squish; body = I.body; bodyGeo = I.bodyGeo; basePos = I.basePos; pos = I.pos; face = I.face;
   faceVerts = I.faceVerts; faceCaps = I.faceCaps; riders = I.riders; baseNrm = I.baseNrm; baseR = I.baseR; elevMax = I.elevMax; hash = I.hash; shapeN = I.shapeN;
   colorBase = I.colorBase; scorch = I.scorch; faceMask = I.faceMask; bodyMat = I.bodyMat; inkMat = I.inkMat; floorY = I.floorY; lift = I.lift; gs = I.gs;
-  current = I.current; current.rt = I.rt; bodyCol = I.bodyCol; itemCol = I.itemCol; itemAll = I.itemAll; curKey = I.key; undoStack = I.undo; ovD = I.ovD; bound = I.bound; curInst = I;
+  current = I.current; current.rt = I.rt; patternKey = I.patternKey || 'none'; bodyCol = I.bodyCol; itemCol = I.itemCol; itemAll = I.itemAll; curKey = I.key; undoStack = I.undo; ovD = I.ovD; bound = I.bound; curInst = I;
 }
 function runOn(I, fn) {
   if (I === curInst) { fn(); return; }
@@ -2136,19 +2146,46 @@ function copyActive() {
   if (insts.length >= 12) { toast('12こまで ふやせます'); return; }
   cancelPose();
   const s = snap();
-  const src = { key: curKey, bodyCol, itemCol, itemAll, plant: current.rt.plantKind, px: cat.position.x, pz: cat.position.z, sy: curInst.sy || 0 };
+  const src = { key: curKey, bodyCol, itemCol, itemAll,
+    pattern:patternKey, stickers:[...(curInst.photoStickers || [])], plant: current.rt.plantKind,
+    px: cat.position.x, pz: cat.position.z, sy: curInst.sy || 0,
+    rx: curInst.bound.rx, rz: curInst.bound.rz };
   syncInst();
   cat = new THREE.Group(); scene.add(cat); squish = null; current = null;
   curInst = { cat }; insts.push(curInst);
   buildCharacter(src.key, { keep: true });
+  for (const photo of src.stickers) {
+    const sticker = photo.clone();
+    sticker.geometry = photo.geometry.clone();
+    sticker.material = photo.material.clone();
+    squish.add(sticker);
+    const anchor = sticker.position.toArray();
+    riders.push({o:sticker,base:Float32Array.from(anchor),ctr:anchor.slice(),bind:bindPoints(anchor)});
+    curInst.photoStickers.push(sticker);
+  }
   applySnap(s);
+  applyBodyPattern(src.pattern);
   bodyCol = src.bodyCol; bodyMat.color.set(bodyCol); itemCol = src.itemCol; itemAll = src.itemAll;
   const rt = current.rt;
   if (rt.plant) { if (src.plant === null) rt.clear(); else rt.plant(src.plant); if (itemCol !== null) rt.tint(itemCol, itemAll); }
-  cat.position.x = src.px; cat.position.z = src.pz + 0.03 * (insts.length - 1); curInst.sy = src.sy;   // 基本は今の位置
+  const stride = 2 * Math.max(src.rx,src.rz) + 0.65;
+  const offsets = [[stride,0],[-stride,0],[0,-stride],[0,stride],
+    [stride,-stride],[-stride,-stride],[stride,stride],[-stride,stride],
+    [stride*1.6,0],[-stride*1.6,0],[0,-stride*1.6]];
+  const taken = insts.filter(i => i !== curInst).map(i => i.cat.position);
+  let best = [src.px + stride, src.pz], bestScore = -Infinity;
+  for (const [dx,dz] of offsets) {
+    const x = src.px + dx, z = src.pz + dz;
+    if (x < -6.5 || x > 6.5 || z < -5 || z > 4) continue;
+    const score = Math.min(...taken.map(p => (p.x-x)**2 + (p.z-z)**2));
+    if (score > bestScore) { bestScore=score; best=[x,z]; }
+    if (score >= stride*stride*0.95) {best=[x,z];break;}
+  }
+  cat.position.x = best[0]; cat.position.z = best[1]; curInst.sy = 0;
   undoStack = []; updateButtons();
-  syncInst(); applyStage(); sfx.sprout(); toast('ふやしました。ならべかたを えらんでね');
-  if (layout !== 'free') arrange(layout, true);
+  syncInst(); applyStage(); setFree(); setMode('move');
+  fitView(insts.filter(i=>i.cat.visible)); sfx.sprout();
+  toast('べつの ばしょに ふやしました。うごかしてね');
 }
 function removeActive() {
   finishBakeSettle();
@@ -2193,34 +2230,12 @@ function fitView(L) {
     if (k < 1) requestAnimationFrame(step);
   })();
 }
-// 並べかた：ROW=横並び、STACK=縦積み
-function arrange(kind, quiet) {
-  const L = insts.filter(i => i.cat.visible); if (L.length < 2) { toast('さきに こを ふやしてね'); return; }
-  layout = kind; ui('rowBtn').classList.toggle('on', kind === 'row'); ui('stackBtn').classList.toggle('on', kind === 'stack');
-  cancelPose();
-  if (kind === 'row') {
-    const w = L.map(i => 2 * Math.max(i.bound.rx, i.bound.rz) + 0.12), tot = w.reduce((a, b) => a + b, 0);
-    let x = -tot / 2;
-    L.forEach((i, k) => { i.cat.position.x = x + w[k] / 2; i.cat.position.z = 0; i.sy = 0; x += w[k]; });
-  } else {
-    const b0 = L[0]; let prev = b0; b0.sy = 0; b0.cat.position.x = L.reduce((a, i) => a + i.cat.position.x, 0) / L.length; b0.cat.position.z = 0;
-    for (let k = 1; k < L.length; k++) {
-      const I = L[k], top = prev.bound.cy + prev.bound.ry + prev.lift + (prev.sy || 0), bot = I.bound.cy - I.bound.ry + I.lift;
-      I.cat.position.x = b0.cat.position.x; I.cat.position.z = b0.cat.position.z + 0.02 * k;
-      I.sy = Math.max(0, top - bot - 0.1 * (I.bound.ry * 2)); prev = I;
-    }
-  }
-  for (const I of L) I.ovDirty = true;
-  fitView(L);
-  if (!quiet) { sfx.sprout(); toast(kind === 'row' ? 'ならべました' : 'かさねました'); }
-}
-function setFree() { layout = 'free'; ui('rowBtn').classList.remove('on'); ui('stackBtn').classList.remove('on'); }
-ui('rowBtn').onclick = () => layout === 'row' ? (setFree(), toast('じゆうに おけます')) : arrange('row');
-ui('stackBtn').onclick = () => layout === 'stack' ? (setFree(), toast('じゆうに おけます')) : arrange('stack');
+// Place each copy manually; the previous row/stack layout buttons were removed.
+function setFree() { layout = 'free'; }
 // もちモード：目・鼻・口を消す（全員）
 function applyMochi() { for (const I of insts) if (I.face) I.face.visible = !mochi; if (face) face.visible = !mochi; ui('mochi').classList.toggle('on', mochi); }
 ui('mochi').onclick = () => { mochi = !mochi; applyMochi(); sfx.poke(); toast(mochi ? 'かおを かくしました' : 'かおを もどしました'); };
-ui('delBtn').onclick = removeActive;
+
 /* YAWARAKA -> WHERE WHICH: capture only the selected character as a transparent sprite. */
 const YY_GALLERY_KEY="brain-friends-gallery-v1";
 function yySnapshot(){
