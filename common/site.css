@@ -171,3 +171,26 @@ mark{background:#fff0a8;color:inherit;border-radius:2px}
 .tabs a+a{border-left:1px solid #aab2b9}
 .tabs a{border-bottom-width:3px}
 @media(max-width:560px){.tabs{width:100%}}
+
+/* 作品一覧：実験中の作品は半分の大きさ（列を倍に割り、ふつうの作品は2マス・実験中は1マス使う） */
+.grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-flow:row dense}
+@media(min-width:720px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(min-width:1060px){.grid{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.grid>li{grid-column:span 2}
+.grid>li.half{grid-column:span 1;align-self:start}
+.half .card{gap:7px;padding:7px 7px 6px;border-radius:calc(var(--radius) / 2)}
+.half .ico{width:26px;height:26px;border-radius:7px}
+.half .ico svg{width:15px;height:15px}
+.half .cbody{gap:1px}
+.half .en{font-size:8px;letter-spacing:.12em}
+.half .title{font-size:12px;letter-spacing:0}
+.half .badges{gap:3px;margin-top:2px}
+.half .b{font-size:9px;padding:3px 4px}
+.half .b.upd{padding:2px 3px}
+.half .dates{font-size:9px;margin-top:2px;letter-spacing:0}
+.half .dates .dt{margin-right:4px}
+.wrap.half .dates{padding-right:22px}
+.half .go{font-size:14px}
+.half .like{width:26px;height:26px;right:2px;bottom:2px}
+.half .like svg{width:13px;height:13px}
+.half .sticker{transform:rotate(4deg) scale(.6);transform-origin:top right;right:6px}

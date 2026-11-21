@@ -14,7 +14,7 @@
   var CATS = {
     game: { ja: 'ゲーム', en: 'GAME', cls: 'c-game' },
     tool: { ja: '実用', en: 'UTILITY', cls: 'c-tool' },
-    lab:  { ja: '実験', en: 'LAB', cls: 'c-lab' }
+    lab:  { ja: '実験中', en: 'LAB', cls: 'c-lab' }
   };
   var STATUS = {
     stable: null,
