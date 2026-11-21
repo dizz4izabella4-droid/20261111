@@ -1594,13 +1594,14 @@ function createDiagram(canvas) {
 
     const insetX = Math.min(3, hx / 6);
     const insetY = Math.min(3, hy / 6);
+    // Incoming lanes are on the driver's left (screen y increases downward).
     if (config.stopX) {
-      stroke([{x:left-scale,y:cy+insetX},{x:left-scale,y:bottom-insetX}], '#e7edf3', 2);
-      stroke([{x:right+scale,y:top+insetX},{x:right+scale,y:cy-insetX}], '#e7edf3', 2);
+      stroke([{x:left-scale,y:top+insetX},{x:left-scale,y:cy-insetX}], '#e7edf3', 2);
+      stroke([{x:right+scale,y:cy+insetX},{x:right+scale,y:bottom-insetX}], '#e7edf3', 2);
     }
     if (config.stopY) {
-      stroke([{x:left+insetY,y:top-scale},{x:cx-insetY,y:top-scale}], '#e7edf3', 2);
-      stroke([{x:cx+insetY,y:bottom+scale},{x:right-insetY,y:bottom+scale}], '#e7edf3', 2);
+      stroke([{x:cx+insetY,y:top-scale},{x:right-insetY,y:top-scale}], '#e7edf3', 2);
+      stroke([{x:left+insetY,y:bottom+scale},{x:cx-insetY,y:bottom+scale}], '#e7edf3', 2);
     }
   }
 
@@ -1976,8 +1977,8 @@ function defaultConfig() {
     roads:{x:{width:8,lanes:2},y:{width:8,lanes:2},priority:"x",stopX:false,stopY:true},
     obstacles:[{x:-10,y:-9.5,w:8,h:7}],
     cars:[
-      {...presets.sedan,preset:"sedan",x:-18,y:2.1,dir:"E",speed:42,reaction:1,brake:1,obeysStop:false,discovery:null},
-      {...presets.kei,preset:"kei",x:-2.1,y:-18,dir:"S",speed:39,reaction:1,brake:1,obeysStop:false,discovery:null}
+      {...presets.sedan,preset:"sedan",x:-18,y:-2.1,dir:"E",speed:42,reaction:1,brake:1,obeysStop:false,discovery:null},
+      {...presets.kei,preset:"kei",x:2.1,y:-18,dir:"S",speed:39,reaction:1,brake:1,obeysStop:false,discovery:null}
     ]
   };
 }
