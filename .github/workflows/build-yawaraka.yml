@@ -204,15 +204,21 @@ jobs:
               markerRect:document.getElementById('lightHandle').getBoundingClientRect().toJSON(),
               enabled:document.getElementById('lightMoveBtn').getAttribute('aria-pressed')
             }),lightRect);
-            await page.mouse.move(lightRect.x,lightRect.y);
-            await page.mouse.down();
-            await page.mouse.move(lightRect.x+100,lightRect.y+68,{steps:5});
-            await page.mouse.up();
-            await new Promise(resolve=>setTimeout(resolve,200));
-            const dragNow=await page.$eval('#lightHandle',el=>({
-              x:Number(el.dataset.x),y:Number(el.dataset.y),
-              left:el.style.left,top:el.style.top,hidden:el.hidden
-            }));
+            // The handle can be clamped close to the screen edge after a
+            // camera orbit. Dispatch a complete pointer gesture to its real
+            // DOM handlers rather than sending the cursor off the canvas.
+            const dragNow=await page.evaluate(({x,y})=>{
+              const el=document.getElementById('lightHandle');
+              const evt=(type,px,py)=>new PointerEvent(type,{
+                bubbles:true,pointerId:6,pointerType:'touch',
+                isPrimary:true,buttons:type==='pointerup'?0:1,clientX:px,clientY:py
+              });
+              el.dispatchEvent(evt('pointerdown',x,y));
+              el.dispatchEvent(evt('pointermove',x-100,y+68));
+              el.dispatchEvent(evt('pointerup',x-100,y+68));
+              return {x:Number(el.dataset.x),y:Number(el.dataset.y),
+                left:el.style.left,top:el.style.top,hidden:el.hidden};
+            },lightRect);
             if (Math.abs(dragNow.x-lightBefore.x)<=.05 ||
                 Math.abs(dragNow.y-lightBefore.y)<=.05)
               throw new Error('Direct light drag did not change both light axes: '+
