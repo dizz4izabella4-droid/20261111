@@ -1027,7 +1027,8 @@ function placeItem() {
   if (selectedItem) syncAccessoryControls();
 }
 canvas.addEventListener('pointerdown', e => {
-  if (anim.on || mode === 'camera') return;
+  if (!anim.on && mode === 'camera') return;
+  // Touch remains active even during the viewing/animation mode.
   // Each new fingertip gets its own local anchor; the first keeps its pose
   // even while another finger touches the bake button outside the canvas.
   if (mode === 'sculpt' && (pull.held || extraPulls.size)) {
@@ -1048,7 +1049,7 @@ canvas.addEventListener('pointerdown', e => {
     const vis = insts.filter(i => i.cat.visible);
     if (vis.length > 1) { const hh = ray.intersectObjects(vis.map(i => i.body), false)[0]; if (hh && hh.object.userData.inst !== curInst) selectInst(hh.object.userData.inst); }
   }
-  if (mode === 'place') {
+  if (!anim.on && mode === 'place') {
     // Hit the actual accessory (hat, crown, flower...) instead of only
     // its tiny invisible grab sphere; all components share the rider root.
     const accessoryRoots = riders.filter(r=>r.o.parent===squish && r.o===current.rt.root);
@@ -1139,7 +1140,7 @@ function release(e) {
     if (extraPulls.has(pid)) {
       extraPulls.delete(pid);
       if (!pull.held && extraPulls.size === 0) {
-        controls.enabled = true;
+        controls.enabled = !anim.on;
         sfx.stretch(0, 0); sfx.boing(pull.off.length());
       }
       return;
@@ -1162,7 +1163,7 @@ function release(e) {
   }
   if (!pull.held) return;
   pull.held = false; primaryPointerId = null;
-  controls.enabled = true;
+  controls.enabled = !anim.on;
   if (extraPulls.size > 0) return;
   sfx.stretch(0, 0); sfx.boing(pull.off.length());
   pull.wasLifted = pull.off.y > 0.25;
@@ -1241,6 +1242,7 @@ let animPos = { x: 0, z: 0 }, animFit = { m: 1, ty: 0.6, cx: 0 };
 function setAnim(on) {
   finishBakeSettle();
   if (on) setLightEditing(false);
+  if (!on && pull.active) cancelPose();
   anim.on = on; applyStage();
   document.body.classList.toggle('anim', on);
   animBtn.classList.toggle('on', on);
@@ -2515,7 +2517,7 @@ renderer.setAnimationLoop(() => {
   m.multiply(shear).multiply(new THREE.Matrix4().makeTranslation(0, -floorY, 0));
   squish.matrix.copy(m);
   squish.matrixWorldNeedsUpdate = true;
-  if (current.rt.setPulled && !anim.on) {
+  if (current.rt.setPulled) {
     const strained = pull.held || extraPulls.size > 0;
     current.rt.setPulled(strained);
     current.rt.setBrow(strained);
@@ -2541,7 +2543,7 @@ renderer.setAnimationLoop(() => {
       const u = Math.min(pull.rl.t / pull.rl.dur, 1), e = u * u * (3 - 2 * u);
       pull.off.copy(pull.rl.o0).multiplyScalar(1 - e);
       if (u >= 1) { pull.off.set(0, 0, 0); pull.rl = null; spring.sqV += 2.5; }
-    } else if (!pull.held && extraPulls.size === 0 && !RET.hold) {
+    } else if (!pull.held && extraPulls.size === 0 && (!RET.hold || anim.on)) {
       const K2 = RET.k, D2 = RET.d;
       const acc = pull.off.clone().multiplyScalar(-K2).addScaledVector(pull.vel, -D2);
       pull.vel.addScaledVector(acc, dt);
