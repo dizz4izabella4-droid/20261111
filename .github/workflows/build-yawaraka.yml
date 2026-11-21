@@ -232,39 +232,37 @@ jobs:
             await page.$eval('#lightX', el=>{el.value='-4';el.dispatchEvent(new Event('input',{bubbles:true}));});
             await page.$eval('#lightY', el=>{el.value='10';el.dispatchEvent(new Event('input',{bubbles:true}));});
             await page.$eval('#lightZ', el=>{el.value='-2';el.dispatchEvent(new Event('input',{bubbles:true}));});
+            // Decoration controls: a hat is selectable, movable and scalable.
+            await page.click('#plantBtn');
+            await page.click('#tray button:first-child');
+            await page.waitForFunction(() =>
+              document.getElementById('accessoryPanel').classList.contains('open') &&
+              document.getElementById('toolModes').dataset.m==='place');
+            await page.$eval('#accessorySize',el=>{el.value='1.8';el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));});
+            await page.$eval('#accessoryX',el=>{el.value='.3';el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));});
+            await page.$eval('#accessoryY',el=>{el.value='.25';el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));});
+            const accessoryValues=await page.evaluate(()=>({
+              size:Number(document.getElementById('accessorySize').value),
+              x:Number(document.getElementById('accessoryX').value),
+              y:Number(document.getElementById('accessoryY').value)
+            }));
+            if (accessoryValues.size!==1.8 || accessoryValues.x!==.3 || accessoryValues.y!==.25)
+              throw new Error('Accessory size/position controls did not update: '+JSON.stringify(accessoryValues));
+            // The requested texture/pattern/photo-paste subsystem is absent.
             await page.click('#colorBtn');
-            await page.click('#patternDots');
-            if (!await page.$eval('#patternDots',el=>el.classList.contains('on')))
-              throw new Error('Pattern selection did not apply');
-            await page.evaluate(async()=>{
-              const input=document.getElementById('photoTextureInput');
-              const c=document.createElement('canvas');c.width=c.height=20;
-              const ctx=c.getContext('2d');ctx.fillStyle='#db465b';ctx.fillRect(0,0,20,20);
-              const blob=await new Promise(resolve=>c.toBlob(resolve,'image/png'));
-              const list=new DataTransfer();
-              list.items.add(new File([blob],'local-photo.png',{type:'image/png'}));
-              input.files=list.files;input.dispatchEvent(new Event('change',{bubbles:true}));
-            });
-            await page.waitForFunction(() => !document.getElementById('cropDialog').hidden);
-            await page.$eval('#cropZoom',el=>{el.value='1.5';el.dispatchEvent(new Event('input',{bubbles:true}));});
-            await page.click('#cropApply');
-            await page.waitForFunction(() => document.getElementById('cropDialog').hidden);
-            const pasted=await page.evaluate(() => {
-              const cv=document.getElementById('c'),rect=cv.getBoundingClientRect();
-              const arrow=document.getElementById('selectedArrow').getBoundingClientRect();
-              for(const yoff of [65,90,110,135,45,155])
-                for(const xoff of [0,-45,45,-85,85]) {
-                  cv.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,
-                    pointerId:74,pointerType:'touch',buttons:1,
-                    clientX:arrow.left+arrow.width/2+xoff,
-                    clientY:arrow.top+arrow.height/2+yoff}));
-                  if(document.getElementById('toast').textContent==='しゃしんを はりました')
-                    return {ok:true,xoff,yoff};
-                }
-              return {ok:false,arrow:[arrow.left,arrow.top],canvas:[rect.width,rect.height],
-                toast:document.getElementById('toast').textContent};
-            });
-            if (!pasted.ok) throw new Error('Photo cutout not placed: '+JSON.stringify(pasted));
+            const removedTextureUI=await page.evaluate(() =>
+              ['patternDots','patternPhoto','photoTextureInput','cropDialog']
+              .filter(id=>document.getElementById(id)));
+            if(removedTextureUI.length)
+              throw new Error('Texture pasting UI unexpectedly remains: '+removedTextureUI);
+            await page.click('#tMore');
+            for(const [id,value] of [['lightBrightness','1.6'],['lightContrast','.9']]){
+              await page.$eval('#'+id,(el,val)=>{el.value=val;el.dispatchEvent(new Event('input',{bubbles:true}));},value);
+              const got=await page.$eval('#'+id,el=>Number(el.value));
+              if(Math.abs(got-Number(value))>.01)
+                throw new Error('Light intensity/contrast control failed: '+id+': '+got);
+            }
+            await page.click('#tMore');
             await page.click('#tShape');
             if (!await page.$eval('#relaxBtn',el=>el.getClientRects().length>0))
               throw new Error('Restore not visible in shape tab');
@@ -312,7 +310,7 @@ jobs:
               document.getElementById('c').dataset.dragPoints==='0' &&
               document.getElementById('c').dataset.strained==='false',
               {timeout:15000});
-            console.log('PASS: persistent modes and actual camera rotation, unified character placement, direct light drag, independent light depth, textures, photo crop, two-touch BAKE');
+            console.log('PASS: camera orbit, merged placement, hat size/position, light drag/brightness/contrast, removed textures, two-touch BAKE');
             // Small touch viewport: all three direct modes remain separately tappable.
             await page.setViewport({width:390,height:844,isMobile:true,deviceScaleFactor:1,hasTouch:true});
             await page.waitForFunction(() =>
@@ -334,14 +332,13 @@ jobs:
               button:getComputedStyle(document.getElementById('modeSculpt')).touchAction,
               copy:getComputedStyle(document.getElementById('copyBtn')).touchAction,
               canvas:getComputedStyle(document.getElementById('c')).touchAction,
-              crop:getComputedStyle(document.getElementById('cropCanvas')).touchAction
+              soft:getComputedStyle(document.getElementById('soft')).touchAction
             }));
             if (touchPolicy.html !== 'manipulation' ||
                 touchPolicy.body !== 'manipulation' ||
                 touchPolicy.button !== 'manipulation' ||
                 touchPolicy.copy !== 'manipulation' ||
-                touchPolicy.canvas !== 'none' ||
-                touchPolicy.crop !== 'none')
+                touchPolicy.canvas !== 'none')
               throw new Error('Incorrect double-tap touch policy: '+JSON.stringify(touchPolicy));
             const uiRect=await page.$eval('#modeSculpt',el=>{
               const r=el.getBoundingClientRect();
@@ -368,7 +365,7 @@ jobs:
               return result;
             });
             for(const [id,pos] of Object.entries(mobilePanel)){
-              if(!pos.visible || pos.x<0 || pos.right>390.5 || pos.width<40)
+              if(!pos.visible || pos.x<0 || pos.right>390.5 || pos.width<29)
                 throw new Error('Panel control out of mobile viewport: '+JSON.stringify({id,pos,mobilePanel}));
             }
             const tabRatio=mobilePanel.tShape.width/mobilePanel.tMore.width;
@@ -376,6 +373,47 @@ jobs:
             if(Math.abs(tabRatio-2)>.22 || Math.abs(colorRatio-2)>.22)
               throw new Error('Shape/color/details width ratio is not 2:2:1: '+JSON.stringify(mobilePanel));
             console.log('PASS: shape panel has BAKE and RELAX, initial panel visible, 2:2:1 tabs and small-screen layout');
+            const positions = await page.evaluate(()=>{
+              const box=id=>{const r=document.getElementById(id).getBoundingClientRect();
+                return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width};};
+              return {tool:box('toolModes'),copy:box('multi'),tabs:box('tShape'),
+                characters:box('ch-neko'),soft:box('softBar'),
+                softness:document.getElementById('soft').getClientRects().length>0};
+            });
+            if(positions.tool.left>20 || positions.tabs.left>20 ||
+               positions.copy.right<390-24 ||
+               positions.characters.left>20 || positions.characters.top>25 ||
+               !positions.softness)
+              throw new Error('Mobile left/right control layout broken: '+JSON.stringify(positions));
+            // View mode must retain the softness slider and allow touches.
+            await page.click('#animBtn');
+            await page.waitForFunction(()=>document.body.classList.contains('anim'));
+            if(!await page.$eval('#softBar',el=>el.getClientRects().length>0))
+              throw new Error('Softness disappeared in viewing mode');
+            await page.$eval('#soft',el=>{el.value='.3';el.dispatchEvent(new Event('input',{bubbles:true}));});
+            const viewTouch=await page.evaluate(()=>{
+              const cv=document.getElementById('c'),r=cv.getBoundingClientRect();
+              const save=cv.setPointerCapture;
+              let grabbed=false; cv.setPointerCapture=()=>{grabbed=true;};
+              const ptr=(type,x,y)=>new PointerEvent(type,{bubbles:true,
+                pointerId:201,pointerType:'touch',buttons:type==='pointerup'?0:1,clientX:x,clientY:y});
+              try{
+                for(const yy of [.35,.42,.5,.58,.65,.3])for(const xx of [.3,.42,.5,.6,.7]){
+                  const x=r.left+xx*r.width,y=r.top+yy*r.height;
+                  grabbed=false;cv.dispatchEvent(ptr('pointerdown',x,y));
+                  if(!grabbed)continue;
+                  cv.dispatchEvent(ptr('pointermove',x+45,y-40));
+                  window.dispatchEvent(ptr('pointerup',x+45,y-40));
+                  return {grabbed:true,xx,yy};
+                }
+                return {grabbed:false};
+              }finally{cv.setPointerCapture=save;}
+            });
+            if(!viewTouch.grabbed)
+              throw new Error('Viewing mode did not allow touching the んちょ: '+JSON.stringify(viewTouch));
+            await page.click('#animBtn');
+            await page.waitForFunction(()=>!document.body.classList.contains('anim'));
+            console.log('PASS: iPhone-width left/right layout, permanent softness and touchable viewing mode');
             console.log('PASS: touch viewport 390x844 persistent mode buttons');
             if (jsErrors.length) throw new Error('Page errors: '+jsErrors.join(' / '));
             console.log('PASS: startup, WebGL canvas, default hiragana, outline off, relax, language toggle, gallery');

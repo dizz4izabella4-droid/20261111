@@ -122,27 +122,6 @@
   font-size:32px; line-height:1; font-weight:900; text-shadow:-2px -2px 0 #fff,2px -2px 0 #fff,-2px 2px 0 #fff,2px 2px 0 #fff,0 5px 6px #60574b88; }
 .selected-arrow[hidden] { display:none!important; }
 #lightX,#lightY,#lightZ { width:105px; accent-color:var(--c-more); }
-.photo-crop { position:fixed; inset:0; z-index:40; display:grid; place-items:center; background:rgba(32,29,36,.72);
-  padding:12px; overflow:auto; }
-.photo-crop[hidden] { display:none!important; }
-.crop-panel { box-sizing:border-box; background:#fbfaf5; color:#32313d; border-radius:20px;
-  width:min(380px,94vw); padding:16px; display:flex; flex-direction:column; align-items:center; gap:10px;
-  box-shadow:0 16px 50px #19182466; font:600 13px/1.6 inherit; }
-.crop-panel strong { font-size:18px; }
-.crop-panel canvas { width:min(320px,80vw); height:auto; aspect-ratio:1; touch-action:none;
-  border:2px solid #aea8aa; border-radius:10px; cursor:move; }
-.crop-panel label { display:flex; align-items:center; gap:10px; width:100%; justify-content:center; }
-.crop-panel label input { width:70%; accent-color:#7c6b88; }
-.crop-panel > span { font-size:12px; text-align:center; }
-.crop-buttons { display:flex; justify-content:space-between; gap:10px; width:100%; }
-.crop-buttons button { flex:1; background:#eeeae9; border:2px solid #99919a; border-radius:14px;
-  padding:9px 7px; color:#38313e; font-weight:700; font-family:inherit; cursor:pointer; }
-.crop-buttons #cropApply { background:#5a578b; color:#fff; border-color:#5a578b; }
-#pal .pattern-row { display:flex; gap:5px; align-items:center; flex-wrap:nowrap; max-width:100%; overflow-x:auto; }
-#pal .pattern-row button { flex:none; padding:7px 12px; border:2px solid #b8439a;
-  border-radius:999px; background:#fffafa; color:#9b3383; font-weight:700; font-family:inherit; cursor:pointer; }
-#pal .pattern-row button.on { background:#b8439a; color:#fff; }
-
   /* Shape, color and details tab widths are 2:2:1; decoration remains a regular main tab. */
   .tabs #tShape, .tabs #plantBtn, .tabs #colorBtn { flex: 2 1 0; }
   .tabs #tMore { flex: 1 1 0; }
@@ -152,6 +131,58 @@
   #pShape > .big button { min-width: 0; }
   #pShape #bakeBtn { font-size: clamp(18px, 4.5vw, 25px); gap: 5px; }
   #pShape #relaxBtn { font-size: clamp(10px, 2.8vw, 14px); white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
+
+  /* A left-anchored workspace with an independent copy action on the right. */
+  .dock { left:12px; right:12px; bottom:max(10px,env(safe-area-inset-bottom)); width:auto;
+    transform:none; align-items:stretch; max-width:none; gap:6px; z-index:9; }
+  .control-row { display:flex; width:100%; align-items:center; justify-content:space-between; gap:8px; }
+  .control-row .tool-modes { margin:0; flex:0 1 375px; width:min(375px,calc(100% - 110px)); min-width:0; }
+  .control-row #multi { margin-left:auto; flex:none; max-width:110px; box-sizing:border-box; display:flex;
+    align-items:center; flex-wrap:wrap; gap:0; justify-content:center; padding:4px 7px; }
+  .control-row #copyBtn { padding:7px 10px; min-height:42px; }
+  .control-row #cnt { justify-content:center; font-size:10px; padding:0 1px; }
+  .tabs { align-self:flex-start; width:min(510px,calc(100% - 100px)); box-sizing:border-box; max-width:100%;
+    justify-content:flex-start; }
+  .dock .panel.open { align-self:flex-start; max-width: min(720px,100%); box-sizing:border-box; }
+  #pShape, #tray, #pal, #pMore, #accessoryPanel { margin-left:0; }
+  #pShape { width:min(510px,100%); }
+  .softbar { position:fixed; top:max(91px,env(safe-area-inset-top)); left:12px; z-index:12;
+    border:2px solid #b9b1c2; border-radius:14px; padding:8px 10px; background:#fbfaf5e8;
+    box-shadow:0 3px 8px #3b37402a; width:fit-content; max-width:calc(100vw - 40px); }
+  .softbar label { display:flex; flex-wrap:wrap; align-items:center; gap:7px; }
+  .softbar #soft { width:clamp(105px,28vw,178px); }
+  .chars { position:fixed; top:max(10px,env(safe-area-inset-top)); left:12px;
+    right:auto; bottom:auto; z-index:16; flex-direction:row; gap:7px; }
+  .chars button { width:52px; height:52px; }
+  .chars svg { width:38px; height:38px; }
+  .name { top:13px; left:130px; right:85px; font-size:clamp(13px,3.2vw,20px); }
+  .hint { top:65px; text-align:left; left:13px; right:13px; font-size:12px; }
+  .anims { z-index:17; }
+  #accessoryPanel { display:none; width:min(510px,100%); max-width:100%; box-sizing:border-box;
+    flex-wrap:wrap; gap:8px; background:#fbfaf5ed; border:2px solid var(--c-item); border-radius:16px; padding:8px; }
+  #accessoryPanel.open { display:flex; }
+  #accessoryPanel .lab { gap:5px; }
+  #accessoryPanel input { width:clamp(80px,20vw,135px); accent-color:var(--c-item); }
+  #accessoryHint { flex-basis:100%; }
+  #pMore #lightBrightness, #pMore #lightContrast { width:120px; accent-color:var(--c-more); }
+  /* The animation overlay hides editing, never the always-present softness control. */
+  body.anim .softbar { display:block; }
+  @media(max-width:620px) {
+    .dock { left:9px; right:9px; }
+    .control-row .tool-modes { flex:1 1 auto; width:auto; gap:3px; padding:4px; }
+    .control-row .tool-modes button { min-width:0; padding:7px 2px; font-size:11px; min-height:42px; }
+    .control-row #multi { max-width:90px; padding:3px 5px; }
+    .control-row #copyBtn { font-size:11px; }
+    .tabs { width:calc(100% - 93px); gap:3px; }
+    .tabs button { font-size:10px; min-height:40px; }
+    .softbar { left:9px; top:max(81px,env(safe-area-inset-top)); padding:6px 8px; }
+    .softbar #soft { width:110px; }
+    .chars { left:9px; }
+    .chars button { width:44px; height:44px; }
+    .chars svg { width:32px; height:32px; }
+    .name { left:107px; right:66px; }
+    .hint { top:56px; }
+  }
 </style>
 </head>
 <body>
@@ -215,8 +246,8 @@
   </div>
 </div>
 <div class="hint" id="hint">からだを ひっぱって かたちを かえてね</div>
+<div class="softbar" id="softBar"><label class="lab">やわらかさ <input type="range" id="soft" min="0" max="1" step="0.05" value="0.55"><span id="softv">やわらかい</span></label></div>
 <div class="dock">
-  <div class="row" id="multi"><button id="copyBtn">ふやす</button><span class="lab" id="cnt">1 / 12</span></div>
   <div class="row panel" id="pShape"><button id="hp">たかく</button><button id="hm">ひくく</button><button id="wp">ひろく</button><button id="wm">ほそく</button>
   <div class="big">
     <button id="bakeBtn"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-4-1-6 1-10z"/></svg>かためる</button>
@@ -224,9 +255,14 @@
   </div>
   </div>
   <div class="row panel" id="tray" aria-label="item"></div>
+  <div class="row panel" id="accessoryPanel">
+    <span class="lab" id="accessoryHint">かざりを タップして えらんでね</span>
+    <label class="lab">おおきさ <input id="accessorySize" type="range" min="0.5" max="2.5" step="0.05" value="1"></label>
+    <label class="lab">よこ <input id="accessoryX" type="range" min="-1.5" max="1.5" step="0.05" value="0"></label>
+    <label class="lab">たて <input id="accessoryY" type="range" min="-1" max="1" step="0.05" value="0"></label>
+  </div>
   <div class="row panel" id="pal" aria-label="color"></div>
   <div class="row panel" id="pMore">
-    <label class="lab" style="flex-basis:100%">やわらかさ <input type="range" id="soft" min="0" max="1" step="0.05" value="0.55"> <span id="softv">やわらかい</span></label>
     <label class="lab" style="flex-basis:100%">もどるはやさ <input type="range" id="ret" min="0.2" max="4.2" step="0.05" value="4"> <span id="retv">4 びょう</span></label>
     <span class="grp">へんしゅう</span>
     <button id="undo">ひとつもどす</button><button id="reset">はじめから</button>
@@ -234,6 +270,8 @@
     <button id="mochi">おもち</button><button id="line">せん</button><button id="snd" class="on">おと</button>
     <span class="grp">ひかりの ばしょ</span>
     <button type="button" id="lightMoveBtn" aria-pressed="false">ひかりを うごかす</button>
+    <label class="lab">あかるさ <input type="range" id="lightBrightness" min="0.5" max="2" step="0.05" value="1"></label>
+    <label class="lab">かげの こさ <input type="range" id="lightContrast" min="0" max="1" step="0.05" value="0.65"></label>
     <label class="lab">よこ <input type="range" id="lightX" min="-8" max="8" step="0.5" value="3"></label>
     <label class="lab">たかさ <input type="range" id="lightY" min="2" max="12" step="0.5" value="6"></label>
     <label class="lab">おくゆき <input type="range" id="lightZ" min="-8" max="8" step="0.5" value="4"></label>
@@ -241,26 +279,19 @@
     <button id="photoSave" type="button" title="つくった こを しゃしんに ほぞん">しゃしんにほぞん</button>
     <button id="sendWW" type="button" title="なかまに とうろく">なかまに とうろく</button>
   </div>
+  <div class="control-row">
   <div class="row tool-modes" id="toolModes" role="group" aria-label="そうさを えらぶ" data-m="sculpt">
     <button id="modeSculpt" type="button" class="on" aria-pressed="true">のばす</button>
     <button id="modePlace" type="button" aria-pressed="false">おく</button>
     <button id="modeCamera" type="button" aria-pressed="false">みまわす</button>
+  </div>
+  <div class="row" id="multi"><button id="copyBtn">ふやす</button><span class="lab" id="cnt">1 / 12</span></div>
   </div>
   <div class="row tabs">
     <button id="tShape">かたち</button><button id="plantBtn">かざり</button><button id="colorBtn">いろ</button><button id="tMore">くわしく</button>
   </div>
 </div>
 <div class="toast" id="toast"></div>
-<input id="photoTextureInput" type="file" accept="image/*" hidden>
-<div id="cropDialog" class="photo-crop" role="dialog" aria-label="しゃしんを きりとる" aria-modal="true" hidden>
-  <div class="crop-panel">
-    <strong>しゃしんを きりとる</strong>
-    <canvas id="cropCanvas" width="320" height="320" aria-label="しゃしんの きりとり"></canvas>
-    <label>おおきさ <input id="cropZoom" type="range" min="1" max="3.5" step="0.05" value="1"></label>
-    <span>しゃしんを うごかして きりとる ばしょを きめてね</span>
-    <div class="crop-buttons"><button id="cropCancel" type="button">やめる</button><button id="cropApply" type="button">きりとって はる</button></div>
-  </div>
-</div>
 <div class="chars" aria-label="こを えらぶ">
   <button id="ch-neko" title="ぬおん" aria-label="ぬおん">
     <svg viewBox="0 0 48 48" fill="none" stroke="#3a3aa8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -291,6 +322,8 @@
     copyBtn: ["ふやす", "複製"],
     modeSculpt: ["のばす", "変形"], modePlace: ["おく", "配置"], modeCamera: ["みまわす", "カメラ"],
     lightMoveBtn: ["ひかりを うごかす", "光源を移動"],
+    accessoryHint: ["かざりを タップして えらんでね", "装飾をタップして選択"],
+    
     hp: ["たかく", "高く"], hm: ["ひくく", "低く"], wp: ["ひろく", "広く"], wm: ["ほそく", "細く"],
     tShape: ["かたち", "形"], plantBtn: ["かざり", "装飾"], colorBtn: ["いろ", "色"], tMore: ["くわしく", "詳細設定"],
     undo: ["ひとつもどす", "元に戻す"], reset: ["はじめから", "初期化"],
@@ -298,9 +331,6 @@
     photoSave: ["しゃしんにほぞん", "写真に保存"],
     sendWW: ["なかまに とうろく", "WHERE WHICHに登録"],
     relaxBtn: ["ゆっくりもどす", "元の形に戻す"],
-    patternNone: ["なし", "なし"], patternDots: ["みずたま", "水玉"],
-    patternLines: ["しましま", "縞模様"], patternGrain: ["ざらざら", "粒模様"],
-    patternPhoto: ["しゃしんから", "写真から"],
     itemAll: ["ぜんぶ", "全体"],
     bakeBtn: ["かためる", "固定する"]
   };
@@ -410,7 +440,9 @@
     document.querySelectorAll("#pMore .grp").forEach(el=>translateFree(el,groups));
     const lab=$("soft")?.closest("label");if(lab)directText(lab,["やわらかさ","柔らかさ"][k]);
     const lab2=$("ret")?.closest("label");if(lab2)directText(lab2,["もどるはやさ","復元時間"][k]);
-    for(const [id,pair] of [["lightX",["よこ","左右"]],["lightY",["たかさ","高さ"]],["lightZ",["おくゆき","奥行き"]]]){
+    for(const [id,pair] of [["lightX",["よこ","左右"]],["lightY",["たかさ","高さ"]],["lightZ",["おくゆき","奥行き"]],
+      ["lightBrightness",["あかるさ","明るさ"]],["lightContrast",["かげの こさ","陰影の強さ"]],
+      ["accessorySize",["おおきさ","大きさ"]],["accessoryX",["よこ","左右"]],["accessoryY",["たて","上下"]]]){
       const label=$(id)?.closest("label");if(label)directText(label,pair[k]);
     }
     const lang=$("yawaraka-lang");if(lang){const label=["ことば：ひらがな（おして かんじへ）","表示言語：漢字（押すとひらがな）"][k];if(lang.textContent!==label)lang.textContent=label;}
