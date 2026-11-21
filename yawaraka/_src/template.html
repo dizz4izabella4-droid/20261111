@@ -83,7 +83,24 @@
   :root { --c-str: #3a3aa8; --c-shape: #1f8a8a; --c-item: #3f8f3f; --c-color: #b8439a; --c-more: #5b6470; --c-multi: #b7791f; --c-bake: #e0442a; }
   .tabs button { border-color: var(--tc); color: var(--tc); background: #fbfaf5; }
   .tabs button.on { background: var(--tc); color: #fff; }
-  #modeBtn { --tc: var(--c-str); } #modeBtn[data-m="place"] { --tc: #7a4fc4; } #modeBtn[data-m="move"] { --tc: var(--c-multi); } #modeBtn[data-m="camera"] { --tc: #2b2b33; }
+  /* Explicit, persistent mode selector — never cycles modes on repeated taps. */
+.tool-modes { box-sizing:border-box; display:flex; width:100%; max-width:100%; overflow:visible;
+  align-items:stretch; gap:6px; background:#fbfaf5f2; padding:5px; border:2px solid #c9c4b6;
+  border-radius:17px; box-shadow:0 2px 8px #60504019; }
+.tool-modes button { flex:1 1 0; min-width:0; min-height:46px; background:#fbfaf5; border:2px solid #c4c0c9;
+  border-radius:13px; color:#4f4b57; font-size:14px; font-weight:800; padding:9px 3px; }
+#modeSculpt { --mc:var(--c-str); } #modePlace { --mc:#7a4fc4; } #modeCamera { --mc:#313343; }
+.tool-modes button.on, .tool-modes button[aria-pressed="true"] {
+  color:#fff; background:var(--mc); border-color:var(--mc); box-shadow:0 2px 7px #31334329; }
+.tool-modes button:focus-visible, #lightHandle:focus-visible { outline:3px solid #fc8d4d; outline-offset:2px; }
+.light-handle { position:fixed; z-index:15; width:56px; height:56px; border-radius:50%;
+  transform:translate(-50%,-50%); background:#fff6c5; color:#a26a10; border:3px solid #c28d23;
+  box-shadow:0 0 0 6px #fff7cb73,0 0 25px #e6b64d99;
+  font-size:30px; font-weight:bold; line-height:48px; padding:0; cursor:grab; touch-action:none; user-select:none; }
+.light-handle[hidden] { display:none!important; }
+.light-handle:active { cursor:grabbing; background:#ffe28a; }
+#lightMoveBtn[aria-pressed="true"] { background:var(--c-more); color:#fff; }
+
   #tShape { --tc: var(--c-shape); } #plantBtn { --tc: var(--c-item); } #colorBtn { --tc: var(--c-color); } #tMore { --tc: var(--c-more); }
   #pShape { --pc: var(--c-shape); } #tray { --pc: var(--c-item); } #pal { --pc: var(--c-color); } #pMore { --pc: var(--c-more); } #multi { --pc: var(--c-multi); }
   .panel.open, #multi { background: rgba(251,250,245,.94); border: 2px solid var(--pc); border-radius: 18px; padding: 8px 10px; box-shadow: 0 3px 10px rgba(60,50,40,.14); }
@@ -127,6 +144,7 @@
 <canvas id="c"></canvas>
 <div class="name" id="cname"></div>
 <div id="selectedArrow" class="selected-arrow" aria-hidden="true" hidden>▼</div>
+<button type="button" id="lightHandle" class="light-handle" title="ひかりを うごかす" aria-label="ひかりを うごかす" hidden>☀</button>
 <div class="anims">
   <button class="main" id="animBtn" title="あにめを みる" aria-label="あにめを みる">
     <svg id="animIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l10.5-6.5z"/></svg>
@@ -196,6 +214,7 @@
     <span class="grp">みため</span>
     <button id="mochi">おもち</button><button id="line">せん</button><button id="snd" class="on">おと</button>
     <span class="grp">ひかりの ばしょ</span>
+    <button type="button" id="lightMoveBtn" aria-pressed="false">ひかりを うごかす</button>
     <label class="lab">よこ <input type="range" id="lightX" min="-8" max="8" step="0.5" value="3"></label>
     <label class="lab">たかさ <input type="range" id="lightY" min="2" max="12" step="0.5" value="6"></label>
     <label class="lab">おくゆき <input type="range" id="lightZ" min="-8" max="8" step="0.5" value="4"></label>
@@ -203,8 +222,13 @@
     <button id="photoSave" type="button" title="つくった こを しゃしんに ほぞん">しゃしんにほぞん</button>
     <button id="sendWW" type="button" title="なかまに とうろく">なかまに とうろく</button>
   </div>
+  <div class="row tool-modes" id="toolModes" role="group" aria-label="そうさを えらぶ" data-m="sculpt">
+    <button id="modeSculpt" type="button" class="on" aria-pressed="true">のばす</button>
+    <button id="modePlace" type="button" aria-pressed="false">おく</button>
+    <button id="modeCamera" type="button" aria-pressed="false">みまわす</button>
+  </div>
   <div class="row tabs">
-    <button id="modeBtn" class="on">のばす</button><button id="tShape">かたち</button><button id="plantBtn">かざり</button><button id="colorBtn">いろ</button><button id="tMore">くわしく</button>
+    <button id="tShape">かたち</button><button id="plantBtn">かざり</button><button id="colorBtn">いろ</button><button id="tMore">くわしく</button>
   </div>
   <div class="big">
     <button id="bakeBtn"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-4-1-6 1-10z"/></svg>かためる</button>
@@ -250,6 +274,8 @@
   const KEY = "yawaraka-ui-language-v2";
   const labels = {
     copyBtn: ["ふやす", "複製"],
+    modeSculpt: ["のばす", "変形"], modePlace: ["おく", "配置"], modeCamera: ["みまわす", "カメラ"],
+    lightMoveBtn: ["ひかりを うごかす", "光源を移動"],
     hp: ["たかく", "高く"], hm: ["ひくく", "低く"], wp: ["ひろく", "広く"], wm: ["ほそく", "細く"],
     tShape: ["かたち", "形"], plantBtn: ["かざり", "装飾"], colorBtn: ["いろ", "色"], tMore: ["くわしく", "詳細設定"],
     undo: ["ひとつもどす", "元に戻す"], reset: ["はじめから", "初期化"],
@@ -263,11 +289,9 @@
     itemAll: ["ぜんぶ", "全体"],
     bakeBtn: ["かためる", "固定する"]
   };
-  const modes = {sculpt:["のばす","伸ばす"],place:["おく","配置"],move:["うごかす","移動"],camera:["みまわす","視点"]};
   const hint = {
     sculpt:["からだを ひっぱってから「かためる」","体を引っ張ってから「固定する」"],
-    place:["かざりを さわって うごかす","装飾をドラッグして移動"],
-    move:["こを うごかして ばしょを きめる","キャラをドラッグして配置"],
+    place:["んちょ や かざりを うごかす","キャラクターや装飾品を移動"],
     camera:["さわって まわす・ひろげて ちかづく","ドラッグで回転・ピンチで拡大"]
   };
   const titles = {
@@ -343,8 +367,7 @@
     running=false;
     const k=mode==="kanji"?1:0;
     for(const [id,pair] of Object.entries(labels))replaceText($(id),pair[k],id==="bakeBtn");
-    const which=$("modeBtn")?.dataset.m || "sculpt";
-    replaceText($("modeBtn"),modes[which][k]);
+    const which=$("toolModes")?.dataset.m || "sculpt";
     replaceText($("hint"),hint[which][k]);
     const val=$("soft")?parseFloat($("soft").value):.55;
     replaceText($("softv"),([["かたい","硬い"],["ふつう","普通"],["やわらかい","柔らかい"],["とてもやわらかい","非常に柔らかい"]])[val<.2?0:val<.45?1:val<.7?2:3][k]);
@@ -380,6 +403,11 @@
     const photo=$("photoSave"),send=$("sendWW");
     if(photo)photo.title=["とうめいな しゃしんを ほぞん","透明PNG画像を保存"][k];
     if(send)send.title=["なかまに とうろく","WHERE WHICHへ登録"][k];
+    const lh=$("lightHandle"); if(lh){
+      lh.title=["ひかりを うごかす","光源をドラッグ"][k];
+      lh.setAttribute("aria-label",lh.title);
+    }
+    const modes=$("toolModes"); if(modes)modes.setAttribute("aria-label",["そうさを えらぶ","操作を選択"][k]);
   }
   function schedule(){if(mode!=="kanji")return;requestAnimationFrame(redraw);}
   function init(){
