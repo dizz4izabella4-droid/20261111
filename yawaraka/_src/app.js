@@ -24,10 +24,30 @@ controls.maxDistance = 30;
 controls.maxPolarAngle = Math.PI;   // 下からものぞける
 controls.autoRotate = true;
 controls.autoRotateSpeed = 1.2;
+// iPhone-style camera gestures: one finger orbits; pinch zooms;
+// two-finger drag pans the framing without changing the sculpt.
+controls.touches.ONE=THREE.TOUCH.ROTATE;
+controls.touches.TWO=THREE.TOUCH.DOLLY_PAN;
+controls.enableDamping=true;
+controls.dampingFactor=.09;
+controls.rotateSpeed=.68;
+controls.zoomSpeed=.9;
+controls.panSpeed=.7;
+controls.screenSpacePanning=true;
 
 // ---- ライト（トゥーン調）
-scene.add(new THREE.HemisphereLight(0xffffff, 0xd8d4c8, 1.6));
-const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+const hemisphere=new THREE.HemisphereLight(0xffffff,0xc6bcb5,0.75);
+scene.add(hemisphere);
+const sun = new THREE.DirectionalLight(0xffffff, 2.15);
+let lightingBrightness=1, lightingContrast=.65;
+function refreshLighting() {
+  const contrast=lightingContrast, brightness=lightingBrightness;
+  hemisphere.intensity=brightness*(1.34-contrast*.82);
+  sun.intensity=brightness*(1.05+contrast*1.7);
+  under.intensity=brightness*(.78-contrast*.56);
+  // More pronounced high/low light bands make baked surface relief visible.
+  grad.needsUpdate=true;
+}
 const LIGHT_POS = { x: 3, y: 6, z: 4 };
 function updateLightPosition(cx = 0) {
   sun.position.set(cx + LIGHT_POS.x, LIGHT_POS.y, LIGHT_POS.z);
@@ -43,12 +63,12 @@ sun.shadow.camera.far = 30;
 sun.shadow.radius = 6;
 sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03;
 scene.add(sun);
-const under = new THREE.DirectionalLight(0xffffff, 0.9);   // 下から見たとき用のやさしい光
+const under = new THREE.DirectionalLight(0xffffff, 0.42);   // 下から見たとき用のやさしい光
 under.position.set(0, -5, 1);
 scene.add(under);
 
 // トゥーン用グラデーション
-const grad = new THREE.DataTexture(new Uint8Array([200, 232, 250, 255]), 4, 1, THREE.RedFormat);
+const grad = new THREE.DataTexture(new Uint8Array([105, 165, 225, 255]), 4, 1, THREE.RedFormat);
 grad.minFilter = grad.magFilter = THREE.NearestFilter;
 grad.needsUpdate = true;
 let bodyMat, inkMat;
@@ -749,7 +769,7 @@ function buildCharacter(key, opts = {}) {
   colorBase = Float32Array.from(bodyGeo.attributes.color.array); scorch = new Float32Array(bodyGeo.attributes.position.count);
   bodyCol = c.body; itemCol = null;
   body = withOutline(new THREE.Mesh(bodyGeo, bodyMat), 0.04);
-  body.receiveShadow = false; body.userData.inst = curInst;
+  body.receiveShadow = true; body.userData.inst = curInst;
   squish.add(body);
   face = new THREE.Group();
   face.visible = !mochi;
@@ -2019,7 +2039,7 @@ function setMode(m) {
   mode = m;
   const cam = m === 'camera';
   controls.enableRotate = cam;
-  controls.enablePan = false;
+  controls.enablePan = cam;
   controls.autoRotate = false;
   controls.enabled = cam || (!pull.held && !pl && !mv && !leafDrag);
   ui('toolModes').dataset.m = m;
@@ -2031,7 +2051,7 @@ function setMode(m) {
   ui('hint').textContent = {
     sculpt: 'からだを ひっぱって「かためる」を おしてね',
     place: 'んちょ や かざりを うごかしてね',
-    camera: 'さわって まわす・ひろげて ちかづく'
+    camera: '1ぽんで まわす・2ほんで うごかす・つまんで ズーム'
   }[m];
   canvas.style.cursor = cam ? 'move' : 'grab';
   syncAccessoryControls();
@@ -2049,6 +2069,14 @@ ui('ret').oninput = e => setReturn(parseFloat(e.target.value));
 function setSoft(v) { SOFT = v; SF = 0.6 + 1.2 * v; ui('softv').textContent = v < 0.2 ? 'かたい' : v < 0.45 ? 'ふつう' : v < 0.7 ? 'やわらかい' : 'とてもやわらかい'; }
 ui('soft').oninput = e => setSoft(parseFloat(e.target.value)); ui('soft').value = SOFT; setSoft(SOFT);
 setReturn(4); ui('ret').value = 4;
+for (const [id,prop] of [['lightBrightness','lightingBrightness'],['lightContrast','lightingContrast']]) {
+  ui(id).addEventListener('input',e=>{
+    if (prop==='lightingBrightness')lightingBrightness=Number(e.target.value);
+    else lightingContrast=Number(e.target.value);
+    refreshLighting();
+  });
+}
+refreshLighting();
 for (const [axis, id] of [['x','lightX'],['y','lightY'],['z','lightZ']]) {
   ui(id).oninput = e => {
     LIGHT_POS[axis] = Number(e.target.value);
