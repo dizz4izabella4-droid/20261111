@@ -77,6 +77,7 @@ let colorBase = null, scorch = null, bodyCol = 0xffffff, itemCol = null;
 let curKey = 'mebae', gs = { x: 1, y: 1, z: 1 }, flashT = -1;
 let undoStack = [];
 let relaxMorph = null;
+let bakeSettle = null;
 let ovD = null, bound = null, curInst = null;
 const insts = [];
 const ui = id => document.getElementById(id);
@@ -678,6 +679,7 @@ const CHARS = {
 };
 
 function buildCharacter(key, opts = {}) {
+  finishBakeSettle();
   const c = CHARS[key] || CHARS.neko;
   if (!curInst) { curInst = { cat }; insts.push(curInst); }
   if (current && current.rt && current.rt.dispose) current.rt.dispose();
@@ -1114,6 +1116,7 @@ HOP.g = 8 * HOP.h / (HOP.air * HOP.air);
 const animBtn = document.getElementById('animBtn'), animIcon = document.getElementById('animIcon');
 let animPos = { x: 0, z: 0 }, animFit = { m: 1, ty: 0.6, cx: 0 };
 function setAnim(on) {
+  finishBakeSettle();
   anim.on = on; applyStage();
   document.body.classList.toggle('anim', on);
   animBtn.classList.toggle('on', on);
@@ -1662,6 +1665,7 @@ function snap() {
            rd: riders.map(r => ({ b: r.base.slice(), c: r.ctr.slice() })), gs: { ...gs }, sc: scorch.slice() };
 }
 function applySnap(s) {
+  finishBakeSettle();
   basePos.set(s.base);
   faceVerts.forEach((f, i) => f.base.set(s.fv[i]));
   faceCaps.forEach((c, i) => c.base.set(s.fc[i]));
@@ -1671,10 +1675,88 @@ function applySnap(s) {
 }
 function pushUndo() { undoStack.push(snap()); if (undoStack.length > 30) undoStack.shift(); updateButtons(); }
 function updateButtons() { ui('undo').disabled = !undoStack.length; }
+// When a frame is late, BAKE may run before the mesh catches up with the pointer.
+// Re-evaluate the latest drag synchronously, then show a brief, limited post-bake
+// adjustment. The committed geometry is always the final target; only its
+// visible mesh is interpolated. This keeps undo, copies and ornaments intact.
+function syncPullDeformationForBake() {
+  const lifted = Math.max(0, pull.off.y) * (RET.hold ? 0 : 0.5);
+  const o = pull.off.clone(); o.y -= lifted;
+  const g = pull.grab;
+  if (g.y + o.y < floorY + 0.06) o.y = floorY + 0.06 - g.y;
+  const L = o.length(), sig = (0.42 + L * 0.25) * (0.8 + 0.2 * SF);
+  DF.ox = o.x; DF.oy = o.y; DF.oz = o.z;
+  DF.gx = g.x; DF.gy = g.y; DF.gz = g.z;
+  DF.sig2 = sig * sig;
+  DF.sideK = Math.min(Math.abs(o.x) / (L + 1e-6), 1);
+  const n = pull.n, inward = n
+    ? THREE.MathUtils.clamp(-(o.x * n.x + o.y * n.y + o.z * n.z) / (L + 1e-6), 0, 1)
+    : 0;
+  DF.shell = 1 - 0.8 * inward;
+  refreshMesh(true);
+}
+function finishBakeSettle() {
+  if (!bakeSettle) return;
+  bakeSettle = null;
+  ui('bakeBtn').removeAttribute('data-refining');
+  // Only display geometry was interpolated; the committed base never changed.
+  refreshMesh(false);
+}
+function advanceBakeSettle() {
+  const s = bakeSettle;
+  if (!s) return;
+  if (s.actor !== curInst || pull.active || anim.on) { finishBakeSettle(); return; }
+  const now = performance.now();
+  const t = Math.min(1, (now - s.start) / s.duration);
+  if (t < 1 && s.last && now - s.last < 55) return;
+  s.last = now;
+  const remaining = 1 - t * t * (3 - 2 * t);
+  // Correct no more than 0.12 units per coordinate: refinement, not remoulding.
+  const interpolate = (dst, from, target) => {
+    for (let i = 0; i < dst.length; i++) {
+      const d = Math.max(-0.12, Math.min(0.12, from[i] - target[i]));
+      dst[i] = target[i] + remaining * d;
+    }
+  };
+  interpolate(pos.array, s.body, basePos);
+  pos.needsUpdate = true;
+  bodyGeo.computeVertexNormals(); bodyGeo.computeBoundingSphere();
+  for (let j = 0; j < faceVerts.length; j++) {
+    const f = faceVerts[j];
+    interpolate(f.attr.array, s.faces[j], f.base); f.attr.needsUpdate = true;
+  }
+  for (let j = 0; j < faceCaps.length; j++) {
+    const c = faceCaps[j], out = c.o.position.toArray();
+    interpolate(out, s.caps[j], c.base); c.o.position.fromArray(out);
+  }
+  for (let j = 0; j < riders.length; j++) {
+    const r = riders[j];
+    if (r.o.parent !== squish) continue;
+    const out = r.o.position.toArray();
+    interpolate(out, s.items[j], r.base); r.o.position.fromArray(out);
+  }
+  if (t >= 1) finishBakeSettle();
+}
+// Finalize before any new sculpting gesture, rather than reading a transition
+// mesh as the next sculpting base.
+canvas.addEventListener('pointerdown', finishBakeSettle, { capture: true });
+
 function commitPose(burn) {
+  finishBakeSettle();
   relaxMorph = null;
   pushUndo();
   const hasPose = pull.active;
+  let beforeBake = null;
+  if (hasPose) {
+    // Preserve the last displayed frame only for the short post-bake correction.
+    if (burn) beforeBake = {
+      body: pos.array.slice(),
+      faces: faceVerts.map(f => f.attr.array.slice()),
+      caps: faceCaps.map(c => c.o.position.toArray()),
+      items: riders.map(r => r.o.position.toArray())
+    };
+    syncPullDeformationForBake();
+  }
   const nb = hasPose ? Float32Array.from(pos.array) : basePos;
   if (hasPose) for (let i = 0; i < nb.length; i++) nb[i] -= ovD[i];
   for (let i = 0; i < scorch.length; i++) {      // 焼き色：のびた所ほどよく焼ける
@@ -1696,11 +1778,23 @@ function commitPose(burn) {
     controls.enabled = true; sfx.stretch(0, 0);
     commitBases();
   }
+  if (burn && beforeBake && hasPose) {
+    let discrepancy = 0;
+    for (let i = 0; i < basePos.length; i++)
+      discrepancy = Math.max(discrepancy, Math.abs(beforeBake.body[i] - basePos[i]));
+    if (discrepancy > 0.004) {
+      bakeSettle = { actor: curInst, start: performance.now(), duration: 620,
+        ...beforeBake, last: 0 };
+      ui('bakeBtn').dataset.refining = 'true';
+      advanceBakeSettle();
+    }
+  }
   if (burn) { flashT = 0; sfx.thud(3); spring.sqV -= 2.5; toast(hasPose ? 'いまの かたちで かためました' : 'かためました'); }
 }
 // まるごと のばす・ちぢめる（床を基準に）
 function scaleShape(ax, ay, az) {
   if (anim.on) return;
+  finishBakeSettle();
   relaxMorph = null;
   if (pull.active) commitPose(false);
   const nx = gs.x * ax, ny = gs.y * ay, nz = gs.z * az;
@@ -1741,6 +1835,7 @@ function advanceRelax() {
   if (t >= 1) { relaxMorph = null; commitBases(); syncInst(); toast('もとの かたちに もどりました'); }
 }
 ui('relaxBtn').onclick = () => {
+  finishBakeSettle();
   if (anim.on) { toast('あにめを とめてから もどしてね'); return; }
   if (pull.held) release();
   if (pull.active) commitPose(false);
@@ -1940,6 +2035,7 @@ function cancelPose() {
 }
 function selectInst(I) {
   if (I === curInst) return;
+  finishBakeSettle();
   cancelPose(); cat.position.y = lift;
   syncInst(); loadState(I);
   applyCharUI(current, curKey);
@@ -1947,6 +2043,7 @@ function selectInst(I) {
   leafDrag = false; sfx.grab();
 }
 function copyActive() {
+  finishBakeSettle();
   if (insts.length >= 12) { toast('12こまで ふやせます'); return; }
   cancelPose();
   const s = snap();
@@ -1965,6 +2062,7 @@ function copyActive() {
   if (layout !== 'free') arrange(layout, true);
 }
 function removeActive() {
+  finishBakeSettle();
   if (insts.length < 2) { toast('さいごの ひとつは のこります'); return; }
   const I = curInst, idx = insts.indexOf(I), next = insts[idx ? idx - 1 : 1];
   cancelPose();
@@ -2248,6 +2346,7 @@ renderer.setAnimationLoop(() => {
     if (k >= 1) { ringT = -1; ring.material.opacity = 0; }
   }
 
+  advanceBakeSettle();
   resize();
   controls.update();
   // 着地でカメラを少しゆらす
