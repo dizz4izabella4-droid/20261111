@@ -899,12 +899,12 @@ function setNdc(e) {
   ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(ndc, camera);
 }
-let leafDrag = false, waitUp = false, pl = false;
+let leafDrag = false, waitUp = false, pl = false, selectedItem = null;
 const _tri = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()], _bc = new THREE.Vector3();
 // アイテムを、さわった体の表面の場所へ移して固定する
 function placeItem() {
   const h = ray.intersectObject(body, false)[0]; if (!h) return;
-  const r = riders.find(q => q.o === current.rt.root); if (!r) return;
+  const r = selectedItem || riders.find(q => q.o === current.rt.root); if (!r) return;
   const f = h.face, P = pos.array, lp = body.worldToLocal(h.point.clone());
   [f.a, f.b, f.c].forEach((v, i) => _tri[i].set(P[v * 3], P[v * 3 + 1], P[v * 3 + 2]));
   THREE.Triangle.getBarycoord(lp, _tri[0], _tri[1], _tri[2], _bc);
@@ -921,13 +921,21 @@ canvas.addEventListener('pointerdown', e => {
     if (vis.length > 1) { const hh = ray.intersectObjects(vis.map(i => i.body), false)[0]; if (hh && hh.object.userData.inst !== curInst) selectInst(hh.object.userData.inst); }
   }
   if (mode === 'place') {
-    if (!current.rt.leafMeshes.length) { toast('No item to move · plant one first'); return; }
-    if (!ray.intersectObject(body, false)[0]) return;
-    pushUndo(); pl = true; controls.enabled = false; sfx.grab(); canvas.setPointerCapture(e.pointerId);
-    placeItem(); return;
+    const itemHits = ray.intersectObjects(current.rt.leafMeshes || [], false);
+    const bodyHit = ray.intersectObject(body, false)[0];
+    if (!bodyHit && !itemHits.length) return;
+    if (itemHits.length && (!bodyHit || itemHits[0].distance < bodyHit.distance)) {
+      selectedItem = riders.find(r => { let p = itemHits[0].object; while (p) { if (p === r.o) return true; p = p.parent; } return false; }) || null;
+      if (selectedItem) { pushUndo(); pl = true; controls.enabled = false; canvas.setPointerCapture(e.pointerId); placeItem(); }
+    } else {
+      const p = ray.ray.intersectPlane(floorPlane, new THREE.Vector3()); if (!p) return;
+      mv = { dx: cat.position.x - p.x, dz: cat.position.z - p.z };
+      if (layout !== 'free') setFree();
+      controls.enabled = false; canvas.setPointerCapture(e.pointerId);
+    }
+    sfx.grab(); return;
   }
   if (mode === 'move') {
-    if (stageOn) { toast('Turn STAGE off to move'); return; }
     if (!ray.intersectObject(body, false)[0]) return;
     const p = ray.ray.intersectPlane(floorPlane, new THREE.Vector3()); if (!p) return;
     mv = { dx: cat.position.x - p.x, dz: cat.position.z - p.z }; if (layout !== 'free') setFree();
@@ -1607,13 +1615,13 @@ const pedLine = outlineMat(0.04);
   m.castShadow = m.receiveShadow = true; ped.add(m);
   const o = new THREE.Mesh(g, pedLine); o.visible = lineOn; ped.add(o); pedOutlines.push(o);
 }
-let stageOn = true;
+let stageOn = false;
 function applyStage() {
-  const on = stageOn && !anim.on;
-  ped.visible = on; ground.position.y = on ? -PH : 0;
-  ui('multi').style.display = stageOn ? 'none' : 'flex';
+  const on = false;
+  ped.visible = false; ground.position.y = 0;
+  ui('multi').style.display = 'flex';
   ui('cnt').textContent = insts.length + ' / 12';
-  for (const I of insts) I.cat.visible = !stageOn || I === curInst;
+  for (const I of insts) I.cat.visible = true;
 }
 let stageBackup = null;
 let toastT = 0;
@@ -1700,19 +1708,14 @@ function scaleShape(ax, ay, az) {
   sfx.boing(0.5); spring.sqV += ay > 1 ? 2 : -2;
 }
 ui('bakeBtn').onclick = () => { if (!anim.on) commitPose(true); };
-ui('relaxBtn').onclick = () => { if (pull.active && !pull.held) { pull.relax = true; sfx.boing(0.5); } };
+ui('relaxBtn').onclick = () => { if (pull.held) release(); pull.active = true; pull.held = false; pull.relax = true; pull.rl = null; pull.vel.set(0,0,0); sfx.boing(0.5); };
 ui('undo').onclick = () => { if (pull.active && !pull.held) { pull.relax = true; return; } if (pull.active || !undoStack.length) return; applySnap(undoStack.pop()); updateButtons(); sfx.poke(); };
 ui('reset').onclick = () => { buildCharacter(curKey); sfx.poke(); spring.sqV = -3; toast('RESET'); };
 ui('hp').onclick = () => scaleShape(1, 1.12, 1);
 ui('hm').onclick = () => scaleShape(1, 1 / 1.12, 1);
 ui('wp').onclick = () => scaleShape(1.12, 1, 1.12);
 ui('wm').onclick = () => scaleShape(1 / 1.12, 1, 1 / 1.12);
-ui('stage').onclick = () => {
-  stageOn = !stageOn; ui('stage').classList.toggle('on', stageOn);
-  if (stageOn) { stageBackup = insts.map(I => ({ I, x: I.cat.position.x, z: I.cat.position.z })); cat.position.x = cat.position.z = 0; }
-  else { for (const b of stageBackup || []) { b.I.cat.position.x = b.x; b.I.cat.position.z = b.z; } toast('MULTI MODE: COPY to add more'); }
-  applyStage();
-};
+
 
 // 植え替え
 const PLANT_LIST = [['tophat', 'TOP HAT', '#2b2b33'], ['party', 'PARTY', '#ff8fb1'], ['crown', 'CROWN', '#f2c744'], ['beanie', 'BEANIE', '#5aa9e6'], ['straw', 'STRAW', '#e8cf8a'], ['chef', 'CHEF', '#ffffff'], ['bow', 'BOW', '#ff6b9a'],
@@ -1920,7 +1923,23 @@ function removeActive() {
   insts.splice(idx, 1);
   loadState(next); applyCharUI(current, curKey); applyStage(); sfx.pluck();
 }
-ui('copyBtn').onclick = copyActive;
+ui('copyBtn').onclick = () => {
+  if (mode === 'place' && selectedItem && selectedItem.o.parent) {
+    const source = selectedItem;
+    const duplicate = source.o.clone(true);
+    duplicate.position.x += 0.18;
+    source.o.parent.add(duplicate);
+    const base = Float32Array.from(source.base);
+    base[0] += 0.18;
+    const ctr = Array.from(source.ctr); ctr[0] += 0.18;
+    const rider = { o: duplicate, base, ctr, bind: bindPoints(ctr) };
+    riders.push(rider);
+    duplicate.traverse(o => { if (o.isMesh) { o.frustumCulled = false; current.rt.leafMeshes.push(o); } });
+    selectedItem = rider; syncInst(); sfx.sprout(); toast('ITEM COPIED');
+    return;
+  }
+  copyActive();
+};
 // 全員が画面に入るようにカメラを引く
 function fitView(L) {
   let x0 = 1e9, x1 = -1e9, y1 = 0, z1 = -1e9;
@@ -2049,7 +2068,7 @@ renderer.setAnimationLoop(() => {
   // 引っ張り：離したら行きすぎながら戻る
   if (pull.active) {
     if (!pull.held && pull.relax) {   // RELAX：ゆっくり動きだして、なめらかに元の形へ（最初はほとんど動かない）
-      if (!pull.rl) { pull.rl = { t: 0, o0: pull.off.clone(), dur: Math.max(1, RET.T) }; pull.vel.set(0, 0, 0); }
+      if (!pull.rl) { pull.rl = { t: 0, o0: pull.off.clone(), dur: 4 }; pull.vel.set(0, 0, 0); }
       pull.rl.t += dt;
       const u = Math.min(pull.rl.t / pull.rl.dur, 1), e = u * u * (3 - 2 * u);
       pull.off.copy(pull.rl.o0).multiplyScalar(1 - e);
