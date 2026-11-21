@@ -106,6 +106,106 @@ jobs:
             await page.waitForFunction(() => !document.getElementById('bakeBtn').dataset.refining, {timeout:15000});
             await page.click('#undo');
             console.log('PASS: same-task drag and BAKE starts subtle post-cure refinement, completes, and undo works');
+            // User-requested interaction regression: controls removed, separate copies,
+            // selection pointer, lighting, patterns, photo crop/paste and multi-touch bake.
+            const retired = await page.evaluate(() =>
+              ['delBtn','rowBtn','stackBtn','poke'].filter(id=>document.getElementById(id)));
+            if (retired.length) throw new Error('Retired controls still in DOM: '+retired);
+            if (await page.$eval('#mochi',el=>el.textContent) !== 'おもち')
+              throw new Error('Mochi control was not renamed');
+            await page.click('#copyBtn');
+            await page.waitForFunction(() =>
+              document.getElementById('cnt').textContent.startsWith('2 /') &&
+              !document.getElementById('selectedArrow').hidden &&
+              document.getElementById('modeBtn').dataset.m==='move',
+              {timeout:15000});
+            const copyInfo=await page.$eval('#selectedArrow', el=>({
+              text:el.textContent,pos:el.dataset.worldPosition
+            }));
+            if (!copyInfo.pos || copyInfo.pos==='0.00,0.00')
+              throw new Error('Copy not spawned elsewhere: '+JSON.stringify(copyInfo));
+            await page.click('#tMore');
+            await page.$eval('#lightX', el=>{el.value='-4';el.dispatchEvent(new Event('input',{bubbles:true}));});
+            await page.$eval('#lightY', el=>{el.value='10';el.dispatchEvent(new Event('input',{bubbles:true}));});
+            await page.$eval('#lightZ', el=>{el.value='-2';el.dispatchEvent(new Event('input',{bubbles:true}));});
+            await page.click('#colorBtn');
+            await page.click('#patternDots');
+            if (!await page.$eval('#patternDots',el=>el.classList.contains('on')))
+              throw new Error('Pattern selection did not apply');
+            await page.evaluate(async()=>{
+              const input=document.getElementById('photoTextureInput');
+              const c=document.createElement('canvas');c.width=c.height=20;
+              const ctx=c.getContext('2d');ctx.fillStyle='#db465b';ctx.fillRect(0,0,20,20);
+              const blob=await new Promise(resolve=>c.toBlob(resolve,'image/png'));
+              const list=new DataTransfer();
+              list.items.add(new File([blob],'local-photo.png',{type:'image/png'}));
+              input.files=list.files;input.dispatchEvent(new Event('change',{bubbles:true}));
+            });
+            await page.waitForFunction(() => !document.getElementById('cropDialog').hidden);
+            await page.$eval('#cropZoom',el=>{el.value='1.5';el.dispatchEvent(new Event('input',{bubbles:true}));});
+            await page.click('#cropApply');
+            await page.waitForFunction(() => document.getElementById('cropDialog').hidden);
+            const pasted=await page.evaluate(() => {
+              const cv=document.getElementById('c'),rect=cv.getBoundingClientRect();
+              const arrow=document.getElementById('selectedArrow').getBoundingClientRect();
+              for(const yoff of [65,90,110,135,45,155])
+                for(const xoff of [0,-45,45,-85,85]) {
+                  cv.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,
+                    pointerId:74,pointerType:'touch',buttons:1,
+                    clientX:arrow.left+arrow.width/2+xoff,
+                    clientY:arrow.top+arrow.height/2+yoff}));
+                  if(document.getElementById('toast').textContent==='しゃしんを はりました')
+                    return {ok:true,xoff,yoff};
+                }
+              return {ok:false,arrow:[arrow.left,arrow.top],canvas:[rect.width,rect.height],
+                toast:document.getElementById('toast').textContent};
+            });
+            if (!pasted.ok) throw new Error('Photo cutout not placed: '+JSON.stringify(pasted));
+            // Switch from MOVE through CAMERA to STRETCH.
+            await page.click('#modeBtn');
+            await page.click('#modeBtn');
+            await page.waitForFunction(() => document.getElementById('modeBtn').dataset.m==='sculpt');
+            const multiStart=await page.evaluate(() => {
+              const cv=document.getElementById('c'),a=document.getElementById('selectedArrow').getBoundingClientRect();
+              const save=cv.setPointerCapture,captured=[];
+              cv.setPointerCapture=id=>captured.push(id);
+              const ptr=(type,id,x,y)=>new PointerEvent(type,{bubbles:true,pointerType:'touch',
+                pointerId:id,buttons:1,clientX:x,clientY:y});
+              try{
+                for (const dy of [85,100,65,120,45]) for(const dx of [0,-35,35,-65,65]){
+                  const x=a.left+a.width/2+dx,y=a.top+a.height/2+dy;
+                  captured.length=0;
+                  cv.dispatchEvent(ptr('pointerdown',101,x,y));
+                  if(!captured.includes(101))continue;
+                  cv.dispatchEvent(ptr('pointerdown',102,x+5,y+5));
+                  if(captured.includes(102))return {ok:true,x,y,captured:[...captured]};
+                  window.dispatchEvent(ptr('pointerup',101,x,y));
+                }
+                return {ok:false,captured};
+              }finally{cv.setPointerCapture=save;}
+            });
+            if (!multiStart.ok)throw new Error('Independent multi-touch was not captured: '+JSON.stringify(multiStart));
+            await page.waitForFunction(() =>
+              document.getElementById('c').dataset.dragPoints==='2' &&
+              document.getElementById('c').dataset.strained==='true',
+              {timeout:15000});
+            const multiBake=await page.evaluate(({x,y})=>{
+              const cv=document.getElementById('c');
+              cv.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,
+                pointerId:101,pointerType:'touch',buttons:1,clientX:x+85,clientY:y-65}));
+              cv.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,
+                pointerId:102,pointerType:'touch',buttons:1,clientX:x-70,clientY:y-45}));
+              document.getElementById('bakeBtn').click();
+              return {toast:document.getElementById('toast').textContent,
+                refining:document.getElementById('bakeBtn').dataset.refining};
+            },multiStart);
+            if (!multiBake.toast.includes('かためました'))
+              throw new Error('BAKE while holding two fingers failed: '+JSON.stringify(multiBake));
+            await page.waitForFunction(() =>
+              document.getElementById('c').dataset.dragPoints==='0' &&
+              document.getElementById('c').dataset.strained==='false',
+              {timeout:15000});
+            console.log('PASS: UI removal, separate copy, selection arrow, lights, texture pattern, photo crop/paste, two touches and held BAKE');
             if (jsErrors.length) throw new Error('Page errors: '+jsErrors.join(' / '));
             console.log('PASS: startup, WebGL canvas, default hiragana, outline off, relax, language toggle, gallery');
           } finally { await browser.close(); }

@@ -28,6 +28,12 @@ controls.autoRotateSpeed = 1.2;
 // ---- ライト（トゥーン調）
 scene.add(new THREE.HemisphereLight(0xffffff, 0xd8d4c8, 1.6));
 const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+const LIGHT_POS = { x: 3, y: 6, z: 4 };
+function updateLightPosition(cx = 0) {
+  sun.position.set(cx + LIGHT_POS.x, LIGHT_POS.y, LIGHT_POS.z);
+  sun.target.position.set(cx, 0, 0);
+  sun.target.updateMatrixWorld();
+}
 sun.position.set(3, 6, 4);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
@@ -74,6 +80,8 @@ let squish = null;                 // ぷにぷに変形用（キャラごとに
 let faceMask = null, itemAll = false;
 const PROT = 0.6;
 let colorBase = null, scorch = null, bodyCol = 0xffffff, itemCol = null;
+let patternKey = 'none';
+let pendingPhotoTexture = null;
 let curKey = 'mebae', gs = { x: 1, y: 1, z: 1 }, flashT = -1;
 let undoStack = [];
 let relaxMorph = null;
@@ -84,6 +92,21 @@ const ui = id => document.getElementById(id);
 let current = null, body, bodyGeo, basePos, face, floorY = 0, lift = 0, pos;
 let riders = [], faceVerts = [], faceCaps = [];
 let mochi = false, layout = 'free';
+const selectedArrow = document.getElementById('selectedArrow');
+function updateSelectionArrow() {
+  canvas.dataset.dragPoints = String((pull.held ? 1 : 0) + extraPulls.size);
+  canvas.dataset.strained = current && current.rt && current.rt.pulled ? 'true' : 'false';
+  if (!selectedArrow) return;
+  if (insts.length < 2 || anim.on || !curInst || !curInst.bound || !curInst.cat.visible) { selectedArrow.hidden = true; return; }
+  const b = curInst.bound;
+  const world = curInst.cat.localToWorld(new THREE.Vector3(b.cx, b.cy + b.ry + .45, b.cz));
+  const point = world.project(camera), rect = canvas.getBoundingClientRect();
+  if (point.z > 1 || Math.abs(point.x) > 1.25 || Math.abs(point.y) > 1.25) { selectedArrow.hidden = true; return; }
+  selectedArrow.hidden = false;
+  selectedArrow.dataset.worldPosition = [curInst.cat.position.x.toFixed(2),curInst.cat.position.z.toFixed(2)].join(',');
+  selectedArrow.style.left = rect.left + (point.x + 1) * rect.width / 2 + 'px';
+  selectedArrow.style.top = rect.top + (1 - point.y) * rect.height / 2 + 'px';
+}
 let SOFT = 0.55, SF = 0.6 + 1.2 * SOFT;   // やわらかさ：最初は少し柔らかめ（SF=1がこれまでの標準）
 
 // 餅形の体を作る（底はぺたっと、すそはむにっと）
@@ -374,6 +397,8 @@ function buildMebae() {
   // うれしい用：両はしがほんの少しだけ上がる
   const mouthS = strokeOnFace([[-0.06, 0.322], [-0.03, 0.305], [0, 0.3], [0.03, 0.305], [0.06, 0.322]], 0.02, 0.018);
   mouthS.visible = false; face.add(mouthS);
+  const mouthPull = strokeOnFace([[-0.07, 0.31], [-0.05, 0.27], [0, 0.245], [0.05, 0.27], [0.07, 0.31], [0.04, 0.335], [0, 0.344], [-0.04, 0.335]], 0.019, 0.022, true);
+  mouthPull.visible = false; face.add(mouthPull);
 
   // 芽（植え替えできる）：根もとのグループ(sprout)は体のこの場所に固定。中身(plant)を差し替える
   const top = onTop(0, 0.05);
@@ -437,6 +462,14 @@ function buildMebae() {
   setPlant('grass');
   return {
     mouths: [mouthN, mouthS],
+    pulled: false,
+    setPulled(v) {
+      if (this.pulled === v) return;
+      this.pulled = v;
+      mouthPull.visible = v;
+      if (v) { mouthN.visible = false; mouthS.visible = false; }
+      else mouthN.visible = !mouthS.visible;
+    },
     get root() { return sprout; },
     get leafMeshes() { return sp.mode === 'on' ? [grabBall] : []; },
     tint: tintMain,
@@ -631,22 +664,31 @@ function evalBind(b, base, out, withNormal = true) {
 const _tmp3 = new Float32Array(3);
 
 // 体の変形を「なめらかな関数」として共通化（体の頂点も顔パーツも同じ式で動かす → ずれない）
-const DF = { ox: 0, oy: 0, oz: 0, gx: 0, gy: 0, gz: 0, sig2: 1, sideK: 0, shell: 1 };
+const DF = { ox: 0, oy: 0, oz: 0, gx: 0, gy: 0, gz: 0, sig2: 1, sideK: 0, shell: 1, extra: [] };
 const _d = [0, 0, 0];
 function deformPoint(bx, by, bz, rBase, mask = 0) {
   const dx = bx - DF.gx, dy = by - DF.gy, dz = bz - DF.gz, d2 = dx * dx + dy * dy + dz * dz;
-  const plant = Math.min(Math.max((by - floorY) / 0.35, 0), 1);              // 底は床にくっついたまま
-  const front = Math.min(Math.max(bz / shapeN.C, 0), 1);                     // 横に引くと正面（顔）を少し広めに
-  const w = Math.max(Math.exp(-d2 / DF.sig2), Math.exp(-d2 / (DF.sig2 * 1.8)) * 0.35 * DF.sideK * front) * plant * (1 - PROT * mask);
+  const plant = Math.min(Math.max((by - floorY) / 0.35, 0), 1);
+  const front = Math.min(Math.max(bz / shapeN.C, 0), 1);
+  const keep = plant * (1 - PROT * mask);
+  const w = Math.max(Math.exp(-d2 / DF.sig2),
+    Math.exp(-d2 / (DF.sig2 * 1.8)) * 0.35 * DF.sideK * front) * keep;
   let x = bx + DF.ox * w, y = by + DF.oy * w, z = bz + DF.oz * w;
-  if (w > 1e-4) {
-    // めり込み防止：元の体の殻より内側に入った点は外へ押し戻す
+  let affected = w > 1e-4, shell = DF.shell, magnitude = w;
+  for (const p of DF.extra) {
+    const ox = bx - p.gx, oy = by - p.gy, oz = bz - p.gz;
+    const dis = ox * ox + oy * oy + oz * oz;
+    const h = Math.max(Math.exp(-dis / p.sig2),
+      Math.exp(-dis / (p.sig2 * 1.8)) * 0.35 * p.sideK * front) * keep;
+    x += p.ox * h; y += p.oy * h; z += p.oz * h;
+    if (h > 1e-4) { affected = true; shell = Math.min(shell, p.shell); magnitude = Math.max(magnitude, h); }
+  }
+  if (affected) {
     const xn = x / shapeN.A, yn = y / shapeN.B, zn = z / shapeN.C, r = Math.hypot(xn, yn, zn) || 1e-6;
     const bin = Math.min(89, Math.max(0, Math.floor((Math.asin(THREE.MathUtils.clamp(yn / r, -1, 1)) / Math.PI + 0.5) * 90)));
-    const rMin = Math.min(elevMax[bin], rBase * 1.2) * 0.985 * DF.shell;
+    const rMin = Math.min(elevMax[bin], rBase * 1.2) * 0.985 * shell;
     if (r < rMin) { const k = rMin / r; x *= k; y *= k; z *= k; }
-    // 床より下には絶対に出さない（輪郭線のぶんも少しすき間をあける）
-    const minY = floorY + 0.04 * Math.min(w * 3, 1);
+    const minY = floorY + 0.04 * Math.min(magnitude * 3, 1);
     if (y < minY) y = minY;
   }
   _d[0] = x; _d[1] = y; _d[2] = z;
@@ -680,13 +722,15 @@ const CHARS = {
 
 function buildCharacter(key, opts = {}) {
   finishBakeSettle();
+  patternKey = 'none';
   const c = CHARS[key] || CHARS.neko;
   if (!curInst) { curInst = { cat }; insts.push(curInst); }
+  curInst.photoStickers = [];
   if (current && current.rt && current.rt.dispose) current.rt.dispose();
   current = c; curKey = key;
   undoStack = []; gs = { x: 1, y: 1, z: 1 }; flashT = -1;
   // 状態リセット
-  pull.active = pull.held = false; pull.off.set(0, 0, 0); pull.vel.set(0, 0, 0); pullLift = 0;
+  pull.active = pull.held = false; extraPulls.clear(); primaryPointerId = null; gesturePointerId = null; pull.off.set(0, 0, 0); pull.vel.set(0, 0, 0); pullLift = 0;
   jump.phase = 'idle'; jump.y = 0; jump.vy = 0;
   for (const k in spring) spring[k] = 0;
   controls.enabled = true;
@@ -722,7 +766,7 @@ function buildCharacter(key, opts = {}) {
       m.visible = false; face.add(m); brows.push(m);
     }
     const [mN, mS] = current.rt.mouths;
-    current.rt.setSmile = v => { if (mS.visible !== v) { mS.visible = v; mN.visible = !v; } };
+    current.rt.setSmile = v => { if (current.rt.pulled) return; if (mS.visible !== v) { mS.visible = v; mN.visible = !v; } };
     current.rt.setBrow = v => { if (brows[0].visible !== v) brows.forEach(m => m.visible = v); };
   }
 
@@ -899,6 +943,18 @@ const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 // 引っ張り：つかんだ点・引っ張り量(ローカル)・速度
 const pull = { active: false, held: false, grab: new THREE.Vector3(), off: new THREE.Vector3(), vel: new THREE.Vector3(),
                plane: new THREE.Plane(), startW: new THREE.Vector3() };
+const extraPulls = new Map(); // Additional independent touch points on the selected んちょ.
+let primaryPointerId = null, gesturePointerId = null;
+function setGrabOffset(g, e) {
+  setNdc(e);
+  const pt = ray.ray.intersectPlane(g.plane, new THREE.Vector3());
+  if (!pt) return;
+  const from = body.worldToLocal(g.startW.clone()), to = body.worldToLocal(pt);
+  const offset = to.sub(from).add(g.startOff);
+  const len = offset.length(), cap = (offset.y > 0 ? 2.2 : 1.4) * (0.7 + 0.3 * SF);
+  if (len > 0) offset.multiplyScalar(cap * Math.tanh(len / cap) / len);
+  g.off.copy(offset);
+}
 
 function setNdc(e) {
   const r = canvas.getBoundingClientRect();
@@ -920,8 +976,34 @@ function placeItem() {
   evalBind(r.bind, r.base, _tmp3, false); r.o.position.fromArray(_tmp3);
 }
 canvas.addEventListener('pointerdown', e => {
-  if (anim.on || mode === 'camera') return;               // 鑑賞中・カメラモード中は引っぱらない
+  if (anim.on || mode === 'camera') return;
+  // Each new fingertip gets its own local anchor; the first keeps its pose
+  // even while another finger touches the bake button outside the canvas.
+  if (mode === 'sculpt' && (pull.held || extraPulls.size)) {
+    if (e.pointerId === primaryPointerId || extraPulls.has(e.pointerId)) return;
+    setNdc(e);
+    const hit = ray.intersectObject(body, false)[0];
+    if (!hit || extraPulls.size >= 3) return;
+    const g = { grab: body.worldToLocal(hit.point.clone()), startW: hit.point.clone(),
+      startOff: new THREE.Vector3(), off: new THREE.Vector3(), n: hit.face.normal.clone(),
+      plane: new THREE.Plane() };
+    g.plane.setFromNormalAndCoplanarPoint(camera.getWorldDirection(new THREE.Vector3()).negate(), hit.point);
+    extraPulls.set(e.pointerId, g);
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+    return;
+  }
   setNdc(e);
+  if (pendingPhotoTexture) {
+    const all = insts.filter(i=>i.cat.visible);
+    const tapped = ray.intersectObjects(all.map(i=>i.body),false)[0];
+    if (tapped && tapped.object.userData.inst !== curInst) {
+      selectInst(tapped.object.userData.inst);
+      setNdc(e);
+    }
+    const hit = ray.intersectObject(body, false)[0];
+    if (hit) { addPhotoSticker(hit, pendingPhotoTexture); pendingPhotoTexture = null; toast('しゃしんを はりました'); }
+    return;
+  }
   {   // 重なっている中から、さわった子を選ぶ
     const vis = insts.filter(i => i.cat.visible);
     if (vis.length > 1) { const hh = ray.intersectObjects(vis.map(i => i.body), false)[0]; if (hh && hh.object.userData.inst !== curInst) selectInst(hh.object.userData.inst); }
@@ -932,12 +1014,12 @@ canvas.addEventListener('pointerdown', e => {
     if (!bodyHit && !itemHits.length) return;
     if (itemHits.length && (!bodyHit || itemHits[0].distance < bodyHit.distance)) {
       selectedItem = riders.find(r => { let p = itemHits[0].object; while (p) { if (p === r.o) return true; p = p.parent; } return false; }) || null;
-      if (selectedItem) { pushUndo(); pl = true; controls.enabled = false; canvas.setPointerCapture(e.pointerId); placeItem(); }
+      if (selectedItem) { pushUndo(); pl = true; gesturePointerId = e.pointerId; controls.enabled = false; canvas.setPointerCapture(e.pointerId); placeItem(); }
     } else {
       const p = ray.ray.intersectPlane(floorPlane, new THREE.Vector3()); if (!p) return;
       mv = { dx: cat.position.x - p.x, dz: cat.position.z - p.z };
       if (layout !== 'free') setFree();
-      controls.enabled = false; canvas.setPointerCapture(e.pointerId);
+      gesturePointerId = e.pointerId; controls.enabled = false; canvas.setPointerCapture(e.pointerId);
     }
     sfx.grab(); return;
   }
@@ -945,7 +1027,7 @@ canvas.addEventListener('pointerdown', e => {
     if (!ray.intersectObject(body, false)[0]) return;
     const p = ray.ray.intersectPlane(floorPlane, new THREE.Vector3()); if (!p) return;
     mv = { dx: cat.position.x - p.x, dz: cat.position.z - p.z }; if (layout !== 'free') setFree();
-    controls.enabled = false; sfx.grab(); canvas.setPointerCapture(e.pointerId);
+    gesturePointerId = e.pointerId; controls.enabled = false; sfx.grab(); canvas.setPointerCapture(e.pointerId);
     return;
   }
   // んちょめちょぽの葉っぱを先に判定
@@ -954,7 +1036,7 @@ canvas.addEventListener('pointerdown', e => {
     const lh = ray.intersectObjects(rt.leafMeshes, false)[0];
     const bh = ray.intersectObject(body, false)[0];
     if (lh && (!bh || lh.distance <= bh.distance) && rt.leafGrab(lh)) {
-      leafDrag = true;
+      leafDrag = true; gesturePointerId = e.pointerId;
       controls.enabled = false;
       sfx.grab();
       canvas.setPointerCapture(e.pointerId);
@@ -973,6 +1055,7 @@ canvas.addEventListener('pointerdown', e => {
   pull.grab.copy(localHit).sub(pull.off);
   pull.vel.set(0, 0, 0);
   pull.active = pull.held = true;
+  primaryPointerId = e.pointerId;
   sfx.grab();
   pull.n = h.face.normal.clone();
   pull.startW.copy(h.point);
@@ -983,6 +1066,8 @@ canvas.addEventListener('pointerdown', e => {
 });
 let leafPrev = 0, leafPrevT = 0;
 canvas.addEventListener('pointermove', e => {
+  if (extraPulls.has(e.pointerId)) { setGrabOffset(extraPulls.get(e.pointerId), e); return; }
+  if ((pl || mv || leafDrag) && gesturePointerId !== e.pointerId) return;
   if (pl) { setNdc(e); placeItem(); return; }
   if (mv) {
     setNdc(e); const p = ray.ray.intersectPlane(floorPlane, new THREE.Vector3());
@@ -1005,23 +1090,29 @@ canvas.addEventListener('pointermove', e => {
     leafPrev = L; leafPrevT = now;
     return;
   }
-  if (!pull.held) return;
-  setNdc(e);
-  const p = ray.ray.intersectPlane(pull.plane, new THREE.Vector3());
-  if (!p) return;
-  const a = body.worldToLocal(pull.startW.clone()), b = body.worldToLocal(p);
-  const o = b.sub(a).add(pull.startOff);
-  // 伸びすぎない（ゴムっぽく頭打ち）
-  const L = o.length(), MAX = (o.y > 0 ? 2.2 : 1.4) * (0.7 + 0.3 * SF);
-  if (L > 0) o.multiplyScalar((MAX * Math.tanh(L / MAX)) / L);
-  pull.off.copy(o);
+  if (!pull.held || e.pointerId !== primaryPointerId) return;
+  setGrabOffset(pull, e);
 });
-function release() {
-  if (pl) { pl = false; controls.enabled = true; sfx.boing(0.3); return; }
-  if (mv) { mv = null; controls.enabled = true; return; }
-  if (waitUp) { waitUp = false; controls.enabled = true; return; }
+function release(e) {
+  const pid = e && e.pointerId;
+  if (pid !== undefined) {
+    if (extraPulls.has(pid)) {
+      extraPulls.delete(pid);
+      if (!pull.held && extraPulls.size === 0) {
+        controls.enabled = true;
+        sfx.stretch(0, 0); sfx.boing(pull.off.length());
+      }
+      return;
+    }
+    if (pl || mv || waitUp || leafDrag) {
+      if (gesturePointerId !== pid) return;
+    } else if (primaryPointerId !== pid) return;
+  }
+  if (pl) { pl = false; gesturePointerId = null; controls.enabled = true; sfx.boing(0.3); return; }
+  if (mv) { mv = null; gesturePointerId = null; controls.enabled = true; return; }
+  if (waitUp) { waitUp = false; gesturePointerId = null; controls.enabled = true; return; }
   if (leafDrag) {
-    leafDrag = false;
+    leafDrag = false; gesturePointerId = null;
     controls.enabled = true;
     sfx.stretch(0, 0);
     const L = current.rt.leafRelease();
@@ -1030,25 +1121,17 @@ function release() {
     return;
   }
   if (!pull.held) return;
-  pull.held = false;
+  pull.held = false; primaryPointerId = null;
   controls.enabled = true;
-  sfx.stretch(0, 0);
-  sfx.boing(pull.off.length());
+  if (extraPulls.size > 0) return;
+  sfx.stretch(0, 0); sfx.boing(pull.off.length());
   pull.wasLifted = pull.off.y > 0.25;
-  // 離した瞬間にぷるんっ
   spring.sqV += 2 + pull.off.length() * 3;
   spring.sxV += pull.off.x * 2.5;
   spring.szV += pull.off.z * 2.5;
 }
 addEventListener('pointerup', release);
 addEventListener('pointercancel', release);
-
-document.getElementById('poke').onclick = () => {
-  sfx.poke();
-  spring.sqV -= 4.5;
-  spring.sxV += (Math.random() - 0.5) * 3;
-  spring.szV += (Math.random() - 0.5) * 2;
-};
 
 // ---- ジャンプ
 const jump = { phase: 'idle', t: 0, y: 0, vy: 0 };
@@ -1144,7 +1227,7 @@ function setAnim(on) {
     }
     dotFloor.visible = false;
     ground.position.x = 0;
-    sun.position.set(3, 6, 4); sun.target.position.set(0, 0, 0); sun.target.updateMatrixWorld();
+    updateLightPosition();
     anim.y = 0; anim.sq = 0; anim.dy = 0; anim.sh = 0; anim.shV = 0; anim.shx = 0; anim.shxV = 0; anim.spin = 0; anim.puff = 0;
     clearFx();
     if (current.rt.setEyesClosed) current.rt.setEyesClosed(false);
@@ -1604,7 +1687,7 @@ function updateAnim(dt) {
   camera.position.set(anim.camX + AF.cx + 6.4 * AF.m, AF.ty + 3.0 * AF.m, 6.6 * AF.m);
   camera.lookAt(controls.target);
   // 影と床もいっしょに
-  sun.position.set(anim.camX + 3, 6, 4); sun.target.position.set(anim.camX, 0, 0); sun.target.updateMatrixWorld();
+  updateLightPosition(anim.camX);
   ground.position.x = anim.camX;
   dotFloor.position.x = Math.floor(anim.camX / DOT) * DOT;
 }
@@ -1661,11 +1744,18 @@ function commitBases() {
   rebind(); computeBound();
 }
 function snap() {
-  return { base: basePos.slice(), fv: faceVerts.map(f => f.base.slice()), fc: faceCaps.map(c => c.base.slice()),
+  return { pattern:patternKey, stickerCount:(curInst.photoStickers||[]).length, base: basePos.slice(), fv: faceVerts.map(f => f.base.slice()), fc: faceCaps.map(c => c.base.slice()),
            rd: riders.map(r => ({ b: r.base.slice(), c: r.ctr.slice() })), gs: { ...gs }, sc: scorch.slice() };
 }
 function applySnap(s) {
   finishBakeSettle();
+  const stickers = curInst.photoStickers || [];
+  while (stickers.length > (s.stickerCount||0)) {
+    const photo = stickers.pop(), i = riders.findIndex(r=>r.o===photo);
+    if (i !== -1) riders.splice(i,1);
+    squish.remove(photo); photo.geometry.dispose(); photo.material.dispose();
+  }
+  applyBodyPattern(s.pattern || 'none');
   basePos.set(s.base);
   faceVerts.forEach((f, i) => f.base.set(s.fv[i]));
   faceCaps.forEach((c, i) => c.base.set(s.fc[i]));
@@ -1693,6 +1783,16 @@ function syncPullDeformationForBake() {
     ? THREE.MathUtils.clamp(-(o.x * n.x + o.y * n.y + o.z * n.z) / (L + 1e-6), 0, 1)
     : 0;
   DF.shell = 1 - 0.8 * inward;
+  DF.extra = [];
+  for (const p of extraPulls.values()) {
+    const off = p.off.clone(), anchor = p.grab;
+    if (anchor.y + off.y < floorY + 0.06) off.y = floorY + 0.06 - anchor.y;
+    const len = off.length(), width = (0.42 + len * 0.25) * (0.8 + 0.2 * SF);
+    const inwards = p.n ? THREE.MathUtils.clamp(-off.dot(p.n) / (len + 1e-6), 0, 1) : 0;
+    DF.extra.push({gx:anchor.x,gy:anchor.y,gz:anchor.z,
+      ox:off.x,oy:off.y,oz:off.z,sig2:width*width,
+      sideK:Math.min(Math.abs(off.x)/(len+1e-6),1),shell:1-0.8*inwards});
+  }
   refreshMesh(true);
 }
 function finishBakeSettle() {
@@ -1745,7 +1845,7 @@ function commitPose(burn) {
   finishBakeSettle();
   relaxMorph = null;
   pushUndo();
-  const hasPose = pull.active;
+  const hasPose = pull.active || extraPulls.size > 0;
   let beforeBake = null;
   if (hasPose) {
     // Preserve the last displayed frame only for the short post-bake correction.
@@ -1773,8 +1873,8 @@ function commitPose(burn) {
     faceVerts.forEach((f, i) => f.base.set(nfv[i]));
     faceCaps.forEach((c, i) => c.base.set(nfc[i]));
     riders.forEach((r, i) => { for (let k = 0; k < 3; k++) r.ctr[k] += nrd[i][k] - r.base[k]; r.base.set(nrd[i]); });
-    pull.active = pull.held = false; pull.relax = false; pull.rl = null; pull.off.set(0, 0, 0); pull.vel.set(0, 0, 0); pull.prevOff = null; pullLift = 0;
-    DF.ox = DF.oy = DF.oz = 0; DF.shell = 1;
+    pull.active = pull.held = false; extraPulls.clear(); primaryPointerId = null; gesturePointerId = null; pull.relax = false; pull.rl = null; pull.off.set(0, 0, 0); pull.vel.set(0, 0, 0); pull.prevOff = null; pullLift = 0;
+    DF.ox = DF.oy = DF.oz = 0; DF.shell = 1; DF.extra = [];
     controls.enabled = true; sfx.stretch(0, 0);
     commitBases();
   }
@@ -1883,6 +1983,7 @@ onPlucked = () => { trayOpen(true); toast('かざりを えらんでね'); };
 // ---- モード：のばす / カメラ
 let mode = 'sculpt', spinSaved = true;
 function setMode(m) {
+  if (m !== 'sculpt') { extraPulls.clear(); primaryPointerId=null; }
   if (m === mode && ui('modeBtn').dataset.init) return;
   ui('modeBtn').dataset.init = '1';
   mode = m;
@@ -1906,6 +2007,12 @@ ui('ret').oninput = e => setReturn(parseFloat(e.target.value));
 function setSoft(v) { SOFT = v; SF = 0.6 + 1.2 * v; ui('softv').textContent = v < 0.2 ? 'かたい' : v < 0.45 ? 'ふつう' : v < 0.7 ? 'やわらかい' : 'とてもやわらかい'; }
 ui('soft').oninput = e => setSoft(parseFloat(e.target.value)); ui('soft').value = SOFT; setSoft(SOFT);
 setReturn(4); ui('ret').value = 4;
+for (const [axis, id] of [['x','lightX'],['y','lightY'],['z','lightZ']]) {
+  ui(id).oninput = e => {
+    LIGHT_POS[axis] = Number(e.target.value);
+    updateLightPosition(anim.on ? anim.camX : 0);
+  };
+}
 
 // ---- 色
 const BODY_COLS = ['#ffffff', '#ffd6e0', '#d7f0d9', '#d4e6ff', '#ffe9a8'];
@@ -1933,10 +2040,146 @@ addSw('からだ', BODY_COLS, c => { bodyCol = new THREE.Color(c).getHex(); body
   addSw('かざり', ITEM_COLS, c => { itemCol = new THREE.Color(c).getHex(); applyItem(); }, all);
 }
 
+// ---- Surface patterns and locally cropped photo stickers ----
+const patternMaps = new Map();
+const patternButtons = {};
+function patternTexture(key) {
+  if (key === 'none') return null;
+  if (patternMaps.has(key)) return patternMaps.get(key);
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,128,128);
+  if (key === 'dots') {
+    ctx.fillStyle = 'rgba(45,40,60,0.34)';
+    for (let y=8;y<128;y+=24) for (let x=8;x<128;x+=24) {
+      ctx.beginPath();ctx.arc(x+(y%48?8:0),y,3.5,0,Math.PI*2);ctx.fill();
+    }
+  } else if (key === 'lines') {
+    ctx.fillStyle='rgba(55,42,65,0.24)';
+    for(let x=-128;x<256;x+=26) {ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+128,128);
+      ctx.lineTo(x+136,128);ctx.lineTo(x+8,0);ctx.fill();}
+  } else if (key === 'grain') {
+    let seed=707; const next=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
+    for(let i=0;i<3800;i++){ctx.fillStyle='rgba(60,48,50,0.18)';
+      const x=next()*128,y=next()*128;ctx.fillRect(x,y,1+next()*2,1+next()*2);}
+  }
+  const texture = new THREE.CanvasTexture(c);
+  texture.wrapS=texture.wrapT=THREE.RepeatWrapping;
+  texture.repeat.set(4,3);
+  texture.colorSpace=THREE.SRGBColorSpace;
+  texture.anisotropy=4;
+  patternMaps.set(key,texture);
+  return texture;
+}
+function applyBodyPattern(key) {
+  patternKey = key;
+  if (bodyMat) {bodyMat.map = patternTexture(key);bodyMat.needsUpdate=true;}
+  if (curInst) curInst.patternKey = key;
+  for(const [k,btn] of Object.entries(patternButtons))btn.classList.toggle('on',k===key);
+}
+const patRow=document.createElement('div');patRow.className='pattern-row';pal.appendChild(patRow);
+const patLabel=document.createElement('span');patLabel.className='lab';
+patLabel.textContent='もよう';patRow.appendChild(patLabel);
+for(const [key,id,label] of [
+  ['none','patternNone','なし'],['dots','patternDots','みずたま'],
+  ['lines','patternLines','しましま'],['grain','patternGrain','ざらざら']]) {
+  const btn=document.createElement('button');btn.type='button';btn.id=id;btn.textContent=label;
+  btn.onclick=()=>{pushUndo();applyBodyPattern(key);};
+  patternButtons[key]=btn;patRow.appendChild(btn);
+}
+const photoBtn=document.createElement('button');
+photoBtn.id='patternPhoto';photoBtn.type='button';photoBtn.textContent='しゃしんから';
+photoBtn.onclick=()=>ui('photoTextureInput').click();patRow.appendChild(photoBtn);
+applyBodyPattern('none');
+
+const cropDialog=ui('cropDialog'),cropCanvas=ui('cropCanvas'),cropCtx=cropCanvas.getContext('2d');
+const cropZoom=ui('cropZoom'),crop={image:null,dx:0,dy:0,zoom:1,pointer:null,lastX:0,lastY:0};
+function cropScale() {
+  return Math.max(224/crop.image.naturalWidth,224/crop.image.naturalHeight)*crop.zoom;
+}
+function cropClamp() {
+  const scale=cropScale(),maxX=(crop.image.naturalWidth*scale-224)/2,maxY=(crop.image.naturalHeight*scale-224)/2;
+  crop.dx=Math.max(-maxX,Math.min(maxX,crop.dx));
+  crop.dy=Math.max(-maxY,Math.min(maxY,crop.dy));
+}
+function cropDraw() {
+  if(!crop.image)return;
+  cropClamp();
+  const sc=cropScale(),w=crop.image.naturalWidth*sc,h=crop.image.naturalHeight*sc;
+  const x=160-w/2+crop.dx,y=160-h/2+crop.dy;
+  cropCtx.fillStyle='#eee';cropCtx.fillRect(0,0,320,320);
+  cropCtx.drawImage(crop.image,x,y,w,h);
+  cropCtx.fillStyle='rgba(0,0,0,.55)';
+  cropCtx.fillRect(0,0,320,48);cropCtx.fillRect(0,272,320,48);
+  cropCtx.fillRect(0,48,48,224);cropCtx.fillRect(272,48,48,224);
+  cropCtx.strokeStyle='#ffffff';cropCtx.lineWidth=3;cropCtx.strokeRect(48,48,224,224);
+}
+function cropClose() {
+  cropDialog.hidden=true;crop.image=null;crop.pointer=null;ui('photoTextureInput').value='';
+}
+ui('photoTextureInput').addEventListener('change',e=>{
+  const file=e.target.files&&e.target.files[0];
+  if(!file)return;
+  if(!file.type.startsWith('image/')) {toast('がぞうを えらんでね');return;}
+  const url=URL.createObjectURL(file),img=new Image();
+  img.onload=()=>{
+    URL.revokeObjectURL(url);
+    crop.image=img;crop.dx=crop.dy=0;crop.zoom=1;cropZoom.value='1';
+    cropDialog.hidden=false;cropDraw();
+  };
+  img.onerror=()=>{URL.revokeObjectURL(url);toast('しゃしんを よみこめません');};
+  img.src=url;
+});
+cropZoom.addEventListener('input',()=>{if(!crop.image)return;crop.zoom=Number(cropZoom.value);cropDraw();});
+cropCanvas.addEventListener('pointerdown',e=>{
+  if(!crop.image)return;
+  crop.pointer=e.pointerId;crop.lastX=e.clientX;crop.lastY=e.clientY;
+  try{cropCanvas.setPointerCapture(e.pointerId);}catch(_){}
+});
+cropCanvas.addEventListener('pointermove',e=>{
+  if(!crop.image||crop.pointer!==e.pointerId)return;
+  const factor=320/cropCanvas.getBoundingClientRect().width;
+  crop.dx+=(e.clientX-crop.lastX)*factor;crop.dy+=(e.clientY-crop.lastY)*factor;
+  crop.lastX=e.clientX;crop.lastY=e.clientY;cropDraw();
+});
+const endCrop=e=>{if(!e || crop.pointer===e.pointerId)crop.pointer=null;};
+cropCanvas.addEventListener('pointerup',endCrop);
+cropCanvas.addEventListener('pointercancel',endCrop);
+ui('cropCancel').onclick=cropClose;
+ui('cropApply').onclick=()=>{
+  if(!crop.image)return;
+  const output=document.createElement('canvas');output.width=output.height=256;
+  const ctx=output.getContext('2d');
+  const f=256/224,sc=cropScale(),w=crop.image.naturalWidth*sc,h=crop.image.naturalHeight*sc;
+  ctx.drawImage(crop.image,(160-w/2+crop.dx-48)*f,(160-h/2+crop.dy-48)*f,w*f,h*f);
+  const map=new THREE.CanvasTexture(output);map.colorSpace=THREE.SRGBColorSpace;map.anisotropy=4;
+  if(pendingPhotoTexture)pendingPhotoTexture.dispose();
+  pendingPhotoTexture=map;cropClose();
+  toast('んちょを さわって しゃしんを はってね');
+};
+function addPhotoSticker(hit, texture) {
+  finishBakeSettle();
+  const stickers=curInst.photoStickers||(curInst.photoStickers=[]);
+  if(stickers.length>=24){toast('しゃしんは 24こまでです');texture.dispose();return;}
+  pushUndo();
+  const point=body.worldToLocal(hit.point.clone()),normal=hit.face.normal.clone().normalize();
+  const sticker=new THREE.Mesh(new THREE.PlaneGeometry(.85,.85),
+    new THREE.MeshBasicMaterial({map:texture,transparent:true,side:THREE.DoubleSide,depthWrite:false,
+      polygonOffset:true,polygonOffsetFactor:-5,polygonOffsetUnits:-5}));
+  sticker.position.copy(point).addScaledVector(normal,.045);
+  sticker.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),normal);
+  sticker.frustumCulled=false;sticker.renderOrder=3;sticker.userData.photoSticker=true;
+  squish.add(sticker);
+  const anchor=sticker.position.toArray();
+  riders.push({o:sticker,base:Float32Array.from(anchor),ctr:anchor.slice(),bind:bindPoints(anchor)});
+  stickers.push(sticker);syncInst();
+}
+
 // ================= 増量モード（ステージを消すと、コピーして好きに置ける） =================
 const attached = o => { for (let p = o; p; p = p.parent) if (p === scene) return true; return false; };
 function syncInst() {
   const I = curInst;
+  I.photoStickers = I.photoStickers || []; I.patternKey = patternKey;
   I.cat = cat; I.squish = squish; I.body = body; I.bodyGeo = bodyGeo; I.basePos = basePos; I.pos = pos; I.face = face;
   I.faceVerts = faceVerts; I.faceCaps = faceCaps; I.riders = riders; I.baseNrm = baseNrm; I.baseR = baseR; I.elevMax = elevMax; I.hash = hash; I.shapeN = shapeN;
   I.colorBase = colorBase; I.scorch = scorch; I.faceMask = faceMask; I.bodyMat = bodyMat; I.inkMat = inkMat; I.floorY = floorY; I.lift = lift; I.gs = gs;
@@ -1946,7 +2189,7 @@ function loadState(I) {
   cat = I.cat; squish = I.squish; body = I.body; bodyGeo = I.bodyGeo; basePos = I.basePos; pos = I.pos; face = I.face;
   faceVerts = I.faceVerts; faceCaps = I.faceCaps; riders = I.riders; baseNrm = I.baseNrm; baseR = I.baseR; elevMax = I.elevMax; hash = I.hash; shapeN = I.shapeN;
   colorBase = I.colorBase; scorch = I.scorch; faceMask = I.faceMask; bodyMat = I.bodyMat; inkMat = I.inkMat; floorY = I.floorY; lift = I.lift; gs = I.gs;
-  current = I.current; current.rt = I.rt; bodyCol = I.bodyCol; itemCol = I.itemCol; itemAll = I.itemAll; curKey = I.key; undoStack = I.undo; ovD = I.ovD; bound = I.bound; curInst = I;
+  current = I.current; current.rt = I.rt; patternKey = I.patternKey || 'none'; bodyCol = I.bodyCol; itemCol = I.itemCol; itemAll = I.itemAll; curKey = I.key; undoStack = I.undo; ovD = I.ovD; bound = I.bound; curInst = I;
 }
 function runOn(I, fn) {
   if (I === curInst) { fn(); return; }
@@ -1964,7 +2207,7 @@ function computeBound() {
 }
 // 体・顔・芽をいまの状態（つまみ＋重なり）に合わせて作り直す
 function refreshMesh(usePull) {
-  if (!usePull) { DF.ox = DF.oy = DF.oz = 0; DF.shell = 1; }
+  if (!usePull) { DF.ox = DF.oy = DF.oz = 0; DF.shell = 1; DF.extra = []; }
   const P = pos.array, n = pos.count;
   for (let i = 0; i < n; i++) {
     const j = i * 3;
@@ -2029,7 +2272,8 @@ function applyCharUI(c, key) {
   for (const k in CHARS) document.getElementById('ch-' + k).classList.toggle('on', k === key);
 }
 function cancelPose() {
-  if (!pull.active) return;
+  if (!pull.active && extraPulls.size === 0) return;
+  extraPulls.clear(); primaryPointerId = null; gesturePointerId = null;
   pull.off.set(0, 0, 0); pull.vel.set(0, 0, 0); pull.active = pull.held = false; pull.relax = false; pull.rl = null; pullLift = 0;
   refreshMesh(false);
 }
@@ -2038,6 +2282,7 @@ function selectInst(I) {
   finishBakeSettle();
   cancelPose(); cat.position.y = lift;
   syncInst(); loadState(I);
+  applyBodyPattern(patternKey);
   applyCharUI(current, curKey);
   jump.phase = 'idle'; jump.y = 0; for (const k in spring) spring[k] = 0;
   leafDrag = false; sfx.grab();
@@ -2047,19 +2292,46 @@ function copyActive() {
   if (insts.length >= 12) { toast('12こまで ふやせます'); return; }
   cancelPose();
   const s = snap();
-  const src = { key: curKey, bodyCol, itemCol, itemAll, plant: current.rt.plantKind, px: cat.position.x, pz: cat.position.z, sy: curInst.sy || 0 };
+  const src = { key: curKey, bodyCol, itemCol, itemAll,
+    pattern:patternKey, stickers:[...(curInst.photoStickers || [])], plant: current.rt.plantKind,
+    px: cat.position.x, pz: cat.position.z, sy: curInst.sy || 0,
+    rx: curInst.bound.rx, rz: curInst.bound.rz };
   syncInst();
   cat = new THREE.Group(); scene.add(cat); squish = null; current = null;
   curInst = { cat }; insts.push(curInst);
   buildCharacter(src.key, { keep: true });
+  for (const photo of src.stickers) {
+    const sticker = photo.clone();
+    sticker.geometry = photo.geometry.clone();
+    sticker.material = photo.material.clone();
+    squish.add(sticker);
+    const anchor = sticker.position.toArray();
+    riders.push({o:sticker,base:Float32Array.from(anchor),ctr:anchor.slice(),bind:bindPoints(anchor)});
+    curInst.photoStickers.push(sticker);
+  }
   applySnap(s);
+  applyBodyPattern(src.pattern);
   bodyCol = src.bodyCol; bodyMat.color.set(bodyCol); itemCol = src.itemCol; itemAll = src.itemAll;
   const rt = current.rt;
   if (rt.plant) { if (src.plant === null) rt.clear(); else rt.plant(src.plant); if (itemCol !== null) rt.tint(itemCol, itemAll); }
-  cat.position.x = src.px; cat.position.z = src.pz + 0.03 * (insts.length - 1); curInst.sy = src.sy;   // 基本は今の位置
+  const stride = 2 * Math.max(src.rx,src.rz) + 0.65;
+  const offsets = [[stride,0],[-stride,0],[0,-stride],[0,stride],
+    [stride,-stride],[-stride,-stride],[stride,stride],[-stride,stride],
+    [stride*1.6,0],[-stride*1.6,0],[0,-stride*1.6]];
+  const taken = insts.filter(i => i !== curInst).map(i => i.cat.position);
+  let best = [src.px + stride, src.pz], bestScore = -Infinity;
+  for (const [dx,dz] of offsets) {
+    const x = src.px + dx, z = src.pz + dz;
+    if (x < -6.5 || x > 6.5 || z < -5 || z > 4) continue;
+    const score = Math.min(...taken.map(p => (p.x-x)**2 + (p.z-z)**2));
+    if (score > bestScore) { bestScore=score; best=[x,z]; }
+    if (score >= stride*stride*0.95) {best=[x,z];break;}
+  }
+  cat.position.x = best[0]; cat.position.z = best[1]; curInst.sy = 0;
   undoStack = []; updateButtons();
-  syncInst(); applyStage(); sfx.sprout(); toast('ふやしました。ならべかたを えらんでね');
-  if (layout !== 'free') arrange(layout, true);
+  syncInst(); applyStage(); setFree(); setMode('move');
+  fitView(insts.filter(i=>i.cat.visible)); sfx.sprout();
+  toast('べつの ばしょに ふやしました。うごかしてね');
 }
 function removeActive() {
   finishBakeSettle();
@@ -2104,34 +2376,12 @@ function fitView(L) {
     if (k < 1) requestAnimationFrame(step);
   })();
 }
-// 並べかた：ROW=横並び、STACK=縦積み
-function arrange(kind, quiet) {
-  const L = insts.filter(i => i.cat.visible); if (L.length < 2) { toast('さきに こを ふやしてね'); return; }
-  layout = kind; ui('rowBtn').classList.toggle('on', kind === 'row'); ui('stackBtn').classList.toggle('on', kind === 'stack');
-  cancelPose();
-  if (kind === 'row') {
-    const w = L.map(i => 2 * Math.max(i.bound.rx, i.bound.rz) + 0.12), tot = w.reduce((a, b) => a + b, 0);
-    let x = -tot / 2;
-    L.forEach((i, k) => { i.cat.position.x = x + w[k] / 2; i.cat.position.z = 0; i.sy = 0; x += w[k]; });
-  } else {
-    const b0 = L[0]; let prev = b0; b0.sy = 0; b0.cat.position.x = L.reduce((a, i) => a + i.cat.position.x, 0) / L.length; b0.cat.position.z = 0;
-    for (let k = 1; k < L.length; k++) {
-      const I = L[k], top = prev.bound.cy + prev.bound.ry + prev.lift + (prev.sy || 0), bot = I.bound.cy - I.bound.ry + I.lift;
-      I.cat.position.x = b0.cat.position.x; I.cat.position.z = b0.cat.position.z + 0.02 * k;
-      I.sy = Math.max(0, top - bot - 0.1 * (I.bound.ry * 2)); prev = I;
-    }
-  }
-  for (const I of L) I.ovDirty = true;
-  fitView(L);
-  if (!quiet) { sfx.sprout(); toast(kind === 'row' ? 'ならべました' : 'かさねました'); }
-}
-function setFree() { layout = 'free'; ui('rowBtn').classList.remove('on'); ui('stackBtn').classList.remove('on'); }
-ui('rowBtn').onclick = () => layout === 'row' ? (setFree(), toast('じゆうに おけます')) : arrange('row');
-ui('stackBtn').onclick = () => layout === 'stack' ? (setFree(), toast('じゆうに おけます')) : arrange('stack');
+// Place each copy manually; the previous row/stack layout buttons were removed.
+function setFree() { layout = 'free'; }
 // もちモード：目・鼻・口を消す（全員）
 function applyMochi() { for (const I of insts) if (I.face) I.face.visible = !mochi; if (face) face.visible = !mochi; ui('mochi').classList.toggle('on', mochi); }
 ui('mochi').onclick = () => { mochi = !mochi; applyMochi(); sfx.poke(); toast(mochi ? 'かおを かくしました' : 'かおを もどしました'); };
-ui('delBtn').onclick = removeActive;
+
 /* YAWARAKA -> WHERE WHICH: capture only the selected character as a transparent sprite. */
 const YY_GALLERY_KEY="brain-friends-gallery-v1";
 function yySnapshot(){
@@ -2268,6 +2518,11 @@ renderer.setAnimationLoop(() => {
   m.multiply(shear).multiply(new THREE.Matrix4().makeTranslation(0, -floorY, 0));
   squish.matrix.copy(m);
   squish.matrixWorldNeedsUpdate = true;
+  if (current.rt.setPulled && !anim.on) {
+    const strained = pull.held || extraPulls.size > 0;
+    current.rt.setPulled(strained);
+    current.rt.setBrow(strained);
+  }
   if (current.rt.update) current.rt.update(dt, { shx, shz, sy: syC, vy: jump.phase === 'air' ? jump.vy : 0, pullX: pull.active ? pull.off.x : 0 });
   if (anim.on) for (const I of insts) {   // アクションは全員いっしょに
     if (I === curInst || !I.cat.visible) continue;
@@ -2289,7 +2544,7 @@ renderer.setAnimationLoop(() => {
       const u = Math.min(pull.rl.t / pull.rl.dur, 1), e = u * u * (3 - 2 * u);
       pull.off.copy(pull.rl.o0).multiplyScalar(1 - e);
       if (u >= 1) { pull.off.set(0, 0, 0); pull.rl = null; spring.sqV += 2.5; }
-    } else if (!pull.held && !RET.hold) {
+    } else if (!pull.held && extraPulls.size === 0 && !RET.hold) {
       const K2 = RET.k, D2 = RET.d;
       const acc = pull.off.clone().multiplyScalar(-K2).addScaledVector(pull.vel, -D2);
       pull.vel.addScaledVector(acc, dt);
@@ -2297,7 +2552,7 @@ renderer.setAnimationLoop(() => {
     }
     const lifted = Math.max(0, pull.off.y) * (RET.hold ? 0 : 0.5);          // 上に引くと体ごと持ち上がる
     pullLift = lifted;
-    if (pull.held) {
+    if (pull.held || extraPulls.size > 0) {
       const prev = pull.prevOff || pull.off.clone();
       sfx.stretch(pull.off.length(), prev.distanceTo(pull.off) / Math.max(dt, 1e-3));
       pull.prevOff = pull.off.clone();
@@ -2305,17 +2560,8 @@ renderer.setAnimationLoop(() => {
       pull.prevOff = null;
       if (pull.wasLifted && pull.off.y < 0) { sfx.land(); pull.wasLifted = false; }
     }
-    const o = pull.off.clone(); o.y -= lifted;
-    const g = pull.grab;
-    // つまんだ所は床より下へは行かない（離した後のはね返りでも）
-    if (g.y + o.y < floorY + 0.06) o.y = floorY + 0.06 - g.y;
-    const L = o.length();
-    const sig = (0.42 + L * 0.25) * (0.8 + 0.2 * SF), sig2 = sig * sig;
-    DF.ox = o.x; DF.oy = o.y; DF.oz = o.z; DF.gx = g.x; DF.gy = g.y; DF.gz = g.z;
-    DF.sig2 = sig2; DF.sideK = Math.min(Math.abs(o.x) / (L + 1e-6), 1);
-    { const n = pull.n; const inw = n ? THREE.MathUtils.clamp(-(o.x * n.x + o.y * n.y + o.z * n.z) / (L + 1e-6), 0, 1) : 0; DF.shell = 1 - 0.8 * inw; }   // 押しこむときは凹ませてよい
-    refreshMesh(true);
-    if (!pull.held && pull.off.length() < 0.002 && pull.vel.length() < 0.01) {
+    syncPullDeformationForBake(); // Same deformation used by the live preview and BAKE.
+    if (!pull.held && extraPulls.size === 0 && pull.off.length() < 0.002 && pull.vel.length() < 0.01) {
       pullLift = 0; pull.active = false; pull.relax = false; pull.rl = null;
       refreshMesh(false);
     }
@@ -2356,6 +2602,7 @@ renderer.setAnimationLoop(() => {
     camera.position.add(sh);
     shake *= Math.pow(0.0005, dt);   // すぐ収まる
   }
+  updateSelectionArrow();
   renderer.render(scene, camera);
   if (sh) camera.position.sub(sh);
 });
