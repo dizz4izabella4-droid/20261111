@@ -41,6 +41,7 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;overscroll-behavi
 @keyframes bl{from{opacity:1}to{opacity:.45}}
 #cmdp{background:rgba(5,8,20,.82);border-top:1px solid rgba(108,255,154,.4);display:flex;flex-direction:column;justify-content:center;gap:10px;padding:14px 18px;box-sizing:border-box;pointer-events:auto}
 .port #cmdp{left:0;right:0;bottom:0;height:33%}
+.port #cmdp.with-mic{justify-content:flex-start;padding-top:10px;gap:6px}
 .land #cmdp{right:0;top:0;bottom:0;width:40%;border-top:0;border-left:1px solid rgba(108,255,154,.4)}
 #cmdtext{font:700 22px/1.25 ui-monospace,Menlo,monospace;color:#6cff9a;text-align:center}
 #cmdhint{font:700 12px ui-monospace,Menlo,monospace;letter-spacing:.12em;text-align:center;opacity:.85}
@@ -1186,7 +1187,11 @@ const CORE = (function () {
     setUI('title', ph === 'TITLE' && !ALERT, v => el.title.classList.toggle('hide', !v));
     setUI('end', ph === 'END', v => el.end.classList.toggle('hide', !v));
     setUI('cmdp', ph === 'CMD', v => el.cmdp.classList.toggle('hide', !v));
-    setUI('vmicbtn', S.sub === 'YOURTURN' && !AUTO, v => { $('vmicbtn').classList.toggle('hide', !v); if (!v) { MICV.press = false; $('vmicbtn').classList.remove('down'); } });
+    setUI('vmicbtn', S.sub === 'YOURTURN' && !AUTO, v => {
+      $('vmicbtn').classList.toggle('hide', !v);
+      el.cmdp.classList.toggle('with-mic', v);
+      if (!v) { MICV.press = false; $('vmicbtn').classList.remove('down'); }
+    });
     setUI('cmdbtn', S.sub === 'PREVIEW', v => { $('cmdbtn').style.visibility = v ? 'visible' : 'hidden'; });
     setUI('hud', ph !== 'TITLE' && ph !== 'DEAD', v => { el.unit.classList.toggle('hide', !v); el.gaugeBox.classList.toggle('hide', !v); });
     setUI('btns', ph !== 'TITLE' && ph !== 'END' && ph !== 'CMD' && ph !== 'DEAD' && S.sub !== 'CRASH', v => { el.siren.classList.toggle('hide', !v); el.lights.classList.toggle('hide', !v); });
