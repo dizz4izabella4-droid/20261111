@@ -381,7 +381,7 @@ jobs:
                 softness:document.getElementById('soft').getClientRects().length>0};
             });
             if(positions.tool.left>20 || positions.tabs.left>20 ||
-               positions.copy.right<window.innerWidth-24 ||
+               positions.copy.right<390-24 ||
                positions.characters.left>20 || positions.characters.top>25 ||
                !positions.softness)
               throw new Error('Mobile left/right control layout broken: '+JSON.stringify(positions));
