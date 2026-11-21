@@ -648,6 +648,9 @@
     box-shadow: 0 0 18px var(--glow);
   }
   .move-btn:active, .num-btn:active, .menu-btn:active { transform: scale(0.96); }
+  /* 数字ボタンは押しても光らせない（タッチ後に押した表示が残らないように） */
+  .num-btn:hover, .num-btn:active, .num-btn:focus { background: transparent; color: var(--main); box-shadow: none; outline: none; }
+  .num-btn:active { transform: none; }
   .slot-btn.selected { background: var(--main); color: var(--bg); }
   .goddess-btn:disabled { box-shadow: none; }
   .overlay { background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--main) 12%, var(--bg)) 0%, var(--bg) 70%); }
@@ -1688,12 +1691,12 @@
   // === 難易度（開始時に選ぶ）：廊下の長さ（クリアまでの歩数）と制限時間の倍率 ===
   const ALL_IDS = ['lumi', 'fers', 'roza', 'miri', 'lyum', 'sylph', 'nerei', 'volta'];
   const DIFFS = [
-    { name: '激甘', len: 4,  time: 2.0, easy: true, roster: ALL_IDS.slice(0, 5), desc: '廊下 4マス ／ 一桁＋一桁・計算は1回だけ ／ 制限時間 ×2.0 ／ 仲間の女神 5人（呼ぶかは自由）' },
-    { name: '甘口', len: 6,  time: 1.5, roster: ALL_IDS.slice(0, 5), desc: '廊下 6マス ／ 制限時間 ×1.5 ／ 仲間の女神 5人（呼ぶかは自由）' },
-    { name: '中辛', len: 10, time: 1.0, roster: ALL_IDS.slice(0, 5), desc: '廊下 10マス ／ 制限時間 ×1.0 ／ 仲間の女神 5人（呼ぶかは自由）' },
-    { name: '辛口', len: 14, time: 0.8, roster: ALL_IDS.slice(0, 5), desc: '廊下 14マス ／ 制限時間 ×0.8 ／ 仲間の女神 5人（呼ぶかは自由）' },
-    { name: 'デス', len: 14, time: 0.8, roster: [], solo: true, desc: '廊下 14マス ／ 制限時間 ×0.8 ／ 女神なしのソロ ／ HP1・復活3回' },
-    { name: '電卓', len: 10, time: 0.8, calc: true, roster: ALL_IDS.slice(0, 5), desc: '廊下 10マス ／ 4〜5桁の四則演算 ／ 制限時間 ×0.8 ／ 仲間の女神 5人（呼ぶかは自由）' }
+    { name: '激甘', len: 2,  time: 2.0, easy: true, roster: ALL_IDS.slice(0, 5), desc: '廊下 2マス ／ 一桁＋一桁・計算は1回だけ ／ 制限時間 ×2.0 ／ 仲間の女神 5人（呼ぶかは自由）' },
+    { name: '甘口', len: 3,  time: 1.5, roster: ALL_IDS.slice(0, 5), desc: '廊下 3マス ／ 制限時間 ×1.5 ／ 仲間の女神 5人（呼ぶかは自由）' },
+    { name: '中辛', len: 5, time: 1.0, roster: ALL_IDS.slice(0, 5), desc: '廊下 5マス ／ 制限時間 ×1.0 ／ 仲間の女神 5人（呼ぶかは自由）' },
+    { name: '辛口', len: 7, time: 0.8, roster: ALL_IDS.slice(0, 5), desc: '廊下 7マス ／ 制限時間 ×0.8 ／ 仲間の女神 5人（呼ぶかは自由）' },
+    { name: 'デス', len: 7, time: 0.8, roster: [], solo: true, desc: '廊下 7マス ／ 制限時間 ×0.8 ／ 女神なしのソロ ／ HP1・復活3回' },
+    { name: '電卓', len: 5, time: 0.8, calc: true, roster: ALL_IDS.slice(0, 5), desc: '廊下 5マス ／ 4〜5桁の四則演算 ／ 制限時間 ×0.8 ／ 仲間の女神 5人（呼ぶかは自由）' }
   ];
   let roster = ALL_IDS.slice(0, 5), soloMode = false, easyMode = false;   // 仲間になっている女神（召喚できる顔ぶれ）／デス（ソロ）
   let corridorLen = 10, timeScale = 1, diffName = '中辛', calcMode = false;
@@ -2191,7 +2194,7 @@
     // 敵HP＝「倒すのに必要な計算数」が一定になるよう、主人公の攻撃力から逆算する
     // （1回の計算で平均 ASSUMED_HITS 回ヒットする想定。calcs は敵ごとの目標計算数）
     const avgHit = state.hero.atk + 1;           // 1ヒットの平均ダメージ（atk + 0〜2）
-    const enemyHp = Math.max(1, Math.round(avgHit * ASSUMED_HITS * base.calcs));
+    const enemyHp = Math.max(1, Math.round(avgHit * ASSUMED_HITS * base.calcs * 2));   // 敵の体力は2倍
     state.enemy = {
       name: base.name,
       hp: enemyHp,
@@ -3792,7 +3795,7 @@
   });
 
   document.querySelectorAll('.num-btn').forEach(btn => {
-    btn.onclick = () => handleNumInput(btn.dataset.key);
+    btn.onclick = () => { handleNumInput(btn.dataset.key); btn.blur(); };
   });
 
   function heroStats() {
