@@ -3892,7 +3892,11 @@ function stepRelaxMorph(){
   const r=relaxMorph;
   if(!r)return;
   if(xe!==r.actor||Q.held||L.on){relaxMorph=null;return}
-  const t=Math.min(1,(performance.now()-r.start)/r.duration),k=t*t*(3-2*t),rev=1-k;
+  const now=performance.now();
+  const t=Math.min(1,(now-r.start)/r.duration);
+  if(t<1&&r.last&&now-r.last<38)return; // Limit mesh rebinding cost on mobile.
+  r.last=now;
+  const k=t*t*(3-2*t),rev=1-k;
   for(let n=0;n<Yt.length;n++)Yt[n]=r.from.base[n]*rev+r.target.base[n]*k;
   for(let j=0;j<vn.length;j++)for(let n=0;n<vn[j].base.length;n++)
     vn[j].base[n]=r.from.fv[j][n]*rev+r.target.fv[j][n]*k;
