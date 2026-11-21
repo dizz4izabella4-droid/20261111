@@ -692,12 +692,19 @@
   #equip-fig .eq { fill: color-mix(in srgb, currentColor 22%, transparent); stroke: currentColor; stroke-width: 1.4; stroke-linejoin: round; filter: drop-shadow(0 0 3px currentColor); }
   #equip-fig .eq.broken { stroke-dasharray: 3 2; opacity: 0.35; fill: none; filter: none; }
   #equip-fig .eq.line { fill: none; }
-  #rec-body { width: min(92vw, 520px); max-height: 54vh; overflow-y: auto; font-size: 0.78rem; margin-bottom: 8px; }
+  #rec-body { width: min(92vw, 520px); max-height: 54vh; overflow-y: auto; overflow-x: auto; font-size: 0.78rem; margin-bottom: 8px; }
   #rec-body table { width: 100%; border-collapse: collapse; }
   #rec-body th, #rec-body td { border-bottom: 1px solid color-mix(in srgb, var(--main) 30%, transparent); padding: 4px 4px; text-align: center; white-space: nowrap; }
   #rec-body th { opacity: 0.7; font-weight: normal; position: sticky; top: 0; background: var(--bg); }
   #rec-body .tot { display: grid; grid-template-columns: 1fr auto; gap: 6px 14px; padding: 4px 8px; }
   #rec-body .tot b { text-align: right; }
+  #rec-body h4 { margin: 12px 0 4px; font-size: 0.8rem; opacity: 0.75; font-weight: normal; letter-spacing: 0.12em; }
+  #rec-body canvas { width: 100%; height: 104px; display: block; }
+  #rec-body .ach { padding: 6px 8px; border-bottom: 1px solid color-mix(in srgb, var(--main) 30%, transparent); text-align: left; }
+  #rec-body .ach.off { opacity: 0.45; }
+  #rec-body .ach.can { cursor: pointer; }
+  #rec-body .ach.sel { outline: 1px solid var(--main); }
+  #rec-body .ach small { display: block; opacity: 0.75; }
   .diff-btn { display: block; width: min(86vw, 320px); margin: 5px 0; text-align: center; }
   .diff-btn small { display: block; font-size: 0.68rem; font-weight: normal; opacity: 0.8; margin-top: 2px; letter-spacing: 0; }
   .diff-btn.death { color: var(--alert); border-color: var(--alert); }
@@ -1748,6 +1755,7 @@
 
   // === 初期化・リスタート ===
   function resetGame() {
+    state.run = null;
     clearDeath();
     state.guard = null;
     holdWalk = true;   // 開始は停止状態。「前へ進む」で動き出す
@@ -1961,7 +1969,7 @@
     resultOpen = true;
     state.paused = true;
     document.getElementById('result-stats').innerHTML =
-      `難易度: ${diffName}<br>踏破 ${state.clears} 回目<br>到達LV: ${state.hero.lv}<br>歩数: ${state.steps}歩<br>撃破: ${state.kills || 0}体<br>HP 全回復<br>周回: 今回 ${state.clears} 周目 ／ 通算 ${totalNo} 周<br>称号: ${titleOf(totalNo)}<br>入手: ${gain}<br>仲間: ${joinTxt}`;
+      `難易度: ${diffName}<br>踏破 ${state.clears} 回目<br>到達LV: ${state.hero.lv}<br>歩数: ${state.steps}歩<br>撃破: ${state.kills || 0}体<br>HP 全回復<br>周回: 今回 ${state.clears} 周目 ／ 通算 ${totalNo} 周<br>称号: ${curTitle(totalNo)}<br>入手: ${gain}<br>仲間: ${joinTxt}${state.lastBest && state.lastBest.length ? '<br>自己ベスト更新: ' + state.lastBest.join(' ／ ') : ''}`;
     // 先にエンディング（スタッフロール → fin.）。終わったらリザルトを出す
     setTimeout(() => startEnding(() => playClearDeath(() => { document.getElementById('result-screen').style.display = 'flex'; })), 900);
   }
@@ -2145,6 +2153,7 @@
       shape: base.shape
     };
 
+    dexNote(base.name, 'seen');
     addLog(`${state.enemy.name} が現れた！`);
     if (!say('enemy', 0.5)) say('start', 0.6);
     beginBattle();
@@ -2152,6 +2161,7 @@
 
   // 召喚画面を出さず、現在のパーティのまま戦闘へ
   function beginBattle() {
+    noteSortie();
     state.mode = 'BATTLE';
     switchPad('BATTLE');
     updateUI();
@@ -2298,6 +2308,7 @@
   }
   function startBattle() {
     SFX.beep();
+    noteSortie();
     // 現在の編成を記憶
     state.lastFormation = state.party.map(m => {
       if (!m) return null;
@@ -2391,6 +2402,7 @@
     SFX.correct();
     fxGhost('ok', `${state.problem.text} = ${state.problem.answer}`);
     fxStreakSet(fx.streak + 1);
+    logAnswer('ok');
     const ratio = state.problem.remainTime / state.problem.maxTime;
     let hits = 1;
     let speedLabel = '通常';
@@ -2450,6 +2462,7 @@
   function startGuard() {
     if (state.guard) return;
     state.guard = { elapsed: 0 };
+    logAnswer('timeout');
     const tbar = document.getElementById('timer-bar');
     tbar.style.width = '0%';
     SFX.guardReady();
@@ -2477,6 +2490,7 @@
     volta: ["ほら、泣くんじゃないわよ！ あんたは何も悪くないわ！", "雷は消えても、音は残るのよ。……忘れないでね", "よくやったわ、あんた。本当に、よくやったのよ", "わたしが守れたんだから、胸を張りなさい！", "怒鳴ってばかりでごめんね。……あんたが、大事だったわ", "叱らないわよ、今日は。ゆっくり、休みなさい", "前を向きなさい。あんたなら、きっと大丈夫よ", "雲の上で、見てるわよ。ずっとね", "ありがとう。あんたの隣、悪くなかったわ", "また会いましょう。そのときは、雷を鳴らしてあげる"],
   };
   function resolvePlayerFail(reason) {
+    if (reason === '計算ミス！') logAnswer('miss');
     SFX.hit(); SFX.miss();
     fxGhost('ng', `${state.problem.text} = ${state.problem.input || '?'}`);
     fxStreakSet(0);
@@ -2492,6 +2506,7 @@
     const best = guardians.filter(m => m.hp === topHp);
     const target = guardians.length ? best[Math.floor(Math.random() * best.length)] : state.party.find(m => m && m.isHero);
     const dmg = Math.max(1, state.enemy.atk + Math.floor(Math.random() * 3) - 1);
+    if (!target.isHero) goddessNote(target.id, 'hit');
 
     const guard = target.isHero ? (state.equip || []).find(id => !state.broken[id]) : null;
     if (guard) {
@@ -2689,6 +2704,7 @@
     addLog(`${state.enemy.name} を撃破！ EXP ${gainedExp} を獲得。`);
     state.hero.exp += gainedExp;
     state.kills = (state.kills || 0) + 1;
+    dexNote(state.enemy.name, 'killed');
     setTimeout(SFX.win, 350);
     let spoke = false;
 
@@ -3802,18 +3818,88 @@
   let memRec = null;
   function loadRec() {
     if (memRec) return memRec;
-    try { const r = JSON.parse(localStorage.getItem(REC_KEY)); if (r && r.laps && r.tot) { r.inv = r.inv || { equip: [], broken: {}, potions: 0 }; r.inv.joined = r.inv.joined || []; memRec = r; return r; } } catch (e) {}
-    memRec = { laps: [], tot: { clears: 0, kills: 0, steps: 0, bestLv: 0, byDiff: {} }, inv: { equip: [], broken: {}, potions: 0, joined: [] } };
+    try { const r = JSON.parse(localStorage.getItem(REC_KEY)); if (r && r.laps && r.tot) { r.inv = r.inv || { equip: [], broken: {}, potions: 0 }; r.inv.joined = r.inv.joined || []; memRec = recFix(r); return r; } } catch (e) {}
+    memRec = recFix({ laps: [], tot: { clears: 0, kills: 0, steps: 0, bestLv: 0, byDiff: {} }, inv: { equip: [], broken: {}, potions: 0, joined: [] } });
     return memRec;
   }
+  // 暗算の記録（回答ごとの集計）。ok=正解 miss=計算ミス timeout=時間切れ／sumMs=正解の所要時間の合計／fastest=最速（ms）
+  function recFix(r) {
+    r.stats = r.stats || {};
+    ['ok', 'miss', 'timeout', 'sumMs', 'fastest', 'maxStreak'].forEach(k => { r.stats[k] = r.stats[k] || 0; });
+    r.stats.byOp = r.stats.byOp || {}; r.stats.byDiff = r.stats.byDiff || {}; r.stats.byDay = r.stats.byDay || {};
+    r.dex = r.dex || {}; r.byGoddess = r.byGoddess || {}; r.ach = r.ach || {}; r.titleSel = r.titleSel || null;
+    return r;
+  }
+  function bump(b, kind, ms) {
+    ['ok', 'miss', 'timeout', 'sumMs', 'fastest'].forEach(k => { b[k] = b[k] || 0; });
+    b[kind]++;
+    if (kind === 'ok') { b.sumMs += ms; if (!b.fastest || ms < b.fastest) b.fastest = ms; }
+  }
+  function dayKey() { const d = new Date(), z = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`; }
+  function logAnswer(kind) {
+    if (!state.problem) return;
+    const r = loadRec(), st = r.stats, pr = state.problem;
+    const ms = kind === 'ok' ? Math.max(0, Math.round(pr.maxTime - pr.remainTime)) : 0;
+    if (!state.run) state.run = { ok: 0, miss: 0, timeout: 0, sumMs: 0, fastest: 0, maxStreak: 0 };
+    bump(st, kind, ms); bump(state.run, kind, ms);
+    bump(st.byDiff[diffName] = st.byDiff[diffName] || {}, kind, ms);
+    const dk = dayKey(); bump(st.byDay[dk] = st.byDay[dk] || {}, kind, ms);
+    const keys = Object.keys(st.byDay).sort();
+    while (keys.length > 30) delete st.byDay[keys.shift()];
+    new Set((pr.text.match(/[+\-×÷]/g) || [])).forEach(op => bump(st.byOp[op] = st.byOp[op] || {}, kind, ms));
+    if (kind === 'ok') { st.maxStreak = Math.max(st.maxStreak, fx.streak); state.run.maxStreak = Math.max(state.run.maxStreak, fx.streak); }
+    checkAch();
+    saveRec();
+  }
+  function dexNote(name, k) { const d = loadRec().dex; d[name] = d[name] || { seen: 0, killed: 0 }; d[name][k]++; }
+  function goddessNote(id, k) { const g = loadRec().byGoddess; g[id] = g[id] || { sortie: 0, hit: 0 }; g[id][k]++; }
+  function noteSortie() { state.party.forEach(m => { if (m && !m.isHero) goddessNote(m.id, 'sortie'); }); }
+  // === 実績・称号：条件は記録から判定する（隠し実績は、解除されるまで条件も名前も出さない）===
+  const ACH = [
+    { id: 's10', name: '十連撃', desc: '10問連続で正解', title: '十連の剣', cond: r => r.stats.maxStreak >= 10 },
+    { id: 's30', name: '三十連撃', desc: '30問連続で正解', title: '止まらない指', cond: r => r.stats.maxStreak >= 30 },
+    { id: 'f15', name: '瞬き未満', desc: '1.5秒以内に正解する', title: '瞬きの暗算者', cond: r => r.stats.fastest > 0 && r.stats.fastest <= 1500 },
+    { id: 'a100', name: '百の答え', desc: '累計100問に正解', title: '百問の徒', cond: r => r.stats.ok >= 100 },
+    { id: 'a1000', name: '千の答え', desc: '累計1000問に正解', title: '千問の亡者', cond: r => r.stats.ok >= 1000 },
+    { id: 'c3', name: '三度目の朝', desc: '3周クリア', title: null, cond: r => r.tot.clears >= 3 },
+    { id: 'pf', name: '無傷の周回', desc: 'ミスも時間切れもなく1周クリア（15問以上）', title: '無傷の生還者', cond: r => r.laps.some(l => l.ok >= 15 && !l.miss && !l.timeout) },
+    { id: 'dth', hidden: true, name: '独りの輪廻', desc: 'デスをクリア', title: '独りの輪廻者', cond: r => (r.tot.byDiff['デス'] || 0) >= 1 },
+    { id: 'clc', hidden: true, name: '電卓を捨てた者', desc: '電卓をクリア', title: '数の怪物', cond: r => (r.tot.byDiff['電卓'] || 0) >= 1 },
+    { id: 'm100', hidden: true, name: 'それでも', desc: '累計100回ミスしても挑み続けた', title: '敗北を数える者', cond: r => r.stats.miss >= 100 }
+  ];
+  function checkAch() {
+    const r = loadRec(); let any = false;
+    ACH.forEach(a => {
+      if (r.ach[a.id] || !a.cond(r)) return;
+      r.ach[a.id] = Date.now(); any = true;
+      addLog(`実績解除【${a.name}】` + (a.title ? `　称号「${a.title}」` : ''));
+      if (state.mode === 'BATTLE') fxPop('実績解除', { dy: -118, col: STEEL });
+    });
+    if (any) saveRec();
+  }
+  function curTitle(n) { return loadRec().titleSel || titleOf(n); }
   function saveRec() { try { localStorage.setItem(REC_KEY, JSON.stringify(memRec)); } catch (e) {} }
   function recordClear() {
     const r = loadRec();
     r.tot.clears++; r.tot.kills += state.kills || 0; r.tot.steps += state.steps || 0;
     r.tot.bestLv = Math.max(r.tot.bestLv, state.hero.lv);
     r.tot.byDiff[diffName] = (r.tot.byDiff[diffName] || 0) + 1;
-    r.laps.push({ no: r.tot.clears, run: state.clears, diff: diffName, lv: state.hero.lv, steps: state.steps || 0, kills: state.kills || 0, t: Date.now() });
+    const ru = state.run || { ok: 0, miss: 0, timeout: 0, sumMs: 0, fastest: 0, maxStreak: 0 };
+    const lap = { no: r.tot.clears, run: state.clears, diff: diffName, lv: state.hero.lv, steps: state.steps || 0, kills: state.kills || 0, t: Date.now(),
+      ok: ru.ok, miss: ru.miss, timeout: ru.timeout, avgMs: ru.ok ? Math.round(ru.sumMs / ru.ok) : 0, fastest: ru.fastest || 0, maxStreak: ru.maxStreak };
+    // 自己ベスト更新（過去の周と比べる）
+    const prev = r.laps.filter(l => l.avgMs > 0), acc = l => l.ok / Math.max(1, l.ok + l.miss + l.timeout);
+    state.lastBest = [];
+    if (prev.length && lap.avgMs > 0) {
+      const bA = Math.min(...prev.map(l => l.avgMs)); if (lap.avgMs < bA) state.lastBest.push(`平均回答 ${fmtS(lap.avgMs)}（前 ${fmtS(bA)}）`);
+      const bF = Math.min(...prev.map(l => l.fastest || 1e9)); if (lap.fastest && lap.fastest < bF) state.lastBest.push(`最速 ${fmtS(lap.fastest)}（前 ${fmtS(bF)}）`);
+      const bC = Math.max(...prev.map(acc)); if (acc(lap) > bC) state.lastBest.push(`正答率 ${pct(lap.ok, lap.ok + lap.miss + lap.timeout)}`);
+      const bS = Math.max(...prev.map(l => l.maxStreak || 0)); if (lap.maxStreak > bS) state.lastBest.push(`連続正解 ${lap.maxStreak}（前 ${bS}）`);
+    }
+    state.run = null;
+    r.laps.push(lap);
     if (r.laps.length > 300) r.laps.splice(0, r.laps.length - 300);
+    checkAch();
     saveRec();
     return r.tot.clears;
   }
@@ -3821,26 +3907,103 @@
   const TITLES = [[0, '迷い込んだ少年'], [1, '旧校舎の生還者'], [3, '廊下の常連'], [5, '見習い暗算魔術師'], [10, '電卓いらずの男'], [20, '旧校舎の主'], [30, '女神たちの保護者'], [50, '暗算輪廻者']];
   function titleOf(n) { let t = TITLES[0][1]; TITLES.forEach(x => { if (n >= x[0]) t = x[1]; }); return t; }
   let recTab = 0;
+  const REC_TABS = ['周ごと', '総合', '暗算', '図鑑', '実績', '女神'];
+  function fmtS(ms) { return ms > 0 ? (ms / 1000).toFixed(2) + '秒' : '—'; }
+  function pct(ok, all) { return all ? (Math.round(ok / all * 1000) / 10) + '%' : '—'; }
+  function recTable(head, rows) { return '<table><tr>' + head.map(h => `<th>${h}</th>`).join('') + '</tr>' + rows.map(r => '<tr>' + r.map(c => `<td>${c}</td>`).join('') + '</tr>').join('') + '</table>'; }
+  // 折れ線グラフ（Canvas）。値が小さいほど良い指標は lowGood で「ベスト」に印を付ける
+  function drawLine(cv, vals, fmt) {
+    const dpr = window.devicePixelRatio || 1, W = Math.max(200, cv.clientWidth || 300), H = 104;
+    cv.width = W * dpr; cv.height = H * dpr;
+    const c = cv.getContext('2d'); c.scale(dpr, dpr);
+    const col = getThemeColor(), dim = getThemeDim();
+    let lo = Math.min(...vals), hi = Math.max(...vals); if (hi - lo < 1e-9) { hi += 1; lo -= 1; }
+    const L = 8, R = 8, T = 16, B = 14, X = i => L + (W - L - R) * i / (vals.length - 1), Y = v => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
+    c.strokeStyle = dim; c.globalAlpha = 0.4; c.lineWidth = 1;
+    for (let k = 0; k < 3; k++) { const y = T + (H - T - B) * k / 2; c.beginPath(); c.moveTo(L, y); c.lineTo(W - R, y); c.stroke(); }
+    c.globalAlpha = 1; c.strokeStyle = col; c.lineWidth = 1.6; c.beginPath();
+    vals.forEach((v, i) => i ? c.lineTo(X(i), Y(v)) : c.moveTo(X(i), Y(v))); c.stroke();
+    c.fillStyle = col; vals.forEach((v, i) => { c.beginPath(); c.arc(X(i), Y(v), 2.2, 0, 7); c.fill(); });
+    c.font = '10px monospace'; c.fillStyle = col;
+    c.textAlign = 'left'; c.fillText(fmt(vals[0]), L, H - 2);
+    c.textAlign = 'right'; c.fillText(fmt(vals[vals.length - 1]), W - R, H - 2);
+    c.textAlign = 'left'; c.fillText('高 ' + fmt(hi) + ' ／ 低 ' + fmt(lo), L, 10);
+  }
+  function diffTxt(cur, best, lowGood, fmt) {
+    if (Math.abs(cur - best) < 1e-9) return '＝（ベスト）';
+    const worse = lowGood ? cur > best : cur < best;
+    return (worse ? '▼ ' : '▲ ') + (cur > best ? '+' : '−') + fmt(Math.abs(cur - best));
+  }
   function renderRecord() {
     const r = loadRec();
     const tabs = document.getElementById('rec-tabs'); tabs.innerHTML = '';
-    ['周ごと', '総合'].forEach((n, i) => {
+    REC_TABS.forEach((n, i) => {
       const b = document.createElement('button'); b.className = 'stat-tab' + (i === recTab ? ' sel' : ''); b.textContent = n;
       b.onclick = () => { SFX.tab(); recTab = i; renderRecord(); }; tabs.appendChild(b);
     });
-    const body = document.getElementById('rec-body');
-    if (!r.tot.clears) { body.innerHTML = '<div style="opacity:.7;padding:14px;text-align:center;">まだクリアの記録はない。</div>'; return; }
+    const body = document.getElementById('rec-body'), none = t => { body.innerHTML = `<div style="opacity:.7;padding:14px;text-align:center;">${t}</div>`; };
+    const st = r.stats, all = st.ok + st.miss + st.timeout;
     if (recTab === 0) {
-      body.innerHTML = '<table><tr><th>周</th><th>難易度</th><th>Lv</th><th>歩数</th><th>撃破</th><th>日時</th></tr>' +
-        r.laps.slice().reverse().map(l => `<tr><td>${l.no}周目</td><td>${l.diff}</td><td>${l.lv}</td><td>${l.steps}</td><td>${l.kills}</td><td>${fmtT(l.t)}</td></tr>`).join('') + '</table>';
-    } else {
+      if (!r.tot.clears) return none('まだクリアの記録はない。');
+      body.innerHTML = recTable(['周', '難易度', 'Lv', '歩数', '撃破', '平均', '正答率', '日時'],
+        r.laps.slice().reverse().map(l => [l.no + '周目', l.diff, l.lv, l.steps, l.kills, l.avgMs ? fmtS(l.avgMs) : '—', l.ok != null ? pct(l.ok, l.ok + l.miss + l.timeout) : '—', fmtT(l.t)]));
+    } else if (recTab === 1) {
+      if (!r.tot.clears) return none('まだクリアの記録はない。');
       const now = new Date(); const wk = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7)).getTime();
       const dayS = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
       const wkN = r.laps.filter(l => l.t >= wk).length, dayN = r.laps.filter(l => l.t >= dayS).length;
-      const rows = [['称号', titleOf(r.tot.clears)], ['通算クリア（周回）', r.tot.clears + ' 周'], ['今週のクリア', wkN + ' 周'], ['今日のクリア', dayN + ' 周'],
+      const rows = [['称号', curTitle(r.tot.clears)], ['通算クリア（周回）', r.tot.clears + ' 周'], ['今週のクリア', wkN + ' 周'], ['今日のクリア', dayN + ' 周'],
         ['総撃破数', r.tot.kills + ' 体'], ['総歩数', r.tot.steps + ' 歩'], ['最高Lv', 'Lv.' + r.tot.bestLv]]
         .concat(Object.keys(r.tot.byDiff).map(k => ['難易度【' + k + '】', r.tot.byDiff[k] + ' 周']));
       body.innerHTML = '<div class="tot">' + rows.map(x => `<span>${x[0]}</span><b>${x[1]}</b>`).join('') + '</div>';
+    } else if (recTab === 2) {
+      if (!all) return none('まだ回答の記録はない。');
+      const rows = [['最速回答', fmtS(st.fastest)], ['平均回答', fmtS(st.ok ? st.sumMs / st.ok : 0)], ['正答率', pct(st.ok, all)], ['最大連続正解', st.maxStreak + ' 問'],
+        ['総回答数', all + ' 問'], ['　正解／ミス／時間切れ', `${st.ok} ／ ${st.miss} ／ ${st.timeout}`]];
+      let h = '<div class="tot">' + rows.map(x => `<span>${x[0]}</span><b>${x[1]}</b>`).join('') + '</div>';
+      const ops = ['+', '-', '×', '÷'].filter(o => st.byOp[o]);
+      if (ops.length) h += '<h4>演算別</h4>' + recTable(['演算', '回答', '正答率'], ops.map(o => { const b = st.byOp[o], n = b.ok + b.miss + b.timeout; return [o === '-' ? '−' : o, n, pct(b.ok, n)]; }));
+      const ds = Object.keys(st.byDiff);
+      if (ds.length) h += '<h4>難易度別</h4>' + recTable(['難易度', '回答', '正答率', '平均', '最速'], ds.map(d => { const b = st.byDiff[d], n = b.ok + b.miss + b.timeout; return [d, n, pct(b.ok, n), fmtS(b.ok ? b.sumMs / b.ok : 0), fmtS(b.fastest)]; }));
+      const days = Object.keys(st.byDay).sort().reverse().slice(0, 14);
+      if (days.length) h += '<h4>日別（直近14日）</h4>' + recTable(['日', '回答', '正答率', '平均'], days.map(d => { const b = st.byDay[d], n = b.ok + b.miss + b.timeout; return [d.slice(5), n, pct(b.ok, n), fmtS(b.ok ? b.sumMs / b.ok : 0)]; }));
+      const lp = r.laps.filter(l => l.avgMs > 0);
+      if (lp.length) {
+        const last = lp[lp.length - 1], ac = l => l.ok / Math.max(1, l.ok + l.miss + l.timeout);
+        const bestAvg = Math.min(...lp.map(l => l.avgMs)), bestF = Math.min(...lp.map(l => l.fastest || 1e9)), bestAc = Math.max(...lp.map(ac)), bestSt = Math.max(...lp.map(l => l.maxStreak || 0));
+        h += '<h4>直近の周 と 自己ベスト</h4>' + recTable(['項目', '直近', 'ベスト', '差'], [
+          ['平均回答', fmtS(last.avgMs), fmtS(bestAvg), diffTxt(last.avgMs, bestAvg, true, v => (v / 1000).toFixed(2) + '秒')],
+          ['最速', fmtS(last.fastest), fmtS(bestF), diffTxt(last.fastest || 1e9, bestF, true, v => (v / 1000).toFixed(2) + '秒')],
+          ['正答率', pct(last.ok, last.ok + last.miss + last.timeout), Math.round(bestAc * 1000) / 10 + '%', diffTxt(ac(last) * 100, bestAc * 100, false, v => v.toFixed(1) + '%')],
+          ['連続正解', last.maxStreak, bestSt, diffTxt(last.maxStreak, bestSt, false, v => v + '問')]]);
+      }
+      if (lp.length >= 2) h += '<h4>暗算の成長（周ごと・平均回答 秒）</h4><canvas id="rec-g1"></canvas><h4>正答率（%）</h4><canvas id="rec-g2"></canvas>';
+      else h += '<h4>暗算の成長</h4><div style="opacity:.7;padding:6px 8px;">2周分の記録がたまると、グラフが出る。</div>';
+      body.innerHTML = h;
+      if (lp.length >= 2) {
+        const w = lp.slice(-20);
+        drawLine(document.getElementById('rec-g1'), w.map(l => l.avgMs / 1000), v => v.toFixed(2));
+        drawLine(document.getElementById('rec-g2'), w.map(l => 100 * l.ok / Math.max(1, l.ok + l.miss + l.timeout)), v => v.toFixed(0));
+      }
+    } else if (recTab === 3) {
+      body.innerHTML = recTable(['敵', '遭遇', '撃破'], ENEMY_POOL.map(e => { const d = r.dex[e.name]; return d && d.seen ? [e.name, d.seen, d.killed] : ['？？？', '—', '—']; })) +
+        '<div style="opacity:.6;padding:6px 8px;">出会った敵だけ、名前が載る。</div>';
+    } else if (recTab === 4) {
+      const got = ACH.filter(a => r.ach[a.id]).length;
+      body.innerHTML = `<div style="padding:4px 8px;opacity:.8;">解除 ${got} ／ ${ACH.length}　（称号のある実績は、タップで称号に設定）</div>` + ACH.map(a => {
+        const on = !!r.ach[a.id], sel = on && a.title && r.titleSel === a.title;
+        if (!on && a.hidden) return '<div class="ach off">？？？<small>条件は非公開</small></div>';
+        return `<div class="ach ${on ? '' : 'off'} ${on && a.title ? 'can' : ''} ${sel ? 'sel' : ''}" data-id="${a.id}">${on ? '◆' : '◇'} ${a.name}${sel ? '　【称号】' : ''}<small>${a.desc}${on && a.title ? '　→ 称号「' + a.title + '」' : ''}</small></div>`;
+      }).join('');
+      body.querySelectorAll('.ach.can').forEach(el => el.onclick = () => {
+        const a = ACH.find(x => x.id === el.dataset.id); SFX.tab();
+        r.titleSel = r.titleSel === a.title ? null : a.title; saveRec(); renderRecord();
+      });
+    } else {
+      const js = (r.inv.joined || []).map(id => ({ id, d: GODDESS_POOL.find(x => x.id === id) })).filter(x => x.d);
+      if (!js.length) return none('まだ仲間になった女神はいない。（クリアごとに、ひとり加わる）');
+      body.innerHTML = recTable(['女神', '出撃', '身代わり'], js.map(x => { const g = r.byGoddess[x.id] || { sortie: 0, hit: 0 }; return [x.d.name, g.sortie, g.hit]; })) +
+        `<div style="opacity:.6;padding:6px 8px;">身代わり＝敵の攻撃の的になった回数。</div>`;
     }
   }
   function openRecord() { SFX.statusOpen(); recTab = 0; renderRecord(); document.getElementById('record-modal').style.display = 'flex'; }
