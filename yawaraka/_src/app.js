@@ -2677,6 +2677,7 @@ renderer.setAnimationLoop(() => {
   advanceBakeSettle();
   resize();
   controls.update();
+  canvas.dataset.cameraAngle = controls.getAzimuthalAngle().toFixed(5);
   // 着地でカメラを少しゆらす
   let sh = null;
   if (shake > 0.001) {
