@@ -1194,6 +1194,7 @@ const animBtn = document.getElementById('animBtn'), animIcon = document.getEleme
 let animPos = { x: 0, z: 0 }, animFit = { m: 1, ty: 0.6, cx: 0 };
 function setAnim(on) {
   finishBakeSettle();
+  if (on) setLightEditing(false);
   anim.on = on; applyStage();
   document.body.classList.toggle('anim', on);
   animBtn.classList.toggle('on', on);
@@ -2022,6 +2023,79 @@ for (const [axis, id] of [['x','lightX'],['y','lightY'],['z','lightZ']]) {
   };
 }
 
+// Drag the on-screen light directly with a mouse or a finger.
+// Horizontal gestures change left/right, vertical gestures change height;
+// the existing depth slider remains available for front/back adjustment.
+const lightHandle = ui('lightHandle'), lightMoveBtn = ui('lightMoveBtn');
+let lightEditing = false, lightDrag = null;
+function setLightEditing(active) {
+  lightEditing = active;
+  lightDrag = null;
+  lightHandle.hidden = !active || anim.on;
+  lightMoveBtn.classList.toggle('on', active);
+  lightMoveBtn.setAttribute('aria-pressed', String(active));
+  if (active) updateLightHandle();
+}
+function updateLightHandle() {
+  if (!lightEditing || anim.on) { lightHandle.hidden = true; return; }
+  lightHandle.hidden = false;
+  lightHandle.dataset.x = LIGHT_POS.x.toFixed(2);
+  lightHandle.dataset.y = LIGHT_POS.y.toFixed(2);
+  lightHandle.dataset.z = LIGHT_POS.z.toFixed(2);
+  if (lightDrag) return;
+  const p = sun.position.clone().project(camera);
+  const r = canvas.getBoundingClientRect();
+  const minX = r.left + 42, maxX = Math.max(minX, r.right - 98);
+  const minY = r.top + 77;
+  const dockTop = document.querySelector('.dock').getBoundingClientRect().top;
+  const maxY = Math.max(minY, Math.min(r.bottom - 86, dockTop - 54));
+  const x = r.left + (p.x + 1) * r.width / 2;
+  const y = r.top + (1 - p.y) * r.height / 2;
+  lightHandle.style.left = Math.min(maxX, Math.max(minX, Number.isFinite(x) ? x : minX)) + 'px';
+  lightHandle.style.top = Math.min(maxY, Math.max(minY, Number.isFinite(y) ? y : minY)) + 'px';
+}
+lightMoveBtn.onclick = () => setLightEditing(!lightEditing);
+lightHandle.addEventListener('pointerdown', e => {
+  if (!lightEditing || anim.on) return;
+  e.preventDefault();
+  e.stopPropagation();
+  lightDrag = { id: e.pointerId, x: e.clientX, y: e.clientY };
+  try { lightHandle.setPointerCapture(e.pointerId); } catch (_) {}
+});
+lightHandle.addEventListener('pointermove', e => {
+  if (!lightDrag || e.pointerId !== lightDrag.id) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const dx = e.clientX - lightDrag.x, dy = e.clientY - lightDrag.y;
+  lightDrag.x = e.clientX; lightDrag.y = e.clientY;
+  const r = canvas.getBoundingClientRect();
+  LIGHT_POS.x = THREE.MathUtils.clamp(LIGHT_POS.x + dx * 16 / Math.max(r.width, 1), -8, 8);
+  LIGHT_POS.y = THREE.MathUtils.clamp(LIGHT_POS.y - dy * 12 / Math.max(r.height, 1), 2, 12);
+  ui('lightX').value = String(LIGHT_POS.x);
+  ui('lightY').value = String(LIGHT_POS.y);
+  updateLightPosition(anim.on ? anim.camX : 0);
+  // Keep the handle underneath the dragging finger until the gesture ends.
+  const minX = r.left + 42, maxX = Math.max(minX, r.right - 98);
+  const minY = r.top + 77;
+  const maxY = Math.max(minY, Math.min(r.bottom - 86, document.querySelector('.dock').getBoundingClientRect().top - 54));
+  const x = parseFloat(lightHandle.style.left) + dx;
+  const y = parseFloat(lightHandle.style.top) + dy;
+  lightHandle.style.left = THREE.MathUtils.clamp(x, minX, maxX) + 'px';
+  lightHandle.style.top = THREE.MathUtils.clamp(y, minY, maxY) + 'px';
+  lightHandle.dataset.x = LIGHT_POS.x.toFixed(2);
+  lightHandle.dataset.y = LIGHT_POS.y.toFixed(2);
+});
+function endLightDrag(e) {
+  if (lightDrag && (!e || e.pointerId === lightDrag.id)) {
+    lightDrag = null;
+    updateLightHandle();
+  }
+}
+lightHandle.addEventListener('pointerup', endLightDrag);
+lightHandle.addEventListener('pointercancel', endLightDrag);
+window.addEventListener('pointerup', endLightDrag);
+
+
 // ---- 色
 const BODY_COLS = ['#ffffff', '#ffd6e0', '#d7f0d9', '#d4e6ff', '#ffe9a8'];
 const ITEM_COLS = ['#e5584f', '#f2c744', '#5aa9e6', '#2b2b33'];
@@ -2611,6 +2685,7 @@ renderer.setAnimationLoop(() => {
     shake *= Math.pow(0.0005, dt);   // すぐ収まる
   }
   updateSelectionArrow();
+  updateLightHandle();
   renderer.render(scene, camera);
   if (sh) camera.position.sub(sh);
 });
