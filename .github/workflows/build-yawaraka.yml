@@ -74,6 +74,32 @@ jobs:
               try { return JSON.parse(localStorage.getItem('brain-friends-gallery-v1')||'[]').length > 0; }
               catch (e) { return false; }
             }, { timeout: 15000 });
+            // Simulate a pointer moving and BAKE firing in the SAME JS task.
+            // No animation frame can catch up, reproducing a late-frame solidification.
+            const dragAt = await page.evaluate(() => {
+              const rect = document.getElementById('c').getBoundingClientRect();
+              return { x:rect.left + rect.width * 0.50, y:rect.top + rect.height * 0.50 };
+            });
+            await page.mouse.move(dragAt.x, dragAt.y);
+            await page.mouse.down();
+            const bakeInfo = await page.evaluate(({x, y}) => {
+              const canvas = document.getElementById('c');
+              canvas.dispatchEvent(new PointerEvent('pointermove', {
+                bubbles:true, pointerId:1, pointerType:'mouse', buttons:1, button:0,
+                clientX:x+165, clientY:y-85
+              }));
+              document.getElementById('bakeBtn').click();
+              return {
+                refining:document.getElementById('bakeBtn').dataset.refining,
+                toast:document.getElementById('toast').textContent
+              };
+            }, dragAt);
+            await page.mouse.up();
+            if (bakeInfo.refining !== 'true')
+              throw new Error('BAKE did not start the frame-lag refinement: '+JSON.stringify(bakeInfo));
+            await page.waitForFunction(() => !document.getElementById('bakeBtn').dataset.refining, {timeout:15000});
+            await page.click('#undo');
+            console.log('PASS: same-task drag and BAKE starts subtle post-cure refinement, completes, and undo works');
             if (jsErrors.length) throw new Error('Page errors: '+jsErrors.join(' / '));
             console.log('PASS: startup, WebGL canvas, default hiragana, outline off, relax, language toggle, gallery');
           } finally { await browser.close(); }
