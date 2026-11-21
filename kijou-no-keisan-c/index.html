@@ -182,6 +182,51 @@ select { appearance:none; padding-right:29px; background:
   .advanced .subgrid, .scene-controls, .candidates { grid-template-columns:1fr; }
   .scene-conditions .fields, .road-fields, .obstacle-fields { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
+@media (min-width:1280px) {
+  body { display:flex; flex-direction:column; height:100vh; height:100dvh; min-height:450px; }
+  .shell { width:min(1720px, calc(100% - 80px)); }
+  .topbar .shell { min-height:54px; }
+  main { display:flex; flex:1; flex-direction:column; min-height:0; padding:12px 0 8px; }
+  .workspace-header { display:flex; align-items:center; justify-content:space-between; gap:24px; margin-bottom:12px; }
+  .headline h1 { font-size:1.8rem; }
+  .headline p { margin-top:3px; font-size:.875rem; }
+  .tabs { margin:0; flex:none; }
+  .tabs button { min-height:36px; }
+  .workspace { display:grid; grid-template-columns:minmax(0,1.85fr) minmax(0,1fr); flex:1; min-height:0; gap:14px; }
+  .workspace-visual { display:flex; flex-direction:column; min-height:0; gap:10px; }
+  .diagram { display:flex; flex:1 1 0; flex-direction:column; min-height:0; }
+  .diagram-head { flex:none; padding:9px 15px; }
+  #plan { flex:1 1 0; height:0; min-height:0; }
+  .legend { flex:none; min-height:36px; padding:6px 15px; }
+  .workspace-results, .workspace-settings { overflow:auto; overscroll-behavior:contain; }
+  .workspace-results { max-height:39%; background:var(--white); border:1px solid var(--line); border-radius:14px; }
+  .workspace-results > .result { border:0; box-shadow:none; margin:0; padding:11px 15px; }
+  .workspace-results > .result-details, .workspace-results > #scene-result { margin:0; padding:10px 15px; }
+  .workspace-results > #scene-result > .mode-copy:first-child { margin-top:0; }
+  #inverse-result .metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .workspace-settings { scrollbar-gutter:stable; padding:4px; }
+  .workspace-settings .mode-panel { margin:0 0 14px; }
+  .inputs, .advanced .subgrid, .scene-controls { grid-template-columns:1fr; }
+  .scene-conditions .fields, .obstacle-fields { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .note { margin:6px 1px 0; }
+}
+@media (min-width:1280px) and (max-height:620px) {
+  .topbar .shell { min-height:42px; }
+  .top-actions button, .tabs button, .zoom button { min-height:30px; }
+  main { padding:6px 0 5px; }
+  .workspace-header { margin-bottom:6px; }
+  .headline, .diagram-head > :first-child { display:flex; align-items:baseline; gap:12px; }
+  .headline h1 { font-size:1.4rem; }
+  .headline p, .diagram-head p { margin:0; }
+  .workspace-visual { gap:6px; }
+  .diagram-head { padding:6px 12px; }
+  .legend { min-height:29px; padding:3px 12px; }
+  .workspace-results { max-height:clamp(92px, 20vh, 124px); }
+  .workspace-results > .result { padding:6px 12px; }
+  .workspace-results .result .result-details { margin-top:6px; }
+  .workspace-results .metric dd { margin-top:1px; font-size:1.125rem; }
+  .note { margin-top:4px; }
+}
 </style>
 <script>window.IZ_BASE = {pos: 'bl'};</script>
 <!--IZ-GAME-BASE:START-->
@@ -407,52 +452,62 @@ select { appearance:none; padding-right:29px; background:
   </div>
 </header>
 <main class="shell">
-  <header class="headline">
-    <h1>机上の空論GP</h1>
-    <p>信号のない十字路で、車両2台の出会い頭事故を再現・検証します。</p>
-  </header>
-  <nav class="tabs" aria-label="シミュレーションのモード">
-    <button type="button" data-mode="forward" aria-pressed="true">検証</button>
-    <button type="button" data-mode="inverse" aria-pressed="false">逆算</button>
-    <button type="button" data-mode="scene" aria-pressed="false">現場推定</button>
-  </nav>
-  <section class="card diagram" aria-labelledby="diagram-title">
-    <div class="diagram-head">
-      <div><h2 id="diagram-title">交差点の平面図</h2><p id="diagram-hint">車両をドラッグして初期位置を調整</p></div>
-      <div class="zoom" aria-label="図面の表示倍率">
-        <button type="button" data-action="zoom-out" aria-label="縮小">−</button>
-        <output id="zoom-value">100%</output>
-        <button type="button" data-action="zoom-in" aria-label="拡大">＋</button>
-        <button type="button" data-action="zoom-fit" aria-label="図面全体を表示">全体</button>
+  <div class="workspace-header">
+    <header class="headline">
+      <h1>机上の空論GP</h1>
+      <p>信号のない十字路で、車両2台の出会い頭事故を再現・検証します。</p>
+    </header>
+    <nav class="tabs" aria-label="シミュレーションのモード">
+      <button type="button" data-mode="forward" aria-pressed="true">検証</button>
+      <button type="button" data-mode="inverse" aria-pressed="false">逆算</button>
+      <button type="button" data-mode="scene" aria-pressed="false">現場推定</button>
+    </nav>
+  </div>
+  <div class="workspace">
+    <div class="workspace-visual">
+      <section class="card diagram" aria-labelledby="diagram-title">
+        <div class="diagram-head">
+          <div><h2 id="diagram-title">交差点の平面図</h2><p id="diagram-hint">車両をドラッグして初期位置を調整</p></div>
+          <div class="zoom" aria-label="図面の表示倍率">
+            <button type="button" data-action="zoom-out" aria-label="縮小">−</button>
+            <output id="zoom-value">100%</output>
+            <button type="button" data-action="zoom-in" aria-label="拡大">＋</button>
+            <button type="button" data-action="zoom-fit" aria-label="図面全体を表示">全体</button>
+          </div>
+        </div>
+        <canvas id="plan" aria-label="交差点と車両の軌跡を示す平面図">初期位置や停止位置は下の入力欄で設定できます。</canvas>
+        <div id="legend" class="legend" aria-label="図面の凡例"></div>
+      </section>
+      <div id="workspace-results" class="workspace-results">
+        <section id="forward-result" class="card result" aria-label="検証結果" aria-live="polite"></section>
       </div>
     </div>
-    <canvas id="plan" aria-label="交差点と車両の軌跡を示す平面図">初期位置や停止位置は下の入力欄で設定できます。</canvas>
-    <div id="legend" class="legend" aria-label="図面の凡例"></div>
-  </section>
-  <section id="forward-result" class="card result" aria-label="検証結果" aria-live="polite"></section>
-  <section id="inverse-panel" class="card mode-panel" aria-labelledby="inverse-title" hidden>
-    <h2 class="section-title" id="inverse-title">回避条件の逆算</h2>
-    <div id="inverse-controls" class="fields"></div>
-    <div id="inverse-result" class="result-details" aria-live="polite"></div>
-  </section>
-  <section id="scene-panel" class="card mode-panel" aria-labelledby="scene-title" hidden>
-    <h2 class="section-title" id="scene-title">現場の停止位置</h2>
-    <p class="mode-copy">停止地点と車体の向き、衝突後に移動した方向を入力すると候補が更新されます。鍵で固定した値は推定中も保持されます。</p>
-    <div id="scene-controls"></div>
-    <div id="scene-result" aria-live="polite"></div>
-    <div class="action-row"><button type="button" data-action="seed-scene">検証の衝突結果を停止位置に入力</button></div>
-  </section>
-  <section aria-labelledby="settings-title">
-    <h2 id="settings-title" class="section-title">シミュレーション設定</h2>
-    <div id="basic" class="inputs"></div>
-    <div class="advanced" id="advanced">
-      <details class="card" data-section="cars"><summary>車両の詳細</summary><div class="advanced-body" id="advanced-cars"></div></details>
-      <details class="card" data-section="surface"><summary>路面と衝突</summary><div class="advanced-body" id="advanced-surface"></div></details>
-      <details class="card" data-section="roads"><summary>道路形状と規制</summary><div class="advanced-body" id="advanced-roads"></div></details>
-      <details class="card" data-section="visibility"><summary>見通しと遮蔽物</summary><div class="advanced-body" id="advanced-visibility"></div></details>
+    <div id="workspace-settings" class="workspace-settings">
+      <section id="inverse-panel" class="card mode-panel" aria-labelledby="inverse-title" hidden>
+        <h2 class="section-title" id="inverse-title">回避条件の逆算</h2>
+        <div id="inverse-controls" class="fields"></div>
+        <section id="inverse-result" class="result-details" aria-label="逆算結果" aria-live="polite" hidden></section>
+      </section>
+      <section id="scene-panel" class="card mode-panel" aria-labelledby="scene-title" hidden>
+        <h2 class="section-title" id="scene-title">現場の停止位置</h2>
+        <p class="mode-copy">停止地点と車体の向き、衝突後に移動した方向を入力すると候補が更新されます。鍵で固定した値は推定中も保持されます。</p>
+        <div id="scene-controls"></div>
+        <section id="scene-result" aria-label="現場推定結果" aria-live="polite" hidden></section>
+        <div class="action-row"><button type="button" data-action="seed-scene">検証の衝突結果を停止位置に入力</button></div>
+      </section>
+      <section aria-labelledby="settings-title">
+        <h2 id="settings-title" class="section-title">シミュレーション設定</h2>
+        <div id="basic" class="inputs"></div>
+        <div class="advanced" id="advanced">
+          <details class="card" data-section="cars"><summary>車両の詳細</summary><div class="advanced-body" id="advanced-cars"></div></details>
+          <details class="card" data-section="surface"><summary>路面と衝突</summary><div class="advanced-body" id="advanced-surface"></div></details>
+          <details class="card" data-section="roads"><summary>道路形状と規制</summary><div class="advanced-body" id="advanced-roads"></div></details>
+          <details class="card" data-section="visibility"><summary>見通しと遮蔽物</summary><div class="advanced-body" id="advanced-visibility"></div></details>
+        </div>
+        <div class="action-row"><button type="button" data-action="reset">初期設定に戻す</button></div>
+      </section>
     </div>
-    <div class="action-row"><button type="button" data-action="reset">初期設定に戻す</button></div>
-  </section>
+  </div>
   <p class="note" id="disclaimer">この数値は理論上の計算であり、実際の事故を完全に再現するものではない。</p>
 </main>
 <div id="message" class="status" role="status" hidden></div>
@@ -2212,13 +2267,34 @@ function flush() {
 function syncToolbar() {
   byId("diagram-hint").textContent = mode !== "scene" ? "車両をドラッグして初期位置を調整" : "停止マーカーをドラッグして位置を調整";
 }
+const desktopLayout = matchMedia("(min-width:1280px)");
+const workspaceResults = byId("workspace-results");
+function syncLayout() {
+  const inverseOutput = byId("inverse-result");
+  const sceneOutput = byId("scene-result");
+  if (desktopLayout.matches) {
+    workspaceResults.append(inverseOutput,sceneOutput);
+  } else {
+    byId("inverse-controls").after(inverseOutput);
+    byId("scene-controls").after(sceneOutput);
+  }
+}
+if (desktopLayout.addEventListener) desktopLayout.addEventListener("change", syncLayout);
+else desktopLayout.addListener(syncLayout);
+if (desktopLayout.matches) syncLayout();
 function setMode(nextMode) {
+  if (mode !== nextMode && desktopLayout.matches) {
+    workspaceResults.scrollTop = 0;
+    byId("workspace-settings").scrollTop = 0;
+  }
   mode = nextMode;
   selected = 0;
   document.querySelectorAll("[data-mode]").forEach(button => button.setAttribute("aria-pressed",button.dataset.mode === mode));
   byId("forward-result").hidden = mode !== "forward";
   byId("inverse-panel").hidden = mode !== "inverse";
+  byId("inverse-result").hidden = mode !== "inverse";
   byId("scene-panel").hidden = mode !== "scene";
+  byId("scene-result").hidden = mode !== "scene";
   byId("disclaimer").textContent = disclaimer + (mode === "scene" ? " "+uncertainty : "");
   byId("legend").innerHTML = names.map((label,index)=>`<span class="legend-item"><i class="swatch" style="--swatch:${colors[index]}"></i>${label}</span>`).join("")+
     (mode === "scene" ? '<span class="legend-item"><i class="line-sample"></i>推定ルート</span><span class="legend-item"><i class="swatch" style="--swatch:#e86b7d"></i>衝突候補</span>'

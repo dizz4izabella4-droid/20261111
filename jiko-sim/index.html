@@ -24,6 +24,7 @@ header.top h1{font-size:15px;margin:0;font-weight:700;white-space:nowrap;overflo
 @media (max-width:430px){header.top h1{font-size:0;flex:1}header.top h1::after{content:"机上の空論CL";font-size:14px}.tabs button{padding:5px 7px;font-size:12.5px}}
 .tabs button.on{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.15);font-weight:700;color:var(--accent)}
 #app{flex:1;display:flex;flex-direction:column;min-height:0}
+#edit-nav{display:none}
 #stage{position:relative;flex:none;height:46dvh;min-height:240px;border-bottom:1px solid var(--line);background:#f4f4f0}
 #cv{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
 .stagebar{position:absolute;right:6px;top:6px;display:flex;gap:4px}
@@ -33,8 +34,14 @@ header.top h1{font-size:15px;margin:0;font-weight:700;white-space:nowrap;overflo
 #panel{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:10px 12px 40px}
 @media (min-width:900px){
   #app{flex-direction:row}
-  #stage{flex:1;height:auto;border-bottom:0;border-right:1px solid var(--line)}
-  #panel{flex:none;width:440px}
+  #stage{flex:1;min-width:0;min-height:0;height:auto;border-bottom:0;border-right:1px solid var(--line)}
+  #panel{flex:none;width:440px;overscroll-behavior:contain;scroll-padding-top:10px}
+}
+@media (min-width:1280px) and (min-height:400px){
+  #edit-nav{display:flex;flex:0 0 180px;flex-direction:column;gap:4px;padding:10px;background:var(--soft);border-right:1px solid var(--line)}
+  #edit-nav a{display:block;padding:4px 8px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:8px;text-decoration:none}
+  #edit-nav a:hover,#edit-nav a:focus-visible{border-color:var(--accent);color:var(--accent)}
+  #panel{width:clamp(340px,28vw,400px)}
 }
 .card{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:0 0 10px;background:var(--card)}
 .card h2{font-size:13px;margin:0 0 6px;color:var(--sub);font-weight:700;letter-spacing:.02em}
@@ -321,6 +328,17 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:10px 0}
   </div>
 </header>
 <div id="app">
+  <nav id="edit-nav" aria-label="解析結果と編集項目">
+    <a href="#result">解析結果</a>
+    <a href="#edit-basic">車種・速度・初期位置</a>
+    <a href="#edit-veh">車両詳細</a>
+    <a href="#edit-path">経路</a>
+    <a href="#edit-road">路面</a>
+    <a href="#edit-geom">道路形状</a>
+    <a href="#edit-sight">見通し・遮蔽物</a>
+    <a href="#edit-coll">衝突</a>
+    <a href="#edit-out">出力・保存</a>
+  </nav>
   <div id="stage">
     <canvas id="cv"></canvas>
     <div class="stagebar"><button id="bFit">全体表示</button><button id="bPng">PNG</button></div>
@@ -1417,12 +1435,12 @@ const PHYS = (() => {
   }
   function acc(id, title, body) {
     const pinned = !!pins[id], open = pinned || !!openNow[id];
-    const box = el('div', { class: 'acc' + (open ? ' open' : '') });
+    const box = el('div', { id: 'edit-' + id, class: 'acc' + (open ? ' open' : '') });
     const pinB = el('button', { class: 'pin' + (pinned ? ' on' : ''), title: 'いつも開いた状態にする（全モード共通・この端末に保存）' }, pinned ? '📌 常に開く' : '常に開く');
     pinB.onclick = () => { pins[id] = !pins[id]; if (!pins[id]) delete pins[id]; lsSet(LS_PINS, JSON.stringify(pins)); if (pins[id]) openNow[id] = true; renderPanel(); };
-    const t = el('button', { class: 't' }, title);
-    t.onclick = () => { if (pins[id]) return; openNow[id] = !box.classList.contains('open'); box.classList.toggle('open', openNow[id]); };
-    box.append(el('div', { class: 'acc-h' }, t, pinB), el('div', { class: 'acc-b' }, body));
+    const t = el('button', { class: 't', 'aria-expanded': String(open), 'aria-controls': 'fields-' + id }, title);
+    t.onclick = () => { if (pins[id]) return; openNow[id] = !box.classList.contains('open'); box.classList.toggle('open', openNow[id]); t.setAttribute('aria-expanded', String(openNow[id])); };
+    box.append(el('div', { class: 'acc-h' }, t, pinB), el('div', { id: 'fields-' + id, class: 'acc-b' }, body));
     return box;
   }
   const presetOpts = Object.entries(P.VEH_PRESETS).map(([k, v]) => [k, v.label]);
@@ -1432,7 +1450,7 @@ const PHYS = (() => {
   const HDG = [['0', '東向き →'], ['90', '北向き ↑'], ['180', '西向き ←'], ['-90', '南向き ↓']];
 
   function basicSection() {
-    const box = el('div', { class: 'card basic' }, el('h2', {}, '基本'));
+    const box = el('div', { id: 'edit-basic', class: 'card basic', tabindex: -1 }, el('h2', {}, '基本'));
     const showSpeed = S.mode !== 'scene';
     [0, 1].forEach(i => {
       const v = S.veh[i];
@@ -1474,7 +1492,8 @@ const PHYS = (() => {
     row('運転席の横位置', 'm（中心から右へ）', n('eyeR', { step: 0.05 }));
     row('衝突後のタイヤ', '', i => sel(() => S.veh[i].post, x => S.veh[i].post = x, [['lock', 'ロック（ブレーキ継続）'], ['roll', '転がる（ブレーキ解除）']]));
     row('車体の剛性', 'kN/m（つぶれ量の目安）', n('k', { min: 10, step: 50 }));
-    row('経路', '', i => S.veh[i].path ? el('button', { class: 'btn', onclick: () => { const st = vehStart(S.veh[i]); S.veh[i].path = null; S.veh[i].x = round1(st.c.x); S.veh[i].y = round1(st.c.y); S.veh[i].hdg = snapHdg(st.th); renderPanel(); schedule(0); } }, '直進に戻す') : el('span', { class: 'small' }, '直進'));
+    g.append(el('span', { id: 'edit-path', class: 'l', tabindex: -1 }, '経路'), ...[0, 1].map(i =>
+      S.veh[i].path ? el('button', { class: 'btn', onclick: () => { const st = vehStart(S.veh[i]); S.veh[i].path = null; S.veh[i].x = round1(st.c.x); S.veh[i].y = round1(st.c.y); S.veh[i].hdg = snapHdg(st.th); renderPanel(); schedule(0); } }, '直進に戻す') : el('span', { class: 'small' }, '直進')));
     return acc('veh', '車両', [g, el('div', { class: 'note' }, '寸法は図の大きさだけでなく、衝突判定（回転する長方形）・衝突後の回転（慣性モーメント）・見通し（運転席の位置）に使います。')]);
   }
   const snapHdg = th => { const d = Math.round(angN(th) * R2D / 90) * 90; return d === -180 ? 180 : d; };
@@ -1618,7 +1637,7 @@ const PHYS = (() => {
   }
 
   /* ---------- 結果表示 ---------- */
-  const resBox = el('div', { id: 'result' });
+  const resBox = el('div', { id: 'result', tabindex: -1 });
   const kmh = v => v == null || !isFinite(v) ? '—' : Math.max(0, v * 3.6).toFixed(1);
   const f1 = (v, d = 1) => v == null || !isFinite(v) ? '—' : (+v).toFixed(d).replace(/^-(0(\.0+)?)$/, '$1');
   function vehStats(cfg, res, i) {
@@ -1862,6 +1881,19 @@ const PHYS = (() => {
       : '車・建物をドラッグして配置 ／ 何もない所をドラッグで移動、2本指（ホイール）で拡大';
   }
   function renderAll() { renderPanel(); compute(); }
+  document.getElementById('edit-nav').addEventListener('click', e => {
+    const link = e.target.closest('a');
+    if (!link) return;
+    const target = panel.querySelector(link.hash);
+    if (!target) return;
+    e.preventDefault();
+    const accordion = target.closest('.acc');
+    const heading = accordion?.querySelector('.acc-h .t');
+    if (accordion && !accordion.classList.contains('open')) heading.click();
+    const focus = target === accordion ? heading : target;
+    focus.focus({ preventScroll: true });
+    target.scrollIntoView({ block: 'start', inline: 'nearest' });
+  });
   document.getElementById('tabs').addEventListener('click', e => { const m = e.target.dataset && e.target.dataset.m; if (!m || m === S.mode) return; S.mode = m; renderAll(); fit(); });
   document.getElementById('bFit').onclick = fit;
   document.getElementById('bPng').onclick = exportPng;
