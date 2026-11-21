@@ -1016,19 +1016,13 @@ canvas.addEventListener('pointerdown', e => {
       selectedItem = riders.find(r => { let p = itemHits[0].object; while (p) { if (p === r.o) return true; p = p.parent; } return false; }) || null;
       if (selectedItem) { pushUndo(); pl = true; gesturePointerId = e.pointerId; controls.enabled = false; canvas.setPointerCapture(e.pointerId); placeItem(); }
     } else {
+      selectedItem = null;
       const p = ray.ray.intersectPlane(floorPlane, new THREE.Vector3()); if (!p) return;
       mv = { dx: cat.position.x - p.x, dz: cat.position.z - p.z };
       if (layout !== 'free') setFree();
       gesturePointerId = e.pointerId; controls.enabled = false; canvas.setPointerCapture(e.pointerId);
     }
     sfx.grab(); return;
-  }
-  if (mode === 'move') {
-    if (!ray.intersectObject(body, false)[0]) return;
-    const p = ray.ray.intersectPlane(floorPlane, new THREE.Vector3()); if (!p) return;
-    mv = { dx: cat.position.x - p.x, dz: cat.position.z - p.z }; if (layout !== 'free') setFree();
-    gesturePointerId = e.pointerId; controls.enabled = false; sfx.grab(); canvas.setPointerCapture(e.pointerId);
-    return;
   }
   // んちょめちょぽの葉っぱを先に判定
   const rt = current.rt;
@@ -1200,6 +1194,7 @@ const animBtn = document.getElementById('animBtn'), animIcon = document.getEleme
 let animPos = { x: 0, z: 0 }, animFit = { m: 1, ty: 0.6, cx: 0 };
 function setAnim(on) {
   finishBakeSettle();
+  if (on) setLightEditing(false);
   anim.on = on; applyStage();
   document.body.classList.toggle('anim', on);
   animBtn.classList.toggle('on', on);
@@ -1980,21 +1975,35 @@ function trayOpen(v) { if (v) openPanel('item'); else if (panelNow === 'item') o
 for (const k in PANELS) ui(PANELS[k][0]).onclick = () => openPanel(panelNow === k ? null : k);
 openPanel(null);
 onPlucked = () => { trayOpen(true); toast('かざりを えらんでね'); };
-// ---- モード：のばす / カメラ
+// Explicit modes: body deformation is the default. "おく" moves んちょ and decorations.
 let mode = 'sculpt', spinSaved = true;
+const modeControls = {sculpt: 'modeSculpt', place: 'modePlace', camera: 'modeCamera'};
 function setMode(m) {
-  if (m !== 'sculpt') { extraPulls.clear(); primaryPointerId=null; }
-  if (m === mode && ui('modeBtn').dataset.init) return;
-  ui('modeBtn').dataset.init = '1';
+  if (!modeControls[m]) return;
+  if (m !== 'sculpt') {
+    if (pull.held) release();
+    extraPulls.clear(); primaryPointerId = null;
+  }
   mode = m;
   const cam = m === 'camera';
-  controls.enableRotate = cam; controls.enablePan = false;
-  controls.autoRotate = false; ui('modeBtn').dataset.m = m;
-  ui('modeBtn').classList.toggle('on', !cam); ui('modeBtn').textContent = { sculpt: 'のばす', place: 'おく', move: 'うごかす', camera: 'みまわす' }[m];
-  ui('hint').textContent = { sculpt: 'からだを ひっぱって「かためる」を おしてね', place: 'かざりを さわって うごかす', move: 'こを うごかして ばしょを きめる', camera: 'さわって まわす・ひろげて ちかづく' }[m];
+  controls.enableRotate = cam;
+  controls.enablePan = false;
+  controls.autoRotate = false;
+  controls.enabled = cam || (!pull.held && !pl && !mv && !leafDrag);
+  ui('toolModes').dataset.m = m;
+  for (const [key,id] of Object.entries(modeControls)) {
+    const on = key === m;
+    ui(id).classList.toggle('on', on);
+    ui(id).setAttribute('aria-pressed', String(on));
+  }
+  ui('hint').textContent = {
+    sculpt: 'からだを ひっぱって「かためる」を おしてね',
+    place: 'んちょ や かざりを うごかしてね',
+    camera: 'さわって まわす・ひろげて ちかづく'
+  }[m];
   canvas.style.cursor = cam ? 'move' : 'grab';
 }
-ui('modeBtn').onclick = () => setMode({ sculpt: 'place', place: 'move', move: 'camera', camera: 'sculpt' }[mode]);
+for (const [key,id] of Object.entries(modeControls)) ui(id).onclick = () => setMode(key);
 setMode('sculpt');
 
 // ---- 戻るまでの時間
@@ -2013,6 +2022,79 @@ for (const [axis, id] of [['x','lightX'],['y','lightY'],['z','lightZ']]) {
     updateLightPosition(anim.on ? anim.camX : 0);
   };
 }
+
+// Drag the on-screen light directly with a mouse or a finger.
+// Horizontal gestures change left/right, vertical gestures change height;
+// the existing depth slider remains available for front/back adjustment.
+const lightHandle = ui('lightHandle'), lightMoveBtn = ui('lightMoveBtn');
+let lightEditing = false, lightDrag = null;
+function setLightEditing(active) {
+  lightEditing = active;
+  lightDrag = null;
+  lightHandle.hidden = !active || anim.on;
+  lightMoveBtn.classList.toggle('on', active);
+  lightMoveBtn.setAttribute('aria-pressed', String(active));
+  if (active) updateLightHandle();
+}
+function updateLightHandle() {
+  if (!lightEditing || anim.on) { lightHandle.hidden = true; return; }
+  lightHandle.hidden = false;
+  lightHandle.dataset.x = LIGHT_POS.x.toFixed(2);
+  lightHandle.dataset.y = LIGHT_POS.y.toFixed(2);
+  lightHandle.dataset.z = LIGHT_POS.z.toFixed(2);
+  if (lightDrag) return;
+  const p = sun.position.clone().project(camera);
+  const r = canvas.getBoundingClientRect();
+  const minX = r.left + 42, maxX = Math.max(minX, r.right - 98);
+  const minY = r.top + 77;
+  const dockTop = document.querySelector('.dock').getBoundingClientRect().top;
+  const maxY = Math.max(minY, Math.min(r.bottom - 86, dockTop - 54));
+  const x = r.left + (p.x + 1) * r.width / 2;
+  const y = r.top + (1 - p.y) * r.height / 2;
+  lightHandle.style.left = Math.min(maxX, Math.max(minX, Number.isFinite(x) ? x : minX)) + 'px';
+  lightHandle.style.top = Math.min(maxY, Math.max(minY, Number.isFinite(y) ? y : minY)) + 'px';
+}
+lightMoveBtn.onclick = () => setLightEditing(!lightEditing);
+lightHandle.addEventListener('pointerdown', e => {
+  if (!lightEditing || anim.on) return;
+  e.preventDefault();
+  e.stopPropagation();
+  lightDrag = { id: e.pointerId, x: e.clientX, y: e.clientY };
+  try { lightHandle.setPointerCapture(e.pointerId); } catch (_) {}
+});
+lightHandle.addEventListener('pointermove', e => {
+  if (!lightDrag || e.pointerId !== lightDrag.id) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const dx = e.clientX - lightDrag.x, dy = e.clientY - lightDrag.y;
+  lightDrag.x = e.clientX; lightDrag.y = e.clientY;
+  const r = canvas.getBoundingClientRect();
+  LIGHT_POS.x = THREE.MathUtils.clamp(LIGHT_POS.x + dx * 16 / Math.max(r.width, 1), -8, 8);
+  LIGHT_POS.y = THREE.MathUtils.clamp(LIGHT_POS.y - dy * 12 / Math.max(r.height, 1), 2, 12);
+  ui('lightX').value = String(LIGHT_POS.x);
+  ui('lightY').value = String(LIGHT_POS.y);
+  updateLightPosition(anim.on ? anim.camX : 0);
+  // Keep the handle underneath the dragging finger until the gesture ends.
+  const minX = r.left + 42, maxX = Math.max(minX, r.right - 98);
+  const minY = r.top + 77;
+  const maxY = Math.max(minY, Math.min(r.bottom - 86, document.querySelector('.dock').getBoundingClientRect().top - 54));
+  const x = parseFloat(lightHandle.style.left) + dx;
+  const y = parseFloat(lightHandle.style.top) + dy;
+  lightHandle.style.left = THREE.MathUtils.clamp(x, minX, maxX) + 'px';
+  lightHandle.style.top = THREE.MathUtils.clamp(y, minY, maxY) + 'px';
+  lightHandle.dataset.x = LIGHT_POS.x.toFixed(2);
+  lightHandle.dataset.y = LIGHT_POS.y.toFixed(2);
+});
+function endLightDrag(e) {
+  if (lightDrag && (!e || e.pointerId === lightDrag.id)) {
+    lightDrag = null;
+    updateLightHandle();
+  }
+}
+lightHandle.addEventListener('pointerup', endLightDrag);
+lightHandle.addEventListener('pointercancel', endLightDrag);
+window.addEventListener('pointerup', endLightDrag);
+
 
 // ---- 色
 const BODY_COLS = ['#ffffff', '#ffd6e0', '#d7f0d9', '#d4e6ff', '#ffe9a8'];
@@ -2329,7 +2411,7 @@ function copyActive() {
   }
   cat.position.x = best[0]; cat.position.z = best[1]; curInst.sy = 0;
   undoStack = []; updateButtons();
-  syncInst(); applyStage(); setFree(); setMode('move');
+  syncInst(); applyStage(); setFree(); setMode('place');
   fitView(insts.filter(i=>i.cat.visible)); sfx.sprout();
   toast('べつの ばしょに ふやしました。うごかしてね');
 }
@@ -2595,6 +2677,7 @@ renderer.setAnimationLoop(() => {
   advanceBakeSettle();
   resize();
   controls.update();
+  canvas.dataset.cameraAngle = controls.getAzimuthalAngle().toFixed(5);
   // 着地でカメラを少しゆらす
   let sh = null;
   if (shake > 0.001) {
@@ -2603,6 +2686,7 @@ renderer.setAnimationLoop(() => {
     shake *= Math.pow(0.0005, dt);   // すぐ収まる
   }
   updateSelectionArrow();
+  updateLightHandle();
   renderer.render(scene, camera);
   if (sh) camera.position.sub(sh);
 });

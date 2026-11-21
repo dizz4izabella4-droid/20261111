@@ -52,11 +52,14 @@ jobs:
               return c && c.width > 0 && c.height > 0 && typeof document.getElementById('bakeBtn').onclick === 'function';
             }, { timeout: 30000 });
             const start = await page.evaluate(() => ({
-              mode:document.getElementById('modeBtn').textContent,
+              mode:document.getElementById('toolModes').dataset.m,
+              modeText:document.getElementById('modeSculpt').textContent,
+              selectedModes:[...document.querySelectorAll('#toolModes button[aria-pressed="true"]')].map(x=>x.id),
               outline:document.getElementById('line').classList.contains('on'),
               canvasWidth:document.getElementById('c').width
             }));
-            if(start.mode !== 'のばす' || start.outline || start.canvasWidth < 100)
+            if(start.mode !== 'sculpt' || start.modeText !== 'のばす' ||
+               start.selectedModes.join() !== 'modeSculpt' || start.outline || start.canvasWidth < 100)
               throw new Error('Bad startup UI: '+JSON.stringify(start));
             await page.click('#tShape');
             await page.click('#hp');
@@ -113,18 +116,95 @@ jobs:
             if (retired.length) throw new Error('Retired controls still in DOM: '+retired);
             if (await page.$eval('#mochi',el=>el.textContent) !== 'おもち')
               throw new Error('Mochi control was not renamed');
+            // Close the taller details panel so camera gestures hit the canvas.
+            await page.click('#tMore');
+            // Three independent buttons, not an opaque cycling toggle.
+            await page.click('#modeCamera');
+            await page.waitForFunction(() =>
+              document.getElementById('toolModes').dataset.m==='camera' &&
+              document.getElementById('modeCamera').getAttribute('aria-pressed')==='true');
+            const cameraAngle0 = await page.$eval('#c',el=>Number(el.dataset.cameraAngle));
+            await page.mouse.move(445, 198);
+            await page.mouse.down();
+            await page.mouse.move(620, 250, {steps:7});
+            await page.mouse.up();
+            await page.waitForFunction(a =>
+              Math.abs(Number(document.getElementById('c').dataset.cameraAngle) - a) > 0.03,
+              {timeout:10000}, cameraAngle0);
+            await page.click('#modeSculpt');
+            await page.click('#modeSculpt');
+            if (await page.$eval('#toolModes',el=>el.dataset.m) !== 'sculpt')
+              throw new Error('Sculpt repeated click unexpectedly cycles the tool');
             await page.click('#copyBtn');
             await page.waitForFunction(() =>
               document.getElementById('cnt').textContent.startsWith('2 /') &&
               !document.getElementById('selectedArrow').hidden &&
-              document.getElementById('modeBtn').dataset.m==='move',
+              document.getElementById('toolModes').dataset.m==='place' &&
+              document.getElementById('modePlace').getAttribute('aria-pressed')==='true',
               {timeout:15000});
             const copyInfo=await page.$eval('#selectedArrow', el=>({
               text:el.textContent,pos:el.dataset.worldPosition
             }));
             if (!copyInfo.pos || copyInfo.pos==='0.00,0.00')
               throw new Error('Copy not spawned elsewhere: '+JSON.stringify(copyInfo));
+            // Combined placement tool supports directly dragging the character.
+            const moved = await page.evaluate(() => {
+              const canvas=document.getElementById('c'),ar=document.getElementById('selectedArrow');
+              const rect=ar.getBoundingClientRect(),save=canvas.setPointerCapture;
+              let captured=false;
+              canvas.setPointerCapture = ()=>{captured=true;};
+              const pointer=(type,x,y)=>new PointerEvent(type,{bubbles:true,pointerId:41,
+                pointerType:'touch',buttons:type==='pointerup'?0:1,clientX:x,clientY:y});
+              const before=ar.dataset.worldPosition;
+              try {
+                for(const dy of [70,90,110,130,50])for(const dx of [0,-35,35,-65,65]){
+                  const x=rect.left+rect.width/2+dx,y=rect.top+rect.height/2+dy;
+                  captured=false;
+                  canvas.dispatchEvent(pointer('pointerdown',x,y));
+                  if (!captured)continue;
+                  canvas.dispatchEvent(pointer('pointermove',x+85,y+15));
+                  window.dispatchEvent(pointer('pointerup',x+85,y+15));
+                  return {ok:true,before,dx,dy};
+                }
+                return {ok:false,before};
+              } finally {canvas.setPointerCapture=save;}
+            });
+            if (!moved.ok)throw new Error('Merged placement tool cannot grab the body: '+JSON.stringify(moved));
+            await page.waitForFunction(before =>
+              document.getElementById('selectedArrow').dataset.worldPosition!==before,
+              {timeout:10000},moved.before);
             await page.click('#tMore');
+            await page.click('#lightMoveBtn');
+            await page.waitForFunction(() => !document.getElementById('lightHandle').hidden &&
+              document.getElementById('lightMoveBtn').getAttribute('aria-pressed')==='true');
+            const lightBefore=await page.$eval('#lightHandle',el=>({x:Number(el.dataset.x),y:Number(el.dataset.y)}));
+            const lightRect=await page.$eval('#lightHandle',el=>{
+              const r=el.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};
+            });
+            const lightHit=await page.evaluate(({x,y})=>({
+              point:document.elementFromPoint(x,y)?.id,
+              markerRect:document.getElementById('lightHandle').getBoundingClientRect().toJSON(),
+              enabled:document.getElementById('lightMoveBtn').getAttribute('aria-pressed')
+            }),lightRect);
+            await page.mouse.move(lightRect.x,lightRect.y);
+            await page.mouse.down();
+            await page.mouse.move(lightRect.x+100,lightRect.y+68,{steps:5});
+            await page.mouse.up();
+            await new Promise(resolve=>setTimeout(resolve,200));
+            const dragNow=await page.$eval('#lightHandle',el=>({
+              x:Number(el.dataset.x),y:Number(el.dataset.y),
+              left:el.style.left,top:el.style.top,hidden:el.hidden
+            }));
+            if (Math.abs(dragNow.x-lightBefore.x)<=.05 ||
+                Math.abs(dragNow.y-lightBefore.y)<=.05)
+              throw new Error('Direct light drag did not change both light axes: '+
+                JSON.stringify({lightBefore,lightRect,lightHit,dragNow}));
+            const lightAfter=await page.$eval('#lightHandle',el=>({x:Number(el.dataset.x),y:Number(el.dataset.y)}));
+            const lightSlider=await page.$eval('#lightX',el=>Number(el.value));
+            if (Math.abs(lightAfter.x-lightSlider)>.15)
+              throw new Error('Light drag not synchronized with slider: '+JSON.stringify({lightAfter,lightSlider}));
+            await page.click('#lightMoveBtn');
+            await page.waitForFunction(() => document.getElementById('lightHandle').hidden);
             await page.$eval('#lightX', el=>{el.value='-4';el.dispatchEvent(new Event('input',{bubbles:true}));});
             await page.$eval('#lightY', el=>{el.value='10';el.dispatchEvent(new Event('input',{bubbles:true}));});
             await page.$eval('#lightZ', el=>{el.value='-2';el.dispatchEvent(new Event('input',{bubbles:true}));});
@@ -161,10 +241,10 @@ jobs:
                 toast:document.getElementById('toast').textContent};
             });
             if (!pasted.ok) throw new Error('Photo cutout not placed: '+JSON.stringify(pasted));
-            // Switch from MOVE through CAMERA to STRETCH.
-            await page.click('#modeBtn');
-            await page.click('#modeBtn');
-            await page.waitForFunction(() => document.getElementById('modeBtn').dataset.m==='sculpt');
+            // The explicit sculpt button returns directly, with no cycling.
+            await page.click('#modeSculpt');
+            await page.waitForFunction(() =>
+              document.getElementById('toolModes').dataset.m==='sculpt');
             const multiStart=await page.evaluate(() => {
               const cv=document.getElementById('c'),a=document.getElementById('selectedArrow').getBoundingClientRect();
               const save=cv.setPointerCapture,captured=[];
@@ -205,7 +285,20 @@ jobs:
               document.getElementById('c').dataset.dragPoints==='0' &&
               document.getElementById('c').dataset.strained==='false',
               {timeout:15000});
-            console.log('PASS: UI removal, separate copy, selection arrow, lights, texture pattern, photo crop/paste, two touches and held BAKE');
+            console.log('PASS: persistent modes and actual camera rotation, unified character placement, direct light drag, independent light depth, textures, photo crop, two-touch BAKE');
+            // Small touch viewport: all three direct modes remain separately tappable.
+            await page.setViewport({width:390,height:844,isMobile:true,deviceScaleFactor:1,hasTouch:true});
+            await page.waitForFunction(() =>
+              document.getElementById('c').width>100 &&
+              [...document.querySelectorAll('#toolModes button')].every(btn=>{
+                const r=btn.getBoundingClientRect();
+                return r.width>=65 && r.height>=40 && r.left>=0 && r.right<=window.innerWidth;
+              }),{timeout:15000});
+            await page.click('#modeCamera');
+            await page.click('#modeSculpt');
+            if (await page.$eval('#toolModes',el=>el.dataset.m) !== 'sculpt')
+              throw new Error('Touch-sized mode buttons did not return to default sculpt');
+            console.log('PASS: touch viewport 390x844 persistent mode buttons');
             if (jsErrors.length) throw new Error('Page errors: '+jsErrors.join(' / '));
             console.log('PASS: startup, WebGL canvas, default hiragana, outline off, relax, language toggle, gallery');
           } finally { await browser.close(); }
