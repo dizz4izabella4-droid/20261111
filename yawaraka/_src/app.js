@@ -536,8 +536,8 @@ function buildMebae() {
       }
       if (sp.mode === 'grow') {
         const sc = 1 - Math.exp(-6 * sp.t) * Math.cos(11 * sp.t);     // にょきっ
-        sprout.scale.setScalar(Math.max(sc, 0.001));
-        if (sp.t >= 0.9) { sprout.scale.setScalar(1); sp.mode = 'on'; sw.fv += 3; }
+        sprout.scale.setScalar(Math.max(sc, 0.001) * (sprout.userData.sizeFactor || 1));
+        if (sp.t >= 0.9) { sprout.scale.setScalar(sprout.userData.sizeFactor || 1); sp.mode = 'on'; sw.fv += 3; }
       }
       // のびよ〜ん（離したら行きすぎながら戻る）
       if (sp.active) {
@@ -969,7 +969,9 @@ function placeItem() {
   const w = [_bc.x, _bc.y, _bc.z], idx = [f.a, f.b, f.c], b = [0, 0, 0];
   for (let i = 0; i < 3; i++) for (let k = 0; k < 3; k++) b[k] += basePos[idx[i] * 3 + k] * w[i];
   r.base.set(b); r.ctr = b.slice(); r.bind = bindPoints(r.ctr);
+  r.offsetX = r.offsetY = 0;
   evalBind(r.bind, r.base, _tmp3, false); r.o.position.fromArray(_tmp3);
+  if (selectedItem) syncAccessoryControls();
 }
 canvas.addEventListener('pointerdown', e => {
   if (anim.on || mode === 'camera') return;
@@ -994,14 +996,20 @@ canvas.addEventListener('pointerdown', e => {
     if (vis.length > 1) { const hh = ray.intersectObjects(vis.map(i => i.body), false)[0]; if (hh && hh.object.userData.inst !== curInst) selectInst(hh.object.userData.inst); }
   }
   if (mode === 'place') {
-    const itemHits = ray.intersectObjects(current.rt.leafMeshes || [], false);
+    // Hit the actual accessory (hat, crown, flower...) instead of only
+    // its tiny invisible grab sphere; all components share the rider root.
+    const accessoryRoots = riders.filter(r=>r.o.parent===squish && r.o===current.rt.root);
+    const itemHits = ray.intersectObjects(accessoryRoots.map(r=>r.o),true);
     const bodyHit = ray.intersectObject(body, false)[0];
     if (!bodyHit && !itemHits.length) return;
     if (itemHits.length && (!bodyHit || itemHits[0].distance < bodyHit.distance)) {
-      selectedItem = riders.find(r => { let p = itemHits[0].object; while (p) { if (p === r.o) return true; p = p.parent; } return false; }) || null;
+      selectedItem = accessoryRoots.find(r => { let p=itemHits[0].object;
+        while(p){if(p===r.o)return true;p=p.parent;}return false;
+      }) || null;
+      syncAccessoryControls();
       if (selectedItem) { pushUndo(); pl = true; gesturePointerId = e.pointerId; controls.enabled = false; canvas.setPointerCapture(e.pointerId); placeItem(); }
     } else {
-      selectedItem = null;
+      selectedItem = null; syncAccessoryControls();
       const p = ray.ray.intersectPlane(floorPlane, new THREE.Vector3()); if (!p) return;
       mv = { dx: cat.position.x - p.x, dz: cat.position.z - p.z };
       if (layout !== 'free') setFree();
@@ -1725,14 +1733,21 @@ function commitBases() {
 }
 function snap() {
   return { base: basePos.slice(), fv: faceVerts.map(f => f.base.slice()), fc: faceCaps.map(c => c.base.slice()),
-           rd: riders.map(r => ({ b: r.base.slice(), c: r.ctr.slice() })), gs: { ...gs }, sc: scorch.slice() };
+           rd: riders.map(r => ({ b: r.base.slice(), c: r.ctr.slice(), size:r.o.userData.sizeFactor || r.o.scale.x,
+             ox:r.offsetX||0, oy:r.offsetY||0 })), gs: { ...gs }, sc: scorch.slice() };
 }
 function applySnap(s) {
   finishBakeSettle();
   basePos.set(s.base);
   faceVerts.forEach((f, i) => f.base.set(s.fv[i]));
   faceCaps.forEach((c, i) => c.base.set(s.fc[i]));
-  riders.forEach((r, i) => { r.base.set(s.rd[i].b); r.ctr = s.rd[i].c.slice(); });
+  riders.forEach((r, i) => {
+    if(!s.rd[i])return;
+    r.base.set(s.rd[i].b); r.ctr=s.rd[i].c.slice();
+    r.offsetX=s.rd[i].ox||0; r.offsetY=s.rd[i].oy||0;
+    r.o.userData.sizeFactor=s.rd[i].size||1;
+    r.o.scale.setScalar(r.o.userData.sizeFactor);
+  });
   gs = { ...s.gs }; scorch.set(s.sc); applyScorch();
   commitBases();
 }
@@ -2206,6 +2221,7 @@ function selectInst(I) {
   finishBakeSettle();
   cancelPose(); cat.position.y = lift;
   syncInst(); loadState(I);
+  selectedItem = null; syncAccessoryControls();
   applyCharUI(current, curKey);
   jump.phase = 'idle'; jump.y = 0; for (const k in spring) spring[k] = 0;
   leafDrag = false; sfx.grab();
