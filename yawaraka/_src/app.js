@@ -1988,9 +1988,8 @@ ui('delBtn').onclick = removeActive;
 let mv = null;
 const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
-let startKey = 'mebae';
-try { startKey = localStorage.getItem('mochi-char') || 'mebae'; } catch (e) {}
-buildCharacter(startKey);
+// YAWARAKA: display the んちょ character by default and exclusively.
+buildCharacter('mebae');
 let last = 0;
 renderer.setAnimationLoop(() => {
   const t = clock.getElapsedTime();
