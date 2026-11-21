@@ -2157,7 +2157,7 @@
     const rv = document.getElementById('revive-screen');
     const rvMain = rv.querySelector('.rv-main');
     const mainOrig = rvMain.textContent;
-    rvMain.textContent = '輪廻により、蘇る';
+    rvMain.textContent = state.pendingJoin ? '新しい女神の力で蘇った' : '女神の力で蘇った';
     document.getElementById('rv-sub').textContent = '——はじまりへ還る';
     const parts = document.getElementById('rv-parts');
     parts.innerHTML = '';
