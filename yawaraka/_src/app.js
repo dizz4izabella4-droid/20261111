@@ -2030,6 +2030,141 @@ addSw('からだ', BODY_COLS, c => { bodyCol = new THREE.Color(c).getHex(); body
   addSw('かざり', ITEM_COLS, c => { itemCol = new THREE.Color(c).getHex(); applyItem(); }, all);
 }
 
+// ---- Surface patterns and locally cropped photo stickers ----
+const patternMaps = new Map();
+const patternButtons = {};
+function patternTexture(key) {
+  if (key === 'none') return null;
+  if (patternMaps.has(key)) return patternMaps.get(key);
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,128,128);
+  if (key === 'dots') {
+    ctx.fillStyle = 'rgba(45,40,60,0.34)';
+    for (let y=8;y<128;y+=24) for (let x=8;x<128;x+=24) {
+      ctx.beginPath();ctx.arc(x+(y%48?8:0),y,3.5,0,Math.PI*2);ctx.fill();
+    }
+  } else if (key === 'lines') {
+    ctx.fillStyle='rgba(55,42,65,0.24)';
+    for(let x=-128;x<256;x+=26) {ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+128,128);
+      ctx.lineTo(x+136,128);ctx.lineTo(x+8,0);ctx.fill();}
+  } else if (key === 'grain') {
+    let seed=707; const next=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
+    for(let i=0;i<3800;i++){ctx.fillStyle='rgba(60,48,50,0.18)';
+      const x=next()*128,y=next()*128;ctx.fillRect(x,y,1+next()*2,1+next()*2);}
+  }
+  const texture = new THREE.CanvasTexture(c);
+  texture.wrapS=texture.wrapT=THREE.RepeatWrapping;
+  texture.repeat.set(4,3);
+  texture.colorSpace=THREE.SRGBColorSpace;
+  texture.anisotropy=4;
+  patternMaps.set(key,texture);
+  return texture;
+}
+function applyBodyPattern(key) {
+  patternKey = key;
+  if (bodyMat) {bodyMat.map = patternTexture(key);bodyMat.needsUpdate=true;}
+  if (curInst) curInst.patternKey = key;
+  for(const [k,btn] of Object.entries(patternButtons))btn.classList.toggle('on',k===key);
+}
+const patRow=document.createElement('div');patRow.className='pattern-row';pal.appendChild(patRow);
+const patLabel=document.createElement('span');patLabel.className='lab';
+patLabel.textContent='もよう';patRow.appendChild(patLabel);
+for(const [key,id,label] of [
+  ['none','patternNone','なし'],['dots','patternDots','みずたま'],
+  ['lines','patternLines','しましま'],['grain','patternGrain','ざらざら']]) {
+  const btn=document.createElement('button');btn.type='button';btn.id=id;btn.textContent=label;
+  btn.onclick=()=>{pushUndo();applyBodyPattern(key);};
+  patternButtons[key]=btn;patRow.appendChild(btn);
+}
+const photoBtn=document.createElement('button');
+photoBtn.id='patternPhoto';photoBtn.type='button';photoBtn.textContent='しゃしんから';
+photoBtn.onclick=()=>ui('photoTextureInput').click();patRow.appendChild(photoBtn);
+applyBodyPattern('none');
+
+const cropDialog=ui('cropDialog'),cropCanvas=ui('cropCanvas'),cropCtx=cropCanvas.getContext('2d');
+const cropZoom=ui('cropZoom'),crop={image:null,dx:0,dy:0,zoom:1,pointer:null,lastX:0,lastY:0};
+function cropScale() {
+  return Math.max(224/crop.image.naturalWidth,224/crop.image.naturalHeight)*crop.zoom;
+}
+function cropClamp() {
+  const scale=cropScale(),maxX=(crop.image.naturalWidth*scale-224)/2,maxY=(crop.image.naturalHeight*scale-224)/2;
+  crop.dx=Math.max(-maxX,Math.min(maxX,crop.dx));
+  crop.dy=Math.max(-maxY,Math.min(maxY,crop.dy));
+}
+function cropDraw() {
+  if(!crop.image)return;
+  cropClamp();
+  const sc=cropScale(),w=crop.image.naturalWidth*sc,h=crop.image.naturalHeight*sc;
+  const x=160-w/2+crop.dx,y=160-h/2+crop.dy;
+  cropCtx.fillStyle='#eee';cropCtx.fillRect(0,0,320,320);
+  cropCtx.drawImage(crop.image,x,y,w,h);
+  cropCtx.fillStyle='rgba(0,0,0,.55)';
+  cropCtx.fillRect(0,0,320,48);cropCtx.fillRect(0,272,320,48);
+  cropCtx.fillRect(0,48,48,224);cropCtx.fillRect(272,48,48,224);
+  cropCtx.strokeStyle='#ffffff';cropCtx.lineWidth=3;cropCtx.strokeRect(48,48,224,224);
+}
+function cropClose() {
+  cropDialog.hidden=true;crop.image=null;crop.pointer=null;ui('photoTextureInput').value='';
+}
+ui('photoTextureInput').addEventListener('change',e=>{
+  const file=e.target.files&&e.target.files[0];
+  if(!file)return;
+  if(!file.type.startsWith('image/')) {toast('がぞうを えらんでね');return;}
+  const url=URL.createObjectURL(file),img=new Image();
+  img.onload=()=>{
+    URL.revokeObjectURL(url);
+    crop.image=img;crop.dx=crop.dy=0;crop.zoom=1;cropZoom.value='1';
+    cropDialog.hidden=false;cropDraw();
+  };
+  img.onerror=()=>{URL.revokeObjectURL(url);toast('しゃしんを よみこめません');};
+  img.src=url;
+});
+cropZoom.addEventListener('input',()=>{if(!crop.image)return;crop.zoom=Number(cropZoom.value);cropDraw();});
+cropCanvas.addEventListener('pointerdown',e=>{
+  if(!crop.image)return;
+  crop.pointer=e.pointerId;crop.lastX=e.clientX;crop.lastY=e.clientY;
+  try{cropCanvas.setPointerCapture(e.pointerId);}catch(_){}
+});
+cropCanvas.addEventListener('pointermove',e=>{
+  if(!crop.image||crop.pointer!==e.pointerId)return;
+  const factor=320/cropCanvas.getBoundingClientRect().width;
+  crop.dx+=(e.clientX-crop.lastX)*factor;crop.dy+=(e.clientY-crop.lastY)*factor;
+  crop.lastX=e.clientX;crop.lastY=e.clientY;cropDraw();
+});
+const endCrop=e=>{if(!e || crop.pointer===e.pointerId)crop.pointer=null;};
+cropCanvas.addEventListener('pointerup',endCrop);
+cropCanvas.addEventListener('pointercancel',endCrop);
+ui('cropCancel').onclick=cropClose;
+ui('cropApply').onclick=()=>{
+  if(!crop.image)return;
+  const output=document.createElement('canvas');output.width=output.height=256;
+  const ctx=output.getContext('2d');
+  const f=256/224,sc=cropScale(),w=crop.image.naturalWidth*sc,h=crop.image.naturalHeight*sc;
+  ctx.drawImage(crop.image,(160-w/2+crop.dx-48)*f,(160-h/2+crop.dy-48)*f,w*f,h*f);
+  const map=new THREE.CanvasTexture(output);map.colorSpace=THREE.SRGBColorSpace;map.anisotropy=4;
+  if(pendingPhotoTexture)pendingPhotoTexture.dispose();
+  pendingPhotoTexture=map;cropClose();
+  toast('んちょを さわって しゃしんを はってね');
+};
+function addPhotoSticker(hit, texture) {
+  finishBakeSettle();
+  const stickers=curInst.photoStickers||(curInst.photoStickers=[]);
+  if(stickers.length>=24){toast('しゃしんは 24こまでです');texture.dispose();return;}
+  pushUndo();
+  const point=body.worldToLocal(hit.point.clone()),normal=hit.face.normal.clone().normalize();
+  const sticker=new THREE.Mesh(new THREE.PlaneGeometry(.85,.85),
+    new THREE.MeshBasicMaterial({map:texture,transparent:true,side:THREE.DoubleSide,depthWrite:false,
+      polygonOffset:true,polygonOffsetFactor:-5,polygonOffsetUnits:-5}));
+  sticker.position.copy(point).addScaledVector(normal,.045);
+  sticker.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),normal);
+  sticker.frustumCulled=false;sticker.renderOrder=3;sticker.userData.photoSticker=true;
+  squish.add(sticker);
+  const anchor=sticker.position.toArray();
+  riders.push({o:sticker,base:Float32Array.from(anchor),ctr:anchor.slice(),bind:bindPoints(anchor)});
+  stickers.push(sticker);syncInst();
+}
+
 // ================= 増量モード（ステージを消すと、コピーして好きに置ける） =================
 const attached = o => { for (let p = o; p; p = p.parent) if (p === scene) return true; return false; };
 function syncInst() {
