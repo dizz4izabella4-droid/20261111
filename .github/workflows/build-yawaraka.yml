@@ -56,12 +56,25 @@ jobs:
               modeText:document.getElementById('modeSculpt').textContent,
               selectedModes:[...document.querySelectorAll('#toolModes button[aria-pressed="true"]')].map(x=>x.id),
               outline:document.getElementById('line').classList.contains('on'),
-              canvasWidth:document.getElementById('c').width
+              canvasWidth:document.getElementById('c').width,
+              shapeOpen:document.getElementById('pShape').classList.contains('open'),
+              bakeParent:document.getElementById('bakeBtn').closest('.panel')?.id,
+              relaxParent:document.getElementById('relaxBtn').closest('.panel')?.id,
+              bakeVisible:document.getElementById('bakeBtn').getClientRects().length>0,
+              relaxVisible:document.getElementById('relaxBtn').getClientRects().length>0,
+              tabs:{
+                shape:getComputedStyle(document.getElementById('tShape')).flexGrow,
+                decoration:getComputedStyle(document.getElementById('plantBtn')).flexGrow,
+                color:getComputedStyle(document.getElementById('colorBtn')).flexGrow,
+                details:getComputedStyle(document.getElementById('tMore')).flexGrow
+              }
             }));
             if(start.mode !== 'sculpt' || start.modeText !== 'のばす' ||
-               start.selectedModes.join() !== 'modeSculpt' || start.outline || start.canvasWidth < 100)
-              throw new Error('Bad startup UI: '+JSON.stringify(start));
-            await page.click('#tShape');
+               start.selectedModes.join() !== 'modeSculpt' || start.outline || start.canvasWidth < 100 ||
+               !start.shapeOpen || start.bakeParent!=='pShape' || start.relaxParent!=='pShape' ||
+               !start.bakeVisible || !start.relaxVisible ||
+               start.tabs.shape!=='2' || start.tabs.color!=='2' || start.tabs.details!=='1')
+              throw new Error('Bad startup UI or shape panel layout: '+JSON.stringify(start));
             await page.click('#hp');
             await page.click('#relaxBtn');
             await page.waitForFunction(() =>
@@ -77,6 +90,10 @@ jobs:
               try { return JSON.parse(localStorage.getItem('brain-friends-gallery-v1')||'[]').length > 0; }
               catch (e) { return false; }
             }, { timeout: 15000 });
+            await page.click('#tShape');
+            if (!await page.$eval('#bakeBtn',el=>el.getClientRects().length>0 &&
+              el.closest('#pShape')!==null))
+              throw new Error('BAKE not visible when shape tab is active');
             // Reproduce a slow frame: pointerdown + pointermove + BAKE all in
             // one JS task (without a render frame). Search the visible body.
             const bakeInfo = await page.evaluate(() => {
@@ -107,6 +124,7 @@ jobs:
             if (!bakeInfo.passed)
               throw new Error('BAKE did not start the frame-lag refinement: '+JSON.stringify(bakeInfo));
             await page.waitForFunction(() => !document.getElementById('bakeBtn').dataset.refining, {timeout:15000});
+            await page.click('#tMore'); // Undo remains in the advanced panel.
             await page.click('#undo');
             console.log('PASS: same-task drag and BAKE starts subtle post-cure refinement, completes, and undo works');
             // User-requested interaction regression: controls removed, separate copies,
@@ -186,15 +204,21 @@ jobs:
               markerRect:document.getElementById('lightHandle').getBoundingClientRect().toJSON(),
               enabled:document.getElementById('lightMoveBtn').getAttribute('aria-pressed')
             }),lightRect);
-            await page.mouse.move(lightRect.x,lightRect.y);
-            await page.mouse.down();
-            await page.mouse.move(lightRect.x+100,lightRect.y+68,{steps:5});
-            await page.mouse.up();
-            await new Promise(resolve=>setTimeout(resolve,200));
-            const dragNow=await page.$eval('#lightHandle',el=>({
-              x:Number(el.dataset.x),y:Number(el.dataset.y),
-              left:el.style.left,top:el.style.top,hidden:el.hidden
-            }));
+            // The handle can be clamped close to the screen edge after a
+            // camera orbit. Dispatch a complete pointer gesture to its real
+            // DOM handlers rather than sending the cursor off the canvas.
+            const dragNow=await page.evaluate(({x,y})=>{
+              const el=document.getElementById('lightHandle');
+              const evt=(type,px,py)=>new PointerEvent(type,{
+                bubbles:true,pointerId:6,pointerType:'touch',
+                isPrimary:true,buttons:type==='pointerup'?0:1,clientX:px,clientY:py
+              });
+              el.dispatchEvent(evt('pointerdown',x,y));
+              el.dispatchEvent(evt('pointermove',x-100,y+68));
+              el.dispatchEvent(evt('pointerup',x-100,y+68));
+              return {x:Number(el.dataset.x),y:Number(el.dataset.y),
+                left:el.style.left,top:el.style.top,hidden:el.hidden};
+            },lightRect);
             if (Math.abs(dragNow.x-lightBefore.x)<=.05 ||
                 Math.abs(dragNow.y-lightBefore.y)<=.05)
               throw new Error('Direct light drag did not change both light axes: '+
@@ -241,6 +265,9 @@ jobs:
                 toast:document.getElementById('toast').textContent};
             });
             if (!pasted.ok) throw new Error('Photo cutout not placed: '+JSON.stringify(pasted));
+            await page.click('#tShape');
+            if (!await page.$eval('#relaxBtn',el=>el.getClientRects().length>0))
+              throw new Error('Restore not visible in shape tab');
             // The explicit sculpt button returns directly, with no cycling.
             await page.click('#modeSculpt');
             await page.waitForFunction(() =>
@@ -331,6 +358,24 @@ jobs:
             if (doubleTapInfo.zoom > scaleBefore * 1.03 || doubleTapInfo.mode !== 'sculpt')
               throw new Error('UI double-tap caused zoom or left default mode: '+JSON.stringify({scaleBefore,doubleTapInfo}));
             console.log('PASS: double-tap suppressed on mobile UI; pinch zoom not globally disabled');
+            const mobilePanel = await page.evaluate(() => {
+              const ids=['tShape','plantBtn','colorBtn','tMore','bakeBtn','relaxBtn'];
+              const result={};
+              for(const id of ids){
+                const el=document.getElementById(id),r=el.getBoundingClientRect();
+                result[id]={x:r.left,width:r.width,right:r.right,visible:!!el.getClientRects().length};
+              }
+              return result;
+            });
+            for(const [id,pos] of Object.entries(mobilePanel)){
+              if(!pos.visible || pos.x<0 || pos.right>390.5 || pos.width<40)
+                throw new Error('Panel control out of mobile viewport: '+JSON.stringify({id,pos,mobilePanel}));
+            }
+            const tabRatio=mobilePanel.tShape.width/mobilePanel.tMore.width;
+            const colorRatio=mobilePanel.colorBtn.width/mobilePanel.tMore.width;
+            if(Math.abs(tabRatio-2)>.22 || Math.abs(colorRatio-2)>.22)
+              throw new Error('Shape/color/details width ratio is not 2:2:1: '+JSON.stringify(mobilePanel));
+            console.log('PASS: shape panel has BAKE and RELAX, initial panel visible, 2:2:1 tabs and small-screen layout');
             console.log('PASS: touch viewport 390x844 persistent mode buttons');
             if (jsErrors.length) throw new Error('Page errors: '+jsErrors.join(' / '));
             console.log('PASS: startup, WebGL canvas, default hiragana, outline off, relax, language toggle, gallery');

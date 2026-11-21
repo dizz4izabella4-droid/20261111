@@ -1973,7 +1973,7 @@ let panelNow = 'item';
 function openPanel(n) { panelNow = n; for (const k in PANELS) { ui(PANELS[k][1]).classList.toggle('open', k === n); ui(PANELS[k][0]).classList.toggle('on', k === n); } }
 function trayOpen(v) { if (v) openPanel('item'); else if (panelNow === 'item') openPanel(null); }
 for (const k in PANELS) ui(PANELS[k][0]).onclick = () => openPanel(panelNow === k ? null : k);
-openPanel(null);
+openPanel('shape'); // 変形が基本操作：固定・復元も最初から使える
 onPlucked = () => { trayOpen(true); toast('かざりを えらんでね'); };
 // Explicit modes: body deformation is the default. "おく" moves んちょ and decorations.
 let mode = 'sculpt', spinSaved = true;
