@@ -33,6 +33,7 @@ TARGETS = [
     'pc98-novel/_engine/template.html',
     'pc98-novel/index.html',
     'pc98-novel/works/sakurabashi/index.html',
+    'pc98-novel/works/irie-kan/index.html',
     'lab/index.html',
     'cinema/index.html',
     'utility/index.html',

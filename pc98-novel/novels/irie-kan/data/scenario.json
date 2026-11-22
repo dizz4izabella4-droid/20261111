@@ -1,0 +1,1150 @@
+{
+ "_note": "このファイルは scenario.txt から build.js が作ります。直すときは scenario.txt を直してください。",
+ "start": "opening",
+ "scenes": {
+  "opening": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "証拠保管庫",
+     "place": "閲覧室",
+     "chapter": "M-01"
+    },
+    {
+     "type": "BG",
+     "id": "reading_room",
+     "fade": 600
+    },
+    {
+     "type": "BGM",
+     "id": "calm"
+    },
+    {
+     "type": "BGM",
+     "id": "hum",
+     "channel": "env"
+    },
+    {
+     "type": "TEXT",
+     "text": "証拠保管庫の閲覧室は、今夜も紙と埃の匂いがした。"
+    },
+    {
+     "type": "TEXT",
+     "text": "机に置かれた綴じ資料の背表紙には、「M-01　入江館主人殺害事件」とある。"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「その棚の、いちばん最初の事件です。はじめて読む人には、まずそれを渡すことになっています」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "TEXT",
+     "text": "「解決した事件ですか」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「いいえ。犯人は断定されていません。記録が、どこまでを証明しているか。それを読む事件です」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "SE",
+     "id": "click"
+    },
+    {
+     "type": "TEXT",
+     "text": "「（空室から電話が来た。……見出しの奇妙さに、引っ張られないように）」",
+     "speaker": "me"
+    },
+    {
+     "type": "JUMP",
+     "to": "book1"
+    }
+   ]
+  },
+  "book1": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "証拠保管庫",
+     "place": "M-01 第1冊",
+     "chapter": "初動・現場記録"
+    },
+    {
+     "type": "BG",
+     "id": "inn_night",
+     "fade": 800
+    },
+    {
+     "type": "BGM",
+     "id": "mystery"
+    },
+    {
+     "type": "TEXT",
+     "text": "第1冊は、南汐署・刑事課の「初動・現場記録」。"
+    },
+    {
+     "type": "TEXT",
+     "text": "記録の日付は、1990年9月13日。海沿いの旅館、入江館。"
+    },
+    {
+     "type": "TEXT",
+     "text": "館主の中条俊子が、一階事務室で死亡しているのを、帳場係が発見した。"
+    },
+    {
+     "type": "SE",
+     "id": "door"
+    },
+    {
+     "type": "BG",
+     "id": "office_room",
+     "fade": 500
+    },
+    {
+     "type": "TEXT",
+     "text": "事務室の扉は施錠されていなかった。負傷と室内の状況から、殺人として捜査が始まる。"
+    },
+    {
+     "type": "TEXT",
+     "text": "ただし、第一発見者が触れた扉の位置は、発見前と同じとは限らない、と注記がある。"
+    },
+    {
+     "type": "TEXT",
+     "text": "事務室へは、渡り廊下と搬入口側の二方向から近づける。旧図には、搬入口から事務室への短い廊下が描かれていない。"
+    },
+    {
+     "type": "TEXT",
+     "text": "見た目の経路の少なさは、通れる経路の少なさではない。"
+    },
+    {
+     "type": "INFO",
+     "id": "two_routes",
+     "silent": true
+    },
+    {
+     "type": "TEXT",
+     "text": "午後八時四十分、従業員の尾形が、館主と翌朝の仕入れについて話した。"
+    },
+    {
+     "type": "TEXT",
+     "text": "午後九時十八分、帳場の日誌に『西館201より着信』と記入。九時三十一分には、裏玄関を施錠したという夜番の話がある。"
+    },
+    {
+     "type": "TEXT",
+     "text": "どの時刻も、同じ時計から採られたものではない。記録の精度も、それぞれ違う。"
+    },
+    {
+     "type": "INFO",
+     "id": "log_2118",
+     "silent": true
+    },
+    {
+     "type": "TEXT",
+     "text": "西館201号室は、当夜は空室扱いだった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "しかし、改装工事後の部屋番号と内線番号の対応表は、提出されていない。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「空室から電話が来た」という言い方そのものが、まだ確認前の推測だ、と記録は書いている。"
+    },
+    {
+     "type": "INFO",
+     "id": "empty_201",
+     "silent": true
+    },
+    {
+     "type": "SE",
+     "id": "get"
+    },
+    {
+     "type": "TEXT",
+     "text": "手がかりを、情報画面（INFO）に記録した。"
+    },
+    {
+     "type": "LABEL",
+     "name": "q1"
+    },
+    {
+     "type": "CHOICE",
+     "options": [
+      {
+       "text": "確定している。日誌に『西館201より着信』と書いてあるから",
+       "next": "#q1_w1",
+       "once": true,
+       "correct": false
+      },
+      {
+       "text": "確定していない。番号の対応表が出ておらず、確認前の推測にとどまる",
+       "next": "#q1_ok",
+       "correct": true
+      },
+      {
+       "text": "偽りだと分かっている。201は空室だったのだから",
+       "next": "#q1_w2",
+       "once": true,
+       "correct": false
+      }
+     ],
+     "id": "q1",
+     "prompt": "「空室の201号室から電話が来た」。この時点の記録は、それを確定しているか？"
+    },
+    {
+     "type": "LABEL",
+     "name": "q1_w1"
+    },
+    {
+     "type": "FLAG",
+     "set": {
+      "m1": true
+     }
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「日誌が証明するのは、『201と書いた』という記入までです。誰かが201の部屋から掛けた、ということではありません」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "JUMP",
+     "to": "#q1"
+    },
+    {
+     "type": "LABEL",
+     "name": "q1_w2"
+    },
+    {
+     "type": "FLAG",
+     "set": {
+      "m1": true
+     }
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「偽りだと決まったわけでもありません。記録は『確認前』と言っているだけです。確定も否定も、まだできないのです」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "JUMP",
+     "to": "#q1"
+    },
+    {
+     "type": "LABEL",
+     "name": "q1_ok"
+    },
+    {
+     "type": "IF",
+     "cond": "!m1",
+     "else": "#__if1_else"
+    },
+    {
+     "type": "FLAG",
+     "add": {
+      "score": 1
+     }
+    },
+    {
+     "type": "LABEL",
+     "name": "__if1_else"
+    },
+    {
+     "type": "SE",
+     "id": "select"
+    },
+    {
+     "type": "TEXT",
+     "text": "「確かなのは、日誌に201と書かれたこと。部屋から掛けられた、とまでは言えない」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「見出しの奇妙さは、まだ証拠じゃない」",
+     "speaker": "me"
+    },
+    {
+     "type": "JUMP",
+     "to": "book2"
+    }
+   ]
+  },
+  "book2": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "証拠保管庫",
+     "place": "M-01 第2冊",
+     "chapter": "関係者聴取録"
+    },
+    {
+     "type": "BG",
+     "id": "switchboard",
+     "fade": 600
+    },
+    {
+     "type": "BGM",
+     "id": "calm"
+    },
+    {
+     "type": "TEXT",
+     "text": "第2冊は、南汐署・聴取担当の「関係者聴取録」。"
+    },
+    {
+     "type": "TEXT",
+     "text": "帳場係の野々宮葉子は、交換盤に『201』と点灯したので日誌へ書いた、と話す。"
+    },
+    {
+     "type": "TEXT",
+     "text": "発信した人も、室内も、見ていない。声は、最初は「年配の男性に聞こえた」。二度目の聴取では「かすれていて、性別は分からない」。"
+    },
+    {
+     "type": "TEXT",
+     "text": "野々宮は、番号札の下に貼られた小さな工事中の紙には、気づかなかったという。"
+    },
+    {
+     "type": "TEXT",
+     "text": "嘘をついていなくても、表示そのものが現実とずれていることはありうる。"
+    },
+    {
+     "type": "INFO",
+     "id": "nonomiya",
+     "silent": true
+    },
+    {
+     "type": "TEXT",
+     "text": "205号室の宿泊者、島崎正史。夜に自室の電話が一度鳴ったが、受話器を取ると無言だった。自分から帳場へ掛けた覚えはない。"
+    },
+    {
+     "type": "TEXT",
+     "text": "時刻は、腕時計ではなく廊下の時計を見た記憶による。"
+    },
+    {
+     "type": "INFO",
+     "id": "shimazaki",
+     "silent": true
+    },
+    {
+     "type": "TEXT",
+     "text": "料理長の児玉実は、帳場から呼び出し音が聞こえたと話す。ただし厨房から交換盤は見えない。"
+    },
+    {
+     "type": "TEXT",
+     "text": "「201から」という部分は、翌朝の噂で知った。事件後に配られた新聞が、空室の着信を大きく扱っていた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "音は、帳場のベルにも、厨房の注文ベルにも似ている。"
+    },
+    {
+     "type": "INFO",
+     "id": "kodama",
+     "silent": true
+    },
+    {
+     "type": "BG",
+     "id": "inn_night",
+     "fade": 500
+    },
+    {
+     "type": "TEXT",
+     "text": "夜番の尾形定夫は、館主との仕入れをめぐる口論を認めた。最初に伏せたのは、「変な疑いを招きたくなかった」から。"
+    },
+    {
+     "type": "TEXT",
+     "text": "裏玄関は九時三十一分に施錠したが、内側からは開けられる仕組みだった。予備の配膳通路は、日常的に使っていた道だ。"
+    },
+    {
+     "type": "INFO",
+     "id": "ogata",
+     "silent": true
+    },
+    {
+     "type": "TEXT",
+     "text": "聴取担当者は当初、「空室発信」の欄に赤線を引いた。調査のあと、その赤線に取消線が付いている。"
+    },
+    {
+     "type": "TEXT",
+     "text": "発言を撤回させたのではない。意味を確定したかのように書いた、捜査側の注記を訂正したのだ。"
+    },
+    {
+     "type": "SE",
+     "id": "get"
+    },
+    {
+     "type": "TEXT",
+     "text": "手がかりを、情報画面（INFO）に記録した。"
+    },
+    {
+     "type": "LABEL",
+     "name": "q2"
+    },
+    {
+     "type": "CHOICE",
+     "options": [
+      {
+       "text": "なる。複数の人が同じ呼び出し音を聞いたのだから",
+       "next": "#q2_w1",
+       "once": true,
+       "correct": false
+      },
+      {
+       "text": "『電話があったこと』には一定の裏付けだが、『201から』は翌朝の噂で、別の疑問",
+       "next": "#q2_ok",
+       "correct": true
+      },
+      {
+       "text": "なにもならない。新聞を読んだあとの証言なので、すべて無効",
+       "next": "#q2_w2",
+       "once": true,
+       "correct": false
+      }
+     ],
+     "id": "q2",
+     "prompt": "児玉の証言は、「201から着信した」ことの独立した裏付けになるか？"
+    },
+    {
+     "type": "LABEL",
+     "name": "q2_w1"
+    },
+    {
+     "type": "FLAG",
+     "set": {
+      "m2": true
+     }
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「音を聞いたことと、何の音と理解したかは別です。『201から』は、本人が見聞きしたことではありませんでした」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "JUMP",
+     "to": "#q2"
+    },
+    {
+     "type": "LABEL",
+     "name": "q2_w2"
+    },
+    {
+     "type": "FLAG",
+     "set": {
+      "m2": true
+     }
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「担当者の注記は、影響した可能性を記しただけです。すべて無効、とは書いていません。電話があったこと自体には、一定の裏付けがあります」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "JUMP",
+     "to": "#q2"
+    },
+    {
+     "type": "LABEL",
+     "name": "q2_ok"
+    },
+    {
+     "type": "IF",
+     "cond": "!m2",
+     "else": "#__if2_else"
+    },
+    {
+     "type": "FLAG",
+     "add": {
+      "score": 1
+     }
+    },
+    {
+     "type": "LABEL",
+     "name": "__if2_else"
+    },
+    {
+     "type": "SE",
+     "id": "select"
+    },
+    {
+     "type": "TEXT",
+     "text": "「電話があった。ここまでは、いくつかの証言が支える」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「でも、どこから、誰が、何を話したか。それぞれが別の疑問だ」",
+     "speaker": "me"
+    },
+    {
+     "type": "LABEL",
+     "name": "q3"
+    },
+    {
+     "type": "CHOICE",
+     "options": [
+      {
+       "text": "尾形が殺害した、という根拠になる",
+       "next": "#q3_w1",
+       "once": true,
+       "correct": false
+      },
+      {
+       "text": "口論があった事実は言えるが、それを殺害した事実と連続させることはできない",
+       "next": "#q3_ok",
+       "correct": true
+      },
+      {
+       "text": "最初に口論を伏せたので、嘘つきで、証言はすべて信用できない",
+       "next": "#q3_w2",
+       "once": true,
+       "correct": false
+      }
+     ],
+     "id": "q3",
+     "prompt": "尾形が館主と口論したことは、何の根拠になるか？"
+    },
+    {
+     "type": "LABEL",
+     "name": "q3_w1"
+    },
+    {
+     "type": "FLAG",
+     "set": {
+      "m3": true
+     }
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「口論をした事実と、殺害した事実は、別の資料でそれぞれ確かめるものです。記録も、連続させることはできない、と明記しています」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "JUMP",
+     "to": "#q3"
+    },
+    {
+     "type": "LABEL",
+     "name": "q3_w2"
+    },
+    {
+     "type": "FLAG",
+     "set": {
+      "m3": true
+     }
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「伏せた理由は『変な疑いを招きたくなかった』。通路の使い方も日常の業務でした。印象で評価せず、確認できる範囲を分けて読みましょう」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "JUMP",
+     "to": "#q3"
+    },
+    {
+     "type": "LABEL",
+     "name": "q3_ok"
+    },
+    {
+     "type": "IF",
+     "cond": "!m3",
+     "else": "#__if3_else"
+    },
+    {
+     "type": "FLAG",
+     "add": {
+      "score": 1
+     }
+    },
+    {
+     "type": "LABEL",
+     "name": "__if3_else"
+    },
+    {
+     "type": "SE",
+     "id": "select"
+    },
+    {
+     "type": "TEXT",
+     "text": "「口論は、あった。でも、それだけで殺害には届かない」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「疑わしい印象と、説明の成り立つ証拠は、別のものだ」",
+     "speaker": "me"
+    },
+    {
+     "type": "JUMP",
+     "to": "book3"
+    }
+   ]
+  },
+  "book3": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "証拠保管庫",
+     "place": "M-01 第3冊",
+     "chapter": "設備照会・再検証"
+    },
+    {
+     "type": "BG",
+     "id": "switchboard",
+     "fade": 600
+    },
+    {
+     "type": "BGM",
+     "id": "mystery"
+    },
+    {
+     "type": "TEXT",
+     "text": "第3冊は、南汐署・資料照会係の「設備照会・再検証」。"
+    },
+    {
+     "type": "TEXT",
+     "text": "保守会社の作業票には、『西館201・205 電話機交換、番号札後日更新』とあった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "交換機の端子表を見ると、ある期間、『201』の表示が205号室に対応している。"
+    },
+    {
+     "type": "TEXT",
+     "text": "ところが、十三日の作業完了欄は、未署名のままだ。事件当夜の状態は、いまも分からない。"
+    },
+    {
+     "type": "SE",
+     "id": "shock"
+    },
+    {
+     "type": "INFO",
+     "id": "work_order",
+     "silent": true
+    },
+    {
+     "type": "INFO",
+     "id": "terminal",
+     "silent": true
+    },
+    {
+     "type": "TEXT",
+     "text": "宿泊台帳では、201は販売停止、205は島崎の一名宿泊。"
+    },
+    {
+     "type": "TEXT",
+     "text": "台帳が示すのは、契約上の利用者だ。特定の時刻に電話機を操作した人物は、示さない。"
+    },
+    {
+     "type": "TEXT",
+     "text": "業務日誌の余白には、改装後、呼出音と表示位置が一致しない、という苦情も残されていた。"
+    },
+    {
+     "type": "INFO",
+     "id": "ledger",
+     "silent": true
+    },
+    {
+     "type": "TEXT",
+     "text": "帳場係の「21:18」は、手書きの時刻だった。交換機が自動で記録したものではない。"
+    },
+    {
+     "type": "TEXT",
+     "text": "保守会社の試験表は十分単位。厨房の壁時計は、定期点検で三分進み、帳場は二分遅れと分かった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "ただし、その測定の日は、事件当日ではない。"
+    },
+    {
+     "type": "INFO",
+     "id": "clock_diff",
+     "silent": true
+    },
+    {
+     "type": "SE",
+     "id": "get"
+    },
+    {
+     "type": "TEXT",
+     "text": "手がかりを、情報画面（INFO）に記録した。"
+    },
+    {
+     "type": "LABEL",
+     "name": "q4"
+    },
+    {
+     "type": "CHOICE",
+     "options": [
+      {
+       "text": "できる。帳場は二分遅れなので、実際は21:20ごろ",
+       "next": "#q4_w1",
+       "once": true,
+       "correct": false
+      },
+      {
+       "text": "できない。測定の日は事件当日とは別で、補正すると存在しない正確さを作ってしまう",
+       "next": "#q4_ok",
+       "correct": true
+      },
+      {
+       "text": "時刻の記録はすべて無意味なので、事件の時系列は考えられない",
+       "next": "#q4_w2",
+       "once": true,
+       "correct": false
+      }
+     ],
+     "id": "q4",
+     "prompt": "点検で分かった時計の差（厨房は三分進み、帳場は二分遅れ）を使って、「21:18」を補正できるか？"
+    },
+    {
+     "type": "LABEL",
+     "name": "q4_w1"
+    },
+    {
+     "type": "FLAG",
+     "set": {
+      "m4": true
+     }
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「別の日に測った差が、事件の夜にも同じだった保証はありません。記録は、かえって存在しない正確さを作ることになる、と戒めています」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "JUMP",
+     "to": "#q4"
+    },
+    {
+     "type": "LABEL",
+     "name": "q4_w2"
+    },
+    {
+     "type": "FLAG",
+     "set": {
+      "m4": true
+     }
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「無意味ではありません。十五分単位の証言を一分単位に変換できない、というだけです。精度の違う時刻を、そのまま並べて読むのです」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "JUMP",
+     "to": "#q4"
+    },
+    {
+     "type": "LABEL",
+     "name": "q4_ok"
+    },
+    {
+     "type": "IF",
+     "cond": "!m4",
+     "else": "#__if4_else"
+    },
+    {
+     "type": "FLAG",
+     "add": {
+      "score": 1
+     }
+    },
+    {
+     "type": "LABEL",
+     "name": "__if4_else"
+    },
+    {
+     "type": "SE",
+     "id": "select"
+    },
+    {
+     "type": "TEXT",
+     "text": "「時計の差は、測定としては確かな記録。でも、別の日の数字は、別の日の時刻を直してはくれない」",
+     "speaker": "me"
+    },
+    {
+     "type": "BGM",
+     "id": "tension"
+    },
+    {
+     "type": "TEXT",
+     "text": "最後の綴りには、こう書いてあった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "この綴りは、事件解決を記録したものではない。保守履歴と宿泊台帳を重ねて、着信表示の読み違いを見つけるための資料である。"
+    },
+    {
+     "type": "TEXT",
+     "text": "誰が発信したかは、未確定。人物に関する証言と設備に関する記録は、同じ結論を証明するものとして、混ぜずに保存する。"
+    },
+    {
+     "type": "LABEL",
+     "name": "q5"
+    },
+    {
+     "type": "CHOICE",
+     "options": [
+      {
+       "text": "空室の201号室から、誰かが電話を掛けた",
+       "next": "#q5_w1",
+       "once": true,
+       "correct": false
+      },
+      {
+       "text": "205号室の島崎が、電話を掛けた",
+       "next": "#q5_w2",
+       "once": true,
+       "correct": false
+      },
+      {
+       "text": "201号室からの発信は立証されていない。205号室など別の場所の可能性を残すが、断定もできず、発信者は未確定",
+       "next": "#q5_ok",
+       "correct": true
+      }
+     ],
+     "id": "q5",
+     "prompt": "第3冊までの記録から、「201号室からの発信」について言えるのはどれ？"
+    },
+    {
+     "type": "LABEL",
+     "name": "q5_w1"
+    },
+    {
+     "type": "FLAG",
+     "set": {
+      "m5": true
+     }
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「その前提は、番号の対応が正しい場合にだけ成り立つものでした。対応が崩れるかもしれない以上、それを事実として読むことはできません」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "JUMP",
+     "to": "#q5"
+    },
+    {
+     "type": "LABEL",
+     "name": "q5_w2"
+    },
+    {
+     "type": "FLAG",
+     "set": {
+      "m5": true
+     }
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「205号室という可能性は残ります。でも、島崎が掛けたとは直ちに言えません。誰かが一時的にその電話を使った可能性も、記録は残しています」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "JUMP",
+     "to": "#q5"
+    },
+    {
+     "type": "LABEL",
+     "name": "q5_ok"
+    },
+    {
+     "type": "IF",
+     "cond": "!m5",
+     "else": "#__if5_else"
+    },
+    {
+     "type": "FLAG",
+     "add": {
+      "score": 1
+     }
+    },
+    {
+     "type": "LABEL",
+     "name": "__if5_else"
+    },
+    {
+     "type": "SE",
+     "id": "get"
+    },
+    {
+     "type": "TEXT",
+     "text": "「分かっているのは、『201と表示された』ことまで」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「そこから先は、人物の証言でも、設備の記録でも、まだ届いていない」",
+     "speaker": "me"
+    },
+    {
+     "type": "JUMP",
+     "to": "finale"
+    }
+   ]
+  },
+  "finale": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "証拠保管庫",
+     "place": "閲覧室",
+     "chapter": "M-01 閲覧終了"
+    },
+    {
+     "type": "BG",
+     "id": "reading_room",
+     "fade": 800
+    },
+    {
+     "type": "BGM",
+     "id": "calm"
+    },
+    {
+     "type": "TEXT",
+     "text": "簿冊を閉じる。背表紙に、「解決済み」の印はなかった。"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「この事件は、犯人が分からないまま保管されています。それでも、読み終えた人が持ち帰れるものがあります」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "TEXT",
+     "text": "「不可解な話ほど、何を直接見たのかに立ち返る。それだけです」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "ENDING"
+    }
+   ]
+  },
+  "ep_true": {
+   "commands": [
+    {
+     "type": "BGM",
+     "id": "ending"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「五つとも、記録のとおりです。犯人の名を言わずに読み切る。それが、いちばん難しい読み方です」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "TEXT",
+     "text": "「分かったのは、犯人じゃない。『何が、まだ言えないか』だった」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT_STYLE",
+     "mode": "CUSTOM",
+     "charMs": 60,
+     "fadeMs": 400,
+     "lineMs": 600
+    },
+    {
+     "type": "TEXT",
+     "text": "201と表示された。\nそれは、201から掛けられた、という意味ではない。"
+    },
+    {
+     "type": "TEXT_STYLE",
+     "mode": "RESET"
+    },
+    {
+     "type": "ENDING"
+    }
+   ]
+  },
+  "ep_good": {
+   "commands": [
+    {
+     "type": "BGM",
+     "id": "ending"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「ほとんど、読めています。ただ、いくつかは印象で選びましたね」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "TEXT",
+     "text": "「番号札の下の、小さな紙。もう一度、頁を戻して読み直そう」",
+     "speaker": "me"
+    },
+    {
+     "type": "ENDING"
+    }
+   ]
+  },
+  "ep_normal": {
+   "commands": [
+    {
+     "type": "BGM",
+     "id": "ending"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「奇妙な見出しは、人を急がせます。まず、誰が何を直接見たのかを、頁ごとに分けてみてください」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "TEXT",
+     "text": "「空室から電話。……その一文を、証拠のように読んでいた」",
+     "speaker": "me"
+    },
+    {
+     "type": "ENDING"
+    }
+   ]
+  }
+ }
+}
