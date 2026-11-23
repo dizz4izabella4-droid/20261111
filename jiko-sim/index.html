@@ -341,7 +341,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:10px 0}
   </nav>
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div class="stagebar"><button id="bFit">全体表示</button><button id="bPng">PNG</button></div>
+    <div class="stagebar"><button id="bV3" title="事故の経過を立体で再生します">3D再現</button><button id="bFit">全体表示</button><button id="bPng">PNG</button></div>
     <div id="hint"></div>
   </div>
   <div id="panel"></div>
@@ -869,6 +869,412 @@ const PHYS = (() => {
 </script>
 
 <!-- ============================================================
+     3D再現モード（簡易3D）
+     設計・実装：ソフィア（2026-11-23）
+     検証モード／逆算モードで計算した事故の経過を、立体で再生する。
+     ・外部ライブラリなし。Canvas 2D で透視投影し、面を奥から順に塗る（簡易3D）。
+     ・車は箱を組み合わせた簡易モデル。建物・道路・車線もこの中で描く。
+     ・視点：俯瞰（ドラッグで回転・ホイール/ピンチで拡大縮小）／A・B の運転席／A・B の後方。
+     ・DOM に触るのはこのブロックだけ。物理計算には一切手を入れない。
+     座標：x=東, y=北, z=上（m）。車の向き th は x 軸から反時計回り(rad)。
+     ============================================================ -->
+<script id="sim3d">
+const SIM3D = (() => {
+  'use strict';
+  const PI = Math.PI, TAU = PI * 2;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const lerp = (a, b, k) => a + (b - a) * k;
+  const angLerp = (a, b, k) => { let d = (b - a) % TAU; if (d > PI) d -= TAU; if (d < -PI) d += TAU; return a + d * k; };
+  const hex = c => { const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(c || ''); return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [120, 120, 120]; };
+  const rgb = (c, k = 1) => `rgb(${Math.round(clamp(c[0] * k, 0, 255))},${Math.round(clamp(c[1] * k, 0, 255))},${Math.round(clamp(c[2] * k, 0, 255))})`;
+  const kmh = v => Math.round(v * 3.6);
+
+  /* ---------- 時間軸：衝突前（recs）＋衝突後（postCrash の経路）をひとつにつなぐ ---------- */
+  function buildTimeline(res) {
+    const coll = res.collided ? res.coll : null, tc = coll ? coll.t : res.tEnd;
+    const tl = [0, 1].map(i => {
+      const pre = res.recs.filter(r => !coll || r.t < tc - 1e-6).map(r => ({ t: r.t, c: r.st[i].c, th: r.st[i].th, v: r.st[i].v }));
+      if (coll) { const q = coll.pre[i]; pre.push({ t: tc, c: q.c, th: q.th, v: q.v }); }
+      else if (pre.length) { const l = pre[pre.length - 1]; pre.push({ t: res.tEnd, c: l.c, th: l.th, v: l.v }); }
+      let post = [];
+      if (coll && res.post) {
+        const p = res.post[i].path;
+        post = p.map((q, k) => {
+          const a = p[Math.max(0, k - 1)], b = p[Math.min(p.length - 1, k + 1)], dt = b.t - a.t;
+          const sp = dt > 0 ? Math.hypot(b.c.x - a.c.x, b.c.y - a.c.y) / dt : 0;
+          return { t: tc + q.t, c: q.c, th: q.th, v: sp };
+        });
+      }
+      return { pre, post };
+    });
+    let T = coll && res.post ? tc + Math.max(res.post[0].t, res.post[1].t) + 1.2 : res.tEnd;
+    return { tl, tc: coll ? tc : null, T: Math.max(0.5, T) };
+  }
+  function sample(arr, t) {
+    if (!arr.length) return null;
+    if (t <= arr[0].t) return { ...arr[0] };
+    const n = arr.length; if (t >= arr[n - 1].t) return { ...arr[n - 1] };
+    let lo = 0, hi = n - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (arr[m].t <= t) lo = m; else hi = m; }
+    const a = arr[lo], b = arr[hi], k = (t - a.t) / Math.max(1e-9, b.t - a.t);
+    return { t, c: { x: lerp(a.c.x, b.c.x, k), y: lerp(a.c.y, b.c.y, k) }, th: angLerp(a.th, b.th, k), v: lerp(a.v, b.v, k), dv: b.v - a.v };
+  }
+  function poseAt(TL, i, t) {
+    const o = TL.tl[i];
+    if (TL.tc != null && t >= TL.tc && o.post.length) { const p = sample(o.post, t); p.after = true; return p; }
+    const p = sample(o.pre, Math.min(t, TL.tc != null ? TL.tc : t)); p.after = false; return p;
+  }
+
+  /* ---------- 車の見た目（簡易モデル）：箱の組み合わせ ---------- */
+  function kindOf(vp) {
+    if (!(vp.tr > 0)) return 'bike';
+    if (vp.L >= 8) return 'truckL';
+    if (vp.m >= 3000) return 'truckS';
+    if (vp.W >= 1.84) return 'suv';
+    if (vp.L < 3.6) return 'kei';
+    return 'car';
+  }
+  const SPEC = {
+    car: { z0: .26, top: .86, cab: [-.30, .10], cabTop: 1.42, wr: .32, eye: 1.18 },
+    kei: { z0: .24, top: .95, cab: [-.40, .18], cabTop: 1.62, wr: .29, eye: 1.22 },
+    suv: { z0: .30, top: 1.00, cab: [-.42, .14], cabTop: 1.75, wr: .36, eye: 1.32 },
+    truckS: { z0: .38, top: 1.15, cab: [.12, .5], cabTop: 2.10, wr: .38, eye: 1.80, box: [-.5, .10, 2.55] },
+    truckL: { z0: .55, top: 1.30, cab: [.28, .5], cabTop: 3.00, wr: .52, eye: 2.45, box: [-.5, .26, 3.70] },
+    bike: { z0: .30, top: .95, wr: .31, eye: 1.45 },
+  };
+  function boxFaces(out, c, th, x0, x1, y0, y1, z0, z1, cols) {
+    // 車の局所座標(前=+x, 左=+y)の箱を世界座標の面に変換。cols = {top, side, front, rear}
+    const f = { x: Math.cos(th), y: Math.sin(th) }, l = { x: -f.y, y: f.x };
+    const P = (lx, ly, z) => ({ x: c.x + f.x * lx + l.x * ly, y: c.y + f.y * lx + l.y * ly, z });
+    const v = [P(x0, y0, z0), P(x1, y0, z0), P(x1, y1, z0), P(x0, y1, z0), P(x0, y0, z1), P(x1, y0, z1), P(x1, y1, z1), P(x0, y1, z1)];
+    const ctr = P((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+    const quad = (a, b, c2, d, col) => out.push({ p: [v[a], v[b], v[c2], v[d]], col, ctr });
+    quad(4, 5, 6, 7, cols.top);            // 上
+    quad(1, 2, 6, 5, cols.front || cols.side); // 前
+    quad(3, 0, 4, 7, cols.rear || cols.side);  // 後
+    quad(2, 3, 7, 6, cols.side);           // 左
+    quad(0, 1, 5, 4, cols.side);           // 右
+  }
+  function carFaces(out, pose, vp, kind, col, braking) {
+    const c = pose.c, th = pose.th, S = SPEC[kind], L = vp.L, W = vp.W;
+    const body = hex(col), glass = [38, 54, 70], dark = [32, 33, 36], tire = [24, 24, 26];
+    const solid = (b) => ({ top: b, side: b, front: b, rear: b });
+    if (kind === 'bike') {
+      for (const lx of [vp.wb / 2, -vp.wb / 2]) boxFaces(out, c, th, lx - S.wr, lx + S.wr, -.07, .07, 0, S.wr * 2, solid(tire));
+      boxFaces(out, c, th, -L * .38, L * .30, -.11, .11, S.z0, S.top, solid(body));          // 車体
+      boxFaces(out, c, th, L * .24, L * .38, -.28, .28, S.top, S.top + .06, solid(dark));      // ハンドル
+      boxFaces(out, c, th, -L * .22, .02, -.22, .22, S.top, S.top + .62, solid([60, 70, 90])); // ライダー
+      boxFaces(out, c, th, -L * .17, -L * .02, -.13, .13, S.top + .62, S.top + .88, solid([220, 220, 225])); // ヘルメット
+      boxFaces(out, c, th, -L * .5, -L * .5 + .04, -.06, .06, .55, .70, { top: braking ? [255, 40, 30] : [120, 20, 20], side: braking ? [255, 40, 30] : [120, 20, 20] });
+      return;
+    }
+    for (const lx of [vp.wb / 2, -vp.wb / 2]) for (const sy of [1, -1]) {
+      const ly = sy * (vp.tr / 2 + .02); boxFaces(out, c, th, lx - S.wr, lx + S.wr, ly - .13, ly + .13, 0, S.wr * 2, solid(tire));
+    }
+    boxFaces(out, c, th, -L / 2, L / 2, -W / 2, W / 2, S.z0, S.top, solid(body));            // 車体
+    if (S.box) boxFaces(out, c, th, L * S.box[0], L * S.box[1], -W / 2, W / 2, S.top, S.box[2], solid([226, 228, 232])); // 荷台
+    boxFaces(out, c, th, L * S.cab[0], L * S.cab[1], -W / 2 * .92, W / 2 * .92, S.top, S.cabTop, { top: body, side: glass, front: glass, rear: glass }); // キャビン
+    const lamp = braking ? [255, 40, 30] : [125, 22, 22];
+    for (const sy of [1, -1]) {
+      boxFaces(out, c, th, -L / 2 - .03, -L / 2 + .05, sy * W * .30 - .17, sy * W * .30 + .17, S.top - .30, S.top - .12, solid(lamp)); // テールランプ
+      boxFaces(out, c, th, L / 2 - .05, L / 2 + .03, sy * W * .30 - .17, sy * W * .30 + .17, S.top - .30, S.top - .12, solid([255, 246, 200])); // ヘッドライト
+    }
+  }
+
+  /* ---------- 世界（道路・建物・車線）の面 ---------- */
+  function worldGround(road, stopMark) {
+    const g = [], R = 260, add = (z, col, ...pts) => g.push({ z, col, pts });
+    const rect = (x1, y1, x2, y2, z, col) => add(z, col, [x1, y1], [x2, y1], [x2, y2], [x1, y2]);
+    const wx = road.xLanes * road.xLaneW, wy = road.yLanes * road.yLaneW, ex = wy / 2, ey = wx / 2;
+    rect(-1500, -1500, 1500, 1500, 0, [112, 150, 96]);
+    rect(-R, -ey - 2.2, R, ey + 2.2, .004, [176, 176, 170]); rect(-ex - 2.2, -R, ex + 2.2, R, .004, [176, 176, 170]); // 歩道
+    rect(-R, -ey, R, ey, .01, [88, 92, 98]); rect(-ex, -R, ex, R, .01, [88, 92, 98]);
+    const stripe = (a, b, w, col, z) => { // a→b の帯
+      const dx = b[0] - a[0], dy = b[1] - a[1], n = Math.hypot(dx, dy) || 1, nx = -dy / n * w / 2, ny = dx / n * w / 2;
+      add(z, col, [a[0] + nx, a[1] + ny], [b[0] + nx, b[1] + ny], [b[0] - nx, b[1] - ny], [a[0] - nx, a[1] - ny]);
+    };
+    const edge = [235, 235, 232], center = [244, 200, 60];
+    for (const s of [-1, 1]) {
+      stripe([-R, s * ey], [-ex, s * ey], .14, edge, .02); stripe([ex, s * ey], [R, s * ey], .14, edge, .02);
+      stripe([s * ex, -R], [s * ex, -ey], .14, edge, .02); stripe([s * ex, ey], [s * ex, R], .14, edge, .02);
+    }
+    const lanes = axis => {
+      const n = axis === 'x' ? road.xLanes : road.yLanes, lw = axis === 'x' ? road.xLaneW : road.yLaneW, w = n * lw;
+      const through = road.priority === axis, edgeD = axis === 'x' ? ex : ey;
+      for (let k = 1; k < n; k++) {
+        const o = -w / 2 + k * lw, isC = k === n / 2;
+        const segs = through && isC ? [[-R, R]] : [[-R, -edgeD], [edgeD, R]];
+        for (const [a, b] of segs) {
+          const P = t => axis === 'x' ? [t, o] : [o, t];
+          if (isC) stripe(P(a), P(b), .16, center, .02);
+          else for (let t = a; t < b - 1; t += 7.5) stripe(P(t), P(Math.min(b, t + 3)), .12, edge, .02);
+        }
+      }
+    };
+    lanes('x'); lanes('y');
+    // 横断歩道（交差点の4辺）
+    const zebra = (cx, cy, alongX, len) => { for (let k = -len / 2 + .3; k < len / 2 - .2; k += .9) { const a = alongX ? [cx, cy + k] : [cx + k, cy], b = alongX ? [cx + 2.6, cy + k] : [cx + k, cy + 2.6]; stripe(alongX ? [cx - 1.3, cy + k] : [cx + k, cy - 1.3], alongX ? [cx + 1.3, cy + k] : [cx + k, cy + 1.3], .45, [236, 236, 232], .02); } };
+    zebra(-ex - 2, 0, true, wx); zebra(ex + 2, 0, true, wx); zebra(0, -ey - 2, false, wy); zebra(0, ey + 2, false, wy);
+    // 一時停止線
+    if (road.stop && road.priority !== 'none') {
+      if (road.priority === 'x') { stripe([-wy / 2, -ey - 4.2], [0, -ey - 4.2], .45, [240, 240, 240], .02); stripe([0, ey + 4.2], [wy / 2, ey + 4.2], .45, [240, 240, 240], .02); }
+      else { stripe([-ex - 4.2, 0], [-ex - 4.2, wx / 2], .45, [240, 240, 240], .02); stripe([ex + 4.2, -wx / 2], [ex + 4.2, 0], .45, [240, 240, 240], .02); }
+    }
+    return g;
+  }
+  function worldSolids(obstacles) {
+    const out = [];
+    for (const o of obstacles) {
+      const x1 = Math.min(o.x1, o.x2), x2 = Math.max(o.x1, o.x2), y1 = Math.min(o.y1, o.y2), y2 = Math.max(o.y1, o.y2), H = 7.5;
+      const wallC = [196, 190, 180], roofC = [150, 146, 140], ctr = { x: (x1 + x2) / 2, y: (y1 + y2) / 2, z: H / 2 };
+      const tile = (ax, ay, bx, by, col) => { // 垂直な壁を約3mの小片に分けて、奥行きの並べ替えが破綻しにくくする
+        const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 3)), m = Math.ceil(H / 3);
+        for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) {
+          const t0 = i / n, t1 = (i + 1) / n, z0 = H * j / m, z1 = H * (j + 1) / m;
+          const P = (t, z) => ({ x: lerp(ax, bx, t), y: lerp(ay, by, t), z });
+          out.push({ p: [P(t0, z0), P(t1, z0), P(t1, z1), P(t0, z1)], col, ctr });
+        }
+      };
+      tile(x1, y1, x2, y1, wallC); tile(x2, y1, x2, y2, [186, 180, 170]); tile(x2, y2, x1, y2, wallC); tile(x1, y2, x1, y1, [186, 180, 170]);
+      const nx = Math.max(1, Math.ceil((x2 - x1) / 4)), ny = Math.max(1, Math.ceil((y2 - y1) / 4));
+      for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) out.push({ p: [{ x: lerp(x1, x2, i / nx), y: lerp(y1, y2, j / ny), z: H }, { x: lerp(x1, x2, (i + 1) / nx), y: lerp(y1, y2, j / ny), z: H }, { x: lerp(x1, x2, (i + 1) / nx), y: lerp(y1, y2, (j + 1) / ny), z: H }, { x: lerp(x1, x2, i / nx), y: lerp(y1, y2, (j + 1) / ny), z: H }], col: roofC, ctr });
+    }
+    return out;
+  }
+
+  /* ---------- カメラ・投影 ---------- */
+  function makeCam(pos, yaw, pitch, W, H, fovDeg) {
+    const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+    const fwd = { x: cp * cy, y: cp * sy, z: sp }, right = { x: sy, y: -cy, z: 0 };
+    const up = { x: right.y * fwd.z - right.z * fwd.y, y: right.z * fwd.x - right.x * fwd.z, z: right.x * fwd.y - right.y * fwd.x };
+    const f = (W / 2) / Math.tan(fovDeg * D2R / 2);
+    return { pos, fwd, right, up, f, W, H, yaw, pitch };
+  }
+  const D2R = PI / 180;
+  const toCam = (cam, p) => { const dx = p.x - cam.pos.x, dy = p.y - cam.pos.y, dz = p.z - cam.pos.z; return { x: dx * cam.right.x + dy * cam.right.y + dz * cam.right.z, y: dx * cam.up.x + dy * cam.up.y + dz * cam.up.z, z: dx * cam.fwd.x + dy * cam.fwd.y + dz * cam.fwd.z }; };
+  const NEAR = 0.15;
+  function clipNear(pts) { // Sutherland–Hodgman（手前側 z>=NEAR だけ残す）
+    const out = [];
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[i], b = pts[(i + 1) % pts.length], ina = a.z >= NEAR, inb = b.z >= NEAR;
+      if (ina) out.push(a);
+      if (ina !== inb) { const k = (NEAR - a.z) / (b.z - a.z); out.push({ x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k), z: NEAR }); }
+    }
+    return out;
+  }
+  function fillPoly(g, cam, pts3, style, alpha) {
+    const cp = clipNear(pts3.map(p => toCam(cam, p))); if (cp.length < 3) return false;
+    g.beginPath();
+    for (let i = 0; i < cp.length; i++) { const q = cp[i], sx = cam.W / 2 + q.x / q.z * cam.f, sy = cam.H / 2 - q.y / q.z * cam.f; if (i) g.lineTo(sx, sy); else g.moveTo(sx, sy); }
+    g.closePath(); if (alpha != null) g.globalAlpha = alpha; g.fillStyle = style; g.fill(); if (alpha != null) g.globalAlpha = 1; return true;
+  }
+
+  /* ---------- 画面（オーバーレイ） ---------- */
+  let root, cv, g, W = 0, H = 0, dpr = 1, st = null, raf = 0, lastTs = 0;
+  function css() {
+    if (document.getElementById('sim3d-css')) return;
+    const s = document.createElement('style'); s.id = 'sim3d-css';
+    s.textContent = `
+#v3{position:fixed;inset:0;z-index:60;background:#0d1117;display:none;flex-direction:column;touch-action:none;user-select:none;-webkit-user-select:none;color:#fff;font:13px system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
+#v3.on{display:flex}
+#v3 .v3top{display:flex;align-items:center;gap:6px;padding:calc(6px + env(safe-area-inset-top,0px)) 8px 6px;background:#161b22;flex-wrap:wrap}
+#v3 .v3top b{margin-right:auto;font-size:14px}
+#v3 button{border:1px solid #3a4250;background:#232a35;color:#fff;border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer;min-height:34px}
+#v3 button.on{background:#2f7ff0;border-color:#2f7ff0}
+#v3 .v3cv{position:relative;flex:1;min-height:0}
+#v3 canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#v3 .v3bar{display:flex;align-items:center;gap:8px;padding:6px 60px calc(8px + env(safe-area-inset-bottom,0px)) 8px;background:#161b22;flex-wrap:wrap}
+#v3 .v3bar input[type=range]{flex:1;min-width:80px}
+#v3 .v3bar span{font-variant-numeric:tabular-nums;min-width:74px;text-align:right}
+`;
+    document.head.append(s);
+  }
+  function build() {
+    if (root) return;
+    css();
+    root = document.createElement('div'); root.id = 'v3';
+    root.innerHTML = `
+<div class="v3top"><b>3D再現</b>
+  <button data-cam="orbit">俯瞰</button><button data-cam="A">A運転席</button><button data-cam="B">B運転席</button><button data-cam="chaseA">A後方</button><button data-cam="chaseB">B後方</button>
+  <button id="v3x" aria-label="閉じる">✕ 閉じる</button></div>
+<div class="v3cv"><canvas></canvas></div>
+<div class="v3bar"><button id="v3p">▶ 再生</button><button id="v3r" aria-label="最初から">⏮</button>
+  <input id="v3t" type="range" min="0" max="1000" value="0"><span id="v3s"></span>
+  <button data-sp="0.25">0.25×</button><button data-sp="0.5">0.5×</button><button data-sp="1">1×</button></div>`;
+    document.body.append(root);
+    cv = root.querySelector('canvas'); g = cv.getContext('2d');
+    root.querySelector('#v3x').onclick = close;
+    root.querySelectorAll('[data-cam]').forEach(b => b.onclick = () => setCam(b.dataset.cam));
+    root.querySelectorAll('[data-sp]').forEach(b => b.onclick = () => { st.speed = +b.dataset.sp; syncUI(); });
+    root.querySelector('#v3p').onclick = () => { if (st.t >= st.TL.T - 1e-3) st.t = 0; st.playing = !st.playing; lastTs = 0; syncUI(); loop(); };
+    root.querySelector('#v3r').onclick = () => { st.t = 0; st.playing = false; syncUI(); render(); };
+    root.querySelector('#v3t').oninput = e => { st.t = +e.target.value / 1000 * st.TL.T; st.playing = false; syncUI(); render(); };
+    // 視点の操作：ドラッグで回す／見回す、ホイール・ピンチで拡大縮小
+    const pts = new Map(); let pinch = 0;
+    cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = Math.hypot(a.x - b.x, a.y - b.y); } });
+    cv.addEventListener('pointermove', e => {
+      const p = pts.get(e.pointerId); if (!p || !st) return;
+      if (pts.size === 2) { pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y); if (pinch > 0 && d > 0) st.zoom = clamp(st.zoom * pinch / d, .25, 6); pinch = d; render(); return; }
+      const dx = e.clientX - p.x, dy = e.clientY - p.y; pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (st.cam === 'orbit') { st.oYaw -= dx * .008; st.oEl = clamp(st.oEl + dy * .006, .06, 1.5); }
+      else { st.lYaw -= dx * .006; st.lPitch = clamp(st.lPitch + dy * .005, -.9, .9); }
+      render();
+    });
+    const up = e => { pts.delete(e.pointerId); pinch = 0; };
+    cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+    cv.addEventListener('wheel', e => { e.preventDefault(); if (st) { st.zoom = clamp(st.zoom * (e.deltaY > 0 ? 1.1 : .9), .25, 6); render(); } }, { passive: false });
+    addEventListener('resize', () => { if (st) { size(); render(); } });
+    addEventListener('keydown', e => { if (!st) return; if (e.key === 'Escape') close(); else if (e.key === ' ') { e.preventDefault(); root.querySelector('#v3p').click(); } });
+  }
+  function size() { const r = cv.getBoundingClientRect(); dpr = Math.min(2, window.devicePixelRatio || 1); W = Math.max(50, r.width); H = Math.max(50, r.height); cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+  function setCam(k) { st.cam = k; st.lYaw = 0; st.lPitch = 0; syncUI(); render(); }
+  function syncUI() {
+    root.querySelectorAll('[data-cam]').forEach(b => b.classList.toggle('on', b.dataset.cam === st.cam));
+    root.querySelectorAll('[data-sp]').forEach(b => b.classList.toggle('on', +b.dataset.sp === st.speed));
+    root.querySelector('#v3p').textContent = st.playing ? '⏸ 一時停止' : (st.t >= st.TL.T - 1e-3 ? '↺ もう一度' : '▶ 再生');
+    root.querySelector('#v3t').value = Math.round(st.t / st.TL.T * 1000);
+    root.querySelector('#v3s').textContent = st.t.toFixed(2) + ' / ' + st.TL.T.toFixed(1) + ' s';
+  }
+  function loop() {
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(ts => {
+      if (!st || !st.playing) return;
+      if (lastTs) st.t = Math.min(st.TL.T, st.t + (ts - lastTs) / 1000 * st.speed);
+      lastTs = ts; if (st.t >= st.TL.T - 1e-3) { st.playing = false; lastTs = 0; }
+      syncUI(); render(); if (st.playing) loop();
+    });
+  }
+
+  /* ---------- 描画 ---------- */
+  function cameraFor(poses) {
+    const k = st.cam, vp = st.cfg.veh;
+    if (k === 'A' || k === 'B') {
+      const i = k === 'A' ? 0 : 1, p = poses[i], v = vp[i], f = { x: Math.cos(p.th), y: Math.sin(p.th) }, r = { x: f.y, y: -f.x };
+      const pos = { x: p.c.x + f.x * (v.L / 2 - v.eyeF) + r.x * v.eyeR, y: p.c.y + f.y * (v.L / 2 - v.eyeF) + r.y * v.eyeR, z: SPEC[st.kind[i]].eye };
+      return makeCam(pos, p.th + st.lYaw, -.02 + st.lPitch, W, H, 86 / st.zoom);
+    }
+    if (k === 'chaseA' || k === 'chaseB') {
+      const i = k === 'chaseA' ? 0 : 1, p = poses[i], f = { x: Math.cos(p.th), y: Math.sin(p.th) }, d = (vp[i].L / 2 + 7) * st.zoom;
+      const yaw = p.th + st.lYaw, cx = Math.cos(yaw), sy = Math.sin(yaw);
+      const tgt = { x: p.c.x, y: p.c.y, z: 1.0 }, pos = { x: tgt.x - cx * d, y: tgt.y - sy * d, z: 2.8 + 1.2 * st.zoom + st.lPitch * 4 };
+      return makeCam(pos, yaw, Math.atan2(tgt.z - pos.z, d), W, H, 62);
+    }
+    const mid = { x: (poses[0].c.x + poses[1].c.x) / 2, y: (poses[0].c.y + poses[1].c.y) / 2, z: 0.8 };
+    const sep = Math.hypot(poses[0].c.x - poses[1].c.x, poses[0].c.y - poses[1].c.y);
+    const D = Math.max(17, sep * .85 + 13) * st.zoom, el = st.oEl, yaw = st.oYaw;
+    const pos = { x: mid.x + Math.cos(el) * Math.cos(yaw) * D, y: mid.y + Math.cos(el) * Math.sin(yaw) * D, z: mid.z + Math.sin(el) * D };
+    return makeCam(pos, yaw + PI, -el, W, H, 55);
+  }
+  function render() {
+    if (!st || !cv) return;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const poses = [poseAt(st.TL, 0, st.t), poseAt(st.TL, 1, st.t)];
+    const cam = cameraFor(poses), own = (st.cam === 'A') ? 0 : (st.cam === 'B') ? 1 : -1;
+    // 空
+    const yh = H / 2 + Math.tan(cam.pitch) * cam.f, sky = g.createLinearGradient(0, yh - H * .7, 0, yh);
+    sky.addColorStop(0, '#6fa3dc'); sky.addColorStop(1, '#dbe9f6'); g.fillStyle = sky; g.fillRect(0, 0, W, H);
+    // 地面（平らなので並べ替え不要：描いた順に重なる）
+    for (const q of st.ground) fillPoly(g, cam, q.pts.map(p => ({ x: p[0], y: p[1], z: q.z })), rgb(q.col));
+    // 衝突後のタイヤ痕
+    if (st.TL.tc != null && st.res.post && st.t > st.TL.tc) {
+      g.save(); g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = 'rgba(20,20,22,.55)';
+      for (let i = 0; i < 2; i++) {
+        const post = st.res.post[i], n = post.path.length; if (!post.tracks) continue;
+        const upto = Math.min(n - 1, Math.floor((st.t - st.TL.tc) / .02));
+        for (const tr of post.tracks) {
+          g.beginPath(); let pen = false;
+          for (let k = 0; k <= Math.min(upto, tr.length - 1); k++) {
+            const q = toCam(cam, { x: tr[k].x, y: tr[k].y, z: .02 });
+            if (q.z < NEAR) { pen = false; continue; }
+            const sx = W / 2 + q.x / q.z * cam.f, sy = H / 2 - q.y / q.z * cam.f;
+            if (pen) g.lineTo(sx, sy); else { g.moveTo(sx, sy); pen = true; }
+          }
+          g.lineWidth = Math.max(1, .18 * cam.f / Math.max(4, toCam(cam, { x: poses[i].c.x, y: poses[i].c.y, z: 0 }).z)); g.stroke();
+        }
+      }
+      g.restore();
+    }
+    // 影
+    for (let i = 0; i < 2; i++) { if (i === own) continue; const v = st.cfg.veh[i], f = { x: Math.cos(poses[i].th), y: Math.sin(poses[i].th) }, l = { x: -f.y, y: f.x }, c = poses[i].c, a = v.L / 2 + .25, b = v.W / 2 + .25; const P = (x, y) => ({ x: c.x + f.x * x + l.x * y, y: c.y + f.y * x + l.y * y, z: .03 }); fillPoly(g, cam, [P(a, b), P(a, -b), P(-a, -b), P(-a, b)], '#000', .28); }
+    // 立体（建物・車）：面の中心の遠い順に塗る。裏向きの面は省く
+    const faces = st.solids.map(f => ({ ...f, shade: 1 }));
+    for (let i = 0; i < 2; i++) if (i !== own) carFaces(faces, poses[i], st.cfg.veh[i], st.kind[i], st.colors[i], poses[i].dv < -1e-4 && !poses[i].after);
+    const Ld = { x: .45, y: -.35, z: .82 }, Ln = Math.hypot(Ld.x, Ld.y, Ld.z);
+    const draw = [];
+    for (const f of faces) {
+      const a = f.p[0], b = f.p[1], c = f.p[2];
+      let nx = (b.y - a.y) * (c.z - a.z) - (b.z - a.z) * (c.y - a.y), ny = (b.z - a.z) * (c.x - a.x) - (b.x - a.x) * (c.z - a.z), nz = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+      const nl = Math.hypot(nx, ny, nz) || 1; nx /= nl; ny /= nl; nz /= nl;
+      const fc = { x: (a.x + c.x) / 2, y: (a.y + c.y) / 2, z: (a.z + c.z) / 2 };
+      if (f.ctr && nx * (fc.x - f.ctr.x) + ny * (fc.y - f.ctr.y) + nz * (fc.z - f.ctr.z) < 0) { nx = -nx; ny = -ny; nz = -nz; } // 外向きにそろえる
+      const toC = { x: cam.pos.x - fc.x, y: cam.pos.y - fc.y, z: cam.pos.z - fc.z };
+      if (nx * toC.x + ny * toC.y + nz * toC.z <= 0) continue;
+      const sh = .5 + .5 * Math.max(0, (nx * Ld.x + ny * Ld.y + nz * Ld.z) / Ln);
+      draw.push({ f, sh, d: toC.x * toC.x + toC.y * toC.y + toC.z * toC.z });
+    }
+    draw.sort((p, q) => q.d - p.d);
+    g.lineJoin = 'round';
+    for (const e of draw) { const s = rgb(e.f.col, e.sh); if (fillPoly(g, cam, e.f.p, s)) { g.strokeStyle = s; g.lineWidth = .6; g.stroke(); } }
+    // 運転席の視点：ボンネットと柱の簡易表現
+    if (own >= 0 && st.kind[own] !== 'bike') {
+      g.fillStyle = 'rgba(18,20,24,.92)'; g.beginPath(); g.moveTo(0, H); g.lineTo(0, H * .90); g.quadraticCurveTo(W / 2, H * .83, W, H * .90); g.lineTo(W, H); g.closePath(); g.fill();
+      g.fillStyle = 'rgba(18,20,24,.88)'; g.beginPath(); g.moveTo(0, 0); g.lineTo(W * .05, 0); g.lineTo(0, H * .55); g.closePath(); g.fill();
+      g.beginPath(); g.moveTo(W, 0); g.lineTo(W * .95, 0); g.lineTo(W, H * .55); g.closePath(); g.fill();
+    }
+    hud(poses);
+  }
+  function hud(poses) {
+    const tc = st.TL.tc, res = st.res, chips = [];
+    for (let i = 0; i < 2; i++) {
+      const rv = res.veh[i], after = tc != null && st.t >= tc;
+      let s = '走行中'; if (after) s = '衝突後'; else if (rv.tBrake >= 0 && st.t >= rv.tBrake) s = 'ブレーキ'; else if (rv.tSee >= 0 && st.t >= rv.tSee) s = '発見・反応中';
+      chips.push(`${st.labels[i]}  ${kmh(poses[i].v)} km/h  ${s}`);
+    }
+    g.save(); g.font = '600 13px system-ui,sans-serif'; g.textBaseline = 'middle';
+    chips.forEach((t, i) => { const w = g.measureText(t).width + 18, x = 8, y = 10 + i * 28; g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(x, y, w, 23); g.fillStyle = st.colors[i]; g.fillRect(x, y, 4, 23); g.fillStyle = '#fff'; g.fillText(t, x + 10, y + 12); });
+    const camName = { orbit: '俯瞰（ドラッグで回転・拡大縮小）', A: st.labels[0] + ' 運転席（ドラッグで見回し）', B: st.labels[1] + ' 運転席（ドラッグで見回し）', chaseA: st.labels[0] + ' 後方', chaseB: st.labels[1] + ' 後方' }[st.cam];
+    g.font = '12px system-ui,sans-serif'; g.fillStyle = 'rgba(255,255,255,.85)'; g.textAlign = 'right'; g.fillText(camName, W - 10, 18);
+    if (tc != null && st.t >= tc && st.t < tc + 1.4) {
+      const k = 1 - (st.t - tc) / 1.4; g.textAlign = 'center'; g.font = '800 26px system-ui,sans-serif'; g.fillStyle = `rgba(255,70,50,${.35 + .65 * k})`; g.fillText('衝突', W / 2, H * .2);
+    }
+    if (tc == null && st.t >= st.TL.T - 1e-3) { g.textAlign = 'center'; g.font = '700 18px system-ui,sans-serif'; g.fillStyle = 'rgba(255,255,255,.9)'; g.fillText('衝突しませんでした', W / 2, H * .2); }
+    g.restore();
+  }
+
+
+  // 俯瞰カメラの初期の向き：建物（遮蔽物）に視線が遮られない方角を選ぶ
+  function pickYaw(obstacles, mid, D, prefer) {
+    const hit = (x, y) => obstacles.some(o => x > Math.min(o.x1, o.x2) - 2 && x < Math.max(o.x1, o.x2) + 2 && y > Math.min(o.y1, o.y2) - 2 && y < Math.max(o.y1, o.y2) + 2);
+    let best = prefer, bestScore = 1e9;
+    for (let k = 0; k < 16; k++) {
+      const yaw = k * TAU / 16; let blocked = 0;
+      for (let t = .15; t <= 1.001; t += .05) if (hit(mid.x + Math.cos(yaw) * D * t, mid.y + Math.sin(yaw) * D * t)) blocked++;
+      let d = Math.abs(((yaw - prefer) % TAU + TAU + PI) % TAU - PI);
+      const score = blocked * 10 + d;
+      if (score < bestScore) { bestScore = score; best = yaw; }
+    }
+    return best;
+  }
+
+  /* ---------- 入口 ---------- */
+  function open(o) {
+    // o = { cfg, res, road, obstacles, colors, labels }
+    build();
+    const TL = buildTimeline(o.res);
+    const p0 = [poseAt(TL, 0, TL.tc != null ? TL.tc : 0), poseAt(TL, 1, TL.tc != null ? TL.tc : 0)];
+    const mid0 = { x: (p0[0].c.x + p0[1].c.x) / 2, y: (p0[0].c.y + p0[1].c.y) / 2 };
+    st = { cfg: o.cfg, res: o.res, TL, t: 0, playing: true, speed: 1, cam: 'orbit', zoom: 1, oYaw: pickYaw(o.obstacles || [], mid0, 36, -2.1), oEl: .6, lYaw: 0, lPitch: 0,
+      colors: o.colors || ['#1565c0', '#d84315'], labels: o.labels || ['A', 'B'], kind: o.cfg.veh.map(kindOf),
+      ground: worldGround(o.road), solids: worldSolids(o.obstacles || []) };
+    root.classList.add('on'); document.body.style.overflow = 'hidden';
+    size(); syncUI(); render(); lastTs = 0; loop();
+  }
+  function close() { if (!root) return; root.classList.remove('on'); document.body.style.overflow = ''; if (st) st.playing = false; cancelAnimationFrame(raf); st = null; }
+  return { open, close, buildTimeline, poseAt, kindOf };
+})();
+if (typeof module !== 'undefined') module.exports = SIM3D;
+</script>
+
+<!-- ============================================================
      画面部分（状態・描画・入力パネル）
      ============================================================ -->
 <script id="ui">
@@ -881,11 +1287,27 @@ const PHYS = (() => {
   const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
   const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 
+  /* ---------- 運転者の特性（反応時間・ブレーキ立ち上がりの目安）設計：ソフィア ----------
+     値は一般的な目安であり、年齢だけで決まるものではない（個人差が大きい）。実際の事案では実測値や記録で置き換えること。 */
+  const DRIVERS = {
+    normal:    { label: '一般的な運転者',            react: 0.75, rise: 0.10 },
+    alert:     { label: '若年・予期あり（注意集中）', react: 0.60, rise: 0.08 },
+    senior1:   { label: '高齢者（65〜74歳の目安）',   react: 1.00, rise: 0.15 },
+    senior2:   { label: '高齢者（75歳以上の目安）',   react: 1.25, rise: 0.20 },
+    tired:     { label: '疲労・漫然運転',            react: 1.20, rise: 0.15 },
+    distract:  { label: '脇見・ながら運転',          react: 1.50, rise: 0.15 },
+    custom:    { label: '任意（数値を直接入力）',     react: null, rise: null },
+  };
+  const driverOpts = Object.keys(DRIVERS).map(k => [k, DRIVERS[k].label + (DRIVERS[k].react != null ? '：' + DRIVERS[k].react.toFixed(2) + '秒' : '')]);
+  const driverKeyOf = v => { for (const k of Object.keys(DRIVERS)) { const d = DRIVERS[k]; if (d.react != null && Math.abs(d.react - v.react) < 1e-9 && Math.abs(d.rise - v.rise) < 1e-9) return k; } return 'custom'; };
+  const driverShown = v => { const d = DRIVERS[v.driver]; return (!d || (d.react != null && (Math.abs(d.react - v.react) > 1e-9 || Math.abs(d.rise - v.rise) > 1e-9))) ? driverKeyOf(v) : v.driver; };
+  function applyDriver(i, key) { const v = S.veh[i], d = DRIVERS[key]; v.driver = key; if (d && d.react != null) { v.react = d.react; v.rise = d.rise; } }
+
   /* ---------- 状態 ---------- */
   function vehFromPreset(key, extra) {
     const p = P.VEH_PRESETS[key];
     return { preset: key, m: p.m, L: p.L, W: p.W, wb: p.wb, tr: p.tr, eyeF: p.eyeF, eyeR: p.eyeR, k: p.k, eff: Math.round(p.eff * 100),
-      Ifac: 1.0, v0: 40, react: 0.75, rise: 0.1, post: 'lock', brake: 'auto', D: 30, x: 0, y: 0, hdg: 0, path: null, ...extra };
+      Ifac: 1.0, v0: 40, react: 0.75, rise: 0.1, driver: 'normal', post: 'lock', brake: 'auto', D: 30, x: 0, y: 0, hdg: 0, path: null, ...extra };
   }
   function defaultState() {
     return {
@@ -1305,7 +1727,9 @@ const PHYS = (() => {
     tag(g, T, d.I, '推定衝突地点', '#b0101a', 10, -8);
   }
 
+  const bV3 = document.getElementById('bV3');
   function draw() {
+    bV3.hidden = S.mode === 'scene';
     if (!cv.width) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     drawScene(ctx, cssW, cssH, view);
@@ -1445,7 +1869,7 @@ const PHYS = (() => {
   }
   const presetOpts = Object.entries(P.VEH_PRESETS).map(([k, v]) => [k, v.label]);
   const roadOpts = [...Object.entries(P.ROAD_PRESETS).map(([k, v]) => [k, `${v.label}（μ${v.mu}）`]), ['custom', '手入力']];
-  function applyPreset(i, key) { const v = S.veh[i], keep = { v0: v.v0, x: v.x, y: v.y, hdg: v.hdg, path: v.path, react: v.react, brake: v.brake, D: v.D, rise: v.rise, post: v.post, Ifac: v.Ifac }; S.veh[i] = vehFromPreset(key, keep); }
+  function applyPreset(i, key) { const v = S.veh[i], keep = { v0: v.v0, x: v.x, y: v.y, hdg: v.hdg, path: v.path, react: v.react, brake: v.brake, D: v.D, rise: v.rise, driver: v.driver, post: v.post, Ifac: v.Ifac }; S.veh[i] = vehFromPreset(key, keep); }
   function applyRoadPreset(k) { S.road.preset = k; if (P.ROAD_PRESETS[k]) S.road.mu = P.ROAD_PRESETS[k].mu; }
   const HDG = [['0', '東向き →'], ['90', '北向き ↑'], ['180', '西向き ←'], ['-90', '南向き ↓']];
 
@@ -1457,7 +1881,10 @@ const PHYS = (() => {
       box.append(el('div', { class: 'vrow' }, el('span', { class: i ? 'tagB' : 'tagA' }, vname(i)),
         sel(() => S.veh[i].preset, k => applyPreset(i, k), presetOpts, { after: refreshValues }),
         showSpeed ? num(() => S.veh[i].v0, x => S.veh[i].v0 = x, { min: 0, max: 300, unit: 'km/h', step: 1 }) : el('span', { class: 'small' }, '')));
+      box.append(el('div', { class: 'vrow' }, el('span', { class: 'small' }, '運転者'),
+        sel(() => driverShown(S.veh[i]), k => applyDriver(i, k), driverOpts, { after: refreshValues }), el('span', { class: 'small' }, '')));
     });
+    box.append(el('div', { class: 'small', style: 'margin:2px 0 6px' }, '運転者の特性は反応時間とブレーキの立ち上がりの目安です（年齢だけでは決まらず個人差があります）。数値は「車両詳細」で直接変えられます。'));
     box.append(el('div', { class: 'row' }, el('label', {}, '路面'), el('div', { style: 'flex:1' }, sel(() => S.road.preset, applyRoadPreset, roadOpts, { after: refreshValues }))));
     if (S.mode !== 'scene') {
       box.append(el('div', { class: 'small', style: 'margin:6px 0 2px' }, '初期位置（図の車をドラッグして配置。車線に吸い付きます）'));
@@ -1483,9 +1910,9 @@ const PHYS = (() => {
     row('トレッド', 'm（左右の車輪間。バイクは0）', n('tr', { min: 0, step: 0.05 }));
     row('慣性モーメント係数', '直方体の値に掛ける', n('Ifac', { min: 0.2, max: 3, step: 0.05 }));
     g.append(el('span', { class: 'l' }, '→ 慣性モーメント', el('small', {}, 'kg·m²')), ...[0, 1].map(i => { const s = el('span', { class: 'small' }); binds.push({ el: { set value(x) { s.textContent = x; }, get value() { return s.textContent; } }, get: () => Math.round(vehParams(S.veh[i]).I).toLocaleString() }); s.textContent = Math.round(vehParams(S.veh[i]).I).toLocaleString(); return s; }));
-    row('運転者の反応時間', '秒（空走時間）', n('react', { min: 0, max: 5, step: 0.05 }));
+    row('運転者の反応時間', '秒（空走時間）', i => num(() => S.veh[i].react, x => { S.veh[i].react = x; S.veh[i].driver = driverKeyOf(S.veh[i]); }, { min: 0, max: 5, step: 0.05 }));
     row('ブレーキの効き', '%（路面μに対して）', n('eff', { min: 5, max: 120, step: 1 }));
-    row('ブレーキ立ち上がり', '秒', n('rise', { min: 0, max: 1, step: 0.05 }));
+    row('ブレーキ立ち上がり', '秒', i => num(() => S.veh[i].rise, x => { S.veh[i].rise = x; S.veh[i].driver = driverKeyOf(S.veh[i]); }, { min: 0, max: 1, step: 0.05 }));
     row('相手の発見', '', i => sel(() => S.veh[i].brake, x => S.veh[i].brake = x, [['auto', '見えた時（見通し判定）'], ['distance', '衝突地点の手前Dmで'], ['never', '発見しない（ブレーキなし）']], { after: refreshValues }));
     row('発見距離 D', 'm（上で「手前Dm」のとき）', i => num(() => S.veh[i].D, x => S.veh[i].D = x, { min: 0, step: 1, disabled: () => S.veh[i].brake !== 'distance' }));
     row('運転席の位置', 'm（前端から後ろへ）', n('eyeF', { min: 0, step: 0.1 }));
@@ -1816,7 +2243,7 @@ const PHYS = (() => {
     L.push(`路面 μ=${S.road.mu}（${(P.ROAD_PRESETS[S.road.preset] || { label: '手入力' }).label}）／ 反発係数 ${S.coll.e} ／ 車両間摩擦 ${S.coll.muc}`);
     S.veh.forEach((v, i) => {
       const st = vehStart(v);
-      L.push(`${vname(i)}: ${P.VEH_PRESETS[v.preset]?.label || ''} ${v.m}kg ${v.L}×${v.W}m 速度${v.v0}km/h 反応${v.react}s 効き${v.eff}% 位置(${st.c.x.toFixed(1)},${st.c.y.toFixed(1)}) 向き${(st.th * R2D).toFixed(0)}° 発見:${{ auto: '見通し', distance: '手前' + v.D + 'm', never: 'なし' }[v.brake]}${v.path ? ' 経路:曲線' : ''}`);
+      L.push(`${vname(i)}: ${P.VEH_PRESETS[v.preset]?.label || ''} ${v.m}kg ${v.L}×${v.W}m 速度${v.v0}km/h 反応${v.react}s(${DRIVERS[driverShown(v)].label}) 効き${v.eff}% 位置(${st.c.x.toFixed(1)},${st.c.y.toFixed(1)}) 向き${(st.th * R2D).toFixed(0)}° 発見:${{ auto: '見通し', distance: '手前' + v.D + 'm', never: 'なし' }[v.brake]}${v.path ? ' 経路:曲線' : ''}`);
     });
     if (S.mode === 'verify' && simRes) {
       if (simRes.collided) { const C = simRes.coll; L.push(`結果: 衝突 ${C.t.toFixed(2)}s 衝突速度 A${kmh(C.pre[0].v)} B${kmh(C.pre[1].v)} km/h 相対${kmh(C.vrel)}km/h 変形エネルギー${(C.dE / 1000).toFixed(1)}kJ ΔV A${kmh(C.dv[0])} B${kmh(C.dv[1])}`); }
@@ -1895,6 +2322,13 @@ const PHYS = (() => {
     target.scrollIntoView({ block: 'start', inline: 'nearest' });
   });
   document.getElementById('tabs').addEventListener('click', e => { const m = e.target.dataset && e.target.dataset.m; if (!m || m === S.mode) return; S.mode = m; renderAll(); fit(); });
+  // 3D再現：検証・逆算の結果を立体で再生する（ソフィア作 2026-11-23）
+  function open3d() {
+    const useRev = S.mode === 'reverse' && revSim, cfg = useRev ? revSim.cfg : simCfg, res = useRev ? revSim.res : simRes;
+    if (!cfg || !res) { alert('先に検証または逆算の結果を出してください。'); return; }
+    SIM3D.open({ cfg, res, road: { ...S.road }, obstacles: obstaclesN(), colors: [COL.A, COL.B], labels: ['A', 'B'] });
+  }
+  document.getElementById('bV3').onclick = open3d;
   document.getElementById('bFit').onclick = fit;
   document.getElementById('bPng').onclick = exportPng;
   window.addEventListener('resize', resize);
