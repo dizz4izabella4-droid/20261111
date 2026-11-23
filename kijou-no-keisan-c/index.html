@@ -227,7 +227,9 @@ select { appearance:none; padding-right:29px; background:
   .workspace-results .metric dd { margin-top:1px; font-size:1.125rem; }
   .note { margin-top:4px; }
 }
+#open3{background:#124799;color:#fff;border-color:#124799;box-shadow:0 2px 5px #15223730;margin:0 12px 8px}#open3:hover{background:#0b376f;color:#fff}#replay{width:min(960px,94vw);max-width:94vw;padding:.65rem;border:2px solid #124799;border-radius:10px;background:#fff;color:#152237}#replay::backdrop{background:#101b2bd9}#scene3{display:block;width:100%;height:min(56vh,570px)}.replay-controls{display:flex;align-items:center;flex-wrap:wrap;gap:.55rem;padding:.4rem 0}#replay button{background:#124799;color:#fff;border-color:#124799}#replay button:hover{background:#0b376f;color:#fff}#replay select{background:#fff;color:#152237;border:1px solid #64748b;border-radius:7px;min-height:40px;padding:0 10px}#close3{margin-left:auto}#time3{flex:1;min-width:60px;accent-color:#124799}#look3:not([hidden]){display:flex;align-items:center;gap:.5rem}
 </style>
+
 <script>window.IZ_BASE = {pos: 'bl'};</script>
 <!--IZ-GAME-BASE:START-->
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -442,6 +444,14 @@ select { appearance:none; padding-right:29px; background:
 <!--IZ-GAME-BASE:END-->
 </head>
 <body>
+<dialog id="replay"><div class="replay-controls"><strong>3D再現</strong>
+<select id="camera3" aria-label="視点"><option value="-1">俯瞰</option><option value="0">車両A 運転席</option><option value="1">車両B 運転席</option></select>
+<button id="close3" type="button">閉じる</button></div>
+<canvas id="scene3" aria-label="交通状況の3D再現"></canvas>
+<div class="replay-controls"><button id="play3" type="button">再生</button><input id="time3" aria-label="再現時刻" type="range" step="0.01" min="0" value="0"><output id="clock3"></output></div>
+<label id="look3">左右確認 <input id="yaw3" type="range" min="-110" max="110" value="0" aria-label="視線の角度"><button id="front3" type="button">正面</button></label>
+</dialog>
+
 <header class="topbar">
   <div class="shell">
     <div class="identity"><span class="identity-caption">事故再現ツール</span></div>
@@ -475,6 +485,7 @@ select { appearance:none; padding-right:29px; background:
             <button type="button" data-action="zoom-fit" aria-label="図面全体を表示">全体</button>
           </div>
         </div>
+        <button type="button" id="open3">3D再現</button>
         <canvas id="plan" aria-label="交差点と車両の軌跡を示す平面図">初期位置や停止位置は下の入力欄で設定できます。</canvas>
         <div id="legend" class="legend" aria-label="図面の凡例"></div>
       </section>
@@ -2288,6 +2299,7 @@ function setMode(nextMode) {
     workspaceResults.scrollTop = 0;
     byId("workspace-settings").scrollTop = 0;
   }
+  byId("open3").hidden = nextMode === "scene";
   mode = nextMode;
   selected = 0;
   document.querySelectorAll("[data-mode]").forEach(button => button.setAttribute("aria-pressed",button.dataset.mode === mode));
@@ -2547,6 +2559,162 @@ function savePng() {
 }
 byId("export-settings").addEventListener("click",saveSettings);
 byId("export-png").addEventListener("click",savePng);
+{
+  const replay = byId("replay"), canvas = byId("scene3"), timeline = byId("time3");
+  const camera = byId("camera3"), yaw = byId("yaw3"), play = byId("play3");
+  let gl, program, buffer, streetBuffer, streetCount, frame, previous, elapsed, scenario, tracks, street, extent;
+  function shader(type, source) {
+    const obj = gl.createShader(type);
+    gl.shaderSource(obj, source); gl.compileShader(obj);
+    if (!gl.getShaderParameter(obj, gl.COMPILE_STATUS)) throw Error(gl.getShaderInfoLog(obj));
+    return obj;
+  }
+  function init() {
+    gl = canvas.getContext("webgl", {antialias:true});
+    if (!gl) throw Error("WebGL");
+    program = gl.createProgram();
+    gl.attachShader(program,shader(gl.VERTEX_SHADER,`
+      attribute vec3 pos,col; varying lowp vec3 tint;
+      uniform vec3 eye,right,up,forward; uniform float aspect;
+      void main(){vec3 d=pos-eye;float z=dot(d,forward);
+      gl_Position=vec4(dot(d,right)*1.52/aspect,dot(d,up)*1.52,z*1.0001-.12,z);tint=col;}`));
+    gl.attachShader(program,shader(gl.FRAGMENT_SHADER,
+      "precision mediump float;varying lowp vec3 tint;void main(){gl_FragColor=vec4(tint,1.);}"));
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program,gl.LINK_STATUS)) throw Error("shader");
+    gl.useProgram(program);buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+    ["pos","col"].forEach((name,i)=>{const a=gl.getAttribLocation(program,name);
+      gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,3,gl.FLOAT,false,24,i*12);});
+    streetBuffer=gl.createBuffer();
+    gl.enable(gl.DEPTH_TEST);
+  }
+  // Coordinates are GP x, GP y and height in metres.
+  function prism(mesh, lower, upper, color) {
+    function face(a,b,c,d,light) {
+      for(const p of [a,b,c,a,c,d]) mesh.push(...p,...color.map(v=>v*light));
+    }
+    face(...upper,1);
+    for(let i=0;i<4;i++){const j=(i+1)%4;face(lower[i],lower[j],upper[j],upper[i],.64+.09*i);}
+  }
+  function rectangle(x,y,w,d,z) {
+    return [[-1,-1],[1,-1],[1,1],[-1,1]].map(([a,b])=>[x+a*w/2,y+b*d/2,z]);
+  }
+  function buildStreet() {
+    const mesh=[],roads=scenario.roads,rx=roads.y.width/2,ry=roads.x.width/2;
+    const box=(x,y,w,d,z,h,col)=>prism(mesh,rectangle(x,y,w,d,z),rectangle(x,y,w,d,z+h),col);
+    extent=Math.max(40,...tracks.flatMap(path=>path.map(p=>Math.max(Math.abs(p.x),Math.abs(p.y)))))+25;
+    const span=extent+80;
+    box(0,0,span*2,span*2,-.22,.05,[.44,.51,.47]);
+    box(0,0,span*2,2*ry,-.1,.09,[.29,.33,.38]);
+    box(0,0,2*rx,span*2,-.1,.1,[.29,.33,.38]);
+    for(const axis of ["x","y"]){
+      const alongX=axis==="x", cfg=roads[axis],edge=alongX?rx:ry;
+      function mark(a,b,w,d,col){box(alongX?a:b,alongX?b:a,alongX?w:d,alongX?d:w,.015,.01,col);}
+      for(let lane=1;lane<cfg.lanes;lane++){
+        const col=lane*2===cfg.lanes && roads.priority===axis?[.88,.75,.46]:[.85,.88,.88];
+        for(let k=edge+2;k<span;k+=4) for(const sign of [-1,1]) mark(sign*k,cfg.width*(lane/cfg.lanes-.5),2,.12,col);
+      }
+      if(alongX?roads.stopX:roads.stopY) for(const sign of [-1,1])
+        mark(sign*(edge+1),sign*(alongX?1:-1)*cfg.width/4,.3,cfg.width*.46,[.94,.95,.95]);
+    }
+    // Street blocks, varied facades and regularly spaced lamps from the vehicle viewer.
+    let seed=31;
+    function rand(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;}
+    for(const sx of [-1,1]) for(const sy of [-1,1]){
+      for(let k=0;k<Math.min(span,180);k+=16){
+        const x=sx*(rx+26+k),y=sy*(ry+28),h=8+rand()*22;
+        box(x,y,7+rand()*5,9,0,h,[.48,.54,.60]);
+        for(let z=3;z<h-1;z+=3) box(x,y-sy*4.55,6,.15,z,.8,[.65,.77,.83]);
+        box(x,sy*(ry+2),.12,.12,0,5,[.36,.39,.43]);
+        box(x,sy*(ry+1.6),.36,1,5,.16,[.87,.86,.69]);
+      }
+    }
+    for(const o of scenario.obstacles) box(o.x,o.y,o.w,o.h,0,3,[.55,.49,.44]);
+    return mesh;
+  }
+  function pose(path,t){
+    let lo=0,hi=path.length-1;
+    while(lo<hi){const m=(lo+hi)>>1;if(path[m].t<t)lo=m+1;else hi=m;}
+    const b=path[lo],a=path[Math.max(0,lo-1)],k=b.t>a.t?Math.min(1,Math.max(0,(t-a.t)/(b.t-a.t))):1;
+    const da=b.angle-a.angle;
+    return {x:a.x+(b.x-a.x)*k,y:a.y+(b.y-a.y)*k,angle:a.angle+Math.atan2(Math.sin(da),Math.cos(da))*k};
+  }
+  function vehicle(mesh,p,car,i,inside){
+    const c=Math.cos(p.angle),s=Math.sin(p.angle),l=car.length,w=car.width;
+    function ring(x,y,len,width,z){return rectangle(x*l,y*w,len*l,width*w,z).map(([a,b,h])=>[p.x+a*c-b*s,p.y+a*s+b*c,h]);}
+    const paint=i?[.99,.67,.31]:[.26,.78,.73];
+    prism(mesh,ring(0,0,.97,.97,.31),ring(0,0,1,1,.94),paint);
+    if(inside)return;
+    prism(mesh,ring(-.09,0,.65,.91,.95),ring(-.12,0,.43,.79,1.61),[.25,.36,.43]);
+    prism(mesh,ring(-.12,0,.43,.79,1.61),ring(-.12,0,.42,.78,1.66),paint);
+    for(const side of [-.35,.35]){
+      prism(mesh,ring(.497,side,.01,.18,.64),ring(.497,side,.01,.18,.77),[.96,.94,.77]);
+      prism(mesh,ring(-.497,side,.01,.18,.64),ring(-.497,side,.01,.18,.77),[.76,.16,.13]);
+    }
+    for(const x of [-.31,.31]) for(const side of [-.47,.47]){
+      const wheel=(a,offset)=>{
+        const u=x*l+.32*Math.cos(a),v=side*w+offset;
+        return [p.x+c*u-s*v,p.y+s*u+c*v,.33+.32*Math.sin(a)];
+      };
+      const outer=Math.sign(side)*.10;
+      for(let j=0;j<12;j++){
+        const a=j*Math.PI/6,b=(j+1)*Math.PI/6;
+        const A=wheel(a,outer),B=wheel(b,outer),C=wheel(a,-outer),D=wheel(b,-outer);
+        for(const point of [A,B,C,C,B,D])mesh.push(...point,.10,.12,.14);
+        const center=wheel(0,outer);center[0]-=.32*c;center[1]-=.32*s;
+        for(const point of [A,B,center])mesh.push(...point,.20,.22,.25);
+      }
+    }
+  }
+  function render(){
+    const ratio=Math.min(devicePixelRatio,2),w=Math.max(1,Math.round(canvas.clientWidth*ratio)),h=Math.max(1,Math.round(canvas.clientHeight*ratio));
+    if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
+    gl.viewport(0,0,w,h);gl.clearColor(.71,.81,.88,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+    const poses=tracks.map(path=>pose(path,elapsed)),idx=Number(camera.value);
+    let eye,heading,pitch;
+    if(idx<0){
+      const [a,b]=poses,d=Math.max(12,Math.hypot(a.x-b.x,a.y-b.y)*.85+5)*Math.max(1,h/w);
+      eye=[(a.x+b.x)/2-d*.55,(a.y+b.y)/2+d*.80,d];heading=Math.atan2(-.80,.55);pitch=-.80;
+    }else{
+      const p=poses[idx],car=scenario.cars[idx],c=Math.cos(p.angle),s=Math.sin(p.angle);
+      eye=[p.x+c*car.length*.22-s*car.width*.22,p.y+s*car.length*.22+c*car.width*.22,1.30];
+      heading=p.angle+Number(yaw.value)*Math.PI/180;pitch=-.075;
+    }
+    const c=Math.cos(heading),s=Math.sin(heading),cp=Math.cos(pitch),sp=Math.sin(pitch);
+    for(const [key,value] of Object.entries({eye,right:[-s,c,0],up:[-c*sp,-s*sp,cp],forward:[c*cp,s*cp,sp]}))
+      gl.uniform3fv(gl.getUniformLocation(program,key),value);
+    gl.uniform1f(gl.getUniformLocation(program,"aspect"),w/h);
+    function bind(meshBuffer) {
+      gl.bindBuffer(gl.ARRAY_BUFFER,meshBuffer);
+      ["pos","col"].forEach((key,i)=>gl.vertexAttribPointer(gl.getAttribLocation(program,key),3,gl.FLOAT,false,24,i*12));
+    }
+    bind(streetBuffer);gl.drawArrays(gl.TRIANGLES,0,streetCount);
+    bind(buffer);
+    const mesh=[];poses.forEach((p,i)=>vehicle(mesh,p,scenario.cars[i],i,i===idx));
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(mesh),gl.DYNAMIC_DRAW);gl.drawArrays(gl.TRIANGLES,0,mesh.length/6);
+    timeline.value=elapsed;byId("clock3").textContent=elapsed.toFixed(2)+" 秒";
+    byId("look3").hidden=idx<0;
+  }
+  function pause(){cancelAnimationFrame(frame);frame=0;play.textContent="再生";}
+  function tick(now){elapsed=Math.min(+timeline.max,elapsed+(now-previous)/1000);previous=now;render();
+    if(elapsed>=+timeline.max)pause();else frame=requestAnimationFrame(tick);}
+  byId("open3").onclick=()=>{
+    flush();
+    scenario=mode==="inverse"?inverseResult?.scenario:s;
+    const result=mode==="inverse"?inverseResult?.result:forwardResult;
+    if(!scenario||!result?.cars?.every(v=>v.path?.length))return notify("再現できる軌跡がありません。");
+    tracks=result.cars.map(v=>v.path);timeline.max=Math.max(...tracks.map(p=>p.at(-1).t));
+    elapsed=0;yaw.value=0;replay.showModal();
+    try{if(!program)init();street=buildStreet();streetCount=street.length/6;gl.bindBuffer(gl.ARRAY_BUFFER,streetBuffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(street),gl.STATIC_DRAW);render();}catch(error){replay.close();notify("3D表示を開始できません。WebGLの利用設定をご確認ください。");console.error(error);}
+  };
+  byId("close3").onclick=()=>replay.close();replay.onclose=pause;
+  camera.onchange=()=>{yaw.value=0;render();};yaw.oninput=render;byId("front3").onclick=()=>{yaw.value=0;render();};
+  timeline.oninput=()=>{pause();elapsed=+timeline.value;render();};
+  play.onclick=()=>{if(frame)return pause();if(elapsed>=+timeline.max)elapsed=0;
+    previous=performance.now();play.textContent="一時停止";frame=requestAnimationFrame(tick);};
+  new ResizeObserver(()=>{if(replay.open&&program)render();}).observe(canvas);
+}
+
 renderControls();
 setMode("forward");
 
