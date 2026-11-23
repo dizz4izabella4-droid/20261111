@@ -742,7 +742,7 @@ const CORE = (function () {
   'use strict';
   const Q = new URLSearchParams(location.search);
   const DEBUG = Q.get('debug') === '1', AUTO = Q.get('auto') === '1', SHOT = Q.get('shot');
-  const VFX_ON = Q.get('vfx') !== '0';
+  let VFX_ON = Q.get('vfx') !== '0';
   const core = CORE.create(CONFIG, { seed: +Q.get('seed') || 1 });
   const S = core.state;
   const $ = id => document.getElementById(id);
@@ -1267,9 +1267,15 @@ const CORE = (function () {
   }
 
   /* ================= 配送 ================= */
+  let effectErrorLogged = false;
+  function effectError(error) {
+    if (!effectErrorLogged) console.error('HANDS UP: frame error; continuing play', error);
+    effectErrorLogged = true;
+  }
   function handle(evs) {
     for (const e of evs) {
-      switch (e.type) {
+      try {
+        switch (e.type) {
         case 'stopped': AUDIO.sfx('stopped'); FX.dust(); break;
         case 'cuffs': AUDIO.sfx('cuffs'); FX.glint(); break;
         case 'window': case 'miss': case 'whiff': case 'ramArm': case 'spot': case 'door': case 'arrest': AUDIO.sfx(e.type, e); break;
@@ -1296,7 +1302,8 @@ const CORE = (function () {
         case 'boost': AUDIO.sfx('boost'); FX.boostGo(); break;
         case 'crash': AUDIO.sfx('crash'); FX.flash = 1; FX.shake = 26; break;
         case 'stuck': console.warn('stuck', e); break;
-      }
+        }
+      } catch (error) { effectError(error); } // An optional sound or impact effect must not stop the game loop.
     }
     if (DEBUG && evs.length) window.__events = (window.__events || []).concat(evs).slice(-40);
   }
@@ -2952,21 +2959,41 @@ const CORE = (function () {
   }
 
   /* ================= MAIN ================= */
-  let yTick = 0, last = performance.now(), fps = 60, fpsN = 0, fpsT = 0;
+  let yTick = 0, last = performance.now(), fps = 60, fpsN = 0, fpsT = 0, slowFrames = 0;
   function frame(now) {
-    const dt = Math.min((now - last) / 1000, 0.1); last = now;
+    // Schedule first: a transient iOS canvas/audio error must not kill every subsequent frame.
+    requestAnimationFrame(frame);
+    const elapsed = Math.max(0, (now - last) / 1000), dt = Math.min(elapsed, 0.1); last = now;
+    if (VFX_ON && !Q.has('vfx') && navigator.maxTouchPoints > 0 && S.hits > 0) {
+      slowFrames = elapsed > 0.14 ? slowFrames + 1 : 0;
+      if (slowFrames >= 6) { VFX_ON = false; FX.impact = null; }
+    }
+    try {
     if (!paused) {
-      if (!AUTO) { MICV.ensure(); const r = MICV.update(dt, S); if (r === 'voice') pend.voice = true; else if (r === 'more') pend.more = true; if (NOMIC && S.sub === 'YOURTURN' && S.t > 1.0) pend.voice = true; }
+      if (!AUTO) {
+        try {
+          MICV.ensure(); const r = MICV.update(dt, S);
+          if (r === 'voice') pend.voice = true; else if (r === 'more') pend.more = true;
+        } catch (error) { effectError(error); MICV.fallback = true; }
+        if (NOMIC && S.sub === 'YOURTURN' && S.t > 1.0) pend.voice = true;
+      }
       const evs = core.step(dt, AUTO ? core.bot(S, { replay: true }) : null);
       if (!AUTO) { /* 入力は下の pend で渡す */ }
       handle(evs);
-      tNow += dt; scroll += S.speed * dt * S.timeScale; AUDIO.update(S, tNow); FX.update(dt);
+      tNow += dt; scroll += S.speed * dt * S.timeScale;
+      try { AUDIO.update(S, tNow); } catch (error) { effectError(error); AUDIO.mute(); }
+      try { FX.update(dt); } catch (error) { effectError(error); FX.reset(); }
       if (S.sub === 'YOURTURN') { yTick += dt; if (yTick >= ((1 - S.t / S.ytLimit) < 0.4 ? 0.25 : 0.5)) { yTick = 0; AUDIO.sfx('tick'); } } else yTick = 0;
       fpsN++; fpsT += dt; if (fpsT >= 0.5) { fps = fpsN / fpsT; fpsN = 0; fpsT = 0; }
       updateUI(dt);
     }
     render();
-    requestAnimationFrame(frame);
+    } catch (error) {
+      effectError(error);
+      VFX_ON = false; FX.reset(); GLASS.reset();
+      // Keep UI and chase state advancing if a damaged-car or VFX draw fails once.
+      try { updateUI(0); render(); } catch (fallbackError) { effectError(fallbackError); }
+    }
   }
   // 入力は core.step に1フレーム分まとめて渡す
   const _step = core.step;
