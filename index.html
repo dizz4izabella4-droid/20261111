@@ -111,8 +111,9 @@
   function card(w) {
     var dv = IZ.deviceText(w), cat = IZ.CATS[w.category], lab = w.category === 'lab', tool = w.category === 'tool';
     var badges = '';
-    if (w.isNew) badges += '<span class="b new">NEW</span>';
-    else if (w.isUpdated) badges += '<span class="b upd">更新</span>';
+    if (typeof w.updateBadge === 'string') badges += '<span class="b upd">' + IZ.esc(w.updateBadge) + '</span>';
+    else if (w.isNew) badges += '<span class="b new">NEW</span>';
+    else if (w.isUpdated && w.updateBadge !== false) badges += '<span class="b upd">更新</span>';
     if (lab) {
       // 実験：未完・端末のバッジは出さず、バージョンを表示
       var st = IZ.STATUS[w.status];

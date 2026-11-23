@@ -75,6 +75,7 @@
           var o = {
             id: w.id, title: w.title, titleEn: w.titleEn || '', summary: w.summary || '',
             category: CATS[w.category] ? w.category : 'lab', status: w.status || 'stable', statusNote: w.statusNote || '', version: w.version || '', sticker: w.sticker || '',
+            updateBadge: w.updateBadge,
             devices: w.devices || [], icon: w.icon, gallery: w.gallery !== false, order: i,
             url: new URL(w.path, ROOT).href, path: w.path,
             history: h, dateState: !h ? 'pending' : (h.status === 'ok' ? 'ok' : (h.status === 'none' ? 'none' : 'unverified')),
