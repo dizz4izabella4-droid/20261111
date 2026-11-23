@@ -48,6 +48,7 @@ TARGETS = [
     'redline/play/template.html',
     'final-stop/index.html',
     'fantasy/index.html',
+    'crime-scene/index.html',
     'lumina/index.html',
     'shoko/index.html',
     'kijou-no-keisan-c/index.html',
