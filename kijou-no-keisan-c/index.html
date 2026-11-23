@@ -228,6 +228,33 @@ select { appearance:none; padding-right:29px; background:
   .note { margin-top:4px; }
 }
 #open3{background:#124799;color:#fff;border-color:#124799;box-shadow:0 2px 5px #15223730;margin:0 12px 8px}#open3:hover{background:#0b376f;color:#fff}#replay{width:min(960px,94vw);max-width:94vw;padding:.65rem;border:2px solid #124799;border-radius:10px;background:#fff;color:#152237}#replay::backdrop{background:#101b2bd9}#scene3{display:block;width:100%;height:min(56vh,570px)}.replay-controls{display:flex;align-items:center;flex-wrap:wrap;gap:.55rem;padding:.4rem 0}#replay button{background:#124799;color:#fff;border-color:#124799}#replay button:hover{background:#0b376f;color:#fff}#replay select{background:#fff;color:#152237;border:1px solid #64748b;border-radius:7px;min-height:40px;padding:0 10px}#close3{margin-left:auto}#time3{flex:1;min-width:60px;accent-color:#124799}#look3:not([hidden]){display:flex;align-items:center;gap:.5rem}
+.diagram-actions {display:flex;flex-wrap:wrap;gap:8px;padding:0 12px 8px}
+.diagram-actions #open3 {margin:0}
+#pick-cancel {margin-left:auto}
+#investigation {width:min(920px,94vw);max-width:94vw;max-height:86vh;padding:16px;border:1px solid #8295b4;border-radius:12px;background:var(--white);color:var(--ink)}
+#investigation::backdrop {background:#101b2bd9}
+.investigation-bar {display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.investigation-bar h2 {font-size:1.12rem}
+.investigation-bar select,.investigation-form select,.investigation-form input {min-height:38px;max-width:100%;border:1px solid #8295b4;border-radius:7px;padding:5px 8px;background:white;color:var(--ink);font:inherit}
+.investigation-form {padding:12px;background:var(--soft);border:1px solid var(--line);border-radius:8px;margin:12px 0}
+.investigation-form .fields {grid-template-columns:repeat(auto-fit,minmax(min(100%,135px),1fr));margin-bottom:10px}
+.investigation-form .field input {width:100%}
+.investigation-table {overflow:auto;margin-top:12px}
+.investigation-table table {border-collapse:collapse;width:100%;font-size:.875rem}
+.investigation-table th,.investigation-table td {text-align:left;vertical-align:top;padding:8px;border-bottom:1px solid var(--line);min-width:90px}
+.investigation-table button {white-space:nowrap}
+.damage-plots {display:flex;flex-wrap:wrap;gap:16px;margin:10px 0}
+.damage-plots figure {margin:0;text-align:center;font-size:.82rem;color:var(--muted)}
+.damage-plot {position:relative;width:88px;height:140px;margin:5px auto;border:2px solid #53637a;border-radius:16px;background:var(--pale)}
+.damage-plot i {position:absolute;width:10px;height:10px;transform:translate(-50%,-50%);border-radius:50%;background:#d16817;border:1px solid white}
+.damage-plot i.contact {background:#a73146;width:14px;height:14px}
+#sight3 {margin:5px 0;color:var(--blue-dark);font-size:.86rem}
+@media(max-width:600px) {
+  #investigation {padding:10px}
+  .topbar .shell,.top-actions {flex-wrap:wrap}
+  .topbar .shell {padding-block:8px}
+  .investigation-form .fields {grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 </style>
 
 <script>window.IZ_BASE = {pos: 'bl'};</script>
@@ -444,19 +471,39 @@ select { appearance:none; padding-right:29px; background:
 <!--IZ-GAME-BASE:END-->
 </head>
 <body>
+<dialog id="investigation" aria-labelledby="investigation-title">
+  <header class="investigation-bar">
+    <h2 id="investigation-title">現場資料と照合</h2>
+    <button id="close-investigation" type="button">閉じる</button>
+  </header>
+  <div class="investigation-bar">
+    <label>表示 <select id="investigation-tab">
+      <option value="marks">観測点・線</option><option value="records">映像・EDR</option>
+      <option value="damage">車両の損傷</option><option value="sight">見通し</option>
+      <option value="compare">仮説比較</option>
+    </select></label>
+    <span id="investigation-context"></span>
+  </div>
+  <section id="investigation-content"></section>
+</dialog>
+<input type="file" id="import-case" accept=".json,application/json" hidden>
+
 <dialog id="replay"><div class="replay-controls"><strong>3D再現</strong>
 <select id="camera3" aria-label="視点"><option value="-1">俯瞰</option><option value="0">車両A 運転席</option><option value="1">車両B 運転席</option></select>
 <button id="close3" type="button">閉じる</button></div>
 <canvas id="scene3" aria-label="交通状況の3D再現"></canvas>
+<p id="sight3" hidden></p>
+<label id="decor3" class="check" hidden><input id="show-street3" type="checkbox">参考の街並みを表示</label>
 <div class="replay-controls"><button id="play3" type="button">再生</button><input id="time3" aria-label="再現時刻" type="range" step="0.01" min="0" value="0"><output id="clock3"></output></div>
-<label id="look3">左右確認 <input id="yaw3" type="range" min="-110" max="110" value="0" aria-label="視線の角度"><button id="front3" type="button">正面</button></label>
+<label id="look3">左右確認 <input id="yaw3" type="range" min="-180" max="180" value="0" aria-label="視線の角度"><button id="front3" type="button">正面</button></label>
 </dialog>
 
 <header class="topbar">
   <div class="shell">
     <div class="identity"><span class="identity-caption">事故再現ツール</span></div>
     <div class="top-actions">
-      <button id="export-settings" type="button"><span class="download-icon" aria-hidden="true"></span>設定を保存</button>
+      <button id="export-settings" type="button"><span class="download-icon" aria-hidden="true"></span>案件を保存</button>
+      <button id="load-case" type="button">案件を読み込む</button>
       <button id="export-png" class="primary" type="button"><span class="download-icon" aria-hidden="true"></span>PNGを保存</button>
     </div>
   </div>
@@ -485,7 +532,11 @@ select { appearance:none; padding-right:29px; background:
             <button type="button" data-action="zoom-fit" aria-label="図面全体を表示">全体</button>
           </div>
         </div>
-        <button type="button" id="open3">3D再現</button>
+        <div class="diagram-actions">
+          <button type="button" id="open3">3D再現</button>
+          <button type="button" id="open-investigation" class="primary">現場資料と照合</button>
+          <button type="button" id="pick-cancel" hidden>座標指定を中止</button>
+        </div>
         <canvas id="plan" aria-label="交差点と車両の軌跡を示す平面図">初期位置や停止位置は下の入力欄で設定できます。</canvas>
         <div id="legend" class="legend" aria-label="図面の凡例"></div>
       </section>
@@ -525,6 +576,59 @@ select { appearance:none; padding-right:29px; background:
 <script>
 "use strict";
 /* World distances are metres, times are seconds and angles are radians clockwise from east. */
+// Shared geometry for discovery, the recorded-sight comparison and the driver camera.
+function driverEye(pose, car) {
+  const c = Math.cos(pose.angle), s = Math.sin(pose.angle);
+  return {x:pose.x + c*car.length*.22 - s*car.width*.22,
+    y:pose.y + s*car.length*.22 + c*car.width*.22, z:car.eyeHeight ?? 1.3};
+}
+function sightBoxes(obstacles) {
+  return obstacles.filter(o => o.w > 0 && o.h > 0 && (o.height ?? 3) > 0)
+    .map(o => ({min:[o.x-o.w/2,o.y-o.h/2,0], max:[o.x+o.w/2,o.y+o.h/2,o.height ?? 3]}));
+}
+function sightBlocked(eye, target, box) {
+  let enter = 0, leave = 1;
+  for (const [i,axis] of ["x","y","z"].entries()) {
+    const delta = target[axis] - eye[axis];
+    if (Math.abs(delta) < 1e-8) {
+      if (eye[axis] < box.min[i] || eye[axis] > box.max[i]) return false;
+      continue;
+    }
+    const first = (box.min[i]-eye[axis])/delta, last = (box.max[i]-eye[axis])/delta;
+    enter = Math.max(enter,Math.min(first,last));
+    leave = Math.min(leave,Math.max(first,last));
+    if (enter > leave) return false;
+  }
+  return true;
+}
+const sightSamples = [[0,0],[-.48,-.48],[-.48,.48],[.48,-.48],[.48,.48]];
+function clearSight(eye, target, car, boxes) {
+  const c = Math.cos(target.angle), s = Math.sin(target.angle), height = car.height ?? 1.66;
+  for (const [long,side] of sightSamples) {
+    const x = target.x + c*car.length*long - s*car.width*side;
+    const y = target.y + s*car.length*long + c*car.width*side;
+    for (const z of [height*.92,height*.48]) {
+      const p = {x,y,z};
+      if (!boxes.some(box => sightBlocked(eye,p,box))) return p;
+    }
+  }
+  return null;
+}
+function sampleTrack(path, time) {
+  let lo = 0, hi = path.length;
+  while (lo < hi) {
+    const mid = (lo+hi) >> 1;
+    if (path[mid].t <= time) lo = mid+1;
+    else hi = mid;
+  }
+  const a = path[Math.max(0,lo-1)], b = path[Math.min(lo,path.length-1)];
+  if (a === b || time <= a.t) return a;
+  const f = (time-a.t)/(b.t-a.t), angle = b.angle-a.angle;
+  return {x:a.x+(b.x-a.x)*f,y:a.y+(b.y-a.y)*f,
+    angle:a.angle+Math.atan2(Math.sin(angle),Math.cos(angle))*f,
+    speed:a.speed+(b.speed-a.speed)*f};
+}
+
 const SofiaPhysics = (() => {
   const GRAVITY = 9.80665;
   const EPS = 1e-7;
@@ -681,36 +785,13 @@ const SofiaPhysics = (() => {
       speed: Math.max(0, finite(car.speed, 0)) / 3.6,
       mass, length, width, inertia: mass * (length ** 2 + width ** 2) / 12,
       tireRadius: .35 * Math.hypot(length, width),
+      eyeHeight:car.eyeHeight, height:car.height,
       reaction: Math.max(0, finite(car.reaction, .8)),
       brakeFraction: clamp(finite(car.brake, 1), 0, 1),
       obeysStop: !!car.obeysStop, discovery: Number.isFinite(car.discovery) ? car.discovery : null,
       seen: null, brake: null, path: [], passed: false, decel: 0, omega: 0,
       brakingDistance: 0, travelDistance: 0, slideDistance: 0
     };
-  }
-
-  function roadBorders(s) {
-    return (s.obstacles || []).filter((obstacle) => obstacle.w > 0 && obstacle.h > 0)
-      .map(({ x, y, w, h }) => ({ min: [x - w / 2, y - h / 2], max: [x + w / 2, y + h / 2] }));
-  }
-
-  function segmentBlocked(source, target, obstacle) {
-    let enter = 0;
-    let leave = 1;
-    for (let i = 0; i < 2; i++) {
-      const origin = source[i];
-      const movement = target[i] - origin;
-      if (Math.abs(movement) <= EPS) {
-        if (origin < obstacle.min[i] || origin > obstacle.max[i]) return false;
-        continue;
-      }
-      const first = (obstacle.min[i] - origin) / movement;
-      const last = (obstacle.max[i] - origin) / movement;
-      enter = Math.max(enter, Math.min(first, last));
-      leave = Math.min(leave, Math.max(first, last));
-      if (enter > leave) return false;
-    }
-    return true;
   }
 
   function poseAt(body, time) {
@@ -724,25 +805,13 @@ const SofiaPhysics = (() => {
     if (body.discovery !== null) return -dot(driver, body.forward) <= body.discovery + EPS;
     if (other.passed) return false;
     if (!obstacles.length) return true;
-    const target = poseAt(other, ahead);
-    const side = normalTo(body.forward);
-    const otherSide = normalTo(other.forward);
-    const eye = [
-      driver.x + body.forward.x * body.length * .22 + side.x * body.width * .22,
-      driver.y + body.forward.y * body.length * .22 + side.y * body.width * .22
-    ];
-    for (const [longitudinal, lateral] of [[0, 0], [-.48, -.48], [-.48, .48], [.48, -.48], [.48, .48]]) {
-      const point = [
-        target.x + other.forward.x * other.length * longitudinal + otherSide.x * other.width * lateral,
-        target.y + other.forward.y * other.length * longitudinal + otherSide.y * other.width * lateral
-      ];
-      if (!obstacles.some((obstacle) => segmentBlocked(eye, point, obstacle))) return true;
-    }
-    return false;
+    const target = {...poseAt(other,ahead),angle:other.angle};
+    return Boolean(clearSight(driverEye({...driver,angle:body.angle},body),target,other,obstacles));
   }
 
   function snapshot(body, time, phase) {
-    return { x: body.x, y: body.y, angle: body.angle, t: time, phase };
+    const speed = body.v ? norm(body.v) : body.speed;
+    return {x:body.x,y:body.y,angle:body.angle,t:time,phase,speed:speed*3.6};
   }
 
   function pushPose(body, time, phase) {
@@ -847,7 +916,7 @@ const SofiaPhysics = (() => {
     pushPose(body, time, phase);
     return {
       path: body.path, seen: body.seen, brake: body.brake, end: snapshot(body, time, phase),
-      stopped: endedStopped, passed: body.passed, brakingDistance: body.brakingDistance,
+      stopped: endedStopped && !body.passed, passed: body.passed, passedAt:body.passedAt, brakingDistance: body.brakingDistance,
       travelDistance: body.travelDistance + body.slideDistance, slideDistance: body.slideDistance,
       conflictDistance: body.initialConflict
     };
@@ -858,7 +927,7 @@ const SofiaPhysics = (() => {
     const [a, b] = bodies;
     const grip = Math.max(0, finite(s.mu, .72)) * GRAVITY;
     const restitution = clamp(finite(s.restitution, .2), 0, 1);
-    const obstacles = roadBorders(s);
+    const obstacles = sightBoxes(s.obstacles || []);
     const roads = s.roads || {};
     const horizon = Math.max(.1, finite(options.maxTime, 60));
     const sampleInterval = options.fast ? .65 : .1;
@@ -874,6 +943,7 @@ const SofiaPhysics = (() => {
       body.conflictRadius = (body.length + other.width) / 2;
       body.initialConflict = Math.max(0, lateralAxis - dot(body, body.forward) - body.conflictRadius);
       body.passed = dot(body, body.forward) > lateralAxis + body.conflictRadius + 12;
+      if (body.passed) body.passedAt = 0;
       pushPose(body, 0, phaseBefore(body));
     }
 
@@ -952,6 +1022,7 @@ const SofiaPhysics = (() => {
         const justPassed = left && !body.passed;
         if (justPassed) {
           body.passed = true;
+          body.passedAt = t;
           body.decel = 0;
         }
         if (justPassed || (body.speed === 0 && body.path.at(-1).phase !== 'stop') ||
@@ -1519,7 +1590,8 @@ function createDiagram(canvas) {
 
   function box(x, y, w, h, color, border, radius = 4) {
     ctx.beginPath();
-    ctx.roundRect(x, y, w, h, radius);
+    if (ctx.roundRect) ctx.roundRect(x,y,w,h,radius);
+    else ctx.rect(x,y,w,h);
     ctx.fillStyle = color;
     ctx.fill();
     if (border) {
@@ -1874,6 +1946,34 @@ function createDiagram(canvas) {
       });
       if (view.result?.collision) collisionMarker(view.result.collision, '衝突地点');
     }
+    for (const mark of view.marks || []) {
+      const color = "#ffc15a";
+      if (mark.b) worldStroke([mark.a,mark.b],color,2.5,[6,4]);
+      for (const point of [mark.a,mark.b].filter(Boolean)) {
+        const p = screen(point);
+        disk(p.x,p.y,4,color,"#102030");
+      }
+      const p = screen(mark.a);
+      ctx.font = "600 12px system-ui";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = "#101a2a";
+      ctx.strokeText(mark.label,p.x+7,p.y-8);
+      ctx.fillStyle = color;
+      ctx.fillText(mark.label,p.x+7,p.y-8);
+    }
+    for (const [index, item] of (view.sight || []).entries()) {
+      if (!item) continue;
+      worldStroke([item.eye,item.target],"#9df8df",2,[4,3]);
+      const p = screen(item.eye);
+      disk(p.x,p.y,8,"#9df8df","#12352b");
+      ctx.font = "bold 11px system-ui";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "#12352b";
+      ctx.fillText(index === 0 ? "A" : "B",p.x,p.y);
+    }
     instruments();
   }
 
@@ -1933,6 +2033,7 @@ function createDiagram(canvas) {
         for (const p of track.path) points.push(p);
       });
     }
+    for (const mark of view.marks || []) points.push(...[mark.a,mark.b].filter(Boolean));
     let maxX = 17;
     let maxY = 17;
     for (const p of points) {
@@ -1948,11 +2049,11 @@ function createDiagram(canvas) {
 }
 // Application state and browser controls.
 const presets = {
-  sedan: { label: "普通乗用車", mass: 1450, length: 4.55, width: 1.78 },
-  kei: { label: "軽自動車", mass: 850, length: 3.39, width: 1.48 },
-  suv: { label: "SUV", mass: 1850, length: 4.72, width: 1.89 },
-  truck: { label: "小型トラック", mass: 3200, length: 5.1, width: 1.9 },
-  bike: { label: "二輪車（乗員含む）", mass: 250, length: 2.1, width: .78 },
+  sedan: { label: "普通乗用車", mass: 1450, length: 4.55, width: 1.78, height:1.66, eyeHeight:1.3 },
+  kei: { label: "軽自動車", mass: 850, length: 3.39, width: 1.48, height:1.66, eyeHeight:1.3 },
+  suv: { label: "SUV", mass: 1850, length: 4.72, width: 1.89, height:1.8, eyeHeight:1.45 },
+  truck: { label: "小型トラック", mass: 3200, length: 5.1, width: 1.9, height:2.5, eyeHeight:2.0 },
+  bike: { label: "二輪車（乗員含む）", mass: 250, length: 2.1, width: .78, height:1.55, eyeHeight:1.45 },
   custom: { label: "手入力" }
 };
 const surfaces = {
@@ -1986,7 +2087,7 @@ function defaultConfig() {
   return {
     surface:"dry", mu:.7, restitution:.18,
     roads:{x:{width:8,lanes:2},y:{width:8,lanes:2},priority:"x",stopX:false,stopY:true},
-    obstacles:[{x:-10,y:-9.5,w:8,h:7}],
+    obstacles:[{x:-10,y:-9.5,w:8,h:7,height:3}],
     cars:[
       {...presets.sedan,preset:"sedan",x:-18,y:-2.1,dir:"E",speed:42,reaction:1,brake:1,obeysStop:false,discovery:null},
       {...presets.kei,preset:"kei",x:2.1,y:-18,dir:"S",speed:39,reaction:1,brake:1,obeysStop:false,discovery:null}
@@ -2076,6 +2177,8 @@ function renderControls() {
       ${numberField(path+".mass","質量","kg",70,40000,1)}
       ${numberField(path+".length","全長","m",1,20,.01)}
       ${numberField(path+".width","全幅","m",.4,5,.01)}
+      ${numberField(path+".height","全高","m",.5,5,.01)}
+      ${numberField(path+".eyeHeight","運転者の目の高さ","m",.5,4,.01)}
       ${numberField(path+".reaction","反応時間","s",0,4,.01)}
       ${numberField(path+".brake","制動の強さ","",0,1,.01)}
       ${numberField(path+".discovery","発見距離を指定","m",0,150,.1,{optional:true})}
@@ -2112,6 +2215,7 @@ function renderObstacles() {
           ${numberField(path+".y","中心 Y","m",-100,100,.1)}
           ${numberField(path+".w","東西の幅","m",.3,50,.1)}
           ${numberField(path+".h","南北の幅","m",.3,50,.1)}
+          ${numberField(path+".height","高さ","m",0,30,.01)}
         </div></div>`;
     }).join("") : '<p class="obstacle-help">遮蔽物はありません。</p>') +
     '<div class="toggles"><button type="button" data-action="add-obstacle">遮蔽物を追加</button></div>';
@@ -2239,7 +2343,7 @@ function renderSceneResults() {
 }
 function view() {
   return {mode, result:mode==="inverse" && !pointer ? inverseResult?.result : forwardResult,
-    scene,estimate:sceneEstimate,selected,zoom,selection};
+    scene,estimate:sceneEstimate,selected,zoom,selection,marks:diagramMarks(),sight:diagramSight()};
 }
 function draw() {
   const scenario = mode === "inverse" && !pointer && inverseResult?.scenario ? inverseResult.scenario : s;
@@ -2277,6 +2381,10 @@ function flush() {
   update();
 }
 function syncToolbar() {
+  if (investigationPick) {
+    byId("diagram-hint").textContent = "図面をタップして座標を指定";
+    return;
+  }
   byId("diagram-hint").textContent = mode !== "scene" ? "車両をドラッグして初期位置を調整" : "停止マーカーをドラッグして位置を調整";
 }
 const desktopLayout = matchMedia("(min-width:1280px)");
@@ -2346,10 +2454,10 @@ function applyInput(target) {
     const [,index,property] = carMatch;
     const car = s.cars[index], base = `s.cars.${index}.`;
     if (property === "preset" && value !== "custom") {
-      const {mass,length,width} = presets[value];
-      Object.assign(car,{mass,length,width});
-      ["mass","length","width"].forEach(key=>syncPath(base+key));
-    } else if (["mass","length","width"].includes(property)) {
+      const {mass,length,width,height,eyeHeight} = presets[value];
+      Object.assign(car,{mass,length,width,height,eyeHeight});
+      ["mass","length","width","height","eyeHeight"].forEach(key=>syncPath(base+key));
+    } else if (["mass","length","width","height","eyeHeight"].includes(property)) {
       car.preset = "custom";
       syncPath(base+"preset");
     }
@@ -2443,7 +2551,7 @@ document.addEventListener("click", event => {
   if (action === "add-obstacle") {
     if (s.obstacles.length >= 12) return notify("遮蔽物は12個まで設置できます。");
     const offset = 2*(s.obstacles.length%5);
-    s.obstacles.push({x:10+offset,y:-10,w:5,h:5});
+    s.obstacles.push({x:10+offset,y:-10,w:5,h:5,height:3});
     renderObstacles();
     document.querySelector(`[data-bind="s.obstacles.${s.obstacles.length-1}.x"]`)?.focus();
     schedule(true);
@@ -2469,6 +2577,7 @@ document.addEventListener("click", event => {
 plan.addEventListener("pointerdown", event => {
   if (!event.isPrimary || event.button !== 0) return;
   const point = diagram.point(event);
+  if (acceptInvestigationPoint(point)) return;
   let kind, index, offsetX = 0, offsetY = 0;
   const hit = diagram.hit(point,s,view());
   if (!hit) return;
@@ -2522,9 +2631,9 @@ function download(blob,filename) {
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 function saveSettings() {
-  const data = {version:1,mode,settings:clone(s),inverse:{...inverse},scene:clone(scene)};
-  download(new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),"kijou-gp-settings.json");
-  notify("設定を JSON で保存しました。");
+  const data = {version:2,active:caseSnapshot(),evidence, hypotheses, sweepOptions};
+  download(new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),"kijou-gp-case.json");
+  notify("案件を保存しました。");
 }
 function savePng() {
   flush();
@@ -2562,7 +2671,7 @@ byId("export-png").addEventListener("click",savePng);
 {
   const replay = byId("replay"), canvas = byId("scene3"), timeline = byId("time3");
   const camera = byId("camera3"), yaw = byId("yaw3"), play = byId("play3");
-  let gl, program, buffer, streetBuffer, streetCount, frame, previous, elapsed, scenario, tracks, street, extent;
+  let gl, program, buffer, streetBuffer, streetCount, decorBuffer, decorCount, frame, previous, elapsed, scenario, tracks, sight;
   function shader(type, source) {
     const obj = gl.createShader(type);
     gl.shaderSource(obj, source); gl.compileShader(obj);
@@ -2586,6 +2695,7 @@ byId("export-png").addEventListener("click",savePng);
     ["pos","col"].forEach((name,i)=>{const a=gl.getAttribLocation(program,name);
       gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,3,gl.FLOAT,false,24,i*12);});
     streetBuffer=gl.createBuffer();
+    decorBuffer=gl.createBuffer();
     gl.enable(gl.DEPTH_TEST);
   }
   // Coordinates are GP x, GP y and height in metres.
@@ -2602,7 +2712,7 @@ byId("export-png").addEventListener("click",savePng);
   function buildStreet() {
     const mesh=[],roads=scenario.roads,rx=roads.y.width/2,ry=roads.x.width/2;
     const box=(x,y,w,d,z,h,col)=>prism(mesh,rectangle(x,y,w,d,z),rectangle(x,y,w,d,z+h),col);
-    extent=Math.max(40,...tracks.flatMap(path=>path.map(p=>Math.max(Math.abs(p.x),Math.abs(p.y)))))+25;
+    const extent=Math.max(40,...tracks.flatMap(path=>path.map(p=>Math.max(Math.abs(p.x),Math.abs(p.y)))))+25;
     const span=extent+80;
     box(0,0,span*2,span*2,-.22,.05,[.44,.51,.47]);
     box(0,0,span*2,2*ry,-.1,.09,[.29,.33,.38]);
@@ -2617,6 +2727,7 @@ byId("export-png").addEventListener("click",savePng);
       if(alongX?roads.stopX:roads.stopY) for(const sign of [-1,1])
         mark(sign*(edge+1),sign*(alongX?1:-1)*cfg.width/4,.3,cfg.width*.46,[.94,.95,.95]);
     }
+    const measuredStreet = mesh.splice(0);
     // Street blocks, varied facades and regularly spaced lamps from the vehicle viewer.
     let seed=31;
     function rand(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;}
@@ -2629,19 +2740,16 @@ byId("export-png").addEventListener("click",savePng);
         box(x,sy*(ry+1.6),.36,1,5,.16,[.87,.86,.69]);
       }
     }
-    for(const o of scenario.obstacles) box(o.x,o.y,o.w,o.h,0,3,[.55,.49,.44]);
-    return mesh;
-  }
-  function pose(path,t){
-    let lo=0,hi=path.length-1;
-    while(lo<hi){const m=(lo+hi)>>1;if(path[m].t<t)lo=m+1;else hi=m;}
-    const b=path[lo],a=path[Math.max(0,lo-1)],k=b.t>a.t?Math.min(1,Math.max(0,(t-a.t)/(b.t-a.t))):1;
-    const da=b.angle-a.angle;
-    return {x:a.x+(b.x-a.x)*k,y:a.y+(b.y-a.y)*k,angle:a.angle+Math.atan2(Math.sin(da),Math.cos(da))*k};
+    const decor = mesh.splice(0);
+    for (const value of measuredStreet) mesh.push(value);
+    for (const o of scenario.obstacles) {
+      if ((o.height ?? 3) > 0) box(o.x,o.y,o.w,o.h,0,o.height ?? 3,[.55,.49,.44]);
+    }
+    return {street:mesh,decor};
   }
   function vehicle(mesh,p,car,i,inside){
     const c=Math.cos(p.angle),s=Math.sin(p.angle),l=car.length,w=car.width;
-    function ring(x,y,len,width,z){return rectangle(x*l,y*w,len*l,width*w,z).map(([a,b,h])=>[p.x+a*c-b*s,p.y+a*s+b*c,h]);}
+    function ring(x,y,len,width,z){return rectangle(x*l,y*w,len*l,width*w,z).map(([a,b,h])=>[p.x+a*c-b*s,p.y+a*s+b*c,h*(car.height ?? 1.66)/1.66]);}
     const paint=i?[.99,.67,.31]:[.26,.78,.73];
     prism(mesh,ring(0,0,.97,.97,.31),ring(0,0,1,1,.94),paint);
     if(inside)return;
@@ -2670,14 +2778,14 @@ byId("export-png").addEventListener("click",savePng);
     const ratio=Math.min(devicePixelRatio,2),w=Math.max(1,Math.round(canvas.clientWidth*ratio)),h=Math.max(1,Math.round(canvas.clientHeight*ratio));
     if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
     gl.viewport(0,0,w,h);gl.clearColor(.71,.81,.88,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
-    const poses=tracks.map(path=>pose(path,elapsed)),idx=Number(camera.value);
+    const poses=tracks.map(path=>sampleTrack(path,elapsed)),idx=Number(camera.value);
     let eye,heading,pitch;
     if(idx<0){
       const [a,b]=poses,d=Math.max(12,Math.hypot(a.x-b.x,a.y-b.y)*.85+5)*Math.max(1,h/w);
       eye=[(a.x+b.x)/2-d*.55,(a.y+b.y)/2+d*.80,d];heading=Math.atan2(-.80,.55);pitch=-.80;
     }else{
-      const p=poses[idx],car=scenario.cars[idx],c=Math.cos(p.angle),s=Math.sin(p.angle);
-      eye=[p.x+c*car.length*.22-s*car.width*.22,p.y+s*car.length*.22+c*car.width*.22,1.30];
+      const p=poses[idx], driver=driverEye(p,scenario.cars[idx]);
+      eye=[driver.x,driver.y,driver.z];
       heading=p.angle+Number(yaw.value)*Math.PI/180;pitch=-.075;
     }
     const c=Math.cos(heading),s=Math.sin(heading),cp=Math.cos(pitch),sp=Math.sin(pitch);
@@ -2689,11 +2797,20 @@ byId("export-png").addEventListener("click",savePng);
       ["pos","col"].forEach((key,i)=>gl.vertexAttribPointer(gl.getAttribLocation(program,key),3,gl.FLOAT,false,24,i*12));
     }
     bind(streetBuffer);gl.drawArrays(gl.TRIANGLES,0,streetCount);
+    if (idx < 0 || byId("show-street3").checked) {bind(decorBuffer);gl.drawArrays(gl.TRIANGLES,0,decorCount);}
     bind(buffer);
     const mesh=[];poses.forEach((p,i)=>vehicle(mesh,p,scenario.cars[i],i,i===idx));
     gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(mesh),gl.DYNAMIC_DRAW);gl.drawArrays(gl.TRIANGLES,0,mesh.length/6);
     timeline.value=elapsed;byId("clock3").textContent=elapsed.toFixed(2)+" 秒";
     byId("look3").hidden=idx<0;
+    byId("sight3").hidden=idx<0;
+    byId("decor3").hidden=idx<0;
+    if (idx >= 0) {
+      const first = sight[idx];
+      byId("sight3").textContent = first
+        ? "視線が初めて通る時刻 " + first.t.toFixed(2) + " 秒"
+        : "衝突または計算終了まで視線が通る位置なし";
+    }
   }
   function pause(){cancelAnimationFrame(frame);frame=0;play.textContent="再生";}
   function tick(now){elapsed=Math.min(+timeline.max,elapsed+(now-previous)/1000);previous=now;render();
@@ -2705,15 +2822,724 @@ byId("export-png").addEventListener("click",savePng);
     if(!scenario||!result?.cars?.every(v=>v.path?.length))return notify("再現できる軌跡がありません。");
     tracks=result.cars.map(v=>v.path);timeline.max=Math.max(...tracks.map(p=>p.at(-1).t));
     elapsed=0;yaw.value=0;replay.showModal();
-    try{if(!program)init();street=buildStreet();streetCount=street.length/6;gl.bindBuffer(gl.ARRAY_BUFFER,streetBuffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(street),gl.STATIC_DRAW);render();}catch(error){replay.close();notify("3D表示を開始できません。WebGLの利用設定をご確認ください。");console.error(error);}
+    try {
+      if (!program) init();
+      sight = firstSight(scenario,result);
+      const {street,decor} = buildStreet();
+      streetCount = street.length/6;
+      decorCount = decor.length/6;
+      for (const [target,mesh] of [[streetBuffer,street],[decorBuffer,decor]]) {
+        gl.bindBuffer(gl.ARRAY_BUFFER,target);
+        gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(mesh),gl.STATIC_DRAW);
+      }
+      render();
+    } catch (error) {
+      replay.close();notify("3D表示を開始できません。WebGLの利用設定をご確認ください。");console.error(error);
+    }
   };
   byId("close3").onclick=()=>replay.close();replay.onclose=pause;
+  document.addEventListener("gp-replay-sight", event => {
+    if (!replay.open) return;
+    const {index,t,target,eye} = event.detail;
+    const p = sampleTrack(tracks[index],t);
+    const heading = Math.atan2(target.y-eye.y,target.x-eye.x)-p.angle;
+    pause();
+    camera.value = String(index);
+    yaw.value = Math.round(degree(Math.atan2(Math.sin(heading),Math.cos(heading))));
+    byId("show-street3").checked = false;
+    elapsed = t;
+    render();
+  });
   camera.onchange=()=>{yaw.value=0;render();};yaw.oninput=render;byId("front3").onclick=()=>{yaw.value=0;render();};
+  byId("show-street3").onchange=render;
   timeline.oninput=()=>{pause();elapsed=+timeline.value;render();};
   play.onclick=()=>{if(frame)return pause();if(elapsed>=+timeline.max)elapsed=0;
     previous=performance.now();play.textContent="一時停止";frame=requestAnimationFrame(tick);};
   new ResizeObserver(()=>{if(replay.open&&program)render();}).observe(canvas);
 }
+
+const emptyEvidence = () => ({marks:[],sources:[],records:[],damage:[]});
+const defaultSweep = () => ({car:0,speedMin:35,speedMax:45,muMin:.55,muMax:.75});
+let evidence = emptyEvidence(), hypotheses = [], sweepOptions = defaultSweep();
+let investigationPick, markDraft, sightOverlay = false, sweepResult;
+const fieldDialog = byId("investigation"), fieldContent = byId("investigation-content");
+const coord = point => `X ${format(point.x,2)} / Y ${format(point.y,2)} m`;
+const seconds = value => format(value,2)+" 秒";
+const difference = (value,unit) => (value > 0 ? "+" : "") + format(value,2) + " " + unit;
+const markKinds = {reference:"基準点・線",tire:"タイヤ痕",scrape:"衝突に関連すると仮定した路面痕",
+  debris:"破片",recognition:"供述上の認知地点"};
+const damageSides = {front:"前面",rear:"後面",left:"左側面",right:"右側面"};
+const recordKinds = {crossing:"停止線・基準線の通過",brake:"ブレーキ開始",speed:"車速",brakeState:"ブレーキ作動"};
+const sourceKinds = {video:"映像",edr:"EDR",other:"その他"};
+
+function caseSnapshot() {
+  return {settings:clone(s),scene:clone(scene),inverse:{...inverse},mode,selected,zoom};
+}
+function modelFor(snapshot, current = false) {
+  const settings = snapshot.settings;
+  if (snapshot.mode === "scene") {
+    const estimate = current ? sceneEstimate : estimateScene(settings,snapshot.scene);
+    return {settings,scene:snapshot.scene,candidate:estimate?.candidates[snapshot.selected]};
+  }
+  if (snapshot.mode === "inverse") {
+    const inverseSolution = current ? inverseResult : solveInverse(settings,snapshot.inverse.car,snapshot.inverse.key);
+    return {settings:inverseSolution?.scenario ?? settings,result:inverseSolution?.result};
+  }
+  return {settings,result:current ? forwardResult : simulate(settings)};
+}
+function liveModel() {
+  if (pendingFrame || !forwardResult) flush();
+  return modelFor(caseSnapshot(),true);
+}
+function applyCase(snapshot) {
+  s = clone(snapshot.settings);
+  scene = clone(snapshot.scene);
+  inverse = {...snapshot.inverse};
+  zoom = snapshot.zoom;
+  selection = null;
+  renderedConfigVersion = -1;
+  sweepResult = null;
+  renderControls();
+  setMode(snapshot.mode);
+  selected = snapshot.selected;
+  flush();
+}
+function firstSight(settings,result) {
+  const boxes = sightBoxes(settings.obstacles);
+  return settings.cars.map((car,index) => {
+    const end = Math.min(result.collision?.t ?? result.duration,
+      result.cars[index].passedAt ?? Infinity,result.cars[1-index].passedAt ?? Infinity);
+    if (end === 0 && result.cars.some(track=>track.passedAt === 0)) return null;
+    const driver = result.cars[index].path, other = result.cars[1-index].path;
+    function inspect(t) {
+      const eye = driverEye(sampleTrack(driver,t),car);
+      const target = clearSight(eye,sampleTrack(other,t),settings.cars[1-index],boxes);
+      return target ? {t,eye,target} : null;
+    }
+    let hit = inspect(0);
+    if (hit) return hit;
+    for (let low = 0; low < end;) {
+      let high = Math.min(end,low+.04);
+      hit = inspect(high);
+      if (!hit) {low = high; continue;}
+      for (let step=0; step<10; step++) {
+        const mid = (low+high)/2, sight = inspect(mid);
+        if (sight) {high = mid; hit = sight;}
+        else low = mid;
+      }
+      return hit;
+    }
+    return null;
+  });
+}
+let sightCache = {};
+function getSight(model) {
+  if (!model.result) return [];
+  if (sightCache.result !== model.result) {
+    sightCache = {result:model.result,values:firstSight(model.settings,model.result)};
+  }
+  return sightCache.values;
+}
+function diagramSight() {
+  if (!sightOverlay || pointer || renderedConfigVersion !== configVersion) return [];
+  if (mode === "forward") return getSight({settings:s,result:forwardResult});
+  if (mode === "inverse" && inverseResult?.scenario)
+    return getSight({settings:inverseResult.scenario,result:inverseResult.result});
+  return [];
+}
+function diagramMarks() {
+  const preview = investigationPick && markDraft ? markFrom(markDraft) : null;
+  return preview ? [...evidence.marks,preview] : evidence.marks;
+}
+function pointDistance(a,b) {
+  return Math.hypot(a.x-b.x,a.y-b.y);
+}
+function lineDistance(point,a,b) {
+  if (!b) return pointDistance(point,a);
+  const dx = b.x-a.x, dy = b.y-a.y;
+  const f = dx || dy ? clamp(((point.x-a.x)*dx+(point.y-a.y)*dy)/(dx*dx+dy*dy),0,1) : 0;
+  return Math.hypot(point.x-a.x-f*dx,point.y-a.y-f*dy);
+}
+function pathDistance(point,path) {
+  return path.slice(1).reduce((best,b,i) => Math.min(best,lineDistance(point,path[i],b)),
+    pointDistance(point,path[0]));
+}
+function modelImpact(model) {
+  return model.candidate?.impact ?? model.result?.collision;
+}
+function markCheck(model,mark) {
+  const impact = modelImpact(model);
+  if (mark.kind === "scrape") return impact ? lineDistance(impact,mark.a,mark.b) : null;
+  if (mark.kind === "recognition" && mark.car !== -1) {
+    const seen = model.result?.cars[mark.car]?.seen;
+    return seen ? pointDistance(seen,mark.a) : null;
+  }
+  if (mark.kind !== "tire" || mark.car === -1) return null;
+  const path = model.candidate?.routes[mark.car] ?? model.result?.cars[mark.car]?.path;
+  if (!path?.length) return null;
+  const first = pathDistance(mark.a,path);
+  return mark.b ? Math.max(first,pathDistance(mark.b,path)) : first;
+}
+function markMetric(kind) {
+  return {tire:"端点から車両中心軌跡への最大距離",scrape:"衝突点から観測点・線への距離",
+    recognition:"供述地点とモデル上の発見時の車両中心の距離"}[kind];
+}
+function damagePosition(side,fraction) {
+  if (side === "front" || side === "rear") return {x:fraction,y:side === "front" ? 0 : 1};
+  return {x:side === "left" ? 0 : 1,y:fraction};
+}
+function contactPosition(model,index) {
+  const impact = modelImpact(model);
+  const pose = model.candidate?.positions[index] ?? model.result?.collision?.poses[index];
+  if (!impact || !pose) return null;
+  const car = model.settings.cars[index];
+  const c = Math.cos(pose.angle), sn = Math.sin(pose.angle), dx = impact.x-pose.x, dy = impact.y-pose.y;
+  const long = (dx*c+dy*sn)/car.length;
+  const lat = (dy*c-dx*sn)/car.width;
+  return {x:lat+.5,y:.5-long};
+}
+function damageCheck(model,mark) {
+  const predicted = contactPosition(model,mark.car);
+  if (!predicted) return null;
+  const actual = damagePosition(mark.side,mark.fraction);
+  const car = model.settings.cars[mark.car];
+  return Math.hypot((predicted.x-actual.x)*car.width,(predicted.y-actual.y)*car.length);
+}
+function crossingTime(result,car,index,station) {
+  const path = result.cars[index].path;
+  const sign = ["W","N"].includes(car.dir) ? -1 : 1;
+  const axis = ["E","W"].includes(car.dir) ? "x" : "y";
+  if (result.cars[index].passedAt === 0) return null;
+  const distance = point => sign*(point[axis]-station)+car.length/2;
+  if (distance(path[0]) === 0) return path[0].t;
+  for (let i=1;i<path.length;i++) {
+    const a = path[i-1], b = path[i];
+    if (b.t > (result.collision?.t ?? Infinity)) break;
+    const from = distance(a), to = distance(b);
+    if (from < 0 && to >= 0) return a.t+(b.t-a.t)*(-from)/(to-from);
+  }
+  return null;
+}
+function recordCheck(model,record) {
+  const source = evidence.sources[record.source];
+  const result = model.result;
+  if (!result || !source) return null;
+  let anchor = 0;
+  if (source.anchor === "collision") anchor = result.collision?.t;
+  if (source.anchor === "crossing") anchor = crossingTime(result,model.settings.cars[source.car],source.car,source.station);
+  if (!Number.isFinite(anchor)) return null;
+  const observedTime = anchor + record.time-source.zero;
+  const track = result.cars[record.car];
+  if (record.kind === "speed" || record.kind === "brakeState") {
+    if (observedTime < -1e-8 || observedTime > Math.min(result.duration,track.passedAt ?? Infinity)+1e-8) return null;
+    if (record.kind === "speed") {
+      const value = sampleTrack(track.path,observedTime).speed;
+      return {label:format(value,2)+" km/h",gap:value-record.value,unit:"km/h"};
+    }
+    if (observedTime > (result.collision?.t ?? Infinity)) return null;
+    const on = track.brake && observedTime >= track.brake.t && sampleTrack(track.path,observedTime).speed > .01;
+    return {label:on ? "作動" : "非作動",match:Boolean(on) === Boolean(record.value)};
+  }
+  const t = record.kind === "brake" ? track.brake?.t :
+    crossingTime(result,model.settings.cars[record.car],record.car,record.value);
+  return Number.isFinite(t) ? {label:seconds(t-anchor+source.zero),gap:t-observedTime,unit:"秒"} : null;
+}
+function recordDifference(result,tolerance) {
+  if (!result) return "照合できる時刻なし";
+  if ("match" in result) return result.match ? "一致" : "不一致";
+  return difference(result.gap,result.unit) + (tolerance == null ? "" :
+    Math.abs(result.gap) <= tolerance ? "（許容差内）" : "（許容差外）");
+}
+function markDistance(value,tolerance) {
+  return value == null ? "—" : format(value,2)+" m"+(tolerance == null ? "" :
+    value <= tolerance ? "（許容差内）" : "（許容差外）");
+}
+function field(label,html) {return `<label class="field">${label}${html}</label>`;}
+function input(name,value="",attributes="",type="number") {
+  return `<input name="${name}" value="${escapeText(value)}" type="${type}" ${attributes}>`;
+}
+function num(name,value="",attributes="") {return input(name,value,`step="any" inputmode="decimal" ${attributes}`);}
+function words(name,value="",attributes="") {return input(name,value,`maxlength="80" ${attributes}`,"text");}
+function select(name,choices,value) {
+  return `<select name="${name}">${Object.entries(choices).map(([key,label])=>
+    `<option value="${escapeText(key)}"${key===String(value) ? " selected" : ""}>${escapeText(label)}</option>`).join("")}</select>`;
+}
+function form(id,fields,button,options="") {
+  return `<form class="investigation-form" id="${id}"><div class="fields">${fields}</div>
+    ${options}<button class="primary" type="submit">${button}</button></form>`;
+}
+function table(columns,rows) {
+  if (!rows.length) return "";
+  return `<div class="investigation-table"><table><thead><tr>${columns.map(col=>`<th scope="col">${col}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map(row=>`<tr>${row.map(cell=>`<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+}
+function toolButton(action,value,label) {
+  return `<button type="button" data-investigation="${action}" data-index="${value}">${label}</button>`;
+}
+const carChoices = {0:"車両A",1:"車両B"};
+const carsAndUnknown = {...carChoices,"-1":"不明"};
+const toNumber = field => field === "" || field == null ? null : Number(field);
+function markFrom(data) {
+  const x = toNumber(data.x), y = toNumber(data.y), bx = toNumber(data.bx), by = toNumber(data.by);
+  if (x == null || y == null || (bx == null) !== (by == null)) return null;
+  if ([x,y,bx,by].some(v=>v!==null&&(!Number.isFinite(v)||Math.abs(v)>150))) return null;
+  return {kind:data.kind,car:Number(data.car),label:data.label.trim() || markKinds[data.kind],
+    source:data.source.trim(),a:{x,y},b:bx == null ? null : {x:bx,y:by},tolerance:toNumber(data.tolerance)};
+}
+function markPanel(model) {
+  const draft = {kind:"reference",car:-1,label:"",source:"",x:"",y:"",bx:"",by:"",tolerance:"",...markDraft};
+  const pick = (label,key) => toolButton("pick",key,label);
+  return form("mark-form",field("種類",select("kind",markKinds,draft.kind))+
+    field("対象車両",select("car",carsAndUnknown,draft.car))+
+    field("図面のラベル",words("label",draft.label))+
+    field("資料番号・出典",words("source",draft.source))+
+    field("始点 X（m）",num("x",draft.x,'min="-150" max="150" required'))+
+    field("始点 Y（m）",num("y",draft.y,'min="-150" max="150" required'))+
+    field("終点 X（m・任意）",num("bx",draft.bx,'min="-150" max="150"'))+
+    field("終点 Y（m・任意）",num("by",draft.by,'min="-150" max="150"'))+
+    field("照合の許容差（m）",num("tolerance",draft.tolerance,'min="0" max="100"')),
+    markDraft?.edit == null ? "観測点・線を追加" : "観測点・線を更新",
+    pick("図面で始点を指定","a")+" "+pick("図面で終点を指定","b")+" "+
+    (markDraft?.edit == null ? "" : toolButton("cancel-mark",0,"編集を中止")+" "))+
+    `<p class="mode-copy">図面は交差点中心が原点です。タイヤ痕の距離は車両中心軌跡を基準に計算します。許容差は照合ごとに設定できます。</p>`+
+    table(["観測点・線","座標・資料","計算との距離","操作"],evidence.marks.map((mark,index)=>[
+      escapeText(mark.label)+"<br>"+markKinds[mark.kind]+" / "+carsAndUnknown[mark.car],
+      coord(mark.a)+(mark.b ? "<br>"+coord(mark.b) : "")+"<br>"+escapeText(mark.source),
+      (markMetric(mark.kind) ?? "位置の記録") + "<br>" + markDistance(markCheck(model,mark),mark.tolerance),
+      toolButton("edit-mark",index,"編集")+" "+toolButton("remove-mark",index,"削除")
+    ]));
+}
+function recordsPanel(model) {
+  const sources = evidence.sources.map((source,index)=>[
+    escapeText(source.label)+"（"+sourceKinds[source.kind]+"）",
+    (source.anchor === "crossing" ? carChoices[source.car]+" が "+format(source.station,2)+" m の基準線を通過" :
+      source.anchor === "collision" ? "衝突" : "再現開始")+" = "+seconds(source.zero),
+    toolButton("remove-source",index,"資料と記録を削除")
+  ]);
+  const options = Object.fromEntries(evidence.sources.map((source,index)=>[index,source.label]));
+  const entry = evidence.sources.length ? form("record-form",
+    field("資料",select("source",options,0))+field("車両",select("car",carChoices,0))+
+    field("観測項目",select("kind",recordKinds,"crossing"))+
+    field("資料上の時刻（秒）",num("time",0,'min="-3600" max="86400" required'))+
+    field('<span id="record-value-label">基準線の X / Y（m）</span>',num("value",0,'required'))+
+    field('<span id="record-tolerance-label">許容差（秒）</span>',num("tolerance","",'min="0" max="200"')),
+    "記録を追加") : "";
+  return `<p class="mode-copy">資料ごとに、衝突・基準線通過などに対応する時刻を登録します。EDRの衝突基準で、衝突前の記録は負の秒数を入力できます。</p>`+
+    form("source-form",field("資料番号・名称",words("label","",'required'))+
+      field("種類",select("kind",sourceKinds,"video"))+
+      field("合わせる出来事",select("anchor",{collision:"衝突",crossing:"基準線の通過",start:"再現開始"},"collision"))+
+      field("通過した車両",select("car",carChoices,0))+
+      field("基準線の X / Y（m）",num("station",0,'min="-150" max="150" required'))+
+      field("その出来事の資料上の時刻（秒）",num("zero",0,'min="-3600" max="86400" required')),"資料を登録")+
+    table(["資料","時刻の基準","操作"],sources)+entry+
+    `<p class="mode-copy">基準線は車両前端で判定し、東西走行では X、南北走行では Y を入力します。時刻・速度の差は「計算 − 記録」です。ブレーキ作動は記録信号とモデル上の制動区間を照合します。</p>`+
+    table(["資料・車両","記録","計算","差","操作"],evidence.records.map((record,index)=>{
+      const source = evidence.sources[record.source], result = recordCheck(model,record);
+      const value = {speed:format(record.value,2)+" km/h",brakeState:record.value ? "作動" : "非作動",
+        crossing:format(record.value,2)+" m",brake:""}[record.kind];
+      return [escapeText(source.label)+" / "+carChoices[record.car],
+        recordKinds[record.kind]+"<br>"+seconds(record.time)+" "+value,
+        result?.label ?? "—",recordDifference(result,record.tolerance),toolButton("remove-record",index,"削除")];
+    }));
+}
+function damagePanel(model) {
+  const dot = (point,contact) => `<i ${contact ? 'class="contact"' : ""} style="left:${clamp(point.x,0,1)*100}%;top:${clamp(point.y,0,1)*100}%"></i>`;
+  const plots = model.settings.cars.map((_,index)=>{
+    const predicted = contactPosition(model,index);
+    const marks = evidence.damage.filter(item=>item.car===index).map(item=>dot(damagePosition(item.side,item.fraction),false));
+    return `<figure>${carChoices[index]}・前<div class="damage-plot">${predicted ? dot(predicted,true) : ""}${marks.join("")}</div>後</figure>`;
+  }).join("");
+  return `<p class="mode-copy">橙は写真等で確認した損傷、赤はモデルの推定接触点です。前・後面は車両左端が 0%、側面は前端が 0% です。</p><div class="damage-plots">${plots}</div>`+
+    form("damage-form",field("対象車両",select("car",carChoices,0))+
+      field("損傷面",select("side",damageSides,"front"))+
+      field("面内の位置（%）",num("fraction",50,'min="0" max="100" required'))+
+      field("写真番号・出典",words("source"))+
+      field("照合の許容差（m）",num("tolerance","",'min="0" max="100"')),"損傷を記録")+
+    table(["車両・損傷位置","出典","推定接触点との距離","操作"],evidence.damage.map((mark,index)=>[
+      carChoices[mark.car]+" / "+damageSides[mark.side]+" "+format(mark.fraction*100,1)+"%",
+      escapeText(mark.source),markDistance(damageCheck(model,mark),mark.tolerance),toolButton("remove-damage",index,"削除")
+    ]));
+}
+function sightPanel(model) {
+  const hits = getSight(model);
+  const items = model.settings.cars.map((car,index)=>{
+    const hit = hits[index], collision = model.result?.collision;
+    return [carChoices[index],format(car.eyeHeight,2)+" m",hit ? seconds(hit.t)+"<br>"+coord(hit.eye) :
+      model.result ? "計算範囲内で視線が通る位置なし" : "時刻付き軌跡なし",
+      hit && collision ? seconds(collision.t-hit.t) : "—",hit ? toolButton("jump-sight",index,"運転席で確認") : ""];
+  });
+  return `<p class="mode-copy">設定した遮蔽物を使って、運転席から相手車への視線が最初に通る位置を計算します。頭の向きや実際に気づいた時刻は供述などの資料で確認します。</p>`+
+    form("sight-form",model.settings.cars.map((_,index)=>
+      field(carChoices[index]+"の目の高さ（m）",num("eye"+index,s.cars[index].eyeHeight,'min=".5" max="4" required'))).join(""),
+      "目の高さを更新")+
+    `<p class="mode-copy">全高は「車両の詳細」、遮蔽物の高さは「見通しと遮蔽物」で調整できます。</p>`+
+    table(["車両","目の高さ","視線が通る時刻・目の位置","衝突まで","3D再現"],items)+
+    toolButton("toggle-sight",0,sightOverlay ? "図面の視線を隠す" : "図面に視線を表示");
+}
+function stopComparison(model,index) {
+  const expected = model.candidate?.predictedStops[index] ??
+    (model.result?.cars[index]?.stopped ? model.result.cars[index].end : null);
+  if (!expected || !scene.stopEnabled[index]) return "—";
+  const observed = scene.stops[index];
+  const angle = expected.angle-observed.angle;
+  return format(pointDistance(expected,observed),2)+" m / "+
+    format(Math.abs(degree(Math.atan2(Math.sin(angle),Math.cos(angle)))),1)+"°";
+}
+let comparisonCache = new WeakMap();
+function comparePanel(current) {
+  const models = [current,...hypotheses.map(snapshot=>{
+    if (!comparisonCache.has(snapshot)) comparisonCache.set(snapshot,modelFor(snapshot));
+    return comparisonCache.get(snapshot);
+  })];
+  const across = (label,show) => [label,...models.map(show)];
+  const speeds = model => (model.candidate?.speeds ?? model.result?.collision?.before)
+    ?.map(v=>format(v,1)+" km/h").join(" / ") ?? "—";
+  const rows = [
+    across("衝突",model=>model.candidate ? "推定候補" : model.result?.collision ?
+      seconds(model.result.collision.t) : model.result ? "計算範囲内で衝突なし" : "—"),
+    across("衝突直前の速度 A / B",speeds),
+    across("衝突位置",model=>modelImpact(model) ? coord(modelImpact(model)) : "—"),
+    across("初期速度 A / B",model=>model.settings.cars.map(car=>format(car.speed)+" km/h").join(" / ")),
+    across("摩擦係数 μ",model=>format(model.candidate?.mu ?? model.settings.mu,2)),
+    ...[0,1].map(index=>across(carChoices[index]+" 実測停止位置・角度との差",model=>stopComparison(model,index))),
+    ...evidence.marks.filter(mark=>markMetric(mark.kind)).map(mark=>
+      across(escapeText(mark.label),model=>markDistance(markCheck(model,mark),mark.tolerance))),
+    ...evidence.records.map(record=>across(escapeText(evidence.sources[record.source].label)+" / "+
+      carChoices[record.car]+" "+recordKinds[record.kind]+" "+seconds(record.time),
+      model=>recordDifference(recordCheck(model,record),record.tolerance))),
+    ...evidence.damage.map(item=>across(carChoices[item.car]+" "+damageSides[item.side]+" "+
+      format(item.fraction*100,1)+"% "+escapeText(item.source),model=>markDistance(damageCheck(model,item),item.tolerance))),
+    across("操作",(_,i)=> i===0 ? "編集中" :
+      toolButton("restore-hypothesis",i-1,"図面で開く")+" "+toolButton("remove-hypothesis",i-1,"削除"))
+  ];
+  return form("hypothesis-form",field("仮説名",words("label","",'required')),"現在の条件を仮説に保存")+
+    `<p class="mode-copy">各仮説を現在登録されている同じ資料と照合します。停止位置と角度の比較には「現場推定」に入力した停止位置を使います。</p>`+
+    table(["照合項目","現在",...hypotheses.map(v=>escapeText(v.label)+"<br>"+modeNames[v.mode])],rows)+
+    form("sweep-form",field("速度を変える車両",select("car",carChoices,sweepOptions.car))+
+      field("初期速度の下限（km/h）",num("speedMin",sweepOptions.speedMin,'min="0" max="160" required'))+
+      field("初期速度の上限（km/h）",num("speedMax",sweepOptions.speedMax,'min="0" max="160" required'))+
+      field("摩擦係数の下限",num("muMin",sweepOptions.muMin,'min=".05" max="1.2" required'))+
+      field("摩擦係数の上限",num("muMax",sweepOptions.muMax,'min=".05" max="1.2" required')),"範囲内の条件を比較")+
+    `<p class="mode-copy">現在の検証設定を基に、各範囲の下限・中間・上限の組み合わせを計算します。</p>`+
+    (sweepResult?.configVersion === configVersion ? renderSweep(sweepResult.rows) : "");
+}
+function runSweep(options) {
+  const {car,speedMin,speedMax,muMin,muMax} = options;
+  const sample = (min,max) => [...new Set([min,(min+max)/2,max])];
+  const rows = [];
+  for (const speed of sample(speedMin,speedMax)) {
+    for (const mu of sample(muMin,muMax)) {
+      const settings = clone(s);
+      settings.cars[car].speed = speed;
+      settings.mu = mu;
+      const result = simulate(settings);
+      rows.push({speed,mu,hit:result.collision});
+    }
+  }
+  return rows;
+}
+function renderSweep(rows) {
+  const hits = rows.filter(row=>row.hit).length;
+  return `<p class="mode-copy">計算した ${rows.length} 条件で衝突あり ${hits} 件、計算範囲内で衝突なし ${rows.length-hits} 件。</p>`+
+    table(["初期速度","摩擦係数 μ","衝突まで","衝突直前速度 A / B"],rows.map(row=>[
+      format(row.speed,2)+" km/h",format(row.mu,3),row.hit ? seconds(row.hit.t) : "衝突なし",
+      row.hit ? row.hit.before.map(v=>format(v)+" km/h").join(" / ") : "—"
+    ]));
+}
+const fieldPanels = {marks:markPanel,records:recordsPanel,damage:damagePanel,sight:sightPanel,compare:comparePanel};
+function syncRecordForm() {
+  const sourceForm = byId("source-form");
+  if (sourceForm) {
+    const crossing = sourceForm.elements.anchor.value === "crossing";
+    for (const key of ["car","station"]) {
+      const input = sourceForm.elements[key];
+      input.disabled = !crossing;
+      input.closest("label").hidden = !crossing;
+    }
+  }
+  const entry = byId("record-form");
+  if (!entry) return;
+  const kind = entry.elements.kind.value, label = byId("record-value-label");
+  const value = entry.elements.value, tolerance = entry.elements.tolerance;
+  value.closest("label").hidden = kind === "brake";
+  value.disabled = kind === "brake";
+  label.textContent = {crossing:"基準線の X / Y（m）",speed:"記録速度（km/h）",brakeState:"作動 1 / 非作動 0"}[kind] ?? "";
+  value.min = kind === "crossing" ? -150 : 0;
+  value.max = {crossing:150,speed:300,brakeState:1}[kind] ?? 0;
+  value.step = kind === "brakeState" ? "1" : "any";
+  tolerance.closest("label").hidden = kind === "brakeState";
+  tolerance.disabled = kind === "brakeState";
+  byId("record-tolerance-label").textContent = kind === "speed" ? "許容差（km/h）" : "許容差（秒）";
+}
+function refreshInvestigation() {
+  const model = liveModel(), tab = byId("investigation-tab").value;
+  byId("investigation-context").textContent = modeNames[mode]+
+    (mode==="scene" && model.candidate ? "・候補 "+(selected+1) : "");
+  fieldContent.innerHTML = fieldPanels[tab](model);
+  syncRecordForm();
+}
+function openInvestigation() {
+  refreshInvestigation();
+  fieldDialog.showModal();
+}
+function finishPicking(reopen) {
+  investigationPick = null;
+  byId("pick-cancel").hidden = true;
+  syncToolbar();
+  draw();
+  if (reopen) openInvestigation();
+}
+function acceptInvestigationPoint(point) {
+  if (!investigationPick) return false;
+  const [xKey,yKey] = investigationPick === "a" ? ["x","y"] : ["bx","by"];
+  markDraft[xKey] = rounded(clamp(point.x,-150,150));
+  markDraft[yKey] = rounded(clamp(point.y,-150,150));
+  finishPicking(true);
+  return true;
+}
+function formError(form,message) {
+  let status = form.querySelector("[role=alert]");
+  if (!status) {
+    status = document.createElement("p");
+    status.setAttribute("role","alert");
+    status.className = "bad";
+    form.append(status);
+  }
+  status.textContent = message;
+}
+const formHandlers = {
+  "mark-form"(data) {
+    const mark = markFrom(data);
+    if (!mark) return "始点と、線の場合は終点の X・Y を指定してください。";
+    if (markDraft?.edit != null) evidence.marks[markDraft.edit] = mark;
+    else {
+      if (evidence.marks.length >= 60) return "観測点・線は60件までです。";
+      evidence.marks.push(mark);
+    }
+    markDraft = undefined;
+    draw();
+  },
+  "source-form"(data) {
+    if (!data.label.trim()) return "資料名を入力してください。";
+    if (evidence.sources.length >= 20) return "資料は20件までです。";
+    const source = {label:data.label.trim(),kind:data.kind,anchor:data.anchor,zero:Number(data.zero)};
+    if (data.anchor === "crossing") Object.assign(source,{car:Number(data.car),station:Number(data.station)});
+    evidence.sources.push(source);
+  },
+  "record-form"(data) {
+    if (evidence.records.length >= 120) return "時刻付きの記録は120件までです。";
+    evidence.records.push({source:Number(data.source),car:Number(data.car),kind:data.kind,
+      time:Number(data.time),value:toNumber(data.value),tolerance:toNumber(data.tolerance)});
+  },
+  "damage-form"(data) {
+    if (evidence.damage.length >= 40) return "損傷位置は40件までです。";
+    evidence.damage.push({car:Number(data.car),side:data.side,fraction:Number(data.fraction)/100,
+      source:data.source.trim(),tolerance:toNumber(data.tolerance)});
+  },
+  "sight-form"(data) {
+    s.cars.forEach((car,index)=>{
+      const eyeHeight = Number(data["eye"+index]);
+      if (car.eyeHeight === eyeHeight) return;
+      car.eyeHeight = eyeHeight;
+      car.preset = "custom";
+    });
+    renderControls();
+    schedule(true);
+  },
+  "hypothesis-form"(data) {
+    const label = data.label.trim();
+    if (!label) return "仮説名を入力してください。";
+    if (hypotheses.length >= 6) return "仮説は6件までです。";
+    if (mode === "scene" && !sceneEstimate?.candidates[selected]) return "保存する現場推定の候補を選んでください。";
+    if (mode === "inverse" && !inverseResult?.scenario) return "逆算結果が出る条件を入力してください。";
+    hypotheses.push({...caseSnapshot(),label});
+  },
+  "sweep-form"(data) {
+    const options = Object.fromEntries(Object.entries(data).map(([key,value])=>[key,Number(value)]));
+    if (options.speedMin > options.speedMax || options.muMin > options.muMax)
+      return "下限は上限以下にしてください。";
+    sweepOptions = options;
+    sweepResult = {rows:runSweep(options),configVersion};
+  }
+};
+fieldContent.addEventListener("submit",event=>{
+  event.preventDefault();
+  const entry = event.target, handler = formHandlers[entry.id];
+  if (!handler) return;
+  const error = handler(Object.fromEntries(new FormData(entry)));
+  if (error) formError(entry,error);
+  else refreshInvestigation();
+});
+fieldContent.addEventListener("change",event=>{
+  if ((event.target.form?.id === "record-form" && event.target.name === "kind") ||
+      (event.target.form?.id === "source-form" && event.target.name === "anchor")) syncRecordForm();
+});
+fieldContent.addEventListener("click",event=>{
+  const button = event.target.closest("[data-investigation]");
+  if (!button) return;
+  const action = button.dataset.investigation, n = Number(button.dataset.index);
+  if (action === "pick") {
+    markDraft = {...Object.fromEntries(new FormData(byId("mark-form"))),edit:markDraft?.edit};
+    investigationPick = button.dataset.index;
+    fieldDialog.close();
+    byId("pick-cancel").hidden = false;
+    syncToolbar();
+    plan.scrollIntoView({block:"nearest"});
+    return;
+  }
+  if (action === "edit-mark") {
+    const {a,b,...mark} = evidence.marks[n];
+    markDraft = {...mark,edit:n,x:a.x,y:a.y,bx:b?.x ?? "",by:b?.y ?? "",tolerance:mark.tolerance ?? ""};
+  }
+  if (action === "cancel-mark") markDraft = undefined;
+  if (action === "remove-mark") {evidence.marks.splice(n,1);markDraft = undefined;draw();}
+  if (action === "remove-damage") evidence.damage.splice(n,1);
+  if (action === "remove-record") evidence.records.splice(n,1);
+  if (action === "remove-source") {
+    evidence.sources.splice(n,1);
+    evidence.records = evidence.records.filter(row=>row.source!==n).map(row=>({...row,source:row.source-(row.source>n)}));
+  }
+  if (action === "remove-hypothesis") hypotheses.splice(n,1);
+  if (action === "restore-hypothesis") {
+    fieldDialog.close();
+    applyCase(hypotheses[n]);
+    notify("仮説の再現条件を開きました。");
+    return;
+  }
+  if (action === "toggle-sight") {
+    sightOverlay = !sightOverlay;
+    draw();
+    if (sightOverlay) return fieldDialog.close();
+  }
+  if (action === "jump-sight") {
+    const hit = getSight(liveModel())[n];
+    if (!hit) return;
+    fieldDialog.close();
+    byId("open3").click();
+    document.dispatchEvent(new CustomEvent("gp-replay-sight",{detail:{index:n,...hit}}));
+    return;
+  }
+  refreshInvestigation();
+});
+byId("open-investigation").onclick = () => {
+  if (investigationPick) return finishPicking(true);
+  openInvestigation();
+};
+byId("close-investigation").onclick = () => fieldDialog.close();
+byId("pick-cancel").onclick = () => finishPicking(true);
+byId("investigation-tab").onchange = refreshInvestigation;
+
+function caseNumber(value,min,max) {
+  if (!Number.isFinite(value) || value < min || value > max) throw Error("数値が範囲外です。");
+  return value;
+}
+function caseChoice(value,choices) {
+  if (typeof value !== "string" || !Object.hasOwn(choices,value)) throw Error("選択項目が不正です。");
+  return value;
+}
+function caseText(value) {
+  if (typeof value !== "string" || value.length > 80) throw Error("資料名またはラベルが不正です。");
+  return value;
+}
+function caseArray(value,limit,read) {
+  if (!Array.isArray(value) || value.length > limit) throw Error("項目の件数が不正です。");
+  return value.map(read);
+}
+function caseNumbers(source,schema) {
+  return Object.fromEntries(Object.entries(schema).map(([key,[min,max]])=>[key,caseNumber(source[key],min,max)]));
+}
+function readSnapshot(raw) {
+  const source = raw.settings;
+  const cars = caseArray(source.cars,2,(car,index)=>{
+    const preset = caseChoice(car.preset,presets);
+    return {...caseNumbers(car,{mass:[70,40000],length:[1,20],width:[.4,5],x:[-150,150],y:[-150,150],
+      speed:[0,160],reaction:[0,4],brake:[0,1]}),
+      height:caseNumber(car.height ?? presets[preset].height ?? 1.66,.5,5),
+      eyeHeight:caseNumber(car.eyeHeight ?? presets[preset].eyeHeight ?? 1.3,.5,4),
+      dir:caseChoice(car.dir,directions[index]),preset,obeysStop:car.obeysStop===true,
+      discovery:car.discovery==null ? null : caseNumber(car.discovery,0,150)};
+  });
+  if (cars.length !== 2) throw Error("車両データが不足しています。");
+  const roads = {stopX:source.roads.stopX===true,stopY:source.roads.stopY===true,
+    priority:caseChoice(source.roads.priority,{none:0,x:1,y:2})};
+  for (const axis of ["x","y"]) {
+    roads[axis] = caseNumbers(source.roads[axis],{width:[3,30],lanes:[1,8]});
+    if (!Number.isInteger(roads[axis].lanes)) throw Error("車線数が不正です。");
+  }
+  const settings = {cars,roads,surface:caseChoice(source.surface,surfaces),
+    ...caseNumbers(source,{mu:[.05,1.2],restitution:[0,1]}),
+    obstacles:caseArray(source.obstacles,12,item=>({...caseNumbers(item,{x:[-100,100],y:[-100,100],w:[.3,50],h:[.3,50]}),
+      height:caseNumber(item.height ?? 3,0,30)}))};
+  const stops = caseArray(raw.scene.stops,2,item=>caseNumbers(item,{x:[-10000,10000],y:[-10000,10000],angle:[-1e6,1e6],heading:[-1e6,1e6]}));
+  if (stops.length !== 2) throw Error("停止位置のデータが不足しています。");
+  const locks = Object.fromEntries(["mu","restitution","a.speed","b.speed",
+    ...["a","b"].flatMap(car=>["x","y","angle","heading"].map(key=>car+"."+key))]
+    .filter(key=>raw.scene.locks?.[key]===true).map(key=>[key,true]));
+  return {settings,scene:{stops,locks,stopEnabled:[0,1].map(i=>raw.scene.stopEnabled?.[i]===true)},
+    inverse:{car:readCar(raw.inverse.car),key:caseChoice(raw.inverse.key,inverseTypes)},
+    mode:caseChoice(raw.mode,modeNames),selected:Math.floor(caseNumber(raw.selected ?? 0,0,4)),
+    zoom:caseNumber(raw.zoom ?? 1,.005,3)};
+}
+function readCar(value,unknown=false) {
+  if (value === 0 || value === 1 || (unknown && value === -1)) return value;
+  throw Error("対象車両が不正です。");
+}
+function readEvidence(raw) {
+  const tolerance = (value,max) => value == null ? null : caseNumber(value,0,max);
+  const point = value => caseNumbers(value,{x:[-150,150],y:[-150,150]});
+  const sources = caseArray(raw.sources,20,item=>{
+    const anchor=caseChoice(item.anchor,{collision:1,start:1,crossing:1});
+    return {label:caseText(item.label),kind:caseChoice(item.kind,sourceKinds),anchor,zero:caseNumber(item.zero,-3600,86400),
+      ...(anchor==="crossing" ? {car:readCar(item.car),station:caseNumber(item.station,-150,150)} : {})};
+  });
+  return {sources,
+    marks:caseArray(raw.marks,60,item=>({label:caseText(item.label),source:caseText(item.source),
+      kind:caseChoice(item.kind,markKinds),car:readCar(item.car,true),a:point(item.a),b:item.b ? point(item.b) : null,
+      tolerance:tolerance(item.tolerance,100)})),
+    damage:caseArray(raw.damage,40,item=>({car:readCar(item.car),side:caseChoice(item.side,damageSides),
+      source:caseText(item.source),fraction:caseNumber(item.fraction,0,1),tolerance:tolerance(item.tolerance,100)})),
+    records:caseArray(raw.records,120,item=>{
+      if (!Number.isInteger(item.source) || !sources[item.source]) throw Error("記録の出典が見つかりません。");
+      const kind = caseChoice(item.kind,recordKinds);
+      const bounds = {crossing:[-150,150],speed:[0,300],brakeState:[0,1]};
+      const value = kind === "brake" ? null : caseNumber(item.value,...bounds[kind]);
+      if (kind === "brakeState" && !Number.isInteger(value)) throw Error("ブレーキ作動の値が不正です。");
+      return {source:item.source,car:readCar(item.car),kind,time:caseNumber(item.time,-3600,86400),value,
+        tolerance:tolerance(item.tolerance,200)};
+    })
+  };
+}
+function readCase(raw) {
+  if (raw?.version === 1)
+    return {active:readSnapshot(raw),evidence:emptyEvidence(),hypotheses:[],sweep:defaultSweep()};
+  if (raw?.version !== 2) throw Error("対応する案件ファイルを選んでください。");
+  const sweep = {...caseNumbers(raw.sweepOptions,{speedMin:[0,160],speedMax:[0,160],muMin:[.05,1.2],muMax:[.05,1.2]}),
+    car:readCar(raw.sweepOptions.car)};
+  if (sweep.speedMin > sweep.speedMax || sweep.muMin > sweep.muMax) throw Error("比較範囲が不正です。");
+  return {active:readSnapshot(raw.active),evidence:readEvidence(raw.evidence),sweep,
+    hypotheses:caseArray(raw.hypotheses,6,item=>({...readSnapshot(item),label:caseText(item.label)}))};
+}
+byId("load-case").onclick = () => byId("import-case").click();
+byId("import-case").onchange = async event => {
+  const file = event.target.files[0];
+  event.target.value = "";
+  if (!file) return;
+  try {
+    if (file.size > 1024*1024) throw Error("案件ファイルの上限は 1 MB です。");
+    const loaded = readCase(JSON.parse(await file.text()));
+    if (!window.confirm("現在の条件・現場資料・仮説を、読み込む案件の内容に切り替えますか？")) return;
+    evidence = loaded.evidence;
+    hypotheses = loaded.hypotheses;
+    sweepOptions = loaded.sweep;
+    comparisonCache = new WeakMap();
+    markDraft = undefined;
+    if (investigationPick) finishPicking(false);
+    applyCase(loaded.active);
+    notify("案件を読み込みました。");
+  } catch (error) {
+    notify(error instanceof SyntaxError ? "JSON の案件ファイルを読み込めませんでした。" : "案件を読み込めませんでした。 "+error.message);
+  }
+};
 
 renderControls();
 setMode("forward");
