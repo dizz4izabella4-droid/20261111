@@ -6,6 +6,7 @@
 
 | 作品 | フォルダ | 端末 |
 |---|---|---|
+| あの宝石（宝石をそろえる落ちものパズル） | `ano-houseki/` | スマホ・PC |
 | CMD Typing（タイピング PC版） | `typing-pc/` | PC（キーボード） |
 | CMD Typing Mobile（タイピング スマホ版） | `typing-mobile/` | スマホ（フリック入力） |
 | 鳥と獣の戦い | `tori-to-kemono/` | スマホ（2人対戦） |

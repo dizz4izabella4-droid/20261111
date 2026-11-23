@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<script>try{navigator.audioSession&&(navigator.audioSession.type='ambient')}catch(e){}</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>あの宝石</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at top,#252044,#090c18 65%);color:#f8f4ff;font-family:system-ui,sans-serif;display:grid;place-items:center;padding:18px}
+#app{width:min(100%,520px);background:#101323;border:1px solid #7770a8;border-radius:18px;padding:16px;box-shadow:0 18px 60px #0009}
+header{text-align:center}h1{font-size:clamp(20px,5vw,27px);letter-spacing:3px;margin:4px 0;text-shadow:0 0 16px #a17aff}header p{font-size:10px;letter-spacing:4px;color:#aaa6cc;margin:0 0 14px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;text-align:center}.stats div{background:#20213a;border-radius:9px;padding:7px 3px;font-size:10px;color:#bbb8d7}.stats b{display:block;color:white;font-size:18px}
+.themes,.actions{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:12px 0}
+button{background:#292b49;color:white;border:1px solid #65658c;border-radius:8px;padding:9px 11px;font-weight:650;cursor:pointer;touch-action:manipulation}button.active{background:#765bc0;border-color:#d2baff}
+.arena{display:flex;justify-content:center;align-items:flex-start;gap:10px}.board{position:relative;overflow:hidden;width:min(70vw,324px);display:grid;grid-template-columns:repeat(6,1fr);gap:4px;padding:7px;background:var(--well);border:2px solid var(--rim);border-radius:11px;box-shadow:0 0 22px var(--glow),inset 0 0 20px #000b}
+.cell{aspect-ratio:1;min-width:0;background:var(--empty);border:1px solid #ffffff13;border-radius:5px;display:grid;place-items:center}
+.gem{width:78%;height:78%;border-radius:23%;transform:rotate(45deg);border:1px solid #fff9;background:var(--gem);box-shadow:inset 2px 2px 4px #fff9,inset -4px -4px 7px #0009,0 0 9px var(--shine);position:relative}
+.gem:after{content:"";position:absolute;left:13%;top:8%;width:34%;height:20%;border-radius:50%;background:#fff;filter:blur(2px)}
+.cell.clearing .gem{animation:gemPop .3s ease-out forwards}
+@keyframes gemPop{0%{transform:scale(1) rotate(45deg);filter:brightness(1)}45%{transform:scale(1.22) rotate(65deg);filter:brightness(2.4)}100%{transform:scale(.05) rotate(120deg);opacity:0}}
+.fx-particle{position:absolute;z-index:4;width:7px;height:7px;border-radius:50%;pointer-events:none;background:var(--particle-color);box-shadow:0 0 8px var(--particle-color);animation:particleFly .48s cubic-bezier(.12,.7,.25,1) forwards}
+@keyframes particleFly{0%{opacity:1;transform:translate(-50%,-50%) scale(1.2)}100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.1)}}
+.combo-float{position:absolute;z-index:6;left:50%;top:42%;transform:translate(-50%,-50%);font-weight:1000;font-size:clamp(18px,5vw,30px);letter-spacing:2px;color:#fff3a6;text-shadow:0 0 8px #ff8c32,0 3px 0 #8b3c16;white-space:nowrap;pointer-events:none;animation:comboRise .85s ease-out forwards}
+@keyframes comboRise{0%{opacity:0;transform:translate(-50%,-30%) scale(.55)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.12)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-115%) scale(.9)}}
+.board.danger{animation:dangerPulse .65s ease-in-out infinite alternate}
+@keyframes dangerPulse{from{box-shadow:0 0 12px #ff304477,inset 0 0 12px #000b}to{box-shadow:0 0 28px #ff2030,inset 0 0 20px #700}}
+.gem.ghost{opacity:.22;filter:saturate(.65);box-shadow:0 0 0 1px #fff8,inset 0 0 0 2px #fff8;transform:scale(.88) rotate(45deg)}
+#app[data-theme=dark] .gem.ghost{transform:scale(.88);clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+.controls button{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none}
+.wild{--gem:conic-gradient(from 0deg,#ff4d73,#ffcf4d,#72f7a8,#54cfff,#a77bff,#ff4d73);--shine:#fff;position:relative;animation:wildPulse 1.2s ease-in-out infinite alternate}.gem.wild:before{content:'✦';position:absolute;inset:0;display:grid;place-items:center;color:white;font-size:clamp(13px,3vw,20px);font-weight:1000;transform:rotate(-45deg);text-shadow:0 0 7px #fff}
+@keyframes wildPulse{from{filter:brightness(.9) saturate(1.1)}to{filter:brightness(1.5) saturate(1.6)}}
+.bomb{--gem:radial-gradient(circle at 35% 30%,#fff8d8 0 8%,#ffdf58 18%,#ff7a28 48%,#a81736 78%,#410c2d);--shine:#ff9b35;position:relative}.gem.bomb:before{content:'✹';position:absolute;inset:0;display:grid;place-items:center;color:#fff7cf;font-size:clamp(12px,3vw,20px);font-weight:1000;text-shadow:0 0 5px #ff3c00;transform:rotate(-45deg)}
+.ruby{--gem:linear-gradient(135deg,#fff,#ff718b 35%,#c5164d 70%,#510c2a);--shine:#ff5379}.blue{--gem:linear-gradient(135deg,#fff,#7de4ff 35%,#1684d5 70%,#102b75);--shine:#5bcfff}.green{--gem:linear-gradient(135deg,#fff,#9cffc2 35%,#11a66e 70%,#064a39);--shine:#4affb0}.gold{--gem:linear-gradient(135deg,#fffde1,#ffe879 35%,#dc9b17 70%,#78400b);--shine:#ffdc6b}.violet{--gem:linear-gradient(135deg,#fff,#dfb4ff 35%,#9145e1 70%,#38145e);--shine:#c38aff}
+#app[data-theme=classic]{--well:#10212c;--empty:#263b49;--rim:#91b5c9;--glow:#367f9b66}#app[data-theme=gem]{--well:#150c31;--empty:#291a49;--rim:#a88aff;--glow:#a14dff99}#app[data-theme=retro]{--well:#210e25;--empty:#39182e;--rim:#ffad4f;--glow:#ff633b77}#app[data-theme=dark]{--well:#111016;--empty:#292430;--rim:#81758d;--glow:#9d69b477}
+#app[data-theme=gem] .gem{border-radius:50%;box-shadow:inset 3px 3px 8px #fff,inset -5px -6px 8px #0009,0 0 14px var(--shine)}#app[data-theme=retro] .gem{border-radius:3px}#app[data-theme=dark] .gem{border-radius:0;transform:none;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+.side{min-width:65px;color:#c9c5e1;font-size:12px}.next{display:flex;flex-direction:column;gap:8px;margin:10px 0}.next .gem{width:25px;height:25px}
+.status{text-align:center;min-height:28px;margin:10px 0;color:#ffe69c;font-weight:700}.controls{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-width:340px;margin:10px auto}.controls button{padding:12px 3px}
+.progresslabel{display:flex;justify-content:space-between;font-size:11px;color:#bbb8d7;margin-top:10px}.bar{height:7px;background:#302d49;border-radius:10px;overflow:hidden;margin:5px 0}.bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,#59e5dc,#b68bff,#ffdc73)}.stagebar span{background:linear-gradient(90deg,#ff9c48,#ffe36b,#ff67c4);transition:width .2s}
+.sound{text-align:center;color:#c5c0e1;font-size:12px;margin:10px}.sound input{vertical-align:middle;width:100px;accent-color:#ad8aff}
+.overlay{position:absolute;inset:0;background:#080a16ed;z-index:5;display:grid;place-items:center;padding:20px;border-radius:18px}.dialog{text-align:center;max-width:300px}.dialog h2{font-size:25px;letter-spacing:2px;text-shadow:0 0 15px #a78bfa}.dialog p{font-size:13px;line-height:1.7;color:#c9c5e1}.dialog button{background:#765bc0;padding:12px 24px;font-size:15px}
+.wrap{position:relative}.hidden{display:none!important}.hint{text-align:center;font-size:11px;color:#9290b2;margin-top:8px}
+@media(max-width:390px){#app{padding:10px}.arena{gap:6px}.side{min-width:55px}.board{gap:3px;padding:5px}}
+</style>
+<!--IZ-GAME-BASE:START-->
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black">
+<script>
+/* iz-game-base v1 — 全ゲーム共通の基本設計
+ *  1. iOS の「ダブルタップで拡大」「ピンチ拡大」を無効にする
+ *  2. 全画面表示の切り替え（Fullscreen API。iPhone は非対応のため「ホーム画面に追加」を案内）
+ *  3. 画面の向き（自動 / 縦 / 横）の選択（Androidは全画面時に固定、非対応端末は回転の案内を出す）
+ * 各作品の <head> へ tools/apply_game_base.py が埋め込む（作品は1ファイル完結のため、外部読み込みはしない）。
+ * 位置を変えたいときは、この前に window.IZ_BASE={pos:'tr'|'tl'|'br'|'bl'} を書く。
+ */
+(function () {
+  'use strict';
+  if (window.__izGameBase) return;
+  window.__izGameBase = 1;
+  var D = document, W = window, DE = D.documentElement;
+  var KEY = 'izGameBase.orient';
+  var cfg = W.IZ_BASE || {};
+  /* 表示文言。作品側で window.IZ_BASE={lang:'en'} を書くと英語になる（既定は日本語） */
+  var T = cfg.lang === 'en'
+    ? { set: 'Display settings', scr: 'SCREEN', fs: 'Go full screen', fsOff: 'Exit full screen', ori: 'ORIENTATION', auto: 'Auto', port: 'Portrait', land: 'Landscape', close: 'Close', nAuto: 'Follows your device orientation.', nFix: 'Locks the orientation in full screen. If it cannot be locked, please rotate your device.', rot: function (m) { return '\u21bb Please turn your device to ' + (m === 'land' ? 'landscape' : 'portrait'); } }
+    : { set: '表示設定', scr: '画面', fs: '全画面にする', fsOff: '全画面をやめる', ori: '向き', auto: '自動', port: '縦', land: '横', close: '閉じる', nAuto: '端末の向きに合わせます。', nFix: '全画面のときに向きを固定します。固定できない場合は、端末を回してください。', rot: function (m) { return '\u21bb 端末を' + (m === 'land' ? '横' : '縦') + '向きにしてください'; } };
+
+  /* ---------- 1. 拡大の無効化 ---------- */
+  function fixViewport() {
+    var m = D.querySelector('meta[name="viewport"]');
+    if (!m) {
+      m = D.createElement('meta');
+      m.name = 'viewport';
+      (D.head || DE).appendChild(m);
+      m.content = 'width=device-width,initial-scale=1,viewport-fit=cover';
+    }
+    var c = m.getAttribute('content') || '';
+    c = c.replace(/(^|,)\s*(maximum-scale|minimum-scale|user-scalable)\s*=\s*[^,]*/gi, '').replace(/^,/, '');
+    m.setAttribute('content', c + ',maximum-scale=1,user-scalable=no');
+  }
+  fixViewport();
+
+  var st = D.createElement('style');
+  st.textContent = 'html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}';
+  (D.head || DE).appendChild(st);
+
+  // iOS Safari はピンチを gesture イベントで受ける
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (t) {
+    D.addEventListener(t, function (e) { e.preventDefault(); }, { passive: false });
+  });
+  // 2本指の拡大（scale が 1 から動いたとき）だけを止める。マルチタッチ操作そのものは妨げない
+  D.addEventListener('touchmove', function (e) {
+    if (e.touches && e.touches.length > 1 && e.scale && e.scale !== 1) e.preventDefault();
+  }, { passive: false });
+  // ダブルタップ拡大の保険。ボタン・入力欄などは click を壊さないよう除外し、CSS の touch-action に任せる
+  var lastEnd = 0;
+  var SKIP = 'input,textarea,select,button,a,label,summary,video,audio,[contenteditable],[role="button"],[data-iz-base-ui]';
+  D.addEventListener('touchend', function (e) {
+    var now = Date.now();
+    var t = e.target;
+    var skip = t && t.closest && t.closest(SKIP);
+    if (!skip && now - lastEnd < 350 && e.cancelable) e.preventDefault();
+    lastEnd = now;
+  }, { passive: false });
+
+  /* ---------- 2・3. 全画面と向き ---------- */
+  var fsEl = DE;
+  var fsReq = fsEl.requestFullscreen || fsEl.webkitRequestFullscreen || fsEl.msRequestFullscreen;
+  var fsOk = !!fsReq && (D.fullscreenEnabled !== false) && (D.webkitFullscreenEnabled !== false);
+  function isFs() { return !!(D.fullscreenElement || D.webkitFullscreenElement); }
+  function standalone() {
+    return !!(navigator.standalone || (W.matchMedia && W.matchMedia('(display-mode: standalone)').matches));
+  }
+  function enterFs() {
+    try {
+      var p = fsReq.call(fsEl, { navigationUI: 'hide' });
+      if (p && p.catch) p.catch(function () {});
+      return p;
+    } catch (e) { return null; }
+  }
+  function exitFs() {
+    var f = D.exitFullscreen || D.webkitExitFullscreen || D.msExitFullscreen;
+    try { var p = f && f.call(D); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+  }
+  function lockApi() { return W.screen && screen.orientation && screen.orientation.lock; }
+  // 変更できない機能は表示しない（iPhone は両方とも不可なので、ボタン自体を出さない）
+  var orOk = !!lockApi() && (navigator.maxTouchPoints > 0);
+  var uiOk = fsOk || orOk;
+  function applyOrient(mode, wantFs) {
+    // 戻り値は使わず、結果は banner() が画面の向きで判定する
+    if (mode === 'auto') {
+      try { if (W.screen && screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (e) {}
+      return;
+    }
+    var tgt = mode === 'land' ? 'landscape' : 'portrait';
+    function lock() {
+      if (!lockApi()) return;
+      try { var p = screen.orientation.lock(tgt); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+    }
+    if (isFs() || standalone()) lock();
+    else if (wantFs && fsOk) {
+      var p = enterFs();
+      if (p && p.then) p.then(lock, function () {}); else lock();
+    }
+  }
+  var mode = 'auto';
+  try { mode = localStorage.getItem(KEY) || 'auto'; } catch (e) {}
+  if ((mode !== 'land' && mode !== 'port') || !orOk) mode = 'auto';
+
+  /* ---------- UI ---------- */
+  var ui, btn, panel, banner, bT;
+  var pos = cfg.pos || 'tr';
+  function build() {
+    if (ui || !D.body || !uiOk) return;
+    var css = D.createElement('style');
+    css.textContent =
+      '#izb{position:fixed;z-index:2147483646;font:12px/1.4 "Hiragino Sans","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;color:#fff;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}' +
+      '#izb *{box-sizing:border-box}' +
+      '#izb.tr{top:calc(6px + env(safe-area-inset-top,0px));right:calc(6px + env(safe-area-inset-right,0px))}' +
+      '#izb.tl{top:calc(6px + env(safe-area-inset-top,0px));left:calc(6px + env(safe-area-inset-left,0px))}' +
+      '#izb.br{bottom:calc(6px + env(safe-area-inset-bottom,0px));right:calc(6px + env(safe-area-inset-right,0px))}' +
+      '#izb.bl{bottom:calc(6px + env(safe-area-inset-bottom,0px));left:calc(6px + env(safe-area-inset-left,0px))}' +
+      '#izb button{font:inherit;color:inherit;border:0;margin:0;cursor:pointer;-webkit-appearance:none;appearance:none}' +
+      '#izb .iz-b{width:30px;height:30px;border-radius:8px;background:rgba(20,20,24,.45);border:1px solid rgba(255,255,255,.25);font-size:16px;line-height:28px;text-align:center;padding:0;opacity:.45;transition:opacity .2s}' +
+      '#izb .iz-b:active,#izb.open .iz-b{opacity:1}' +
+      '#izb .iz-p{display:none;position:absolute;width:210px;padding:10px;border-radius:10px;background:rgba(18,18,22,.94);border:1px solid rgba(255,255,255,.22);box-shadow:0 4px 18px rgba(0,0,0,.5)}' +
+      '#izb.open .iz-p{display:block}' +
+      '#izb.tr .iz-p,#izb.tl .iz-p{top:36px}#izb.br .iz-p,#izb.bl .iz-p{bottom:36px}' +
+      '#izb.tr .iz-p,#izb.br .iz-p{right:0}#izb.tl .iz-p,#izb.bl .iz-p{left:0}' +
+      '#izb .iz-h{font-size:11px;color:#aab;margin:0 0 5px}' +
+      '#izb .iz-r{display:flex;gap:4px;margin-bottom:9px}' +
+      '#izb .iz-r button{flex:1;padding:8px 0;border-radius:7px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);font-size:13px}' +
+      '#izb .iz-r button.on{background:#e8c13a;color:#111;border-color:#e8c13a;font-weight:700}' +
+      '#izb .iz-r button[disabled]{opacity:.4}' +
+      '#izb .iz-n{font-size:10.5px;color:#9a9aa8;margin:-3px 0 6px}' +
+      '#izb .iz-x{display:block;width:100%;padding:6px 0;border-radius:7px;background:transparent;border:1px solid rgba(255,255,255,.18);font-size:12px;color:#ccd}' +
+      '#izbn{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:2147483645;padding:7px 14px;border-radius:18px;background:rgba(18,18,22,.88);border:1px solid rgba(255,255,255,.25);color:#fff;font:13px/1.3 "Hiragino Sans","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;pointer-events:none;display:none;white-space:nowrap}';
+    (D.head || DE).appendChild(css);
+
+    ui = D.createElement('div');
+    ui.id = 'izb';
+    ui.className = pos;
+    ui.setAttribute('data-iz-base-ui', '');
+    ui.innerHTML =
+      '<button type="button" class="iz-b" tabindex="-1" aria-label="' + T.set + '">⛶</button>' +
+      '<div class="iz-p">' +
+      (fsOk ? '<div class="iz-h">' + T.scr + '</div><div class="iz-r"><button type="button" tabindex="-1" data-fs="1">' + T.fs + '</button></div>' : '') +
+      (orOk ? '<div class="iz-h">' + T.ori + '</div><div class="iz-r" id="izor"><button type="button" tabindex="-1" data-o="auto">' + T.auto + '</button><button type="button" tabindex="-1" data-o="port">' + T.port + '</button><button type="button" tabindex="-1" data-o="land">' + T.land + '</button></div><div class="iz-n" id="izon"></div>' : '') +
+      '<button type="button" class="iz-x" tabindex="-1" data-close="1">' + T.close + '</button>' +
+      '</div>';
+    D.body.appendChild(ui);
+    btn = ui.querySelector('.iz-b');
+    panel = ui.querySelector('.iz-p');
+
+    banner = D.createElement('div');
+    banner.id = 'izbn';
+    D.body.appendChild(banner);
+
+    // UI 上の操作はゲーム側へ伝えない
+    ['touchstart', 'touchend', 'pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'dblclick', 'keydown', 'keyup'].forEach(function (t) {
+      ui.addEventListener(t, function (e) { e.stopPropagation(); });
+    });
+    ui.addEventListener('click', function (e) {
+      var t = e.target.closest('button');
+      if (!t) return;
+      if (t === btn) { ui.classList.toggle('open'); refresh(); }
+      else if (t.getAttribute('data-close')) ui.classList.remove('open');
+      else if (t.getAttribute('data-fs')) { isFs() ? exitFs() : enterFs(); setTimeout(refresh, 250); }
+      else if (t.getAttribute('data-o')) setMode(t.getAttribute('data-o'), true);
+      if (t.blur) t.blur();
+    });
+    refresh();
+  }
+  function setMode(m, fromUser) {
+    mode = m;
+    try { localStorage.setItem(KEY, m); } catch (e) {}
+    applyOrient(m, fromUser);
+    refresh();
+    setTimeout(banner_, 400);
+  }
+  function refresh() {
+    if (!ui) return;
+    var fb = ui.querySelector('[data-fs]');
+    if (fb) fb.textContent = isFs() ? T.fsOff : T.fs;
+    var bs = ui.querySelectorAll('[data-o]');
+    for (var i = 0; i < bs.length; i++) bs[i].classList.toggle('on', bs[i].getAttribute('data-o') === mode);
+    var on = ui.querySelector('#izon');
+    if (on) on.textContent = mode === 'auto' ? T.nAuto : T.nFix;
+  }
+  function banner_() {
+    if (!banner) return;
+    var land = W.innerWidth > W.innerHeight;
+    var bad = (mode === 'land' && !land) || (mode === 'port' && land);
+    if (bad) {
+      banner.textContent = T.rot(mode);
+      banner.style.display = 'block';
+      clearTimeout(bT);
+      bT = setTimeout(function () { banner.style.display = 'none'; }, 6000);
+    } else banner.style.display = 'none';
+  }
+  function onChange() { refresh(); setTimeout(banner_, 300); }
+  D.addEventListener('fullscreenchange', onChange);
+  D.addEventListener('webkitfullscreenchange', onChange);
+  W.addEventListener('orientationchange', onChange);
+  W.addEventListener('resize', function () { setTimeout(banner_, 300); });
+
+  function init() {
+    build();
+    if (mode !== 'auto') { applyOrient(mode, false); setTimeout(banner_, 600); }
+  }
+  if (D.body) init(); else D.addEventListener('DOMContentLoaded', init);
+
+  W.IZBase = { fullscreen: function (on) { on === false ? exitFs() : enterFs(); }, orientation: setMode, get mode() { return mode; } };
+})();
+</script>
+<!--IZ-GAME-BASE:END-->
+</head>
+<body>
+<main id="app" data-theme="gem">
+<header><h1>✦ あの宝石 ✦</h1><p>ARCADE GEM PUZZLE</p></header>
+<section class="stats"><div>SCORE<b id="score">0</b></div><div>LEVEL<b id="level">1</b></div><div>BEST<b id="best">0</b></div><div>CHAIN<b id="chain">0</b></div></section>
+<div class="progresslabel"><span>LEVEL PROGRESS</span><span id="progressText">0 / 100</span></div><div class="bar"><span id="progress"></span></div>
+<div class="progresslabel"><span id="stageLabel">STAGE 1 GOAL</span><span id="stageText">0 / 24</span></div><div class="bar stagebar"><span id="stageProgress"></span></div>
+<div class="themes"><button data-theme="gem" class="active">宝石</button><button data-theme="classic">クラシック</button><button data-theme="retro">レトロ</button><button data-theme="dark">ダーク</button></div>
+<div class="wrap">
+<div class="arena"><div class="board" id="board"></div><aside class="side">NEXT<div class="next" id="next"></div><p>縦・横・斜めに<br>3つ以上そろえる<br><br>🌈ワイルドはどの色ともマッチ<br>💣ボムは周囲を爆破</p></aside></div>
+<div class="status" id="status">TITLE SCREEN</div>
+<div class="controls"><button data-act="left">◀ 左</button><button data-act="rotate">↻ 回転</button><button data-act="right">右 ▶</button><button data-act="down">▼ 落下</button></div>
+<div class="actions"><button id="pause">一時停止</button><button id="mute">♪ ON</button><button id="restart">最初から</button></div>
+<div class="sound">音量 <input id="volume" type="range" min="0" max="100" value="35"> <span id="volumeText">35%</span></div>
+<div class="hint">← → 移動 ／ ↑ 回転 ／ ↓ 高速落下 ／ Space ハードドロップ ／ 盤面スワイプ対応 ／ 消去演出・危険警告 ／ 🌈ワイルドは全色とマッチ ／ 💣ボムは周囲3×3を爆破 ／ ステージごとに盤面色変化</div>
+<div class="overlay" id="overlay"><div class="dialog"><h2 id="overlayTitle">あの宝石</h2><p id="overlayDesc">宝石を3つ以上そろえて消去。連鎖をつなげてハイスコアを目指そう！</p><button id="play">PLAY GAME</button></div></div>
+</div>
+</main>
+<script>
+(()=>{
+const root=document.getElementById('app'),$=id=>document.getElementById(id),W=6,H=10,C=['ruby','blue','green','gold','violet'];
+let grid,piece,next,score=0,level=1,stage=1,stageClears=0,stageTarget=24,best=Number(localStorage.getItem('jewelColumnsBest')||0),chain=0,paused=true,over=false,clearing=false,timer=null,audio=null,muted=false,volume=.35,musicTimer=null,musicStep=0;
+$('best').textContent=best;
+const rand=()=>C[Math.floor(Math.random()*C.length)],make=()=>{let c=[rand(),rand(),rand()];for(let i=0;i<3;i++){if(Math.random()<.075)c[i]='wild';else if(Math.random()<.2)c[i]='bomb'}return{x:2,y:-3,c}};
+function valid(p){return p.c.every((c,i)=>{let y=p.y+i;return p.x>=0&&p.x<W&&y<H&&(y<0||!grid[y][p.x]);});}
+function audioInit(){if(!audio){let AC=window.AudioContext||window.webkitAudioContext;if(AC)audio=new AC();}if(audio&&audio.state==='suspended')audio.resume();}
+function tone(freq,dur=.09,type='sine',gain=.08){if(!audio||muted||volume===0)return;let o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.value=freq;g.gain.setValueAtTime(gain*volume,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+dur);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+dur);}
+function sfx(k){if(k==='move')tone(250,.04,'square',.03);if(k==='rotate')tone(480,.08,'triangle',.05);if(k==='drop')tone(110,.12,'sawtooth',.05);if(k==='clear'){tone(660,.12);setTimeout(()=>tone(880,.14),90)}if(k==='bomb'){tone(95,.28,'sawtooth',.14);setTimeout(()=>tone(55,.32,'square',.08),80)}if(k==='level')[523,659,784,1046].forEach((n,i)=>setTimeout(()=>tone(n,.18,'triangle'),i*95));if(k==='over'){tone(220,.3);setTimeout(()=>tone(165,.45),240)}}
+function stopMusic(){if(musicTimer)clearInterval(musicTimer);musicTimer=null}
+function startMusic(){stopMusic();if(muted||volume===0)return;let notes=[261,329,392,329,293,349,440,349];musicTimer=setInterval(()=>{if(!paused&&!over)tone(notes[musicStep++%notes.length],.18,'triangle',.025)},300)}
+function render(){let b=$('board');b.innerHTML='';const stagePalettes=[['#150c31','#291a49','#a88aff','#a14dff99'],['#082333','#103d50','#5dd9ef','#168cbf99'],['#2b1020','#4b1932','#ff8bad','#f23d7b88'],['#10291f','#1c4936','#82e6a8','#32c97888'],['#291c08','#4d3510','#ffd36c','#e99c2d99']];const pal=stagePalettes[(stage-1)%stagePalettes.length];b.style.setProperty('--well',pal[0]);b.style.setProperty('--empty',pal[1]);b.style.setProperty('--rim',pal[2]);b.style.setProperty('--glow',pal[3]);let ghostY=null;if(piece){ghostY=piece.y;while(valid({...piece,y:ghostY+1}))ghostY++}for(let y=0;y<H;y++)for(let x=0;x<W;x++){let c=grid[y][x];let ghost=null;if(piece&&piece.x===x){let gi=y-ghostY;if(gi>=0&&gi<3&&!c)ghost=piece.c[gi];let i=y-piece.y;if(i>=0&&i<3)c=piece.c[i]}let cell=document.createElement('div');cell.className='cell';if(c){let g=document.createElement('div');g.className='gem '+c;cell.append(g)}else if(ghost){let g=document.createElement('div');g.className='gem ghost '+ghost;cell.append(g)}b.append(cell)}$('next').innerHTML='';next.c.forEach(c=>{let g=document.createElement('div');g.className='gem '+c;$('next').append(g)});b.classList.toggle('danger',grid[0].some(Boolean));$('score').textContent=score;$('level').textContent=level;$('best').textContent=best;$('chain').textContent=chain;let p=score%100;$('progressText').textContent=p+' / 100';$('progress').style.width=p+'%';$('stageLabel').textContent='STAGE '+stage+' GOAL';$('stageText').textContent=stageClears+' / '+stageTarget;$('stageProgress').style.width=Math.min(100,stageClears/stageTarget*100)+'%'}
+function speed(){return Math.max(145,650-(level-1)*55)}
+function resetTimer(){clearInterval(timer);timer=setInterval(tick,speed())}
+function spawn(){piece=next||make();next=make();if(!valid(piece)){gameOver();return}render()}
+function move(dx,dy){if(!piece||over||paused||clearing)return;let p={...piece,x:piece.x+dx,y:piece.y+dy};if(valid(p)){piece=p;render();if(dx)sfx('move')}else if(dy>0)lock()}
+function rotate(){if(!piece||over||paused||clearing)return;let p={...piece,c:[piece.c[2],piece.c[0],piece.c[1]]};if(valid(p)){piece=p;render();sfx('rotate')}}
+function hardDrop(){if(!piece||over||paused||clearing)return;let p={...piece};while(valid({...p,y:p.y+1}))p.y++;piece=p;render();lock()}
+function lock(){piece.c.forEach((c,i)=>{let y=piece.y+i;if(y>=0&&y<H)grid[y][piece.x]=c});piece=null;sfx('drop');resolve(1)}
+function resolve(depth){let hit=new Set(),dirs=[[1,0],[0,1],[1,1],[1,-1]];for(let y=0;y<H;y++)for(let x=0;x<W;x++){let c=grid[y][x];if(!c)continue;for(let[dx,dy]of dirs){let line=[[x,y]],xx=x+dx,yy=y+dy;while(xx>=0&&xx<W&&yy>=0&&yy<H&&grid[yy][xx]!=='bomb'&&c!=='bomb'&&(grid[yy][xx]===c||grid[yy][xx]==='wild'||c==='wild')){line.push([xx,yy]);xx+=dx;yy+=dy}if(line.length>=3)line.forEach(([a,b])=>hit.add(b*W+a))}}let bombCount=0;for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(grid[y][x]==='bomb'){bombCount++;for(let yy=Math.max(0,y-1);yy<=Math.min(H-1,y+1);yy++)for(let xx=Math.max(0,x-1);xx<=Math.min(W-1,x+1);xx++)hit.add(yy*W+xx)}if(!hit.size){chain=0;spawn();return}clearing=true;chain=depth;let old=level;stageClears+=hit.size;let stageBonus=0;if(stageClears>=stageTarget){stageBonus=250*stage;stageClears-=stageTarget;stage++;stageTarget+=6;}score+=hit.size*10*depth+(bombCount?50*bombCount*depth:0)+stageBonus;level=Math.floor(score/100)+1;if(score>best){best=score;localStorage.setItem('jewelColumnsBest',best)}$('status').textContent=stageBonus?'🏆 STAGE CLEAR! +'+stageBonus+' BONUS':bombCount?'💥 BOMB! '+(depth>1?depth+' CHAIN!':'')+' +'+(hit.size*10*depth+50*bombCount*depth):depth>1?depth+' CHAIN!  +'+hit.size*10*depth:'GEM CLEAR!';sfx(bombCount?'bomb':'clear');if(depth>1){tone(880+depth*90,.22,'sawtooth',.045)}if(stageBonus){[659,784,988,1318].forEach((n,i)=>setTimeout(()=>tone(n,.22,'triangle',.09),i*110))}render();const board=$('board');hit.forEach(n=>{const cell=board.children[n];if(!cell)return;cell.classList.add('clearing');const gem=grid[Math.floor(n/W)][n%W];const palette={ruby:'#ff547b',blue:'#59d9ff',green:'#56ffad',gold:'#ffe36b',violet:'#ca8aff',bomb:'#ff8b35',wild:'#ffffff'};const rect=cell.getBoundingClientRect(),br=board.getBoundingClientRect();for(let k=0;k<5;k++){const dot=document.createElement('i');dot.className='fx-particle';dot.style.left=(rect.left-br.left+rect.width/2)+'px';dot.style.top=(rect.top-br.top+rect.height/2)+'px';dot.style.setProperty('--particle-color',palette[gem]||'#fff');const a=Math.PI*2*k/5+Math.random()*.45,dist=18+Math.random()*25;dot.style.setProperty('--dx',Math.cos(a)*dist+'px');dot.style.setProperty('--dy',Math.sin(a)*dist+'px');board.append(dot);setTimeout(()=>dot.remove(),520)}});if(depth>1||stageBonus){const label=document.createElement('div');label.className='combo-float';label.textContent=stageBonus?'STAGE '+(stage-1)+' CLEAR!':depth+' CHAIN!';board.append(label);setTimeout(()=>label.remove(),1100)}if(level>old){$('status').textContent='LEVEL UP! '+level;sfx('level')}$('board').animate([{filter:'brightness(1)'},{filter:'brightness(2.2)'},{filter:'brightness(1)'}],300);setTimeout(()=>{hit.forEach(n=>grid[Math.floor(n/W)][n%W]=null);for(let x=0;x<W;x++){let a=[];for(let y=H-1;y>=0;y--)if(grid[y][x])a.push(grid[y][x]);for(let y=H-1;y>=0;y--)grid[y][x]=a[H-1-y]||null}clearing=false;render();resetTimer();resolve(depth+1)},300)}
+function tick(){if(paused||over||clearing||!piece)return;let p={...piece,y:piece.y+1};if(valid(p)){piece=p;render()}else lock()}
+function showOverlay(t,d,b){$('overlayTitle').textContent=t;$('overlayDesc').textContent=d;$('play').textContent=b;$('overlay').classList.remove('hidden')}
+function gameOver(){over=true;paused=true;stopMusic();sfx('over');clearInterval(timer);render();$('status').textContent='GAME OVER';showOverlay('GAME OVER','SCORE '+score+'　BEST '+best+'。もう一度挑戦しよう！','RETRY')}
+function start(){audioInit();clearInterval(timer);stopMusic();grid=Array.from({length:H},()=>Array(W).fill(null));score=0;level=1;stage=1;stageClears=0;stageTarget=24;chain=0;over=false;paused=false;clearing=false;next=make();spawn();$('status').textContent='GOOD LUCK!';$('overlay').classList.add('hidden');render();resetTimer();startMusic()}
+function togglePause(){if(over)return;paused=!paused;$('pause').textContent=paused?'再開':'一時停止';$('status').textContent=paused?'PAUSED':'PLAY';if(paused)stopMusic();else startMusic()}
+document.querySelectorAll('#app [data-theme]').forEach(b=>b.addEventListener('click',()=>{root.dataset.theme=b.dataset.theme;document.querySelectorAll('#app [data-theme]').forEach(x=>x.classList.toggle('active',x===b))}));
+document.querySelectorAll('#app [data-act]').forEach(b=>{
+ const act=b.dataset.act,run=()=>({left:()=>move(-1,0),right:()=>move(1,0),down:()=>move(0,1),rotate} [act]());
+ let holdDelay=null,repeat=null;
+ const stop=()=>{clearTimeout(holdDelay);clearInterval(repeat);holdDelay=repeat=null};
+ b.addEventListener('click',()=>{if(!b.dataset.held)run();b.dataset.held=''});
+ if(act!=='rotate'){
+  b.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;e.preventDefault();stop();b.dataset.held='yes';run();holdDelay=setTimeout(()=>{repeat=setInterval(run,act==='down'?75:115)},260)});
+  ['pointerup','pointercancel','pointerleave','lostpointercapture'].forEach(ev=>b.addEventListener(ev,stop));
+ }
+});
+$('play').addEventListener('click',start);$('restart').addEventListener('click',start);$('pause').addEventListener('click',togglePause);
+$('mute').addEventListener('click',()=>{muted=!muted;$('mute').textContent=muted?'♪ OFF':'♪ ON';if(muted)stopMusic();else if(!paused)startMusic()});
+$('volume').addEventListener('input',e=>{volume=Number(e.target.value)/100;$('volumeText').textContent=e.target.value+'%';if(volume===0)stopMusic();else if(!paused&&!muted)startMusic()});
+root.tabIndex=0;root.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','ArrowDown','ArrowUp',' '].includes(e.key)){e.preventDefault();if(e.key==='ArrowLeft')move(-1,0);if(e.key==='ArrowRight')move(1,0);if(e.key==='ArrowDown')move(0,1);if(e.key==='ArrowUp')rotate();if(e.key===' ')hardDrop()}});
+const boardEl=document.querySelector('.board');
+let gesture=null;
+boardEl.addEventListener('pointerdown',e=>{root.focus();gesture={x:e.clientX,y:e.clientY,id:e.pointerId};try{boardEl.setPointerCapture(e.pointerId)}catch(_){}});
+boardEl.addEventListener('pointerup',e=>{
+ if(!gesture)return;
+ const dx=e.clientX-gesture.x,dy=e.clientY-gesture.y;
+ if(Math.max(Math.abs(dx),Math.abs(dy))<18)rotate();
+ else if(Math.abs(dx)>Math.abs(dy)){const steps=Math.min(5,Math.max(1,Math.floor(Math.abs(dx)/34)));for(let i=0;i<steps;i++)move(dx>0?1:-1,0)}
+ else if(dy>28)hardDrop();
+ else if(dy< -28)rotate();
+ gesture=null;
+});
+boardEl.addEventListener('pointercancel',()=>gesture=null);
+document.querySelectorAll('#app [data-theme]').forEach(b=>b.addEventListener('click',()=>{}));
+root.dataset.theme='gem';grid=Array.from({length:H},()=>Array(W).fill(null));next=make();piece=make();render();showOverlay('あの宝石','宝石を縦・横・斜めに3つ以上そろえて消去。連鎖で高得点を狙おう！','PLAY GAME');
+})();
+</script>
+</body>
+</html>
