@@ -283,6 +283,20 @@ select { appearance:none; padding-right:29px; background:
   .investigation-form .fields {grid-template-columns:repeat(2,minmax(0,1fr))}
   .simple-grid,.simple-results {grid-template-columns:1fr}
 }
+
+.pattern-dialog {width:min(620px,calc(100vw - 20px));max-height:88dvh;overflow:auto;border:1px solid #8ea6c8;
+  border-radius:16px;background:white;color:var(--ink);padding:clamp(16px,4vw,26px);box-shadow:0 18px 60px #12233c55}
+.pattern-dialog::backdrop {background:#142137cf}
+.pattern-dialog h2 {font-size:1.34rem;margin-bottom:8px}
+.pattern-dialog p {color:var(--muted);line-height:1.55}
+.pattern-list {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:18px 0 0}
+.pattern-list button {min-height:88px;text-align:left;display:grid;align-content:center;gap:5px;border:2px solid #b4c6df;
+  background:#f5f8fc;color:#17365d;padding:12px;font-size:.96rem}
+.pattern-list button:hover,.pattern-list button:focus-visible {border-color:#174d9a;background:#e9f2ff}
+.pattern-list button strong {font-size:1rem}
+.pattern-list button span {font-size:.82rem;font-weight:500;line-height:1.4;color:#44566e}
+.pattern-current {display:inline-block;margin-top:12px;font-size:.85rem;color:var(--blue-dark);font-weight:700}
+@media(max-width:600px){.pattern-list {grid-template-columns:1fr}.pattern-list button {min-height:66px}}
 </style>
 
 <script>window.IZ_BASE = {pos: 'bl'};</script>
@@ -526,10 +540,23 @@ select { appearance:none; padding-right:29px; background:
 <label id="look3">左右確認 <input id="yaw3" type="range" min="-180" max="180" value="0" aria-label="視線の角度"><button id="front3" type="button">正面</button></label>
 </dialog>
 
+<dialog id="pattern-dialog" class="pattern-dialog" aria-labelledby="pattern-title">
+  <h2 id="pattern-title">事故類型を選択</h2>
+  <p>類型を選ぶと道路形状・進路・初期条件を設定します。後から変更できます。</p>
+  <div class="pattern-list">
+    <button type="button" data-pattern="cross"><strong>十字路・出会い頭</strong><span>交差する2台の直進</span></button>
+    <button type="button" data-pattern="rightStraight"><strong>対向車の右折と直進</strong><span>右折する車と、向かいから来る直進車</span></button>
+    <button type="button" data-pattern="tMerge"><strong>丁字路・合流</strong><span>南側から右折して東西道路へ合流</span></button>
+    <button type="button" data-pattern="rear"><strong>直線道路・追突</strong><span>同じ方向を進む2台</span></button>
+    <button type="button" data-pattern="headOn"><strong>直線道路・正面衝突</strong><span>向かい合って進む2台</span></button>
+  </div>
+</dialog>
+
 <header class="topbar">
   <div class="shell">
     <div class="identity"><span class="identity-caption">事故再現ツール</span></div>
     <div class="top-actions">
+      <button id="choose-pattern" type="button">事故類型</button>
       <button id="start-tutorial" type="button">使い方</button>
       <button id="export-settings" type="button"><span class="download-icon" aria-hidden="true"></span>案件を保存</button>
       <button id="load-case" type="button">案件を読み込む</button>
@@ -541,7 +568,8 @@ select { appearance:none; padding-right:29px; background:
   <div class="workspace-header">
     <header class="headline">
       <h1>机上の空論GP</h1>
-      <p>信号のない十字路で、車両2台の出会い頭事故を再現・検証します。</p>
+      <p>道路形状と事故類型を選び、2台の軌跡・接触・運転席からの視界を検証します。</p>
+      <span id="pattern-current" class="pattern-current"></span>
     </header>
     <nav class="tabs" aria-label="シミュレーションのモード">
       <button type="button" data-mode="forward" aria-pressed="true">検証</button>
@@ -848,7 +876,8 @@ const SofiaPhysics = (() => {
   function poseAt(body, time) {
     const speed = body.passed ? 0 : body.speed;
     const distance = (speed - .5 * body.decel * time) * time;
-    return { x: body.x + body.forward.x * distance, y: body.y + body.forward.y * distance };
+    if (body.origin) return routePose(body,body.distance + Math.max(0,distance));
+    return { x: body.x + body.forward.x * distance, y: body.y + body.forward.y * distance,angle:body.angle };
   }
 
   function visible(body, other, obstacles, ahead = 0) {
@@ -856,8 +885,8 @@ const SofiaPhysics = (() => {
     if (body.discovery !== null) return -dot(driver, body.forward) <= body.discovery + EPS;
     if (other.passed) return false;
     if (!obstacles.length) return true;
-    const target = {...poseAt(other,ahead),angle:other.angle};
-    return Boolean(clearSight(driverEye({...driver,angle:body.angle},body),target,other,obstacles));
+    const target = poseAt(other,ahead);
+    return Boolean(clearSight(driverEye(driver,body),target,other,obstacles));
   }
 
   function snapshot(body, time, phase) {
@@ -973,7 +1002,157 @@ const SofiaPhysics = (() => {
     };
   }
 
+
+  // Parameterized centre paths keep the turning geometry common to the plan and 3D replay.
+  function routePose(body, distance) {
+    const d = Math.max(0, distance);
+    const start = body.routeStart;
+    const origin = body.origin;
+    const u = body.initialForward;
+    if (!body.turn || d <= start) return {
+      x: origin.x + u.x * d, y: origin.y + u.y * d, angle: body.initialAngle
+    };
+    const r = body.turnRadius, sign = body.turn === "right" ? 1 : -1;
+    const side = normalTo(u);
+    const x0 = origin.x + u.x * start, y0 = origin.y + u.y * start;
+    const phi = Math.min(Math.PI / 2, (d - start) / r);
+    const cx = x0 + side.x * sign * r, cy = y0 + side.y * sign * r;
+    const vx = -side.x * sign * r, vy = -side.y * sign * r;
+    const rx = vx * Math.cos(phi) - vy * Math.sin(phi) * sign;
+    const ry = vx * Math.sin(phi) * sign + vy * Math.cos(phi);
+    const arc = r * Math.PI / 2;
+    const extra = Math.max(0, d - start - arc);
+    const angle = body.initialAngle + sign * phi;
+    return { x: cx + rx + Math.cos(angle) * extra,
+      y: cy + ry + Math.sin(angle) * extra, angle };
+  }
+
+  function advanceRoute(body, dt) {
+    if (body.passed || body.speed <= EPS) return;
+    const distance = Math.max(0, (body.speed - .5 * body.decel * dt) * dt);
+    body.distance += distance;
+    const pose = routePose(body, body.distance);
+    body.x = pose.x; body.y = pose.y; body.angle = pose.angle;
+    body.forward = unitAt(body.angle);
+    body.travelDistance += distance;
+    if (body.brake) body.brakingDistance += distance;
+    body.speed = Math.max(0, body.speed - body.decel * dt);
+    if (body.speed <= EPS) { body.speed = 0; body.decel = 0; }
+  }
+
+  function simulateRoute(s, options) {
+    const bodies = [bodyFor(s.cars[0], 'E'), bodyFor(s.cars[1], 'W')];
+    const [a,b] = bodies;
+    const grip = Math.max(0,finite(s.mu,.72)) * GRAVITY;
+    const restitution = clamp(finite(s.restitution,.2),0,1);
+    const obstacles = sightBoxes(s.obstacles || []);
+    const horizon = Math.min(60,Math.max(.1,finite(options.maxTime,12)));
+    const interval = options.fast ? .35 : .08;
+    const lane = Math.max(1.5,Math.min(6,Math.min(
+      s.roads?.x?.westWidth ?? 8,s.roads?.y?.southWidth ?? 8) / 4));
+    for (let i=0;i<2;i++) {
+      const body=bodies[i], car=s.cars[i];
+      body.origin={x:body.x,y:body.y};
+      body.initialForward=body.forward; body.initialAngle=body.angle;
+      body.turn=(car.turn === 'right' || car.turn === 'left') ? car.turn : null;
+      body.turnRadius=Math.max(3,2*lane);
+      const turnCoord=body.forward.x !== 0 ? -lane*body.forward.x : -lane*body.forward.y;
+      const coord=body.forward.x !== 0 ? body.x : body.y;
+      const component=body.forward.x !== 0 ? body.forward.x : body.forward.y;
+      body.routeStart=Math.max(0,(turnCoord-coord)/component);
+      body.distance=0;
+      body.initialConflict=Math.max(0,body.routeStart - body.length/2);
+      body.signCenterDistance=Math.max(s.roads?.x?.width ?? 8,s.roads?.y?.width ?? 8)/2 + 1 + body.length/2;
+      body.signActive=!!(body.forward.x !== 0 ? s.roads?.stopX : s.roads?.stopY) && body.obeysStop;
+      body.passed=false;
+      pushPose(body,0,phaseBefore(body));
+    }
+    let t=0, lastSample=0, collision=null;
+    const recordContact=(normal,initialOverlap)=>{
+      for(const body of bodies){
+        pushPose(body,t,phaseBefore(body));
+        body.v=scale(unitAt(body.angle),body.speed);
+      }
+      const location=contactPoint(a,b,normal);
+      const preVelocity=bodies.map(body=>body.v);
+      const beforeEnergy=energy(a)+energy(b);
+      const impact=applyImpact(a,b,normal,location,restitution);
+      const lostEnergy=Math.max(0,beforeEnergy-energy(a)-energy(b));
+      collision={...location,t,angleA:a.angle,angleB:b.angle,
+        deltaV:norm(impact.relative)*3.6,closingSpeed:impact.closing*3.6,
+        energy:lostEnergy,before:preVelocity.map(v=>norm(v)*3.6),
+        after:bodies.map(body=>norm(body.v)*3.6),preVelocity,
+        postVelocity:bodies.map(body=>body.v),
+        angularVelocity:bodies.map(body=>body.omega),
+        vehicleDeltaV:bodies.map((body,i)=>norm(delta(body.v,preVelocity[i]))*3.6),
+        poses:bodies.map(body=>snapshot(body,t,'slide')),normal,
+        initialOverlap:initialOverlap && t<EPS};
+      bodies.forEach(body=>pushPose(body,t,activeSlide(body)?'slide':'stop'));
+    };
+    const first=overlap(a,b);
+    if(first && first.depth>EPS) recordContact(first.normal,true);
+    while(!collision && t<horizon-EPS){
+      // A short step bounds the distance moved between SAT tests at road speeds.
+      let dt=Math.min(.004,horizon-t);
+      for(let i=0;i<2;i++){
+        const body=bodies[i], other=bodies[1-i];
+        if(body.passed || body.speed<=EPS)continue;
+        if(!body.seen && visible(body,other,obstacles)){
+          body.seen=snapshot(body,t,phaseBefore(body));pushPose(body,t,phaseBefore(body));
+        }
+        const reaction=body.brakeFraction>0 && body.seen ? body.seen.t+body.reaction-t : Infinity;
+        const stop=signTime(body,grip);
+        if(!body.brake && Math.min(reaction,stop)<=EPS){
+          body.brake={...snapshot(body,t,'brake'),reason:stop<=reaction?'sign':'reaction'};
+          body.decel=grip*body.brakeFraction;pushPose(body,t,'brake');
+        }
+        if(!body.brake)dt=Math.min(dt,Math.max(EPS*10,reaction),Math.max(EPS*10,stop));
+        if(body.decel>EPS)dt=Math.min(dt,body.speed/body.decel);
+      }
+      const previous=bodies.map(body=>({x:body.x,y:body.y,angle:body.angle,speed:body.speed,
+        distance:body.distance,travelDistance:body.travelDistance,brakingDistance:body.brakingDistance}));
+      for(const body of bodies)advanceRoute(body,dt);
+      const touch=overlap(a,b);
+      if(touch){
+        // Refine the first contact between the two sampled poses.
+        let low=0,high=dt;
+        for(let n=0;n<11;n++){
+          const mid=(low+high)/2;
+          bodies.forEach((body,i)=>{
+            Object.assign(body,previous[i]);
+            advanceRoute(body,mid);
+          });
+          if(overlap(a,b))high=mid;else low=mid;
+        }
+        bodies.forEach((body,i)=>{Object.assign(body,previous[i]);advanceRoute(body,high);});
+        t+=high;
+        const contact=overlap(a,b) || touch;
+        recordContact(contact.normal,false);
+        break;
+      }
+      t+=dt;
+      for(const body of bodies){
+        const endOfConflict=body.turn ? body.routeStart+body.turnRadius*Math.PI/2+18 : 55;
+        if(body.distance>endOfConflict && !body.passed){
+          body.passed=true;body.passedAt=t;body.decel=0;pushPose(body,t,phaseBefore(body));
+        }
+        if(body.speed===0 && body.path.at(-1)?.phase!=='stop')pushPose(body,t,'stop');
+      }
+      if(t-lastSample>=interval-EPS){
+        bodies.forEach(body=>pushPose(body,t,phaseBefore(body)));
+        lastSample=t;
+      }
+      if(bodies.every(body=>body.passed || body.speed<=EPS))break;
+    }
+    let limited=!collision && bodies.some(body=>!body.passed && body.speed>EPS);
+    if(collision && !options.fast){
+      const motion=settle(bodies,t,grip,interval);t=motion.time;limited=motion.limited;
+    }
+    return {collision,cars:bodies.map(body=>output(body,t,!!collision)),duration:t,limited};
+  }
+
   function simulate(s, options = {}) {
+    if (s.pattern && s.pattern !== 'cross') return simulateRoute(s, options);
     const bodies = [bodyFor(s.cars[0], 'E'), bodyFor(s.cars[1], 'S')];
     const [a, b] = bodies;
     const grip = Math.max(0, finite(s.mu, .72)) * GRAVITY;
@@ -1689,33 +1868,31 @@ function createDiagram(canvas) {
 
   function roads(config) {
     const {width,height,cx,cy,scale}=camera;
+    const shape=config.shape || "cross";
     const west=config.x.westWidth*scale/2, east=config.x.eastWidth*scale/2;
     const north=config.y.northWidth*scale/2, south=config.y.southWidth*scale/2;
-    const crossingX=Math.max(north,south), crossingY=Math.max(west,east);
+    const hasNorth=shape==="cross", hasSouth=shape!=="straightX";
+    const crossingX=Math.max(hasNorth?north:0,hasSouth?south:0);
+    const crossingY=Math.max(west,east);
     ctx.fillStyle='#2b394c';
     ctx.fillRect(0,cy-west,cx,west*2);
     ctx.fillRect(cx,cy-east,width-cx,east*2);
-    ctx.fillRect(cx-north,0,north*2,cy);
-    ctx.fillRect(cx-south,cy,south*2,height-cy);
-
-    // Each arm keeps its own curb and lane geometry at the intersection.
-    for (const [x1,x2,half] of [[0,cx-crossingX,west],[cx+crossingX,width,east]]) {
-      if (x2<=x1) continue;
+    if(hasNorth)ctx.fillRect(cx-north,0,north*2,cy);
+    if(hasSouth)ctx.fillRect(cx-south,cy,south*2,height-cy);
+    for(const [x1,x2,half] of [[0,cx-crossingX,west],[cx+crossingX,width,east]]){
+      if(x2<=x1)continue;
       stroke([{x:x1,y:cy-half},{x:x2,y:cy-half}],'#77869c',1.25);
       stroke([{x:x1,y:cy+half},{x:x2,y:cy+half}],'#77869c',1.25);
     }
-    for (const [y1,y2,half] of [[0,cy-crossingY,north],[cy+crossingY,height,south]]) {
-      if (y2<=y1) continue;
+    for(const [y1,y2,half,enabled] of [[0,cy-crossingY,north,hasNorth],
+      [cy+crossingY,height,south,hasSouth]]){
+      if(!enabled||y2<=y1)continue;
       stroke([{x:cx-half,y:y1},{x:cx-half,y:y2}],'#77869c',1.25);
       stroke([{x:cx+half,y:y1},{x:cx+half,y:y2}],'#77869c',1.25);
     }
-    const crosshair=Math.min(4,west/3,east/3,north/3,south/3);
-    stroke([{x:cx-crosshair,y:cy},{x:cx+crosshair,y:cy}],'#77869c99');
-    stroke([{x:cx,y:cy-crosshair},{x:cx,y:cy+crosshair}],'#77869c99');
-
-    function lines(axis,half,from,to,lanes) {
-      if (to<=from) return;
-      for (let i=1;i<lanes;i++) {
+    function lines(axis,half,from,to,lanes){
+      if(to<=from)return;
+      for(let i=1;i<lanes;i++){
         const location=(axis==='x'?cy:cx)-half+i*(2*half/lanes);
         const dash=[Math.max(4,scale*2),Math.max(3,scale*1.5)];
         const centerline=i*2===lanes;
@@ -1727,18 +1904,15 @@ function createDiagram(canvas) {
     }
     lines('x',west,0,cx-crossingX,config.x.lanes);
     lines('x',east,cx+crossingX,width,config.x.lanes);
-    lines('y',north,0,cy-crossingY,config.y.lanes);
-    lines('y',south,cy+crossingY,height,config.y.lanes);
-
-    const wx=Math.min(3,west/6),ex=Math.min(3,east/6);
-    const ny=Math.min(3,north/6),sy=Math.min(3,south/6);
+    if(hasNorth)lines('y',north,0,cy-crossingY,config.y.lanes);
+    if(hasSouth)lines('y',south,cy+crossingY,height,config.y.lanes);
     if(config.stopX){
-      stroke([{x:cx-crossingX-scale,y:cy-west+wx},{x:cx-crossingX-scale,y:cy-wx}],'#e7edf3',2);
-      stroke([{x:cx+crossingX+scale,y:cy+ex},{x:cx+crossingX+scale,y:cy+east-ex}],'#e7edf3',2);
+      stroke([{x:cx-crossingX-scale,y:cy-west+west/6},{x:cx-crossingX-scale,y:cy-west/6}],'#e7edf3',2);
+      stroke([{x:cx+crossingX+scale,y:cy+east/6},{x:cx+crossingX+scale,y:cy+east-east/6}],'#e7edf3',2);
     }
     if(config.stopY){
-      stroke([{x:cx+ny,y:cy-crossingY-scale},{x:cx+north-ny,y:cy-crossingY-scale}],'#e7edf3',2);
-      stroke([{x:cx-south+sy,y:cy+crossingY+scale},{x:cx-sy,y:cy+crossingY+scale}],'#e7edf3',2);
+      if(hasNorth)stroke([{x:cx+north/6,y:cy-crossingY-scale},{x:cx+north-north/6,y:cy-crossingY-scale}],'#e7edf3',2);
+      if(hasSouth)stroke([{x:cx-south+south/6,y:cy+crossingY+scale},{x:cx-south/6,y:cy+crossingY+scale}],'#e7edf3',2);
     }
   }
 
@@ -2124,7 +2298,47 @@ const uncertainty = "現場推定には幅があり、条件に合う複数の�
 const pinKey = "sofia-intersection-pinned-v1";
 const names = ["車両A","車両B"];
 const colors = ["#32a995","#d18a36"];
-const directions = [{E:"東向き",W:"西向き"},{S:"南向き",N:"北向き"}];
+const directions = [{E:"東向き",W:"西向き",S:"南向き",N:"北向き"},
+  {E:"東向き",W:"西向き",S:"南向き",N:"北向き"}];
+const patternTypes = {
+  cross:{label:"十字路・出会い頭",shape:"cross",description:"交差する道路を直進する2台"},
+  rightStraight:{label:"対向車の右折と直進",shape:"cross",description:"車両Aが右折、車両Bが対向から直進"},
+  tMerge:{label:"丁字路・合流",shape:"tSouth",description:"南側から進入する車両Bが右折合流"},
+  rear:{label:"直線道路・追突",shape:"straightX",description:"同方向に進む2台の追突"},
+  headOn:{label:"直線道路・正面衝突",shape:"straightX",description:"向かい合う2台の正面衝突"}
+};
+const roadShapes = {cross:"十字路",tSouth:"丁字路（南側が接続）",straightX:"直線道路（東西）"};
+function patternConfig(kind) {
+  const p=patternTypes[kind] || patternTypes.cross, cfg=defaultConfig();
+  cfg.pattern=kind in patternTypes ? kind : "cross";
+  cfg.roads.shape=p.shape;
+  cfg.obstacles=[];
+  cfg.roads.stopX=false;cfg.roads.stopY=false;
+  const [a,b]=cfg.cars;
+  Object.assign(a,{turn:"straight",reaction:1,brake:0});
+  Object.assign(b,{turn:"straight",reaction:1,brake:0});
+  if(kind==="cross")return defaultConfig();
+  if(kind==="rightStraight"){
+    Object.assign(a,{x:-18,y:-2.1,dir:"E",speed:22,turn:"right"});
+    Object.assign(b,{x:26,y:2.1,dir:"W",speed:24});
+  } else if(kind==="tMerge"){
+    Object.assign(a,{x:-18,y:-2.1,dir:"E",speed:15});
+    Object.assign(b,{x:-2.1,y:18,dir:"N",speed:20,turn:"right"});
+  } else if(kind==="rear"){
+    Object.assign(a,{x:-5,y:-2.1,dir:"E",speed:15});
+    Object.assign(b,{x:-25,y:-2.1,dir:"E",speed:45});
+  } else if(kind==="headOn"){
+    Object.assign(a,{x:-20,y:-2.1,dir:"E",speed:38});
+    Object.assign(b,{x:20,y:-2.1,dir:"W",speed:38});
+  }
+  return cfg;
+}
+function directionChoices(index) {
+  if(s.pattern==="cross")return index ? {S:"南向き",N:"北向き"} : {E:"東向き",W:"西向き"};
+  const car=s.cars[index];
+  return {[car.dir]:directions[index][car.dir] + (car.turn==="right"?" → 右折":"")};
+}
+
 const clone = value => JSON.parse(JSON.stringify(value));
 const clamp = (value,min,max) => Math.min(max, Math.max(min,value));
 const degree = rad => rad * 180 / Math.PI;
@@ -2139,8 +2353,8 @@ const escapeText = value => String(value ?? "").replace(/[&<>"']/g, char => ({
 const byId = id => document.getElementById(id);
 function defaultConfig() {
   return {
-    surface:"dry", mu:.7, restitution:.18,
-    roads:{x:{width:8,westWidth:8,eastWidth:8,lanes:2},y:{width:8,northWidth:8,southWidth:8,lanes:2},priority:"x",stopX:false,stopY:true},
+    pattern:"cross", surface:"dry", mu:.7, restitution:.18,
+    roads:{shape:"cross",x:{width:8,westWidth:8,eastWidth:8,lanes:2},y:{width:8,northWidth:8,southWidth:8,lanes:2},priority:"x",stopX:false,stopY:true},
     obstacles:[{x:-10,y:-9.5,w:8,h:7,height:3}],
     cars:[
       {...presets.sedan,preset:"sedan",x:-18,y:-2.1,dir:"E",speed:42,reaction:1,brake:1,obeysStop:false,discovery:null},
@@ -2159,6 +2373,23 @@ function readPins() {
   catch { return {}; }
 }
 let s = defaultConfig();
+function updatePatternUI() {
+  byId("pattern-current").textContent="選択中："+(patternTypes[s.pattern]?.label || patternTypes.cross.label);
+  for (const button of document.querySelectorAll('[data-mode="inverse"],[data-mode="scene"]')) {
+    button.disabled=s.pattern!=="cross";
+    button.title=button.disabled?"この類型の逆算・現場推定は未対応です。":"";
+  }
+}
+function choosePattern(kind) {
+  if(!patternTypes[kind])return;
+  s=patternConfig(kind);
+  scene=defaultScene();inverse={car:0,key:"speed"};
+  selected=0;zoom=1;renderedConfigVersion=-1;
+  updatePatternUI();renderControls();setMode("forward");
+  byId("pattern-dialog").close();
+  schedule(true);
+}
+
 let scene = defaultScene();
 let inverse = {car:0,key:"speed"};
 const pinned = readPins();
@@ -2213,7 +2444,7 @@ function badge(index) {
 function renderControls() {
   byId("basic").innerHTML = s.cars.map((car,index) => {
     const path = `s.cars.${index}`;
-    return `<article class="card input-card"><h3>${badge(index)}${names[index]}</h3>
+    return `<article class="card input-card"><h3>${badge(index)}${names[index]}${car.turn==="right"?"・右折":""}</h3>
       <div class="fields">
         ${numberField(path+".speed","初期速度","km/h",0,160,.1)}
         ${selectField(path+".preset","車種",Object.fromEntries(Object.entries(presets).map(([key,v])=>[key,v.label])))}
@@ -2221,7 +2452,7 @@ function renderControls() {
       <details class="position"><summary>初期位置と進行方向</summary><div class="fields">
         ${numberField(path+".x","X 座標","m",-150,150,.1)}
         ${numberField(path+".y","Y 座標","m",-150,150,.1)}
-        ${selectField(path+".dir","進行方向",directions[index])}
+        ${selectField(path+".dir","進行方向",directionChoices(index))}
       </div></details></article>`;
   }).join("") + `<article class="card input-card surface-card"><h3>路面</h3>${
     selectField("s.surface","路面状態",Object.fromEntries(Object.entries(surfaces).map(([key,v])=>[key,v.label])))
@@ -2245,6 +2476,7 @@ function renderControls() {
     ${numberField("s.restitution","衝突時の反発係数","",0,1,.01)}
   </div><p class="mode-copy">反発係数が小さいほど衝突で失われるエネルギーが大きくなります。変形などによる推定損失を結果に表示します。</p>`;
   byId("advanced-roads").innerHTML = pin("roads") + `<div class="fields road-fields">
+    <div class="field"><span>道路形状</span><strong>${roadShapes[s.roads.shape] || roadShapes.cross}</strong></div>
     ${numberField("s.roads.x.westWidth","西側の東西道路幅","m",3,30,.1)}
     ${numberField("s.roads.x.eastWidth","東側の東西道路幅","m",3,30,.1)}
     ${numberField("s.roads.x.lanes","東西の車線数","",1,8,1)}
@@ -2255,7 +2487,7 @@ function renderControls() {
   </div><div class="toggles">
     ${checkbox("s.roads.stopX","東西に一時停止規制")}
     ${checkbox("s.roads.stopY","南北に一時停止規制")}
-  </div><p class="mode-copy">4方向の道路幅を独立して変更できます。車線数は図示に使い、幅は一時停止位置の計算にも反映します。</p>`;
+  </div><p class="mode-copy">道路形状は「事故類型」で切り替えます。各方向の幅と車線数は図面と3Dへ反映します。</p>`;
   renderObstacles();
   byId("inverse-controls").innerHTML = selectField("inverse.car","対象車両",{"0":"車両A","1":"車両B"})+
     selectField("inverse.key","逆算する項目",inverseTypes);
@@ -2336,6 +2568,7 @@ function renderForward() {
     `衝突地点 X ${format(hit.x)} m、Y ${format(hit.y)} m。車体の向き A ${angleLabel(hit.angleA)}° / B ${angleLabel(hit.angleB)}°。`,
     `衝突直前の速度 A ${format(hit.before[0])} / B ${format(hit.before[1])} km/h。衝突直後 A ${format(hit.after[0])} / B ${format(hit.after[1])} km/h。`
   ] : ["この設定での車両の通過・停止と衝突の有無を図面に表示しています。"];
+  if(s.pattern!=="cross") info.unshift("類型："+patternTypes[s.pattern].label+"。旋回は一定半径、制動と接触後は設定値による理論計算です。");
   if (hit?.initialOverlap) info.unshift("車体が重なった状態から計算しています。図面または座標入力で初期位置を離してください。");
   if (limit && hit) info.push("計算時間内にすべての車両が停止しませんでした。");
   forwardResult.cars.forEach((car,index) => {
@@ -2492,6 +2725,9 @@ byId("simple-panel").addEventListener("input",event=>{
   renderSimple();
 });
 function setMode(nextMode) {
+  if(s.pattern!=="cross" && (nextMode==="inverse" || nextMode==="scene")) {
+    notify("この類型の逆算・現場推定は現在対応していません。検証モードで軌跡を確認してください。");return;
+  }
   if (mode !== nextMode && desktopLayout.matches) {
     workspaceResults.scrollTop = 0;
     byId("workspace-settings").scrollTop = 0;
@@ -2656,7 +2892,8 @@ document.addEventListener("click", event => {
   }
   if (action === "reset") {
     if (!window.confirm("車両・道路の設定と入力した現場の停止位置を初期状態に戻しますか？")) return;
-    s = defaultConfig();
+    s = patternConfig(s.pattern);
+    updatePatternUI();
     scene = defaultScene();
     inverse = {car:0,key:"speed"};
     zoom = 1;
@@ -2811,12 +3048,15 @@ byId("export-png").addEventListener("click",savePng);
     box(0,0,span*2,span*2,-.22,.05,[.44,.51,.47]);
     box(-span/2,0,span,roads.x.westWidth,-.1,.09,[.29,.33,.38]);
     box(span/2,0,span,roads.x.eastWidth,-.1,.09,[.29,.33,.38]);
-    box(0,-span/2,roads.y.northWidth,span,-.1,.1,[.29,.33,.38]);
-    box(0,span/2,roads.y.southWidth,span,-.1,.1,[.29,.33,.38]);
+    if((roads.shape || "cross")==="cross")
+      box(0,-span/2,roads.y.northWidth,span,-.1,.1,[.29,.33,.38]);
+    if((roads.shape || "cross")!=="straightX")
+      box(0,span/2,roads.y.southWidth,span,-.1,.1,[.29,.33,.38]);
     for(const axis of ["x","y"]){
       const alongX=axis==="x", cfg=roads[axis],edge=alongX?rx:ry;
       function mark(a,b,w,d,col){box(alongX?a:b,alongX?b:a,alongX?w:d,alongX?d:w,.015,.01,col);}
       for(const sign of [-1,1]){
+        if(!alongX && ((roads.shape==="straightX") || (roads.shape==="tSouth" && sign<0)))continue;
         const sideWidth=alongX?(sign<0?cfg.westWidth:cfg.eastWidth):(sign<0?cfg.northWidth:cfg.southWidth);
         for(let lane=1;lane<cfg.lanes;lane++){
           const col=lane*2===cfg.lanes && roads.priority===axis?[.88,.75,.46]:[.85,.88,.88];
@@ -2997,6 +3237,7 @@ function liveModel() {
 }
 function applyCase(snapshot) {
   s = clone(snapshot.settings);
+  updatePatternUI();
   scene = clone(snapshot.scene);
   inverse = {...snapshot.inverse};
   simpleState = {...snapshot.simple};
@@ -3006,7 +3247,7 @@ function applyCase(snapshot) {
   renderedConfigVersion = -1;
   sweepResult = null;
   renderControls();
-  setMode(snapshot.mode);
+  setMode(s.pattern==="cross" ? snapshot.mode : (snapshot.mode==="simple"?"simple":"forward"));
   selected = snapshot.selected;
   flush();
 }
@@ -3742,11 +3983,11 @@ function readSnapshot(raw) {
       speed:[0,160],reaction:[0,4],brake:[0,1]}),
       height:caseNumber(car.height ?? presets[preset].height ?? 1.66,.5,5),
       eyeHeight:caseNumber(car.eyeHeight ?? presets[preset].eyeHeight ?? 1.3,.5,4),
-      dir:caseChoice(car.dir,directions[index]),preset,obeysStop:car.obeysStop===true,
+      dir:caseChoice(car.dir,directions[index]),turn:caseChoice(car.turn ?? "straight",{straight:0,right:1,left:2}),preset,obeysStop:car.obeysStop===true,
       discovery:car.discovery==null ? null : caseNumber(car.discovery,0,150)};
   });
   if (cars.length !== 2) throw Error("車両データが不足しています。");
-  const roads = {stopX:source.roads.stopX===true,stopY:source.roads.stopY===true,
+  const roads = {shape:caseChoice(source.roads.shape ?? "cross",roadShapes),stopX:source.roads.stopX===true,stopY:source.roads.stopY===true,
     priority:caseChoice(source.roads.priority,{none:0,x:1,y:2})};
   for (const axis of ["x","y"]) {
     roads[axis] = caseNumbers(source.roads[axis],{width:[3,30],lanes:[1,8]});
@@ -3754,7 +3995,7 @@ function readSnapshot(raw) {
     for (const arm of arms) roads[axis][arm]=caseNumber(source.roads[axis][arm] ?? roads[axis].width,3,30);
     if (!Number.isInteger(roads[axis].lanes)) throw Error("車線数が不正です。");
   }
-  const settings = {cars,roads,surface:caseChoice(source.surface,surfaces),
+  const settings = {cars,roads,pattern:caseChoice(source.pattern ?? "cross",patternTypes),surface:caseChoice(source.surface,surfaces),
     ...caseNumbers(source,{mu:[.05,1.2],restitution:[0,1]}),
     obstacles:caseArray(source.obstacles,12,item=>({...caseNumbers(item,{x:[-100,100],y:[-100,100],w:[.3,50],h:[.3,50]}),
       height:caseNumber(item.height ?? 3,0,30)}))};
@@ -3837,7 +4078,8 @@ byId("import-case").onchange = async event => {
 };
 
 const tutorialSteps = [
-  {title:"モードを選ぶ",body:"上の切替から、簡易・検証・逆算・現場推定を選びます。チュートリアル中は説明に合わせて画面が切り替わります。入力した値は変更しません。",selector:".tabs"},
+  {title:"事故類型を選ぶ",body:"上の「事故類型」から十字路の出会い頭、対向右折と直進、丁字路の合流、追突、正面衝突を選びます。類型を切り替えると初期条件が入れ替わります。",selector:"#choose-pattern"},
+  {title:"モードを選ぶ",body:"上の切替から、簡易・検証を選びます。逆算・現場推定は十字路の出会い頭のみ対応します。チュートリアル中は説明に合わせて画面が切り替わります。",selector:".tabs"},
   {title:"簡易：到達時間を比べる",body:"車両AとBそれぞれの地点までの距離と速度を入力します。到達時間と先着の時間差が表示されます。これだけで衝突の有無は判定できません。",mode:"simple",selector:"#simple-panel .simple-grid",top:true},
   {title:"検証：条件を入力する",body:"車両の初期速度と位置、路面の状態を設定します。条件を変えると衝突の計算が更新されます。車両の詳細と道路形状は下の設定を開いて変更できます。",mode:"forward",selector:"#basic",top:true},
   {title:"図面で位置を確認する",body:"図面の車両をドラッグして初期位置を調整できます。軌跡と衝突地点を確認し、＋・－・全体で表示倍率を変えます。",mode:"forward",selector:"#plan",top:true},
@@ -3861,7 +4103,7 @@ function stopTutorial() {
 function showTutorialStep() {
   const step=tutorialSteps[tutorialIndex];
   if (!step) return stopTutorial();
-  if (step.mode && mode!==step.mode) setMode(step.mode);
+  if (step.mode && mode!==step.mode) setMode(s.pattern==="cross" ? step.mode : (step.mode==="inverse"||step.mode==="scene" ? "forward" : step.mode));
   tutorialTarget?.classList.remove("tutorial-target");
   tutorialTarget=document.querySelector(step.selector);
   tutorialTarget?.classList.add("tutorial-target");
@@ -3887,7 +4129,15 @@ byId("tutorial-next").onclick=()=>{tutorialIndex++;showTutorialStep();};
 document.addEventListener("keydown",event=>{if(event.key==="Escape" && tutorialIndex>=0) stopTutorial();});
 
 renderControls();
+updatePatternUI();
 setMode("forward");
+const patternDialog=byId("pattern-dialog");
+patternDialog.addEventListener("click",event=>{
+  const choice=event.target.closest("[data-pattern]");
+  if(choice)choosePattern(choice.dataset.pattern);
+});
+byId("choose-pattern").onclick=()=>patternDialog.showModal();
+patternDialog.showModal();
 
 </script>
 </body>
