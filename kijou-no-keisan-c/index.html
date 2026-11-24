@@ -237,6 +237,8 @@ select { appearance:none; padding-right:29px; background:
 .investigation-bar h2 {font-size:1.12rem}
 .investigation-bar select,.investigation-form select,.investigation-form input {min-height:38px;max-width:100%;border:1px solid #8295b4;border-radius:7px;padding:5px 8px;background:white;color:var(--ink);font:inherit}
 .investigation-form {padding:12px;background:var(--soft);border:1px solid var(--line);border-radius:8px;margin:12px 0}
+.field-extra {padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--pale)}
+.field-extra summary {font-weight:700}
 .investigation-form .fields {grid-template-columns:repeat(auto-fit,minmax(min(100%,135px),1fr));margin-bottom:10px}
 .investigation-form .field input {width:100%}
 .investigation-table {overflow:auto;margin-top:12px}
@@ -478,7 +480,7 @@ select { appearance:none; padding-right:29px; background:
   </header>
   <div class="investigation-bar">
     <label>表示 <select id="investigation-tab">
-      <option value="marks">観測点・線</option><option value="records">映像・EDR</option>
+      <option value="marks">観測点・線</option><option value="records">映像・EDR</option><option value="timeline">事故の時系列</option>
       <option value="damage">車両の損傷</option><option value="sight">見通し</option>
       <option value="compare">仮説比較</option>
     </select></label>
@@ -2850,6 +2852,10 @@ byId("export-png").addEventListener("click",savePng);
     elapsed = t;
     render();
   });
+  document.addEventListener("gp-replay-time",event=>{
+    if (!replay.open || !Number.isFinite(event.detail?.time)) return;
+    pause();elapsed=clamp(event.detail.time,0,+timeline.max);render();
+  });
   camera.onchange=()=>{yaw.value=0;render();};yaw.oninput=render;byId("front3").onclick=()=>{yaw.value=0;render();};
   byId("show-street3").onchange=render;
   timeline.oninput=()=>{pause();elapsed=+timeline.value;render();};
@@ -3024,9 +3030,7 @@ function recordCheck(model,record) {
   const source = evidence.sources[record.source];
   const result = model.result;
   if (!result || !source) return null;
-  let anchor = 0;
-  if (source.anchor === "collision") anchor = result.collision?.t;
-  if (source.anchor === "crossing") anchor = crossingTime(result,model.settings.cars[source.car],source.car,source.station);
+  const anchor = recordAnchor(model,source);
   if (!Number.isFinite(anchor)) return null;
   const observedTime = anchor + record.time-source.zero;
   const track = result.cars[record.car];
@@ -3086,10 +3090,37 @@ function markFrom(data) {
   return {kind:data.kind,car:Number(data.car),label:data.label.trim() || markKinds[data.kind],
     source:data.source.trim(),a:{x,y},b:bx == null ? null : {x:bx,y:by},tolerance:toNumber(data.tolerance)};
 }
+function locateFromBaseline(a,b,da,db,side) {
+  const length = pointDistance(a,b);
+  if (length < .001 || !Number.isFinite(da) || !Number.isFinite(db) || da < 0 || db < 0 ||
+      da + db + 1e-7 < length || Math.abs(da-db) > length + 1e-7) return null;
+  const along = (da*da-db*db+length*length)/(2*length);
+  const offSquared = da*da-along*along;
+  if (offSquared < -1e-6) return null;
+  const off = Math.sqrt(Math.max(0,offSquared))*(side === "right" ? -1 : 1);
+  const dx=(b.x-a.x)/length, dy=(b.y-a.y)/length;
+  const x=a.x+along*dx-off*dy, y=a.y+along*dy+off*dx;
+  return Math.abs(x)<=150 && Math.abs(y)<=150 ? {x,y} : null;
+}
+function surveyPanel() {
+  const lines = evidence.marks.map((mark,i)=>[mark,i]).filter(([mark])=>mark.b && pointDistance(mark.a,mark.b)>.001);
+  if (!lines.length) return '<p class="mode-copy">二点を指定した基準線を観測点・線に登録すると、両端から測った距離で痕跡を配置できます。</p>';
+  const options=Object.fromEntries(lines.map(([mark,i])=>[i,mark.label+" "+coord(mark.a)+" → "+coord(mark.b)]));
+  return '<details class="field-extra"><summary>実測距離から痕跡を配置</summary>'+
+    '<p class="mode-copy">基準線を始点から終点へ見た左右を指定します。両端からの実測距離が交わらない場合は配置できません。</p>'+
+    form("survey-form",field("基準線",select("baseline",options,lines[0][1]))+
+      field("始点から（m）",num("distanceA","",'min="0" max="450" required'))+
+      field("終点から（m）",num("distanceB","",'min="0" max="450" required'))+
+      field("基準線の左右",select("side",{left:"左側",right:"右側"},"left"))+
+      field("種類",select("kind",markKinds,"reference"))+
+      field("車両",select("car",carsAndUnknown,-1))+
+      field("ラベル",words("label","",'required'))+
+      field("資料番号・出典",words("source")),"実測位置を図面に追加")+"</details>";
+}
 function markPanel(model) {
   const draft = {kind:"reference",car:-1,label:"",source:"",x:"",y:"",bx:"",by:"",tolerance:"",...markDraft};
   const pick = (label,key) => toolButton("pick",key,label);
-  return form("mark-form",field("種類",select("kind",markKinds,draft.kind))+
+  return surveyPanel()+form("mark-form",field("種類",select("kind",markKinds,draft.kind))+
     field("対象車両",select("car",carsAndUnknown,draft.car))+
     field("図面のラベル",words("label",draft.label))+
     field("資料番号・出典",words("source",draft.source))+
@@ -3104,10 +3135,85 @@ function markPanel(model) {
     `<p class="mode-copy">図面は交差点中心が原点です。タイヤ痕の距離は車両中心軌跡を基準に計算します。許容差は照合ごとに設定できます。</p>`+
     table(["観測点・線","座標・資料","計算との距離","操作"],evidence.marks.map((mark,index)=>[
       escapeText(mark.label)+"<br>"+markKinds[mark.kind]+" / "+carsAndUnknown[mark.car],
-      coord(mark.a)+(mark.b ? "<br>"+coord(mark.b) : "")+"<br>"+escapeText(mark.source),
+      coord(mark.a)+(mark.b ? "<br>"+coord(mark.b) : "")+"<br>"+escapeText(mark.source)+
+        (mark.survey ? "<br>実測: 始点 "+format(mark.survey.distanceA,2)+" m / 終点 "+format(mark.survey.distanceB,2)+" m（"+(mark.survey.side==="right"?"右":"左")+"）" : ""),
       (markMetric(mark.kind) ?? "位置の記録") + "<br>" + markDistance(markCheck(model,mark),mark.tolerance),
       toolButton("edit-mark",index,"編集")+" "+toolButton("remove-mark",index,"削除")
     ]));
+}
+function recordAnchor(model,source) {
+  if (!model.result || !source) return null;
+  if (source.anchor==="start") return 0;
+  if (source.anchor==="collision") return model.result.collision?.t ?? null;
+  if (source.anchor==="crossing")
+    return crossingTime(model.result,model.settings.cars[source.car],source.car,source.station);
+  return null;
+}
+function crossingSections(model) {
+  const rows=[];
+  evidence.sources.forEach((source,sourceIndex)=>{
+    if (source.kind!=="video") return;
+    for (const carIndex of [0,1]) {
+      const entries=evidence.records.filter(row=>row.source===sourceIndex && row.car===carIndex && row.kind==="crossing")
+        .sort((a,b)=>a.time-b.time);
+      for (let i=1;i<entries.length;i++) {
+        const from=entries[i-1], to=entries[i];
+        const dt=to.time-from.time, direction=["W","N"].includes(model.settings.cars[carIndex].dir)?-1:1;
+        const distance=(to.value-from.value)*direction;
+        if (dt<=0 || distance<=0) continue;
+        rows.push({source:source.label,car:carIndex,from:from.value,to:to.value,
+          dt,distance,speed:distance/dt*3.6});
+      }
+    }
+  });
+  return rows;
+}
+function sectionPanel(model) {
+  const rows=crossingSections(model);
+  return '<details class="field-extra"><summary>映像の基準線2点から区間平均速度を算出（'+rows.length+'区間）</summary>'+
+    '<p class="mode-copy">同じ映像・同じ車両の2つの通過時刻と基準線座標を使います。走行方向と距離が合う組を時刻順に計算します。速度は区間平均で、瞬間速度や制動前速度ではありません。</p>'+
+    table(["映像・車両","線の位置","区間距離","時間差","区間平均速度"],rows.map(row=>[
+      escapeText(row.source)+" / "+carChoices[row.car],format(row.from,2)+" → "+format(row.to,2)+" m",
+      format(row.distance,2)+" m",seconds(row.dt),format(row.speed,2)+" km/h"
+    ]))+"</details>";
+}
+function timelineRows(model) {
+  const rows=[];
+  evidence.records.forEach(record=>{
+    const source=evidence.sources[record.source], anchor=recordAnchor(model,source);
+    const t=Number.isFinite(anchor) ? anchor+record.time-source.zero : null;
+    const value=record.kind==="speed" ? format(record.value,2)+" km/h" :
+      record.kind==="brakeState" ? (record.value?"作動":"非作動") :
+      record.kind==="crossing" ? format(record.value,2)+" m" : "";
+    rows.push({t,origin:source?.label??"",event:carChoices[record.car]+" "+recordKinds[record.kind],
+      detail:seconds(record.time)+(value?" / "+value:""),type:"資料"});
+  });
+  if (model.result) {
+    for (const [i,car] of model.result.cars.entries()) {
+      if (Number.isFinite(car.brake?.t)) rows.push({t:car.brake.t,origin:"再現",event:carChoices[i]+" ブレーキ開始",detail:"",type:"計算"});
+      if (Number.isFinite(car.seen?.t)) rows.push({t:car.seen.t,origin:"再現",event:carChoices[i]+" 視界内に入る",detail:"",type:"計算"});
+    }
+    if (Number.isFinite(model.result.collision?.t))
+      rows.push({t:model.result.collision.t,origin:"再現",event:"衝突",detail:"",type:"計算"});
+  }
+  return rows.sort((a,b)=>a.t===null ? Number(b.t!==null) : b.t===null ? -1 : a.t-b.t);
+}
+function timelinePanel(model) {
+  const rows=timelineRows(model);
+  const max=model.result?.duration ?? 0;
+  return '<p class="mode-copy">映像・EDRの時刻を登録した基準時刻に合わせ、再現上の出来事と並べます。基準が再現できない資料は「未換算」と表示します。</p>'+
+    toolButton("export-timeline",0,"時系列をCSV保存")+
+    table(["再現時刻","種類","資料","出来事・資料時刻","3D"],rows.map((row,i)=>[
+      row.t===null?"未換算":seconds(row.t),row.type,escapeText(row.origin),
+      escapeText(row.event)+(row.detail?"<br>"+escapeText(row.detail):""),
+      row.t!==null && row.t>=0 && row.t<=max && mode!=="scene" ? toolButton("jump-event",i,"この時刻を見る"):""
+    ]));
+}
+function timelineCsv(model) {
+  const safe=value => {const str=String(value);return '"'+(/^[=+@\-\t\r]/.test(str)?"'":"")+str.replaceAll('"','""')+'"';};
+  const rows=[["再現時刻(秒)","種類","資料","出来事","資料時刻・値"],
+    ...timelineRows(model).map(row=>[row.t??"未換算",row.type,row.origin,row.event,row.detail])];
+  return "\uFEFF"+rows.map(row=>row.map(safe).join(",")).join("\r\n");
 }
 function recordsPanel(model) {
   const sources = evidence.sources.map((source,index)=>[
@@ -3140,7 +3246,7 @@ function recordsPanel(model) {
       return [escapeText(source.label)+" / "+carChoices[record.car],
         recordKinds[record.kind]+"<br>"+seconds(record.time)+" "+value,
         result?.label ?? "—",recordDifference(result,record.tolerance),toolButton("remove-record",index,"削除")];
-    }));
+    }))+sectionPanel(model);
 }
 function damagePanel(model) {
   const dot = (point,contact) => `<i ${contact ? 'class="contact"' : ""} style="left:${clamp(point.x,0,1)*100}%;top:${clamp(point.y,0,1)*100}%"></i>`;
@@ -3246,7 +3352,7 @@ function renderSweep(rows) {
       row.hit ? row.hit.before.map(v=>format(v)+" km/h").join(" / ") : "—"
     ]));
 }
-const fieldPanels = {marks:markPanel,records:recordsPanel,damage:damagePanel,sight:sightPanel,compare:comparePanel};
+const fieldPanels = {marks:markPanel,records:recordsPanel,timeline:timelinePanel,damage:damagePanel,sight:sightPanel,compare:comparePanel};
 function syncRecordForm() {
   const sourceForm = byId("source-form");
   if (sourceForm) {
@@ -3319,6 +3425,19 @@ const formHandlers = {
     markDraft = undefined;
     draw();
   },
+  "survey-form"(data) {
+    if (evidence.marks.length >= 60) return "観測点・線は60件までです。";
+    const baseline=Number(data.baseline), mark=evidence.marks[baseline];
+    if (!Number.isInteger(baseline) || !mark?.b || pointDistance(mark.a,mark.b)<.001) return "基準線を選んでください。";
+    const distanceA=Number(data.distanceA), distanceB=Number(data.distanceB);
+    if (data.side!=="left" && data.side!=="right") return "基準線の左右を選んでください。";
+    const a=locateFromBaseline(mark.a,mark.b,distanceA,distanceB,data.side);
+    if (!a) return "距離が交わらないか、図面の範囲外です。実測値を確認してください。";
+    evidence.marks.push({kind:data.kind,car:Number(data.car),label:data.label.trim()||markKinds[data.kind],
+      source:data.source.trim(),a,b:null,tolerance:null,
+      survey:{distanceA,distanceB,side:data.side}});
+    draw();
+  },
   "source-form"(data) {
     if (!data.label.trim()) return "資料名を入力してください。";
     if (evidence.sources.length >= 20) return "資料は20件までです。";
@@ -3385,6 +3504,18 @@ fieldContent.addEventListener("click",event=>{
     byId("pick-cancel").hidden = false;
     syncToolbar();
     plan.scrollIntoView({block:"nearest"});
+    return;
+  }
+  if (action === "export-timeline") {
+    download(new Blob([timelineCsv(liveModel())],{type:"text/csv;charset=utf-8"}),"kijou-gp-timeline.csv");
+    return;
+  }
+  if (action === "jump-event") {
+    const row=timelineRows(liveModel())[n];
+    if (row?.t==null || !byId("open3") || mode==="scene") return;
+    fieldDialog.close();
+    byId("open3").click();
+    document.dispatchEvent(new CustomEvent("gp-replay-time",{detail:{time:row.t}}));
     return;
   }
   if (action === "edit-mark") {
@@ -3495,7 +3626,9 @@ function readEvidence(raw) {
   return {sources,
     marks:caseArray(raw.marks,60,item=>({label:caseText(item.label),source:caseText(item.source),
       kind:caseChoice(item.kind,markKinds),car:readCar(item.car,true),a:point(item.a),b:item.b ? point(item.b) : null,
-      tolerance:tolerance(item.tolerance,100)})),
+      tolerance:tolerance(item.tolerance,100),
+      ...(item.survey ? {survey:{distanceA:caseNumber(item.survey.distanceA,0,450),
+        distanceB:caseNumber(item.survey.distanceB,0,450),side:caseChoice(item.survey.side,{left:1,right:1})}} : {})})),
     damage:caseArray(raw.damage,40,item=>({car:readCar(item.car),side:caseChoice(item.side,damageSides),
       source:caseText(item.source),fraction:caseNumber(item.fraction,0,1),tolerance:tolerance(item.tolerance,100)})),
     records:caseArray(raw.records,120,item=>{
