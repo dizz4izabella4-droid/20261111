@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>考える算数</title>
+<style>
+:root{--bg:#faf8f3;--card:#fff;--ink:#23262b;--sub:#6a6f78;--line:#e4e0d6;--acc:#2f6f5e;--accbg:#e3f1ec;--ok:#2f7d4f;--ng:#b3412f;--ngbg:#fbebe7;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17191c;--card:#202328;--ink:#eceae4;--sub:#9a9fa8;--line:#33373d;--acc:#6cc2a8;--accbg:#22332e;--ok:#7fd3a0;--ng:#f0917e;--ngbg:#3a2723;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#17191c;--card:#202328;--ink:#eceae4;--sub:#9a9fa8;--line:#33373d;--acc:#6cc2a8;--accbg:#22332e;--ok:#7fd3a0;--ng:#f0917e;--ngbg:#3a2723;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;line-height:1.7}
+main{max-width:560px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:22px;margin:4px 0 2px}
+.lead{color:var(--sub);font-size:14px;margin:0 0 16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mod{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;text-align:left;color:var(--ink);font:inherit;cursor:pointer}
+.mod b{display:block;font-size:15px}.mod span{font-size:12px;color:var(--sub)}
+.mod.on{border-color:var(--acc);background:var(--accbg)}
+.lv{display:inline-block;margin-top:4px;font-size:11px;color:var(--acc)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:16px}
+.meta{display:flex;justify-content:space-between;font-size:12px;color:var(--sub)}
+.q{font-size:22px;font-weight:600;margin:14px 0;min-height:2.6em}
+.row{display:flex;gap:8px}
+input{flex:1;min-width:0;font:inherit;font-size:20px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+button.p,button.s{font:inherit;border-radius:12px;padding:10px 16px;cursor:pointer;border:1px solid var(--acc)}
+button.p{background:var(--acc);color:var(--bg)}button.s{background:none;color:var(--acc)}
+.fb{margin-top:14px;padding:12px;border-radius:12px;font-size:15px;display:none;white-space:pre-line}
+.fb.ok{display:block;background:var(--accbg);color:var(--ok)}.fb.ng{display:block;background:var(--ngbg);color:var(--ng)}
+.hint{margin-top:10px;font-size:14px;color:var(--sub);display:none;white-space:pre-line}
+.bar{height:6px;background:var(--line);border-radius:3px;margin-top:8px;overflow:hidden}.bar i{display:block;height:100%;background:var(--acc);width:0;transition:width .3s}
+.use h3{font-size:15px;margin:0 0 6px;color:var(--acc)}.use ul{margin:0;padding-left:1.2em;font-size:14px}.use li{margin:4px 0}
+#stg{position:relative;width:320px;max-width:100%;height:150px;margin:8px auto;background:var(--bg);border-radius:12px;overflow:hidden}.it{position:absolute;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;transition:all .9s cubic-bezier(.4,0,.2,1)}.lt{font-weight:700;margin-top:6px}.say{display:flex;gap:8px;align-items:flex-start}.av{font-size:28px}.say p{margin:0;background:var(--accbg);padding:10px 12px;border-radius:4px 14px 14px 14px;font-size:14px;flex:1}#pv:disabled{opacity:.4}
+.av{width:38px;height:38px;border-radius:50%;background:var(--acc);color:var(--bg);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex:none}.qt{display:none;margin-top:12px;padding:12px;border-left:4px solid var(--acc);background:var(--accbg);border-radius:0 12px 12px 0;font-size:14px}.qt small{display:block;color:var(--sub)}#rv:disabled{opacity:.4}select{font:inherit;font-size:12px;padding:2px 4px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}.mod:last-child:nth-child(odd){grid-column:1/-1}
+@media (prefers-reduced-motion:reduce){.it,.bar i{transition:none}}
+</style>
+</head>
+<body>
+<main>
+<h1>考える算数</h1>
+<p class="lead">大人の学び直し向け。中学1〜3年の内容を、基礎から順に。答えだけでなく「なぜそうなるか」を言葉にしよう。画面下の「これが活きる場面」で、仕事や日常とのつながりも確認できます。3問連続で正解するとレベルアップ(Lv1=中1、Lv2=中2、Lv3=中3)。</p>
+<div class="grid" id="mods"></div>
+<div class="row" style="margin-top:12px;align-items:center;justify-content:space-between"><span class="meta" id="day"></span><button class="s" id="rv"></button></div>
+<div class="card">
+  <div class="meta"><span id="mname"></span><span><select id="lvs" aria-label="レベル"><option value="1">Lv1 中1</option><option value="2">Lv2 中2</option><option value="3">Lv3 中3</option></select> <span id="mstat"></span></span></div>
+  <div class="bar"><i id="bar"></i></div>
+  <div class="q" id="q"></div>
+  <div class="row"><input id="in" type="text" autocomplete="off" placeholder="答え(分数は 3/4 の形)"><button class="p" id="go">答える</button></div>
+  <div class="row" style="margin-top:8px"><button class="s" id="hb">ヒント</button><button class="s" id="dk">わからない</button><button class="s" id="nx" style="display:none">つぎの問題</button></div>
+  <div class="hint" id="hint"></div>
+  <div class="fb" id="fb" aria-live="polite"></div>
+<div class="qt" id="qt"></div>
+</div>
+<div class="card" id="les"><div class="meta"><span id="tn">先生のミニ授業</span><span id="stp"></span></div><div class="lt" id="lt"></div><div id="stg"></div><div class="say"><span class="av" id="av"></span><p id="say" aria-live="polite"></p></div><div class="row" style="margin-top:10px"><button class="s" id="pv">もどる</button><button class="p" id="nt">つぎへ</button><button class="s" id="lk" style="margin-left:auto">この問題で見る</button></div></div>
+<div class="card use" id="use"></div>
+<p class="lead" style="font-size:12px;margin-top:16px">※ 先生の語りは学習用に創作したイメージで、ご本人の言葉ではありません。名言は記録にもとづくものを選び、確かでないものには「伝承」と記しています。</p>
+<button class="s" id="rs" style="font-size:12px">学習記録をリセット</button>
+</main>
+<script>
+const R=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const gcd=(a,b)=>b?gcd(b,a%b):a,lcm=(a,b)=>a/gcd(a,b)*b,pick=a=>a[R(0,a.length-1)],ms=n=>n<0?'−'+(-n):''+n,sg=n=>'('+(n<0?'−':'+')+Math.abs(n)+')',fr=(n,d)=>{const g=gcd(n,d);return n/g+'/'+d/g},tm=n=>(n<0?' − ':' + ')+Math.abs(n),nz=(a,b)=>{let v;do{v=R(a,b)}while(!v);return v},cx=a=>(a<0?'−':'')+(Math.abs(a)===1?'':Math.abs(a))+'x',rd=n=>Math.round(n*100)/100;
+const G0={
+calc:L=>{
+ if(L===1){const t=R(0,2);
+  if(t===0){const A=R(12,98),B=R(3,9),ans=A*B/100;return{q:`${A/10} × ${B/10} = ?`,a:ans,h:'小数点を無視して整数のかけ算をし、あとで小数点以下の桁数(合わせて2桁)だけ戻そう。',e:`${A}×${B}=${A*B}。小数点以下が1桁+1桁=2桁なので ${ans}。`}}
+  if(t===1){const Q=R(12,98),B=R(2,9),D=Q*B;return{q:`${D/10} ÷ ${B} = ?`,a:Q/10,h:'小数点の位置をそろえたまま、整数と同じように割ろう。',e:`${D/10}÷${B}=${Q/10}。たしかめ算: ${Q/10}×${B}=${D/10}。`}}
+  let p=R(2,8),q=R(2,8);while(q===p)q=R(2,8);const l=lcm(p,q),n=l/p+l/q;
+  return{q:`1/${p} + 1/${q} = ?(分数で入力。例 5/6)`,a:n/l,s:fr(n,l),h:'分母の最小公倍数にそろえて(通分して)たそう。',e:`分母の最小公倍数は${l}。${l/p}/${l} + ${l/q}/${l} = ${n}/${l} = ${fr(n,l)}。`}}
+ if(L===2){const t=Math.random();
+  if(t<.5){let a,d;do{a=nz(-9,9);d=nz(-9,9)}while(Math.abs(a+d)>10);const sub=Math.random()<.5,expr=sub?sg(a)+' − '+sg(-d):sg(a)+' + '+sg(d);
+   return{q:`${expr} = ?`,a:a+d,h:sub?'ひき算は「ひく数の符号を反対にしたたし算」に直せる。数直線で考えよう。':'正の数をたすと右へ、負の数をたすと左へ動く。数直線で考えよう。',e:`${sub?sg(a)+' + '+sg(d)+' と考える。':''}数直線で ${ms(a)} から${d>0?'右':'左'}へ${Math.abs(d)}動くと ${ms(a+d)}。`,p:{t:'nl',a,d,expr,note:sub?'ひき算は「符号を反対にしたたし算」に直して考えます。':''}}}
+  const s1=pick([-1,1]),s2=pick([-1,1]);
+  if(t<.75){const a=s1*R(2,9),b=s2*R(2,9);return{q:`${sg(a)} × ${sg(b)} = ?`,a:a*b,h:'まず符号(同じなら+、ちがえば−)、次に数の大きさのかけ算。',e:`符号は${a*b>0?'同じなので+':'ちがうので−'}。${Math.abs(a)}×${Math.abs(b)}=${Math.abs(a*b)}。答えは ${ms(a*b)}。`}}
+  const b=s1*R(2,9),k=s2*R(2,9),a=b*k;return{q:`${ms(a)} ÷ ${sg(b)} = ?`,a:k,h:'わり算も、まず符号(同じなら+、ちがえば−)を決める。',e:`符号は${k>0?'同じなので+':'ちがうので−'}。${Math.abs(a)}÷${Math.abs(b)}=${Math.abs(k)}。答えは ${ms(k)}。`}}
+ const a=R(2,9),b=R(2,9),c=R(2,9),d=R(2,9),t=R(0,3),H='かっこ → 累乗 → かけ算・わり算 → たし算・ひき算 の順に計算しよう。';
+ if(t===0)return{q:`${a} − ${b} × (−${c}) = ?`,a:a+b*c,h:H,e:`先に ${b}×(−${c})=${ms(-b*c)}。${a} − (${ms(-b*c)}) = ${a} + ${b*c} = ${a+b*c}。`};
+ if(t===1)return{q:`(−${a})² + ${b} × ${c} = ?`,a:a*a+b*c,h:H,e:`(−${a})²=${a*a}、${b}×${c}=${b*c}。合わせて ${a*a+b*c}。`};
+ if(t===2)return{q:`−${a}² + ${b} = ?`,a:-a*a+b,h:'−a² は「a²に−をつけたもの」。(−a)² とはちがうので注意。',e:`−${a}² = −(${a}×${a}) = −${a*a}。(−${a})²なら ${a*a} でちがいます。−${a*a} + ${b} = ${ms(-a*a+b)}。`};
+ return{q:`${a} + ${b} × (${c} − ${d}) = ?`,a:a+b*(c-d),h:H,e:`かっこの中 ${c}−${d}=${ms(c-d)}。${b}×(${ms(c-d)})=${ms(b*(c-d))}。${a} + (${ms(b*(c-d))}) = ${ms(a+b*(c-d))}。`}},
+ratio:L=>{const t=R(0,3);
+ if(L===1){
+  if(t===0){const v=R(2,15)*4,m=pick([15,30,45,90]);return{q:`時速${v}kmで${m}分間走ると、何km進む?`,a:v*m/60,h:`${m}分は ${m}/60 時間。距離=速さ×時間。`,e:`${m}分=${m/60}時間。${v}×${m/60}=${v*m/60}km。`}}
+  if(t===1){const pr=R(2,40)*100,d=pick([10,20,30,50]),a=pr*(100-d)/100;return{q:`${pr}円の商品が${d}%引き。支払う金額は?`,a,p:{t:'pct',pr,d},h:`${d}%引きなら、のこりは${100-d}%。`,e:`${d}%引き = ${100-d}%を払う。10%=${pr/10}円を基準にすると、${pr}×${(100-d)/100}=${a}円。`}}
+  if(t===2){const w=pick([20,25,50]),n=R(1,w-1),a=n*100/w;return{q:`${w}人のクラスで${n}人が電車通学。割合は何%?`,a,h:'割合 = 比べる量 ÷ もとにする量。100倍して%に。',e:`${n}÷${w}=${n/w}。100倍して${a}%。`}}
+  if(Math.random()<.5){const a=R(2,9),b=R(2,9),k=R(2,9);return{q:`${a}:${b} = □:${b*k}`,a:a*k,h:'後ろの比の値は何倍になっている?',e:`${b}→${b*k}は${k}倍。前も${k}倍して ${a}×${k}=${a*k}。`}}
+  const a=R(2,5),b=R(a+1,8),k=R(2,9);return{q:`${(a+b)*k}円を ${a}:${b} に分けるとき、多い方は何円?`,a:b*k,h:`全体は ${a+b} つぶん。1つぶんは?`,e:`全体は${a}+${b}=${a+b}。1つぶん=${(a+b)*k}÷${a+b}=${k}円。多い方は ${b}×${k}=${b*k}円。`}}
+ if(L===2){
+  if(t===0){const T=pick([100,200,400,500]),p=pick([3,4,5,6,8,10,12,15]),s=T*p/100;return{q:`食塩${s}gを水に溶かして ${T}g の食塩水を作った。濃度は何%?`,a:p,h:'濃度 = 食塩 ÷ 食塩水全体 × 100。',e:`${s}÷${T}=${s/T}、100倍して${p}%。「全体」は食塩水(水+食塩)です。`}}
+  if(t===1){const T=pick([100,200,400,500]),p=pick([3,4,5,6,8,10,12,15]);return{q:`${T}gの${p}%の食塩水に含まれる食塩は何g?`,a:T*p/100,h:'食塩 = 全体 × 濃度。',e:`${T}×${p/100}=${T*p/100}g。`}}
+  if(t===2){const b=R(1,10)*20,p=pick([10,20,25,30,50]),n=b*(100+p)/100;return{q:`${b}が${n}に増えた。増加率は何%?`,a:p,h:'増加率 = 増えた量 ÷ もとの量。',e:`増えた量 ${n-b} ÷ もとの ${b} = ${(n-b)/b} → ${p}%。もとにする量は「増える前」の値です。`}}
+  const o=R(2,20)*100,p=pick([10,20,25,30,40]),pay=o*(100-p)/100;return{q:`${p}%引きで買ったら${pay}円だった。元の値段は?`,a:o,h:`元の値段を□とすると □×${(100-p)/100}=${pay}。`,e:`${pay}÷${(100-p)/100}=${o}円。支払額は元の${100-p}%にあたるので、割って元にもどします。`}}
+ if(t===0){const b=R(1,10)*10000;return{q:`${b}円を年10%で2年預けた(複利)。いくらになる?`,a:b*121/100,h:'1年目の終わりに1.1倍。2年目はその金額がさらに1.1倍。',e:`1年目: ${b*11/10}円、2年目: ${b*121/100}円。利息にも利息がつくので、単利(${b*12/10}円)より多い。`}}
+ if(t===1){const[v1,v2]=pick([[40,60],[30,60],[60,90],[20,30],[12,36]]),l=lcm(v1,v2),T=l/v1+l/v2,a=2*l/T;return{q:`行きは時速${v1}km、帰りは時速${v2}kmで同じ道を往復した。平均の速さは時速何km?`,a,h:'単純平均ではありません。道のりを仮に決めて、かかった時間を求めよう。',e:`片道を${l}kmとすると往復${2*l}km。時間は ${l/v1}+${l/v2}=${T}時間。平均=${2*l}÷${T}=${a}km/h。`}}
+ if(t===2){const[w1,p1,w2,p2]=pick([[200,5,300,10],[100,4,300,8],[300,6,200,11],[400,5,100,10]]),s=w1*p1/100+w2*p2/100,a=s*100/(w1+w2);return{q:`${w1}gの${p1}%食塩水と${w2}gの${p2}%食塩水を混ぜた。濃度は何%?`,a,h:'濃度の平均ではなく、食塩の重さの合計と全体の重さで考える。',e:`食塩: ${w1*p1/100}+${w2*p2/100}=${s}g。全体: ${w1+w2}g。${s}÷${w1+w2}×100=${a}%。`}}
+ const[x,y]=pick([[6,3],[12,6],[10,15],[20,30],[4,12]]),a=x*y/(x+y);return{q:`Aさんは1人で${x}日、Bさんは1人で${y}日で終わる仕事がある。2人で一緒にやると何日?`,a,h:'全体の仕事を1として、1日にできる量(1/'+x+' と 1/'+y+')をたす。',e:`1日で 1/${x}+1/${y} = ${x+y}/${x*y}。全体1を割って ${x*y}/${x+y}=${a}日。`}},
+alg:L=>{const t=R(0,2);
+ if(L===1){
+  if(t<2){const a=R(2,9),b=nz(-9,9),x=R(-5,6);return{q:`x = ${ms(x)} のとき、${a}x${tm(b)} の値は?`,a:a*x+b,h:'文字に数を代入する。負の数はかっこをつけて計算しよう。',e:`${a}×(${ms(x)})${tm(b)} = ${ms(a*x)}${tm(b)} = ${ms(a*x+b)}。`}}
+  const a=R(-5,6),b=R(-5,6),p=R(2,5),q=R(2,5);return{q:`a = ${ms(a)}、b = ${ms(b)} のとき、${p}a − ${q}b の値は?`,a:p*a-q*b,h:'a と b にそれぞれ代入。ひく相手が負の数なら符号に注意。',e:`${p}×(${ms(a)}) − ${q}×(${ms(b)}) = ${ms(p*a)} − (${ms(q*b)}) = ${ms(p*a-q*b)}。`}}
+ if(L===2){
+  if(t<2){const a=R(2,6),b=nz(-12,12),x=nz(-9,9),c=a*x+b;return{q:`${a}x${tm(b)} = ${ms(c)}`,a:x,p:(x>0&&b>0&&c<=60)?{t:'lin',a,b,x}:null,h:`まず ${b>0?'+':'−'}${Math.abs(b)} を右辺へ移項する(符号が変わる)。`,e:`両辺から ${b} を${b>0?'ひく':'たす'}と ${a}x=${ms(c-b)}。両辺を${a}で割って x=${ms(x)}。`}}
+  const a=R(3,7),c=R(1,a-1),x=nz(-8,8);let b=nz(-10,10),d=a*x+b-c*x;while(!d){b=nz(-10,10);d=a*x+b-c*x}
+  return{q:`${a}x${tm(b)} = ${cx(c)}${tm(d)}`,a:x,h:'x の項を左辺、数の項を右辺に集めよう(移項)。',e:`${a}x−${c}x = ${ms(d)}−(${ms(b)}) → ${a-c}x=${ms(d-b)} → x=${ms(x)}。`}}
+ if(t===0){const a=pick([2,3,4,5]),k=R(-6,9),b=R(1,9),c=k+b;return{q:`x/${a} + ${b} = ${ms(c)}`,a:a*k,h:`両辺に${a}をかけて、分母をはらおう。`,e:`両辺×${a}: x + ${a*b} = ${ms(a*c)} → x=${ms(a*c-a*b)}。`}}
+ if(t===1){const x=R(-5,9),y=R(-5,9),S=x+y,D=x-y,ask=Math.random()<.5;return{q:`x + y = ${ms(S)}、x − y = ${ms(D)} のとき、${ask?'x':'y'} の値は?`,a:ask?x:y,h:ask?'2つの式を左辺どうし・右辺どうしでたすと、y が消える。':'上の式から下の式をひくと、x が消える。',e:ask?`たすと 2x=${ms(S+D)} → x=${ms(x)}。`:`ひくと 2y=${ms(S-D)} → y=${ms(y)}。`}}
+ const m=R(3,6),n=R(2,m-1),dd=m-n,x=R(2,12),a=R(1,x*dd-1),b=x*dd-a;return{q:`ある数の${m}倍から${a}をひくと、その数の${n}倍に${b}をたした数と等しい。ある数は?`,a:x,h:`ある数を x とおいて式にしよう: ${m}x − ${a} = ${n}x + ${b}`,e:`${m}x−${n}x=${b}+${a} → ${dd}x=${a+b} → x=${x}。`}},
+func:L=>{const t=R(0,2);
+ if(L===1){
+  if(t===0){const k=R(2,9),x1=R(2,6),x2=R(7,15);return{q:`yはxに比例し、x=${x1}のときy=${k*x1}。x=${x2}のときyは?`,a:k*x2,h:'y=ax とおいて、まず比例定数 a を求めよう。',e:`a=${k*x1}÷${x1}=${k}。y=${k}x に x=${x2} を代入して ${k*x2}。`}}
+  if(t===1){const P=pick([12,18,24,30,36]),ds=[...Array(P).keys()].map(i=>i+1).filter(d=>P%d===0&&d>1&&d<P),x1=pick(ds),x2=pick(ds.filter(d=>d!==x1));return{q:`yはxに反比例し、x=${x1}のときy=${P/x1}。x=${x2}のときyは?`,a:P/x2,h:'反比例は xy=一定。まず積を求めよう。',e:`xy=${x1}×${P/x1}=${P}。y=${P}/x に x=${x2} を代入して ${P/x2}。`}}
+  const a=R(2,5),b=nz(-6,9),x=R(1,8);return{q:`y = ${a}x${tm(b)} で、x = ${x} のときの y は?`,a:a*x+b,h:'x に数を代入するだけ。',e:`y=${a}×${x}${tm(b)}=${ms(a*x+b)}。`}}
+ const a=pick([-5,-4,-3,-2,2,3,4,5]),b=nz(-9,9);
+ if(L===2){
+  if(t===0){const x=nz(-6,6);return{q:`一次関数 y = ${cx(a)}${tm(b)} で、x = ${ms(x)} のときの y は?`,a:a*x+b,h:'負の数を代入するときはかっこをつける。',e:`y=${a}×(${ms(x)})${tm(b)} = ${ms(a*x)}${tm(b)} = ${ms(a*x+b)}。`}}
+  if(t===1){const x1=R(-3,2),x2=x1+R(2,4),y1=a*x1+b,y2=a*x2+b;return{q:`2点 (${ms(x1)}, ${ms(y1)})、(${ms(x2)}, ${ms(y2)}) を通る直線の傾きは?`,a,h:'傾き = yの増加量 ÷ xの増加量。',e:`(${ms(y2)} − (${ms(y1)})) ÷ (${ms(x2)} − (${ms(x1)})) = ${ms(y2-y1)} ÷ ${x2-x1} = ${ms(a)}。`}}
+  const dx=R(2,6);return{q:`y = ${cx(a)}${tm(b)} で、x が ${dx} 増えると y はいくら増える?(減るなら負の数)`,a:a*dx,h:'変化の割合は傾きと同じ。増加量 = 傾き × xの増加量。',e:`傾きは ${ms(a)}。${ms(a)}×${dx}=${ms(a*dx)}。`}}
+ if(t===0){const x1=R(-3,2),x2=x1+R(2,4),y1=a*x1+b,y2=a*x2+b;return{q:`2点 (${ms(x1)}, ${ms(y1)})、(${ms(x2)}, ${ms(y2)}) を通る直線 y = ax + b の b(切片)は?`,a:b,h:'まず傾き a を求め、1つの点を y=ax+b に代入して b を求める。',e:`a=${ms(a)}。(${ms(x1)}, ${ms(y1)}) を代入: b = ${ms(y1)} − (${ms(a)})×(${ms(x1)}) = ${ms(b)}。`}}
+ const x=R(-5,6),a1=nz(1,5);let a2=nz(-4,4);while(a2===a1)a2=nz(-4,4);const b1=nz(-8,8),b2=(a1-a2)*x+b1,fx=(c,d)=>cx(c)+(d?tm(d):'');
+ return{q:`y = ${fx(a1,b1)} と y = ${fx(a2,b2)} の交点の x 座標は?`,a:x,h:'交点では y が等しい。2つの式を「=」で結ぼう。',e:`${fx(a1,b1)} = ${fx(a2,b2)} → ${a1-a2}x = ${ms(b2-b1)} → x = ${ms(x)}。`}},
+geo:L=>{const t=R(0,3);
+ if(L===1){
+  if(t===0){const b=R(4,15),h=2*R(2,6);return{q:`底辺${b}cm、高さ${h}cmの三角形の面積は何cm²?`,a:b*h/2,h:'三角形の面積 = 底辺 × 高さ ÷ 2。',e:`${b}×${h}÷2=${b*h/2}cm²。`}}
+  if(t===1){const a=R(3,8),b=R(a+1,12),h=2*R(2,5);return{q:`上底${a}cm、下底${b}cm、高さ${h}cmの台形の面積は何cm²?`,a:(a+b)*h/2,h:'台形の面積 = (上底+下底) × 高さ ÷ 2。',e:`(${a}+${b})×${h}÷2=${(a+b)*h/2}cm²。`}}
+  if(t===2){const r=R(2,12);return{q:`半径${r}cmの円の面積は何cm²?(円周率3.14)`,a:314*r*r/100,h:'円の面積 = 半径 × 半径 × 円周率。',e:`${r}×${r}×3.14=${314*r*r/100}cm²。`}}
+  const r=R(2,15);return{q:`半径${r}cmの円の円周は何cm?(円周率3.14)`,a:628*r/100,h:'円周 = 直径 × 円周率 = 半径 × 2 × 3.14。',e:`${r}×2×3.14=${628*r/100}cm。`}}
+ if(L===2){
+  if(t<2){const r=R(2,8),h=R(3,12);return{q:`底面の半径${r}cm、高さ${h}cmの円柱の体積は何cm³?(円周率3.14)`,a:314*r*r*h/100,h:'体積 = 底面積 × 高さ。底面は円。',e:`底面積 ${r}×${r}×3.14=${314*r*r/100}。×高さ${h} = ${314*r*r*h/100}cm³。`}}
+  if(t===2){const r=pick([6,12]),dg=pick([60,90,120,180]);return{q:`半径${r}cm、中心角${dg}°のおうぎ形の面積は何cm²?(円周率3.14)`,a:314*r*r*dg/360/100,h:`おうぎ形 = 円の面積 × (中心角 ÷ 360)。`,e:`円の面積 ${314*r*r/100} × ${dg}/360 = ${314*r*r*dg/360/100}cm²。`}}
+  const a=R(3,9),b=2*R(2,5),h=R(4,10);return{q:`底面が直角をはさむ2辺${a}cmと${b}cmの直角三角形、高さ${h}cmの三角柱の体積は?`,a:a*b/2*h,h:'底面積(直角三角形)× 高さ。',e:`底面積 ${a}×${b}÷2=${a*b/2}。×${h} = ${a*b/2*h}cm³。`}}
+ const [x,y,z]=pick([[3,4,5],[5,12,13],[6,8,10],[8,15,17],[9,12,15],[7,24,25]]);
+ if(t===0)return{q:`直角をはさむ2辺が${x}cmと${y}cmの直角三角形。斜辺は何cm?`,a:z,h:'三平方の定理: a² + b² = c²(c が斜辺)。',e:`${x}²+${y}²=${x*x}+${y*y}=${z*z}。√${z*z}=${z}cm。`};
+ if(t===1)return{q:`斜辺${z}cm、他の1辺${x}cmの直角三角形。残りの1辺は何cm?`,a:y,h:'a² + b² = c² を変形して b² = c² − a²。',e:`${z}²−${x}²=${z*z}−${x*x}=${y*y}。√${y*y}=${y}cm。`};
+ if(t===2)return{q:`縦${x}cm、横${y}cmの長方形の対角線は何cm?`,a:z,h:'対角線は直角三角形の斜辺になる。',e:`${x}²+${y}²=${z*z}。対角線は${z}cm。`};
+ return{q:`はしごを壁から${x}m離して立てかけると、壁の高さ${y}mの位置にとどいた。はしごの長さは何m?`,a:z,h:'壁・地面・はしごで直角三角形ができる。',e:`${x}²+${y}²=${z*z}。はしごは${z}m。`}},
+prob:L=>{const t=R(0,3);
+ if(L===1){
+  if(t<2){const a=[...Array(5)].map(()=>R(50,100));const s0=a.reduce((x,y)=>x+y,0);a[4]+=(5-s0%5)%5;const s=a.reduce((x,y)=>x+y,0);
+   if(t===0)return{q:`5人のテストの点数は ${a.join(', ')} 点。平均点は?`,a:s/5,h:'平均 = 合計 ÷ 人数。',e:`合計 ${s} ÷ 5 = ${s/5}点。`};
+   const so=[...a].sort((x,y)=>x-y);return{q:`5人のテストの点数は ${a.join(', ')} 点。中央値(真ん中の値)は?`,a:so[2],h:'小さい順に並べかえて、真ん中の値を選ぶ。',e:`並べかえると ${so.join(', ')}。真ん中は ${so[2]}。`}}
+  if(t===2){const m=R(60,80);return{q:`4回のテストの平均が${m}点。5回目で何点とると、5回の平均が${m+2}点になる?`,a:(m+2)*5-m*4,h:'平均×回数 = 合計。5回の合計から、4回の合計をひく。',e:`5回の合計 ${(m+2)*5} − 4回の合計 ${m*4} = ${(m+2)*5-m*4}点。`}}
+  const n=R(5,12),m=R(55,85);return{q:`${n}人の平均点が${m}点。合計点は?`,a:n*m,h:'合計 = 平均 × 人数。',e:`${m}×${n}=${n*m}点。`}}
+ if(L===2){
+  if(t===0){const n=R(4,7),k=pick([2,3]);return{q:`${n}人から${k}人を選び、${k===2?'1位・2位':'1位・2位・3位'}を決める。決め方は何通り?`,a:k===2?n*(n-1):n*(n-1)*(n-2),h:'順番に決める。1位は何通り、次は何通り…',e:`${k===2?`${n}×${n-1}`:`${n}×${n-1}×${n-2}`} = ${k===2?n*(n-1):n*(n-1)*(n-2)}通り。`}}
+  if(t===1){const n=R(4,10);return{q:`${n}チームで総当たり戦(どうしが1回ずつ)をすると、全部で何試合?`,a:n*(n-1)/2,h:'1チームあたり (n−1) 試合。ただし同じ試合を2回数えている。',e:`${n}×${n-1}÷2=${n*(n-1)/2}試合。`}}
+  const n=R(5,8),k=pick([2,3]);return{q:`${n}人から${k}人の委員を選ぶ(順番は関係ない)。選び方は何通り?`,a:k===2?n*(n-1)/2:n*(n-1)*(n-2)/6,h:'順番ありで数えて、同じ組を重ねて数えた分で割る。',e:k===2?`${n}×${n-1}÷2=${n*(n-1)/2}通り。`:`${n}×${n-1}×${n-2}÷6=${n*(n-1)*(n-2)/6}通り。`}}
+ if(t===0){const s=R(5,9),c=6-Math.abs(7-s);return{q:`サイコロを2個投げる。目の和が${s}になる確率は?(分数で。例 1/6)`,a:c/36,s:fr(c,36),p:{t:'dice',s},h:'「あてはまる場合の数 ÷ すべての場合の数(36通り)」。',e:`和が${s}になるのは${c}通り。${c}/36=${fr(c,36)}。`}}
+ if(t===1){const r=R(2,6),w=R(2,6);return{q:`赤玉${r}個、白玉${w}個の袋から1個取り出す。赤玉が出る確率は?(分数で)`,a:r/(r+w),s:fr(r,r+w),h:'赤の個数 ÷ 全部の個数。',e:`${r}/${r+w}=${fr(r,r+w)}。`}}
+ if(t===2){const r=R(3,5),w=R(2,4),n=r+w;return{q:`赤玉${r}個、白玉${w}個の袋から、もどさずに続けて2個取り出す。2個とも赤の確率は?(分数で)`,a:r*(r-1)/(n*(n-1)),s:fr(r*(r-1),n*(n-1)),h:'1個目が赤の確率 × (残りで)2個目も赤の確率。',e:`${r}/${n} × ${r-1}/${n-1} = ${r*(r-1)}/${n*(n-1)} = ${fr(r*(r-1),n*(n-1))}。`}}
+ const[n,k,c]=pick([[3,1,3],[3,2,3],[4,2,6],[4,1,4]]);return{q:`コインを${n}枚投げて、表がちょうど${k}枚出る確率は?(分数で)`,a:c/2**n,s:fr(c,2**n),h:`全部で 2の${n}乗=${2**n}通り。そのうち表が${k}枚になるのは何通り?`,e:`表${k}枚の出方は${c}通り。${c}/${2**n}=${fr(c,2**n)}。`}},
+rule:L=>{
+ if(L===1){const s=R(1,9),d=R(2,7),x=[0,1,2,3].map(i=>s+d*i);return{q:`${x.join(', ')}, … の10番目の数は?`,a:s+9*d,h:'となりどうしの差(公差)を見つけて、10番目まで何回その差をたすか考えよう。',e:`初項${s}、公差${d}。n番目 = ${s}+${d}×(n−1)。10番目は ${s}+${d}×9=${s+9*d}。`}}
+ if(L===2){const n=pick([20,30,40,50,60,80,100]);return{q:`1 + 2 + 3 + … + ${n} の合計は?`,a:n*(n+1)/2,h:`1と${n}、2と${n-1}、…のペアの和に注目。`,e:`1+${n}=${n+1} のペアが ${n/2}組。${n+1}×${n/2}=${n*(n+1)/2}。`}}
+ const t=R(0,2);
+ if(t===0){const s=R(1,3),r=R(2,3),x=[0,1,2,3].map(i=>s*r**i);return{q:`${x.join(', ')}, … の6番目の数は?`,a:s*r**5,h:'となりどうしの比(公比)を調べよう。',e:`公比${r}。6番目 = ${s}×${r}の5乗 = ${s*r**5}。`}}
+ if(t===1){const n=R(6,12);return{q:`正${n}角形の対角線は全部で何本?`,a:n*(n-3)/2,h:'1つの頂点から引ける対角線は何本? それを全頂点で数えると…',e:`1頂点から ${n-3} 本。${n}個の頂点で ${n}×${n-3}=${n*(n-3)}、同じ線を2回数えているので÷2 → ${n*(n-3)/2}本。`}}
+ const s=R(1,3),x=[1,2,3,4,5].map(k=>s+k*(k-1)/2);return{q:`${x.join(', ')}, … と続く。(となりどうしの差が 1, 2, 3, … と増える)10番目の数は?`,a:s+45,h:'差を順にたしていくと、10番目は 1番目 + (1+2+…+9)。',e:`1+2+…+9=45。${s}+45=${s+45}。`}}
+};
+const sup=n=>'⁰¹²³⁴⁵⁶⁷⁸⁹'[n];
+const nw={
+calc2:()=>{const t=R(0,3);
+ if(t===0){const A=R(2,5),B=R(2,5),p=R(2,5),r=R(2,5),q=nz(-6,6),s=nz(-6,6),a=A*p-B*r,b=A*q-B*s;return{q:`${A}(${p}x${tm(q)}) − ${B}(${r}x${tm(s)}) を簡単にすると ax + b。a + b の値は?`,a:a+b,h:'かっこをはずして(分配法則)、x の項と数の項をそれぞれまとめよう。',e:`${A*p}x${tm(A*q)} − (${B*r}x${tm(B*s)}) = ${ms(a)}x${tm(b)}。a+b=${ms(a+b)}。`}}
+ if(t===1){const A=R(2,5),B=R(2,4),C=R(2,4),x=nz(-4,5),y=nz(-4,5),v=A*(x+B*y)-C*(x-y);return{q:`x = ${ms(x)}、y = ${ms(y)} のとき、${A}(x + ${B}y) − ${C}(x − y) の値は?`,a:v,h:'先に式を簡単にしてから代入すると、計算が楽になる。',e:`式を整理: ${ms(A-C)}x + ${A*B+C}y。代入して ${ms(A-C)}×(${ms(x)}) + ${A*B+C}×(${ms(y)}) = ${ms(v)}。`}}
+ if(t===2){const a=pick([2,3]),m=R(1,3),n=R(2,3),k=R(1,m+n-1);return{q:`${a}${sup(m)} × ${a}${sup(n)} ÷ ${a}${sup(k)} = ?`,a:a**(m+n-k),h:'同じ数のかけ算は指数をたし、わり算は指数をひく。',e:`${a}の${m}乗 × ${a}の${n}乗 = ${a}の${m+n}乗。÷ ${a}の${k}乗 で ${a}の${m+n-k}乗 = ${a**(m+n-k)}。`}}
+ const b=R(2,6),a=R(1,9);return{q:`y = ${b}x − ${a} を x について解くと x = (y + p) / q。p + q の値は?`,a:a+b,h:'y = bx − a の両辺に a をたし、b で割る。',e:`${b}x = y + ${a} → x = (y + ${a}) / ${b}。p=${a}、q=${b} なので ${a+b}。`}},
+calc3:()=>{const t=R(0,4),s=pick([2,3,5,6,7]),m=R(2,7);
+ if(t===0)return{q:`√${s*m*m} ÷ √${s} = ?`,a:m,h:'√a ÷ √b = √(a÷b)。',e:`√(${s*m*m}÷${s}) = √${m*m} = ${m}。`};
+ if(t===1)return{q:`√${s} × √${s*m*m} = ?`,a:s*m,h:'√a × √b = √(ab)。まず積を作ってから簡単にする。',e:`√(${s}×${s*m*m}) = √${s*s*m*m} = ${s*m}。`};
+ if(t===2)return{q:`√${s*m*m} = a√${s} と表すとき、a は?`,a:m,h:`${s*m*m} を (平方数)×${s} に分けよう。`,e:`${s*m*m}=${m*m}×${s}。√${m*m}=${m} を外に出して ${m}√${s}。`};
+ if(t===3){const a=R(1,4),n=R(a*a+1,25);return{q:`(√${n} + ${a})(√${n} − ${a}) = ?`,a:n-a*a,h:'(x+a)(x−a) = x²−a² の公式。',e:`(√${n})² − ${a}² = ${n} − ${a*a} = ${n-a*a}。`}}
+ const a=nz(-6,6),b=nz(-6,6);return{q:`(x${tm(a)})(x${tm(b)}) を展開すると x² + px + q。p + q の値は?`,a:a+b+a*b,h:'(x+a)(x+b) = x² + (a+b)x + ab。',e:`x² + ${ms(a+b)}x + ${ms(a*b)}。p+q=${ms(a+b+a*b)}。`}},
+ratio1:()=>{const a=R(2,9),b=R(2,9),k=R(2,6);return{q:`□ : ${b*k} = ${a} : ${b}`,a:a*k,h:'比例式の性質: 内項の積 = 外項の積。',e:`□×${b} = ${b*k}×${a} → □=${a*k}。`}},
+ratio3:()=>{const t=R(0,3);
+ if(t===0){const a=R(2,4),b=R(a+1,6),k=R(1,5);return{q:`相似比が ${a}:${b} の2つの図形。小さい方の面積が ${a*a*k}cm² のとき、大きい方の面積は何cm²?`,a:b*b*k,h:'面積比は相似比の2乗。',e:`面積比は ${a*a}:${b*b}。${a*a*k}cm² は ${a*a} の ${k} 倍なので、大きい方は ${b*b}×${k}=${b*b*k}cm²。`}}
+ if(t===1){const a=R(1,3),b=R(a+1,5),k=R(1,3);return{q:`相似比が ${a}:${b} の2つの立体。小さい方の体積が ${a**3*k}cm³ のとき、大きい方の体積は何cm³?`,a:b**3*k,h:'体積比は相似比の3乗。',e:`体積比は ${a**3}:${b**3}。${a**3*k} は ${a**3} の ${k} 倍なので、${b**3}×${k}=${b**3*k}cm³。`}}
+ if(t===2){const s=pick([500,1000,2500,5000,10000,25000]),d=R(2,12);return{q:`縮尺 1:${s} の地図で、${d}cm の長さは実際には何m?`,a:d*s/100,h:'実際の長さ = 地図上の長さ × 縮尺の分母。cm を m に直すのを忘れずに。',e:`${d}cm × ${s} = ${d*s}cm = ${d*s/100}m。`}}
+ const s=pick([500,1000,2000,5000]),d=R(2,9);return{q:`縮尺 1:${s} の地図で、地図上の面積が ${d}cm² の土地は、実際には何m²?`,a:d*s*s/10000,h:'面積は長さの比の2乗で変わる。縮尺の分母を2乗しよう。',e:`面積の比は 1:${s*s}。${d}×${s*s}=${d*s*s}cm² = ${d*s*s/10000}m²(1m²=10000cm²)。`}},
+alg3:()=>{const t=R(0,2);
+ if(t===0){let r1=nz(-9,9),r2=nz(-9,9);while(r1===r2)r2=nz(-9,9);const b=-(r1+r2),c=r1*r2,big=Math.random()<.5,eqs='x²'+(b?(b<0?' − ':' + ')+(Math.abs(b)===1?'':Math.abs(b))+'x':'')+tm(c)+' = 0';
+  return{q:`${eqs} の2つの解のうち、${big?'大きい':'小さい'}方は?`,a:big?Math.max(r1,r2):Math.min(r1,r2),h:`(x+m)(x+n)=0 の形に因数分解。m×n=${c}、m+n=${b}。`,e:`(x${tm(-r1)})(x${tm(-r2)}) = 0 より x=${ms(r1)}, ${ms(r2)}。`}}
+ if(t===1){const a=nz(-5,5),m=R(2,6);return{q:`(x${tm(-a)})² = ${m*m} の解のうち、大きい方は?`,a:a+m,h:'両辺の平方根をとる。x − a = ±m。',e:`x${tm(-a)} = ±${m} → x = ${ms(a)} ± ${m}。大きい方は ${ms(a+m)}。`}}
+ const n=R(3,12);return{q:`連続する2つの正の整数の積が ${n*(n+1)}。小さい方の整数は?`,a:n,h:'小さい方を x とすると x(x+1)=積。二次方程式を作って解く(正の解を選ぶ)。',e:`x(x+1)=${n*(n+1)} → x²+x−${n*(n+1)}=0 → (x−${n})(x+${n+1})=0。x は正なので ${n}。`}},
+func3:()=>{const t=R(0,3);
+ if(t===0){const a=R(1,5),x1=R(1,4),x2=nz(-6,6);return{q:`yはx²に比例し、x=${x1}のときy=${a*x1*x1}。x=${ms(x2)}のときyは?`,a:a*x2*x2,h:'y=ax² とおいて、まず a を求める。',e:`a=${a*x1*x1}÷${x1}²=${a}。y=${a}x² に x=${ms(x2)} を代入: ${a}×${x2*x2}=${a*x2*x2}。`}}
+ if(t===1){const a=R(1,4),p=R(-3,2),q=p+R(2,4);return{q:`y = ${a===1?'':a}x² で、x が ${ms(p)} から ${q} まで増加するときの変化の割合は?`,a:a*(p+q),h:'変化の割合 = (yの増加量)÷(xの増加量)。y=ax² では a×(p+q) になる。',e:`yの増加量 ${ms(a*q*q-a*p*p)}、xの増加量 ${q-p}。割ると ${ms(a*(p+q))}(= a×(p+q))。`}}
+ if(t===2){const a=R(1,4),m=R(1,4),n=R(1,5),M=Math.max(m,n);return{q:`y = ${a===1?'':a}x² で、x の変域が −${m} ≤ x ≤ ${n} のとき、y の最大値は?`,a:a*M*M,h:'x=0 で最小。最大は、0 から遠い方の端の x で起こる。',e:`|x| が大きいほど y は大きい。端 −${m} と ${n} のうち遠いのは ${M}。y=${a}×${M}²=${a*M*M}。`}}
+ let r1=nz(-4,5),r2=nz(-4,5);while(r1===r2||r1+r2===0)r2=nz(-4,5);const s=r1+r2,c=-r1*r2;return{q:`y = x² と y = ${cx(s)}${tm(c)} の交点の x 座標のうち、大きい方は?`,a:Math.max(r1,r2),h:'交点では y が等しい: x² = (直線の式)。二次方程式を作って解く。',e:`x² = ${cx(s)}${tm(c)} → x²${tm(-s)}x${tm(-c)} = 0 → (x${tm(-r1)})(x${tm(-r2)}) = 0。x=${ms(r1)}, ${ms(r2)}。`}},
+sph:()=>{if(Math.random()<.5){const r=pick([3,6,9]);return{q:`半径${r}cmの球の体積は何πcm³?(π の係数を答える)`,a:4*r**3/3,h:'球の体積 = 4/3 × π × r³。',e:`4/3 × ${r}³ = 4/3 × ${r**3} = ${4*r**3/3}。答えは ${4*r**3/3}πcm³。`}}const r=R(2,12);return{q:`半径${r}cmの球の表面積は何πcm²?(π の係数を答える)`,a:4*r*r,h:'球の表面積 = 4πr²。',e:`4×${r}² = ${4*r*r}。答えは ${4*r*r}πcm²。`}},
+ang:()=>{const t=R(0,4);
+ if(t===0){const n=pick([5,6,8,9,10,12,15,18,20]);return{q:`正${n}角形の1つの内角は何度?`,a:180*(n-2)/n,h:'内角の和 = 180° × (n−2)。それを n 等分。',e:`180×${n-2}÷${n}=${180*(n-2)/n}°。`}}
+ if(t===1){const n=R(5,12);return{q:`${n}角形の内角の和は何度?`,a:180*(n-2),h:'n角形は (n−2) 個の三角形に分けられる。',e:`180×(${n}−2)=${180*(n-2)}°。`}}
+ if(t===2){const n=pick([5,6,8,9,10,12,15,18,20,24,30]);return{q:`外角が${360/n}°の正多角形は、正何角形?`,a:n,h:'多角形の外角の和は、いつも 360°。',e:`360÷${360/n}=${n}。正${n}角形です。`}}
+ if(t===3){const v=2*R(10,50);return{q:`頂角が${v}°の二等辺三角形の底角は何度?`,a:(180-v)/2,h:'三角形の内角の和は 180°。底角は等しい。',e:`(180−${v})÷2=${(180-v)/2}°。`}}
+ const a=R(30,70),b=R(30,70);return{q:`三角形の2つの内角が${a}°と${b}°のとき、残りの角の外角は何度?`,a:a+b,h:'外角は、となり合わない2つの内角の和に等しい。',e:`外角 = ${a}+${b} = ${a+b}°。`}},
+arc:()=>{const c=2*R(20,80);return{q:`円Oで、弧ABに対する中心角が${c}°のとき、同じ弧に対する円周角は何度?`,a:c/2,h:'円周角の定理: 円周角は、同じ弧に対する中心角の半分。',e:`${c}÷2=${c/2}°。`}},
+prob3:()=>{const t=R(0,3);
+ if(t===0){const n=50,r=R(5,20),N=R(4,20)*50;return{q:`袋に赤玉と白玉が合わせて ${N} 個入っている。無作為に ${n} 個取り出すと赤玉が ${r} 個だった。袋全体の赤玉は約何個と推定できる?`,a:r*N/n,h:'取り出した中の赤の割合が、全体の割合に近いと考える。',e:`赤の割合 ${r}/${n}。全体 ${N}個 × ${r}/${n} = ${r*N/n}個(標本調査)。`}}
+ if(t===1){const r=R(3,5),w=R(2,4),n=r+w,num=r*(r-1)/2,den=n*(n-1)/2;return{q:`赤玉${r}個、白玉${w}個の袋から同時に2個取り出す。2個とも赤の確率は?(分数で)`,a:num/den,s:fr(num,den),h:'同時に取る = 順番は関係ない(組合せ)。赤2個の選び方 ÷ 全部の選び方。',e:`赤2個の選び方 ${num}通り、全体 ${den}通り。${num}/${den}=${fr(num,den)}。`}}
+ if(t===2){const n=R(4,10);return{q:`${n}人から2人の代表をくじで選ぶ。特定の A さんが選ばれる確率は?(分数で)`,a:2/n,s:fr(2,n),h:'全部の選び方と、A さんをふくむ選び方を数える。',e:`全体 ${n*(n-1)/2}通り。A さんをふくむのは相手を選ぶ ${n-1}通り。${n-1}/${n*(n-1)/2}=${fr(2,n)}。`}}
+ const n=R(6,10),k=R(1,3),num=(n-k)*(n-k-1),den=n*(n-1);return{q:`${n}本のくじのうち当たりは${k}本。2人が順に1本ずつ(もどさず)引くとき、2人ともはずれる確率は?(分数で)`,a:num/den,s:fr(num,den),h:'1人目がはずれる確率 × (残りで)2人目もはずれる確率。',e:`${n-k}/${n} × ${n-k-1}/${n-1} = ${num}/${den} = ${fr(num,den)}。`}},
+match:()=>{const n=R(8,20),sq=Math.random()<.5;return{q:`マッチ棒で${sq?'正方形':'正三角形'}を横一列に${n}個つなげて作る。マッチ棒は全部で何本?`,a:sq?3*n+1:2*n+1,h:`1個目は${sq?4:3}本、2個目からは${sq?3:2}本ずつ増える。n個のときの式をつくろう。`,e:`n個のとき ${sq?'4+3(n−1)=3n+1':'3+2(n−1)=2n+1'}。n=${n} で ${sq?3*n+1:2*n+1}本。`}},
+even:()=>{const m=R(5,30)*2;return{q:`連続する3つの偶数の和が${3*m}。いちばん大きい数は?`,a:m+2,h:'真ん中の偶数を n とすると、3つは n−2, n, n+2。',e:`和 = 3n = ${3*m} → n=${m}。最大は n+2=${m+2}。`}}
+};
+const G={
+calc:L=>L===1?G0.calc(Math.random()<.5?2:3):L===2?nw.calc2():nw.calc3(),
+ratio:L=>L===1?(Math.random()<.25?nw.ratio1():G0.ratio(2)):L===2?G0.ratio(3):nw.ratio3(),
+alg:L=>L===1?G0.alg(Math.random()<.3?1:2):L===2?G0.alg(3):nw.alg3(),
+func:L=>L===1?G0.func(1):L===2?G0.func(Math.random()<.5?2:3):nw.func3(),
+geo:L=>L===1?(Math.random()<.25?nw.sph():G0.geo(2)):L===2?nw.ang():(Math.random()<.3?nw.arc():G0.geo(3)),
+prob:L=>L===1?G0.prob(1):L===2?(Math.random()<.4?G0.prob(2):G0.prob(3)):nw.prob3(),
+rule:L=>L===1?(Math.random()<.5?G0.rule(1):nw.match()):L===2?(Math.random()<.6?G0.rule(2):nw.even()):G0.rule(3)
+};
+const MODS=[["calc","計算力","正負の数・式・平方根",["家計の収支をプラス・マイナスで整理する","気温差・標高差・損益など、基準からの増減を扱う","電卓に頼らず、小数や分数で見積もれる"]],["ratio","割合・比・相似","全体を1として見る",["セール・ポイント還元・手数料の本当の負担を見抜く","濃度や混合比(洗剤・薬・調味料の希釈)を正しく計算する","速さ・時間・距離で、移動や締切を見積もる"]],["alg","文字式と方程式","一次〜二次方程式",["「目標額から逆算して毎月いくら必要か」を求める","料金プランの損益分岐(どちらが得か)を判断する","表計算の数式を、意味を理解して組み立てる"]],["func","比例・関数","一次関数・y=ax²",["グラフの傾きから、成長率や節約ペースを読み取る","基本料+従量料金の仕組みを式で理解する","トレンドの延長で将来の値を予測する"]],["geo","図形","空間・角度・三平方",["床・壁紙・容量など、材料の量を見積もる","斜めの距離(はしご・画面のインチ)を計算する","図面や地図の縮尺を読む"]],["prob","データと確率","代表値・確率・標本調査",["ニュースや広告の「確率」「平均」を鵜呑みにしない","くじ・保険・リスクの偏りを判断する","平均と中央値のちがいで、データの見え方を疑う"]],["rule","規則性","式で先を読む",["数列・規則性から、売上や在庫の先を予想する","手作業を「式」にして、表計算や自動化につなげる","総当たりの組み合わせ数を、式で一気に求める"]]];
+let S={};try{S=JSON.parse(localStorage.getItem("sansu3")||"{}")}catch(e){}
+MODS.forEach(m=>{S[m[0]]=S[m[0]]||{L:1,st:0,n:0}});
+let cur="calc",P=null,done=false;
+const $=i=>document.getElementById(i);
+function save(){try{localStorage.setItem("sansu3",JSON.stringify(S))}catch(e){}}
+function drawMods(){$("mods").innerHTML=MODS.map(m=>`<button class="mod ${m[0]===cur?"on":""}" data-k="${m[0]}"><b>${m[1]}</b><span>${m[2]}</span><br><span class="lv">レベル ${S[m[0]].L} ・ 正解 ${S[m[0]].n}/${S[m[0]].t||0}問</span></button>`).join("");
+ document.querySelectorAll(".mod").forEach(b=>b.onclick=()=>{RM=false;cur=b.dataset.k;drawMods();next();loadLesson()})}
+function stat(){const s=S[cur];const um=MODS.find(m=>m[0]===cur);$("use").innerHTML="<h3>📌 これが活きる場面</h3><ul>"+um[3].map(x=>"<li>"+x+"</li>").join("")+"</ul>";$("mname").textContent=(RM?"【復習】":"")+MODS.find(m=>m[0]===cur)[1]+" ・ レベル"+s.L;$("rv").textContent="まちがえた問題を復習("+REV.length+")";$("rv").disabled=!REV.length&&!RM;$("lvs").value=s.L;$("mstat").textContent=`連続正解 ${s.st}/3`;$("bar").style.width=(s.st/3*100)+"%"}
+let REV=[],RM=false;try{REV=JSON.parse(localStorage.getItem("sansu_rev3")||"[]")}catch(e){}
+function saveRev(){try{localStorage.setItem("sansu_rev3",JSON.stringify(REV))}catch(e){}}
+function addRev(){if(!REV.some(r=>r.q===P.q))REV.push({q:P.q,a:P.a,s:P.s,h:P.h,e:P.e,p:P.p,k:cur});REV=REV.slice(-10)}
+let LQ='';function next(){if(RM&&!REV.length)RM=false;if(RM){P=REV[0];if(P.k!==cur){cur=P.k;drawMods();loadLesson()}}else{P=G[cur](S[cur].L);for(let t=0;t<6&&P.q===LQ;t++)P=G[cur](S[cur].L);LQ=P.q}done=false;$("q").textContent=P.q;$("in").value="";$("in").disabled=false;$("fb").className="fb";$("qt").style.display="none";$("hint").style.display="none";$("nx").style.display="none";$("go").style.display="";$("dk").style.display="";resetLes();$("lk").style.display=P.p&&BLD[P.p.t]?"":"none";stat();if(matchMedia("(pointer:fine)").matches)$("in").focus()}
+function check(){if(done)return;const v=$("in").value.trim().replace(/[０-９．／－−]/g,c=>({"．":".","／":"/","－":"-","−":"-"})[c]||String.fromCharCode(c.charCodeAt(0)-65248));if(v==="")return;
+ const pv=s=>{const m=s.match(/^(-?\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)$/);if(m)return m[1]/m[2];return/^-?(\d+\.?\d*|\.\d+)$/.test(s)?Number(s):NaN};
+if(isNaN(pv(v))){$("fb").className="fb ng";$("fb").textContent="数字(分数は 3/4 の形)で入力してね。";return}const s=S[cur],ok=Math.abs(pv(v)-P.a)<1e-6;done=true;s.t=(s.t||0)+1;if(ok){if(RM)REV.shift()}else{if(RM)REV.push(REV.shift());else addRev()}saveRev();touchDay();
+ if(ok){s.n++;s.st++;let msg="正解! 🎉\n考え方: "+P.e+"\n\n"+cm(1);if(s.st>=3&&s.L<3){s.L++;s.st=0;msg+="\n\nレベルアップ! レベル"+s.L+"に進むよ。"}else if(s.st>=3){s.st=0;msg+="\n\n最高レベルを3問連続クリア。すごい!"}
+  $("fb").className="fb ok";$("fb").textContent=msg;if(s.n%4===0||msg.includes("レベルアップ"))showQuote()}
+ else{s.st=0;useProb();$("fb").className="fb ng";$("fb").textContent=`おしい。答えは ${P.s||P.a}。\n考え方: ${P.e}\n\nどこで考えがずれたか、見くらべてみよう。下の「先生のミニ授業」で、しくみを動きで確認できますよ。\n\n${cm(0)}`}
+ save();stat();drawMods();$("in").disabled=true;$("go").style.display="none";$("nx").style.display=""}
+$("go").onclick=check;$("nx").onclick=next;
+function dstr(o){return new Date(Date.now()-o*864e5).toLocaleDateString("sv-SE")}
+let DY={last:"",days:0,today:0};try{DY=JSON.parse(localStorage.getItem("sansu_day")||"")||DY}catch(e){}
+function showDay(){const live=DY.last===dstr(0)||DY.last===dstr(1);$("day").textContent="🔥 "+(live?DY.days:0)+"日連続 ・ 今日 "+(DY.last===dstr(0)?DY.today:0)+"問"}
+function touchDay(){const t=dstr(0);if(DY.last===t)DY.today++;else{DY.days=DY.last===dstr(1)?DY.days+1:1;DY.today=1;DY.last=t}try{localStorage.setItem("sansu_day",JSON.stringify(DY))}catch(e){}showDay()}
+$("lvs").onchange=e=>{S[cur].L=+e.target.value;S[cur].st=0;save();drawMods();next()};
+$("lk").onclick=()=>useProb();
+$("rv").onclick=()=>{if(REV.length){RM=true;next()}};
+document.onkeydown=e=>{if(e.key==="Enter"&&e.target.tagName!=="BUTTON"){done?next():check()}};
+$("dk").onclick=()=>{if(done)return;done=true;if(RM)REV.push(REV.shift());else addRev();saveRev();touchDay();useProb();$("fb").className="fb ok";$("fb").textContent=`答えは ${P.s||P.a}。\n考え方: ${P.e}\n\nわからなくても大丈夫。しくみが見えたら、つぎで試そう。`;$("in").disabled=true;$("go").style.display="none";$("dk").style.display="none";$("nx").style.display=""};
+$("hb").onclick=()=>{$("hint").textContent="ヒント: "+P.h;$("hint").style.display="block"};
+const A='var(--acc)',B='#d9962b',C='#c9604a',N=n=>[...Array(n).keys()],mk=(id,o)=>({w:20,h:20,r:'50%',c:A,o:1,txt:'',tc:'var(--bg)',rot:0,...o,id}),mp=(n,f)=>Object.fromEntries(N(n).map(i=>f(i))),LB=t=>mk('L',{x:20,y:6,w:280,h:24,r:'0',c:'transparent',tc:'var(--ink)',txt:t});
+const TC={
+calc:{n:'ユークリッド',y:'前300頃',in:'ユークリッドです。『原論』で、数のきまりを一つずつ積み上げて示しました。正負の数も、ルールを順に確かめれば大丈夫ですよ。',q:[{t:'幾何学に王道なし。',s:'伝承(プロクロスの記録)',m:'近道はないけれど、一歩ずつ進めば必ず着きます。'}]},
+ratio:{n:'ベルヌーイ',y:'1654–1705',in:'ヤコブ・ベルヌーイです。利息の増え方を考える中で、数学の大切な定数に気づいたとされています。割合は「全体を100として見る」考え方です。',q:[{t:'変わっても、私は同じものとして蘇る。',s:'出典: 墓碑銘(対数螺旋とともに刻まれた)',m:'増え方のきまりは、形を変えながら続いていきます。'}]},
+alg:{n:'アルキメデス',y:'前287頃–前212',in:'アルキメデスです。てこの「つりあい」を研究しました。方程式は、天びんのつりあいと同じ考え方ですよ。',q:[{t:'私に支点を与えよ。そうすれば地球をも動かしてみせよう。',s:'伝承(パッポスの記録)',m:'仕組みを知れば、大きな問題も動かせます。'}]},
+func:{n:'デカルト',y:'1596–1650',in:'デカルトです。座標を使って、式と図形を結びつけました。傾きと切片の意味を、図で確かめましょう。',q:[{t:'われ思う、ゆえにわれあり。',s:'出典: 『方法序説』',m:'疑って、考え抜く。数学の基本姿勢です。'},{t:'難しい問題は、できるだけ小さく分けて考えよ。',s:'要旨: 『方法序説』の規則より',m:'式も一手ずつ分ければやさしくなりますよ。'}]},
+geo:{n:'ピタゴラス',y:'前570頃–前495頃',in:'ピタゴラスです。直角三角形の3辺には美しい関係がある、と伝えられています(三平方の定理)。',q:[{t:'万物は数である。',s:'伝承(ピタゴラス教団の考え)',m:'図形の中にも、数のきまりが隠れています。'}]},
+prob:{n:'パスカル',y:'1623–1662',in:'パスカルです。賭けの問題をきっかけに、確率の考え方を築いた一人とされています。「場合の数」を数えるのがコツですよ。',q:[{t:'人間は考える葦である。',s:'出典: 『パンセ』',m:'弱くても、考えることで人は強くなれます。'},{t:'心には、理性の知らない理由がある。',s:'出典: 『パンセ』',m:'論理と直感、どちらも大切にしてくださいね。'}]},
+rule:{n:'ガウス',y:'1777–1855',in:'ガウスです。少年のころ1から100までの和をすぐ求めた、という逸話が伝わっています(伝承)。コツは「ペアにして、まとめる」ことです。',q:[{t:'数学は科学の女王であり、数論は数学の女王である。',s:'出典: ガウスの伝記(ザルトリウス)に記録',m:'数のふしぎは、身近なきまりから始まりますよ。'}]}};
+function showQuote(){const T=TC[cur],q=T.q[Math.floor(Math.random()*T.q.length)];$('qt').innerHTML='<b>💬 '+T.n+'先生より</b><br><span style="font-size:16px;font-weight:600">「'+q.t+'」</span><small>'+q.s+'</small><small>'+q.m+'</small>';$('qt').style.display='block'}
+const LBb=t=>({...LB(t),y:126,h:20});
+const BLD={
+nl:p=>{const{a,d,expr,note}=p,X=v=>10+(v+10)*14,e=a+d,w=Math.abs(d)*14,lb=v=>(v<0?'−':'')+Math.abs(v);
+ return{t:`${expr} を数直線で見てみよう`,items:[LB(expr+' = ?'),mk('ax',{x:10,y:89,w:282,h:2,r:'0',c:'var(--sub)'}),...N(21).map(i=>mk('k'+i,{x:10+i*14,y:84,w:2,h:12,r:'0',c:'var(--sub)'})),...[-10,-5,0,5,10].map(v=>mk('v'+(v+10),{x:Math.max(0,X(v)-12),y:100,w:26,h:16,r:'0',c:'transparent',tc:'var(--ink)',txt:lb(v)})),mk('ar',{x:X(a)+1,y:50,w:0,h:6,r:'3px',c:B}),mk('mk',{x:X(a)-7,y:62,w:16,h:16,c:C})],st:[
+{s:`まず ${lb(a)} の位置に印を置きました。正の数をたすと右へ、負の数をたすと左へ動きます。`},
+{s:`${d>0?'+':'−'}${Math.abs(d)} なので、${d>0?'右':'左'}へ${Math.abs(d)}マス動きます。${note}`,set:{ar:{x:Math.min(X(a),X(e))+1,w}}},
+{s:`着いた場所が答え、${lb(e)} です。符号は「向き」、数の大きさは「距離」と考えるとわかりやすいですよ。`,set:{mk:{x:X(e)-7},L:{txt:`${expr} = ${lb(e)}`}}}]}},
+pct:p=>{const{pr,d}=p,k=d/10,u=pr/10,rest=pr-pr*d/100;
+ return{t:`${pr}円の${d}%引きを目で見てみよう`,items:[LB(`${pr}円 = 100%`),...N(10).map(i=>mk('s'+i,{x:10+i*30,y:50,w:30,h:44,r:'0'}))],st:[
+{s:`${pr}円の商品です。全体を100%として、1本の棒で表しました。`},
+{s:`10等分すると、1つぶんは10%、つまり${u}円です。`,set:{L:{txt:`1つ = 10% = ${u}円`},...mp(10,i=>['s'+i,{w:26,r:'4px'}])}},
+{s:`${d}%引きは${k}つぶんが値引き。値引きの部分を分けてみます。`,set:{L:{txt:`${d}%引き = ${k}つぶん`},...mp(k,j=>['s'+(9-j),{c:C,y:104}])}},
+{s:`のこりは${10-k}つぶん = ${100-d}% = ${rest}円。のこりを求めると楽ですよ。`,set:{L:{txt:`のこり${100-d}% = ${rest}円`},...mp(k,j=>['s'+(9-j),{o:0}])}}]}},
+lin:p=>{const{a,b,x}=p,c=a*x+b,u=270/c,wx=x*u;
+ return{t:`${a}x + ${b} = ${c} を線で見てみよう`,items:[LB(`${a}x + ${b} = ${c}`),...N(a).map(i=>mk('u'+i,{x:10+i*wx,y:40,w:wx-3,h:34,r:'6px',c:'var(--sub)',txt:'x'})),mk('ub',{x:10+a*wx,y:40,w:b*u-3,h:34,r:'6px',c:B,txt:String(b)}),mk('tb',{x:10,y:96,w:c*u-3,h:34,r:'6px',txt:String(c)}),mk('t1',{x:10,y:96,w:a*wx-3,h:34,r:'6px',o:0}),mk('t2',{x:10+a*wx,y:96,w:b*u-3,h:34,r:'6px',c:B,o:0,txt:String(b)}),...N(a).map(i=>mk('d'+i,{x:10+i*wx,y:96,w:wx-3,h:34,r:'6px',o:0}))],st:[
+{s:`上は「x が${a}つと${b}」。下は${c}。2本は同じ長さ。これが等式です。`},
+{s:`下の線を「x の${a}つぶん」と「${b}のぶん」に分けます。`,set:{tb:{o:0},t1:{o:1},t2:{o:1}}},
+{s:`両辺から${b}をひきます(移項)。同じだけ取れば、等式はくずれません。`,set:{ub:{o:0},t2:{o:0}}},
+{s:`のこった${a*x}を${a}等分すると、1つぶんが x=${x}。両辺を${a}で割る操作です。`,set:{t1:{o:0},...mp(a,i=>['d'+i,{o:1,txt:String(x)}]),L:{txt:`x = ${x}`},...mp(a,i=>['u'+i,{c:A,txt:String(x)}])}}]}},
+dice:p=>{const s=p.s,cells=N(36).map(i=>({a:(i/6|0)+1,b:i%6+1,i})),hit=cells.filter(c=>c.a+c.b===s),n=hit.length,g=gcd(n,36);
+ return{t:`サイコロ2個で和が${s}になる確率`,items:[mk('L',{x:165,y:30,w:150,h:50,r:'0',c:'transparent',tc:'var(--ink)',txt:`和が${s}の確率は?`}),...cells.map(c=>mk('c'+c.i,{x:20+(c.b-1)*22,y:8+(c.a-1)*22,w:18,h:18,r:'3px',c:'var(--line)',tc:'var(--ink)',txt:String(c.a+c.b)}))],st:[
+{s:'2個のサイコロの目の出方は 6×6=36通り。表にしました(中の数字は目の和)。'},
+{s:`和が${s}になるのは${n}通り。色をつけました。`,set:Object.fromEntries(hit.map(c=>['c'+c.i,{c:B,tc:'var(--bg)'}]))},
+{s:`ほかのマスを薄くして、あてはまるものを取り出します。確率は ${n}/36 = ${n/g}/${36/g}。「あてはまる場合 ÷ すべての場合」です。`,set:{L:{txt:`${n}/36 = ${n/g}/${36/g}`},...Object.fromEntries(cells.filter(c=>c.a+c.b!==s).map(c=>['c'+c.i,{o:.2}])),...Object.fromEntries(hit.map((c,k)=>['c'+c.i,{x:170+k*22,y:100}]))}}]}}
+};
+const cB=[];for(let r=0;r<5;r++)for(let c=0;c<5;c++)if(!(r<3&&c<3))cB.push([c,r]);
+const bl=[];for(let r=0;r<6;r++)for(let k=0;k<6-r;k++)bl.push([r,k]);
+const as=[];for(let r=0;r<6;r++)for(let c=0;c<=r;c++)as.push([r,c]);
+const LES={
+func:{t:'y = ax + b の「傾き」と「切片」',items:[mk('ax',{x:20,y:74,w:280,h:2,r:'0',c:'var(--sub)'}),mk('ay',{x:159,y:8,w:2,h:134,r:'0',c:'var(--sub)'}),LB('y = x'),mk('ln',{x:90,y:73,w:140,h:4,r:'2px',rot:-45})],st:[
+{s:'まず y = x。右へ1進むと上へ1上がる、45°の直線です。原点を通ります。'},
+{s:'y = 2x にすると、右へ1進むと上へ2。傾きが大きいほど、線は急になります。',set:{L:{txt:'y = 2x'},ln:{rot:-63.4}}},
+{s:'y = 2x + b の b は切片。線全体が上へ平行にずれます。傾きは変わりません。',set:{L:{txt:'y = 2x + b(bぶん上へ)'},ln:{y:43}}}]},
+geo:{t:'3² + 4² = 5² を目で見てみよう',items:[LB('3² = 9 と 4² = 16'),...N(9).map(i=>mk('a'+i,{x:20+(i%3)*16,y:50+(i/3|0)*16,w:14,h:14,r:'2px'})),...N(16).map(i=>mk('b'+i,{x:110+(i%4)*16,y:40+(i/4|0)*16,w:14,h:14,r:'2px',c:B}))],st:[
+{s:'直角三角形の2辺が3と4。それぞれを1辺とする正方形の面積は 9 と 16 です。'},
+{s:'この2つの正方形を合わせると、ちょうど1辺が5の正方形(面積25)になります!',set:{L:{txt:'9 + 16 = 25'},...mp(9,i=>['a'+i,{x:120+(i%3)*16,y:34+(i/3|0)*16}]),...mp(16,i=>['b'+i,{x:120+cB[i][0]*16,y:34+cB[i][1]*16}])}},
+{s:'斜辺が5。3² + 4² = 5²。一般に a² + b² = c² が三平方の定理です。',set:{L:{txt:'a² + b² = c²'}}}]},
+rule:{t:'1 + 2 + … + 6 を目で見てみよう',items:[LBb('1+2+3+4+5+6 = ?'),...as.map(([r,c],i)=>mk('a'+i,{x:10+c*20,y:6+r*20,w:16,h:16,r:'3px'})),...bl.map(([r,k],i)=>mk('b'+i,{x:170+k*20,y:6+r*20,w:16,h:16,r:'3px',c:B}))],st:[
+{s:'1+2+3+4+5+6 を、点の階段で表しました。'},
+{s:'同じ階段を逆向きに用意して、すき間にはめこみます。',set:mp(bl.length,i=>['b'+i,{x:10+(bl[i][0]+1+bl[i][1])*20}])},
+{s:'6行×7列の長方形に! 全体は 6×7=42、階段はその半分だから 21。1からnまでの和は n(n+1)÷2 です。',set:{L:{txt:'6 × 7 ÷ 2 = 21'}}}]}
+};
+LES.calc=BLD.nl({a:-3,d:5,expr:'(−3) + (+5)',note:''});
+LES.ratio=BLD.pct({pr:1000,d:30});
+LES.alg=BLD.lin({a:3,b:4,x:5});
+LES.prob=BLD.dice({s:7});
+const DEF={...LES};
+function cm(g){const T=TC[cur],a=g?['その調子ですよ。','よく考えましたね。','筋道が通っています。','いい考え方です。']:['大丈夫、まちがいは発見の入口です。','惜しい。しくみを一緒に見てみましょう。','考えの道筋を、もう一度たどってみましょう。'];return T.n+'先生: 「'+a[Math.floor(Math.random()*a.length)]+'」'}
+let RC=0;$('rs').onclick=()=>{if(!RC){RC=1;$('rs').textContent='もう一度押すと、記録がすべて消えます';setTimeout(()=>{RC=0;$('rs').textContent='学習記録をリセット'},4000);return}RC=0;S={};MODS.forEach(m=>{S[m[0]]={L:1,st:0,n:0}});REV=[];RM=false;DY={last:'',days:0,today:0};save();saveRev();try{localStorage.setItem('sansu_day',JSON.stringify(DY))}catch(e){}$('rs').textContent='学習記録をリセット';drawMods();next();loadLesson();showDay()};
+function useProb(){const p=P&&P.p;if(!p||!BLD[p.t])return;LES[cur]=BLD[p.t](p);loadLesson()}
+function resetLes(){if(LES[cur]!==DEF[cur]){LES[cur]=DEF[cur];loadLesson()}}
+let LI=0,E={};
+function loadLesson(){const L=LES[cur],g=$('stg');g.innerHTML='';E={};L.items.forEach(b=>{const e=document.createElement('div');e.className='it';g.appendChild(e);E[b.id]=e});$('lt').textContent=L.t;const T=TC[cur];$('tn').textContent=T.n+'先生('+T.y+')・イメージ';$('av').textContent=T.n[0];paint(0)}
+function paint(i){const L=LES[cur];LI=i;const S={};L.items.forEach(b=>S[b.id]={...b});for(let k=1;k<=i;k++){const s=L.st[k].set||{};for(const id in s)Object.assign(S[id],s[id])}
+for(const id in S){const s=S[id],e=E[id];e.style.cssText=`left:${s.x}px;top:${s.y}px;width:${s.w}px;height:${s.h}px;border-radius:${s.r};background:${s.c};opacity:${s.o};color:${s.tc};transform:rotate(${s.rot}deg)`;e.textContent=s.txt}
+$('say').textContent=(i==0?TC[cur].in+' ':'')+L.st[i].s;$('stp').textContent=(i+1)+'/'+L.st.length;$('pv').disabled=i==0;$('nt').textContent=i==L.st.length-1?'もういちど':'つぎへ'}
+$('pv').onclick=()=>paint(Math.max(0,LI-1));$('nt').onclick=()=>paint(LI==LES[cur].st.length-1?0:LI+1);
+drawMods();next();loadLesson();showDay();
+</script>
+</body>
+</html>
