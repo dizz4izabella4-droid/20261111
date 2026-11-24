@@ -84,6 +84,69 @@ button[aria-pressed="true"],button.on{background:#2a2f38;border-color:var(--tag)
 .hint{margin:0 0 10px;font-size:12px;color:var(--dim);line-height:1.7}
 .err{padding:14px;border:1px solid var(--red);color:#e0c9c9;font-size:14px;line-height:1.7}
 
+/* ===== ビジュアル改善 ===== */
+/* 机：うっすら方眼 */
+#desk{background:linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px) 0 0/44px 44px,linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px) 0 0/44px 44px,radial-gradient(ellipse at center,#161b25 0%,#0b0e13 72%)}
+#desk h1{text-shadow:0 0 24px rgba(210,166,58,.18)}
+#launcher{margin-top:6px;padding:9px 20px;border-color:var(--tag);letter-spacing:.1em}
+/* ウィンドウ */
+#win{box-shadow:0 22px 70px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.035) inset}
+.titlebar{background:linear-gradient(#212733,#181d26);border-bottom:1px solid #4a4f58;box-shadow:inset 0 -2px 0 rgba(210,166,58,.35)}
+.titlebar .ttl b{letter-spacing:.2em}
+.toolbar{background:#0f1319}
+#tabs button{font-variant-numeric:tabular-nums;border-radius:2px 2px 0 0;border-bottom:2px solid var(--line);letter-spacing:.04em}
+#tabs button.on{border-bottom-color:var(--tag);background:#262c36}
+.content>*{animation:fin .2s ease-out both}
+@keyframes fin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.content>*{animation:none}}
+/* 所見書：紙の質感・書類らしい見出し・押印 */
+.sheet{position:relative;overflow:hidden;background:var(--paper) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .3 0 0 0 0 .2 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");box-shadow:0 6px 22px rgba(0,0,0,.5),inset 0 0 40px rgba(120,100,60,.18);border-top:6px solid #23201a}
+.sheet .hd{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding-bottom:8px;margin-bottom:6px;border-bottom:2px solid var(--paperink)}
+.sheet .hd h2{margin:0;font-size:17px}
+.sheet .hd .no{padding:3px 8px;border:1px solid var(--paperink);font-size:12px;letter-spacing:.1em;white-space:nowrap}
+.sheet .stamp{position:absolute;right:14px;top:56px;transform:rotate(-9deg);padding:2px 10px;border:2px solid rgba(138,43,43,.5);color:rgba(138,43,43,.5);font-size:13px;font-weight:700;letter-spacing:.22em;pointer-events:none}
+.sheet .row dt{font-size:12px;letter-spacing:.06em;padding-top:1px}
+.sheet .row dd{font-variant-numeric:tabular-nums}
+.result{position:relative;margin-top:14px;padding:12px 14px 12px 18px;border:2px solid var(--paperink);outline:1px solid var(--paperink);outline-offset:3px;background:rgba(255,255,255,.18)}
+.result::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--paperink)}
+.result .lbl{display:block;font-size:11px;letter-spacing:.14em;color:#5d5647;margin-top:6px}
+.result .lbl:first-child{margin-top:0}
+.result .big{font-size:18px;letter-spacing:.04em;font-variant-numeric:tabular-nums}
+.flag::before{content:"▲ ";color:var(--red)}
+/* 資料画像：カメラ風の表示 */
+.photo{box-shadow:0 6px 22px rgba(0,0,0,.5)}
+.photo::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 1px,transparent 1px 3px)}
+.photo .stampdt{position:absolute;right:8px;top:8px;z-index:2;font-size:12px;color:#e4b24a;letter-spacing:.06em;text-shadow:0 0 4px rgba(0,0,0,.9)}
+.photo .tag,.photo .cap{z-index:2}
+/* 所見ごとの時間帯の図 */
+.side{display:flex;flex-direction:column;gap:14px;min-width:0}
+.basis{background:#10141a;border:1px solid var(--line);padding:12px 14px 10px}
+.basis h4{margin:0 0 2px;font-size:13px;color:var(--tag);letter-spacing:.06em}
+.basis .sub{margin:0 0 10px;font-size:11.5px;color:var(--dim);line-height:1.6}
+.bchart{position:relative}
+.bgrid{position:absolute;top:0;bottom:20px;left:calc(5.2em + 8px);right:0;pointer-events:none}
+.bgrid .gl{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,.08)}
+.bgrid .band{position:absolute;top:-2px;bottom:-2px;background:rgba(210,166,58,.17);border-left:1px dashed var(--tag);border-right:1px dashed var(--tag)}
+.brow{display:grid;grid-template-columns:5.2em minmax(0,1fr);gap:8px;align-items:center;height:26px;position:relative}
+.brow .bl{font-size:12px;color:#cfc9b9;white-space:nowrap}
+.brow .bt{position:relative;height:12px}
+.brow .rg{position:absolute;top:0;bottom:0;background:#6d7682;border-radius:1px}
+.brow .rg.open{background:linear-gradient(90deg,#6d7682 70%,rgba(109,118,130,.25))}
+.brow.ax{height:18px}
+.brow.ax .bt{height:14px}
+.brow.ax .bt span{position:absolute;top:0;transform:translateX(-50%);font-size:10px;color:var(--dim);font-variant-numeric:tabular-nums}
+.basis .res{margin:6px 0 0;font-size:12.5px;color:var(--ink);line-height:1.6}
+.basis .res b{color:var(--tag)}
+/* 先生・一覧の仕上げ */
+.teacher{border-left:3px solid var(--tag)}
+.teacher h4{padding-bottom:3px;border-bottom:1px solid #262c36}
+.tbl td{font-variant-numeric:tabular-nums}
+.tbl tbody tr:nth-child(even) td{background:rgba(255,255,255,.015)}
+.pill{display:inline-block;margin:0 4px 3px 0;padding:0 7px;border:1px solid var(--line);border-radius:9px;font-size:11px;color:#d8c58f;white-space:nowrap}
+.pill.warn{border-color:#7a3a3a;color:#e0b4b4}
+.strip .bar{background-image:linear-gradient(to right,rgba(255,255,255,.08) 1px,transparent 1px);background-size:25% 100%;background-color:#0d1117}
+.strip.ax .bar{background-image:none}
+
 @media (max-width:720px){
   #win{left:0;top:0;width:100%;height:100vh;height:100dvh;transform:none;border:0;box-shadow:none;padding-top:env(safe-area-inset-top,0px)}
   .titlebar{cursor:default;padding-right:58px} /* 共通基盤の全画面ボタン（右上）を避ける */
@@ -91,6 +154,7 @@ button[aria-pressed="true"],button.on{background:#2a2f38;border-color:var(--tag)
   .content{padding:10px}
   .tbl .hide-s{display:none}
   .strip{grid-template-columns:3.2em minmax(0,1fr) 7.2em;gap:6px;font-size:11px}
+  .sheet .stamp{display:none} /* 文字に重なって読みにくいため */
 }
 </style>
 <!--IZ-GAME-BASE:START-->
@@ -657,12 +721,14 @@ var QA = [
 ].map(function(q){ return '<details><summary>'+esc(q[0])+'</summary><p>'+esc(q[1])+'</p></details>'; }).join('');
 
 /* ===== 画面 ===== */
-function silhouette(c){
+function silhouette(c,e){
   var id = esc(c.id);
+  var ruler='M40 268 L360 268';
+  for(var i=0;i<=20;i++){ ruler+=' M'+(40+i*16)+' 268 L'+(40+i*16)+' '+(268-(i%5===0?12:6)); }
   return '<div class="photo" aria-hidden="true">'
    +'<svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">'
    +'<defs><linearGradient id="fl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#454a4e"/><stop offset="1" stop-color="#1c1f22"/></linearGradient>'
-   +'<radialGradient id="vg" cx=".5" cy=".5" r=".75"><stop offset=".45" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".78"/></radialGradient>'
+   +'<radialGradient id="lc" cx=".3" cy=".22" r=".62"><stop offset="0" stop-color="#fff" stop-opacity=".13"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><radialGradient id="vg" cx=".5" cy=".5" r=".75"><stop offset=".45" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".78"/></radialGradient>'
    +'<filter id="nz"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 .5  0 0 0 0 .5  0 0 0 0 .5  0 0 0 .6 0"/></filter></defs>'
    +'<rect width="400" height="300" fill="url(#fl)"/>'
    +'<g class="fig" fill="#0c0d0f">'
@@ -673,10 +739,13 @@ function silhouette(c){
    +'<path d="M256 134 L338 126 L342 146 L258 160 Z"/>'
    +'<path d="M256 150 L330 170 L322 190 L254 172 Z"/>'
    +'</g>'
-   +'<rect width="400" height="300" filter="url(#nz)" opacity=".35"/>'
+   +'<rect width="400" height="300" fill="url(#lc)"/>'
+   +'<rect width="400" height="300" filter="url(#nz)" opacity=".4"/>'
    +'<rect width="400" height="300" fill="url(#vg)"/>'
+   +'<path d="'+ruler+'" fill="none" stroke="#c9c3b2" stroke-opacity=".55" stroke-width="1"/>'
    +'</svg>'
    +'<span class="tag mono">EXHIBIT '+id+'</span>'
+   +'<span class="stampdt mono">'+esc(fmtTime(e.foundUTC,viewTz(c)))+'</span>'
    +'<span class="cap">資料画像（ぼかし処理済み）</span>'
    +'</div>';
 }
@@ -685,7 +754,6 @@ function sheetHTML(c,e){
   var tz=viewTz(c), v=c.victim||{};
   var rows=[];
   function row(k,val){ rows.push('<div class="row"><dt>'+k+'</dt><dd>'+val+'</dd></div>'); }
-  row('CASE NO', esc(c.id));
   row('被害者', esc((v.label||'')+((v.sex||v.age)?'（'+[v.sex,v.age].filter(Boolean).join('・')+'）':'')));
   if(c.place) row('場所', esc(c.place));
   if(c.office) row('管轄', esc(c.office.name||c.office.type));
@@ -703,17 +771,47 @@ function sheetHTML(c,e){
   if(e.moved) flags+='<p class="flag">死斑の位置が発見時の体位と合いません。遺体が移動された可能性があります。</p>';
   if(e.coroner) flags+='<p class="flag">検視官（Coroner）管轄。外表所見中心のため、推定の幅は広めです。</p>';
 
-  return '<div class="sheet"><h2>検死所見</h2><p class="sub">AUTOPSY SUMMARY ／ 簡易モデルによる推定</p>'
+  return '<div class="sheet"><div class="hd"><div><h2>検死所見</h2><p class="sub" style="margin:2px 0 0">AUTOPSY SUMMARY ／ 簡易モデルによる推定</p></div>'
+    +'<span class="no">CASE '+esc(c.id)+'</span></div>'
+    +'<span class="stamp" aria-hidden="true">CONFIDENTIAL</span>'
     +'<dl>'+rows.join('')+'</dl>'
-    +'<div class="result">推定死後経過 <span class="big">'+esc(fmtHours(e.lo,e.hi))+'</span>'
-    +'推定死亡時刻 <span class="big">'+esc(rangeText(e,tz))+'</span></div>'
+    +'<div class="result"><span class="lbl">推定死後経過</span><span class="big">'+esc(fmtHours(e.lo,e.hi))+'</span>'
+    +'<span class="lbl">推定死亡時刻</span><span class="big">'+esc(rangeText(e,tz))+'</span></div>'
     + flags + '</div>';
+}
+
+/* 所見ごとの時間帯の図（死後の経過時間。重なる範囲を帯で示す） */
+function basisHTML(c,e){
+  var mx=0, i, j, v, t;
+  for(i=0;i<e.ind.length;i++) for(j=0;j<2;j++){ v=e.ind[i].r[j]; if(v!==INF && v>mx) mx=v; }
+  if(e.hi!==INF && e.hi>mx) mx=e.hi;
+  if(e.lo>mx) mx=e.lo;
+  var steps=[24,48,72,120], AX=120;
+  for(i=0;i<steps.length;i++){ if(mx<=steps[i]){ AX=steps[i]; break; } }
+  var tick = AX<=24 ? 6 : (AX<=72 ? 12 : 24);
+  function pc(x){ return Math.min(x,AX)/AX*100; }
+  var grid='', ticks='';
+  for(t=0;t<=AX;t+=tick){
+    grid+='<i class="gl" style="left:'+pc(t)+'%"></i>';
+    ticks+='<span style="left:'+pc(t)+'%">'+t+'</span>';
+  }
+  var bandL=pc(e.lo), bandR=(e.hi===INF)?100:pc(e.hi);
+  var rows=e.ind.map(function(it){
+    var a=it.r[0], b=it.r[1], open=(b===INF);
+    var w=Math.max(1.2, pc(open?AX:b)-pc(a));
+    return '<div class="brow"><span class="bl">'+KEYJP[it.key]+'</span><span class="bt"><i class="rg'+(open?' open':'')+'" style="left:'+pc(a)+'%;width:'+w+'%"></i></span></div>';
+  }).join('');
+  return '<div class="basis"><h4>所見ごとの時間帯</h4>'
+    +'<p class="sub">各所見が示す「死後の経過時間」（単位：時間）。黄色の帯が、重なる範囲です。</p>'
+    +'<div class="bchart"><div class="bgrid">'+grid+'<i class="band" style="left:'+bandL+'%;width:'+Math.max(1,bandR-bandL)+'%"></i></div>'
+    +rows+'<div class="brow ax"><span class="bl"></span><span class="bt">'+ticks+'</span></div></div>'
+    +'<p class="res">重なる範囲 → 死後 <b>'+esc(fmtHours(e.lo,e.hi))+'</b>'+(e.conflict?'（所見に食い違いあり。全体の幅を表示）':'')+'</p></div>';
 }
 
 function caseView(c){
   var e=estimate(c);
   if(!e) return '<div class="err">この事件の所見データが不足しています（発見時刻・室温・直腸温・タイムゾーンが必要です）。</div>';
-  return '<div class="case-grid">'+sheetHTML(c,e)+silhouette(c)+'</div>'
+  return '<div class="case-grid">'+sheetHTML(c,e)+'<div class="side">'+silhouette(c,e)+basisHTML(c,e)+'</div></div>'
     +'<div class="teacher">'+(S.mode==='expert'?expertHTML(c,e):noviceHTML(c,e))+'</div>';
 }
 
@@ -722,15 +820,15 @@ function listView(){
     var e=estimate(c), tz=viewTz(c);
     if(!e) return '<tr class="clk" data-id="'+esc(c.id)+'"><td>'+esc(c.id)+'</td><td colspan="4">データ不足</td></tr>';
     var flag=[];
-    if(e.moved) flag.push('移動の疑い');
-    if(e.conflict) flag.push('所見の不一致');
-    if(e.coroner) flag.push('Coroner');
+    if(e.moved) flag.push('<span class="pill warn">移動の疑い</span>');
+    if(e.conflict) flag.push('<span class="pill warn">所見の不一致</span>');
+    if(e.coroner) flag.push('<span class="pill">Coroner</span>');
     return '<tr class="clk" data-id="'+esc(c.id)+'"><td class="mono">'+esc(c.id)+'<br><span style="color:var(--dim)">'+esc((c.victim&&c.victim.label)||'')+'</span></td>'
       +'<td class="hide-s">'+esc(c.place||'')+'</td>'
       +'<td>'+esc(fmtTime(e.foundUTC,tz))+'</td>'
       +'<td>'+esc(fmtHours(e.lo,e.hi))+'</td>'
       +'<td>'+esc(rangeText(e,tz))+'</td>'
-      +'<td class="hide-s">'+esc(flag.join('・'))+'</td></tr>';
+      +'<td class="hide-s">'+flag.join('')+'</td></tr>';
   }).join('');
   return '<h3 class="series">'+esc(SERIES.title)+'</h3><p class="hint">'+esc(SERIES.summary)+'</p>'
     +'<p class="hint">事件をクリックすると所見書を開きます。'
