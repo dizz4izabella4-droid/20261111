@@ -73,6 +73,14 @@ button[aria-pressed="true"],button.on{background:#2a2f38;border-color:var(--tag)
 .tbl th{font-size:11px;color:var(--dim);font-weight:400;letter-spacing:.08em}
 .tbl tr.clk{cursor:pointer}
 .tbl tr.clk:hover td{background:#171c24}
+.series{margin:0 0 6px;font-size:14px;font-weight:600;letter-spacing:.06em;color:var(--tag)}
+.strip{display:grid;grid-template-columns:3.6em minmax(0,1fr) 9.5em;gap:8px;align-items:center;padding:5px 0;font-size:12px}
+.strip .bar{position:relative;height:16px;background:#0d1117;border:1px solid var(--line)}
+.strip .seg{position:absolute;top:0;bottom:0;background:#a9863a;opacity:.85}
+.strip .seg.wide{background:repeating-linear-gradient(135deg,#5a4a22 0 4px,#2a2418 4px 8px);opacity:1}
+.strip .nt{color:var(--dim);white-space:nowrap}
+.strip.ax .bar{height:14px;border:0;background:none}
+.strip.ax .bar span{position:absolute;top:0;transform:translateX(-50%);font-size:10px;color:var(--dim)}
 .hint{margin:0 0 10px;font-size:12px;color:var(--dim);line-height:1.7}
 .err{padding:14px;border:1px solid var(--red);color:#e0c9c9;font-size:14px;line-height:1.7}
 
@@ -82,6 +90,7 @@ button[aria-pressed="true"],button.on{background:#2a2f38;border-color:var(--tag)
   .case-grid{grid-template-columns:1fr}
   .content{padding:10px}
   .tbl .hide-s{display:none}
+  .strip{grid-template-columns:3.2em minmax(0,1fr) 7.2em;gap:6px;font-size:11px}
 }
 </style>
 <!--IZ-GAME-BASE:START-->
@@ -399,8 +408,26 @@ var CASES = [
     office:{type:'ME',name:'州 監察医務局（Medical Examiner）'},
     found:'2026-11-16 10:00', roomF:52, rectalF:53,
     livor:'fixed', livorSite:'back', foundPos:'supine', rigor:'gone', decomp:'green',
-    notes:['発見まで数日経過。携帯の通信記録など、別の証拠での絞り込みが必要。'] }
+    notes:['発見まで数日経過。携帯の通信記録など、別の証拠での絞り込みが必要。'] },
+  { id:'E-05', victim:{label:'被害者 E',sex:'男性',age:'50代'},
+    place:'ミズーリ州（路肩の自家用車内）', tz:{abbr:'CST',offset:-6},
+    office:{type:'ME',name:'郡 監察医務局（Medical Examiner）'},
+    found:'2026-11-19 07:00', roomF:66, rectalF:73.5,
+    livor:'fixed', livorSite:'back', foundPos:'supine', rigor:'full',
+    notes:['車内で発見。窓は閉まっていた。'] },
+  { id:'F-06', victim:{label:'被害者 F',sex:'女性',age:'30代'},
+    place:'ユタ州（自宅の居間）', tz:{abbr:'MST',offset:-7},
+    office:{type:'ME',name:'州 監察医務局（Medical Examiner）'},
+    found:'2026-11-22 08:00', roomF:82, rectalF:89.4,
+    livor:'partial', livorSite:'back', foundPos:'supine', rigor:'full',
+    env:['heated'], notes:['発見時、暖房が強く入っていた（室温82°F）。'] }
 ];
+
+// サンプル事件のまとまり（連続事件の想定。内容はすべて架空）
+var SERIES = {
+  title:'州間高速 連続殺人事件（サンプル）',
+  summary:'6件の事件。被害者は州境をまたいで発見されています。死亡推定の時間帯を、時差・管轄・発見状況の違いに注意して見比べてください。'
+};
 
 /* ===== 状態 ===== */
 var S = { mode:'novice', unit:'FC', tz:'local', view:'list' };
@@ -564,6 +591,9 @@ function noviceHTML(c,e){
     var diff = BODY_F-(+c.rectalF);
     h.push('<p>平熱は約98.6°F（約37℃）。この方の直腸温は <b>'+fmtTemp(+c.rectalF)+'</b> で、平熱との差は <b>'+r1(diff).toFixed(1)+'°F</b> です。'+rateNote+'</p>');
     h.push('<p>'+r1(diff).toFixed(1)+' ÷ '+(+e.rate.toFixed(2))+' ≒ <b>'+r1(e.tempH)+'時間</b>。つまり体温からは「死後およそ'+Math.round(e.tempH)+'時間、前後'+r1(e.margin)+'時間ほど」と読めます。</p>');
+    if(Math.abs(e.rate-BASE_RATE)>=0.2){
+      h.push('<p>参考までに、もし標準の速さ（1.5°F/時）のまま計算すると '+r1(diff/BASE_RATE)+'時間になり、実際の見積もりとずれてしまいます。部屋の温度によって冷え方が変わるので、室温は必ず確認します。</p>');
+    }
   }
 
   /* 死斑 */
@@ -605,7 +635,7 @@ function noviceHTML(c,e){
   if(e.moved) cav.push('<p class="note"><b>遺体が動かされた可能性があります。</b>死斑は固まると位置が動きません。この方は発見時<b>'+POS[c.foundPos]+'</b>でしたが、死斑は<b>'+SITE[c.livorSite]+'</b>に出ています。亡くなった場所と発見された場所が違うかもしれません。</p>');
   if(e.coroner) cav.push('<p class="note">この事件は検視官（Coroner）の管轄で、解剖を伴わない外表の観察が中心です。そのため、いつもより幅を広めに取っています。</p>');
   if(c.env && c.env.indexOf('outdoor')>=0) cav.push('<p class="note">屋外で発見されています。風・日光・地面の冷たさで冷え方が大きく変わるため、体温による推定は特にずれやすくなります。</p>');
-  if(c.env && c.env.indexOf('heated')>=0) cav.push('<p class="note">暖房が入っていた場合、冷え方がゆるやかになるため、実際の死亡はもっと前の可能性があります。</p>');
+  if(c.env && c.env.indexOf('heated')>=0) cav.push('<p class="note">暖房で室温が高かったため、冷え方はゆるやかでした。そのぶん、見た目の体温だけで判断すると、死後の時間を短く見積もってしまいます。犯人が暖房で時刻をずらそうとした可能性も、頭に置いておきます。</p>');
   head('注意しておきたいこと');
   h.push('<p>これは確実な時刻ではなく、「この範囲の可能性が高い」という見積もりです。体温の下がり方は、服装・体格・室温・風・入浴後や発熱の有無で変わります。天気予報の降水確率のように、幅をもって読んでください。</p>');
   h.push(cav.join(''));
@@ -702,10 +732,41 @@ function listView(){
       +'<td>'+esc(rangeText(e,tz))+'</td>'
       +'<td class="hide-s">'+esc(flag.join('・'))+'</td></tr>';
   }).join('');
-  return '<p class="hint">事件をクリックすると所見書を開きます。'
+  return '<h3 class="series">'+esc(SERIES.title)+'</h3><p class="hint">'+esc(SERIES.summary)+'</p>'
+    +'<p class="hint">事件をクリックすると所見書を開きます。'
     +(S.tz==='local'?'いまは各事件の現地時間で表示しています。事件どうしを比べるときは、上の「時刻表示」を共通のタイムゾーンに切り替えてください。':'すべての時刻を同じタイムゾーンにそろえて表示しています。')
-    +'</p><table class="tbl"><thead><tr><th>事件</th><th class="hide-s">場所</th><th>発見</th><th>推定死後経過</th><th>推定死亡時刻</th><th class="hide-s">注意</th></tr></thead><tbody>'+rows+'</tbody></table>';
+    +'</p><table class="tbl"><thead><tr><th>事件</th><th class="hide-s">場所</th><th>発見</th><th>推定死後経過</th><th>推定死亡時刻</th><th class="hide-s">注意</th></tr></thead><tbody>'+rows+'</tbody></table>'+stripsHTML();
 }
+
+/* 1日の中のどの時間帯か（選んだタイムゾーンで比べる） */
+function stripsHTML(){
+  var h='<h3 class="series" style="margin-top:22px">推定死亡時刻の時間帯（1日の中）</h3>';
+  if(S.tz==='local'){
+    return h+'<p class="hint">上の「時刻表示」で共通のタイムゾーン（EST・CST など）を選ぶと、事件どうしの時間帯を並べて見られます。</p>';
+  }
+  var tz=TZS[S.tz], rows=[];
+  CASES.forEach(function(c){
+    var e=estimate(c); if(!e) return;
+    var label='<span class="mono">'+esc(c.id)+'</span>', segs='', note='';
+    if(e.startUTC==null){
+      note='下限のみ';
+    }else if(e.endUTC-e.startUTC>=24*3600000){
+      segs='<i class="seg wide" style="left:0;width:100%"></i>'; note='24時間以上の幅';
+    }else{
+      var hs=hod(e.startUTC,tz.off), he=hod(e.endUTC,tz.off);
+      if(hs<=he) segs=seg(hs,he);
+      else segs=seg(hs,24)+seg(0,he);
+      note=fmtHM(e.startUTC,tz.off)+'〜'+fmtHM(e.endUTC,tz.off);
+    }
+    rows.push('<div class="strip"><div class="lab">'+label+'</div><div class="bar">'+segs+'</div><div class="nt">'+esc(note)+'</div></div>');
+  });
+  var ticks='<div class="strip ax"><div class="lab"></div><div class="bar">'
+    +[0,6,12,18,24].map(function(t){return '<span style="left:'+(t/24*100)+'%">'+t+'</span>';}).join('')
+    +'</div><div class="nt">'+esc(tz.abbr)+'</div></div>';
+  return h+'<p class="hint">帯が重なる時間帯が、事件に共通する時間帯の手がかりです。幅の広い事件（検視官の管轄や、発見が遅い事件）は、帯が長くなります。</p>'+rows.join('')+ticks;
+}
+function hod(ms,off){ var d=new Date(ms+off*3600000); return d.getUTCHours()+d.getUTCMinutes()/60; }
+function seg(a,b){ return '<i class="seg" style="left:'+(a/24*100)+'%;width:'+Math.max(0.8,(b-a)/24*100)+'%"></i>'; }
 
 function renderTabs(){
   var h='<button role="tab" data-view="list" class="'+(S.view==='list'?'on':'')+'">一覧</button>';
@@ -793,6 +854,7 @@ window.ShibouSuitei = {
   setTimezone:function(t){ if(t==='local'||TZS[t]){ S.tz=t; saveSet(); render(true); } },
   addCase:function(c){ if(c && c.id && !getCase(c.id)){ CASES.push(c); render(true); } },
   estimate:estimate,
+  series:function(){ return SERIES; },
   cases:function(){ return CASES.slice(); }
 };
 
