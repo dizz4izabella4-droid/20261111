@@ -60,7 +60,7 @@ log('2. 乱数入力 3000本');
 log('3. 入力なし（startだけ）');
 {
   const c = CORE.create(CONFIG, { seed: 1 }); let started = false;
-  const r = run(c, 1 / 30, 900, s => { if (!started) { started = true; return { swipe: null, tap: false, button: 'start' }; } return NONE(); }, s => false);
+  const r = run(c, 1 / 30, 1000, s => { if (!started) { started = true; return { swipe: null, tap: false, button: 'start' }; } return NONE(); }, s => false);
   const subs = r.evs.filter(e => e.type === 'sub').map(e => e.sub);
   const ph = r.evs.filter(e => e.type === 'phase'); const pull = ph.find(e => e.to === 'PULLOVER'), chase = r.evs.find(e => e.type === 'sub' && e.sub === 'INTRO'), opn = r.evs.find(e => e.type === 'sub' && e.sub === 'OPEN_PARK');
   const dead = subs.indexOf('DEAD'), ti = subs.indexOf('TITLE', dead);
