@@ -1,0 +1,857 @@
+<title>追跡 パトカー</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: full-bleed 3D viewport, stats top-left, controls pinned to the bottom edge */
+:root{--bg:#0b0e13;--panel:#141a22;--line:#27313d;--fg:#d9dee5;--dim:#8a95a3;--red:#ff3b3b;--blue:#3b6bff;color-scheme:dark}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font:14px/1.4 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;overflow:hidden}
+#cv{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+.vig{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 45%,transparent 55%,rgba(0,0,0,.55) 100%)}
+.top{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));display:flex;justify-content:space-between;gap:12px;pointer-events:none;flex-wrap:wrap}
+.top h1{margin:0;font-size:15px;font-weight:600;letter-spacing:.08em}
+.top p{margin:2px 0 0;color:var(--dim);font-size:12px;font-variant-numeric:tabular-nums}
+.bar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:8px 14px;flex-wrap:wrap;justify-content:center;padding:12px max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 12px) max(16px,env(safe-area-inset-left,0px));background:linear-gradient(transparent,rgba(11,14,19,.94) 35%)}
+.grp{display:flex;gap:4px;align-items:center}
+.grp>span,.grp>label{color:var(--dim);font-size:12px;margin-right:2px;font-variant-numeric:tabular-nums}
+button{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 12px;cursor:pointer;min-height:40px;touch-action:manipulation}
+button[aria-pressed="true"]{border-color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue)}
+#bBrake[aria-pressed="true"]{border-color:var(--red);box-shadow:inset 0 0 0 1px var(--red)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+input[type=range]{width:104px;accent-color:var(--blue);min-height:40px}
+</style>
+<canvas id="cv"></canvas>
+<div class="vig"></div>
+<div class="top"><div><h1>FBI PATROL CAR</h1><p id="stat">読み込み中</p></div><p>ドラッグで回転 / ホイール・ピンチで拡大</p></div>
+<div class="bar">
+  <div class="grp"><label for="rSpd" id="lSpd">速度 40km/h</label><input id="rSpd" type="range" min="0" max="120" value="40"></div>
+  <div class="grp"><label for="rStr">操舵</label><input id="rStr" type="range" min="-100" max="100" value="0"></div>
+  <div class="grp"><button id="bBrake" aria-pressed="false">ブレーキ</button></div>
+  <div class="grp"><span>画質</span><button id="qLow" aria-pressed="false">低</button><button id="qHigh" aria-pressed="true">高</button></div>
+  <div class="grp"><span>解像度</span><button id="sAuto" aria-pressed="true">自動</button><button id="s70" aria-pressed="false">70%</button><button id="s85" aria-pressed="false">85%</button><button id="s100" aria-pressed="false">100%</button></div>
+  <div class="grp"><button id="bSiren" aria-pressed="true">サイレン</button><button id="bRot" aria-pressed="true">自動回転</button></div>
+  <div class="grp"><button id="bFront">前</button><button id="bSide">横</button><button id="bBack">後</button><button id="bTop">上</button></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ============================================================
+ * 追跡 / FINAL STOP — 車両モジュール: FBI仕様 パトカー v5（造形全面やり直し）
+ * 作成: テッサ
+ * 依存: three.js r128（THREE を引数で受け取る）
+ * 単位: メートル。原点=車体中央の接地点、前方=+Z、左=+X（右=-X）
+ *
+ * v5 の要点
+ *  - ホイールウェルを実際に切り欠き、4輪の全体（タイヤ・リム・ブレーキ・キャリパー）が見える
+ *  - 側窓は3枚（前ドア／後ドア／クォーター）＋黒い窓枠。ピラーはボディ色
+ *  - フロント: グリル・ヘッドライト・フォグ・プッシュバー／リア: 縦型テール・ナンバー・マフラー
+ *  - 塗装はクリアコート付き（高画質）。タイヤの踏面・サイドウォール、ナンバーはテクスチャを自作
+ *  - 走行表現: 4輪の回転・前輪の操舵・ピッチ/ロール・ブレーキランプ（car.setDrive）
+ *  - 警光灯: ライトバー・グリル・窓・ミラー・リア。発光ハロと路面の染め。実光源は既定でなし
+ *
+ * v6: 窓に車内のシルエット（シート・ハンドル・ダッシュ）を焼き込み、ミラー・スポットライト・グリル・DRL・
+ *     泥除け・ワイパー等を追加、タイヤ文字を強調
+ *
+ * v7: 車体の稜線を丸め（ベベル）、ヘッドライト・テールランプ・グリルをテクスチャ化、ライトバーをLED分割
+ *
+ * v8: バックランプをテールに統合、塗装の反射を調整、泥はね・汚れ（アルファ付きの薄いオーバーレイ）、
+ *     フロントガラス上部の遮光帯、リアのヒッチ
+ *
+ * 予算の目安: 高画質 約8,000三角形・描画コール約53／低画質 約2,300三角形
+ *
+ * 使い方:
+ *   renderer.outputEncoding = THREE.sRGBEncoding;
+ *   scene.environment = FbiCar.makeEnv(THREE, renderer);   // 高画質で推奨
+ *   const car = FbiCar.build(THREE, { text:'FBI', quality:'high' });
+ *   scene.add(car.group);
+ *   // 毎フレーム: car.update(timeSec, dtSec);  サイレン: car.setSiren(bool);
+ *   // 走行: car.setDrive(speed_m_s, steer(-1..1, +が右), brake(bool));  破棄: car.dispose();
+ * ============================================================ */
+(function (root) {
+  'use strict';
+
+  var RED = 0xff1a1a, BLUE = 0x1a3cff, OFF = 0x1b1b1b;
+
+  function lin(THREE, hex) { return new THREE.Color(hex).convertSRGBToLinear(); }
+
+  // ---------- 環境マップ（手続き生成。一度だけ作る） ----------
+  function makeEnv(THREE, renderer) {
+    var s = new THREE.Scene();
+    var g = new THREE.SphereGeometry(50, 24, 12);
+    var pos = g.attributes.position, cols = [], c = new THREE.Color();
+    var top = lin(THREE, 0x3a4658), hor = lin(THREE, 0x1b222c), bot = lin(THREE, 0x06070a);
+    for (var i = 0; i < pos.count; i++) {
+      var y = pos.getY(i) / 50;
+      if (y >= 0) c.copy(hor).lerp(top, Math.pow(y, 0.6));
+      else c.copy(hor).lerp(bot, Math.min(1, -y * 3));
+      cols.push(c.r, c.g, c.b);
+    }
+    g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+    s.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
+    function panel(w, h, x, y, z, hex, k) {
+      var m = new THREE.Mesh(new THREE.PlaneGeometry(w, h),
+        new THREE.MeshBasicMaterial({ color: lin(THREE, hex).multiplyScalar(k), side: THREE.DoubleSide }));
+      m.position.set(x, y, z); m.lookAt(0, 0, 0); s.add(m);
+    }
+    panel(26, 8, 0, 32, 0, 0xffffff, 2.4);
+    panel(10, 16, -34, 14, 8, 0xbfd0ff, 1.6);
+    panel(8, 14, 34, 10, -16, 0xffe2c0, 1.2);
+    panel(30, 2, 0, 6, -40, 0xffffff, 1.0);
+    var pm = new THREE.PMREMGenerator(renderer);
+    var rt = pm.fromScene(s, 0.02);
+    pm.dispose();
+    return rt.texture;
+  }
+
+  // ---------- 結合ヘルパー（位置・法線・UV・頂点色） ----------
+  function mergeGeos(THREE, list) {
+    var p = [], n = [], u = [], cc = [], anyC = false, i, j;
+    for (i = 0; i < list.length; i++) {
+      var g = list[i].index ? list[i].toNonIndexed() : list[i];
+      var a = g.attributes.position.array, b = g.attributes.normal.array;
+      var c = g.attributes.uv ? g.attributes.uv.array : null;
+      var cl = g.attributes.color ? g.attributes.color.array : null;
+      if (cl) anyC = true;
+      for (j = 0; j < a.length; j++) { p.push(a[j]); n.push(b[j]); cc.push(cl ? cl[j] : 1); }
+      for (j = 0; j < (a.length / 3) * 2; j++) u.push(c ? c[j] : 0);
+    }
+    var out = new THREE.BufferGeometry();
+    out.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
+    out.setAttribute('normal', new THREE.Float32BufferAttribute(n, 3));
+    out.setAttribute('uv', new THREE.Float32BufferAttribute(u, 2));
+    if (anyC) out.setAttribute('color', new THREE.Float32BufferAttribute(cc, 3));
+    return out;
+  }
+
+  function build(THREE, opts) {
+    opts = Object.assign({
+      text: 'FBI', plate: 'FBI-017', siren: true, color: 0x1d222a, light: false, quality: 'high', env: null
+    }, opts || {});
+    var hi = opts.quality !== 'low';
+    var hasDoc = typeof document !== 'undefined';
+
+    var group = new THREE.Group();
+    group.name = 'fbi_car';
+    var shell = new THREE.Group(); // 車体（ピッチ/ロール/上下動）。ホイールは group 直下
+    group.add(shell);
+    var disposables = [];
+    function track(o) { disposables.push(o); return o; }
+    function canvas(w, h) { var c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+    function sRGBTex(c) {
+      var t = track(new THREE.CanvasTexture(c));
+      t.encoding = THREE.sRGBEncoding; t.anisotropy = hi ? 4 : 1;
+      return t;
+    }
+
+    // ---------- マテリアル ----------
+    function mat(color, metal, rough, envI) {
+      var m = hi
+        ? new THREE.MeshStandardMaterial({ color: lin(THREE, color), metalness: metal, roughness: rough })
+        : new THREE.MeshLambertMaterial({ color: lin(THREE, color) });
+      if (hi && opts.env) m.envMap = opts.env;
+      if (hi && envI) m.envMapIntensity = envI;
+      return track(m);
+    }
+    function basic(color) { return track(new THREE.MeshBasicMaterial({ color: lin(THREE, color) })); }
+
+    var mBody;
+    if (hi) {
+      mBody = new THREE.MeshPhysicalMaterial({
+        color: lin(THREE, opts.color), metalness: 0.55, roughness: 0.30, clearcoat: 0.8, clearcoatRoughness: 0.08
+      });
+      if (opts.env) mBody.envMap = opts.env;
+      mBody.envMapIntensity = 1.15;
+      track(mBody);
+    } else mBody = mat(opts.color, 0, 0);
+    var mTrim   = mat(0x08090b, 0.1, 0.6);
+    var mChrome = mat(0x9aa2ad, 0.9, 0.25);
+    var mGlass  = mat(0x070b10, 0.3, 0.06, 0.35);
+    var mPlastic = mat(0x101114, 0.0, 0.5);
+    var mPlate  = mat(0xcfd3d8, 0.0, 0.7);
+    var mHead   = basic(0xdfe6ee);
+    var mTail   = basic(0x7a0b0b);
+    var mAmberLens = basic(0x8a5a10);
+
+    // 点滅するランプ: 色×位相 の4種を共有マテリアルにする
+    var lampMat = {};
+    ['r0', 'r1', 'b0', 'b1'].forEach(function (k) { lampMat['L' + k] = basic(k[0] === 'r' ? RED : BLUE); });
+    var litCol = { r: lin(THREE, RED), b: lin(THREE, BLUE) }, offCol = lin(THREE, OFF);
+
+    // ---------- 静止パーツの結合バケット ----------
+    var buckets = {};
+    function add(key, geo) { (buckets[key] = buckets[key] || []).push(geo); }
+    function put(key, geo, x, y, z, rx, ry, rz) {
+      var g = geo.clone();
+      if (rx || ry || rz) g.applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(rx || 0, ry || 0, rz || 0)));
+      g.translate(x, y, z);
+      add(key, g);
+    }
+    function box(key, w, h, d, x, y, z, ry) { put(key, new THREE.BoxGeometry(w, h, d), x, y, z, 0, ry || 0, 0); }
+    function both(fn) { fn(1); fn(-1); }
+    function lamp(w, h, d, x, y, z, color, phase) { box('L' + (color === RED ? 'r' : 'b') + phase, w, h, d, x, y, z); }
+
+    // ============================================================
+    // 1. 車体: 側面シルエットを押し出す（面取り付き）
+    // ============================================================
+    var WZ = [-1.45, 1.45], WY = 0.382, WR = 0.47;    // ホイール中心Z・高さ・ウェル半径
+    var WDZ = Math.sqrt(WR * WR - 0.042 * 0.042);     // 底辺(y=0.34)でのウェル半幅
+    var WA0 = Math.PI + Math.asin(0.042 / WR), WA1 = -Math.asin(0.042 / WR);
+
+    function extrude(shape, w, bt, materials) {
+      var depth = w - 2 * bt;
+      var g = new THREE.ExtrudeGeometry(shape, {        depth: depth, steps: 1, bevelEnabled: true,
+        bevelThickness: bt, bevelSize: bt, bevelOffset: -bt,   // 輪郭は変えずに稜線だけ丸める
+        bevelSegments: hi ? 3 : 1, curveSegments: hi ? 10 : 4
+      });
+      g.rotateY(-Math.PI / 2);
+      g.translate(depth / 2, 0, 0);
+      track(g);
+      return new THREE.Mesh(g, materials);
+    }
+
+    // 下部ボディ（幅2.0）: 前後のホイールウェルを切り欠く
+    var ls = new THREE.Shape();
+    ls.moveTo(-2.45, 0.34);
+    ls.lineTo(WZ[0] - WDZ, 0.34);
+    ls.absarc(WZ[0], WY, WR, WA0, WA1, true);
+    ls.lineTo(WZ[1] - WDZ, 0.34);
+    ls.absarc(WZ[1], WY, WR, WA0, WA1, true);
+    ls.lineTo(2.45, 0.34);
+    ls.quadraticCurveTo(2.53, 0.42, 2.47, 0.62);
+    ls.lineTo(2.30, 0.90);
+    ls.quadraticCurveTo(1.85, 1.0, 1.30, 1.02);
+    ls.lineTo(-2.35, 1.06);
+    ls.quadraticCurveTo(-2.52, 1.03, -2.47, 0.80);
+    ls.closePath();
+    shell.add(extrude(ls, 2.0, 0.07, [mBody, mBody]));
+
+    // キャビン（幅1.84）。側面はボディ色（窓は別パーツで貼る）
+    var cs = new THREE.Shape();
+    cs.moveTo(-2.30, 1.04);
+    cs.lineTo(-2.225, 1.67);
+    cs.quadraticCurveTo(-2.205, 1.755, -2.10, 1.765);
+    cs.lineTo(0.45, 1.78);
+    cs.lineTo(1.22, 1.04);
+    cs.closePath();
+    shell.add(extrude(cs, 1.84, 0.04, [mBody, mBody]));
+
+    // ウェルの内側（暗い内装）と下回り
+    WZ.forEach(function (z) { box('trim', 1.46, 0.56, WDZ * 2, 0, 0.57, z); });
+    box('trim', 1.40, 0.16, 4.6, 0, 0.28, 0);
+
+    // ============================================================
+    // 2. ガラスと窓枠
+    // ============================================================
+    // ガラスに車内のシルエットを焼き込む（高画質のみ）。u=0 が後方、u=1 が前方
+    var glassTex = hi && hasDoc, glassMats = {};
+    function glassCanvas(kind) {
+      var W = 256, H = 128, cv = canvas(W, H), g = cv.getContext('2d');
+      var gr = g.createLinearGradient(0, 0, 0, H);
+      gr.addColorStop(0, '#111c2a'); gr.addColorStop(0.5, '#080d14'); gr.addColorStop(1, '#030508');
+      g.fillStyle = gr; g.fillRect(0, 0, W, H);
+      function rr(x, y, w, h, r, col) {
+        g.fillStyle = col; g.beginPath(); g.moveTo(x + r, y);
+        g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
+        g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); g.fill();
+      }
+      var seat = '#1a1f27', rest = '#252b36', dash = '#151a21';
+      if (kind === 'f') {                      // 前ドア窓: 運転席・ハンドル・ダッシュ
+        rr(14, 54, 84, 90, 12, seat); rr(34, 22, 46, 42, 12, rest);
+        rr(120, 104, 140, 40, 6, dash);
+        g.strokeStyle = '#2b323e'; g.lineWidth = 7; g.beginPath(); g.ellipse(194, 84, 24, 17, -0.5, 0, 6.283); g.stroke();
+      } else if (kind === 'r') {               // 後ドア窓: 後席と仕切り
+        rr(70, 56, 110, 90, 12, seat); rr(100, 24, 46, 40, 12, rest);
+        g.strokeStyle = 'rgba(120,132,148,0.22)'; g.lineWidth = 2;
+        for (var i = 0; i < 9; i++) { g.beginPath(); g.moveTo(8 + i * 16, 0); g.lineTo(8 + i * 16, 80); g.stroke(); }
+      } else if (kind === 'q') {               // クォーター窓: 荷室の装備
+        rr(30, 78, 100, 60, 4, '#171c24'); rr(150, 96, 70, 40, 4, '#141920');
+        g.fillStyle = 'rgba(120,132,148,0.2)'; g.fillRect(0, 70, W, 2);
+      } else if (kind === 'w') {               // フロント: 前席2脚・ハンドル・ダッシュ・ルームミラー
+        rr(22, 70, 74, 80, 10, seat); rr(40, 48, 40, 34, 9, rest);
+        rr(160, 70, 74, 80, 10, seat); rr(178, 48, 40, 34, 9, rest);
+        rr(0, 104, W, 40, 0, dash);
+        g.strokeStyle = '#2b323e'; g.lineWidth = 7; g.beginPath(); g.ellipse(196, 100, 30, 11, 0, 0, 6.283); g.stroke();
+        rr(118, 4, 26, 13, 4, '#252b36');
+        var sg2 = g.createLinearGradient(0, 0, 0, 30); sg2.addColorStop(0, 'rgba(8,26,66,0.95)'); sg2.addColorStop(1, 'rgba(8,26,66,0)');
+        g.fillStyle = sg2; g.fillRect(0, 0, W, 30);   // 上部の遮光帯
+      } else {                                 // リア: ヘッドレスト・仕切り網
+        rr(26, 60, 74, 80, 10, seat); rr(44, 38, 38, 32, 9, rest);
+        rr(156, 60, 74, 80, 10, seat); rr(174, 38, 38, 32, 9, rest);
+        g.strokeStyle = 'rgba(120,132,148,0.2)'; g.lineWidth = 2;
+        for (var j = 0; j < 17; j++) { g.beginPath(); g.moveTo(j * 16, 0); g.lineTo(j * 16, H); g.stroke(); }
+      }
+      g.save(); g.globalAlpha = 0.10; g.fillStyle = '#bcd2ff';               // 空の映り込みの斜め帯
+      g.beginPath(); g.moveTo(60, 0); g.lineTo(120, 0); g.lineTo(70, H); g.lineTo(10, H); g.closePath(); g.fill();
+      g.globalAlpha = 0.05; g.beginPath(); g.moveTo(150, 0); g.lineTo(175, 0); g.lineTo(125, H); g.lineTo(100, H); g.closePath(); g.fill();
+      g.restore();
+      return cv;
+    }
+    function gk(kind) {
+      if (!glassTex) return 'glass';
+      var key = 'glass' + kind;
+      if (!glassMats[key]) {
+        var gm = new THREE.MeshStandardMaterial({ color: 0xffffff, map: sRGBTex(glassCanvas(kind)), metalness: 0.2, roughness: 0.08 });
+        if (opts.env) gm.envMap = opts.env;
+        gm.envMapIntensity = 0.55;
+        glassMats[key] = track(gm);
+      }
+      return key;
+    }
+
+    function sideWindow(pts, kind) {
+      var xs = pts.map(function (p) { return p[0]; }), ys = pts.map(function (p) { return p[1]; });
+      var minx = Math.min.apply(null, xs), maxx = Math.max.apply(null, xs);
+      var miny = Math.min.apply(null, ys), maxy = Math.max.apply(null, ys);
+      var cx = (minx + maxx) / 2, cy = (miny + maxy) / 2, w = maxx - minx, h = maxy - miny;
+      function shp(kx, ky, flip, uv) {
+        var s = new THREE.Shape();
+        pts.forEach(function (p, i) {
+          var x = cx + (p[0] - cx) * kx, y = cy + (p[1] - cy) * ky;
+          if (flip) x = -x;
+          if (i) s.lineTo(x, y); else s.moveTo(x, y);
+        });
+        s.closePath();
+        var g = new THREE.ShapeGeometry(s);
+        if (uv) {
+          var P = g.attributes.position, U = g.attributes.uv;
+          for (var i = 0; i < P.count; i++) U.setXY(i, ((flip ? -P.getX(i) : P.getX(i)) - minx) / w, (P.getY(i) - miny) / h);
+        }
+        return g;
+      }
+      var gkey = gk(kind);
+      [[gkey, 1, 1, 0.926], ['trim', (w + 0.05) / w, (h + 0.05) / h, 0.922]].forEach(function (d) {
+        var tx = d[0] !== 'trim' && glassTex;
+        var r = shp(d[1], d[2], false, tx); r.rotateY(-Math.PI / 2); r.translate(-d[3], 0, 0); add(d[0], r);
+        var l = shp(d[1], d[2], true, tx);  l.rotateY(Math.PI / 2);  l.translate(d[3], 0, 0);  add(d[0], l);
+      });
+    }
+    sideWindow([[1.037, 1.12], [0.10, 1.12], [0.10, 1.70], [0.433, 1.70]], 'f');      // 前ドア
+    sideWindow([[-0.12, 1.12], [-0.95, 1.12], [-0.95, 1.70], [-0.12, 1.70]], 'r');    // 後ドア
+    sideWindow([[-1.15, 1.12], [-2.17, 1.12], [-2.106, 1.685], [-1.15, 1.70]], 'q');  // クォーター
+
+    // フロント/リアガラス（枠は一回り大きい黒板を少し後ろに）
+    function slopedGlass(w, h, rx, ry, cx, cy, cz, key, nrm) {
+      var g = new THREE.PlaneGeometry(w, h);
+      if (ry) g.rotateY(ry);
+      g.rotateX(rx); g.translate(cx + nrm[0], cy + nrm[1], cz + nrm[2]); add(key, g);
+    }
+    slopedGlass(1.60, 1.068, -0.805, 0, 0, 1.437, 0.861, gk('w'), [0, 0, 0]);
+    slopedGlass(1.68, 1.13, -0.805, 0, 0, 1.434, 0.858, 'trim', [0, 0, 0]);
+    slopedGlass(1.55, 0.60, 0.113, Math.PI, 0, 1.35, -2.295, gk('b'), [0, 0, 0]);
+    slopedGlass(1.63, 0.66, 0.113, Math.PI, 0, 1.35, -2.291, 'trim', [0, 0, 0]);
+
+    // ============================================================
+    // 3. 外装ディテール
+    // ============================================================
+    // --- 前 ---
+    box('trim', 1.00, 0.26, 0.04, 0, 0.64, 2.535);                                  // グリル開口
+    if (hi) [0.58, 0.64, 0.70].forEach(function (y) { box('chrome', 0.96, 0.012, 0.012, 0, y, 2.558); });
+    box('trim', 1.95, 0.24, 0.12, 0, 0.46, 2.50);                                   // フロントバンパー
+    box('trim', 1.20, 0.10, 0.03, 0, 0.40, 2.565);                                  // 下部吸気口
+    both(function (sx) {
+      box('trim', 0.52, 0.15, 0.05, sx * 0.66, 0.82, 2.52);                         // ヘッドライト外枠
+      if (hasDoc && hi) { var hp = new THREE.PlaneGeometry(0.44, 0.09); hp.translate(sx * 0.66, 0.82, 2.568); add('headTex', hp); }
+      else box('head', 0.44, 0.09, 0.03, sx * 0.66, 0.82, 2.55);                     // 光源
+      if (hi) put('trim', new THREE.CylinderGeometry(0.035, 0.035, 0.02, 10, 1), sx * 0.56, 0.82, 2.57, Math.PI / 2, 0, 0); // プロジェクター
+      box('mAmber', 0.14, 0.06, 0.03, sx * 0.80, 0.50, 2.58);                        // フォグ
+    });
+    // --- 後 ---
+    box('trim', 1.95, 0.26, 0.12, 0, 0.46, -2.50);                                  // リアバンパー
+    both(function (sx) {
+      box('tail', 0.20, 0.52, 0.05, sx * 0.89, 0.88, -2.505);                        // 縦型テール
+      if (hasDoc && hi) { var tp = new THREE.PlaneGeometry(0.19, 0.50); tp.rotateY(Math.PI); tp.translate(sx * 0.89, 0.88, -2.532); add('tailTex', tp); }
+      if (!(hasDoc && hi)) box('head', 0.11, 0.06, 0.04, sx * 0.72, 0.62, -2.515);   // バックランプ（高画質はテールのテクスチャに統合）
+    });
+    if (hi) put('chrome', new THREE.CylinderGeometry(0.04, 0.04, 0.18, 10, 1), -0.62, 0.30, -2.52, Math.PI / 2, 0, 0); // マフラー
+
+    // --- 側面 ---
+    both(function (sx) {
+      box('trim', 0.03, 0.12, 1.80, sx * 1.015, 0.45, 0.0);                          // ロッカーパネル
+      box('chrome', 0.012, 0.025, 3.30, sx * 0.93, 1.085, -0.55);                      // 窓下のクロームモール
+      box('mDoorLine', 0.01, 0.01, 0.01, 0, 0, 0);                                    // （予約）
+    });
+    if (hi) {
+      both(function (sx) {
+        [[1.05, 0.66, 1.00], [0.05, 0.40, 1.00], [-0.90, 0.40, 1.00]].forEach(function (s) { // ドアの合わせ目
+          box('trim', 0.012, s[2] - s[1], 0.012, sx * 1.004, (s[1] + s[2]) / 2, s[0]);
+        });
+        [0.20, -0.78].forEach(function (z) { box('chrome', 0.03, 0.04, 0.16, sx * 1.01, 0.945, z); }); // ハンドル
+        var mg = new THREE.SphereGeometry(0.1, 12, 8); mg.scale(0.55, 0.75, 1.0);
+        put('plastic', mg, sx * 1.09, 1.16, 1.10); mg.dispose();                       // ミラー（丸み）
+        var sl = new THREE.CylinderGeometry(0.042, 0.042, 0.15, 10, 1); sl.rotateX(Math.PI / 2);
+        put('chrome', sl, sx * 0.965, 1.27, 0.90); sl.dispose();                        // Aピラーのスポットライト
+        var sc2 = new THREE.CircleGeometry(0.036, 10);
+        put('head', sc2, sx * 0.965, 1.27, 0.978); sc2.dispose();
+        box('trim', 0.05, 0.03, 0.04, sx * 0.945, 1.23, 0.86);
+        box('trim', 0.14, 0.03, 0.06, sx * 1.01, 1.10, 1.12);
+        // アーチ縁（フレア）
+        WZ.forEach(function (z) {
+          var lip = new THREE.TorusGeometry(WR + 0.065, 0.022, 4, 14, Math.PI);
+          put('plastic', lip, sx * 1.0, WY, z, 0, Math.PI / 2, 0);
+          lip.dispose();
+        });
+      });
+      // ボンネット・ワイパー
+      both(function (sx) {
+        box('trim', 0.50, 0.012, 0.14, sx * 0.45, 1.03, 1.75);
+        box('trim', 0.50, 0.015, 0.02, sx * 0.35, 1.10, 1.25);
+      });
+      // グリル: メッシュ地（テクスチャ）
+      if (hasDoc) { var gp = new THREE.PlaneGeometry(0.96, 0.24); gp.translate(0, 0.64, 2.5558); add('grilleTex', gp); }
+      // グリルの縦バー、DRL、フォグ枠      for (var gx = -0.4; gx <= 0.41; gx += 0.1) box('chrome', 0.012, 0.22, 0.012, gx, 0.64, 2.558);
+      both(function (sx) {
+        box('head', 0.40, 0.014, 0.012, sx * 0.66, 0.752, 2.562);
+        box('trim', 0.20, 0.09, 0.03, sx * 0.80, 0.50, 2.565);
+      });
+      // リア: ワイパー・ハッチ合わせ目・給油口・泥除け・シャークフィン
+      box('trim', 0.45, 0.012, 0.012, 0.10, 1.10, -2.322);
+      box('trim', 1.30, 0.012, 0.012, 0, 0.96, -2.512);
+      box('trim', 0.012, 0.14, 0.09, 1.008, 0.95, -1.75);
+      box('trim', 0.12, 0.06, 0.20, 0.40, 1.82, -1.55);
+      both(function (sx) {
+        [0.95, -1.95].forEach(function (z) { box('plastic', 0.02, 0.22, 0.12, sx * 0.975, 0.25, z); });
+      });
+      // リアのヒッチ
+      box('trim', 0.10, 0.12, 0.16, 0, 0.33, -2.60);
+      // 汚れ（下半分の泥はね）
+      if (hasDoc) {
+        function dirt(w, h, x, y, z, ry) { var d = new THREE.PlaneGeometry(w, h); d.rotateY(ry); d.translate(x, y, z); add('dirt', d); }
+        both(function (sx) {
+          var ry = sx * Math.PI / 2;
+          dirt(1.8, 0.12, sx * 1.0325, 0.45, 0.0, ry);        // ロッカーパネル
+          dirt(1.8, 0.30, sx * 1.0035, 0.60, 0.0, ry);        // ドア下
+          dirt(0.42, 0.34, sx * 1.0035, 0.58, 2.22, ry);       // フロントフェンダー先端
+          dirt(0.42, 0.34, sx * 1.0035, 0.58, -2.22, ry);      // リアフェンダー後端
+        });
+        dirt(1.88, 0.34, 0, 0.44, -2.5605, Math.PI);            // リアバンパー下
+      }
+      // プッシュバー
+      [0.46, 0.80].forEach(function (y) {
+        box('trim', 1.40, 0.07, 0.08, 0, y, 2.64);
+        both(function (sx) { box('trim', 0.07, 0.07, 0.14, sx * 0.65, y, 2.57); });
+      });
+      [-0.65, 0, 0.65].forEach(function (x) { box('trim', 0.07, 0.40, 0.08, x, 0.63, 2.64); });
+      // ルーフレール・スポイラー・アンテナ・第3ブレーキ
+      both(function (sx) { box('trim', 0.03, 0.03, 2.2, sx * 0.80, 1.81, -0.95); });
+      box('trim', 1.50, 0.04, 0.22, 0, 1.80, -2.26);
+      box('tail', 0.60, 0.03, 0.03, 0, 1.755, -2.385);
+      put('trim', new THREE.CylinderGeometry(0.008, 0.008, 0.55, 5, 1), -0.55, 2.04, -1.60);
+    }
+
+    // ============================================================
+    // 4. 警光灯
+    // ============================================================
+    box('trim', 1.30, 0.06, 0.34, 0, 1.82, -0.35);                                  // ライトバー土台
+    box('head', 0.50, 0.04, 0.03, 0, 1.84, -0.19);                                  // テイクダウン（白）
+    both(function (sx) { box('head', 0.03, 0.05, 0.18, sx * 0.66, 1.85, -0.35); }); // アレイ（側面白）
+    function ledBlock(cx, color, phase) {
+      if (!hi) { lamp(0.30, 0.08, 0.30, cx, 1.88, -0.35, color, phase); return; }
+      for (var i = -1; i <= 1; i++) lamp(0.085, 0.08, 0.28, cx + i * 0.105, 1.88, -0.35, color, phase);  // LEDを3分割
+      box('trim', 0.30, 0.012, 0.31, cx, 1.926, -0.35);                                                   // 上面の庇
+    }
+    ledBlock(-0.45, RED, 0); ledBlock(-0.15, RED, 1); ledBlock(0.15, BLUE, 0); ledBlock(0.45, BLUE, 1);
+    if (hi) both(function (sx) { box('trim', 0.03, 0.08, 0.34, sx * 0.665, 1.87, -0.35); });              // 端のキャップ
+    lamp(0.22, 0.07, 0.04, -0.28, 0.66, 2.575, RED, 1);                              // グリル内
+    lamp(0.22, 0.07, 0.04,  0.28, 0.66, 2.575, BLUE, 0);
+    lamp(0.30, 0.05, 0.06, -0.45, 1.70, 0.57, RED, 0);                               // ウィンドウ上部
+    lamp(0.30, 0.05, 0.06,  0.45, 1.70, 0.57, BLUE, 1);
+    lamp(0.40, 0.05, 0.04, -0.40, 1.62, -2.325, RED, 1);                             // リア
+    lamp(0.40, 0.05, 0.04,  0.40, 1.62, -2.325, BLUE, 0);
+    lamp(0.05, 0.06, 0.16, -1.15, 1.12, 1.10, RED, 0);                               // ミラー
+    lamp(0.05, 0.06, 0.16,  1.15, 1.12, 1.10, BLUE, 1);
+
+    // ============================================================
+    // 5. テクスチャ（文字・ナンバー・タイヤ）
+    // ============================================================
+    var tMat = null, plateMat = null, mTire = null;
+    if (hasDoc) {
+      var cv = canvas(512, 128), c = cv.getContext('2d');
+      c.fillStyle = '#e8c547';
+      c.font = 'bold 104px Arial, Helvetica, sans-serif';
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText(opts.text, 256, 68);
+      tMat = track(new THREE.MeshBasicMaterial({ map: sRGBTex(cv), transparent: true, depthWrite: false }));
+      var back = new THREE.PlaneGeometry(1.0, 0.25); back.rotateY(Math.PI); back.translate(0, 1.35, -2.305); add('text', back);
+      both(function (sx) {
+        var sg = new THREE.PlaneGeometry(0.8, 0.2);
+        sg.rotateY(sx * Math.PI / 2); sg.translate(sx * 1.014, 0.78, -0.45); add('text', sg);
+      });
+
+      // ナンバープレート（架空）
+      var pc = canvas(256, 128), p = pc.getContext('2d');
+      p.fillStyle = '#e9ecef'; p.fillRect(0, 0, 256, 128);
+      p.strokeStyle = '#1b2a4a'; p.lineWidth = 6; p.strokeRect(6, 6, 244, 116);
+      p.fillStyle = '#1b2a4a'; p.font = 'bold 22px Arial'; p.textAlign = 'center'; p.textBaseline = 'middle';
+      p.fillText('FEDERAL', 128, 28);
+      p.font = 'bold 54px Arial'; p.fillText(opts.plate, 128, 76);
+      p.font = 'bold 16px Arial'; p.fillText('GOVERNMENT', 128, 110);
+      plateMat = track(new THREE.MeshBasicMaterial({ map: sRGBTex(pc) }));
+      var plate = new THREE.PlaneGeometry(0.46, 0.23); plate.rotateY(Math.PI); plate.translate(0, 0.74, -2.538); add('plateTex', plate);
+
+      // タイヤ: 踏面とサイドウォール
+      var tc = canvas(512, 128), t = tc.getContext('2d'), i;
+      t.fillStyle = '#121214'; t.fillRect(0, 0, 512, 128);
+      t.fillStyle = '#1a1a1d'; t.fillRect(0, 43, 512, 42);
+      t.fillStyle = '#08080a';
+      for (i = 0; i < 64; i++) t.fillRect(i * 8 + (i % 2 ? 2 : 0), 43, 3, 42);   // 踏面の溝
+      t.fillRect(0, 62, 512, 3); t.fillRect(0, 71, 512, 2);                       // 周方向の溝
+      t.fillStyle = '#242428'; t.fillRect(0, 22, 512, 2); t.fillRect(0, 104, 512, 2);
+      t.fillStyle = '#5b5b64'; t.font = 'bold 17px Arial'; t.textBaseline = 'middle';
+      t.fillText('PURSUIT RATED  275/55R20  RADIAL', 12, 33);
+      t.fillText('PURSUIT RATED  275/55R20  RADIAL', 12, 96);
+      t.fillStyle = '#3a3a42'; t.fillRect(0, 12, 512, 3); t.fillRect(0, 113, 512, 3);   // サイドウォールのリブ
+      mTire = track(new THREE.MeshStandardMaterial({ map: sRGBTex(tc), roughness: 0.9, metalness: 0 }));
+      if (!hi) mTire = track(new THREE.MeshLambertMaterial({ map: mTire.map }));
+    }
+    if (!mTire) mTire = mat(0x0b0b0b, 0.0, 0.92);
+
+    // ヘッドライト・テールランプ・グリルのテクスチャ（高画質のみ）
+    var fx = hi && hasDoc, mHeadTex = null, mTailTex = null, mGrille = null, mDirt = null;
+    if (fx) {
+      var hc = canvas(256, 52), h = hc.getContext('2d'), hg = h.createLinearGradient(0, 0, 0, 52);
+      hg.addColorStop(0, '#dfe7f1'); hg.addColorStop(1, '#aab4c2'); h.fillStyle = hg; h.fillRect(0, 0, 256, 52);
+      h.strokeStyle = '#2a2f38'; h.lineWidth = 3; h.strokeRect(1.5, 1.5, 253, 49);
+      [64, 192].forEach(function (cx) {
+        var rg = h.createRadialGradient(cx, 26, 2, cx, 26, 21);
+        rg.addColorStop(0, '#ffffff'); rg.addColorStop(0.5, '#e8f0ff'); rg.addColorStop(1, '#5a6472');
+        h.fillStyle = rg; h.beginPath(); h.arc(cx, 26, 21, 0, 6.283); h.fill();
+        h.strokeStyle = '#1b1f26'; h.lineWidth = 3; h.beginPath(); h.arc(cx, 26, 22, 0, 6.283); h.stroke();
+      });
+      mHeadTex = track(new THREE.MeshBasicMaterial({ map: sRGBTex(hc) }));
+
+      var tc2 = canvas(64, 160), tl = tc2.getContext('2d');
+      tl.fillStyle = '#e8e8e8'; tl.fillRect(0, 0, 64, 160);
+      tl.fillStyle = '#9a9a9a'; tl.fillRect(0, 98, 64, 4); tl.fillRect(0, 128, 64, 4);
+      tl.fillStyle = '#c4c4c4';
+      for (var ty = 6; ty < 94; ty += 8) for (var tx = 4 + ((ty / 8) % 2) * 4; tx < 62; tx += 8) { tl.beginPath(); tl.arc(tx, ty, 2.2, 0, 6.283); tl.fill(); }  // 蜂の巣状のレンズ
+      tl.fillStyle = '#f6f6f6'; tl.fillRect(8, 134, 48, 20);   // バックランプ部は明るく
+      tl.strokeStyle = '#555'; tl.lineWidth = 3; tl.strokeRect(1.5, 1.5, 61, 157);
+      mTailTex = track(new THREE.MeshBasicMaterial({ map: sRGBTex(tc2), color: lin(THREE, 0x8a0d0d) }));
+
+      var gc2 = canvas(256, 64), gg = gc2.getContext('2d');
+      gg.fillStyle = '#0a0b0d'; gg.fillRect(0, 0, 256, 64);
+      gg.strokeStyle = 'rgba(160,170,182,0.38)'; gg.lineWidth = 1.2;
+      for (var gi = -64; gi < 256; gi += 7) { gg.beginPath(); gg.moveTo(gi, 0); gg.lineTo(gi + 64, 64); gg.stroke(); gg.beginPath(); gg.moveTo(gi + 64, 0); gg.lineTo(gi, 64); gg.stroke(); }
+      mGrille = track(new THREE.MeshStandardMaterial({ map: sRGBTex(gc2), metalness: 0.4, roughness: 0.5 }));
+
+      var dc = canvas(128, 64), dd = dc.getContext('2d'), dgr = dd.createLinearGradient(0, 64, 0, 0);
+      dgr.addColorStop(0, 'rgba(78,70,60,0.58)'); dgr.addColorStop(0.55, 'rgba(78,70,60,0.26)'); dgr.addColorStop(1, 'rgba(78,70,60,0)');
+      dd.fillStyle = dgr; dd.fillRect(0, 0, 128, 64);
+      var DR = 12345;
+      function rnd() { DR = (DR * 1664525 + 1013904223) >>> 0; return DR / 4294967296; }
+      for (var dn = 0; dn < 420; dn++) {                       // 泥の粒
+        var dx = rnd() * 128, dy = 64 - Math.pow(rnd(), 1.8) * 64, dr = 0.5 + rnd() * 1.6;
+        dd.fillStyle = 'rgba(58,52,46,' + (0.22 + rnd() * 0.32) + ')'; dd.beginPath(); dd.arc(dx, dy, dr, 0, 6.283); dd.fill();
+      }
+      mDirt = track(new THREE.MeshBasicMaterial({ map: sRGBTex(dc), transparent: true, depthWrite: false }));
+    }
+
+    // ============================================================
+    // 6. ホイール: タイヤ（回転体）＋リム（スポーク・ローター・ハブ）＋キャリパー
+    // ============================================================
+    var tireProfile = [
+      [0.255, -0.135], [0.300, -0.145], [0.355, -0.125], [0.378, -0.085], [0.382, -0.03],
+      [0.382, 0.03], [0.378, 0.085], [0.355, 0.125], [0.300, 0.145], [0.255, 0.135]
+    ].map(function (q) { return new THREE.Vector2(q[0], q[1]); });
+    var tireGeo = track(new THREE.LatheGeometry(tireProfile, hi ? 28 : 14));
+    tireGeo.rotateZ(Math.PI / 2);
+
+    function paint(g, hex) {
+      var col = lin(THREE, hex), n = g.attributes.position.count, a = [];
+      for (var i = 0; i < n; i++) a.push(col.r, col.g, col.b);
+      g.setAttribute('color', new THREE.Float32BufferAttribute(a, 3));
+      return g;
+    }
+    // sx=+1 は左輪（外側が+X）、-1 は右輪
+    function rimGeo(sx) {
+      var parts = [];
+      function face(g, x) { g.rotateY(sx * Math.PI / 2); g.translate(sx * x, 0, 0); return g; }
+      function cyl(r, len, seg, x, hex) {
+        var g = new THREE.CylinderGeometry(r, r, len, seg, 1); g.rotateZ(Math.PI / 2); g.translate(sx * x, 0, 0);
+        parts.push(paint(g, hex));
+      }
+      parts.push(paint(face(new THREE.RingGeometry(0.235, 0.272, hi ? 28 : 12), 0.128), 0xc5cbd4)); // リム縁
+      parts.push(paint(face(new THREE.CircleGeometry(0.235, hi ? 28 : 12), 0.03), 0x59606a));       // ブレーキローター
+      if (hi) {
+        parts.push(paint(face(new THREE.CircleGeometry(0.105, 16), 0.058), 0x17191d));              // ハット部
+        for (var k = 0; k < 10; k++) {                                                              // 10本スポーク
+          var sp = new THREE.BoxGeometry(0.022, 0.17, k % 2 ? 0.026 : 0.036);
+          sp.translate(0, 0.155, 0); sp.rotateX(k * Math.PI / 5); sp.translate(sx * 0.098, 0, 0);
+          parts.push(paint(sp, 0x8a909a));
+        }
+        cyl(0.078, 0.04, 14, 0.105, 0xa4abb5);                                                      // センターキャップ
+        for (var m = 0; m < 5; m++) {                                                               // ラグナット
+          var a = m * Math.PI * 2 / 5, nut = new THREE.CylinderGeometry(0.014, 0.014, 0.02, 6, 1);
+          nut.rotateZ(Math.PI / 2); nut.translate(sx * 0.125, Math.cos(a) * 0.048, Math.sin(a) * 0.048);
+          parts.push(paint(nut, 0xd0d5dc));
+        }
+      } else {
+        cyl(0.07, 0.03, 8, 0.10, 0xa4abb5);
+      }
+      return track(mergeGeos(THREE, parts));
+    }
+    var rimL = rimGeo(1), rimR = rimGeo(-1);
+    var mRim = track(hi
+      ? new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.8, roughness: 0.32 })
+      : new THREE.MeshLambertMaterial({ vertexColors: true }));
+    if (hi && opts.env) mRim.envMap = opts.env;
+    var calGeo = track(new THREE.BoxGeometry(0.05, 0.11, 0.09));
+    var mCal = mat(0x4a0f10, 0.2, 0.5);
+    var WX = 0.86;
+    var wheels = [];
+    [[1, 1], [-1, 1], [1, -1], [-1, -1]].forEach(function (d) {
+      var sx = d[0], z = WZ[d[1] > 0 ? 1 : 0];
+      var rootG = new THREE.Group(); rootG.position.set(sx * WX, WY, z);
+      var spin = new THREE.Group(); rootG.add(spin);
+      spin.add(new THREE.Mesh(tireGeo, mTire));
+      spin.add(new THREE.Mesh(sx > 0 ? rimL : rimR, mRim));
+      if (hi) {
+        var cal = new THREE.Mesh(calGeo, mCal);
+        cal.position.set(sx * 0.045, 0.13, 0.03);     // 回転しない（ステアリングには追従）
+        rootG.add(cal);
+      }
+      group.add(rootG);
+      wheels.push({ root: rootG, spin: spin, front: d[1] > 0 });
+    });
+
+    // ============================================================
+    // 7. バケットをメッシュ化
+    // ============================================================
+    var keyMat = {
+      trim: mTrim, chrome: mChrome, glass: mGlass, plastic: mPlastic, plate: mPlate,
+      head: mHead, tail: mTail, mAmber: mAmberLens, text: tMat, plateTex: plateMat,
+      headTex: mHeadTex, tailTex: mTailTex, grilleTex: mGrille, dirt: mDirt
+    };
+    Object.keys(lampMat).forEach(function (k) { keyMat[k] = lampMat[k]; });
+    Object.keys(glassMats).forEach(function (k) { keyMat[k] = glassMats[k]; });
+    Object.keys(buckets).forEach(function (k) {
+      if (!keyMat[k]) { buckets[k].forEach(function (x) { x.dispose(); }); return; }
+      var g = track(mergeGeos(THREE, buckets[k]));
+      buckets[k].forEach(function (x) { x.dispose(); });
+      var m = new THREE.Mesh(g, keyMat[k]);
+      if (k === 'text' || k === 'dirt') m.renderOrder = 2;
+      shell.add(m);
+    });
+
+    // ---------- 発光ハロ・路面の光・接地影・ヘッドライトの路面光 ----------
+    var halos = [];
+    if (hi && hasDoc) {
+      var gc = canvas(64, 64), gx = gc.getContext('2d');
+      var gr = gx.createRadialGradient(32, 32, 0, 32, 32, 32);
+      gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.25, 'rgba(255,255,255,0.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+      gx.fillStyle = gr; gx.fillRect(0, 0, 64, 64);
+      var gtex = track(new THREE.CanvasTexture(gc));
+      var halo = function (col, phase, x, y, z, size) {
+        var sm = track(new THREE.SpriteMaterial({
+          map: gtex, color: litCol[col], blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0
+        }));
+        var sp = new THREE.Sprite(sm); sp.position.set(x, y, z); sp.scale.set(size, size, 1);
+        shell.add(sp); halos.push({ sm: sm, col: col, phase: phase });
+      };
+      halo('r', 0, -0.45, 1.92, -0.35, 1.5); halo('r', 1, -0.15, 1.92, -0.35, 1.5);
+      halo('b', 0, 0.15, 1.92, -0.35, 1.5);  halo('b', 1, 0.45, 1.92, -0.35, 1.5);
+      halo('r', 1, -0.28, 0.66, 2.64, 1.1);  halo('b', 0, 0.28, 0.66, 2.64, 1.1);
+      halo('r', 1, -0.40, 1.62, -2.40, 1.0); halo('b', 0, 0.40, 1.62, -2.40, 1.0);
+
+      var sc = canvas(128, 128), sx2 = sc.getContext('2d');
+      var sgr = sx2.createRadialGradient(64, 64, 0, 64, 64, 64);
+      sgr.addColorStop(0, 'rgba(0,0,0,0.85)'); sgr.addColorStop(0.55, 'rgba(0,0,0,0.65)'); sgr.addColorStop(1, 'rgba(0,0,0,0)');
+      sx2.fillStyle = sgr; sx2.fillRect(0, 0, 128, 128);
+      var sh = new THREE.Mesh(track(new THREE.PlaneGeometry(3.4, 6.6)),
+        track(new THREE.MeshBasicMaterial({ map: track(new THREE.CanvasTexture(sc)), transparent: true, depthWrite: false })));
+      sh.rotation.x = -Math.PI / 2; sh.position.y = 0.012; sh.renderOrder = 1;
+      group.add(sh);
+
+      var floorGlow = function (col, phase, x, z, size) {
+        var fm = track(new THREE.MeshBasicMaterial({
+          map: gtex, color: litCol[col], blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0
+        }));
+        var fp = new THREE.Mesh(track(new THREE.PlaneGeometry(size, size)), fm);
+        fp.rotation.x = -Math.PI / 2; fp.position.set(x, 0.02, z); fp.renderOrder = 1;
+        group.add(fp); halos.push({ sm: fm, col: col, phase: phase, max: 0.55 });
+      };
+      floorGlow('r', 0, -1.4, 0, 8); floorGlow('b', 1, 1.4, 0, 8);
+
+      var bc = canvas(64, 128), bx = bc.getContext('2d');
+      var bgd = bx.createLinearGradient(0, 0, 0, 128);
+      bgd.addColorStop(0, 'rgba(255,240,210,0)'); bgd.addColorStop(1, 'rgba(255,240,210,0.5)');
+      bx.fillStyle = bgd; bx.fillRect(0, 0, 64, 128);
+      bx.globalCompositeOperation = 'destination-in';
+      var bh = bx.createLinearGradient(0, 0, 64, 0);
+      bh.addColorStop(0, 'rgba(0,0,0,0)'); bh.addColorStop(0.5, 'rgba(0,0,0,1)'); bh.addColorStop(1, 'rgba(0,0,0,0)');
+      bx.fillStyle = bh; bx.fillRect(0, 0, 64, 128);
+      var beam = new THREE.Mesh(track(new THREE.PlaneGeometry(4.4, 9.5)), track(new THREE.MeshBasicMaterial({
+        map: track(new THREE.CanvasTexture(bc)), blending: THREE.AdditiveBlending, transparent: true,
+        depthWrite: false, side: THREE.DoubleSide, opacity: 0.6
+      })));
+      beam.rotation.x = Math.PI / 2; beam.position.set(0, 0.022, 7.35); beam.renderOrder = 1;
+      group.add(beam);
+    }
+
+    // ---------- オプション: 実光源（既定OFF） ----------
+    var pl = null, pb = null;
+    if (opts.light) {
+      pl = new THREE.PointLight(RED, 0, 14); pl.position.set(-0.4, 1.95, -0.3);
+      pb = new THREE.PointLight(BLUE, 0, 14); pb.position.set(0.4, 1.95, -0.3);
+      shell.add(pl, pb);
+    }
+
+    // ---------- サイレン制御 ----------
+    var siren = !!opts.siren;
+    function setLit(side, on) {
+      ['r0', 'r1', 'b0', 'b1'].forEach(function (k) {
+        var lit = on && Number(k[1]) === side;
+        lampMat['L' + k].color.copy(lit ? litCol[k[0]] : offCol);
+      });
+      halos.forEach(function (h) { h.sm.opacity = (on && h.phase === side) ? (h.max || 0.9) : 0; });
+      if (pl) { pl.intensity = on && side === 0 ? 1.6 : 0; pb.intensity = on && side === 1 ? 1.6 : 0; }
+    }
+    function setSiren(v) { siren = !!v; if (!siren) setLit(0, false); }
+    function updateSiren(t) {
+      if (!siren) return;
+      var cyc = (t * 2.0) % 2;
+      var side = cyc < 1 ? 0 : 1;
+      var local = cyc - Math.floor(cyc);
+      var on = (local < 0.18) || (local > 0.30 && local < 0.48);
+      setLit(side, on);
+    }
+    setSiren(siren);
+
+    // ---------- 走行表現（見た目のみ。物理は持たない） ----------
+    var drive = { speed: 0, steer: 0, brake: false };
+    var lastSpeed = 0, accS = 0, steerAng = 0, spinAng = 0;
+    var tailCol = lin(THREE, 0x7a0b0b), brakeCol = lin(THREE, 0xff2a1a), tailTexCol = lin(THREE, 0x8a0d0d);
+    function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
+    function setDrive(speed, steer, brake) { drive.speed = speed || 0; drive.steer = steer || 0; drive.brake = !!brake; }
+    function update(t, dt) {
+      updateSiren(t);
+      dt = dt || 0;
+      spinAng += drive.speed * dt / 0.38;
+      steerAng += (drive.steer * 0.5 - steerAng) * Math.min(1, dt * 10);
+      var acc = dt > 0 ? (drive.speed - lastSpeed) / dt : 0; lastSpeed = drive.speed;
+      accS += (acc - accS) * Math.min(1, dt * 6);
+      var sp = clamp(drive.speed / 12, 0, 1);
+      var pitch = clamp(-accS * 0.004 + (drive.brake ? 0.02 : 0), -0.035, 0.04); // +で前のめり
+      shell.rotation.x += (pitch - shell.rotation.x) * Math.min(1, dt * 8);
+      var roll = clamp(-drive.steer * drive.speed * 0.0012, -0.04, 0.04);        // 外側へ傾く
+      shell.rotation.z += (roll - shell.rotation.z) * Math.min(1, dt * 8);
+      shell.position.y = (Math.sin(t * 37) * 0.0025 + Math.sin(t * 11) * 0.003) * sp;
+      for (var i = 0; i < wheels.length; i++) {
+        wheels[i].spin.rotation.x = spinAng;
+        if (wheels[i].front) wheels[i].root.rotation.y = -steerAng;
+      }
+      mTail.color.copy(drive.brake ? brakeCol : tailCol);
+      if (mTailTex) mTailTex.color.copy(drive.brake ? brakeCol : tailTexCol);
+    }
+
+    function dispose() { disposables.forEach(function (o) { if (o && o.dispose) o.dispose(); }); }
+
+    return {
+      group: group,
+      wheels: wheels,
+      update: update,
+      setDrive: setDrive,
+      setSiren: setSiren,
+      dispose: dispose,
+      size: { length: 5.1, width: 2.2, height: 2.0 }
+    };
+  }
+
+  var api = { build: build, makeEnv: makeEnv };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root.FbiCar = api;
+})(typeof window !== 'undefined' ? window : this);
+</script>
+<script>
+(function(){
+function $(id){return document.getElementById(id);}
+var cv=$('cv');
+var r=new THREE.WebGLRenderer({canvas:cv,antialias:true,powerPreference:'high-performance'});
+r.outputEncoding=THREE.sRGBEncoding;r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=1.0;
+function L(h){return new THREE.Color(h).convertSRGBToLinear();}
+var BG=L(0x0b0e13);
+var sc=new THREE.Scene();sc.background=BG;
+sc.environment=FbiCar.makeEnv(THREE,r);
+var cam=new THREE.PerspectiveCamera(40,1,0.1,200);
+sc.add(new THREE.HemisphereLight(0x8aa0c0,0x1a1d24,0.2));
+var k=new THREE.DirectionalLight(0xffffff,1.5);k.position.set(5,8,6);sc.add(k);
+var rim=new THREE.DirectionalLight(0x6f8fff,1.1);rim.position.set(-6,4,-7);sc.add(rim);
+var ground=new THREE.Mesh(new THREE.CircleGeometry(16,48),new THREE.MeshStandardMaterial({color:L(0x1b212b),roughness:0.95,metalness:0,envMapIntensity:0.25}));
+ground.rotation.x=-Math.PI/2;sc.add(ground);
+var grid=new THREE.GridHelper(32,32,0x2e3947,0x232c37);grid.position.y=0.005;sc.add(grid);
+
+var q='high',city=false,sirenOn=true,car,street=null;
+function mk(){
+  if(car){sc.remove(car.group);car.dispose();}
+  car=FbiCar.build(THREE,{text:'FBI',siren:sirenOn,quality:q});window.__car=car;sc.add(car.group);
+  setEnv();
+}
+function setEnv(){
+  sc.fog=new THREE.Fog(BG,9,19);
+}
+mk();
+
+var th=-0.75,ph=1.18,rad=8.5,auto=true,drag=false,px=0,py=0,ptrs={},pd=0;
+var mode='auto',scale=0.8;
+function applyScale(){r.setPixelRatio(Math.min(devicePixelRatio,2)*scale);r.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();}
+addEventListener('resize',applyScale);applyScale();
+
+cv.addEventListener('pointerdown',function(e){ptrs[e.pointerId]=e;cv.setPointerCapture(e.pointerId);px=e.clientX;py=e.clientY;drag=true;});cv.addEventListener('pointermove',function(e){
+  if(!ptrs[e.pointerId])return;ptrs[e.pointerId]=e;
+  var ids=Object.keys(ptrs);
+  if(ids.length===2){var a=ptrs[ids[0]],b=ptrs[ids[1]],d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);if(pd)rad=Math.min(16,Math.max(4,rad*pd/d));pd=d;return;}
+  th-=(e.clientX-px)*0.008;ph=Math.min(1.5,Math.max(0.2,ph-(e.clientY-py)*0.006));px=e.clientX;py=e.clientY;});
+function up(e){delete ptrs[e.pointerId];pd=0;drag=false;}
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+cv.addEventListener('wheel',function(e){e.preventDefault();rad=Math.min(16,Math.max(4,rad*(1+e.deltaY*0.001)));},{passive:false});
+
+function press(ids,on){ids.forEach(function(i){$(i).setAttribute('aria-pressed',i===on);});}
+$('qLow').onclick=function(){q='low';press(['qLow','qHigh'],'qLow');mk();};
+$('qHigh').onclick=function(){q='high';press(['qLow','qHigh'],'qHigh');mk();};
+var SC=['sAuto','s70','s85','s100'];
+$('sAuto').onclick=function(){mode='auto';press(SC,'sAuto');};
+$('s70').onclick=function(){mode='fix';scale=0.7;press(SC,'s70');applyScale();};
+$('s85').onclick=function(){mode='fix';scale=0.85;press(SC,'s85');applyScale();};
+$('s100').onclick=function(){mode='fix';scale=1.0;press(SC,'s100');applyScale();};
+$('bSiren').onclick=function(){sirenOn=!sirenOn;$('bSiren').setAttribute('aria-pressed',sirenOn);car.setSiren(sirenOn);};
+$('bRot').onclick=function(){auto=!auto;$('bRot').setAttribute('aria-pressed',auto);};
+function view(t,p){return function(){th=t;ph=p;auto=false;$('bRot').setAttribute('aria-pressed','false');};}
+$('bFront').onclick=view(0,1.35);$('bBack').onclick=view(Math.PI,1.35);$('bSide').onclick=view(Math.PI/2,1.45);$('bTop').onclick=view(0,0.25);
+if(matchMedia('(prefers-reduced-motion: reduce)').matches){auto=false;$('bRot').setAttribute('aria-pressed','false');}
+
+// 走行: 速度スライダは目標速度。ブレーキ中は減速し、離すと加速して戻る
+var target=40/3.6,v=target,steer=0,brake=false,dist=0;
+$('rSpd').oninput=function(){target=this.value/3.6;$('lSpd').textContent='速度 '+this.value+'km/h';};
+$('rStr').oninput=function(){steer=this.value/100;};
+var bb=$('bBrake');
+function br(on){brake=on;bb.setAttribute('aria-pressed',on);}
+bb.addEventListener('pointerdown',function(e){e.preventDefault();br(true);});
+['pointerup','pointerleave','pointercancel'].forEach(function(n){bb.addEventListener(n,function(){br(false);});});
+bb.addEventListener('keydown',function(e){if(e.key===' '||e.key==='Enter'){br(true);}});
+bb.addEventListener('keyup',function(){br(false);});
+
+var t0=performance.now(),tl=t0,fa=0,fn=0,fps=0;
+function loop(){
+  var now=performance.now(),t=(now-t0)/1000,dt=Math.min(0.05,(now-tl)/1000);
+  fa+=now-tl;fn++;tl=now;
+  if(fa>=1000){
+    fps=fn*1000/fa;fa=0;fn=0;
+    if(mode==='auto'){
+      if(fps<28&&scale>0.6){scale=Math.max(0.6,scale-0.05);applyScale();}
+      else if(fps>=57&&scale<1.0){scale=Math.min(1.0,scale+0.05);applyScale();}
+    }
+    var i=r.info.render;
+    $('stat').textContent='FPS '+fps.toFixed(0)+' / 描画 '+i.calls+' / 三角形 '+i.triangles+' / 解像度 '+Math.round(scale*100)+'% / WebGL'+(r.capabilities.isWebGL2?'2':'1');
+  }
+  var want=brake?0:target;
+  v+=Math.max(-9*dt,Math.min(4*dt,want-v));
+  dist+=v*dt;
+  if(auto&&!drag)th+=0.004;
+  cam.position.set(Math.sin(th)*Math.sin(ph)*rad,Math.cos(ph)*rad,Math.cos(th)*Math.sin(ph)*rad);
+  cam.lookAt(0,0.9,0);
+  car.setDrive(v,steer,brake);
+  car.update(window.__T==null?t:window.__T,dt);
+  r.render(sc,cam);requestAnimationFrame(loop);
+}
+window.__view=function(a,b,c){th=a;ph=b;if(c)rad=c;auto=false;};
+loop();
+})();
+</script>
