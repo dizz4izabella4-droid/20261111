@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<title>死亡推定時刻</title>
+<style>
+:root{--bg:#0b0e13;--ink:#e9e4d8;--dim:#9aa0a8;--line:#3a3f48;--tag:#d2a63a;--panel:#14181f;--bar:#1b2028;--paper:#e8e2d2;--paperink:#23201a;--paperline:#a89f88;--red:#8a2b2b;font-size:15px}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Sans","Yu Gothic","Noto Sans JP",system-ui,sans-serif;-webkit-text-size-adjust:100%}
+body{overflow:hidden}
+button,select{font:inherit;font-size:13px;color:var(--ink);background:var(--bar);border:1px solid var(--line);padding:6px 11px;border-radius:2px;cursor:pointer}
+button:hover,button:focus-visible,select:focus-visible{border-color:var(--tag);outline:none}
+button[aria-pressed="true"],button.on{background:#2a2f38;border-color:var(--tag);color:#fff}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,"Noto Sans Mono CJK JP",monospace}
+
+/* 机（ウィンドウの背景） */
+#desk{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:20px;background:radial-gradient(ellipse at center,#141922 0%,#0b0e13 70%)}
+#desk h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.18em}
+#desk p{margin:0;font-size:12px;color:var(--dim);line-height:1.7}
+
+/* ウィンドウ */
+#win{position:fixed;z-index:10;left:50%;top:50%;width:min(980px,96vw);height:min(88vh,780px);transform:translate(calc(-50% + var(--dx,0px)),calc(-50% + var(--dy,0px)));display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);box-shadow:0 18px 60px rgba(0,0,0,.65)}
+.titlebar{display:flex;align-items:center;gap:10px;padding:7px 8px 7px 14px;background:var(--bar);border-bottom:1px solid var(--line);cursor:grab;user-select:none;-webkit-user-select:none;touch-action:none}
+.titlebar:active{cursor:grabbing}
+.titlebar .ttl{flex:1;font-size:13px;letter-spacing:.12em;color:var(--dim)}
+.titlebar .ttl b{color:var(--ink);font-weight:600}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);background:#10141a}
+.toolbar .grp{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.toolbar label{font-size:11px;color:var(--dim);margin-right:2px}
+.content{flex:1;overflow:auto;padding:14px;-webkit-overflow-scrolling:touch}
+.foot{padding:6px 12px;border-top:1px solid var(--line);font-size:11px;color:var(--dim);background:#10141a}
+
+/* 所見書 */
+.case-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px;align-items:start}
+.sheet{background:var(--paper);color:var(--paperink);padding:16px 18px;border:1px solid #b9b19b;font-family:ui-monospace,"SF Mono",Menlo,Consolas,"Noto Sans Mono CJK JP",monospace}
+.sheet h2{margin:0 0 2px;font-size:16px;letter-spacing:.14em}
+.sheet .sub{margin:0 0 10px;font-size:11px;color:#5d5647;letter-spacing:.06em}
+.sheet dl{margin:0}
+.row{display:grid;grid-template-columns:7.2em minmax(0,1fr);gap:2px 8px;padding:5px 0;border-bottom:1px dotted var(--paperline);font-size:13.5px;line-height:1.6}
+.row dt{color:#5d5647}
+.row dd{margin:0;word-break:break-word}
+.result{margin-top:12px;padding:10px 12px;border:2px solid var(--paperink);font-size:14px;line-height:1.7}
+.result .big{display:block;font-size:16px;font-weight:700}
+.flag{margin:8px 0 0;padding:6px 9px;border-left:4px solid var(--red);background:rgba(138,43,43,.12);font-size:12.5px;line-height:1.6}
+
+/* 資料画像（ぼかし） */
+.photo{position:relative;aspect-ratio:4/3;overflow:hidden;border:1px solid var(--line);background:#1d2024}
+.photo svg{position:absolute;inset:0;width:100%;height:100%}
+.photo .fig{filter:blur(9px)}
+.photo .tag{position:absolute;left:8px;top:7px;padding:2px 6px;font-size:11px;letter-spacing:.08em;background:rgba(232,226,210,.92);color:#23201a}
+.photo .cap{position:absolute;left:0;right:0;bottom:0;padding:5px 8px;font-size:11px;color:#c9c3b2;background:linear-gradient(transparent,rgba(0,0,0,.7))}
+
+/* 先生 */
+.teacher{margin-top:14px;background:#10141a;border:1px solid var(--line);padding:14px 16px}
+.teacher .who{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;color:var(--dim)}
+.teacher .who .badge{padding:2px 8px;border:1px solid var(--tag);color:var(--tag);letter-spacing:.1em}
+.teacher h4{margin:16px 0 4px;font-size:14px;color:var(--tag);letter-spacing:.04em}
+.teacher p{margin:6px 0;line-height:1.9;font-size:14px}
+.teacher b{color:#fff}
+.teacher .calc p{margin:4px 0;line-height:1.7;font-size:13px;color:#d6d0c0}
+.teacher .calc .k{display:inline-block;min-width:9.5em;color:var(--dim)}
+.teacher .note{border-left:3px solid var(--red);padding:2px 0 2px 10px;color:#e0c9c9}
+.teacher details{margin-top:8px;border-top:1px solid var(--line);padding:8px 0}
+.teacher summary{cursor:pointer;font-size:13.5px;color:var(--ink)}
+.teacher summary:hover{color:var(--tag)}
+.qa-h{margin:18px 0 0;font-size:12px;color:var(--dim);letter-spacing:.1em}
+
+/* 一覧 */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th,.tbl td{text-align:left;padding:8px 8px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.6}
+.tbl th{font-size:11px;color:var(--dim);font-weight:400;letter-spacing:.08em}
+.tbl tr.clk{cursor:pointer}
+.tbl tr.clk:hover td{background:#171c24}
+.hint{margin:0 0 10px;font-size:12px;color:var(--dim);line-height:1.7}
+.err{padding:14px;border:1px solid var(--red);color:#e0c9c9;font-size:14px;line-height:1.7}
+
+@media (max-width:720px){
+  #win{left:0;top:0;width:100%;height:100vh;height:100dvh;transform:none;border:0;box-shadow:none;padding-top:env(safe-area-inset-top,0px)}
+  .titlebar{cursor:default;padding-right:58px} /* 共通基盤の全画面ボタン（右上）を避ける */
+  .case-grid{grid-template-columns:1fr}
+  .content{padding:10px}
+  .tbl .hide-s{display:none}
+}
+</style>
+<!--IZ-GAME-BASE:START-->
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black">
+<script>
+/* iz-game-base v1 — 全ゲーム共通の基本設計
+ *  1. iOS の「ダブルタップで拡大」「ピンチ拡大」を無効にする
+ *  2. 全画面表示の切り替え（Fullscreen API。iPhone は非対応のため「ホーム画面に追加」を案内）
+ *  3. 画面の向き（自動 / 縦 / 横）の選択（Androidは全画面時に固定、非対応端末は回転の案内を出す）
+ * 各作品の <head> へ tools/apply_game_base.py が埋め込む（作品は1ファイル完結のため、外部読み込みはしない）。
+ * 位置を変えたいときは、この前に window.IZ_BASE={pos:'tr'|'tl'|'br'|'bl'} を書く。
+ */
+(function () {
+  'use strict';
+  if (window.__izGameBase) return;
+  window.__izGameBase = 1;
+  var D = document, W = window, DE = D.documentElement;
+  var KEY = 'izGameBase.orient';
+  var cfg = W.IZ_BASE || {};
+  /* 表示文言。作品側で window.IZ_BASE={lang:'en'} を書くと英語になる（既定は日本語） */
+  var T = cfg.lang === 'en'
+    ? { set: 'Display settings', scr: 'SCREEN', fs: 'Go full screen', fsOff: 'Exit full screen', ori: 'ORIENTATION', auto: 'Auto', port: 'Portrait', land: 'Landscape', close: 'Close', nAuto: 'Follows your device orientation.', nFix: 'Locks the orientation in full screen. If it cannot be locked, please rotate your device.', rot: function (m) { return '\u21bb Please turn your device to ' + (m === 'land' ? 'landscape' : 'portrait'); } }
+    : { set: '表示設定', scr: '画面', fs: '全画面にする', fsOff: '全画面をやめる', ori: '向き', auto: '自動', port: '縦', land: '横', close: '閉じる', nAuto: '端末の向きに合わせます。', nFix: '全画面のときに向きを固定します。固定できない場合は、端末を回してください。', rot: function (m) { return '\u21bb 端末を' + (m === 'land' ? '横' : '縦') + '向きにしてください'; } };
+
+  /* ---------- 1. 拡大の無効化 ---------- */
+  function fixViewport() {
+    var m = D.querySelector('meta[name="viewport"]');
+    if (!m) {
+      m = D.createElement('meta');
+      m.name = 'viewport';
+      (D.head || DE).appendChild(m);
+      m.content = 'width=device-width,initial-scale=1,viewport-fit=cover';
+    }
+    var c = m.getAttribute('content') || '';
+    c = c.replace(/(^|,)\s*(maximum-scale|minimum-scale|user-scalable)\s*=\s*[^,]*/gi, '').replace(/^,/, '');
+    m.setAttribute('content', c + ',maximum-scale=1,user-scalable=no');
+  }
+  fixViewport();
+
+  var st = D.createElement('style');
+  st.textContent = 'html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}';
+  (D.head || DE).appendChild(st);
+
+  // iOS Safari はピンチを gesture イベントで受ける
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (t) {
+    D.addEventListener(t, function (e) { e.preventDefault(); }, { passive: false });
+  });
+  // 2本指の拡大（scale が 1 から動いたとき）だけを止める。マルチタッチ操作そのものは妨げない
+  D.addEventListener('touchmove', function (e) {
+    if (e.touches && e.touches.length > 1 && e.scale && e.scale !== 1) e.preventDefault();
+  }, { passive: false });
+  // ダブルタップ拡大の保険。ボタン・入力欄などは click を壊さないよう除外し、CSS の touch-action に任せる
+  var lastEnd = 0;
+  var SKIP = 'input,textarea,select,button,a,label,summary,video,audio,[contenteditable],[role="button"],[data-iz-base-ui]';
+  D.addEventListener('touchend', function (e) {
+    var now = Date.now();
+    var t = e.target;
+    var skip = t && t.closest && t.closest(SKIP);
+    if (!skip && now - lastEnd < 350 && e.cancelable) e.preventDefault();
+    lastEnd = now;
+  }, { passive: false });
+
+  /* ---------- 2・3. 全画面と向き ---------- */
+  var fsEl = DE;
+  var fsReq = fsEl.requestFullscreen || fsEl.webkitRequestFullscreen || fsEl.msRequestFullscreen;
+  var fsOk = !!fsReq && (D.fullscreenEnabled !== false) && (D.webkitFullscreenEnabled !== false);
+  function isFs() { return !!(D.fullscreenElement || D.webkitFullscreenElement); }
+  function standalone() {
+    return !!(navigator.standalone || (W.matchMedia && W.matchMedia('(display-mode: standalone)').matches));
+  }
+  function enterFs() {
+    try {
+      var p = fsReq.call(fsEl, { navigationUI: 'hide' });
+      if (p && p.catch) p.catch(function () {});
+      return p;
+    } catch (e) { return null; }
+  }
+  function exitFs() {
+    var f = D.exitFullscreen || D.webkitExitFullscreen || D.msExitFullscreen;
+    try { var p = f && f.call(D); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+  }
+  function lockApi() { return W.screen && screen.orientation && screen.orientation.lock; }
+  // 変更できない機能は表示しない（iPhone は両方とも不可なので、ボタン自体を出さない）
+  var orOk = !!lockApi() && (navigator.maxTouchPoints > 0);
+  var uiOk = fsOk || orOk;
+  function applyOrient(mode, wantFs) {
+    // 戻り値は使わず、結果は banner() が画面の向きで判定する
+    if (mode === 'auto') {
+      try { if (W.screen && screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (e) {}
+      return;
+    }
+    var tgt = mode === 'land' ? 'landscape' : 'portrait';
+    function lock() {
+      if (!lockApi()) return;
+      try { var p = screen.orientation.lock(tgt); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+    }
+    if (isFs() || standalone()) lock();
+    else if (wantFs && fsOk) {
+      var p = enterFs();
+      if (p && p.then) p.then(lock, function () {}); else lock();
+    }
+  }
+  var mode = 'auto';
+  try { mode = localStorage.getItem(KEY) || 'auto'; } catch (e) {}
+  if ((mode !== 'land' && mode !== 'port') || !orOk) mode = 'auto';
+
+  /* ---------- UI ---------- */
+  var ui, btn, panel, banner, bT;
+  var pos = cfg.pos || 'tr';
+  function build() {
+    if (ui || !D.body || !uiOk) return;
+    var css = D.createElement('style');
+    css.textContent =
+      '#izb{position:fixed;z-index:2147483646;font:12px/1.4 "Hiragino Sans","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;color:#fff;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}' +
+      '#izb *{box-sizing:border-box}' +
+      '#izb.tr{top:calc(6px + env(safe-area-inset-top,0px));right:calc(6px + env(safe-area-inset-right,0px))}' +
+      '#izb.tl{top:calc(6px + env(safe-area-inset-top,0px));left:calc(6px + env(safe-area-inset-left,0px))}' +
+      '#izb.br{bottom:calc(6px + env(safe-area-inset-bottom,0px));right:calc(6px + env(safe-area-inset-right,0px))}' +
+      '#izb.bl{bottom:calc(6px + env(safe-area-inset-bottom,0px));left:calc(6px + env(safe-area-inset-left,0px))}' +
+      '#izb button{font:inherit;color:inherit;border:0;margin:0;cursor:pointer;-webkit-appearance:none;appearance:none}' +
+      '#izb .iz-b{width:30px;height:30px;border-radius:8px;background:rgba(20,20,24,.45);border:1px solid rgba(255,255,255,.25);font-size:16px;line-height:28px;text-align:center;padding:0;opacity:.45;transition:opacity .2s}' +
+      '#izb .iz-b:active,#izb.open .iz-b{opacity:1}' +
+      '#izb .iz-p{display:none;position:absolute;width:210px;padding:10px;border-radius:10px;background:rgba(18,18,22,.94);border:1px solid rgba(255,255,255,.22);box-shadow:0 4px 18px rgba(0,0,0,.5)}' +
+      '#izb.open .iz-p{display:block}' +
+      '#izb.tr .iz-p,#izb.tl .iz-p{top:36px}#izb.br .iz-p,#izb.bl .iz-p{bottom:36px}' +
+      '#izb.tr .iz-p,#izb.br .iz-p{right:0}#izb.tl .iz-p,#izb.bl .iz-p{left:0}' +
+      '#izb .iz-h{font-size:11px;color:#aab;margin:0 0 5px}' +
+      '#izb .iz-r{display:flex;gap:4px;margin-bottom:9px}' +
+      '#izb .iz-r button{flex:1;padding:8px 0;border-radius:7px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);font-size:13px}' +
+      '#izb .iz-r button.on{background:#e8c13a;color:#111;border-color:#e8c13a;font-weight:700}' +
+      '#izb .iz-r button[disabled]{opacity:.4}' +
+      '#izb .iz-n{font-size:10.5px;color:#9a9aa8;margin:-3px 0 6px}' +
+      '#izb .iz-x{display:block;width:100%;padding:6px 0;border-radius:7px;background:transparent;border:1px solid rgba(255,255,255,.18);font-size:12px;color:#ccd}' +
+      '#izbn{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:2147483645;padding:7px 14px;border-radius:18px;background:rgba(18,18,22,.88);border:1px solid rgba(255,255,255,.25);color:#fff;font:13px/1.3 "Hiragino Sans","Yu Gothic","Meiryo","Noto Sans JP",sans-serif;pointer-events:none;display:none;white-space:nowrap}';
+    (D.head || DE).appendChild(css);
+
+    ui = D.createElement('div');
+    ui.id = 'izb';
+    ui.className = pos;
+    ui.setAttribute('data-iz-base-ui', '');
+    ui.innerHTML =
+      '<button type="button" class="iz-b" tabindex="-1" aria-label="' + T.set + '">⛶</button>' +
+      '<div class="iz-p">' +
+      (fsOk ? '<div class="iz-h">' + T.scr + '</div><div class="iz-r"><button type="button" tabindex="-1" data-fs="1">' + T.fs + '</button></div>' : '') +
+      (orOk ? '<div class="iz-h">' + T.ori + '</div><div class="iz-r" id="izor"><button type="button" tabindex="-1" data-o="auto">' + T.auto + '</button><button type="button" tabindex="-1" data-o="port">' + T.port + '</button><button type="button" tabindex="-1" data-o="land">' + T.land + '</button></div><div class="iz-n" id="izon"></div>' : '') +
+      '<button type="button" class="iz-x" tabindex="-1" data-close="1">' + T.close + '</button>' +
+      '</div>';
+    D.body.appendChild(ui);
+    btn = ui.querySelector('.iz-b');
+    panel = ui.querySelector('.iz-p');
+
+    banner = D.createElement('div');
+    banner.id = 'izbn';
+    D.body.appendChild(banner);
+
+    // UI 上の操作はゲーム側へ伝えない
+    ['touchstart', 'touchend', 'pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'dblclick', 'keydown', 'keyup'].forEach(function (t) {
+      ui.addEventListener(t, function (e) { e.stopPropagation(); });
+    });
+    ui.addEventListener('click', function (e) {
+      var t = e.target.closest('button');
+      if (!t) return;
+      if (t === btn) { ui.classList.toggle('open'); refresh(); }
+      else if (t.getAttribute('data-close')) ui.classList.remove('open');
+      else if (t.getAttribute('data-fs')) { isFs() ? exitFs() : enterFs(); setTimeout(refresh, 250); }
+      else if (t.getAttribute('data-o')) setMode(t.getAttribute('data-o'), true);
+      if (t.blur) t.blur();
+    });
+    refresh();
+  }
+  function setMode(m, fromUser) {
+    mode = m;
+    try { localStorage.setItem(KEY, m); } catch (e) {}
+    applyOrient(m, fromUser);
+    refresh();
+    setTimeout(banner_, 400);
+  }
+  function refresh() {
+    if (!ui) return;
+    var fb = ui.querySelector('[data-fs]');
+    if (fb) fb.textContent = isFs() ? T.fsOff : T.fs;
+    var bs = ui.querySelectorAll('[data-o]');
+    for (var i = 0; i < bs.length; i++) bs[i].classList.toggle('on', bs[i].getAttribute('data-o') === mode);
+    var on = ui.querySelector('#izon');
+    if (on) on.textContent = mode === 'auto' ? T.nAuto : T.nFix;
+  }
+  function banner_() {
+    if (!banner) return;
+    var land = W.innerWidth > W.innerHeight;
+    var bad = (mode === 'land' && !land) || (mode === 'port' && land);
+    if (bad) {
+      banner.textContent = T.rot(mode);
+      banner.style.display = 'block';
+      clearTimeout(bT);
+      bT = setTimeout(function () { banner.style.display = 'none'; }, 6000);
+    } else banner.style.display = 'none';
+  }
+  function onChange() { refresh(); setTimeout(banner_, 300); }
+  D.addEventListener('fullscreenchange', onChange);
+  D.addEventListener('webkitfullscreenchange', onChange);
+  W.addEventListener('orientationchange', onChange);
+  W.addEventListener('resize', function () { setTimeout(banner_, 300); });
+
+  function init() {
+    build();
+    if (mode !== 'auto') { applyOrient(mode, false); setTimeout(banner_, 600); }
+  }
+  if (D.body) init(); else D.addEventListener('DOMContentLoaded', init);
+
+  W.IZBase = { fullscreen: function (on) { on === false ? exitFs() : enterFs(); }, orientation: setMode, get mode() { return mode; } };
+})();
+</script>
+<!--IZ-GAME-BASE:END-->
+</head>
+<body>
+
+<div id="desk">
+  <h1>死亡推定時刻</h1>
+  <p>検死所見ビューア（試作）<br>体温・死斑・死後硬直から、死亡時刻の幅を読む資料です。</p>
+  <button id="launcher" hidden>検死所見を開く</button>
+</div>
+
+<section id="win" role="dialog" aria-label="死亡推定時刻" hidden>
+  <div class="titlebar" id="titlebar">
+    <div class="ttl"><b>死亡推定時刻</b> ／ 検死所見ビューア</div>
+    <button id="btnClose" aria-label="閉じる">×</button>
+  </div>
+  <div class="toolbar">
+    <div class="grp" id="tabs" role="tablist" aria-label="事件"></div>
+    <div class="grp"><label>解説</label>
+      <button id="mNovice" data-mode="novice">初心者</button>
+      <button id="mExpert" data-mode="expert">専門家</button>
+    </div>
+    <div class="grp"><label for="selUnit">温度</label>
+      <select id="selUnit"><option value="F">°F</option><option value="FC">°F＋℃</option></select>
+    </div>
+    <div class="grp"><label for="selTz">時刻表示</label>
+      <select id="selTz">
+        <option value="local">現地時間</option>
+        <option value="UTC">UTC</option>
+        <option value="EST">東部（EST）</option>
+        <option value="CST">中部（CST）</option>
+        <option value="MST">山岳（MST）</option>
+        <option value="PST">太平洋（PST）</option>
+      </select>
+    </div>
+  </div>
+  <div class="content" id="content"></div>
+  <div class="foot">※ゲーム用の簡易モデルです。実際の法医学的な鑑定の根拠にはなりません。数値は目安です。</div>
+</section>
+
+<script>
+(function(){
+'use strict';
+
+/* ===== 定数と簡易モデル ===== */
+var BODY_F = 98.6;      // 平熱（°F）
+var BASE_RATE = 1.5;    // 基準の冷却速度（°F/時）
+var BASE_ROOM = 68;     // 基準の室温（°F）
+var INF = Infinity;
+
+// 表示用タイムゾーン（11月＝夏時間が終わった標準時）
+var TZS = {
+  UTC:{off:0,abbr:'UTC'}, EST:{off:-5,abbr:'EST'}, CST:{off:-6,abbr:'CST'},
+  MST:{off:-7,abbr:'MST'}, PST:{off:-8,abbr:'PST'}
+};
+
+// 所見ごとの「死後何時間くらいか」の目安（簡易）
+var LIVOR  = {
+  none:{r:[0,2],t:'まだ出ていない'},
+  early:{r:[2,6],t:'出始め（押すと消える）'},
+  spreading:{r:[4,12],t:'広がっている（押すと薄くなる）'},
+  partial:{r:[8,14],t:'ほぼ固定（押すとわずかに薄くなる）'},
+  fixed:{r:[12,INF],t:'固定（押しても消えない）'}
+};
+var RIGOR  = {
+  none:{r:[0,3],t:'まだ始まっていない'},
+  jaw:{r:[2,6],t:'顎・首のみ'},
+  full:{r:[6,24],t:'全身に及ぶ'},
+  passing:{r:[24,48],t:'緩み始め'},
+  gone:{r:[36,INF],t:'ほぼ消失'}
+};
+var DECOMP = {
+  none:{r:[0,36],t:'目立った変化なし'},
+  green:{r:[36,96],t:'腹部の緑変'},
+  bloat:{r:[72,INF],t:'ガスによる膨張'}
+};
+var SITE = {back:'背中側',front:'体の前面',side:'体の側面',legs:'足・下半身'};
+var POS  = {supine:'仰向け',prone:'うつ伏せ',side:'横向き',sitting:'座位',hanging:'懸垂'};
+var EXPECT_SITE = {supine:'back',prone:'front',side:'side',sitting:'legs',hanging:'legs'};
+var KEYJP = {temp:'体温',livor:'死斑',rigor:'死後硬直',decomp:'腐敗'};
+
+/* ===== サンプル事件（州をまたぐ連続事件の想定） ===== */
+var CASES = [
+  { id:'A-01', victim:{label:'被害者 A',sex:'男性',age:'30代'},
+    place:'イリノイ州（シカゴ近郊）', tz:{abbr:'CST',offset:-6},
+    office:{type:'ME',name:'郡 監察医務局（Medical Examiner）'},
+    found:'2026-11-03 07:00', roomF:68, rectalF:85,
+    livor:'partial', livorSite:'back', foundPos:'supine', rigor:'full',
+    notes:['自宅の寝室で発見。暖房は通常の設定。'] },
+  { id:'B-02', victim:{label:'被害者 B',sex:'女性',age:'20代'},
+    place:'コロラド州（山間部）', tz:{abbr:'MST',offset:-7},
+    office:{type:'Coroner',name:'郡 検視官（Coroner）'},
+    found:'2026-11-07 18:30', roomF:55, rectalF:61,
+    livor:'fixed', livorSite:'back', foundPos:'supine', rigor:'full',
+    notes:['暖房のない山小屋で発見。解剖は行われず、外表所見のみ。'] },
+  { id:'C-03', victim:{label:'被害者 C',sex:'男性',age:'40代'},
+    place:'ネバダ州（郊外の空き地）', tz:{abbr:'PST',offset:-8},
+    office:{type:'ME',name:'郡 監察医務局（Medical Examiner）'},
+    found:'2026-11-12 14:00', roomF:42, rectalF:66,
+    livor:'fixed', livorSite:'front', foundPos:'supine', rigor:'full',
+    env:['outdoor'], notes:['屋外で発見。発見時の気温は約42°F。'] },
+  { id:'D-04', victim:{label:'被害者 D',sex:'女性',age:'30代'},
+    place:'オクラホマ州（農地の納屋）', tz:{abbr:'CST',offset:-6},
+    office:{type:'ME',name:'州 監察医務局（Medical Examiner）'},
+    found:'2026-11-16 10:00', roomF:52, rectalF:53,
+    livor:'fixed', livorSite:'back', foundPos:'supine', rigor:'gone', decomp:'green',
+    notes:['発見まで数日経過。携帯の通信記録など、別の証拠での絞り込みが必要。'] }
+];
+
+/* ===== 状態 ===== */
+var S = { mode:'novice', unit:'FC', tz:'local', view:'list' };
+var KEY = 'shibouSuitei.v1';
+function loadSet(){
+  try{
+    var o = JSON.parse(localStorage.getItem(KEY)||'null');
+    if(o){
+      if(o.mode==='novice'||o.mode==='expert') S.mode=o.mode;
+      if(o.unit==='F'||o.unit==='FC') S.unit=o.unit;
+      if(o.tz==='local'||TZS[o.tz]) S.tz=o.tz;
+    }
+  }catch(e){}
+}
+function saveSet(){
+  try{ localStorage.setItem(KEY, JSON.stringify({mode:S.mode,unit:S.unit,tz:S.tz})); }catch(e){}
+}
+
+/* ===== 小道具 ===== */
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function clamp(v,a,b){ return Math.min(b,Math.max(a,v)); }
+function pad(n){ return (n<10?'0':'')+n; }
+function r1(n){ return Math.round(n*10)/10; }
+function fToC(f){ return (f-32)*5/9; }
+function fmtTemp(f){
+  var s = r1(f).toFixed(1)+'°F';
+  if(S.unit==='FC') s += '（'+r1(fToC(f)).toFixed(1)+'℃）';
+  return s;
+}
+function fmtHours(lo,hi){
+  return hi===INF ? lo+'時間以上' : lo+'〜'+hi+'時間';
+}
+function getCase(id){
+  for(var i=0;i<CASES.length;i++) if(CASES[i].id===id) return CASES[i];
+  return null;
+}
+
+/* ===== 時刻 ===== */
+function foundUTC(c){
+  var m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})$/.exec(c.found||'');
+  if(!m || !c.tz || typeof c.tz.offset!=='number') return NaN;
+  return Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5]) - c.tz.offset*3600000;
+}
+function viewTz(c){
+  return S.tz==='local' ? {off:c.tz.offset,abbr:c.tz.abbr} : TZS[S.tz];
+}
+function dayKey(ms,off){ var d=new Date(ms+off*3600000); return d.getUTCFullYear()+'-'+d.getUTCMonth()+'-'+d.getUTCDate(); }
+function fmtDate(ms,off){
+  var d=new Date(ms+off*3600000);
+  return (d.getUTCMonth()+1)+'/'+pad(d.getUTCDate())+'('+'日月火水木金土'.charAt(d.getUTCDay())+')';
+}
+function fmtHM(ms,off){ var d=new Date(ms+off*3600000); return pad(d.getUTCHours())+':'+pad(d.getUTCMinutes()); }
+function fmtTime(ms,tz){ return fmtDate(ms,tz.off)+' '+fmtHM(ms,tz.off)+' '+tz.abbr; }
+function fmtRange(a,b,tz){
+  // a: 早い時刻（NaN なら「以前」）、b: 遅い時刻
+  if(a==null) return fmtTime(b,tz)+' 以前';
+  if(dayKey(a,tz.off)===dayKey(b,tz.off))
+    return fmtDate(a,tz.off)+' '+fmtHM(a,tz.off)+'〜'+fmtHM(b,tz.off)+' '+tz.abbr;
+  return fmtDate(a,tz.off)+' '+fmtHM(a,tz.off)+' 〜 '+fmtDate(b,tz.off)+' '+fmtHM(b,tz.off)+' '+tz.abbr;
+}
+
+/* ===== 推定 ===== */
+function estimate(c){
+  var room=+c.roomF, rect=+c.rectalF;
+  if(!isFinite(room)||!isFinite(rect)||isNaN(foundUTC(c))) return null;
+  var coroner = !!(c.office && c.office.type==='Coroner');
+  var rate = clamp(c.rateF!=null ? +c.rateF : BASE_RATE+(BASE_ROOM-room)*0.03, 0.8, 2.2);
+  var reached = rect <= room+1.5;
+  var h, tr, margin=0;
+  if(reached){
+    h = (BODY_F-(room+1.5))/rate;
+    tr = [Math.max(0,h), INF];
+  }else{
+    h = Math.max(0,(BODY_F-rect)/rate);
+    margin = Math.max(2,0.25*h)*(coroner?1.5:1);
+    tr = [Math.max(0,h-margin), h+margin];
+  }
+  var ind=[{key:'temp',r:tr}];
+  if(LIVOR[c.livor])  ind.push({key:'livor', r:LIVOR[c.livor].r});
+  if(RIGOR[c.rigor])  ind.push({key:'rigor', r:RIGOR[c.rigor].r});
+  if(DECOMP[c.decomp]) ind.push({key:'decomp',r:DECOMP[c.decomp].r});
+
+  var lo=-INF, hi=INF, i;
+  for(i=0;i<ind.length;i++){ lo=Math.max(lo,ind[i].r[0]); hi=Math.min(hi,ind[i].r[1]); }
+  var conflict=false, odd=[];
+  if(lo>hi){
+    conflict=true;
+    var los=[],his=[];
+    for(i=0;i<ind.length;i++){ los.push(ind[i].r[0]); his.push(ind[i].r[1]); }
+    var mlo=Math.max.apply(null,los), mhi=Math.min.apply(null,his);
+    // 食い違いの原因になっている所見（最も遅く始まる／最も早く終わる）を挙げる
+    for(i=0;i<ind.length;i++){ if(ind[i].r[0]===mlo || ind[i].r[1]===mhi) odd.push(ind[i].key); }
+    lo=Math.min.apply(null,los); hi=Math.max.apply(null,his);
+  }
+  lo=Math.floor(lo+1e-9);
+  hi=(hi===INF)?INF:Math.ceil(hi-1e-9);
+  if(coroner){ lo=Math.max(0,lo-1); if(hi!==INF) hi+=1; }
+
+  var moved=false;
+  if((c.livor==='partial'||c.livor==='fixed') && c.livorSite && c.foundPos && EXPECT_SITE[c.foundPos])
+    moved = EXPECT_SITE[c.foundPos]!==c.livorSite;
+
+  var f=foundUTC(c);
+  return {
+    rate:rate, reached:reached, tempH:h, margin:margin, tempRange:tr,
+    ind:ind, lo:lo, hi:hi, conflict:conflict, odd:odd, moved:moved, coroner:coroner,
+    startUTC:(hi===INF)?null:f-hi*3600000, endUTC:f-lo*3600000, foundUTC:f
+  };
+}
+
+/* ===== 解説（専門家） ===== */
+function expertHTML(c,e){
+  var p=[], tr=e.tempRange;
+  if(e.reached)
+    p.push('<p><span class="k">体温（algor mortis）</span>直腸温 '+fmtTemp(+c.rectalF)+'／室温 '+fmtTemp(+c.roomF)+'。室温近傍に到達しており、経過時間は下限のみ（≧'+r1(tr[0])+'h）。</p>');
+  else
+    p.push('<p><span class="k">体温（algor mortis）</span>直腸温 '+fmtTemp(+c.rectalF)+'／室温 '+fmtTemp(+c.roomF)+'。冷却 '+(+e.rate.toFixed(2))+'°F/h と仮定 → '+r1(e.tempH)+'h（'+r1(tr[0])+'〜'+r1(tr[1])+'h）。</p>');
+  if(LIVOR[c.livor]){
+    var lr=LIVOR[c.livor].r;
+    p.push('<p><span class="k">死斑（livor mortis）</span>'+(SITE[c.livorSite]?SITE[c.livorSite]+'、':'')+LIVOR[c.livor].t+' → '+fmtHours(lr[0],lr[1])+'</p>');
+  }
+  if(RIGOR[c.rigor]){
+    var gr=RIGOR[c.rigor].r;
+    p.push('<p><span class="k">硬直（rigor mortis）</span>'+RIGOR[c.rigor].t+' → '+fmtHours(gr[0],gr[1])+'</p>');
+  }
+  if(DECOMP[c.decomp]){
+    var dr=DECOMP[c.decomp].r;
+    p.push('<p><span class="k">腐敗（decomposition）</span>'+DECOMP[c.decomp].t+' → '+fmtHours(dr[0],dr[1])+'</p>');
+  }
+  var tz=viewTz(c);
+  p.push('<p><span class="k">統合（PMI）</span>'+fmtHours(e.lo,e.hi)+(e.conflict?'（所見間に不一致あり）':'')+'</p>');
+  p.push('<p><span class="k">推定死亡時刻</span>'+esc(rangeText(e,tz))+'</p>');
+  if(e.moved) p.push('<p class="note">死斑の分布（'+SITE[c.livorSite]+'）が発見時体位（'+POS[c.foundPos]+'）と不一致。死後の体位変換・移動を示唆。</p>');
+  if(e.coroner) p.push('<p class="note">Coroner管轄。解剖なし・外表所見中心のため、幅を拡大（±1h、体温の誤差×1.5）。</p>');
+  return '<div class="who"><span class="badge">解剖の先生</span><span>ヘイズ医師</span><span>／ 専門家向け</span></div><div class="calc">'+p.join('')+'</div>';
+}
+
+function rangeText(e,tz){
+  return fmtRange(e.startUTC, e.endUTC, tz);
+}
+
+/* ===== 解説（初心者） ===== */
+function noviceHTML(c,e){
+  var h=[], tz=viewTz(c), tr=e.tempRange, n=1;
+  var circ=['①','②','③','④','⑤','⑥'];
+  function head(t){ h.push('<h4>'+circ[n-1]+' '+t+'</h4>'); n++; }
+
+  h.push('<div class="who"><span class="badge">解剖の先生</span><span>ヘイズ医師</span><span>／ 初心者向け</span></div>');
+  h.push('<p>順番にご説明します。体温・死斑・死後硬直'+(DECOMP[c.decomp]?'・腐敗':'')+'の所見から、それぞれ「死後どれくらいか」を読み、重なる時間帯を探します。</p>');
+
+  /* 体温 */
+  head('体温（どれくらい冷えたか）');
+  h.push('<p>人は亡くなると体温をつくれなくなり、まわりの温度に向かって少しずつ冷えていきます。熱いコーヒーを置いておくと、ゆっくりぬるくなるのと同じです。</p>');
+  var rateNote = (Math.abs(e.rate-BASE_RATE)>0.01)
+    ? '室温が'+fmtTemp(+c.roomF)+'なので、冷える速さは1時間あたり約'+(+e.rate.toFixed(2))+'°Fと見ました（寒い部屋ほど速く、暖かい部屋ほどゆっくり冷えます）。'
+    : '部屋は'+fmtTemp(+c.roomF)+'なので、1時間に約1.5°F下がると見ます。';
+  if(e.reached){
+    h.push('<p>この方の直腸温は <b>'+fmtTemp(+c.rectalF)+'</b>。すでに室温（'+fmtTemp(+c.roomF)+'）のすぐ近くまで冷えています。冷えきったコーヒーを見ても、いつ冷めたのか分からないのと同じで、体温からは「少なくとも約<b>'+Math.round(tr[0])+'時間</b>は経っている」としか言えません。</p>');
+  }else{
+    var diff = BODY_F-(+c.rectalF);
+    h.push('<p>平熱は約98.6°F（約37℃）。この方の直腸温は <b>'+fmtTemp(+c.rectalF)+'</b> で、平熱との差は <b>'+r1(diff).toFixed(1)+'°F</b> です。'+rateNote+'</p>');
+    h.push('<p>'+r1(diff).toFixed(1)+' ÷ '+(+e.rate.toFixed(2))+' ≒ <b>'+r1(e.tempH)+'時間</b>。つまり体温からは「死後およそ'+Math.round(e.tempH)+'時間、前後'+r1(e.margin)+'時間ほど」と読めます。</p>');
+  }
+
+  /* 死斑 */
+  if(LIVOR[c.livor]){
+    head('死斑（血がたまった跡）');
+    h.push('<p>心臓が止まると、血が重力で体の下側にたまり、紫がかった斑点になります。泥水を置いておくと、泥が底にたまるのに似ています。時間が経つと血の成分が皮膚にしみ込み、指で押しても消えなくなります。</p>');
+    var lr=LIVOR[c.livor].r;
+    h.push('<p>この方は'+(SITE[c.livorSite]?'<b>'+SITE[c.livorSite]+'</b>に':'')+'死斑があり、状態は<b>'+LIVOR[c.livor].t+'</b>。これは死後 <b>'+fmtHours(lr[0],lr[1])+'</b>ごろの状態です。</p>');
+  }
+
+  /* 硬直 */
+  if(RIGOR[c.rigor]){
+    head('死後硬直（筋肉のこわばり）');
+    h.push('<p>筋肉を動かすためのエネルギーが尽きると、筋肉がゆるまなくなり、固くなります。顎や首など小さな筋肉から始まり、全身に広がり、1日以上たつと再びゆるんでいきます。</p>');
+    var gr=RIGOR[c.rigor].r;
+    h.push('<p>この方は<b>'+RIGOR[c.rigor].t+'</b>。これは死後 <b>'+fmtHours(gr[0],gr[1])+'</b>ごろの状態です。</p>');
+  }
+
+  /* 腐敗 */
+  if(DECOMP[c.decomp]){
+    head('腐敗（体の変化）');
+    h.push('<p>体の中の細菌が増えると、お腹のあたりが緑がかり、やがてガスで膨らみます。暖かいほど早く進み、寒いと遅くなります。</p>');
+    var dr=DECOMP[c.decomp].r;
+    h.push('<p>この方は<b>'+DECOMP[c.decomp].t+'</b>。死後 <b>'+fmtHours(dr[0],dr[1])+'</b>ごろの状態です。</p>');
+  }
+
+  /* まとめ */
+  head('まとめ（重なる時間帯）');
+  if(e.conflict){
+    var names=e.odd.map(function(k){return KEYJP[k];}).join('・');
+    h.push('<p>今回は、所見ごとの時間帯がきれいに重なりませんでした。特に<b>'+names+'</b>が他の所見と食い違っています。環境（暖房・寒さ・服装）で冷え方が変わった、遺体が動かされた、などが考えられます。そこで、全体をおおまかな幅で示します。</p>');
+  }else{
+    h.push('<p>それぞれの所見に共通する時間帯を取ると、死後 <b>'+fmtHours(e.lo,e.hi)+'</b>です。</p>');
+  }
+  h.push('<p>発見は <b>'+esc(fmtTime(e.foundUTC,tz))+'</b>。そこから逆算すると、亡くなったのは <b>'+esc(rangeText(e,tz))+'</b>ごろと考えられます。</p>');
+
+  /* 注意 */
+  var cav=[];
+  if(e.moved) cav.push('<p class="note"><b>遺体が動かされた可能性があります。</b>死斑は固まると位置が動きません。この方は発見時<b>'+POS[c.foundPos]+'</b>でしたが、死斑は<b>'+SITE[c.livorSite]+'</b>に出ています。亡くなった場所と発見された場所が違うかもしれません。</p>');
+  if(e.coroner) cav.push('<p class="note">この事件は検視官（Coroner）の管轄で、解剖を伴わない外表の観察が中心です。そのため、いつもより幅を広めに取っています。</p>');
+  if(c.env && c.env.indexOf('outdoor')>=0) cav.push('<p class="note">屋外で発見されています。風・日光・地面の冷たさで冷え方が大きく変わるため、体温による推定は特にずれやすくなります。</p>');
+  if(c.env && c.env.indexOf('heated')>=0) cav.push('<p class="note">暖房が入っていた場合、冷え方がゆるやかになるため、実際の死亡はもっと前の可能性があります。</p>');
+  head('注意しておきたいこと');
+  h.push('<p>これは確実な時刻ではなく、「この範囲の可能性が高い」という見積もりです。体温の下がり方は、服装・体格・室温・風・入浴後や発熱の有無で変わります。天気予報の降水確率のように、幅をもって読んでください。</p>');
+  h.push(cav.join(''));
+
+  /* もっと詳しく */
+  h.push('<p class="qa-h">もっと詳しく知りたいとき</p>');
+  h.push(QA);
+  return h.join('');
+}
+
+var QA = [
+  ['体温はなぜ下がるのですか？','生きている間は、体が熱をつくり続けて体温を保っています。亡くなるとその熱がつくられなくなり、体は空気や床へ熱を逃がしながら、まわりの温度に近づいていきます。なお、亡くなってすぐは体温があまり下がらない時間帯があることも知られています。'],
+  ['室温や服装が違うと、どうなりますか？','寒い部屋や屋外では熱がどんどん逃げるので速く冷え、暖かい部屋や厚着ではゆっくり冷えます。たとえば同じ死後10時間でも、真冬の屋外と暖房の効いた寝室では体温がかなり違います。このビューアでは、室温に応じて冷える速さを少しだけ補正しています。'],
+  ['死斑が「消える」「消えない」の違いは？','血が皮膚の下にたまっているだけの間は、指で押すと血が押しのけられて白くなります（消える）。時間が経つと血の成分が組織にしみ込み、押しても動かなくなります（固定）。この変わり目が、およそ半日前後です。'],
+  ['死斑の位置から何が分かりますか？','血は重力で下へたまります。仰向けなら背中側、うつ伏せなら体の前面です。固定されたあとで体の向きを変えても、死斑は元の位置に残ります。発見時の体位と死斑の位置が合わなければ、死後に動かされた可能性があります。'],
+  ['なぜ「幅」で答えるのですか？','体温・死斑・硬直は、いずれも環境や個人差で進み方が変わるからです。1つの所見だけでは決めきれないので、複数の所見を重ね、その範囲で答えます。発見が遅いほど所見は少なくなり、幅は広がります。'],
+  ['監察医（ME）と検視官（Coroner）の違いは？','米国では州や郡で制度が違います。MEは医師の資格を持つ専門職で、解剖を行います。Coronerは選挙などで選ばれる役職で、郡によっては医師とは限りません。そのため、同じ連続事件でも、管轄ごとに所見の精度が異なることがあります。'],
+  ['州をまたぐと、時刻はどう読みますか？','米国には複数のタイムゾーンがあります。11月は夏時間が終わっていて、東部はEST（UTC−5）、中部はCST（−6）、山岳はMST（−7）、太平洋はPST（−8）です。複数の事件を比べるときは、同じタイムゾーンにそろえて見ます（上の「時刻表示」で切り替えられます）。なお夏時間の期間は、アリゾナ州のように夏時間を使わない州があり、隣の州との時差が季節で変わります。']
+].map(function(q){ return '<details><summary>'+esc(q[0])+'</summary><p>'+esc(q[1])+'</p></details>'; }).join('');
+
+/* ===== 画面 ===== */
+function silhouette(c){
+  var id = esc(c.id);
+  return '<div class="photo" aria-hidden="true">'
+   +'<svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">'
+   +'<defs><linearGradient id="fl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#454a4e"/><stop offset="1" stop-color="#1c1f22"/></linearGradient>'
+   +'<radialGradient id="vg" cx=".5" cy=".5" r=".75"><stop offset=".45" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".78"/></radialGradient>'
+   +'<filter id="nz"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 .5  0 0 0 0 .5  0 0 0 0 .5  0 0 0 .6 0"/></filter></defs>'
+   +'<rect width="400" height="300" fill="url(#fl)"/>'
+   +'<g class="fig" fill="#0c0d0f">'
+   +'<ellipse cx="102" cy="152" rx="24" ry="22"/>'
+   +'<rect x="128" y="128" width="132" height="50" rx="22"/>'
+   +'<path d="M140 132 L196 98 L212 112 L160 150 Z"/>'
+   +'<path d="M146 176 L190 214 L174 228 L132 186 Z"/>'
+   +'<path d="M256 134 L338 126 L342 146 L258 160 Z"/>'
+   +'<path d="M256 150 L330 170 L322 190 L254 172 Z"/>'
+   +'</g>'
+   +'<rect width="400" height="300" filter="url(#nz)" opacity=".35"/>'
+   +'<rect width="400" height="300" fill="url(#vg)"/>'
+   +'</svg>'
+   +'<span class="tag mono">EXHIBIT '+id+'</span>'
+   +'<span class="cap">資料画像（ぼかし処理済み）</span>'
+   +'</div>';
+}
+
+function sheetHTML(c,e){
+  var tz=viewTz(c), v=c.victim||{};
+  var rows=[];
+  function row(k,val){ rows.push('<div class="row"><dt>'+k+'</dt><dd>'+val+'</dd></div>'); }
+  row('CASE NO', esc(c.id));
+  row('被害者', esc((v.label||'')+((v.sex||v.age)?'（'+[v.sex,v.age].filter(Boolean).join('・')+'）':'')));
+  if(c.place) row('場所', esc(c.place));
+  if(c.office) row('管轄', esc(c.office.name||c.office.type));
+  row('発見', esc(fmtTime(e.foundUTC,tz)));
+  row('室温', fmtTemp(+c.roomF));
+  row('直腸温', fmtTemp(+c.rectalF));
+  if(LIVOR[c.livor]) row('死斑', esc((SITE[c.livorSite]?SITE[c.livorSite]+'：':'')+LIVOR[c.livor].t));
+  if(RIGOR[c.rigor]) row('死後硬直', esc(RIGOR[c.rigor].t));
+  if(DECOMP[c.decomp]) row('腐敗', esc(DECOMP[c.decomp].t));
+  if(POS[c.foundPos]) row('発見時体位', esc(POS[c.foundPos]));
+  if(c.notes && c.notes.length) row('備考', c.notes.map(esc).join('<br>'));
+
+  var flags='';
+  if(e.conflict) flags+='<p class="flag">所見の食い違いあり（'+esc(e.odd.map(function(k){return KEYJP[k];}).join('・'))+'）。幅を広げて表示しています。</p>';
+  if(e.moved) flags+='<p class="flag">死斑の位置が発見時の体位と合いません。遺体が移動された可能性があります。</p>';
+  if(e.coroner) flags+='<p class="flag">検視官（Coroner）管轄。外表所見中心のため、推定の幅は広めです。</p>';
+
+  return '<div class="sheet"><h2>検死所見</h2><p class="sub">AUTOPSY SUMMARY ／ 簡易モデルによる推定</p>'
+    +'<dl>'+rows.join('')+'</dl>'
+    +'<div class="result">推定死後経過 <span class="big">'+esc(fmtHours(e.lo,e.hi))+'</span>'
+    +'推定死亡時刻 <span class="big">'+esc(rangeText(e,tz))+'</span></div>'
+    + flags + '</div>';
+}
+
+function caseView(c){
+  var e=estimate(c);
+  if(!e) return '<div class="err">この事件の所見データが不足しています（発見時刻・室温・直腸温・タイムゾーンが必要です）。</div>';
+  return '<div class="case-grid">'+sheetHTML(c,e)+silhouette(c)+'</div>'
+    +'<div class="teacher">'+(S.mode==='expert'?expertHTML(c,e):noviceHTML(c,e))+'</div>';
+}
+
+function listView(){
+  var rows=CASES.map(function(c){
+    var e=estimate(c), tz=viewTz(c);
+    if(!e) return '<tr class="clk" data-id="'+esc(c.id)+'"><td>'+esc(c.id)+'</td><td colspan="4">データ不足</td></tr>';
+    var flag=[];
+    if(e.moved) flag.push('移動の疑い');
+    if(e.conflict) flag.push('所見の不一致');
+    if(e.coroner) flag.push('Coroner');
+    return '<tr class="clk" data-id="'+esc(c.id)+'"><td class="mono">'+esc(c.id)+'<br><span style="color:var(--dim)">'+esc((c.victim&&c.victim.label)||'')+'</span></td>'
+      +'<td class="hide-s">'+esc(c.place||'')+'</td>'
+      +'<td>'+esc(fmtTime(e.foundUTC,tz))+'</td>'
+      +'<td>'+esc(fmtHours(e.lo,e.hi))+'</td>'
+      +'<td>'+esc(rangeText(e,tz))+'</td>'
+      +'<td class="hide-s">'+esc(flag.join('・'))+'</td></tr>';
+  }).join('');
+  return '<p class="hint">事件をクリックすると所見書を開きます。'
+    +(S.tz==='local'?'いまは各事件の現地時間で表示しています。事件どうしを比べるときは、上の「時刻表示」を共通のタイムゾーンに切り替えてください。':'すべての時刻を同じタイムゾーンにそろえて表示しています。')
+    +'</p><table class="tbl"><thead><tr><th>事件</th><th class="hide-s">場所</th><th>発見</th><th>推定死後経過</th><th>推定死亡時刻</th><th class="hide-s">注意</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+
+function renderTabs(){
+  var h='<button role="tab" data-view="list" class="'+(S.view==='list'?'on':'')+'">一覧</button>';
+  CASES.forEach(function(c){
+    h+='<button role="tab" data-view="'+esc(c.id)+'" class="'+(S.view===c.id?'on':'')+'">'+esc(c.id)+'</button>';
+  });
+  $('tabs').innerHTML=h;
+}
+
+function render(keepScroll){
+  var top = keepScroll ? $('content').scrollTop : 0;
+  renderTabs();
+  $('mNovice').setAttribute('aria-pressed', S.mode==='novice');
+  $('mExpert').setAttribute('aria-pressed', S.mode==='expert');
+  $('selUnit').value=S.unit; $('selTz').value=S.tz;
+  var c = S.view==='list' ? null : getCase(S.view);
+  if(!c) S.view='list';
+  $('content').innerHTML = c ? caseView(c) : listView();
+  $('content').scrollTop = top;
+}
+
+/* ===== 操作 ===== */
+$('tabs').addEventListener('click',function(ev){
+  var b=ev.target.closest('button[data-view]'); if(!b) return;
+  S.view=b.getAttribute('data-view'); render(false);
+});
+$('content').addEventListener('click',function(ev){
+  var tr=ev.target.closest('tr[data-id]'); if(!tr) return;
+  S.view=tr.getAttribute('data-id'); render(false);
+});
+['mNovice','mExpert'].forEach(function(id){
+  $(id).addEventListener('click',function(){ S.mode=this.getAttribute('data-mode'); saveSet(); render(true); });
+});
+$('selUnit').addEventListener('change',function(){ S.unit=this.value; saveSet(); render(true); });
+$('selTz').addEventListener('change',function(){ S.tz=this.value; saveSet(); render(true); });
+
+/* ウィンドウ：開閉とドラッグ */
+var win=$('win'), bar=$('titlebar'), pos={x:0,y:0}, drag=null;
+function applyPos(){ win.style.setProperty('--dx',pos.x+'px'); win.style.setProperty('--dy',pos.y+'px'); }
+function clampPos(){
+  var w=win.offsetWidth, h=win.offsetHeight, iw=innerWidth, ih=innerHeight;
+  pos.x=clamp(pos.x, -(iw/2+w/2-80), iw/2+w/2-80);
+  pos.y=clamp(pos.y, h/2-ih/2, ih/2+h/2-40);
+}
+bar.addEventListener('pointerdown',function(ev){
+  if(ev.target.closest('button')||innerWidth<=720) return;
+  drag={x:ev.clientX,y:ev.clientY,px:pos.x,py:pos.y};
+  try{ bar.setPointerCapture(ev.pointerId); }catch(e){}
+});
+bar.addEventListener('pointermove',function(ev){
+  if(!drag) return;
+  pos.x=drag.px+ev.clientX-drag.x; pos.y=drag.py+ev.clientY-drag.y;
+  clampPos(); applyPos();
+});
+function endDrag(){ drag=null; }
+bar.addEventListener('pointerup',endDrag);
+bar.addEventListener('pointercancel',endDrag);
+window.addEventListener('resize',function(){ clampPos(); applyPos(); });
+
+function openWin(){ win.hidden=false; $('launcher').hidden=true; render(true); }
+function closeWin(){
+  win.hidden=true; $('launcher').hidden=false;
+  try{ window.dispatchEvent(new CustomEvent('shibousuitei:close')); }catch(e){}
+}
+$('btnClose').addEventListener('click',closeWin);
+$('launcher').addEventListener('click',openWin);
+
+/* ===== 公開API（別ゲームから呼ぶ） ===== */
+window.ShibouSuitei = {
+  version:'1.0',
+  // open() 一覧を開く／open('A-01') その事件を開く／open({...事件データ}) 追加して開く
+  open:function(arg){
+    if(arg && typeof arg==='object'){
+      var i, found=false;
+      for(i=0;i<CASES.length;i++) if(CASES[i].id===arg.id){ CASES[i]=arg; found=true; }
+      if(!found) CASES.push(arg);
+      S.view=arg.id;
+    }else if(typeof arg==='string' && getCase(arg)){
+      S.view=arg;
+    }
+    openWin();
+  },
+  close:closeWin,
+  setMode:function(m){ if(m==='novice'||m==='expert'){ S.mode=m; saveSet(); render(true); } },
+  setTimezone:function(t){ if(t==='local'||TZS[t]){ S.tz=t; saveSet(); render(true); } },
+  addCase:function(c){ if(c && c.id && !getCase(c.id)){ CASES.push(c); render(true); } },
+  estimate:estimate,
+  cases:function(){ return CASES.slice(); }
+};
+
+/* ===== 起動 ===== */
+loadSet();
+(function(){
+  var q=new URLSearchParams(location.search);
+  if(q.get('mode')==='expert'||q.get('mode')==='novice') S.mode=q.get('mode');
+  if(q.get('tz')&&(q.get('tz')==='local'||TZS[q.get('tz')])) S.tz=q.get('tz');
+  if(q.get('case')&&getCase(q.get('case'))) S.view=q.get('case');
+})();
+openWin();
+})();
+</script>
+</body>
+</html>

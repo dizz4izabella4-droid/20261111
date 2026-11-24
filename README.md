@@ -22,6 +22,7 @@
 | Noche sin Luna（フラメンコの音ゲー。test ver.） | `noche-sin-luna/` | スマホ・PC |
 | PC98 NOVEL（PC-98ふうノベルゲームエンジンの土台。サンプル「零時の記録」つき。test ver.） | `pc98-novel/` | スマホ・PC |
 | ファンタジー（ローポリ3Dキャラを2D背景で歩かせた試作の記録。実験室。test ver.） | `fantasy/` | スマホ・PC |
+| 死亡推定時刻（検死所見から死亡時刻の幅を読む資料ビューア。別ゲームの部品。test ver.） | `shibou-suitei/` | スマホ・PC |
 
 作品を増やすときは、フォルダを作って中に `index.html` を置き、`python3 tools/build_history.py --add-stubs` で `data/works.json`（作品台帳）に仮登録して題名などを直し、`python3 tools/build_history.py` で日付を集計します。詳しくは [docs/site-guide.md](docs/site-guide.md) を見てください。
 
