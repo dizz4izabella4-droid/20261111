@@ -540,6 +540,11 @@ select { appearance:none; padding-right:29px; background:
 <label id="look3">左右確認 <input id="yaw3" type="range" min="-180" max="180" value="0" aria-label="視線の角度"><button id="front3" type="button">正面</button></label>
 </dialog>
 
+<dialog id="startup-notice" class="pattern-dialog" aria-labelledby="startup-notice-text" style="text-align:center;width:min(480px,calc(100vw - 24px))">
+  <p id="startup-notice-text" style="color:var(--ink);font-size:clamp(1rem,4vw,1.25rem);font-weight:750;line-height:1.9;margin:10px 0 22px">あくまで、妄想の産物です。<br>参考程度にご使用ください。</p>
+  <button id="startup-notice-confirm" class="primary" type="button">確認して始める</button>
+</dialog>
+
 <dialog id="pattern-dialog" class="pattern-dialog" aria-labelledby="pattern-title">
   <h2 id="pattern-title">事故類型を選択</h2>
   <p>類型を選ぶと道路形状・進路・初期条件を設定します。後から変更できます。</p>
@@ -4293,7 +4298,13 @@ patternDialog.addEventListener("click",event=>{
   if(choice)choosePattern(choice.dataset.pattern);
 });
 byId("choose-pattern").onclick=()=>patternDialog.showModal();
-patternDialog.showModal();
+const startupNotice=byId("startup-notice");
+startupNotice.addEventListener("cancel",event=>event.preventDefault());
+byId("startup-notice-confirm").onclick=()=>{
+  startupNotice.close();
+  patternDialog.showModal();
+};
+startupNotice.showModal();
 
 </script>
 </body>
