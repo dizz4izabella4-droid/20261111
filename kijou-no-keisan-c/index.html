@@ -2868,6 +2868,7 @@ const emptyEvidence = () => ({marks:[],sources:[],records:[],damage:[]});
 const defaultSweep = () => ({car:0,speedMin:35,speedMax:45,muMin:.55,muMax:.75});
 let evidence = emptyEvidence(), hypotheses = [], sweepOptions = defaultSweep();
 let investigationPick, markDraft, sightOverlay = false, sweepResult;
+let measurementPair, inspectionTime = 0;
 const fieldDialog = byId("investigation"), fieldContent = byId("investigation-content");
 const coord = point => `X ${format(point.x,2)} / Y ${format(point.y,2)} m`;
 const seconds = value => format(value,2)+" 秒";
@@ -3117,10 +3118,34 @@ function surveyPanel() {
       field("ラベル",words("label","",'required'))+
       field("資料番号・出典",words("source")),"実測位置を図面に追加")+"</details>";
 }
+function measurementEndpoints() {
+  return evidence.marks.flatMap((mark,index)=>[
+    {key:index+":a",label:mark.label+"（始点）",point:mark.a},
+    ...(mark.b ? [{key:index+":b",label:mark.label+"（終点）",point:mark.b}] : [])
+  ]);
+}
+function measurePanel() {
+  const points=measurementEndpoints();
+  if (points.length<2) return '<p class="mode-copy">2点以上を登録すると、図面上の距離と方位を測れます。</p>';
+  const options=Object.fromEntries(points.map(item=>[item.key,item.label]));
+  const start=points.find(item=>item.key===measurementPair?.from) ?? points[0];
+  const end=points.find(item=>item.key===measurementPair?.to && item.key!==start.key) ??
+    points.find(item=>item.key!==start.key);
+  const dx=end.point.x-start.point.x,dy=end.point.y-start.point.y;
+  const distance=Math.hypot(dx,dy);
+  const bearing=distance<1e-8?"—":format((Math.atan2(dx,-dy)*180/Math.PI+360)%360,1)+"°";
+  return '<details class="field-extra"'+(measurementPair?' open':'')+'><summary>図面の2点間を測る</summary>'+
+    '<p class="mode-copy">図面上の座標から直線距離を計算します。方位は図面の上方向を北（0°）、右方向を東（90°）とします。</p>'+
+    form("measure-form",field("出発点",select("from",options,start.key))+
+      field("到着点",select("to",options,end.key)),"2点間を測る")+
+    table(["出発点 → 到着点","直線距離","東西 ΔX / 南北 ΔY","図面上の方位"],[[
+      escapeText(start.label)+" → "+escapeText(end.label),format(distance,2)+" m",
+      format(dx,2)+" m / "+format(-dy,2)+" m",bearing]])+"</details>";
+}
 function markPanel(model) {
   const draft = {kind:"reference",car:-1,label:"",source:"",x:"",y:"",bx:"",by:"",tolerance:"",...markDraft};
   const pick = (label,key) => toolButton("pick",key,label);
-  return surveyPanel()+form("mark-form",field("種類",select("kind",markKinds,draft.kind))+
+  return surveyPanel()+measurePanel()+form("mark-form",field("種類",select("kind",markKinds,draft.kind))+
     field("対象車両",select("car",carsAndUnknown,draft.car))+
     field("図面のラベル",words("label",draft.label))+
     field("資料番号・出典",words("source",draft.source))+
@@ -3198,10 +3223,28 @@ function timelineRows(model) {
   }
   return rows.sort((a,b)=>a.t===null ? Number(b.t!==null) : b.t===null ? -1 : a.t-b.t);
 }
+function inspectedFrame(model) {
+  const result=model.result;
+  if (!result?.cars?.every(car=>car.path?.length)) return "";
+  const max=Math.min(result.duration,...result.cars.map(car=>car.path.at(-1).t));
+  const t=clamp(inspectionTime,0,max);
+  const positions=result.cars.map(car=>sampleTrack(car.path,t));
+  const rows=positions.map((position,index)=>[
+    carChoices[index],coord(position),format(position.speed,2)+" km/h",
+    result.cars[index].brake?.t<=t ? "制動開始後" : "制動開始前"
+  ]);
+  return '<details class="field-extra" open><summary>指定時刻の位置と速度</summary>'+
+    '<p class="mode-copy">車両中心の座標と速度を再現結果の軌跡から読み取ります。2台の距離は中心間の直線距離です。</p>'+
+    form("inspect-form",field("再現開始からの時刻（秒）",
+      num("time",format(t,2),'min="0" max="'+max+'" required')),"この時刻を表示")+
+    table(["車両","車両中心","速度","制動"],rows)+
+    '<p class="mode-copy">車両中心間 '+format(pointDistance(positions[0],positions[1]),2)+' m / 時刻 '+seconds(t)+'</p>'+
+    (mode==="scene"?"":toolButton("jump-inspect",0,"この時刻を3Dで見る"))+"</details>";
+}
 function timelinePanel(model) {
   const rows=timelineRows(model);
   const max=model.result?.duration ?? 0;
-  return '<p class="mode-copy">映像・EDRの時刻を登録した基準時刻に合わせ、再現上の出来事と並べます。基準が再現できない資料は「未換算」と表示します。</p>'+
+  return '<p class="mode-copy">映像・EDRの時刻を登録した基準時刻に合わせ、再現上の出来事と並べます。基準が再現できない資料は「未換算」と表示します。</p>'+inspectedFrame(model)+
     toolButton("export-timeline",0,"時系列をCSV保存")+
     table(["再現時刻","種類","資料","出来事・資料時刻","3D"],rows.map((row,i)=>[
       row.t===null?"未換算":seconds(row.t),row.type,escapeText(row.origin),
@@ -3425,6 +3468,18 @@ const formHandlers = {
     markDraft = undefined;
     draw();
   },
+  "inspect-form"(data) {
+    const model=liveModel(), max=Math.min(model.result?.duration ?? 0,...(model.result?.cars ?? []).map(car=>car.path.at(-1)?.t ?? 0));
+    const time=Number(data.time);
+    if (!Number.isFinite(time) || time<0 || time>max) return "再現範囲内の時刻を入力してください。";
+    inspectionTime=time;
+  },
+  "measure-form"(data) {
+    const points=measurementEndpoints();
+    if (data.from===data.to || !points.some(item=>item.key===data.from) || !points.some(item=>item.key===data.to))
+      return "異なる2点を選んでください。";
+    measurementPair={from:data.from,to:data.to};
+  },
   "survey-form"(data) {
     if (evidence.marks.length >= 60) return "観測点・線は60件までです。";
     const baseline=Number(data.baseline), mark=evidence.marks[baseline];
@@ -3510,12 +3565,13 @@ fieldContent.addEventListener("click",event=>{
     download(new Blob([timelineCsv(liveModel())],{type:"text/csv;charset=utf-8"}),"kijou-gp-timeline.csv");
     return;
   }
-  if (action === "jump-event") {
-    const row=timelineRows(liveModel())[n];
-    if (row?.t==null || !byId("open3") || mode==="scene") return;
+  if (action === "jump-event" || action === "jump-inspect") {
+    const model=liveModel(), row=action==="jump-event" ? timelineRows(model)[n] : null;
+    const time=action==="jump-event" ? row?.t : inspectionTime;
+    if (!Number.isFinite(time) || !byId("open3") || mode==="scene") return;
     fieldDialog.close();
     byId("open3").click();
-    document.dispatchEvent(new CustomEvent("gp-replay-time",{detail:{time:row.t}}));
+    document.dispatchEvent(new CustomEvent("gp-replay-time",{detail:{time}}));
     return;
   }
   if (action === "edit-mark") {
