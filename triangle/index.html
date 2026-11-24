@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>三角定規パズル</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#e9eef2;--grid:#c9d4dc;--ink:#1d2b36;--sub:#5a6b78;--card:#f8fafb;--line:#a9b8c4;--ok:#2f8f6b;--a30:#e9a23b;--a45:#3fa59c;--a60:#5f86dc;--a90:#d4607a;--acc:#1d2b36;--onacc:#f8fafb;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16212a;--grid:#23323d;--ink:#e6eef3;--sub:#93a5b2;--card:#1d2b36;--line:#3a4d5b;--ok:#4cc79a;--acc:#e6eef3;--onacc:#16212a}}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{font-family:"Zen Kaku Gothic New",sans-serif;color:var(--ink);background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px;line-height:1.6}
+main{max-width:520px;margin:0 auto;padding:44px 18px 40px}
+h1{font-size:34px;font-weight:900;margin:0;letter-spacing:.04em}
+h2{font-size:20px;margin:0 0 4px}
+p{margin:0 0 10px;color:var(--sub);font-size:14px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--a60);outline-offset:2px}
+.btn{background:var(--acc);color:var(--onacc);border:0;border-radius:6px;padding:12px 22px;font-weight:700;font-size:16px}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
+.btn[disabled]{opacity:.4;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.card{background:var(--card);border:2px solid var(--line);border-radius:10px;padding:14px;margin:10px 0}
+.counter{font-size:64px;font-weight:900;line-height:1;text-align:center;font-variant-numeric:tabular-nums}
+.stagebtn{width:44px;height:44px;border-radius:6px;border:2px solid var(--line);background:var(--card);font-weight:700}
+.stagebtn.done{border-color:var(--ok);color:var(--ok)}
+.chip{min-width:64px;height:48px;border-radius:6px;border:2px solid var(--line);background:var(--card);font-weight:700;font-size:17px}
+.chip.on{color:#fff;border-color:transparent}
+.msg{min-height:26px;font-weight:700;margin:8px 0}
+.msg.ok{color:var(--ok)}
+svg{display:block;width:100%;height:auto;max-height:270px}
+.pn{width:62px;border:2px solid var(--line);background:var(--card);border-radius:6px;padding:2px;position:relative}
+.pn.sel{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc)}
+.pn svg{max-height:56px}
+.lock{position:absolute;right:2px;top:0;font-size:12px}
+.pn.good{border-color:var(--ok)}
+.pn.bad{border-style:dashed}
+.card.win{border-color:var(--ok);box-shadow:0 0 0 3px var(--ok)}
+.tabs{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.center{text-align:center}
+button{touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;transition:transform .08s,box-shadow .15s,background .15s,border-color .15s}
+button:active{transform:translateY(2px) scale(.96)}
+.btn{box-shadow:0 3px 0 rgba(0,0,0,.28)}
+.btn:active{box-shadow:0 1px 0 rgba(0,0,0,.28)}
+.btn.ghost{box-shadow:none}
+.chip.on{animation:pop .2s}
+@keyframes pop{50%{transform:scale(1.14)}}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}}
+main>*{animation:rise .28s ease both}
+.card.win{animation:glow .5s}
+.snap{animation:snap .3s}
+@keyframes snap{40%{transform:scale(1.035)}}
+.counter.bump{animation:pop .2s}
+.counter.full{color:var(--ok);text-shadow:0 0 18px var(--ok)}
+@keyframes glow{40%{box-shadow:0 0 0 8px var(--ok)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+:root{--bg:#eef1f4;--grid:#e3e8ec;--card:#fff;--line:#d6dde3;--sub:#64727e;--ink:#17222b}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f171d;--grid:#16212a;--card:#17222b;--line:#2a3a46;--sub:#8a9ba8;--ink:#e8eff3}}
+body{background-image:radial-gradient(ellipse at 50% -10%,var(--card),transparent 62%),linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:auto,32px 32px,32px 32px;font-feature-settings:"palt";line-height:1.7}
+main{padding-top:56px}
+h1{font-size:30px;font-weight:700;letter-spacing:.14em}
+h2{font-size:17px;font-weight:700;letter-spacing:.04em}
+.tabs strong{font-size:13px;font-weight:500;color:var(--sub);letter-spacing:.1em}
+.card{border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:0 1px 2px rgba(20,35,50,.06),0 18px 36px -18px rgba(20,35,50,.28)}
+.card.win{border-color:var(--ok);box-shadow:0 0 0 2px var(--ok),0 18px 36px -16px rgba(47,143,107,.55)}
+.btn{border-radius:12px;padding:13px 24px;font-weight:700;letter-spacing:.06em;box-shadow:none}
+.btn:active{box-shadow:none}
+.btn.ghost{background:var(--card);border:1px solid var(--line)}
+.stagebtn{width:46px;height:46px;border-radius:14px;border:1px solid var(--line);font-weight:500;font-variant-numeric:tabular-nums}
+.stagebtn.done{background:var(--ok);color:#fff;border-color:transparent}
+.chip{height:52px;border-radius:14px;border:1px solid var(--line);font-weight:500;letter-spacing:.02em}
+.chip.on{border:0;box-shadow:0 8px 16px -8px rgba(0,0,0,.45)}
+.chip svg{width:22px;height:22px;display:inline-block;vertical-align:middle;margin-right:4px}
+.counter{font-weight:300;font-size:68px;letter-spacing:-.01em}
+.msg{font-weight:500}
+.pn{width:60px;border-radius:14px;border:1px solid var(--line);padding:4px}
+.pn.sel{border-color:transparent;box-shadow:0 0 0 2px var(--acc)}
+.lock{color:var(--sub);right:5px;top:4px}
+.lock svg{width:12px;height:12px;display:block}
+button svg.ic{width:18px;height:18px;display:block}
+#snd{border-radius:12px}
+.btn.sm{padding:8px 14px;font-size:13px;border-radius:10px;font-weight:500}
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script>
+var COL={30:'var(--a30)',45:'var(--a45)',60:'var(--a60)',90:'var(--a90)'};
+var app=document.getElementById('app');
+var raf=0;
+var progress={m1:[],m2:[],m3:[]};
+try{var sv=JSON.parse(localStorage.getItem('sankaku')||'null');if(sv)progress=sv}catch(e){}
+
+function wedge(cx,cy,r,a0,a1,fill,op,extra){
+  var s=a0-90,e=a1-90,rad=Math.PI/180;
+  var x0=cx+r*Math.cos(s*rad),y0=cy+r*Math.sin(s*rad),x1=cx+r*Math.cos(e*rad),y1=cy+r*Math.sin(e*rad);
+  var lg=Math.abs(a1-a0)>180?1:0,sw=a1>=a0?1:0;
+  return '<path d="M'+cx+' '+cy+'L'+x0.toFixed(1)+' '+y0.toFixed(1)+'A'+r+' '+r+' 0 '+lg+' '+sw+' '+x1.toFixed(1)+' '+y1.toFixed(1)+'Z" fill="'+fill+'" fill-opacity="'+op+'" stroke="var(--card)" stroke-width="1.5" stroke-linejoin="round" '+(extra||'')+'/>';
+}function ray(cx,cy,r,a,dash,col,w){
+  var rad=Math.PI/180,t=a-90;
+  return '<line x1="'+cx+'" y1="'+cy+'" x2="'+(cx+r*Math.cos(t*rad)).toFixed(1)+'" y2="'+(cy+r*Math.sin(t*rad)).toFixed(1)+'" stroke="'+(col||'var(--ink)')+'" stroke-width="'+(w||1.5)+'" '+(dash?'stroke-dasharray="5 4"':'')+'/>';
+}
+function rim(cx,cy,R){
+  var s='<circle cx="'+cx+'" cy="'+cy+'" r="'+R+'" fill="none" stroke="var(--line)" stroke-width="1.5"/>';
+  for(var a=0;a<360;a+=30){var rad=(a-90)*Math.PI/180;
+    s+='<line x1="'+(cx+R*Math.cos(rad))+'" y1="'+(cy+R*Math.sin(rad))+'" x2="'+(cx+(R+8)*Math.cos(rad))+'" y2="'+(cy+(R+8)*Math.sin(rad))+'" stroke="var(--sub)" stroke-width="1"/>';}
+  return s;
+}
+function stop(){cancelAnimationFrame(raf);raf=0}
+
+/* ---------- タイトル ---------- */
+function title(){
+  stop();
+  app.innerHTML='<div class="center" style="padding-top:20px"><h1>三角定規パズル</h1><p>角を足して、引いて、並べて、ちょうどにする</p></div>'+
+  '<svg id="tsv" viewBox="0 0 260 260" role="img" aria-label="三角定規の角が順に足されて390度になるアニメーション"></svg>'+
+  '<div class="counter" id="cnt">0°</div><p class="center" id="note" style="min-height:22px"></p>'+
+  '<div class="row" style="justify-content:center;margin-top:10px"><button class="btn" id="go">はじめる</button></div>';
+  var gb=document.getElementById('go');gb.onclick=progress.tut?menu:tutorial;if(progress.m1.concat(progress.m2,progress.m3).some(Boolean))gb.textContent='つづきから';
+  var seq=[90,60,45,30,90,45,30],T=800,P=220,total=seq.length*(T+P)+3200,t0=performance.now();
+  var starts=[],s=0;seq.forEach(function(a){starts.push(s);s+=a});
+  var reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function frame(now){
+    var el=reduce?total-1000:(now-t0)%total,svg=document.getElementById('tsv');
+    if(!svg){return}
+    var out=rim(130,130,108),sum=0,note='';
+    seq.forEach(function(a,i){
+      var p=Math.max(0,Math.min(1,(el-i*(T+P))/T));
+      if(p<=0)return;
+      var R=108-18*Math.floor(starts[i]/360);
+      out+=wedge(130,130,R,starts[i],starts[i]+a*p,COL[a],0.8);
+      sum+=a*p;
+      if(p>0&&p<1)note='+'+a+'°';
+    });
+    var n=Math.round(sum);
+    if(n>=360&&n<390)note='一周（360°）をこえていく…';
+    if(n>=390)note='45°・30°・60°・90°で、390°。';
+    if(n>=390){var q=(el%1200)/1200;out+='<circle cx="130" cy="130" r="'+(110+q*16)+'" fill="none" stroke="var(--ok)" stroke-width="2" stroke-opacity="'+(1-q).toFixed(2)+'"/>'}
+    out+=ray(130,130,118,0,true,'var(--sub)',1);
+    svg.innerHTML=out;
+    document.getElementById('cnt').textContent=n+'°';document.getElementById('cnt').classList.toggle('full',n>=390);
+    document.getElementById('note').textContent=note;
+    raf=requestAnimationFrame(frame);
+  }
+  raf=requestAnimationFrame(frame);
+}
+
+/* ---------- メニュー ---------- */
+var MODES=[
+ {id:'m1',name:'角を作る',desc:'三角定規の角を足し引きして、指定の角度にする',n:M1().length},
+ {id:'m2',name:'回転パネル',desc:'パネルを15°ずつ回し、角の辺をつなげて一周以上の扇にする',n:M2().length},
+ {id:'m3',name:'合体',desc:'角を選んで回し、途中の指定角度も同時に満たす',n:M3().length}];
+function menu(){
+  stop();
+  var h='<div class="tabs"><h2>ステージを選ぶ</h2><div class="row"><button class="btn ghost sm" id="hw">あそびかた</button><button class="btn ghost sm" id="bt">タイトル</button></div></div>';
+  var dn=0,tt=0;MODES.forEach(function(m){tt+=m.n;progress[m.id].forEach(function(v){if(v)dn++})});
+  h+='<div style="height:4px;border-radius:2px;background:var(--line);overflow:hidden"><div style="width:'+Math.round(dn/tt*100)+'%;height:100%;background:var(--ok);transition:width .4s"></div></div><p style="margin-top:6px">クリア '+dn+' / '+tt+(dn===tt?'　全面クリア！390°まで届いた。':'')+'</p>';
+  MODES.forEach(function(m){
+    h+='<div class="card"><h2>'+m.name+'</h2><p>'+m.desc+'</p><div class="row">';
+    for(var i=0;i<m.n;i++)h+='<button class="stagebtn'+(progress[m.id][i]?' done':'')+'" data-m="'+m.id+'" data-i="'+i+'" aria-label="'+m.name+' ステージ'+(i+1)+'">'+(i+1)+'</button>';
+    h+='</div></div>';
+  });
+  app.innerHTML=h;
+  document.getElementById('bt').onclick=title;document.getElementById('hw').onclick=tutorial;
+  var rb=document.createElement('button'),armed=false;rb.className='btn ghost';rb.textContent='記録を消す';rb.style.marginTop='8px';
+  rb.onclick=function(){if(!dn)return;if(!armed){armed=true;rb.textContent='もう一度押すと消えます';return}progress={m1:[],m2:[],m3:[]};try{localStorage.removeItem('sankaku')}catch(e){}menu()};
+  app.appendChild(rb);
+  Array.prototype.forEach.call(app.querySelectorAll('.stagebtn'),function(b){
+    b.onclick=function(){play(b.dataset.m,+b.dataset.i)};
+  });
+}
+/* ---------- あそびかた ---------- */
+function tutorial(){
+  stop();var s=0,sub=false,r=30;
+  var T=[['三角定規の角は4種類','30°・45°・60°・90°。どの三角定規にも、この中の角が入っている。'],
+   ['足したり、引いたり','角を並べて足すと大きく、重ねて引くと差になる。ボタンで切り替えてみよう。'],
+   ['一周をこえる','360°で一周。その先は、内側の小さな扇として続く。'],
+   ['パネルを回して辺をそろえる','図をタップすると、青い扇が15°ずつ回る。灰色の扇の終わりの辺に、始まりの辺を重ねよう。'],
+   ['印に合わせる（合体）','合体モードでは角の種類も変えられる。締の点線の印に、辺がちょうど来るように並べる。']];
+  function fin(){progress.tut=true;try{localStorage.setItem('sankaku',JSON.stringify(progress))}catch(e){}menu()}
+  function show(){
+    app.innerHTML='<div class="tabs"><strong>あそびかた '+(s+1)+' / '+T.length+'</strong><button class="btn ghost sm" id="sk">スキップ</button></div><div class="card"><h2>'+T[s][0]+'</h2><p>'+T[s][1]+'</p><svg id="tv" viewBox="0 0 260 260"></svg><div class="msg" id="tm"></div><div class="row" id="ex"></div></div><div class="row"><button class="btn ghost" id="pv"'+(s?'':' disabled')+'>戻る</button><button class="btn" id="nx2">'+(s===T.length-1?'始める':'次へ')+'</button></div>';
+    document.getElementById('sk').onclick=fin;
+    document.getElementById('pv').onclick=function(){s--;show()};
+    document.getElementById('nx2').onclick=function(){if(s===T.length-1)fin();else{s++;show()}};
+    if(s===1){var b=document.createElement('button');b.className='btn';b.textContent='足す／引く 切り替え';b.onclick=function(){sub=!sub;draw()};document.getElementById('ex').appendChild(b)}
+    if(s===3){document.getElementById('tv').id='fan';document.getElementById('fan').style.cursor='pointer';document.getElementById('fan').onclick=function(){r=(r+15)%360;draw()}}
+    draw();
+  }
+  function draw(){
+    var v=document.getElementById('tv')||document.getElementById('fan'),o=rim(130,130,108),m='',ok=false;
+    if(s===0){var cx=[20,80,145,200],A=[30,45,60,90];A.forEach(function(a,i){o+=wedge(cx[i],150,50,0,a,COL[a],0.85)+'<text x="'+(cx[i]+16)+'" y="190" text-anchor="middle" font-size="16" font-weight="700" fill="var(--ink)">'+a+'°</text>'});o=o.replace(rim(130,130,108),'')}
+    if(s===1){o+=wedge(130,130,108,0,45,COL[45],0.8)+(sub?wedge(130,130,108,45,15,'var(--ink)',0.35):wedge(130,130,108,45,75,COL[30],0.8));m=sub?'45° − 30° = 15°':'45° + 30° = 75°'}
+    if(s===2){for(var i=0;i<4;i++)o+=wedge(130,130,108,90*i,90*i+90,COL[90],0.8);o+=wedge(130,130,88,360,390,COL[30],0.9);m='90°×4 = 360°、さらに +30° = 390°'}
+    if(s===3){o+=wedge(130,130,108,0,90,'var(--ink)',0.25)+wedge(130,130,108,r,r+60,COL[60],0.85)+ray(130,130,120,90,true,'var(--a60)',2.5);ok=r===90;m=ok?'つながった！':'辺をそろえよう（あと'+(((90-r+360)%360)/15)+'回）'}
+    if(s===4){o+=wedge(130,130,108,0,30,COL[30],0.85)+wedge(130,130,108,30,75,COL[45],0.85)+ray(130,130,122,75,true,'var(--ok)',2.5);m='30°＋45°で、印の 75° にぴったり'}
+    v.innerHTML=o;var t=document.getElementById('tm');t.textContent=m;t.className='msg'+(ok?' ok':'');
+    if(ok&&!draw.hit){draw.hit=1;snapFx()}if(!ok)draw.hit=0;
+  }  show();
+}
+function header(name,i,len){
+  return '<div class="tabs"><button class="btn ghost sm" id="back">メニュー</button><strong>'+name+' '+(i+1)+' / '+len+'</strong></div>';
+}
+
+/* ---------- ① 角を作る ---------- */
+function M1(){return [
+ {t:60,chips:[30,45,60,90],sub:false,hint:'1枚の角でちょうど。'},
+ {t:75,chips:[30,45,60,90],sub:false,hint:'2枚を足す。'},
+ {t:15,chips:[30,45,60,90],sub:true,hint:'角をタップするたびに 足す→引く→なし と変わる。'},
+ {t:105,chips:[30,45,60,90,90],sub:true,hint:''},
+ {t:135,chips:[30,45,60,90],sub:true,hint:''},
+ {t:165,chips:[30,45,60,90,90],sub:true,hint:'3枚で作れる。'},
+ {t:255,chips:[90,90,60,45,30,30],sub:true,hint:'引かずに足すだけでも届く。'},
+ {t:150,max:2,chips:[30,45,60,90,90],sub:true,hint:'使える枚数に制限がある。'},
+ {t:195,max:3,chips:[30,45,60,90,90],sub:true,hint:'制限内で、大きい角から考える。'},
+ {t:390,chips:[90,90,60,60,45,45,30,30],sub:false,hint:'一周をこえた角度も、足していけば作れる。'}];}
+function playM1(i){
+  var S=M1(),st=S[i],use=st.chips.map(function(){return 0});
+  app.innerHTML=header('角を作る',i,S.length)+'<div class="card"><h2>目標 '+st.t+'°'+(st.max?'　'+st.max+'枚以内':'')+'</h2><p>'+st.hint+'</p>'+
+   '<svg id="dial" viewBox="0 0 260 260"></svg><div class="counter" id="sum">0°</div><div class="msg" id="msg"></div>'+
+   '<div class="row" id="chips"></div></div><div class="row"><button class="btn ghost" id="rs">やり直す</button></div>';
+  document.getElementById('back').onclick=menu;
+  var cw=document.getElementById('chips');
+  st.chips.forEach(function(a,k){
+    var b=document.createElement('button');b.className='chip';
+    b.onclick=function(){use[k]=st.sub?(use[k]===0?1:use[k]===1?-1:0):(use[k]?0:1);chipSfx(a,use[k]);draw()};
+    cw.appendChild(b);
+  });
+  document.getElementById('rs').onclick=function(){use=use.map(function(){return 0});draw()};
+  function draw(){
+    var cum=0,svg=rim(130,130,108),sum=0,any=false;
+    st.chips.forEach(function(a,k){
+      var b=cw.children[k];
+      b.className='chip'+(use[k]?' on':'');
+      b.style.background=use[k]?(use[k]>0?COL[a]:'var(--ink)'):'';
+      b.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" style="display:inline-block;vertical-align:middle;margin-right:4px">'+wedge(3,21,19,0,a,use[k]?'#fff':COL[a],0.9)+'</svg>'+(use[k]>0?'+':use[k]<0?'−':'')+a+'°';
+      b.setAttribute('aria-label',a+'度 '+(use[k]>0?'足す':use[k]<0?'引く':'未使用'));
+      if(!use[k])return;any=true;
+      var n=cum+use[k]*a;
+      var lap=Math.max(0,Math.floor(Math.min(cum,n)/360));
+      svg+=wedge(130,130,108-18*lap,cum,n,use[k]>0?COL[a]:'var(--ink)',use[k]>0?0.8:0.35);
+      cum=n;
+    });
+    sum=cum;
+    svg+=ray(130,130,120,st.t,true,'var(--ok)',2.5)+ray(130,130,108,0,true,'var(--sub)',1);
+    document.getElementById('dial').innerHTML=svg;
+    var sm=document.getElementById('sum');sm.textContent=sum+'°';sm.classList.remove('bump');void sm.offsetWidth;sm.classList.add('bump');
+    var cnt=use.filter(Boolean).length,ok=any&&sum===st.t&&(!st.max||cnt<=st.max),m=document.getElementById('msg');
+    m.className='msg'+(ok?' ok':'');m.textContent=ok?'ぴったり！':(any&&sum===st.t?cnt+'枚使っている。'+st.max+'枚以内で！':any?(sum<st.t?'あと '+(st.t-sum)+'°':''+(sum-st.t)+'° 多い'):'角を選んで足していこう');
+    if(ok)clear('m1',i,S.length);else unclear();
+  }
+  draw();
+}
+
+/* ---------- ② 回転パネル / ③ 合体 ---------- */
+// panels: [type, lockedRot or null]
+function M2(){return [
+ {total:195,cp:[],cycle:false,p:[[90,0],[60,null],[45,null]],hint:'各パネルの始まりの辺を、前のパネルの終わりの辺に重ねる。鍵マークのパネルは動かせない。'},
+ {total:360,cp:[],cycle:false,p:[[60,null],[90,60],[45,null],[45,null],[60,null],[60,null]],hint:'ちょうど一周になる。'},
+ {total:270,cp:[],cycle:false,p:[[45,null],[45,null],[90,90],[90,null]],hint:'固定パネルから、前後の向きを順にたどる。'},
+ {total:390,cp:[],cycle:false,p:[[45,null],[90,null],[60,null],[45,null],[90,240],[60,null]],hint:'360°をこえた分は、内側の小さな扇として描かれる。'}];}
+function M3(){return [
+ {total:135,cp:[75],cycle:true,p:[[30,null],[30,null],[30,null]],hint:'パネルの角の種類を変えられる。75°の印に辺をそろえつつ、合計135°にする。'},
+ {total:210,cp:[105],cycle:true,p:[[30,null],[30,null],[30,null],[30,null]],hint:'105°の印と、合計210°を同時に。'},
+ {total:360,cp:[90,180,270],cycle:true,p:[[30,null],[30,null],[30,null],[30,null]],hint:'印が3つ。4枚で、ちょうど一周。'},
+ {total:390,cp:[150,270,330],cycle:true,p:[[30,null],[30,null],[30,null],[30,null],[30,null],[30,null]],hint:'150°・270°・330°を通って、390°へ。'}];}
+var TYPES=[30,45,60,90];
+function cnt3(st){var n=st.p.length,c=0;(function r(k,s,ends){if(k===n){if(s===st.total&&st.cp.every(function(q){return ends.indexOf(q)>=0}))c++;return}TYPES.forEach(function(t){r(k+1,s+t,ends.concat(s+t))})})(0,0,[]);return c}
+function playPanel(mode,i){
+  var S=mode==='m2'?M2():M3(),st=S[i],name=mode==='m2'?'回転パネル':'合体';
+  var P=st.p.map(function(q,k){return {type:q[0],lock:q[1]!==null,rot:q[1]!==null?q[1]:(k*105+45)%360}});
+  var sel=P.findIndex(function(p){return !p.lock});var showHint=false;P.forEach(function(p){p.v=p.rot});
+  app.innerHTML=header(name,i,S.length)+'<div class="card"><h2>合計 '+st.total+'°'+(st.cp.length?'　印 '+st.cp.map(function(c){return c+'°'}).join('・'):'')+'</h2><p>'+st.hint+'</p>'+
+   '<svg id="fan" viewBox="0 0 260 260" style="cursor:pointer"></svg><p class="center" style="font-size:12px;margin:0">図をタップすると、選んだパネルが15°回ります</p><div class="msg" id="msg"></div>'+
+   '<div class="row" id="pans" style="margin-bottom:10px"></div>'+
+   '<div class="row"><button class="btn" id="ccw" aria-label="15度左に回す">⟲ 15°</button><button class="btn" id="cw" aria-label="15度右に回す">15° ⟳</button>'+
+   (st.cycle?'<button class="btn ghost" id="ty">角を変える</button>':'')+'<button class="btn ghost" id="hb">ヒント</button></div></div>';
+  document.getElementById('back').onclick=menu;
+  document.getElementById('hb').onclick=function(){showHint=!showHint;draw()};
+  document.getElementById('fan').onclick=function(){rot(15)};
+  function spin(){var f=0;(function s(){var go=false;P.forEach(function(p){var d=((p.rot-p.v+540)%360)-180;if(Math.abs(d)<1){p.v=p.rot}else{p.v+=d*0.35;go=true}});draw();if(go&&++f<40)requestAnimationFrame(s)})()}
+  function rot(d){var p=P[sel];if(!p||p.lock)return;p.rot=(p.rot+d+360)%360;rotSfx(p.rot);spin()}
+  document.getElementById('ccw').onclick=function(){rot(-15)};
+  document.getElementById('cw').onclick=function(){rot(15)};
+  if(st.cycle)document.getElementById('ty').onclick=function(){var p=P[sel];if(!p||p.lock)return;p.type=TYPES[(TYPES.indexOf(p.type)+1)%4];chipSfx(p.type,1);draw()};
+  function draw(){
+    var cum=0,svg=rim(130,130,108),hit=0,ends=[],pw=document.getElementById('pans');pw.innerHTML='';
+    P.forEach(function(p,k){
+      var lap=Math.floor(cum/360),R=108-18*lap,match=((p.rot%360)===(cum%360));
+      if(match)hit++;if(match&&p.mm===false)snapFx();else if(!match&&p.mm===true)voice(220,0,0.12,'triangle',0.08,0);p.mm=match;
+      svg+=wedge(130,130,R,p.v,p.v+p.type,COL[p.type],match?0.85:0.5,k===sel?'stroke-width="3"':'');
+      if(k===sel&&showHint)svg+=ray(130,130,122,cum%360,true,'var(--a60)',2.5);
+      cum+=p.type;ends.push(cum);
+      var b=document.createElement('button');b.className='pn'+(k===sel?' sel':'')+(match?' good':' bad');
+      b.setAttribute('aria-label','パネル'+(k+1)+' '+p.type+'度'+(p.lock?' 固定':''));
+      b.innerHTML='<svg viewBox="0 0 60 60">'+wedge(30,30,26,p.rot,p.rot+p.type,COL[p.type],0.85)+'</svg>'+(p.lock?'<span class="lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg></span>':'');
+      b.onclick=function(){sel=k;draw()};pw.appendChild(b);
+    });    st.cp.forEach(function(c){svg+=ray(130,130,122,c,true,'var(--ok)',2.5)});
+    svg+=ray(130,130,108,0,true,'var(--sub)',1);
+    document.getElementById('fan').innerHTML=svg;
+    var cpOk=st.cp.every(function(c){return ends.indexOf(c)>=0});
+    var ok=hit===P.length&&cum===st.total&&cpOk,m=document.getElementById('msg');
+    m.className='msg'+(ok?' ok':'');
+    m.textContent=ok?'すべての辺がつながった！'+(st.cycle?'　角の並べ方は全部で '+cnt3(st)+' 通り。':''):'つながった辺 '+hit+' / '+P.length+'　合計 '+cum+'°'+(cum!==st.total?'（目標 '+st.total+'°）':'')+(st.cp.length&&!cpOk?'　印に届いていない':'');
+    if(ok)clear(mode,i,S.length);else unclear();
+  }
+  draw();
+}
+
+/* ---------- 共通 ---------- */
+function unclear(){var c=document.querySelector('.card.win');if(c)c.classList.remove('win');var r=document.getElementById('nxrow');if(r)r.remove()}
+function clear(mode,i,len){
+  progress[mode][i]=true;
+  try{localStorage.setItem('sankaku',JSON.stringify(progress))}catch(e){}
+  var m=document.getElementById('msg');
+  var next=document.createElement('div');next.className='row';next.id='nxrow';next.style.marginTop='8px';
+  next.innerHTML=(i+1<len?'<button class="btn" id="nx">次のステージ</button>':'')+'<button class="btn ghost" id="mn">メニューへ</button>';
+  m.parentNode.classList.add('win');if(!document.getElementById('mn')){chime();burst();m.parentNode.appendChild(next);
+    if(document.getElementById('nx'))document.getElementById('nx').onclick=function(){play(mode,i+1)};
+    document.getElementById('mn').onclick=menu;}
+}
+function play(mode,i){stop();if(mode==='m1')playM1(i);else playPanel(mode,i)}
+var snd=true,AC=null;
+function beep(f,d,v){if(!snd)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();var o=AC.createOscillator(),g=AC.createGain();o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(v||0.05,AC.currentTime);g.gain.exponentialRampToValueAtTime(0.0001,AC.currentTime+d);o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}catch(e){}}
+function vib(p){try{if(snd&&navigator.vibrate)navigator.vibrate(p)}catch(e){}}
+function tick(){beep(520,0.05);vib(8)}
+function snapFx(){beep(784,.12,.06);vib(12);var f=document.getElementById('fan');if(f){f.classList.remove('snap');void f.getBoundingClientRect();f.classList.add('snap')}}
+function burst(){if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;var c=document.createElement('canvas');c.width=innerWidth;c.height=innerHeight;c.style.cssText='position:fixed;left:0;top:0;pointer-events:none;z-index:9';document.body.appendChild(c);var x=c.getContext('2d'),cols=['#e9a23b','#3fa59c','#5f86dc','#d4607a'],ps=[],f=0;for(var i=0;i<70;i++){var a=Math.random()*Math.PI*2,s=4+Math.random()*7;ps.push({x:c.width/2,y:c.height*0.4,vx:Math.cos(a)*s,vy:Math.sin(a)*s-4,r:Math.random()*6,vr:(Math.random()-.5)*.4,z:6+Math.random()*8,c:cols[i%4]})}(function t(){x.clearRect(0,0,c.width,c.height);ps.forEach(function(p){p.x+=p.vx;p.y+=p.vy;p.vy+=.35;p.vx*=.99;p.r+=p.vr;x.save();x.translate(p.x,p.y);x.rotate(p.r);x.fillStyle=p.c;x.globalAlpha=Math.max(0,1-f/80);x.beginPath();x.moveTo(0,-p.z);x.lineTo(p.z*.9,p.z*.6);x.lineTo(-p.z*.9,p.z*.6);x.closePath();x.fill();x.restore()});if(++f<80)requestAnimationFrame(t);else c.remove()})()}
+function chime(){beep(660,.18,.07);setTimeout(function(){beep(880,.25,.07)},120);setTimeout(function(){beep(1320,.35,.06)},260);vib([20,40,20])}
+document.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('button,#fan'))tick()});
+var sb=document.createElement('button');sb.className='btn ghost';var IC=function(on){return '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/>'+(on?'<path d="M16.5 8.5a5 5 0 010 7M19 6a8.5 8.5 0 010 12"/>':'<path d="M17 9l5 6M22 9l-5 6"/>')+'</svg>'};sb.innerHTML=IC(1);sb.setAttribute('aria-label','効果音の切り替え');sb.style.cssText='position:fixed;right:10px;top:calc(env(safe-area-inset-top,0px) + 8px);padding:6px 10px;font-size:16px;z-index:5;background:var(--card)';sb.onclick=function(){snd=!snd;sb.innerHTML=IC(snd)};document.body.appendChild(sb);
+var mst,dl,quiet=false,PENT=[1,1.125,1.25,1.5,1.667];
+function ac(){try{if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();mst=AC.createGain();mst.gain.value=0.8;var cp=AC.createDynamicsCompressor();mst.connect(cp);cp.connect(AC.destination);dl=AC.createDelay(0.5);dl.delayTime.value=0.17;var fb=AC.createGain();fb.gain.value=0.32;var lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2400;dl.connect(lp);lp.connect(fb);fb.connect(dl);lp.connect(mst)}if(AC.state==='suspended')AC.resume();return AC}catch(e){return null}}
+function voice(f,t,dur,type,vol,wet){var a=ac();if(!a||!snd)return;var t0=a.currentTime+t,o=a.createOscillator(),g=a.createGain();o.type=type||'sine';o.frequency.value=f;g.gain.setValueAtTime(0.0001,t0);g.gain.exponentialRampToValueAtTime(vol,t0+0.008);g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);o.connect(g);g.connect(mst);if(wet){var w=a.createGain();w.gain.value=wet;g.connect(w);w.connect(dl)}o.start(t0);o.stop(t0+dur+0.05)}
+function bell(f,t,vol,wet){voice(f,t,0.9,'sine',vol,wet);voice(f*2.76,t,0.25,'sine',vol*0.25,wet);voice(f*5.4,t,0.12,'sine',vol*0.1,0)}
+function clickN(t,vol){var a=ac();if(!a||!snd)return;var n=(a.sampleRate*0.02)|0,buf=a.createBuffer(1,n,a.sampleRate),d=buf.getChannelData(0);for(var i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,3);var s=a.createBufferSource();s.buffer=buf;var f=a.createBiquadFilter();f.type='bandpass';f.frequency.value=2200;f.Q.value=0.9;var g=a.createGain();g.gain.value=vol;s.connect(f);f.connect(g);g.connect(mst);s.start(a.currentTime+t)}
+function pitch(i){var k=((i%10)+10)%10;return 261.63*PENT[k%5]*(k>=5?2:1)}
+function tick(){if(quiet){quiet=false;return}clickN(0,0.5);voice(180,0,0.05,'sine',0.12,0);vib(8)}
+function rotSfx(rot){quiet=true;bell(pitch(Math.round(rot/15))*2,0,0.09,0.25);clickN(0,0.3);vib(6)}
+function chipSfx(a,st){quiet=true;var m={30:392,45:440,60:523.25,90:659.25}[a]||440;if(st>0){bell(m,0,0.12,0.3)}else if(st<0){voice(m*0.5,0,0.18,'triangle',0.12,0.2);voice(m*0.375,0.05,0.18,'triangle',0.1,0.2)}else{clickN(0,0.35);voice(200,0,0.06,'sine',0.1,0)}}
+function snapFx(){bell(523.25,0,0.12,0.4);bell(783.99,0.07,0.12,0.4);vib(12);var f=document.getElementById('fan');if(f){f.classList.remove('snap');void f.getBoundingClientRect();f.classList.add('snap')}}
+function chime(){[523.25,659.25,783.99,1046.5,1318.5].forEach(function(f,i){bell(f,i*0.09+(i>3?0.05:0),0.11,0.45)});vib([20,40,20])}
+try{if(localStorage.getItem('sankaku_snd')==='0'){snd=false;sb.innerHTML=IC(false)}}catch(e){}
+sb.id='snd';sb.onclick=function(){snd=!snd;sb.innerHTML=IC(snd);try{localStorage.setItem('sankaku_snd',snd?'1':'0')}catch(e){}if(snd){quiet=false;tick()}};
+document.addEventListener('keydown',function(e){var a=document.getElementById('ccw');if(!a)return;if(e.key==='ArrowLeft')a.click();if(e.key==='ArrowRight')document.getElementById('cw').click()});
+title();
+</script>
+</body>
+</html>
