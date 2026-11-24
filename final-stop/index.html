@@ -404,7 +404,7 @@ const CORE = (function () {
   }
   const PHASE_OF = { TITLE: 'TITLE', OPEN_PARK: 'CHASE', OPEN_GO: 'CHASE', OPEN_SIREN: 'CHASE', OPEN_CATCH: 'CHASE', CRASH: 'CHASE', INTRO: 'CHASE', APPROACH: 'CHASE', WINDOW: 'CHASE', LUNGE: 'CHASE', HIT: 'CHASE', RECOVER: 'CHASE', MISS: 'CHASE', FINISH: 'CHASE',
     PULLOVER: 'PULLOVER', EVENT: 'EVENT', COACH: 'CMD', PREVIEW: 'CMD', SPEAK: 'CMD', YOURTURN: 'CMD', REACT: 'CMD', ARREST: 'ARREST', END: 'END', DEAD: 'DEAD' };
-  const MAX_DWELL = { OPEN_PARK: 6, OPEN_GO: 6, OPEN_SIREN: 30, OPEN_CATCH: 20, CRASH: 8, INTRO: 6, APPROACH: 8, WINDOW: 200, LUNGE: 1, HIT: 1, RECOVER: 3, MISS: 2, FINISH: 2, PULLOVER: 6, EVENT: 10, COACH: 16, SPEAK: 20, YOURTURN: 14, REACT: 6, ARREST: 5, DEAD: 8 };
+  const MAX_DWELL = { OPEN_PARK: 6, OPEN_GO: 6, OPEN_SIREN: 30, OPEN_CATCH: 20, CRASH: 8, INTRO: 6, APPROACH: 8, WINDOW: 200, LUNGE: 1, HIT: 1, RECOVER: 3, MISS: 2, FINISH: 2, PULLOVER: 6, EVENT: 10, COACH: 70, SPEAK: 40, YOURTURN: 14, REACT: 6, ARREST: 5, DEAD: 8 };
   const FORCE_NEXT = { OPEN_PARK: 'OPEN_GO', OPEN_GO: 'OPEN_SIREN', OPEN_SIREN: 'OPEN_CATCH', OPEN_CATCH: 'INTRO', INTRO: 'APPROACH', APPROACH: 'WINDOW', WINDOW: 'MISS', LUNGE: 'HIT', HIT: 'RECOVER', RECOVER: 'APPROACH', MISS: 'APPROACH', FINISH: 'PULLOVER',
     PULLOVER: 'EVENT', EVENT: 'COACH', COACH: 'PREVIEW', SPEAK: 'YOURTURN', YOURTURN: 'REACT', REACT: 'PREVIEW', ARREST: 'END', DEAD: 'TITLE', CRASH: 'TITLE' };
 
@@ -591,7 +591,7 @@ const CORE = (function () {
         enter() { S.cmd.step = 'coach'; S.coachN = 0; S.coachT = 0; S.coachSaid = false; S.coachGo = false; emit('coach', { n: 0 }); },
         upd(h, i, locked) {
           S.coachT += h; if (i.said) S.coachSaid = true;
-          if (!S.coachGo) { if ((S.coachSaid && S.coachT >= 0.4) || S.coachT >= 5) { S.coachGo = true; S.coachT = 0; } }
+          if (!S.coachGo) { if ((S.coachSaid && S.coachT >= 0.4) || S.coachT >= 32) { S.coachGo = true; S.coachT = 0; } }
           else if (S.coachT >= (S.coachN === 0 ? 0.5 : 0.7)) {
             if (S.coachN === 0) { S.coachN = 1; S.coachT = 0; S.coachSaid = false; S.coachGo = false; emit('coach', { n: 1 }); } else go('PREVIEW');
           }
@@ -608,7 +608,7 @@ const CORE = (function () {
         enter() { const t = C.CMDS[S.cmd.i].text; S.dur = t.length * 0.07 + 0.6; S.cmd.step = 'speak'; S.saidFlag = false; S.saidT = 0; emit('cmd', { i: S.cmd.i, step: 'speak', text: t, auto: speakAuto, dur: S.dur }); },
         upd(h, i) {                                          // お手本の声が実際に終わった（said）のを確認し、少し間をおいてから自分の番へ
           if (i.said) S.saidFlag = true; if (S.saidFlag) S.saidT += h;
-          if ((S.saidFlag && S.saidT >= 0.8 && S.t >= 0.5) || S.t >= S.dur + 8) go('YOURTURN');
+          if ((S.saidFlag && S.saidT >= 0.8 && S.t >= 0.5) || S.t >= S.dur + 32) go('YOURTURN');
         }
       },
       YOURTURN: {
@@ -863,7 +863,7 @@ const CORE = (function () {
     mute() { if (this.ctx && this.ctx.state === 'running') this.ctx.suspend(); },
     // iOS：マイクや読み上げのあとで AudioContext が止まった(interrupted/suspended)まま戻らないことがある。何度か起こし直す
     kick() {
-      const go = () => { const c = this.ctx; if (!c || paused) return; if (c.state === 'closed') { this.ctx = null; try { this.init(); } catch (e) {} return; } if (c.state !== 'running') { try { c.resume(); } catch (e) {} } };
+      const go = () => { const c = this.ctx; if (!c || paused || VOICE.isTalking()) return; if (c.state === 'closed') { this.ctx = null; try { this.init(); } catch (e) {} return; } if (c.state !== 'running') { try { c.resume(); } catch (e) {} } };
       go(); [150, 600, 1500, 3000].forEach(ms => setTimeout(go, ms));
     },
     // 効果音
@@ -929,35 +929,75 @@ const CORE = (function () {
     },
     speak(text, style, done, onstart, onbound) {
       if (!this.ok || !this.on) { if (done) setTimeout(done, 50); return; }
+      const sy = speechSynthesis, stale = this.active !== null || sy.speaking || sy.pending;
+      if (stale) this.cancel(false); else this.seq++;
+      const tk = this.seq, quiet = style === 'quietja';
+      const ja = style === 'ja' || style === 'radioja' || quiet;
+      const radio = style === 'radio' || style === 'radioja';
+      let finished = false, attempt = 0, startedAt = 0, lastBoundary = 0;
+      const schedule = (fn, ms) => { const id = setTimeout(fn, ms); this.timers.push(id); };
+      const live = () => !finished && this.seq === tk;
+      const finish = () => {
+        if (!live()) return;
+        finished = true; this.active = null; this.current = null;
+        this.timers.forEach(clearTimeout); this.timers = [];
+        if (radio) AUDIO.radioOff();
+        if (!quiet) AUDIO.kick();
+        if (done) done();
+      };
+      const retry = () => {
+        if (!live()) return;
+        if (attempt >= 1) { finish(); return; }
+        attempt++; startedAt = 0; lastBoundary = 0;
+        this.current = null; // Ignore the cancelled utterance's late onend/onerror.
+        try { sy.cancel(); sy.resume(); } catch (e) {}
+        schedule(start, 220); // Cancelled iOS utterances need a gap before the replacement.
+      };
+      const start = () => {
+        if (!live()) return;
+        try {
+          const u = new SpeechSynthesisUtterance(text), vv = ja ? this.ja : this.voice;
+          if (vv) u.voice = vv;
+          u.lang = (vv && vv.lang) || (ja ? 'ja-JP' : 'en-US');
+          u.rate = style === 'praise' ? 1.05 : radio ? 1.1 : 1.0;
+          u.pitch = style === 'praise' ? 1.15 : radio ? 0.8 : quiet ? 1.0 : 0.95;
+          this.current = u; // Keep the utterance alive until Safari reports its end.
+          u.onstart = () => { if (!live() || this.current !== u) return; startedAt = performance.now(); if (radio) AUDIO.radioOn(); if (onstart) onstart(); };
+          u.onboundary = ev => { if (!live() || this.current !== u) return; lastBoundary = Math.max(lastBoundary, ev.charIndex || 0); if (onbound) onbound(lastBoundary); };
+          u.onend = () => {
+            if (!live() || this.current !== u) return;
+            const elapsed = startedAt ? performance.now() - startedAt : 0;
+            const minimum = Math.min(1700, Math.max(350, text.replace(/\s/g, '').length * (ja ? 85 : 45)));
+            if (lastBoundary < text.length - 3 && elapsed < minimum) retry();
+            else finish();
+          };
+          u.onerror = () => { if (live() && this.current === u) retry(); };
+          startedAt = performance.now(); // onstart is not guaranteed on iOS; measure from the request in that case.
+          sy.speak(u);
+          // Do not use speaking/pending or an estimated sentence length to cancel an audible voice.
+          schedule(() => { if (live() && this.current === u) retry(); }, Math.max(14000, text.length * 550));
+        } catch (e) { retry(); }
+      };
       try {
+        this.active = tk;
         if (!this.voice && this.pick) this.pick();
-        try { if (navigator.audioSession && !MICV.ready) navigator.audioSession.type = 'playback'; } catch (e) {}   // iOS：効果音(WebAudio)と読み上げを同じ種類にそろえ、読み上げ中もサイレン・BGMが消えないようにする
-        AUDIO.kick();
-        const sy = speechSynthesis; try { sy.resume(); } catch (e) {}
-        const stale = sy.speaking || sy.pending; if (stale) sy.cancel();       // iOS：cancel 直後の speak は無視されがちなので、少し待ってから話す
-        if (!MICV.virtual) MICV.release();        // iOS：読み上げとマイクは同時に使えないので、話す前にマイクを閉じる
-        const u = new SpeechSynthesisUtterance(text), ja = style === 'ja' || style === 'radioja' || style === 'quietja', vv = ja ? this.ja : this.voice;
-        if (vv) u.voice = vv;
-        u.lang = (vv && vv.lang) || (ja ? 'ja-JP' : 'en-US'); u.rate = style === 'praise' ? 1.05 : style === 'radio' || style === 'radioja' ? 1.1 : 1.0; u.pitch = style === 'praise' ? 1.15 : style === 'radio' || style === 'radioja' ? 0.8 : style === 'quietja' ? 1.0 : 0.95;
-        let fin = false; const tk = ++this.seq, fire = () => { if (!fin) { fin = true; AUDIO.kick(); if (this.seq === tk) this.talkUntil = 0; if (done) done(); } };
-        this.talkUntil = performance.now() + (text.length * 0.08 + 0.8) * 1000;      // speechSynthesis.speaking は iOS で残りっぱなしになるので、自前で「話し中」を数える
-        if (style === 'radio' || style === 'radioja') { u.onstart = () => AUDIO.radioOn(); const off = () => { AUDIO.radioOff(); fire(); }; u.onend = off; u.onerror = off; setTimeout(off, 9000); AUDIO.radioOn(); }
-        else if (style === 'quietja') { u.onend = fire; u.onerror = fire; setTimeout(fire, (text.length * 0.25 + 4) * 1000); }     // 静寂の中の無線：効果音・ノイズ・音量下げは一切なし。声が始まった時・読み進めた位置を知らせる
-        else { AUDIO.radioOff(); u.onend = fire; u.onerror = fire; setTimeout(fire, (text.length * 0.08 + 1.2) * 1000); }
-        let started = false; const o0 = u.onstart; u.onstart = () => { started = true; if (o0) o0(); if (onstart) onstart(); };
-        if (onbound) u.onboundary = ev => { try { onbound(ev.charIndex || 0); } catch (x) {} };
-        if (stale) setTimeout(() => { try { sy.speak(u); } catch (e) {} }, 90); else sy.speak(u);
-        setTimeout(() => {     // iOS：声が始まらないまま固まった時は、いったん取り消してもう一度だけ話し直す
-          if (started || fin || this.seq !== tk) return; try { sy.cancel(); sy.resume(); } catch (e) {}
-          const u2 = new SpeechSynthesisUtterance(text); u2.voice = u.voice; u2.lang = u.lang; u2.rate = u.rate; u2.pitch = u.pitch; u2.onend = u.onend; u2.onerror = u.onerror; u2.onstart = u.onstart; u2.onboundary = u.onboundary;
-          setTimeout(() => { try { sy.speak(u2); } catch (e) {} }, 120);
-        }, 1600);
-        if (style !== 'quietja') AUDIO.duck(text.length * 0.07 + 0.6);
-      } catch (e) {}
+        if (!MICV.virtual && MICV.ready) MICV.release();
+        if (!quiet) {
+          try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+          AUDIO.radioOff(); if (!radio) AUDIO.mute(); // WebAudio resuming during a spoken example can interrupt iOS TTS.
+        }
+        try { sy.resume(); } catch (e) {}
+        if (stale) schedule(start, 180); else start(); // Keep the first LISTEN tap in its user gesture.
+      } catch (e) { finish(); }
     },
-    seq: 0, talkUntil: 0,
-    isTalking() { return performance.now() < this.talkUntil; },
-    cancel() { try { speechSynthesis.cancel(); } catch (e) {} this.talkUntil = 0; AUDIO.radioOff(); },
+    seq: 0, active: null, current: null, timers: [],
+    isTalking() { return this.active !== null; },
+    cancel(resumeAudio = true) {
+      this.seq++; this.active = null; this.current = null;
+      this.timers.forEach(clearTimeout); this.timers = [];
+      try { speechSynthesis.cancel(); } catch (e) {}
+      AUDIO.radioOff(); if (resumeAudio) AUDIO.kick();
+    },
     toggle() { this.on = !this.on; try { localStorage.setItem('fs.voice', this.on ? 'on' : 'off'); } catch (e) {} }
   };
   VOICE.init();
@@ -1056,7 +1096,7 @@ const CORE = (function () {
   hit.addEventListener('pointerup', endTrk); hit.addEventListener('pointercancel', endTrk);
   function wake() { if (AUDIO.ctx && AUDIO.ctx.state !== 'running') AUDIO.kick(); }
   document.addEventListener('pointerdown', () => { if (!paused) wake(); }, true);
-  setInterval(() => { if (!paused && !document.hidden && AUDIO.ctx && AUDIO.ctx.state !== 'running') AUDIO.kick(); }, 1000);
+  setInterval(() => { if (!paused && !document.hidden && !VOICE.isTalking() && AUDIO.ctx && AUDIO.ctx.state !== 'running') AUDIO.kick(); }, 1000);
   // 命令のセリフをランダムに決める（停車して EVENT に入るたび。デバッグのジャンプ用に最初にも1回）
   function pickCmds() { CONFIG.CMD_ALTS.forEach((alts, i) => { const a = alts[Math.floor(Math.random() * alts.length)]; CONFIG.CMDS[i].text = a[0]; CONFIG.CMDS_JA[i] = a[1]; }); }
   pickCmds();
@@ -1181,7 +1221,7 @@ const CORE = (function () {
   $('alert').addEventListener('click', e => {
     e.stopPropagation();      // 無線の間は AudioContext を作らない（iOSで読み上げが途中で切れる・ザラつく原因になる）。作るのは「同意してスタート」から
     if (alertStep !== 0) return;
-    AUDIO.init(); wake();      // 音声を出す準備（無音で用意するだけ。効果音・ノイズは鳴らさない）。マナーモード対策の再生設定もここで入る
+    AUDIO.mute();              // 無線の読み上げ中は WebAudio を動かさない。音は開始ボタンで再開する
     alertStep = 1; const tx = CONFIG.ALERT_RADIO_JA; $('alertt2').style.visibility = 'visible'; $('alerttx').style.visibility = 'visible'; $('alerttx').textContent = ''; $('alertt4').textContent = '受信中…';
     // 静寂の中で無線だけを流す（効果音なし）。文字は音声が始まってから、読み進めた分だけ出す（音声より先には出さない）
     let shown = 0, spoken = false, moved = false, ty = 0;
@@ -1204,7 +1244,7 @@ const CORE = (function () {
       };
       setTimeout(playNext, 450);      // 音声出力が立ち上がるのを少し待ってから話し始める（出だしが欠けないように）
     } else { shown = 0; ty = setInterval(() => { shown += 1; draw(); if (shown >= tx.length) { clearInterval(ty); spoken = true; next(); } }, 110); }       // 音声なし設定：文字だけ
-    setTimeout(finish, 40000);      // 保険：何があっても次へ進む
+    setTimeout(finish, 90000);      // 読み上げ再試行中に先へ進まないための最終保険
   });
   $('alertgo').addEventListener('pointerdown', e => e.stopPropagation());
   $('alertgo').addEventListener('click', e => {
