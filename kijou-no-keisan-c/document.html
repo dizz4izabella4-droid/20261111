@@ -1,0 +1,173 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>資料作成｜机上の空論GP</title><style>
+*{box-sizing:border-box}body{margin:0;font:15px/1.6 system-ui,"Hiragino Sans",sans-serif;background:#eef2f6;color:#182a42}header{padding:12px 18px;background:white;display:flex;gap:10px;flex-wrap:wrap;align-items:center}h1{font-size:1.25rem;margin:0 15px 0 0}h2{font-size:1rem}a{color:#124799}button,select,input{font:inherit;color:inherit;min-height:40px;border:1px solid #8b9cb2;border-radius:6px;background:white;padding:6px 9px}button{cursor:pointer;font-weight:700}input[type=number]{width:100%}input[type=checkbox]{min-height:22px;width:22px}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #edaa3d;outline-offset:2px}.layout{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px;padding:16px}aside{background:white;border-radius:10px;padding:14px;max-height:calc(100vh - 100px);overflow:auto}label{display:grid;gap:4px;margin:9px 0}label.check{display:flex;gap:8px;align-items:center}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.paper-wrap{overflow:auto;background:#ccd4df;padding:18px}.paper{height:auto;aspect-ratio:277/190;width:100%;min-width:320px;background:white;box-shadow:0 3px 12px #20385030;touch-action:none;user-select:none;display:block}p{margin:8px 0}.help{font-size:.82rem;color:#4e617a}fieldset{border:1px solid #c5d1df;border-radius:7px;margin:12px 0;padding:10px}legend{font-weight:700}.point{padding:8px;border-left:5px solid var(--c,#63768d);background:#f3f6fa;margin:8px 0}.distances{max-height:300px;overflow:auto}details{margin:16px 0}summary{cursor:pointer;font-weight:700}#status{padding:10px;font-weight:700}button.primary{background:#164d96;color:white}.toolbar{display:flex;gap:7px;flex-wrap:wrap}
+@media(max-width:800px){.layout{display:flex;flex-direction:column-reverse;padding:8px}aside{max-height:none}.paper-wrap{padding:5px}}
+@media print{@page{size:A4 landscape;margin:10mm}body{background:white}header,aside,#status,.print-help{display:none!important}.layout,.paper-wrap{display:block;padding:0;margin:0;overflow:visible;background:white}.paper{width:277mm!important;height:190mm!important;min-width:0;box-shadow:none}}
+</style></head><body>
+<header><a href="./">← 検証へ</a><h1>資料作成モード</h1><button id="svg-export" class="primary">SVGを保存</button><button id="print">A4横で印刷</button><button id="save">図面データを保存</button><button id="load">図面データを読込</button><input id="file" type="file" accept=".json,application/json" hidden></header>
+<div class="layout"><aside>
+<label>1. 縮尺<select id="scale"><option value="200">1 / 200</option><option value="300">1 / 300</option><option value="400">1 / 400</option></select></label>
+<label>道路形状<select id="shape"><option value="cross">十字路</option><option value="tSouth">丁字路（南接続）</option><option value="straightX">直線（東西）</option></select></label>
+<fieldset><legend>2. 道路・車線・歩道</legend>
+<label>編集する道路<select id="road"><option value="x">東西道路</option><option value="y">南北道路</option></select></label>
+<p class="help">図面の車線を押しても道路を選択できます。車線幅は両方向の車線を順に指定します。</p>
+<label>車道全体の幅員（m）<input id="road-width" type="number" min=".5" max="80" step=".01"></label><p class="help">全体幅を変更すると各車線を同じ比率でリサイズします。各車線も個別に変更できます。</p><label>車線数<input id="lane-count" type="number" min="1" max="8" step="1"></label><div id="lanes"></div><p id="total"></p>
+<div class="row"><label id="side-a-label">歩道1（m）<input id="side-a" type="number" min="0" max="10" step=".1"></label><label id="side-b-label">歩道2（m）<input id="side-b" type="number" min="0" max="10" step=".1"></label></div>
+<p class="help">歩道幅0で非表示。車道の外側に付加します。</p>
+<label>隅角部の円曲線半径 R（m）<input id="radius" type="number" min="0" max="15" step=".1" value="6"></label>
+</fieldset>
+<fieldset><legend>3. 目標物・地点の配置</legend>
+<label>操作<select id="tool"><option value="reference">目標物を配置（最大4箇所）</option><option value="point">地点を配置（最大20点）</option><option value="move">選択・移動</option></select></label>
+<label>目標物の種類<select id="object"><option>電柱</option><option>標識柱</option><option>建物角</option><option>その他</option></select></label>
+<p class="help">図面を押して配置。配置済みの点はドラッグできます。座標は交差点中心を原点、東がX＋、南がY＋です。</p><div id="objects"></div>
+</fieldset>
+<fieldset><legend>4. 距離の表示</legend><div class="toolbar"><button id="show-all">すべて表示</button><button id="hide-all">すべて非表示</button></div><div id="distances" class="distances"></div></fieldset>
+<details><summary>道路曲線の参照資料</summary><p class="help">道路構造令27条の隅角部処理と、国交省北陸地方整備局「第2章 交差点設計」2-2-1の円曲線処理を参考にしています。Rの初期値6mは編集用の仮値です。道路の級や車両条件によって必要な形状は異なるため、実測値に調整してください。規格適合を自動判定するものではありません。</p><a href="https://laws.e-gov.go.jp/law/345CO0000000320" target="_blank" rel="noopener">道路構造令</a><br><a href="https://www.hrr.mlit.go.jp/gijyutu/kaitei/sekkei_r/02Split/02.pdf" target="_blank" rel="noopener">国交省の交差点設計資料（PDF）</a></details>
+</aside><section><div id="status" role="status">図面を押して目標物を配置してください。</div><div class="paper-wrap"><svg id="paper" class="paper" xmlns="http://www.w3.org/2000/svg" width="277mm" height="190mm" viewBox="0 0 277 190" aria-label="縮尺付き道路図面"></svg></div><p class="help print-help">表示画面の大きさは縮尺ではありません。SVGとA4横印刷は指定縮尺です。印刷は倍率100%・用紙に合わせる設定をオフ・ヘッダーとフッターなしで出力し、図中の10m検尺線で確認してください。図面データはシミュレーション案件とは別に保存します。</p></section></div>
+<script>
+"use strict";
+const $=id=>document.getElementById(id), colors=["#b32635","#145baf","#177044","#8a3ca3"];
+const esc=value=>String(value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let state={version:1,scale:200,shape:"cross",radius:6,roads:{x:{lanes:[3,3],a:0,b:0},y:{lanes:[3,3],a:0,b:0}},refs:[],points:[],visible:{}};
+let selectedRoad="x",drag=null,next=1;
+function sum(values){return values.reduce((a,b)=>a+b,0);}
+function message(s){$("status").textContent=s;}
+function roadPath(left,right,top,bottom,r,L,shape){
+ if(shape==="straightX")return "M "+(-L)+" "+(-top)+" H "+L+" V "+bottom+" H "+(-L)+" Z";
+ let p="M "+(-L)+" "+(-top);
+ if(shape==="cross")p+=" H "+(-left-r)+" A "+r+" "+r+" 0 0 0 "+(-left)+" "+(-top-r)+" V "+(-L)+" H "+right+" V "+(-top-r)+" A "+r+" "+r+" 0 0 0 "+(right+r)+" "+(-top);
+ p+=" H "+L+" V "+bottom+" H "+(right+r)+" A "+r+" "+r+" 0 0 0 "+right+" "+(bottom+r)+" V "+L+" H "+(-left)+" V "+(bottom+r)+" A "+r+" "+r+" 0 0 0 "+(-left-r)+" "+bottom+" H "+(-L)+" Z";
+ return p;
+}
+function text(x,y,value,size=.7,color="#27384f",anchor="middle"){return '<text x="'+x+'" y="'+y+'" font-size="'+size+'" fill="'+color+'" text-anchor="'+anchor+'" font-family="sans-serif" paint-order="stroke" stroke="white" stroke-width=".13">'+esc(value)+'</text>';}
+function pairKey(r,p){return r.id+":"+p.id;}
+function render(){
+ const scale=1000/state.scale, L=state.scale, x=state.roads.x,y=state.roads.y;
+ const hx=sum(y.lanes)/2,hy=sum(x.lanes)/2,r=state.radius;
+ let world='<path d="'+roadPath(hx+y.a,hx+y.b,hy+x.a,hy+x.b,Math.max(0,r-Math.min(x.a,x.b,y.a,y.b)),L,state.shape)+'" fill="#e4e7eb" stroke="#758294" stroke-width=".05"/>';
+ world+='<path d="'+roadPath(hx,hx,hy,hy,r,L,state.shape)+'" fill="white" stroke="#34445b" stroke-width=".06"/>';
+ function lane(axis,widths,half,edge){
+ let offset=-half;
+ widths.forEach((w,i)=>{
+  const mid=offset+w/2;
+  for(const sign of [-1,1]){
+   if(axis==="y"&&(state.shape==="straightX"||(state.shape==="tSouth"&&sign<0)))continue;
+   const end=sign*(edge+r+2), far=sign*L;
+   world+='<path data-road="'+axis+'" d="'+(axis==="x"?'M '+end+' '+mid+' H '+far:'M '+mid+' '+end+' V '+far)+'" fill="none" stroke="transparent" stroke-width="'+w+'" pointer-events="stroke"/>';
+   if(i>0)world+='<path d="'+(axis==="x"?'M '+end+' '+offset+' H '+far:'M '+offset+' '+end+' V '+far)+'" fill="none" stroke="#5f6e80" stroke-width=".04" stroke-dasharray=".8 .7" pointer-events="none"/>';
+  }
+  if(axis==="x")world+=text(-Math.min(19,138.5/scale-2),mid+.2,w.toFixed(2)+"m",.65);
+  else if(state.shape!=="straightX")world+=text(mid,-Math.min(14,95/scale-5),w.toFixed(2)+"m",.6);
+  offset+=w;
+ });
+ }
+ lane("x",x.lanes,hy,hx);lane("y",y.lanes,hx,hy);
+ if(x.a>0)world+=text(-18,-hy-x.a/2,"歩道 "+x.a.toFixed(2)+"m",.65);
+ if(x.b>0)world+=text(-18,hy+x.b/2,"歩道 "+x.b.toFixed(2)+"m",.65);
+ if(state.shape!=="straightX"){
+ if(y.a>0)world+=text(-hx-y.a/2,14,"歩道 "+y.a.toFixed(2)+"m",.6);
+ if(y.b>0)world+=text(hx+y.b/2,14,"歩道 "+y.b.toFixed(2)+"m",.6);
+ }
+ for(const ref of state.refs)for(const p of state.points){
+  if(!state.visible[pairKey(ref,p)])continue;
+  const d=Math.hypot(p.x-ref.x,p.y-ref.y);
+  world+='<line x1="'+ref.x+'" y1="'+ref.y+'" x2="'+p.x+'" y2="'+p.y+'" stroke="'+colors[ref.slot]+'" stroke-width=".045" stroke-dasharray=".35 .25"/>';
+  world+=text((p.x+ref.x)/2,(p.y+ref.y)/2-.2,ref.name+"–"+p.name+" "+d.toFixed(2)+"m",.65,colors[ref.slot]);
+ }
+ for(const obj of [...state.refs,...state.points]){
+  const color=obj.slot==null?"#21364f":colors[obj.slot];
+  world+='<g data-marker="'+obj.id+'" style="cursor:move"><circle cx="'+obj.x+'" cy="'+obj.y+'" r=".28" fill="white" stroke="'+color+'" stroke-width=".12"/>';
+  if(obj.slot!=null)world+='<path d="M '+(obj.x-.19)+' '+obj.y+' h .38 M '+obj.x+' '+(obj.y-.19)+' v .38" stroke="'+color+'" stroke-width=".06"/>';
+  world+=text(obj.x+.55,obj.y-.45,obj.name,.8,color,"start")+'</g>';
+ }
+ const bar=10*scale;
+ $("paper").innerHTML='<defs><clipPath id="plot"><rect x="1" y="8" width="275" height="171"/></clipPath></defs><rect width="277" height="190" fill="white"/><text x="5" y="5" font-family="sans-serif" font-size="3.4">道路平面図　1:'+state.scale+'</text><text x="270" y="5" text-anchor="end" font-size="3">北 ↑</text><g clip-path="url(#plot)"><g transform="translate(138.5 95) scale('+scale+')">'+world+'</g></g><path d="M 6 183 h '+bar+' m '+(-bar)+' -1.5 v 3 m '+bar+' -3 v 3" stroke="#172b45" fill="none" stroke-width=".3"/><text x="6" y="180.5" font-size="2.7">10m（検尺線）</text><text x="270" y="187" text-anchor="end" font-size="2.5">机上の空論GP 資料作成／平面上の直線距離・単位m</text>';
+ const out=[...state.refs,...state.points].filter(p=>Math.abs(p.x)*scale>135||Math.abs(p.y)*scale>80);
+ if(out.length)message("用紙外の点："+out.map(p=>p.name).join("、")+"。縮尺または座標を変更してください。");
+}
+function controls(){
+ $("scale").value=state.scale;$("shape").value=state.shape;$("radius").value=state.radius;
+ const road=state.roads[selectedRoad];$("road-width").value=sum(road.lanes);$("lane-count").value=road.lanes.length;
+ $("lanes").innerHTML=road.lanes.map((w,i)=>'<label>車線'+(i+1)+' 幅（m）<input data-lane="'+i+'" type="number" min=".5" max="10" step=".01" value="'+w+'"></label>').join("");
+ $("side-a").value=road.a;$("side-b").value=road.b;
+ $("side-a-label").firstChild.textContent=selectedRoad==="x"?"北側歩道（m）":"西側歩道（m）";
+ $("side-b-label").firstChild.textContent=selectedRoad==="x"?"南側歩道（m）":"東側歩道（m）";
+ $("total").textContent="車道幅員 "+sum(road.lanes).toFixed(2)+"m";
+ $("objects").innerHTML=[...state.refs,...state.points].map(obj=>'<div class="point" style="--c:'+(obj.slot==null?"#63768d":colors[obj.slot])+'"><label>名称<input data-object="'+obj.id+'" data-prop="name" maxlength="24" value="'+esc(obj.name)+'"></label><div class="row">'+["x","y"].map(k=>'<label>'+k.toUpperCase()+'（m）<input data-object="'+obj.id+'" data-prop="'+k+'" type="number" min="-200" max="200" step=".01" value="'+obj[k]+'"></label>').join("")+'</div><button data-delete="'+obj.id+'">削除</button></div>').join("");
+ distances();render();
+}
+function distances(){
+ $("distances").innerHTML=state.refs.map(ref=>'<h2 style="color:'+colors[ref.slot]+'">'+esc(ref.name)+'</h2>'+state.points.map(p=>'<label class="check"><input type="checkbox" data-pair="'+pairKey(ref,p)+'" '+(state.visible[pairKey(ref,p)]?"checked":"")+'><span>'+esc(p.name)+'：'+Math.hypot(ref.x-p.x,ref.y-p.y).toFixed(2)+'m</span></label>').join("")).join("")||'<p class="help">目標物と地点を配置すると距離を選択できます。</p>';
+}
+document.addEventListener("input",event=>{
+ const el=event.target;
+ if(el.dataset.lane!=null){if(!el.validity.valid||el.value==="")return;state.roads[selectedRoad].lanes[+el.dataset.lane]=+el.value;$("total").textContent="車道幅員 "+sum(state.roads[selectedRoad].lanes).toFixed(2)+"m";$("road-width").value=sum(state.roads[selectedRoad].lanes);render();}
+ if(el.dataset.object){
+ const obj=[...state.refs,...state.points].find(o=>o.id===el.dataset.object);if(!obj)return;
+ const prop=el.dataset.prop;if(prop==="name")obj.name=el.value.slice(0,24);else{if(!el.validity.valid||el.value==="")return;obj[prop]=+el.value;}
+ distances();render();
+ }
+});
+$("road").onchange=()=>{selectedRoad=$("road").value;controls();};
+$("scale").onchange=()=>{state.scale=+$("scale").value;message("縮尺を変更しました。");render();};
+$("shape").onchange=()=>{state.shape=$("shape").value;render();};
+$("road-width").onchange=()=>{const el=$("road-width"),road=state.roads[selectedRoad],width=+el.value,ratio=width/sum(road.lanes);
+ if(!el.validity.valid||!el.value)return;
+ const lanes=road.lanes.map(v=>Math.round(v*ratio*10000)/10000);
+ if(lanes.some(v=>v<.5||v>10)){message("各車線の幅が0.5〜10mになる全体幅を指定してください。");el.value=sum(road.lanes);return;}
+ road.lanes=lanes;controls();};
+$("lane-count").onchange=()=>{const n=+$("lane-count").value;if(!Number.isInteger(n)||n<1||n>8)return;const road=state.roads[selectedRoad];road.lanes=Array.from({length:n},(_,i)=>road.lanes[i]??3);controls();};
+for(const [id,key] of [["side-a","a"],["side-b","b"]])$(id).oninput=()=>{if($(id).value!==""&&$(id).validity.valid){state.roads[selectedRoad][key]=+$(id).value;render();}};
+$("radius").oninput=()=>{if($("radius").value!==""&&$("radius").validity.valid){state.radius=+$("radius").value;render();}};
+$("distances").onchange=event=>{if(event.target.dataset.pair){state.visible[event.target.dataset.pair]=event.target.checked;render();}};
+$("objects").onclick=event=>{
+ const id=event.target.dataset.delete;if(!id)return;
+ state.refs=state.refs.filter(p=>p.id!==id);state.points=state.points.filter(p=>p.id!==id);
+ for(const key of Object.keys(state.visible))if(key.split(":").includes(id))delete state.visible[key];controls();
+};
+function allVisible(value){for(const r of state.refs)for(const p of state.points)state.visible[pairKey(r,p)]=value;distances();render();}
+$("show-all").onclick=()=>allVisible(true);$("hide-all").onclick=()=>allVisible(false);
+function world(event){const pt=$("paper").createSVGPoint();pt.x=event.clientX;pt.y=event.clientY;const p=pt.matrixTransform($("paper").getScreenCTM().inverse());return {x:Math.round((p.x-138.5)*state.scale/1000*100)/100,y:Math.round((p.y-95)*state.scale/1000*100)/100};}
+$("paper").onpointerdown=event=>{
+ const marker=event.target.closest("[data-marker]");
+ if(marker){drag={id:marker.dataset.marker,pointer:event.pointerId};$("paper").setPointerCapture(event.pointerId);event.preventDefault();return;}
+ const road=event.target.dataset.road;
+ if($("tool").value==="move"){if(road){selectedRoad=road;$("road").value=road;controls();}return;}
+ const p=world(event);if(Math.abs(p.x)>200||Math.abs(p.y)>200)return;
+ if($("tool").value==="reference"){
+  if(state.refs.length>=4)return message("目標物は4箇所までです。");
+  const slot=colors.findIndex((_,i)=>!state.refs.some(r=>r.slot===i));
+  state.refs.push({...p,id:"r"+next++,slot,name:"目標"+(slot+1)+" "+$("object").value});
+ }else{
+  if(state.points.length>=20)return message("地点は20点までです。");
+  state.points.push({...p,id:"p"+next,name:"地点"+next++});
+ }
+ message("配置しました。点をドラッグして位置を調整できます。");controls();
+};
+$("paper").onpointermove=event=>{if(!drag||drag.pointer!==event.pointerId)return;const p=world(event),obj=[...state.refs,...state.points].find(o=>o.id===drag.id);if(obj){obj.x=Math.max(-200,Math.min(200,p.x));obj.y=Math.max(-200,Math.min(200,p.y));render();}};
+function stopDrag(){if(!drag)return;drag=null;controls();}
+$("paper").onpointerup=stopDrag;$("paper").onpointercancel=stopDrag;$("paper").onlostpointercapture=stopDrag;
+function download(content,type,name){const url=URL.createObjectURL(new Blob([content],{type})),a=document.createElement("a");a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+$("svg-export").onclick=()=>download(new XMLSerializer().serializeToString($("paper")),"image/svg+xml;charset=utf-8","kijou-plan-1-"+state.scale+".svg");
+$("print").onclick=()=>window.print();
+$("save").onclick=()=>download(JSON.stringify(state,null,2),"application/json","kijou-plan.json");
+$("load").onclick=()=>$("file").click();
+function validate(raw){
+ function num(v,min,max){if(!Number.isFinite(v)||v<min||v>max)throw Error("数値が範囲外です。");return v;}
+ if(raw.version!==1||![200,300,400].includes(raw.scale)||!["cross","tSouth","straightX"].includes(raw.shape))throw Error("資料作成の図面データを選択してください。");
+ const roads={};
+ for(const axis of ["x","y"]){const r=raw.roads[axis];if(!Array.isArray(r.lanes)||r.lanes.length<1||r.lanes.length>8)throw Error("車線数が不正です。");roads[axis]={lanes:r.lanes.map(v=>num(v,.5,10)),a:num(r.a,0,10),b:num(r.b,0,10)};}
+ const ids=new Set(),slots=new Set();
+ function points(list,max,ref){if(!Array.isArray(list)||list.length>max)throw Error("点の数が不正です。");return list.map(o=>{
+ if(typeof o.id!=="string"||!/^r\d+$|^p\d+$/.test(o.id)||ids.has(o.id)||typeof o.name!=="string"||o.name.length>24)throw Error("点のデータが不正です。");
+ ids.add(o.id);const p={id:o.id,name:o.name,x:num(o.x,-200,200),y:num(o.y,-200,200)};
+ if(ref){if(!Number.isInteger(o.slot)||o.slot<0||o.slot>3||slots.has(o.slot))throw Error("目標物の色が不正です。");slots.add(o.slot);p.slot=o.slot;}return p;});}
+ const refs=points(raw.refs,4,true),ps=points(raw.points,20,false),visible={};
+ for(const r of refs)for(const p of ps)visible[pairKey(r,p)]=raw.visible?.[pairKey(r,p)]===true;
+ return {version:1,scale:raw.scale,shape:raw.shape,radius:num(raw.radius,0,15),roads,refs,points:ps,visible};
+}
+$("file").onchange=async event=>{const file=event.target.files[0];event.target.value="";if(!file)return;try{
+ if(file.size>200000)throw Error("図面データは200KBまでです。");
+ const parsed=validate(JSON.parse(await file.text()));state=parsed;next=1+Math.max(0,...[...state.refs,...state.points].map(o=>+o.id.slice(1)));controls();message("図面データを読み込みました。");
+ }catch(e){message("読み込めませんでした："+e.message);}};
+controls();
+</script></body></html>
