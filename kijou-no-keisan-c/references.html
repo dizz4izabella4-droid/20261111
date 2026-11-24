@@ -1,0 +1,321 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>資料編｜机上の空論GP</title><style>
+:root{font-family:system-ui,"Hiragino Sans","Yu Gothic",sans-serif;color:#172b45;background:#f2f5f9;line-height:1.7}
+*{box-sizing:border-box}body{margin:0}main{max-width:1050px;margin:auto;padding:22px 16px 60px}
+a{color:#124799;font-weight:700;text-underline-offset:3px}a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #e49a27;outline-offset:3px}
+h1{font-size:clamp(1.6rem,5vw,2.2rem);margin:16px 0 8px}h2{font-size:1.1rem;line-height:1.5;margin:6px 0}h3{font-size:.9rem;margin:12px 0 0}p{margin:8px 0}
+.intro,article{background:white;border:1px solid #cfdbe9;border-radius:12px;padding:18px}.intro{margin:18px 0}
+.meta,.issuer{font-size:.82rem;color:#52647b}.issuer{margin-top:3px}details{margin:12px 0}summary{cursor:pointer;font-weight:700;color:#234d83}
+.filters{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;margin:20px 0}label{font-size:.875rem;font-weight:700;display:grid;gap:5px}
+input,select,button{font:inherit;color:#172b45;background:white;border:1px solid #8599b5;border-radius:7px;min-height:44px;padding:9px;min-width:0}
+button{cursor:pointer;font-weight:700}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.count{margin:12px 0;font-weight:700}
+[hidden]{display:none!important}.actions{display:flex;gap:15px;flex-wrap:wrap;align-items:center}article>a{display:inline-block;padding:8px 0}
+@media(max-width:650px){.grid,.filters{grid-template-columns:1fr}.intro,article{padding:15px}}
+@media print{.filters,.actions button{display:none}.grid{display:block}article{break-inside:avoid;margin-bottom:12px}details>*{display:block}a:after{content:" (" attr(href) ")";font-size:.7rem;overflow-wrap:anywhere}}
+</style></head><body><main><div class="actions"><a href="./">← シミュレーションへ</a><button id="export" type="button">収集目録をJSONで保存</button></div>
+<h1>資料編：交通事故の過失認定</h1><p>捜査の検討に用いる公開資料の収集目録 · 2026年11月24日確認</p>
+<section class="intro" aria-label="収集範囲"><p><strong>25資料：刑事裁判例10件、調査報告書・裁判例集等7件、法令2件、公的資料5件、検索案内1件。</strong></p>
+<p>原判決の関連理由を確認した事例と、目次・関連箇所まで確認した大部の調査資料を区別しています。各資料を開くと確認範囲を表示します。全収録判例の精読・原典照合や、各事件の上訴・確定状況の網羅調査は未了です。</p>
+<p>刑事上の注意義務・予見可能性・回避可能性・因果関係と証拠評価を調べるための資料です。保険・民事の過失割合表とは分けています。古い判決の罪名・法令を現在の事件へそのまま置き換えないでください。</p>
+<p>要約と「着眼点」は本資料編の編集であり、捜査機関の内部基準や判決からの直接引用ではありません。計算結果から有罪・無罪や過失割合を自動認定するものではありません。</p></section>
+<div class="filters"><label>キーワード<input id="query" type="search" placeholder="例：視認、供述、EDR、信号"></label>
+<label>資料の種類<select id="type"><option value="">すべて</option><option>刑事裁判例</option><option>調査報告書</option><option>裁判例集</option><option>調査案内</option><option>法令</option><option>公的資料</option><option>検索案内</option></select></label>
+<label>事故類型<select id="pattern"><option value="">すべて</option><option value="all">共通</option><option value="cross">交差点・出会い頭</option><option value="rightStraight">右直</option><option value="tMerge">丁字路・右折と後続車</option><option value="rear">追突</option><option value="headOn">正面衝突</option><option value="other">左折・死角等</option></select></label></div>
+<p id="count" class="count" role="status">25 / 25資料</p><div class="grid"><article data-id="K01" data-type="刑事裁判例" data-patterns="rightStraight">
+ <p class="meta">K01 · 刑事裁判例 · 有罪・原判決破棄／執行猶予</p>
+ <h2>対向右折と直進・速度超過と回避可能性</h2><p class="issuer">仙台高裁／2001-12-04／平成13年（う）第89号</p>
+ <p>直進二輪車の通過前に右折できるとの判断と、直進車側の回避可能性を検討。</p>
+ <details><summary>確認箇所・編集メモ</summary>
+ <h3>証拠確認の着眼点（編集メモ）</h3><p>右折開始時の距離・速度、具体的危険が生じた時点、制限速度で走行した場合の経過。</p>
+ <h3>利用時の留意点</h3><p>速度超過の有無だけで事故についての過失を決めない。本件の約10km/h超過に関する判断を他の事案に一般化しない。</p>
+ <h3>原典内の確認箇所</h3><p>理由第2・3</p>
+ <p class="meta">確認範囲：判決原文の関連理由を確認（上訴・確定状況の網羅調査は未了）<br>確認日：2026-11-24</p></details>
+ <a href="https://www.courts.go.jp/assets/hanrei/hanrei-pdf-4669.pdf" target="_blank" rel="noopener noreferrer">出典を開く（PDF） ↗</a>
+ </article>
+<article data-id="K02" data-type="刑事裁判例" data-patterns="rightStraight">
+ <p class="meta">K02 · 刑事裁判例 · 有罪</p>
+ <h2>渋滞車両の陰から来る直進二輪車</h2><p class="issuer">神戸地裁／2003-02-21／平成14年（わ）第923号</p>
+ <p>右折時の見通し確保と安全確認の不足を認定。停止していたとの供述も客観的痕跡と照合した。</p>
+ <details><summary>確認箇所・編集メモ</summary>
+ <h3>証拠確認の着眼点（編集メモ）</h3><p>見通せる位置、車輪の損傷解析、スリップ痕、路面のえぐれ痕、事故直後からの供述経過。</p>
+ <h3>利用時の留意点</h3><p>停止や最徐行の必要性は本件の道路・遮蔽条件に即した判断。</p>
+ <h3>原典内の確認箇所</h3><p>罪となるべき事実・補足説明2〜4</p>
+ <p class="meta">確認範囲：判決原文の関連理由を確認（上訴・確定状況の網羅調査は未了）<br>確認日：2026-11-24</p></details>
+ <a href="https://www.courts.go.jp/assets/hanrei/hanrei-pdf-7042.pdf" target="_blank" rel="noopener noreferrer">出典を開く（PDF） ↗</a>
+ </article>
+<article data-id="K03" data-type="刑事裁判例" data-patterns="cross">
+ <p class="meta">K03 · 刑事裁判例 · 原判決・第一審破棄／無罪</p>
+ <h2>黄点滅・赤点滅交差点と信頼の原則</h2><p class="issuer">最高裁第三小法廷／1973-05-22</p>
+ <p>相手方が赤点滅に従い停止すると信頼できる状況での、刑事過失の有無を判断。</p>
+ <details><summary>確認箇所・編集メモ</summary>
+ <h3>証拠確認の着眼点（編集メモ）</h3><p>信号表示、相手車の異常な進行を認識できた時点、特段の事情の有無。</p>
+ <h3>利用時の留意点</h3><p>多数意見と反対意見を区別する。交通法規違反と当該事故の刑事過失を同一視しない。</p>
+ <h3>原典内の確認箇所</h3><p>多数意見・反対意見</p>
+ <p class="meta">確認範囲：判決原文の関連理由を確認（上訴・確定状況の網羅調査は未了）<br>確認日：2026-11-24</p></details>
+ <a href="https://www.courts.go.jp/app/files/hanrei_jp/051/051051_hanrei.pdf" target="_blank" rel="noopener noreferrer">出典を開く（PDF） ↗</a>
+ </article>
+<article data-id="K04" data-type="刑事裁判例" data-patterns="rear">
+ <p class="meta">K04 · 刑事裁判例 · 有罪</p>
+ <h2>高速道路の渋滞末尾への追突</h2><p class="issuer">大津地裁／2019-10-03／令和元年（わ）第288号</p>
+ <p>前方不注視により渋滞停止車両の発見が遅れた多重追突事案。</p>
+ <details><summary>確認箇所・編集メモ</summary>
+ <h3>証拠確認の着眼点（編集メモ）</h3><p>渋滞情報の認識、前方視認性、走行距離と時間、初めて発見した距離。</p>
+ <h3>利用時の留意点</h3><p>これは本件の前方不注視の認定例。追突の外形だけから全事件の責任を決めるものではない。</p>
+ <h3>原典内の確認箇所</h3><p>罪となるべき事実・量刑の理由</p>
+ <p class="meta">確認範囲：判決原文の関連理由を確認（上訴・確定状況の網羅調査は未了）<br>確認日：2026-11-24</p></details>
+ <a href="https://www.courts.go.jp/assets/hanrei/hanrei-pdf-89006.pdf" target="_blank" rel="noopener noreferrer">出典を開く（PDF） ↗</a>
+ </article>
+<article data-id="K05" data-type="刑事裁判例" data-patterns="headOn">
+ <p class="meta">K05 · 刑事裁判例 · 原判決破棄／有罪</p>
+ <h2>正面衝突・中央線越境の証拠評価</h2><p class="issuer">広島高裁／2002-09-26</p>
+ <p>衝突地点と越境の有無について証拠を総合し、第一審の無罪判断を覆した。</p>
+ <details><summary>確認箇所・編集メモ</summary>
+ <h3>証拠確認の着眼点（編集メモ）</h3><p>路面痕跡、車両損傷、衝突後の動き、鑑定の前提と質量・速度の整合性。</p>
+ <h3>利用時の留意点</h3><p>公訴事実の記述と裁判所が認定した事実を区別する。計算モデルの結論だけを根拠にしない。</p>
+ <h3>原典内の確認箇所</h3><p>理由3〜5・罪となるべき事実</p>
+ <p class="meta">確認範囲：判決原文の関連理由を確認（上訴・確定状況の網羅調査は未了）<br>確認日：2026-11-24</p></details>
+ <a href="https://www.courts.go.jp/assets/hanrei/hanrei-pdf-3844.pdf" target="_blank" rel="noopener noreferrer">出典を開く（PDF） ↗</a>
+ </article>
+<article data-id="K06" data-type="刑事裁判例" data-patterns="tMerge">
+ <p class="meta">K06 · 刑事裁判例 · 原判決破棄／差戻し</p>
+ <h2>丁字路右折と後続車への注意</h2><p class="issuer">最高裁第一小法廷／1970-09-24</p>
+ <p>適切な右折準備後の後方確認義務と、追加の確認を要する特段の事情を検討。</p>
+ <details><summary>確認箇所・編集メモ</summary>
+ <h3>証拠確認の着眼点（編集メモ）</h3><p>合図・寄せ・減速の時系列、後続車の位置、異常運転を認識できた事情。</p>
+ <h3>利用時の留意点</h3><p>丁字路の全ての合流事故に同じ結論が適用されるわけではない。差戻しを無罪確定と表示しない。</p>
+ <h3>原典内の確認箇所</h3><p>理由・後半の法的判断</p>
+ <p class="meta">確認範囲：判決原文の関連理由を確認（上訴・確定状況の網羅調査は未了）<br>確認日：2026-11-24</p></details>
+ <a href="https://www.courts.go.jp/app/files/hanrei_jp/801/051801_hanrei.pdf" target="_blank" rel="noopener noreferrer">出典を開く（PDF） ↗</a>
+ </article>
+<article data-id="K07" data-type="刑事裁判例" data-patterns="other">
+ <p class="meta">K07 · 刑事裁判例 · 無罪・証明不足</p>
+ <h2>大型車左折・死角と再現実験</h2><p class="issuer">東京地裁／2003-12-25</p>
+ <p>被害車両を発見できたとの証明と、視認実験の再現条件・記載の正確性を吟味。</p>
+ <details><summary>確認箇所・編集メモ</summary>
+ <h3>証拠確認の着眼点（編集メモ）</h3><p>ミラー、運転姿勢、車両位置、衝突位置、事故時と再現時の環境差。</p>
+ <h3>利用時の留意点</h3><p>死角の存在だけで過失を否定する事例ではない。発見・回避可能性の立証条件を読む。</p>
+ <h3>原典内の確認箇所</h3><p>判断後半・結論</p>
+ <p class="meta">確認範囲：判決原文の関連理由を確認（上訴・確定状況の網羅調査は未了）<br>確認日：2026-11-24</p></details>
+ <a href="https://www.courts.go.jp/assets/hanrei/hanrei-pdf-5603.pdf" target="_blank" rel="noopener noreferrer">出典を開く（PDF） ↗</a>
+ </article>
+<article data-id="K08" data-type="刑事裁判例" data-patterns="cross">
+ <p class="meta">K08 · 刑事裁判例 · 無罪</p>
+ <h2>変形交差点・信号周期と予見義務</h2><p class="issuer">神戸地裁／2015-06-10</p>
+ <p>交錯する経路を許す信号周期の下で、青信号を信頼した運転者に課せられる義務を判断。</p>
+ <details><summary>確認箇所・編集メモ</summary>
+ <h3>証拠確認の着眼点（編集メモ）</h3><p>信号現示階梯、各車の進入経路、信号周期の認識、特別な事情。</p>
+ <h3>利用時の留意点</h3><p>下級審の個別判断。時差式信号の最高裁決定との前提事実の違いに注意する。</p>
+ <h3>原典内の確認箇所</h3><p>判断2・結論3</p>
+ <p class="meta">確認範囲：判決原文の関連理由を確認（上訴・確定状況の網羅調査は未了）<br>確認日：2026-11-24</p></details>
+ <a href="https://www.courts.go.jp/assets/hanrei/hanrei-pdf-85573.pdf" target="_blank" rel="noopener noreferrer">出典を開く（PDF） ↗</a>
+ </article>
+<article data-id="K09" data-type="刑事裁判例" data-patterns="headOn">
+ <p class="meta">K09 · 刑事裁判例 · 無罪・証明不足</p>
+ <h2>正面衝突・突発的な意識障害の疑い</h2><p class="issuer">大阪地裁／2005-02-09</p>
+ <p>前方注視義務を実際に履行できたかについて、身体的異変の可能性と医学鑑定を検討。</p>
+ <details><summary>確認箇所・編集メモ</summary>
+ <h3>証拠確認の着眼点（編集メモ）</h3><p>事故前の走行状況、異常走行の距離・時間、医学鑑定、本人の認識。</p>
+ <h3>利用時の留意点</h3><p>当時の知見と証拠に基づく判断。病名だけで現在の運転責任を判断しない。</p>
+ <h3>原典内の確認箇所</h3><p>第1・3、第2、第4結論</p>
+ <p class="meta">確認範囲：判決原文の関連理由を確認（上訴・確定状況の網羅調査は未了）<br>確認日：2026-11-24</p></details>
+ <a href="https://www.courts.go.jp/app/files/hanrei_jp/582/006582_hanrei.pdf" target="_blank" rel="noopener noreferrer">出典を開く（PDF） ↗</a>
+ </article>
+<article data-id="K10" data-type="刑事裁判例" data-patterns="rightStraight">
+ <p class="meta">K10 · 刑事裁判例 · 上告棄却</p>
+ <h2>時差式信号・対向信号の推測</h2><p class="issuer">最高裁第三小法廷／2004-07-13／平成12年（あ）第216号</p>
+ <p>自車側の信号表示から対向車側の表示を推測し、相手が停止すると信頼することの可否。</p>
+ <details><summary>確認箇所・編集メモ</summary>
+ <h3>証拠確認の着眼点（編集メモ）</h3><p>信号現示、対向車を認識した状況、右折を開始した時点。</p>
+ <h3>利用時の留意点</h3><p>自車の信号だけから相手の信号を確定しない。道路・信号条件が異なる事件との比較に留意。</p>
+ <h3>原典内の確認箇所</h3><p>決定理由・裁判要旨</p>
+ <p class="meta">確認範囲：判決原文の関連理由を確認（上訴・確定状況の網羅調査は未了）<br>確認日：2026-11-24</p></details>
+ <a href="https://www.courts.go.jp/assets/hanrei/hanrei-pdf-50021.pdf" target="_blank" rel="noopener noreferrer">出典を開く（PDF） ↗</a>
+ </article>
+<article data-id="R01" data-type="調査報告書" data-patterns="all">
+ <p class="meta">R01 · 調査報告書</p>
+ <h2>判例・法規調査報告書（令和5年度）</h2><p class="issuer">安全設計・評価ガイドブック判例等調査委員会／2024-02-28</p>
+ <p>歩行者、無信号交差点直進、信号交差点右折、徐行等を扱う75頁の報告書。</p>
+ <details><summary>確認箇所・編集メモ</summary>
+ 
+ <h3>利用時の留意点</h3><p>調査者による整理。刑事と民事が混在する資料は各事例の区分を確認し、引用前に原判決へ戻る。</p>
+ <h3>原典内の確認箇所</h3><p>第3章32頁〜、第4章54頁〜、第5章72頁〜</p>
+ <p class="meta">確認範囲：本文の関連箇所・目次確認<br>確認日：2026-11-24</p></details>
+ <a href="https://www.road-to-the-l4.go.jp/activity/courtcases/pdf/courtcases01.pdf" target="_blank" rel="noopener noreferrer">出典を開く（PDF） ↗</a>
+ </article>
+<article data-id="R02" data-type="裁判例集" data-patterns="all">
+ <p class="meta">R02 · 裁判例集</p>
+ <h2>裁判例集（令和5年度）</h2><p class="issuer">RoAD to the L4／令和5年度</p>
+ <p>147頁。報告書で参照する裁判例を番号で追うための収集基盤。</p>
+ <details><summary>確認箇所・編集メモ</summary>
+ 
+ <h3>利用時の留意点</h3><p>調査者による整理。刑事と民事が混在する資料は各事例の区分を確認し、引用前に原判決へ戻る。</p>
+ <h3>原典内の確認箇所</h3><p>報告書の事例番号から原典を追跡</p>
+ <p class="meta">確認範囲：目次・構成確認。全収録事例の原判決との照合は未了<br>確認日：2026-11-24</p></details>
+ <a href="https://www.road-to-the-l4.go.jp/activity/courtcases/pdf/courtcases02.pdf" target="_blank" rel="noopener noreferrer">出典を開く（PDF） ↗</a>
+ </article>
+<article data-id="R03" data-type="調査報告書" data-patterns="all">
+ <p class="meta">R03 · 調査報告書</p>
+ <h2>判例・法規調査報告書（令和6年度）</h2><p class="issuer">安全設計・評価ガイドブック判例等調査委員会／2025-02-28</p>
+ <p>166頁。左折・巻き込み、追突などを追加した報告書。</p>
+ <details><summary>確認箇所・編集メモ</summary>
+ 
+ <h3>利用時の留意点</h3><p>調査者による整理。刑事と民事が混在する資料は各事例の区分を確認し、引用前に原判決へ戻る。</p>
+ <h3>原典内の確認箇所</h3><p>第2章7頁〜、第3章41頁〜</p>
+ <p class="meta">確認範囲：目次・関連箇所確認<br>確認日：2026-11-24</p></details>
+ <a href="https://www.road-to-the-l4.go.jp/activity/courtcases/pdf/courtcases04.pdf" target="_blank" rel="noopener noreferrer">出典を開く（PDF） ↗</a>
+ </article>
+<article data-id="R04" data-type="裁判例集" data-patterns="all">
+ <p class="meta">R04 · 裁判例集</p>
+ <h2>裁判例集（令和6年度）</h2><p class="issuer">RoAD to the L4／令和6年度</p>
+ <p>169頁。追加調査の事例を追跡するための裁判例集。</p>
+ <details><summary>確認箇所・編集メモ</summary>
+ 
+ <h3>利用時の留意点</h3><p>調査者による整理。刑事と民事が混在する資料は各事例の区分を確認し、引用前に原判決へ戻る。</p>
+ <h3>原典内の確認箇所</h3><p>報告書の事例番号から原典を追跡</p>
+ <p class="meta">確認範囲：目次・構成確認。全収録事例の原判決との照合は未了<br>確認日：2026-11-24</p></details>
+ <a href="https://www.road-to-the-l4.go.jp/activity/courtcases/pdf/courtcases05.pdf" target="_blank" rel="noopener noreferrer">出典を開く（PDF） ↗</a>
+ </article>
+<article data-id="R05" data-type="調査報告書" data-patterns="all">
+ <p class="meta">R05 · 調査報告書</p>
+ <h2>判例・法規調査報告書（3・令和7年度）</h2><p class="issuer">松田綜合法律事務所／2026-02-28</p>
+ <p>高速道路の追突、緊急回避、飛び出し、工事誘導、低速車、車線変更等を扱う。</p>
+ <details><summary>確認箇所・編集メモ</summary>
+ 
+ <h3>利用時の留意点</h3><p>調査者による整理。刑事と民事が混在する資料は各事例の区分を確認し、引用前に原判決へ戻る。</p>
+ <h3>原典内の確認箇所</h3><p>第6章50頁〜、第8章70頁〜、第10章83頁〜、第13章103頁〜</p>
+ <p class="meta">確認範囲：目次・関連箇所確認<br>確認日：2026-11-24</p></details>
+ <a href="https://www.road-to-the-l4.go.jp/activity/courtcases/pdf/courtcases06.pdf" target="_blank" rel="noopener noreferrer">出典を開く（PDF） ↗</a>
+ </article>
+<article data-id="R06" data-type="調査案内" data-patterns="all">
+ <p class="meta">R06 · 調査案内</p>
+ <h2>裁判例調査の概要</h2><p class="issuer">RoAD to the L4</p>
+ <p>調査の構成、使用データベース、個別事情に応じて読む必要性を説明。</p>
+ <details><summary>確認箇所・編集メモ</summary>
+ 
+ <h3>利用時の留意点</h3><p>調査者による整理。刑事と民事が混在する資料は各事例の区分を確認し、引用前に原判決へ戻る。</p>
+ <h3>原典内の確認箇所</h3><p>報告書の構成・利用上の留意点</p>
+ <p class="meta">確認範囲：関連箇所確認<br>確認日：2026-11-24</p></details>
+ <a href="https://www.road-to-the-l4.go.jp/activity/courtcases/pdf/courtcases07.pdf" target="_blank" rel="noopener noreferrer">出典を開く（PDF） ↗</a>
+ </article>
+<article data-id="R07" data-type="調査報告書" data-patterns="all">
+ <p class="meta">R07 · 調査報告書</p>
+ <h2>無人自動運転等の先進MaaS実装加速化・成果報告書</h2><p class="issuer">経済産業省公開・令和5年度事業／2024-03</p>
+ <p>交通事故裁判例の調査と関連資料を含む事業報告書。単独の判決原本とは区別する。</p>
+ <details><summary>確認箇所・編集メモ</summary>
+ 
+ <h3>利用時の留意点</h3><p>調査者による整理。刑事と民事が混在する資料は各事例の区分を確認し、引用前に原判決へ戻る。</p>
+ <h3>原典内の確認箇所</h3><p>2.1.6「過去の事故に関する交通事故判例事故調査」、付属裁判例Y-32等</p>
+ <p class="meta">確認範囲：表紙・目次・関連箇所確認。全頁の精読は未了<br>確認日：2026-11-24</p></details>
+ <a href="https://www.meti.go.jp/meti_lib/report/2023FY/000621.pdf" target="_blank" rel="noopener noreferrer">出典を開く（PDF） ↗</a>
+ </article>
+<article data-id="L01" data-type="法令" data-patterns="all">
+ <p class="meta">L01 · 法令</p>
+ <h2>道路交通法</h2><p class="issuer">e-Gov法令検索</p>
+ <p>参照索引：17条通行区分、26条車間距離、34条右左折、36条交差点、37条右折と直進等、42条徐行、43条一時停止、70条安全運転。</p>
+ <details><summary>確認箇所・編集メモ</summary>
+ 
+ <h3>利用時の留意点</h3><p>道路交通法違反の有無と刑事過失の成立は別に検討する。事故当時の条文・適用法を確認する。</p>
+ <h3>原典内の確認箇所</h3><p>該当条・項と事故当時の施行版</p>
+ <p class="meta">確認範囲：公的法令ページ・関連条項確認。個々の事件の適用時点は別途照合<br>確認日：2026-11-24</p></details>
+ <a href="https://laws.e-gov.go.jp/law/335AC0000000105" target="_blank" rel="noopener noreferrer">出典を開く ↗</a>
+ </article>
+<article data-id="L02" data-type="法令" data-patterns="all">
+ <p class="meta">L02 · 法令</p>
+ <h2>自動車運転処罰法</h2><p class="issuer">e-Gov法令検索</p>
+ <p>過失運転致死傷（5条）と危険運転関係の規定を確認する入口。</p>
+ <details><summary>確認箇所・編集メモ</summary>
+ 
+ <h3>利用時の留意点</h3><p>道路交通法違反の有無と刑事過失の成立は別に検討する。事故当時の条文・適用法を確認する。</p>
+ <h3>原典内の確認箇所</h3><p>正式名称：自動車の運転により人を死傷させる行為等の処罰に関する法律</p>
+ <p class="meta">確認範囲：公的法令ページ・5条確認。事件当時の適用法と改正履歴は別途照合<br>確認日：2026-11-24</p></details>
+ <a href="https://laws.e-gov.go.jp/law/425AC0000000086" target="_blank" rel="noopener noreferrer">出典を開く ↗</a>
+ </article>
+<article data-id="G01" data-type="公的資料" data-patterns="all">
+ <p class="meta">G01 · 公的資料</p>
+ <h2>交通事故事件捜査の科学化・EDRの活用</h2><p class="issuer">警察庁／令和4年警察白書</p>
+ <p>衝突実験研修、交差点カメラ、3Dレーザースキャナ、EDR情報の活用を説明。</p>
+ <details><summary>確認箇所・編集メモ</summary>
+ 
+ <h3>利用時の留意点</h3><p>公表時点と対象範囲を確認する。記録項目・適用時期は個別車両の実際の記録を確認する。</p>
+ <h3>原典内の確認箇所</h3><p>（3）交通事故事件捜査の科学化・合理化、MEMO</p>
+ <p class="meta">確認範囲：該当本文確認<br>確認日：2026-11-24</p></details>
+ <a href="https://www.npa.go.jp/hakusyo/r04/honbun/html/y5552000.html" target="_blank" rel="noopener noreferrer">出典を開く ↗</a>
+ </article>
+<article data-id="G02" data-type="公的資料" data-patterns="all">
+ <p class="meta">G02 · 公的資料</p>
+ <h2>交通事故事件捜査・不起訴記録の開示</h2><p class="issuer">警察庁／令和7年犯罪被害者白書</p>
+ <p>映像・3D計測の活用と、実況見分調書等の開示に関する制度の説明。</p>
+ <details><summary>確認箇所・編集メモ</summary>
+ 
+ <h3>利用時の留意点</h3><p>公表時点と対象範囲を確認する。記録項目・適用時期は個別車両の実際の記録を確認する。</p>
+ <h3>原典内の確認箇所</h3><p>（18）施策147、（21）施策150</p>
+ <p class="meta">確認範囲：該当本文確認<br>確認日：2026-11-24</p></details>
+ <a href="https://www.npa.go.jp/hanzaihigai/whitepaper/2025/zenbun/chapter3/s3_1.html" target="_blank" rel="noopener noreferrer">出典を開く ↗</a>
+ </article>
+<article data-id="G03" data-type="公的資料" data-patterns="all">
+ <p class="meta">G03 · 公的資料</p>
+ <h2>乗用車等のEDR・記録項目と活用</h2><p class="issuer">国土交通省／審議会資料</p>
+ <p>速度変化量、車両表示速度、ペダル操作等の記録項目と対象期間の説明。</p>
+ <details><summary>確認箇所・編集メモ</summary>
+ 
+ <h3>利用時の留意点</h3><p>公表時点と対象範囲を確認する。記録項目・適用時期は個別車両の実際の記録を確認する。</p>
+ <h3>原典内の確認箇所</h3><p>資料内10頁「乗用車等の事故情報計測・記録装置（EDR）の義務化…」</p>
+ <p class="meta">確認範囲：該当表確認<br>確認日：2026-11-24</p></details>
+ <a href="https://www.mlit.go.jp/policy/shingikai/content/001976226.pdf" target="_blank" rel="noopener noreferrer">出典を開く（PDF） ↗</a>
+ </article>
+<article data-id="G04" data-type="公的資料" data-patterns="all">
+ <p class="meta">G04 · 公的資料</p>
+ <h2>大型車EDRの基準改正</h2><p class="issuer">国土交通省／2024-06-14</p>
+ <p>大型車の記録装置基準と段階的適用を説明。映像記録と車両データの違いを確認できる。</p>
+ <details><summary>確認箇所・編集メモ</summary>
+ 
+ <h3>利用時の留意点</h3><p>公表時点と対象範囲を確認する。記録項目・適用時期は個別車両の実際の記録を確認する。</p>
+ <h3>原典内の確認箇所</h3><p>主な改正の概要・注記</p>
+ <p class="meta">確認範囲：該当本文確認<br>確認日：2026-11-24</p></details>
+ <a href="https://www.mlit.go.jp/report/press/jidosha10_hh_000305.html" target="_blank" rel="noopener noreferrer">出典を開く ↗</a>
+ </article>
+<article data-id="G05" data-type="公的資料" data-patterns="all">
+ <p class="meta">G05 · 公的資料</p>
+ <h2>交通事故の証拠保存と刑事手続</h2><p class="issuer">国土交通省</p>
+ <p>映像・現場記録等の保存と、警察・検察・裁判所による手続の流れ。</p>
+ <details><summary>確認箇所・編集メモ</summary>
+ 
+ <h3>利用時の留意点</h3><p>公表時点と対象範囲を確認する。記録項目・適用時期は個別車両の実際の記録を確認する。</p>
+ <h3>原典内の確認箇所</h3><p>目撃者を確保、自分でも記録、刑事手続</p>
+ <p class="meta">確認範囲：該当本文確認<br>確認日：2026-11-24</p></details>
+ <a href="https://www.mlit.go.jp/jidosha/jibaiseki/accident/correspondence/index.html" target="_blank" rel="noopener noreferrer">出典を開く ↗</a>
+ </article>
+<article data-id="S01" data-type="検索案内" data-patterns="all">
+ <p class="meta">S01 · 検索案内</p>
+ <h2>裁判例検索・掲載範囲の説明</h2><p class="issuer">裁判所</p>
+ <p>公開裁判例を追加収集する入口。すべての判決が掲載されているわけではない。</p>
+ <details><summary>確認箇所・編集メモ</summary>
+ 
+ <h3>利用時の留意点</h3><p>公表時点と対象範囲を確認する。記録項目・適用時期は個別車両の実際の記録を確認する。</p>
+ <h3>原典内の確認箇所</h3><p>検索システムの使い方</p>
+ <p class="meta">確認範囲：該当案内確認<br>確認日：2026-11-24</p></details>
+ <a href="https://www.courts.go.jp/hanrei/search2/index.html" target="_blank" rel="noopener noreferrer">出典を開く ↗</a>
+ </article></div><p id="empty" hidden>該当資料がありません。条件を変えて検索してください。</p>
+<section class="intro"><h2>収集と照合の次の範囲</h2><p>報告書内の事例番号を原判決へ対応させ、同一事件の重複と審級を整理します。原文の見つからない例、刑事・民事の区分、事故当時の適用法・信号・道路条件を確認してから、個別事例の要約を増やします。</p><p>公開裁判例検索は全判決を収録しておらず、不起訴記録や非公開捜査資料の網羅収集もできません。</p></section>
+</main><script type="application/json" id="catalog">[{"id":"K01","type":"刑事裁判例","title":"対向右折と直進・速度超過と回避可能性","issuer":"仙台高裁／2001-12-04／平成13年（う）第89号","patterns":["rightStraight"],"result":"有罪・原判決破棄／執行猶予","url":"https://www.courts.go.jp/assets/hanrei/hanrei-pdf-4669.pdf","summary":"直進二輪車の通過前に右折できるとの判断と、直進車側の回避可能性を検討。","evidence":"右折開始時の距離・速度、具体的危険が生じた時点、制限速度で走行した場合の経過。","limit":"速度超過の有無だけで事故についての過失を決めない。本件の約10km/h超過に関する判断を他の事案に一般化しない。","locator":"理由第2・3","checked":"2026-11-24","review":"判決原文の関連理由を確認（上訴・確定状況の網羅調査は未了）"},{"id":"K02","type":"刑事裁判例","title":"渋滞車両の陰から来る直進二輪車","issuer":"神戸地裁／2003-02-21／平成14年（わ）第923号","patterns":["rightStraight"],"result":"有罪","url":"https://www.courts.go.jp/assets/hanrei/hanrei-pdf-7042.pdf","summary":"右折時の見通し確保と安全確認の不足を認定。停止していたとの供述も客観的痕跡と照合した。","evidence":"見通せる位置、車輪の損傷解析、スリップ痕、路面のえぐれ痕、事故直後からの供述経過。","limit":"停止や最徐行の必要性は本件の道路・遮蔽条件に即した判断。","locator":"罪となるべき事実・補足説明2〜4","checked":"2026-11-24","review":"判決原文の関連理由を確認（上訴・確定状況の網羅調査は未了）"},{"id":"K03","type":"刑事裁判例","title":"黄点滅・赤点滅交差点と信頼の原則","issuer":"最高裁第三小法廷／1973-05-22","patterns":["cross"],"result":"原判決・第一審破棄／無罪","url":"https://www.courts.go.jp/app/files/hanrei_jp/051/051051_hanrei.pdf","summary":"相手方が赤点滅に従い停止すると信頼できる状況での、刑事過失の有無を判断。","evidence":"信号表示、相手車の異常な進行を認識できた時点、特段の事情の有無。","limit":"多数意見と反対意見を区別する。交通法規違反と当該事故の刑事過失を同一視しない。","locator":"多数意見・反対意見","checked":"2026-11-24","review":"判決原文の関連理由を確認（上訴・確定状況の網羅調査は未了）"},{"id":"K04","type":"刑事裁判例","title":"高速道路の渋滞末尾への追突","issuer":"大津地裁／2019-10-03／令和元年（わ）第288号","patterns":["rear"],"result":"有罪","url":"https://www.courts.go.jp/assets/hanrei/hanrei-pdf-89006.pdf","summary":"前方不注視により渋滞停止車両の発見が遅れた多重追突事案。","evidence":"渋滞情報の認識、前方視認性、走行距離と時間、初めて発見した距離。","limit":"これは本件の前方不注視の認定例。追突の外形だけから全事件の責任を決めるものではない。","locator":"罪となるべき事実・量刑の理由","checked":"2026-11-24","review":"判決原文の関連理由を確認（上訴・確定状況の網羅調査は未了）"},{"id":"K05","type":"刑事裁判例","title":"正面衝突・中央線越境の証拠評価","issuer":"広島高裁／2002-09-26","patterns":["headOn"],"result":"原判決破棄／有罪","url":"https://www.courts.go.jp/assets/hanrei/hanrei-pdf-3844.pdf","summary":"衝突地点と越境の有無について証拠を総合し、第一審の無罪判断を覆した。","evidence":"路面痕跡、車両損傷、衝突後の動き、鑑定の前提と質量・速度の整合性。","limit":"公訴事実の記述と裁判所が認定した事実を区別する。計算モデルの結論だけを根拠にしない。","locator":"理由3〜5・罪となるべき事実","checked":"2026-11-24","review":"判決原文の関連理由を確認（上訴・確定状況の網羅調査は未了）"},{"id":"K06","type":"刑事裁判例","title":"丁字路右折と後続車への注意","issuer":"最高裁第一小法廷／1970-09-24","patterns":["tMerge"],"result":"原判決破棄／差戻し","url":"https://www.courts.go.jp/app/files/hanrei_jp/801/051801_hanrei.pdf","summary":"適切な右折準備後の後方確認義務と、追加の確認を要する特段の事情を検討。","evidence":"合図・寄せ・減速の時系列、後続車の位置、異常運転を認識できた事情。","limit":"丁字路の全ての合流事故に同じ結論が適用されるわけではない。差戻しを無罪確定と表示しない。","locator":"理由・後半の法的判断","checked":"2026-11-24","review":"判決原文の関連理由を確認（上訴・確定状況の網羅調査は未了）"},{"id":"K07","type":"刑事裁判例","title":"大型車左折・死角と再現実験","issuer":"東京地裁／2003-12-25","patterns":["other"],"result":"無罪・証明不足","url":"https://www.courts.go.jp/assets/hanrei/hanrei-pdf-5603.pdf","summary":"被害車両を発見できたとの証明と、視認実験の再現条件・記載の正確性を吟味。","evidence":"ミラー、運転姿勢、車両位置、衝突位置、事故時と再現時の環境差。","limit":"死角の存在だけで過失を否定する事例ではない。発見・回避可能性の立証条件を読む。","locator":"判断後半・結論","checked":"2026-11-24","review":"判決原文の関連理由を確認（上訴・確定状況の網羅調査は未了）"},{"id":"K08","type":"刑事裁判例","title":"変形交差点・信号周期と予見義務","issuer":"神戸地裁／2015-06-10","patterns":["cross"],"result":"無罪","url":"https://www.courts.go.jp/assets/hanrei/hanrei-pdf-85573.pdf","summary":"交錯する経路を許す信号周期の下で、青信号を信頼した運転者に課せられる義務を判断。","evidence":"信号現示階梯、各車の進入経路、信号周期の認識、特別な事情。","limit":"下級審の個別判断。時差式信号の最高裁決定との前提事実の違いに注意する。","locator":"判断2・結論3","checked":"2026-11-24","review":"判決原文の関連理由を確認（上訴・確定状況の網羅調査は未了）"},{"id":"K09","type":"刑事裁判例","title":"正面衝突・突発的な意識障害の疑い","issuer":"大阪地裁／2005-02-09","patterns":["headOn"],"result":"無罪・証明不足","url":"https://www.courts.go.jp/app/files/hanrei_jp/582/006582_hanrei.pdf","summary":"前方注視義務を実際に履行できたかについて、身体的異変の可能性と医学鑑定を検討。","evidence":"事故前の走行状況、異常走行の距離・時間、医学鑑定、本人の認識。","limit":"当時の知見と証拠に基づく判断。病名だけで現在の運転責任を判断しない。","locator":"第1・3、第2、第4結論","checked":"2026-11-24","review":"判決原文の関連理由を確認（上訴・確定状況の網羅調査は未了）"},{"id":"K10","type":"刑事裁判例","title":"時差式信号・対向信号の推測","issuer":"最高裁第三小法廷／2004-07-13／平成12年（あ）第216号","patterns":["rightStraight"],"result":"上告棄却","url":"https://www.courts.go.jp/assets/hanrei/hanrei-pdf-50021.pdf","summary":"自車側の信号表示から対向車側の表示を推測し、相手が停止すると信頼することの可否。","evidence":"信号現示、対向車を認識した状況、右折を開始した時点。","limit":"自車の信号だけから相手の信号を確定しない。道路・信号条件が異なる事件との比較に留意。","locator":"決定理由・裁判要旨","checked":"2026-11-24","review":"判決原文の関連理由を確認（上訴・確定状況の網羅調査は未了）"},{"id":"R01","title":"判例・法規調査報告書（令和5年度）","issuer":"安全設計・評価ガイドブック判例等調査委員会／2024-02-28","type":"調査報告書","url":"https://www.road-to-the-l4.go.jp/activity/courtcases/pdf/courtcases01.pdf","summary":"歩行者、無信号交差点直進、信号交差点右折、徐行等を扱う75頁の報告書。","locator":"第3章32頁〜、第4章54頁〜、第5章72頁〜","review":"本文の関連箇所・目次確認","patterns":["all"],"checked":"2026-11-24","limit":"調査者による整理。刑事と民事が混在する資料は各事例の区分を確認し、引用前に原判決へ戻る。"},{"id":"R02","title":"裁判例集（令和5年度）","issuer":"RoAD to the L4／令和5年度","type":"裁判例集","url":"https://www.road-to-the-l4.go.jp/activity/courtcases/pdf/courtcases02.pdf","summary":"147頁。報告書で参照する裁判例を番号で追うための収集基盤。","locator":"報告書の事例番号から原典を追跡","review":"目次・構成確認。全収録事例の原判決との照合は未了","patterns":["all"],"checked":"2026-11-24","limit":"調査者による整理。刑事と民事が混在する資料は各事例の区分を確認し、引用前に原判決へ戻る。"},{"id":"R03","title":"判例・法規調査報告書（令和6年度）","issuer":"安全設計・評価ガイドブック判例等調査委員会／2025-02-28","type":"調査報告書","url":"https://www.road-to-the-l4.go.jp/activity/courtcases/pdf/courtcases04.pdf","summary":"166頁。左折・巻き込み、追突などを追加した報告書。","locator":"第2章7頁〜、第3章41頁〜","review":"目次・関連箇所確認","patterns":["all"],"checked":"2026-11-24","limit":"調査者による整理。刑事と民事が混在する資料は各事例の区分を確認し、引用前に原判決へ戻る。"},{"id":"R04","title":"裁判例集（令和6年度）","issuer":"RoAD to the L4／令和6年度","type":"裁判例集","url":"https://www.road-to-the-l4.go.jp/activity/courtcases/pdf/courtcases05.pdf","summary":"169頁。追加調査の事例を追跡するための裁判例集。","locator":"報告書の事例番号から原典を追跡","review":"目次・構成確認。全収録事例の原判決との照合は未了","patterns":["all"],"checked":"2026-11-24","limit":"調査者による整理。刑事と民事が混在する資料は各事例の区分を確認し、引用前に原判決へ戻る。"},{"id":"R05","title":"判例・法規調査報告書（3・令和7年度）","issuer":"松田綜合法律事務所／2026-02-28","type":"調査報告書","url":"https://www.road-to-the-l4.go.jp/activity/courtcases/pdf/courtcases06.pdf","summary":"高速道路の追突、緊急回避、飛び出し、工事誘導、低速車、車線変更等を扱う。","locator":"第6章50頁〜、第8章70頁〜、第10章83頁〜、第13章103頁〜","review":"目次・関連箇所確認","patterns":["all"],"checked":"2026-11-24","limit":"調査者による整理。刑事と民事が混在する資料は各事例の区分を確認し、引用前に原判決へ戻る。"},{"id":"R06","title":"裁判例調査の概要","issuer":"RoAD to the L4","type":"調査案内","url":"https://www.road-to-the-l4.go.jp/activity/courtcases/pdf/courtcases07.pdf","summary":"調査の構成、使用データベース、個別事情に応じて読む必要性を説明。","locator":"報告書の構成・利用上の留意点","review":"関連箇所確認","patterns":["all"],"checked":"2026-11-24","limit":"調査者による整理。刑事と民事が混在する資料は各事例の区分を確認し、引用前に原判決へ戻る。"},{"id":"R07","title":"無人自動運転等の先進MaaS実装加速化・成果報告書","issuer":"経済産業省公開・令和5年度事業／2024-03","type":"調査報告書","url":"https://www.meti.go.jp/meti_lib/report/2023FY/000621.pdf","summary":"交通事故裁判例の調査と関連資料を含む事業報告書。単独の判決原本とは区別する。","locator":"2.1.6「過去の事故に関する交通事故判例事故調査」、付属裁判例Y-32等","review":"表紙・目次・関連箇所確認。全頁の精読は未了","patterns":["all"],"checked":"2026-11-24","limit":"調査者による整理。刑事と民事が混在する資料は各事例の区分を確認し、引用前に原判決へ戻る。"},{"id":"L01","title":"道路交通法","issuer":"e-Gov法令検索","type":"法令","url":"https://laws.e-gov.go.jp/law/335AC0000000105","summary":"参照索引：17条通行区分、26条車間距離、34条右左折、36条交差点、37条右折と直進等、42条徐行、43条一時停止、70条安全運転。","locator":"該当条・項と事故当時の施行版","review":"公的法令ページ・関連条項確認。個々の事件の適用時点は別途照合","patterns":["all"],"checked":"2026-11-24","limit":"道路交通法違反の有無と刑事過失の成立は別に検討する。事故当時の条文・適用法を確認する。"},{"id":"L02","title":"自動車運転処罰法","issuer":"e-Gov法令検索","type":"法令","url":"https://laws.e-gov.go.jp/law/425AC0000000086","summary":"過失運転致死傷（5条）と危険運転関係の規定を確認する入口。","locator":"正式名称：自動車の運転により人を死傷させる行為等の処罰に関する法律","review":"公的法令ページ・5条確認。事件当時の適用法と改正履歴は別途照合","patterns":["all"],"checked":"2026-11-24","limit":"道路交通法違反の有無と刑事過失の成立は別に検討する。事故当時の条文・適用法を確認する。"},{"id":"G01","title":"交通事故事件捜査の科学化・EDRの活用","issuer":"警察庁／令和4年警察白書","type":"公的資料","url":"https://www.npa.go.jp/hakusyo/r04/honbun/html/y5552000.html","summary":"衝突実験研修、交差点カメラ、3Dレーザースキャナ、EDR情報の活用を説明。","locator":"（3）交通事故事件捜査の科学化・合理化、MEMO","review":"該当本文確認","patterns":["all"],"checked":"2026-11-24","limit":"公表時点と対象範囲を確認する。記録項目・適用時期は個別車両の実際の記録を確認する。"},{"id":"G02","title":"交通事故事件捜査・不起訴記録の開示","issuer":"警察庁／令和7年犯罪被害者白書","type":"公的資料","url":"https://www.npa.go.jp/hanzaihigai/whitepaper/2025/zenbun/chapter3/s3_1.html","summary":"映像・3D計測の活用と、実況見分調書等の開示に関する制度の説明。","locator":"（18）施策147、（21）施策150","review":"該当本文確認","patterns":["all"],"checked":"2026-11-24","limit":"公表時点と対象範囲を確認する。記録項目・適用時期は個別車両の実際の記録を確認する。"},{"id":"G03","title":"乗用車等のEDR・記録項目と活用","issuer":"国土交通省／審議会資料","type":"公的資料","url":"https://www.mlit.go.jp/policy/shingikai/content/001976226.pdf","summary":"速度変化量、車両表示速度、ペダル操作等の記録項目と対象期間の説明。","locator":"資料内10頁「乗用車等の事故情報計測・記録装置（EDR）の義務化…」","review":"該当表確認","patterns":["all"],"checked":"2026-11-24","limit":"公表時点と対象範囲を確認する。記録項目・適用時期は個別車両の実際の記録を確認する。"},{"id":"G04","title":"大型車EDRの基準改正","issuer":"国土交通省／2024-06-14","type":"公的資料","url":"https://www.mlit.go.jp/report/press/jidosha10_hh_000305.html","summary":"大型車の記録装置基準と段階的適用を説明。映像記録と車両データの違いを確認できる。","locator":"主な改正の概要・注記","review":"該当本文確認","patterns":["all"],"checked":"2026-11-24","limit":"公表時点と対象範囲を確認する。記録項目・適用時期は個別車両の実際の記録を確認する。"},{"id":"G05","title":"交通事故の証拠保存と刑事手続","issuer":"国土交通省","type":"公的資料","url":"https://www.mlit.go.jp/jidosha/jibaiseki/accident/correspondence/index.html","summary":"映像・現場記録等の保存と、警察・検察・裁判所による手続の流れ。","locator":"目撃者を確保、自分でも記録、刑事手続","review":"該当本文確認","patterns":["all"],"checked":"2026-11-24","limit":"公表時点と対象範囲を確認する。記録項目・適用時期は個別車両の実際の記録を確認する。"},{"id":"S01","title":"裁判例検索・掲載範囲の説明","issuer":"裁判所","type":"検索案内","url":"https://www.courts.go.jp/hanrei/search2/index.html","summary":"公開裁判例を追加収集する入口。すべての判決が掲載されているわけではない。","locator":"検索システムの使い方","review":"該当案内確認","patterns":["all"],"checked":"2026-11-24","limit":"公表時点と対象範囲を確認する。記録項目・適用時期は個別車両の実際の記録を確認する。"}]</script>
+<script>
+const records=JSON.parse(document.getElementById("catalog").textContent);
+const articles=Array.from(document.querySelectorAll("article"));
+const query=document.getElementById("query"),type=document.getElementById("type"),pattern=document.getElementById("pattern");
+const texts=articles.map(a=>a.textContent.normalize("NFKC").toLowerCase());
+function filter(){
+ const terms=query.value.normalize("NFKC").toLowerCase().trim().split(/\s+/).filter(Boolean);
+ let count=0;
+ articles.forEach((a,i)=>{
+ const patterns=a.dataset.patterns.split(" ");
+ const matches=(!type.value||a.dataset.type===type.value)&&(!pattern.value||patterns.includes(pattern.value)||patterns.includes("all"))&&terms.every(t=>texts[i].includes(t));
+ a.hidden=!matches;if(matches)count++;
+ });
+ document.getElementById("count").textContent=count+" / "+articles.length+"資料";
+ document.getElementById("empty").hidden=count!==0;
+}
+query.addEventListener("input",filter);type.addEventListener("change",filter);pattern.addEventListener("change",filter);
+document.getElementById("export").onclick=()=>{
+ const url=URL.createObjectURL(new Blob([JSON.stringify({title:"机上の空論GP 資料編",checked:"2026-11-24",records},null,2)],{type:"application/json"}));
+ const a=document.createElement("a");a.href=url;a.download="kijou-gp-references-20261124.json";document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+};
+</script></body></html>
