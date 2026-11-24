@@ -251,11 +251,24 @@ select { appearance:none; padding-right:29px; background:
 .damage-plot i {position:absolute;width:10px;height:10px;transform:translate(-50%,-50%);border-radius:50%;background:#d16817;border:1px solid white}
 .damage-plot i.contact {background:#a73146;width:14px;height:14px}
 #sight3 {margin:5px 0;color:var(--blue-dark);font-size:.86rem}
+.simple-panel {padding:clamp(18px,4vw,32px);max-width:850px;margin:0 auto}
+.simple-panel h2 {font-size:1.35rem}
+.simple-panel > p {line-height:1.65;margin-top:10px;color:var(--muted)}
+.simple-grid,.simple-results {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:20px}
+.simple-grid fieldset {min-width:0;border:1px solid var(--line);border-radius:12px;padding:14px}
+.simple-grid legend {font-weight:750;padding:0 5px}
+.simple-grid label {display:grid;gap:5px;font-weight:650;margin:10px 0}
+.simple-grid input {width:100%;min-height:48px;padding:8px 12px;background:white;border:1px solid #879ab6;border-radius:8px;font-size:1rem;color:var(--ink)}
+.simple-results > div {padding:16px;background:var(--pale);border:1px solid #b9cce7;border-radius:12px;display:grid;gap:6px}
+.simple-results strong {font-size:1.3rem;color:var(--blue-dark)}
+.simple-prompt,.simple-comparison {margin-top:20px;padding:14px;border-radius:10px;background:var(--pale);font-weight:700}
+.simple-panel > .simple-note {margin-top:20px;font-size:.875rem}
 @media(max-width:600px) {
   #investigation {padding:10px}
   .topbar .shell,.top-actions {flex-wrap:wrap}
   .topbar .shell {padding-block:8px}
   .investigation-form .fields {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .simple-grid,.simple-results {grid-template-columns:1fr}
 }
 </style>
 
@@ -520,8 +533,25 @@ select { appearance:none; padding-right:29px; background:
       <button type="button" data-mode="forward" aria-pressed="true">検証</button>
       <button type="button" data-mode="inverse" aria-pressed="false">逆算</button>
       <button type="button" data-mode="scene" aria-pressed="false">現場推定</button>
+      <button type="button" data-mode="simple" aria-pressed="false">簡易</button>
     </nav>
   </div>
+  <section id="simple-panel" class="card simple-panel" aria-labelledby="simple-title" hidden>
+    <h2 id="simple-title">距離と速度だけで計算</h2>
+    <p>2台が同じ地点に向かう場合の到達時間を比べます。各車両の残り距離と一定の速度だけを入力してください。</p>
+    <div class="simple-grid">
+      <fieldset><legend>車両A</legend>
+        <label>地点までの距離（m）<input type="number" name="distanceA" data-simple="distanceA" min="0" max="10000" step="any" inputmode="decimal" placeholder="例：20"></label>
+        <label>速度（km/h）<input type="number" name="speedA" data-simple="speedA" min="0" max="300" step="any" inputmode="decimal" placeholder="例：36"></label>
+      </fieldset>
+      <fieldset><legend>車両B</legend>
+        <label>地点までの距離（m）<input type="number" name="distanceB" data-simple="distanceB" min="0" max="10000" step="any" inputmode="decimal" placeholder="例：30"></label>
+        <label>速度（km/h）<input type="number" name="speedB" data-simple="speedB" min="0" max="300" step="any" inputmode="decimal" placeholder="例：54"></label>
+      </fieldset>
+    </div>
+    <div id="simple-result" aria-live="polite"></div>
+    <p class="simple-note">計算式：到達時間（秒）＝距離（m）÷〔速度（km/h）÷ 3.6〕。速度は一定と仮定します。車体の大きさ・制動・発進のずれ・進路を含まないため、到達時刻が近くても衝突の有無は判定できません。</p>
+  </section>
   <div class="workspace">
     <div class="workspace-visual">
       <section class="card diagram" aria-labelledby="diagram-title">
@@ -2066,7 +2096,7 @@ const inverseTypes = {
   speed:"限界速度", distance:"必要な制動距離", mu:"最低摩擦係数",
   reaction:"反応時間の限界", discovery:"発見地点の限界距離"
 };
-const modeNames = {forward:"検証",inverse:"逆算",scene:"現場推定"};
+const modeNames = {forward:"検証",inverse:"逆算",scene:"現場推定",simple:"簡易"};
 const disclaimer = "この数値は理論上の計算であり、実際の事故を完全に再現するものではない。";
 const uncertainty = "現場推定には幅があり、条件に合う複数の候補が得られる場合があります。";
 const pinKey = "sofia-intersection-pinned-v1";
@@ -2111,6 +2141,7 @@ let scene = defaultScene();
 let inverse = {car:0,key:"speed"};
 const pinned = readPins();
 let mode = "forward", selected = 0, zoom = 1;
+let simpleState = {distanceA:null,speedA:null,distanceB:null,speedB:null};
 let forwardResult, inverseResult, sceneEstimate, pointer, selection, pendingFrame = 0, toastTimer;
 let configVersion = 0, renderedConfigVersion = -1;
 const plan = byId("plan");
@@ -2404,12 +2435,48 @@ function syncLayout() {
 if (desktopLayout.addEventListener) desktopLayout.addEventListener("change", syncLayout);
 else desktopLayout.addListener(syncLayout);
 if (desktopLayout.matches) syncLayout();
+function simpleArrival(distance,speed) {
+  return distance===0 ? 0 : speed===0 ? null : distance*3.6/speed;
+}
+function renderSimple() {
+  const result=byId("simple-result");
+  if (Object.entries(simpleState).some(([key,value])=>value!==null &&
+      (!Number.isFinite(value) || value<0 || value>(key.startsWith("distance")?10000:300)))) {
+    result.innerHTML='<p class="simple-prompt" role="alert">距離は0〜10000 m、速度は0〜300 km/hで入力してください。</p>';
+    return;
+  }
+  if (Object.values(simpleState).some(value=>value===null)) {
+    result.innerHTML='<p class="simple-prompt">4つの値を入力すると到達時間を計算します。</p>';
+    return;
+  }
+  const a=simpleArrival(simpleState.distanceA,simpleState.speedA);
+  const b=simpleArrival(simpleState.distanceB,simpleState.speedB);
+  const show=value=>value===null?"停止中・到達しない":format(value,2)+" 秒";
+  let comparison;
+  if (a===null && b===null) comparison="両車とも地点へ到達しません。";
+  else if (a===null || b===null) comparison=(a===null?"車両B":"車両A")+"のみ地点へ到達します。";
+  else if (a===b) comparison="計算上の到達時刻は同じです。";
+  else comparison=(a<b?"車両A":"車両B")+"が "+format(Math.abs(a-b),2)+" 秒先に到達します。";
+  result.innerHTML='<div class="simple-results"><div><span>車両Aの到達時間</span><strong>'+show(a)+
+    '</strong></div><div><span>車両Bの到達時間</span><strong>'+show(b)+
+    '</strong></div></div><p class="simple-comparison">'+comparison+'</p>';
+}
+byId("simple-panel").addEventListener("input",event=>{
+  const input=event.target.closest("[data-simple]");
+  if (!input) return;
+  simpleState[input.dataset.simple]=input.value===""?null:Number(input.value);
+  renderSimple();
+});
 function setMode(nextMode) {
   if (mode !== nextMode && desktopLayout.matches) {
     workspaceResults.scrollTop = 0;
     byId("workspace-settings").scrollTop = 0;
   }
   byId("open3").hidden = nextMode === "scene";
+  document.querySelector(".workspace").hidden = nextMode === "simple";
+  byId("simple-panel").hidden = nextMode !== "simple";
+  byId("export-png").hidden = nextMode === "simple";
+  if (nextMode === "simple") renderSimple();
   mode = nextMode;
   selected = 0;
   document.querySelectorAll("[data-mode]").forEach(button => button.setAttribute("aria-pressed",button.dataset.mode === mode));
@@ -2880,7 +2947,7 @@ const recordKinds = {crossing:"停止線・基準線の通過",brake:"ブレー�
 const sourceKinds = {video:"映像",edr:"EDR",other:"その他"};
 
 function caseSnapshot() {
-  return {settings:clone(s),scene:clone(scene),inverse:{...inverse},mode,selected,zoom};
+  return {settings:clone(s),scene:clone(scene),inverse:{...inverse},simple:{...simpleState},mode,selected,zoom};
 }
 function modelFor(snapshot, current = false) {
   const settings = snapshot.settings;
@@ -2902,6 +2969,8 @@ function applyCase(snapshot) {
   s = clone(snapshot.settings);
   scene = clone(snapshot.scene);
   inverse = {...snapshot.inverse};
+  simpleState = {...snapshot.simple};
+  for (const input of document.querySelectorAll("[data-simple]")) input.value = simpleState[input.dataset.simple] ?? "";
   zoom = snapshot.zoom;
   selection = null;
   renderedConfigVersion = -1;
@@ -3662,8 +3731,13 @@ function readSnapshot(raw) {
   const locks = Object.fromEntries(["mu","restitution","a.speed","b.speed",
     ...["a","b"].flatMap(car=>["x","y","angle","heading"].map(key=>car+"."+key))]
     .filter(key=>raw.scene.locks?.[key]===true).map(key=>[key,true]));
+  const simple={};
+  for (const key of ["distanceA","distanceB","speedA","speedB"]) {
+    const value=raw.simple?.[key];
+    simple[key]=value == null ? null : caseNumber(value,0,key.startsWith("distance")?10000:300);
+  }
   return {settings,scene:{stops,locks,stopEnabled:[0,1].map(i=>raw.scene.stopEnabled?.[i]===true)},
-    inverse:{car:readCar(raw.inverse.car),key:caseChoice(raw.inverse.key,inverseTypes)},
+    inverse:{car:readCar(raw.inverse.car),key:caseChoice(raw.inverse.key,inverseTypes)},simple,
     mode:caseChoice(raw.mode,modeNames),selected:Math.floor(caseNumber(raw.selected ?? 0,0,4)),
     zoom:caseNumber(raw.zoom ?? 1,.005,3)};
 }
