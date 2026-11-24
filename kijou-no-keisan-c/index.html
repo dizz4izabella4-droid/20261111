@@ -251,6 +251,19 @@ select { appearance:none; padding-right:29px; background:
 .damage-plot i {position:absolute;width:10px;height:10px;transform:translate(-50%,-50%);border-radius:50%;background:#d16817;border:1px solid white}
 .damage-plot i.contact {background:#a73146;width:14px;height:14px}
 #sight3 {margin:5px 0;color:var(--blue-dark);font-size:.86rem}
+.tutorial {position:fixed;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));z-index:120;
+  width:min(370px,calc(100vw - 24px));max-height:min(60vh,420px);overflow:auto;
+  background:white;color:var(--ink);border:2px solid #2e619f;border-radius:14px;
+  box-shadow:0 10px 32px #12233c55;padding:15px;line-height:1.55}
+.tutorial-heading,.tutorial-actions {display:flex;align-items:center;justify-content:space-between;gap:8px}
+.tutorial-heading strong {color:var(--blue-dark)}
+.tutorial h2 {font-size:1.05rem;margin-top:8px}
+.tutorial p {font-size:.875rem;margin-top:6px}
+.tutorial-actions {margin-top:13px}
+.tutorial-actions button {min-width:88px}
+.tutorial-target {outline:3px solid #d67516!important;outline-offset:4px;border-radius:5px}
+@media(max-width:600px) {.tutorial {max-height:42dvh;bottom:max(8px,env(safe-area-inset-bottom));padding:12px}
+  .tutorial.tutorial-top {bottom:auto;top:max(8px,env(safe-area-inset-top))}}
 .simple-panel {padding:clamp(18px,4vw,32px);max-width:850px;margin:0 auto}
 .simple-panel h2 {font-size:1.35rem}
 .simple-panel > p {line-height:1.65;margin-top:10px;color:var(--muted)}
@@ -517,6 +530,7 @@ select { appearance:none; padding-right:29px; background:
   <div class="shell">
     <div class="identity"><span class="identity-caption">事故再現ツール</span></div>
     <div class="top-actions">
+      <button id="start-tutorial" type="button">使い方</button>
       <button id="export-settings" type="button"><span class="download-icon" aria-hidden="true"></span>案件を保存</button>
       <button id="load-case" type="button">案件を読み込む</button>
       <button id="export-png" class="primary" type="button"><span class="download-icon" aria-hidden="true"></span>PNGを保存</button>
@@ -604,6 +618,11 @@ select { appearance:none; padding-right:29px; background:
   </div>
   <p class="note" id="disclaimer">この数値は理論上の計算であり、実際の事故を完全に再現するものではない。</p>
 </main>
+<aside id="tutorial" class="tutorial" role="region" aria-label="機能の使い方" aria-live="polite" hidden>
+  <div class="tutorial-heading"><strong id="tutorial-progress"></strong><button id="tutorial-close" type="button" aria-label="チュートリアルを閉じる">閉じる</button></div>
+  <h2 id="tutorial-title"></h2><p id="tutorial-body"></p>
+  <div class="tutorial-actions"><button id="tutorial-prev" type="button">戻る</button><button id="tutorial-next" type="button" class="primary">次へ</button></div>
+</aside>
 <div id="message" class="status" role="status" hidden></div>
 <script>
 "use strict";
@@ -3803,6 +3822,56 @@ byId("import-case").onchange = async event => {
     notify(error instanceof SyntaxError ? "JSON の案件ファイルを読み込めませんでした。" : "案件を読み込めませんでした。 "+error.message);
   }
 };
+
+const tutorialSteps = [
+  {title:"モードを選ぶ",body:"上の切替から、簡易・検証・逆算・現場推定を選びます。チュートリアル中は説明に合わせて画面が切り替わります。入力した値は変更しません。",selector:".tabs"},
+  {title:"簡易：到達時間を比べる",body:"車両AとBそれぞれの地点までの距離と速度を入力します。到達時間と先着の時間差が表示されます。これだけで衝突の有無は判定できません。",mode:"simple",selector:"#simple-panel .simple-grid",top:true},
+  {title:"検証：条件を入力する",body:"車両の初期速度と位置、路面の状態を設定します。条件を変えると衝突の計算が更新されます。車両の詳細と道路形状は下の設定を開いて変更できます。",mode:"forward",selector:"#basic",top:true},
+  {title:"図面で位置を確認する",body:"図面の車両をドラッグして初期位置を調整できます。軌跡と衝突地点を確認し、＋・－・全体で表示倍率を変えます。",mode:"forward",selector:"#plan",top:true},
+  {title:"3Dと運転席から見る",body:"3D再現を開き、再生位置や俯瞰・車両A/Bの運転席視点を切り替えます。端末でWebGLが使える場合に表示されます。",mode:"forward",selector:"#open3",top:true},
+  {title:"現場資料と照合する",body:"観測点・線、映像やEDRの時刻、損傷位置を入力します。計算との距離や時間差を見られます。事故の時系列から任意時刻の位置も確認できます。",mode:"forward",selector:"#open-investigation",top:true},
+  {title:"逆算：条件の境界を調べる",body:"回避に必要な速度・制動距離などを、選んだ条件から逆算します。結果は設定した条件での計算値です。",mode:"inverse",selector:"#inverse-panel",top:true},
+  {title:"現場推定：停止位置から探る",body:"車両の停止地点と向きを指定し、合う条件の候補を調べます。候補が複数になる場合があり、実際の事故状況の確定はできません。",mode:"scene",selector:"#scene-panel",top:true},
+  {title:"案件を保存・再開する",body:"案件を保存すると設定と現場資料をJSONで出力します。案件を読み込むと、その続きから確認できます。図面はPNGでも保存できます。",mode:"forward",selector:"#export-settings"}
+];
+let tutorialIndex=-1, tutorialInitialMode=null, tutorialTarget=null;
+function stopTutorial() {
+  if (tutorialIndex<0) return;
+  tutorialIndex=-1;
+  byId("tutorial").hidden=true;
+  byId("start-tutorial").setAttribute("aria-pressed","false");
+  tutorialTarget?.classList.remove("tutorial-target");
+  tutorialTarget=null;
+  if (tutorialInitialMode && mode!==tutorialInitialMode) setMode(tutorialInitialMode);
+  tutorialInitialMode=null;
+}
+function showTutorialStep() {
+  const step=tutorialSteps[tutorialIndex];
+  if (!step) return stopTutorial();
+  if (step.mode && mode!==step.mode) setMode(step.mode);
+  tutorialTarget?.classList.remove("tutorial-target");
+  tutorialTarget=document.querySelector(step.selector);
+  tutorialTarget?.classList.add("tutorial-target");
+  byId("tutorial-progress").textContent="使い方 "+(tutorialIndex+1)+" / "+tutorialSteps.length;
+  byId("tutorial-title").textContent=step.title;
+  byId("tutorial-body").textContent=step.body;
+  byId("tutorial-prev").disabled=tutorialIndex===0;
+  byId("tutorial-next").textContent=tutorialIndex===tutorialSteps.length-1?"完了":"次へ";
+  byId("tutorial").classList.toggle("tutorial-top",Boolean(step.top));
+  requestAnimationFrame(()=>tutorialTarget?.scrollIntoView({block:"center",behavior:"smooth"}));
+}
+byId("start-tutorial").onclick=()=>{
+  if (tutorialIndex>=0) return stopTutorial();
+  tutorialInitialMode=mode;
+  tutorialIndex=0;
+  byId("tutorial").hidden=false;
+  byId("start-tutorial").setAttribute("aria-pressed","true");
+  showTutorialStep();
+};
+byId("tutorial-close").onclick=stopTutorial;
+byId("tutorial-prev").onclick=()=>{if(tutorialIndex>0){tutorialIndex--;showTutorialStep();}};
+byId("tutorial-next").onclick=()=>{tutorialIndex++;showTutorialStep();};
+document.addEventListener("keydown",event=>{if(event.key==="Escape" && tutorialIndex>=0) stopTutorial();});
 
 renderControls();
 setMode("forward");
