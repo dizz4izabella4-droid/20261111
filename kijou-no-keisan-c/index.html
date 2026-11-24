@@ -1408,7 +1408,15 @@ function estimateRouteScene(settings,scene) {
     "探索範囲で停止まで計算でき、固定条件を満たす衝突候補は見つかりませんでした。初期位置・速度と固定した条件を確認してください。"};
   routeSceneCache={key:cacheKey,value};return value;
 }
-function solveInverse(s, carIndex, key) {
+// Retain only the latest solve for each mode; unrelated redraws reuse its result.
+let inverseSolveCache={}, sceneSolveCache={};
+function solveInverse(s,carIndex,key) {
+  const signature=JSON.stringify([s,carIndex,key]);
+  if(inverseSolveCache.signature===signature)return inverseSolveCache.result;
+  const result=solveInverseUncached(s,carIndex,key);
+  inverseSolveCache={signature,result};return result;
+}
+function solveInverseUncached(s, carIndex, key) {
   if(s.pattern && s.pattern!=="cross")return solveRouteInverse(s,carIndex,key);
   const driver = s.cars[carIndex];
   const other = s.cars[1 - carIndex];
@@ -1646,7 +1654,13 @@ function solveInverse(s, carIndex, key) {
     atBound
   };
 }
-const estimateScene = (() => {
+function estimateScene(s,scene) {
+  const signature=JSON.stringify([s,scene]);
+  if(sceneSolveCache.signature===signature)return sceneSolveCache.result;
+  const result=estimateSceneUncached(s,scene);
+  sceneSolveCache={signature,result};return result;
+}
+const estimateSceneUncached = (() => {
   const gravity = 9.80665;
   const maxSpeed = 160;
   const carKeys = ['a', 'b'];
@@ -2761,8 +2775,8 @@ function renderSceneResults() {
     (candidates ? `${ranges ? `<p class="scene-info">候補間の衝突直前速度の幅　${ranges}</p>` : ""}<div class="candidates">${candidates}</div>${stopText}` : "");
 }
 function view() {
-  return {mode, result:mode==="inverse" && !pointer ? inverseResult?.result : forwardResult,
-    scene,estimate:sceneEstimate,selected,zoom,selection,marks:diagramMarks(),sight:diagramSight()};
+  return {mode, result:pointer ? null : mode==="inverse" ? inverseResult?.result : forwardResult,
+    scene,estimate:pointer ? null : sceneEstimate,selected,zoom,selection,marks:diagramMarks(),sight:diagramSight()};
 }
 function draw() {
   const scenario = mode === "inverse" && !pointer && inverseResult?.scenario ? inverseResult.scenario : s;
@@ -2771,7 +2785,7 @@ function draw() {
 }
 function update() {
   pendingFrame = 0;
-  if (renderedConfigVersion !== configVersion) {
+  if (!pointer && mode !== 'scene' && mode !== 'simple' && renderedConfigVersion !== configVersion) {
     forwardResult = simulate(s);
     renderedConfigVersion = configVersion;
   }
@@ -2782,20 +2796,26 @@ function update() {
       inverseResult = solveInverse(s,inverse.car,inverse.key);
       renderInverse();
     }
-  } else if (mode === "scene") {
+  } else if (mode === "scene" && !pointer) {
     sceneEstimate = estimateScene(s,scene);
     selected = clamp(selected,0,Math.max(0,sceneEstimate.candidates.length-1));
     renderSceneResults();
-  } else {
+  } else if (mode === "forward" && !pointer) {
     renderForward();
   }
   draw();
 }
+let calculationTimer=0;
 function schedule(configChanged=false) {
   if (configChanged) configVersion++;
-  if (!pendingFrame) pendingFrame = requestAnimationFrame(update);
+  clearTimeout(calculationTimer);calculationTimer=0;
+  if(configChanged && !pointer){
+    if(pendingFrame){cancelAnimationFrame(pendingFrame);pendingFrame=0;}
+    calculationTimer=setTimeout(()=>{calculationTimer=0;pendingFrame=requestAnimationFrame(update);},140);
+  }else if (!pendingFrame) pendingFrame = requestAnimationFrame(update);
 }
 function flush() {
+  clearTimeout(calculationTimer);calculationTimer=0;
   if (pendingFrame) cancelAnimationFrame(pendingFrame);
   update();
 }
@@ -2948,6 +2968,7 @@ document.querySelectorAll("[data-section]").forEach(details => {
 
 function seedScene() {
   flush();
+  if(renderedConfigVersion!==configVersion){forwardResult=simulate(s);renderedConfigVersion=configVersion;}
   if (!forwardResult.collision) {
     notify("検証結果に衝突がありません。");
     return;
@@ -3127,6 +3148,7 @@ byId("export-png").addEventListener("click",savePng);
 {
   const replay = byId("replay"), canvas = byId("scene3"), timeline = byId("time3");
   const camera = byId("camera3"), yaw = byId("yaw3"), play = byId("play3");
+  const uniforms={},attributes={};
   let gl, program, buffer, streetBuffer, streetCount, decorBuffer, decorCount, frame, previous, elapsed, scenario, tracks, sight;
   function shader(type, source) {
     const obj = gl.createShader(type);
@@ -3147,8 +3169,10 @@ byId("export-png").addEventListener("click",savePng);
       "precision mediump float;varying lowp vec3 tint;void main(){gl_FragColor=vec4(tint,1.);}"));
     gl.linkProgram(program);
     if (!gl.getProgramParameter(program,gl.LINK_STATUS)) throw Error("shader");
+    for(const key of ["eye","right","up","forward","aspect"])uniforms[key]=gl.getUniformLocation(program,key);
+    for(const key of ["pos","col"])attributes[key]=gl.getAttribLocation(program,key);
     gl.useProgram(program);buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
-    ["pos","col"].forEach((name,i)=>{const a=gl.getAttribLocation(program,name);
+    ["pos","col"].forEach((name,i)=>{const a=attributes[name];
       gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,3,gl.FLOAT,false,24,i*12);});
     streetBuffer=gl.createBuffer();
     decorBuffer=gl.createBuffer();
@@ -3255,11 +3279,11 @@ byId("export-png").addEventListener("click",savePng);
     }
     const c=Math.cos(heading),s=Math.sin(heading),cp=Math.cos(pitch),sp=Math.sin(pitch);
     for(const [key,value] of Object.entries({eye,right:[-s,c,0],up:[-c*sp,-s*sp,cp],forward:[c*cp,s*cp,sp]}))
-      gl.uniform3fv(gl.getUniformLocation(program,key),value);
-    gl.uniform1f(gl.getUniformLocation(program,"aspect"),w/h);
+      gl.uniform3fv(uniforms[key],value);
+    gl.uniform1f(uniforms.aspect,w/h);
     function bind(meshBuffer) {
       gl.bindBuffer(gl.ARRAY_BUFFER,meshBuffer);
-      ["pos","col"].forEach((key,i)=>gl.vertexAttribPointer(gl.getAttribLocation(program,key),3,gl.FLOAT,false,24,i*12));
+      ["pos","col"].forEach((key,i)=>gl.vertexAttribPointer(attributes[key],3,gl.FLOAT,false,24,i*12));
     }
     bind(streetBuffer);gl.drawArrays(gl.TRIANGLES,0,streetCount);
     if (idx < 0 || byId("show-street3").checked) {bind(decorBuffer);gl.drawArrays(gl.TRIANGLES,0,decorCount);}
