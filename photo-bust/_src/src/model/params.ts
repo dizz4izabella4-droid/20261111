@@ -34,7 +34,7 @@ export const BODY_DEFS: ParamDef[] = [
 
 export const BREAST_DEFS: ParamDef[] = [
   { key: 'size', label: '大きさ（ボリューム）', unit: 'index', def: 50, min: 0, max: 100 },
-  { key: 'projection', label: '前方への張り出し', unit: 'mm', def: 0, min: 0, max: 0.12 },
+  { key: 'projection', label: '前方への張り出し', unit: 'mm', def: 0.02, min: 0, max: 0.12 },
   { key: 'baseWidth', label: '付け根の幅', unit: 'mm', def: 0.12, min: 0.07, max: 0.18 },
   { key: 'baseHeight', label: '付け根の高さ', unit: 'mm', def: 0.11, min: 0.06, max: 0.17 },
   { key: 'centerHeight', label: '高さ位置（中心）', unit: 'cm', def: 0.37, min: 0.3, max: 0.44, note: '下端から' },
