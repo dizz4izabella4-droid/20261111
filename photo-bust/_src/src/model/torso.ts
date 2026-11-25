@@ -117,11 +117,13 @@ export class Torso {
     };
 
     // --- sections at key heights ---
-    const dW = 0.27 * body.waistCirc; // waist total depth
-    const waistSec: Omit<Section, 'a'> = { bf: dW * 0.5, bb: dW * 0.5, cz: 0, p: 2.3 };
+    // the back of the chest and waist is a little thinner than the front (user request 2026-11-26)
+    const BACK = 0.9;
+    const dW = 0.27 * body.waistCirc; // waist depth before thinning the back
+    const waistSec: Omit<Section, 'a'> = { bf: dW * 0.5, bb: dW * 0.5 * BACK, cz: 0, p: 2.3 };
     const aW = solveHalfWidth(body.waistCirc, waistSec);
     const dU = 0.92 * body.chestDepth;
-    const ubSec: Omit<Section, 'a'> = { bf: dU * 0.5, bb: dU * 0.5, cz: 0, p: 2.4 };
+    const ubSec: Omit<Section, 'a'> = { bf: dU * 0.5, bb: dU * 0.5 * BACK, cz: 0, p: 2.4 };
     const aU = solveHalfWidth(body.underbustCirc, ubSec);
     const cd = body.chestDepth;
     const nbw = body.neckBaseWidth;
@@ -134,8 +136,8 @@ export class Torso {
       { a: aU * 0.968, bf: cd * 0.964 * 0.52, bb: cd * 0.964 * 0.48, cz: 0, p: 2.4 }, // navel
       { a: aW, ...waistSec }, // waist
       { a: aU, ...ubSec }, // underbust
-      { a: aU * 1.1, bf: cd * 0.5, bb: cd * 0.5, cz: 0, p: 2.5 }, // bust (ribcage + lateral chest)
-      { a: xs - 0.008, bf: cd * 0.95 * 0.5, bb: cd * 0.95 * 0.5, cz: 0, p: 2.7 }, // armpit (just inside the cut plane)
+      { a: aU * 1.1, bf: cd * 0.5, bb: cd * 0.5 * BACK, cz: 0, p: 2.5 }, // bust (ribcage + lateral chest)
+      { a: xs - 0.008, bf: cd * 0.95 * 0.5, bb: cd * 0.95 * 0.5 * BACK, cz: 0, p: 2.7 }, // armpit (just inside the cut plane)
       { a: xs + 0.02, bf: cd * 0.72 * 0.47, bb: cd * 0.72 * 0.53, cz: -0.005, p: 2.8 }, // shoulder joint (cut face widest here)
       { a: xs + 0.004, bf: cd * 0.55 * 0.45, bb: cd * 0.55 * 0.55, cz: -0.01, p: 2.5 }, // shoulder top
       { a: nbw / 2, bf: nbw * 1.05 * 0.5, bb: nbw * 1.05 * 0.5, cz: -0.01, p: 2.1 }, // neck base
