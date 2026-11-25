@@ -37,7 +37,7 @@ export const BREAST_DEFS: ParamDef[] = [
   { key: 'projection', label: '前方への張り出し', unit: 'mm', def: 0.018, min: 0, max: 0.12 },
   { key: 'baseWidth', label: '付け根の幅', unit: 'mm', def: 0.17, min: 0.07, max: 0.18 },
   { key: 'baseHeight', label: '付け根の高さ', unit: 'mm', def: 0.16, min: 0.06, max: 0.17 },
-  { key: 'centerHeight', label: '高さ位置（中心）', unit: 'cm', def: 0.355, min: 0.3, max: 0.44, note: '下端から' },
+  { key: 'centerHeight', label: '高さ位置（中心）', unit: 'cm', def: 0.365, min: 0.3, max: 0.44, note: '下端から' },
   { key: 'spacing', label: '左右の間隔（中心間）', unit: 'mm', def: 0.13, min: 0.12, max: 0.26 },
   { key: 'outwardAngle', label: '外向きの角度', unit: 'deg', def: 10, min: 0, max: 30 },
   { key: 'ptosis', label: '下垂', unit: 'index', def: 0, min: 0, max: 100 },
