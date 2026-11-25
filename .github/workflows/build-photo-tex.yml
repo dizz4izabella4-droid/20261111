@@ -1,0 +1,52 @@
+name: Build photo-tex
+# Builds photo-tex/_src (Vite + TypeScript + three.js), runs the tests and a headless-Chromium
+# smoke test, then commits the static build (photo-tex/index.html + photo-tex/assets/) to main.
+# GitHub Pages of this repository (deploy from branch) then serves it at /photo-tex/.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'photo-tex/_src/**'
+      - '.github/workflows/build-photo-tex.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: build-photo-tex
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: photo-tex/_src
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: photo-tex/_src/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm test
+      - run: npm run build
+      - name: Smoke test of the build (headless Chromium, fixed views, no external requests)
+        run: |
+          npx playwright install --with-deps chromium-headless-shell
+          npm run shots -- --built --milestone ci-smoke
+          rm -rf ../screenshots/ci-smoke
+      - name: Commit build output
+        working-directory: .
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A photo-tex/index.html photo-tex/assets
+          if git diff --cached --quiet; then
+            echo "build output unchanged"
+          else
+            git commit -m "photo-tex: build output (CI)"
+            git push
+          fi
