@@ -35,9 +35,11 @@ function randomParams(seed: number): ModelParams {
   for (const d of BREAST_DEFS) (p.breast as any)[d.key] = d.min + (d.max - d.min) * r();
   return p;
 }
+/** The defaults are flat (projection 0), so breast tests start from a non-flat reference shape. */
+const REFERENCE_BREAST: Partial<ModelParams['breast']> = { projection: 0.045, nippleProjection: 0.006, areolaProjection: 0.001 };
 function withBreast(over: Partial<ModelParams['breast']>, body?: Partial<ModelParams['body']>): ModelParams {
   const p = defaultParams();
-  Object.assign(p.breast, over);
+  Object.assign(p.breast, REFERENCE_BREAST, over);
   if (body) Object.assign(p.body, body);
   return p;
 }
@@ -233,7 +235,7 @@ describe('5.3-3 nipple sampling density', () => {
 
 describe('symmetry (X = 0 plane)', () => {
   it('vertex j mirrors vertex M-j', () => {
-    const mesh = buildBaseMesh(defaultParams(), 'standard');
+    const mesh = buildBaseMesh(withBreast({}), 'standard');
     const cols = mesh.segments + 1;
     let maxErr = 0;
     for (let i = 0; i < mesh.rings; i++)

@@ -34,11 +34,11 @@ export const BODY_DEFS: ParamDef[] = [
 
 export const BREAST_DEFS: ParamDef[] = [
   { key: 'size', label: '大きさ（ボリューム）', unit: 'index', def: 50, min: 0, max: 100 },
-  { key: 'projection', label: '前方への張り出し', unit: 'mm', def: 0.045, min: 0, max: 0.12 },
+  { key: 'projection', label: '前方への張り出し', unit: 'mm', def: 0, min: 0, max: 0.12 },
   { key: 'baseWidth', label: '付け根の幅', unit: 'mm', def: 0.12, min: 0.07, max: 0.18 },
   { key: 'baseHeight', label: '付け根の高さ', unit: 'mm', def: 0.11, min: 0.06, max: 0.17 },
   { key: 'centerHeight', label: '高さ位置（中心）', unit: 'cm', def: 0.37, min: 0.3, max: 0.44, note: '下端から' },
-  { key: 'spacing', label: '左右の間隔（中心間）', unit: 'mm', def: 0.18, min: 0.12, max: 0.26 },
+  { key: 'spacing', label: '左右の間隔（中心間）', unit: 'mm', def: 0.15, min: 0.12, max: 0.26 },
   { key: 'outwardAngle', label: '外向きの角度', unit: 'deg', def: 10, min: 0, max: 30 },
   { key: 'ptosis', label: '下垂', unit: 'index', def: 15, min: 0, max: 100 },
   { key: 'upperFullness', label: '上側の丸み', unit: 'index', def: 40, min: 0, max: 100 },
@@ -46,9 +46,9 @@ export const BREAST_DEFS: ParamDef[] = [
   { key: 'nippleOffsetX', label: '乳頭の位置（左右）', unit: 'mm', def: 0, min: -0.02, max: 0.02, note: '＋で外側' },
   { key: 'nippleOffsetY', label: '乳頭の位置（上下）', unit: 'mm', def: 0, min: -0.025, max: 0.025, note: '＋で上' },
   { key: 'nippleDiameter', label: '乳頭の直径', unit: 'mm', def: 0.01, min: 0.004, max: 0.02 },
-  { key: 'nippleProjection', label: '乳頭の高さ', unit: 'mm', def: 0.006, min: 0, max: 0.015 },
+  { key: 'nippleProjection', label: '乳頭の高さ', unit: 'mm', def: 0, min: 0, max: 0.015 },
   { key: 'areolaDiameter', label: '乳輪の直径', unit: 'mm', def: 0.035, min: 0.015, max: 0.07 },
-  { key: 'areolaProjection', label: '乳輪のふくらみ', unit: 'mm', def: 0.001, min: 0, max: 0.008 },
+  { key: 'areolaProjection', label: '乳輪のふくらみ', unit: 'mm', def: 0, min: 0, max: 0.008 },
 ];
 
 export interface BodyParams {
