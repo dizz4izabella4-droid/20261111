@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VOICE 試験ページ</title>
+<style>
+:root{--bg:#f6f4ef;--panel:#fff;--ink:#1f2328;--sub:#5b6168;--line:#dcd8cf;--ok:#2f855a;--bad:#c53030;--accent:#2b6cb0}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#16181b;--panel:#1f2226;--ink:#e7e9ec;--sub:#9aa1a9;--line:#33373d;--ok:#68d391;--bad:#fc8181;--accent:#63a4ff}}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Hiragino Sans",sans-serif}
+h1{font-size:18px;margin:0 0 4px}
+h2{font-size:15px;margin:16px 0 8px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px}
+table{border-collapse:collapse;width:100%}
+td,th{border-bottom:1px solid var(--line);padding:4px 6px;text-align:left;vertical-align:top;font-size:13px;word-break:break-all}
+th{color:var(--sub);font-size:12px}
+.pass{color:var(--ok);font-weight:600}.fail{color:var(--bad);font-weight:700}
+button,input{font:inherit;color:inherit}
+button{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 12px;min-height:36px;cursor:pointer}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.muted{color:var(--sub);font-size:12px}
+.wrap{overflow-x:auto}
+iframe{display:none}
+</style>
+</head>
+<body>
+<h1>VOICE 試験ページ</h1>
+<p class="muted">中身の単体テスト（tools/voice.html を読み込んで呼ぶ）と、書き出しパックの再生テスト。ここで鳴る音は耳での確認を前提にしていません。数値だけを見ます。</p>
+
+<div class="card">
+  <div class="row"><b>1. 中身のテスト</b><span id="coreSummary" class="muted">実行中…</span></div>
+  <div class="wrap"><table id="coreTable"><tr><th>項目</th><th>期待</th><th>結果</th><th></th></tr></table></div>
+</div>
+
+<div class="card">
+  <div class="row"><b>2. 書き出しパックの再生</b><span id="packSummary" class="muted"></span></div>
+  <p class="muted">?pack=フォルダ（例 <code>?pack=../mygame/voice/</code>）で開くか、3つのファイル（voice.json / voice.wav / voice-player.js）を選ぶ。何も指定しないと、テスト用の音で作ったパックで試します。</p>
+  <div class="row">
+    <input type="file" id="packFiles" multiple accept=".json,.wav,.js" aria-label="パックのファイル">
+    <button type="button" id="packRun">ファイルで試す</button>
+    <button type="button" id="packSelf">テスト用パックで試す</button>
+  </div>
+  <div class="wrap"><table id="packTable"></table></div>
+</div>
+
+<iframe id="core" title="voice core" src="voice.html?noidb"></iframe>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const results = [];
+function row(table, name, expect, got, ok) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = '<td>' + esc(name) + '</td><td>' + esc(expect) + '</td><td>' + esc(got) + '</td><td class="' + (ok ? 'pass' : 'fail') + '">' + (ok ? 'OK' : 'NG') + '</td>';
+  $(table).appendChild(tr);
+}
+function check(name, expect, got, ok) {
+  if (ok === undefined) ok = JSON.stringify(expect) === JSON.stringify(got);
+  results.push({ name, ok: !!ok, expect, got });
+  row('coreTable', name, typeof expect === 'string' ? expect : JSON.stringify(expect), typeof got === 'string' ? got : JSON.stringify(got), ok);
+}
+function waitCore() {
+  return new Promise((res, rej) => {
+    const t0 = Date.now();
+    const tick = () => { const w = $('core').contentWindow; if (w && w.__voiceReady && w.VoiceCore) res(w.VoiceCore); else if (Date.now() - t0 > 15000) rej(new Error('voice.html が読み込めません')); else setTimeout(tick, 50); };
+    tick();
+  });
+}
+/* tone burst "syllable": f Hz, sec, amplitude, with 10 ms raised-cosine edges */
+function tone(f, sec, amp, sr) {
+  const n = Math.round(sec * sr), x = new Float32Array(n), e = Math.round(0.01 * sr);
+  for (let i = 0; i < n; i++) { let g = amp; if (i < e) g *= 0.5 - 0.5 * Math.cos(Math.PI * i / e); if (i > n - e) g *= 0.5 - 0.5 * Math.cos(Math.PI * (n - i) / e); x[i] = g * (Math.sin(2 * Math.PI * f * i / sr) + 0.3 * Math.sin(4 * Math.PI * f * i / sr)); }
+  return x;
+}
+function concat(parts) { const n = parts.reduce((a, b) => a + b.length, 0), y = new Float32Array(n); let p = 0; for (const a of parts) { y.set(a, p); p += a.length; } return y; }
+const sil = (sec, sr) => new Float32Array(Math.round(sec * sr));
+
+/* a project whose syllables are tone bursts: kana[i] at pitch base*(1+i*0.01) */
+function buildToneProject(V, kanaList, sr, opts) {
+  opts = opts || {};
+  V.Project.reset('テスト');
+  V.Bank.clear();
+  const parts = [sil(0.3, sr)], labels = [];
+  let t = 0.3;
+  kanaList.forEach((k, i) => {
+    const d = 0.12 + (i % 3) * 0.02, f = (opts.f || 200) * (1 + (i % 5) * 0.01);
+    parts.push(tone(f, d, opts.amp || 0.5, sr)); labels.push({ kana: k, start: t, end: t + d, confidence: 0.9, src: 'ai' });
+    t += d; parts.push(sil(0.25, sr)); t += 0.25;
+  });
+  const x = concat(parts);
+  const r = V.Project.addRecording({ kind: 'single', name: 'tones', expected: kanaList.slice() }, x, sr);
+  V.Project.setLabels(r.id, labels);
+  return { r, x, labels };
+}
+
+async function runCore() {
+  const V = await waitCore();
+  const { Kana, Reading, DSP, Zip, Project, Bank, Synth, Pack, Cut } = V;
+  // --- inventory & kana
+  check('音節の数', 101, Kana.INVENTORY.length);
+  check('例文で全音をカバー', [], (() => { const s = new Set(); V.SENTENCES.forEach(x => Kana.splitMorae(x.kana).forEach(m => s.add(Kana.normalize(m)))); return Kana.INVENTORY.filter(k => !s.has(k)); })());
+  check('音節分解 きゃくが', ['きゃ', 'く', 'が'], Kana.splitMorae('きゃくが'));
+  check('音節分解 ティーカップ', ['てぃ', 'ー', 'か', 'っ', 'ぷ'], Kana.splitMorae('ティーカップ'));
+  check('を→お ぢ→じ づ→ず ぢゃ→じゃ', ['お', 'じ', 'ず', 'じゃ'], ['を', 'ぢ', 'づ', 'ぢゃ'].map(Kana.normalize));
+  // --- numbers
+  const nums = [['0', 'ぜろ'], ['12', 'じゅうに'], ['100', 'ひゃく'], ['300', 'さんびゃく'], ['600', 'ろっぴゃく'], ['800', 'はっぴゃく'], ['1000', 'せん'],
+    ['3000', 'さんぜん'], ['8000', 'はっせん'], ['10000', 'いちまん'], ['99999', 'きゅうまんきゅうせんきゅうひゃくきゅうじゅうきゅう'], ['1,234', 'せんにひゃくさんじゅうよん'],
+    ['3.14', 'さんてんいちよん'], ['50%', 'ごじゅうぱーせんと'], ['２０２６', 'にせんにじゅうろく'], ['100000000', null]];
+  for (const [n, k] of nums) check('数字 ' + n, k, Reading.numberToKana(n));
+  const rs = (t, d) => Reading.readingString(Reading.parse(t, d || {}).tokens);
+  check('数字を文中で 「50のダメージ」', 'ごじゅうのだめーじ', rs('50のダメージ'));
+  // --- particles & kanji
+  check('助詞は自動変換しない 「わたしは」', 'わたしは', rs('わたしは'));
+  check('[わ] で読みを入れる 「わたし[わ]」', 'わたしわ', rs('わたし[わ]'));
+  check('は{わ} で直前のかなの読み', 'わたしわ', rs('わたしは{わ}'));
+  check('漢字{よみ}', 'あんざんする', rs('暗算{あんざん}する'));
+  check('{よみ} は辞書に覚える', { '暗算': 'あんざん' }, Reading.parse('暗算{あんざん}', {}).learned);
+  check('辞書で読む', 'あんざんする', rs('暗算する', { '暗算': 'あんざん' }));
+  check('辞書の最長一致', 'あんざんりんね', rs('暗算輪廻', { '暗算': 'あんざん', '暗算輪廻': 'あんざんりんね' }));
+  check('読めない漢字は〓（話さない）', 'あ〓い', rs('あ漢い'));
+  check('英字も読めない扱い', ['u'], Reading.parse('ABC', {}).items.map(i => i.t).filter((v, i, a) => a.indexOf(v) === i));
+  check('句読点→間', ['comma', 'period', 'q'], Reading.parse('あ、い。う？', {}).items.filter(i => i.t === 'p').map(i => i.kind));
+  // --- synthesis lengths with stub units
+  const S = { ...V.DEFAULT_SETTINGS };
+  const sr = V.SR_WORK, xf = Math.round(S.crossfadeMs * sr / 1000);
+  const units = { あ: tone(220, 0.1, 0.3, sr), い: tone(220, 0.104, 0.3, sr), う: tone(220, 0.108, 0.3, sr) };
+  const getU = st => units[st.kana] || null;
+  const plan = t => Synth.plan(Reading.parse(t, {}).items, [], k => !!units[k]);
+  let r = Synth.render(plan('あいう'), getU, S);
+  const sumLen = units.あ.length + units.い.length + units.う.length;
+  check('「あいう」の長さ＝素材の合計−重なり×2', sumLen - 2 * xf, r.x.length);
+  r = Synth.render(plan('あっい'), getU, S);
+  const sok = Math.round(S.sokuonMs * sr / 1000);
+  check('っ: 前の尻を20%切って無音' + S.sokuonMs + 'ms', units.あ.length - Math.round(units.あ.length * 0.2) + sok + units.い.length, r.x.length);
+  const sokTl = r.timeline[1];
+  check('っ の区間が無音', true, DSP.peak(r.x.subarray(sokTl.start, sokTl.end)) === 0);
+  r = Synth.render(plan('あー'), getU, S);
+  check('ー: ' + S.choonMs + 'ms 伸びる', units.あ.length + Math.round(S.choonMs * sr / 1000), r.x.length);
+  r = Synth.render(plan('あ、い。う'), getU, S);
+  check('、と。の間', units.あ.length + Math.round(S.pauseComma * sr / 1000) + units.い.length + Math.round(S.pausePeriod * sr / 1000) + units.う.length, r.x.length);
+  r = Synth.render(plan('あぬい'), getU, S);
+  check('素材が無い音は赤（missing）で飛ばす', ['mora', 'missing', 'mora'], plan('あぬい').map(s => s.t));
+  check('素材が無い音の警告', true, r.warnings.some(w => w.includes('ぬ')) && r.missing.includes('ぬ'));
+  check('素材が無い音は無音を入れない', units.あ.length + units.い.length - xf, r.x.length);
+  r = Synth.render(plan('あいう'), getU, { ...S, speed: 1.3 });
+  check('速さ1.3で短くなる（高さは変えない）', true, r.x.length < sumLen - 2 * xf);
+  r = Synth.render(plan('あいう'), getU, { ...S, speed: 0.75 });
+  check('速さ0.75で長くなる', true, r.x.length > sumLen);
+  // --- processing on a real (tone) project
+  const kl = ['か', 'き', 'く', 'け', 'こ'];
+  buildToneProject(V, kl, 44100, { amp: 0.95 });
+  const ctx = Bank.context();
+  const pk = Math.max(...kl.map(k => DSP.peak(Bank.unit(Bank.chosen(k, ctx).take))));
+  check('加工後のピーク ≤ 0.6', '≤0.6', pk.toFixed(3), pk <= 0.6 + 1e-6);
+  const sp = Synth.speak('かきくけこ');
+  check('連結後のピーク ≤ 0.6', '≤0.6', DSP.peak(sp.x).toFixed(3), DSP.peak(sp.x) <= 0.6 + 1e-6);
+  // clicks: max sample jump around joints vs inside units
+  let jIn = 0, jJoint = 0;
+  const tl = sp.timeline.filter(t => t.end > t.start);
+  for (let i = 1; i < sp.x.length; i++) { const d = Math.abs(sp.x[i] - sp.x[i - 1]); let near = false; for (const t of tl) if (Math.abs(i - t.start) < 0.003 * sr || Math.abs(i - t.end) < 0.003 * sr) { near = true; break; } if (near) jJoint = Math.max(jJoint, d); else jIn = Math.max(jIn, d); }
+  check('つなぎ目にクリックが無い（つなぎ目の最大段差 ≤ 内部の最大段差×1.5）', '≤' + (jIn * 1.5).toFixed(4), jJoint.toFixed(4), jJoint <= jIn * 1.5);
+  // --- pitch & auto pick
+  V.Project.reset('pick'); Bank.clear();
+  const xa = concat([sil(0.2, 44100), tone(200, 0.15, 0.4, 44100), sil(0.2, 44100), tone(300, 0.15, 0.4, 44100), sil(0.2, 44100)]);
+  const pr = Project.addRecording({ kind: 'free', name: 'pick' }, xa, 44100);
+  Project.setLabels(pr.id, [{ kana: 'か', start: 0.2, end: 0.35, confidence: 0.9, src: 'ai' }, { kana: 'か', start: 0.55, end: 0.7, confidence: 0.9, src: 'ai' }]);
+  const f0 = Bank.measure(Bank.takes()[0]).f0;
+  check('高さの推定 200Hz', '200±3', f0 ? f0.toFixed(1) : 'null', f0 && Math.abs(f0 - 200) < 3);
+  Project.get().settings.refHz = 210; Bank.clear();
+  check('基準210Hzに近いテイクを自動選択', pr.id + '#0', Bank.chosen('か').take.key);
+  Project.get().picks['か'] = pr.id + '#1';
+  check('手で選んだテイクが優先', pr.id + '#1', Bank.chosen('か').take.key);
+  // --- silence split & ordered assignment
+  const sr2 = 48000, kl2 = ['ぴゃ', 'ぬ', 'へ', 'みゅ', 'ぎょ'];
+  const { x: x2, labels: truth } = buildToneProject(V, kl2, sr2);
+  const segs = Cut.silenceSplit(x2, sr2, V.DEFAULT_SETTINGS);
+  check('無音検出の区間数', 5, segs.length);
+  const err = segs.length === 5 ? Math.max(...segs.map((s, i) => Math.max(Math.abs(s.start - truth[i].start), Math.abs(s.end - truth[i].end)))) * 1000 : 999;
+  check('無音検出の境界誤差 ≤ 20ms', '≤20', err.toFixed(1), err <= 20);
+  const single = Project.addRecording({ kind: 'single', name: 's', expected: kl2 }, x2, sr2);
+  Project.setLabels(single.id, segs.map((s, i) => ({ kana: single.expected[i], start: s.start, end: s.end, src: 'auto' })));
+  check('割り当て順どおり', kl2, Project.rec(single.id).labels.map(l => l.kana));
+  // --- wav & zip & project roundtrip
+  const w = DSP.decodeWav(DSP.encodeWav(x2, sr2));
+  let md = 0; for (let i = 0; i < x2.length; i++) md = Math.max(md, Math.abs(w.x[i] - x2[i]));
+  check('WAV 往復（誤差 < 1/16384）', '<6.1e-5', md.toExponential(2), w.sr === sr2 && w.x.length === x2.length && md < 1 / 16384);
+  const z = await Zip.read(Zip.write([{ name: 'project.json', data: '{"あ":1}' }, { name: 'audio/音.bin', data: new Uint8Array([1, 2, 3]) }]));
+  check('ZIP 往復（日本語の名前）', ['project.json', 'audio/音.bin', '{"あ":1}', '1,2,3'], [...z.keys(), new TextDecoder().decode(z.get('project.json')), [...z.get('audio/音.bin')].join(',')]);
+  Project.get().dictionary['暗算'] = 'あんざん';
+  Project.get().lines.push({ id: 'a.1', text: 'ぴゃぬ', exportedHash: null });
+  const before = JSON.stringify({ r: Project.get().recordings.map(r => [r.id, r.labels.length, r.length]), d: Project.get().dictionary, l: Project.get().lines });
+  const bytes = await Project.toBytes();
+  Project.reset('empty');
+  await Project.fromBytes(bytes);
+  const after = JSON.stringify({ r: Project.get().recordings.map(r => [r.id, r.labels.length, Project.audio.get(r.id).x.length]), d: Project.get().dictionary, l: Project.get().lines });
+  check('.voiceproj 保存→読み込み', before, after);
+  // --- labels import
+  const tr = Project.get().recordings.find(r => r.kind === 'single');
+  const req = Project.cutRequest([tr.id]);
+  const zr = await Zip.read(req.bytes);
+  const rq = JSON.parse(new TextDecoder().decode(zr.get('request.json')));
+  check('切り分け依頼: request.json と WAV', ['voice-cutreq', tr.expected.length, true], [rq.format, rq.recordings[0].expected.length, zr.has(tr.id + '.wav')]);
+  check('切り分け依頼: CRC32 が WAV と一致', rq.recordings[0].crc32, Zip.hex(Zip.crc32(zr.get(tr.id + '.wav'))));
+  let rep = Project.importLabels({ format: 'voice-labels', version: 1, recordings: [{ recId: tr.id, crc32: rq.recordings[0].crc32, method: 'julius', labels: truth.map((l, i) => ({ i, kana: l.kana, start: l.start, end: l.end, confidence: i === 2 ? 0.2 : 0.9 })) }] });
+  check('labels.json 取り込み（要確認1）', [tr.expected.length, 1, 0], [rep.applied[0].n, rep.applied[0].low, rep.warnings.length]);
+  rep = Project.importLabels({ format: 'voice-labels', version: 1, recordings: [{ recId: tr.id, crc32: 'deadbeef', labels: truth.slice(0, 3).map(l => ({ kana: l.kana, start: l.start, end: l.end, confidence: 1 })) }] });
+  check('CRC不一致と数の不一致を警告', 2, rep.warnings.length);
+  // --- phrase longest match
+  V.Project.reset('phrase'); Bank.clear();
+  buildToneProject(V, ['こ', 'ん', 'に', 'ち', 'わ', 'あ'], 48000);
+  const phx = concat([sil(0.2, 48000), tone(180, 0.5, 0.4, 48000), sil(0.2, 48000)]);
+  Project.addRecording({ kind: 'phrase', name: 'ph', text: 'こんにちは', kana: 'こんにちわ', hash: V.fnv('こんにちは'), labels: [{ kana: 'こんにちわ', start: 0.2, end: 0.7, confidence: null, src: 'auto' }] }, phx, 48000);
+  const st = Synth.speak('こんにちわ、あ').steps.map(s => s.t);
+  check('定型句の最長一致を優先', ['phrase', 'pause', 'mora'], st);
+  const phr = Project.get().recordings.find(r => r.kind === 'phrase'); phr.text = 'こんばんは';
+  check('定型句の文を直すと差替待ち（合成に戻る）', 'mora', Synth.speak('こんにちわ').steps[0].t);
+  phr.text = 'こんにちは';
+  // --- pack A build
+  Project.get().lines = [{ id: 'ok.1', text: 'こんにちわ' }, { id: 'ok.2', text: 'あに、ち' }, { id: 'bad.1', text: 'ぬ' }, { id: 'bad.2', text: '漢字' }];
+  const pk2 = Pack.build();
+  check('書き出し: 行と除外', [['ok.1', 'ok.2'], ['bad.1', 'bad.2']], [pk2.report.exported, pk2.report.skipped.map(s => s.id)]);
+  const dw = DSP.decodeWav(pk2.wav);
+  const L = pk2.json.lines;
+  const endMax = Math.max(...Object.values(L).map(l => l.start + l.dur));
+  check('書き出し: WAV の長さ＝json の最後の start+dur', dw.x.length, Math.round(endMax * 24000), Math.abs(dw.x.length - endMax * 24000) <= 24);
+  check('書き出し: 行の間に0.1秒', 0.1, +(L['ok.2'].start - (L['ok.1'].start + L['ok.1'].dur)).toFixed(3), Math.abs(L['ok.2'].start - (L['ok.1'].start + L['ok.1'].dur) - 0.1) < 0.002);
+  check('書き出し: format 1 / 24kHz', [1, 24000, 'voice.wav'], [pk2.json.format, dw.sr, pk2.json.file]);
+  window.__selfPack = pk2;
+  const pass = results.filter(r => r.ok).length;
+  $('coreSummary').textContent = pass + ' / ' + results.length + ' OK';
+  $('coreSummary').className = pass === results.length ? 'pass' : 'fail';
+  window.__coreTests = { pass, total: results.length, failed: results.filter(r => !r.ok) };
+  return V;
+}
+
+/* ------------------------------------------------ pack playback test */
+async function loadPlayer(src) {
+  delete window.createVoicePlayer;
+  const url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+  await new Promise((res, rej) => { const s = document.createElement('script'); s.src = url; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+  if (typeof window.createVoicePlayer !== 'function') throw new Error('voice-player.js に createVoicePlayer がありません');
+}
+function withFakeFiles(prefix, map, fn) {
+  const real = window.fetch;
+  window.fetch = (u, o) => { const path = String(u).split('?')[0], name = path.split('/').pop(); if (path.startsWith(prefix) && map[name]) return Promise.resolve(new Response(map[name])); return real(u, o); };
+  return fn().finally(() => { window.fetch = real; });
+}
+async function packTest(base, label) {
+  $('packTable').innerHTML = '<tr><th>id</th><th>dur</th><th>play()</th><th></th></tr>';
+  const t = { source: label, ids: [], played: 0, failures: [], extra: {} };
+  const p = window.createVoicePlayer({ base });
+  const ok = await p.load();
+  t.loaded = ok;
+  if (!ok) { $('packSummary').innerHTML = '<span class="fail">読み込めませんでした</span>'; window.__packTest = t; return t; }
+  t.ids = p.ids();
+  const ends = [];
+  p.onEnd = id => ends.push(id);
+  for (const id of t.ids) {
+    const started = p.play(id);
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + esc(id) + '</td><td></td><td>' + started + '</td><td class="' + (started ? 'pass' : 'fail') + '">' + (started ? 'OK' : 'NG') + '</td>';
+    $('packTable').appendChild(tr);
+    if (started) t.played++; else t.failures.push(id);
+    await new Promise(r => setTimeout(r, 120));
+  }
+  p.stop();
+  t.extra.unknownIdReturnsFalse = p.play('__no_such_id__') === false;
+  if (t.ids.length >= 2) { p.play(t.ids[0]); p.play(t.ids[1]); t.extra.secondCutsFirst = ends.includes(t.ids[0]) && p.isPlaying(); p.stop(); }
+  p.setEnabled(false); t.extra.disabledReturnsFalse = t.ids.length ? p.play(t.ids[0]) === false : true; p.setEnabled(true);
+  let threw = false; try { p.setVolume(0.5); p.stop(); p.stop(); } catch (e) { threw = true; }
+  t.extra.noThrow = !threw;
+  // a pack that does not exist: fetch answers 404 (stubbed, so the console stays clean)
+  const realFetch = window.fetch;
+  window.fetch = () => Promise.resolve(new Response('', { status: 404 }));
+  const missing = window.createVoicePlayer({ base: './__missing_pack__/' });
+  try { t.extra.missingPackResolvesFalse = (await missing.load()) === false && missing.play('x') === false; } finally { window.fetch = realFetch; }
+  const allOk = t.played === t.ids.length && Object.values(t.extra).every(Boolean);
+  for (const [k, v] of Object.entries(t.extra)) { const tr = document.createElement('tr'); tr.innerHTML = '<td colspan="3">' + esc(k) + '</td><td class="' + (v ? 'pass' : 'fail') + '">' + (v ? 'OK' : 'NG') + '</td>'; $('packTable').appendChild(tr); }
+  $('packSummary').innerHTML = '<span class="' + (allOk ? 'pass' : 'fail') + '">' + esc(label) + ': ' + t.played + ' / ' + t.ids.length + ' 行が再生開始</span>';
+  t.allOk = allOk;
+  window.__packTest = t;
+  return t;
+}
+async function selfPack(V) {
+  const pk = window.__selfPack;
+  await loadPlayer(V.PLAYER_SRC);
+  return withFakeFiles('selftest/', { 'voice.json': JSON.stringify(pk.json), 'voice.wav': new Blob([pk.wav]) }, () => packTest('selftest/', 'テスト用パック'));
+}
+$('packRun').onclick = async () => {
+  const files = [...$('packFiles').files], by = {};
+  for (const f of files) by[f.name] = f;
+  if (!by['voice.json'] || !by['voice.wav'] || !by['voice-player.js']) { alert('voice.json / voice.wav / voice-player.js の3つを選んでください'); return; }
+  await loadPlayer(await by['voice-player.js'].text());
+  withFakeFiles('files/', { 'voice.json': by['voice.json'], 'voice.wav': by['voice.wav'] }, () => packTest('files/', '選んだファイル'));
+};
+(async () => {
+  let V = null;
+  try { V = await runCore(); } catch (e) { $('coreSummary').textContent = 'エラー: ' + e.message; $('coreSummary').className = 'fail'; window.__coreTests = { pass: 0, total: 1, failed: [{ name: 'exception', got: String(e && e.stack || e) }] }; }
+  $('packSelf').onclick = () => V && selfPack(V);
+  const q = new URLSearchParams(location.search).get('pack');
+  try {
+    if (q) { const base = q.endsWith('/') ? q : q + '/'; const src = await (await fetch(base + 'voice-player.js', { cache: 'no-cache' })).text(); await loadPlayer(src); await packTest(base, q); }
+    else if (V) await selfPack(V);
+  } catch (e) { $('packSummary').textContent = 'エラー: ' + e.message; window.__packTest = { error: String(e) }; }
+  window.__testsDone = true;
+})();
+</script>
+</body>
+</html>
