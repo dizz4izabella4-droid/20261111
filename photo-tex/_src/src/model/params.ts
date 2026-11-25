@@ -103,3 +103,48 @@ export function clampToRange(defs: ParamDef[], obj: Record<string, number>): voi
     obj[d.key] = Number.isFinite(v) ? Math.min(d.max, Math.max(d.min, v)) : d.def;
   }
 }
+
+// ---------------- body-type presets (女性 / 男性) ----------------
+// Not part of SPEC (one female template). Added on the user's request 2026-11-26.
+// 女性 = the values the user tuned on 2026-11-26 (also the parameter defaults above).
+// 男性 = the flat version (breasts removed), see below.
+
+export type BodyPresetName = 'female' | 'male';
+
+export const BODY_PRESETS: Record<BodyPresetName, { label: string; params: ModelParams }> = {
+  female: {
+    label: '女性',
+    params: {
+      body: {
+        torsoHeight: 0.45, shoulderWidth: 0.32, chestDepth: 0.19, underbustCirc: 0.67, underbustHeight: 0.25,
+        waistCirc: 0.57, waistHeight: 0.14, navelHeight: 0.05, neckBaseWidth: 0.11,
+      },
+      breast: {
+        size: 50, projection: 0.026, baseWidth: 0.17, baseHeight: 0.16, centerHeight: 0.345, spacing: 0.13,
+        outwardAngle: 10, ptosis: 0, upperFullness: 15, lowerFullness: 70, nippleOffsetX: 0, nippleOffsetY: 0,
+        nippleDiameter: 0.01, nippleProjection: 0, areolaDiameter: 0.035, areolaProjection: 0,
+      },
+    },
+  },
+  male: {
+    // 男性（おまけ）: the first flat version of 2026-11-26 = SPEC 5.2/5.3 placeholder defaults with
+    // the breasts removed (projection / nipple / areola 0) and spacing 150 mm.
+    label: '男性',
+    params: {
+      body: {
+        torsoHeight: 0.5, shoulderWidth: 0.34, chestDepth: 0.19, underbustCirc: 0.7, underbustHeight: 0.3,
+        waistCirc: 0.64, waistHeight: 0.14, navelHeight: 0.05, neckBaseWidth: 0.11,
+      },
+      breast: {
+        size: 50, projection: 0, baseWidth: 0.12, baseHeight: 0.11, centerHeight: 0.37, spacing: 0.15,
+        outwardAngle: 10, ptosis: 15, upperFullness: 40, lowerFullness: 60, nippleOffsetX: 0, nippleOffsetY: 0,
+        nippleDiameter: 0.01, nippleProjection: 0, areolaDiameter: 0.035, areolaProjection: 0,
+      },
+    },
+  },
+};
+
+export function presetParams(name: BodyPresetName): ModelParams {
+  const p = BODY_PRESETS[name].params;
+  return { body: { ...p.body }, breast: { ...p.breast } };
+}

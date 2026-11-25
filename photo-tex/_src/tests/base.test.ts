@@ -4,7 +4,7 @@ import { describe, expect, it, afterAll } from 'vitest';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { Mesh } from 'three';
-import { defaultParams, type ModelParams, type PresetName, PRESETS, BODY_DEFS, BREAST_DEFS } from '../src/model/params';
+import { defaultParams, presetParams, type ModelParams, type PresetName, PRESETS, BODY_DEFS, BREAST_DEFS } from '../src/model/params';
 import { buildBaseMesh, BodyModel, type BaseMesh } from '../src/model/mesh';
 import { ArcTable, sectionPerimeter } from '../src/model/torso';
 import { exportBaseGlb, LANDMARK_NODE_NAMES } from '../src/export/exportBase';
@@ -292,4 +292,22 @@ describe('timing (info only, not a pass/fail threshold)', () => {
     }
     results['timing/buildBaseMesh'] = out;
   });
+});
+
+describe('body-type presets (女性 / 男性)', () => {
+  it('female preset equals the parameter defaults', () => {
+    expect(presetParams('female')).toEqual(defaultParams());
+  });
+  for (const name of ['female', 'male'] as const)
+    it(`${name}: values in range, watertight, circumference ±1%`, () => {
+      const params = presetParams(name);
+      for (const d of BODY_DEFS) expect((params.body as any)[d.key]).toBeGreaterThanOrEqual(d.min);
+      for (const d of BREAST_DEFS) expect((params.breast as any)[d.key]).toBeLessThanOrEqual(d.max);
+      const mesh = buildBaseMesh(params, 'standard');
+      const w = watertight(mesh);
+      expect(w.badEdges).toBe(0);
+      const k = new BodyModel(params).torso.keys;
+      expect(Math.abs(sliceGridPerimeter(mesh, k.waist) / params.body.waistCirc - 1)).toBeLessThan(0.01);
+      expect(Math.abs(sliceGridPerimeter(mesh, k.underbust) / params.body.underbustCirc - 1)).toBeLessThan(0.01);
+    });
 });
