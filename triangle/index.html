@@ -81,6 +81,16 @@ h2{font-size:17px;font-weight:700;letter-spacing:.04em}
 button svg.ic{width:18px;height:18px;display:block}
 #snd{border-radius:12px}
 .btn.sm{padding:8px 14px;font-size:13px;border-radius:10px;font-weight:500}
+#board{max-height:none;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+:root:not([data-theme="light"]),:root{--bg:#0b1016;--card:#121a22;--line:#26323d;--ink:#fff;--sub:rgba(255,255,255,.68);--ok:#5fd6a8;--acc:#3b6cf0;--onacc:#fff;--a30:#f0b04a;--a45:#45b8ae;--a60:#6f95ee;--a90:#e46a86}
+body{background-image:none;background-color:var(--bg);color:#fff}
+.card{background:var(--card);box-shadow:none}
+.card.win{box-shadow:0 0 0 2px var(--ok)}
+.btn.ghost,.stagebtn{background:transparent;color:#fff}
+.stagebtn.done{background:var(--ok);color:#0b1016}
+#snd{background:transparent}
+h1{font-weight:500;letter-spacing:.18em}
+.counter{font-weight:200}
 </style>
 </head>
 <body>
@@ -90,14 +100,15 @@ var COL={30:'var(--a30)',45:'var(--a45)',60:'var(--a60)',90:'var(--a90)'};
 var app=document.getElementById('app');
 var raf=0;
 var progress={m1:[],m2:[],m3:[]};
-try{var sv=JSON.parse(localStorage.getItem('sankaku')||'null');if(sv)progress=sv}catch(e){}
+try{var sv=JSON.parse(localStorage.getItem('sankaku2')||'null');if(sv)progress=sv}catch(e){}
 
 function wedge(cx,cy,r,a0,a1,fill,op,extra){
   var s=a0-90,e=a1-90,rad=Math.PI/180;
   var x0=cx+r*Math.cos(s*rad),y0=cy+r*Math.sin(s*rad),x1=cx+r*Math.cos(e*rad),y1=cy+r*Math.sin(e*rad);
   var lg=Math.abs(a1-a0)>180?1:0,sw=a1>=a0?1:0;
   return '<path d="M'+cx+' '+cy+'L'+x0.toFixed(1)+' '+y0.toFixed(1)+'A'+r+' '+r+' 0 '+lg+' '+sw+' '+x1.toFixed(1)+' '+y1.toFixed(1)+'Z" fill="'+fill+'" fill-opacity="'+op+'" stroke="var(--card)" stroke-width="1.5" stroke-linejoin="round" '+(extra||'')+'/>';
-}function ray(cx,cy,r,a,dash,col,w){
+}
+function ray(cx,cy,r,a,dash,col,w){
   var rad=Math.PI/180,t=a-90;
   return '<line x1="'+cx+'" y1="'+cy+'" x2="'+(cx+r*Math.cos(t*rad)).toFixed(1)+'" y2="'+(cy+r*Math.sin(t*rad)).toFixed(1)+'" stroke="'+(col||'var(--ink)')+'" stroke-width="'+(w||1.5)+'" '+(dash?'stroke-dasharray="5 4"':'')+'/>';
 }
@@ -112,7 +123,7 @@ function stop(){cancelAnimationFrame(raf);raf=0}
 /* ---------- タイトル ---------- */
 function title(){
   stop();
-  app.innerHTML='<div class="center" style="padding-top:20px"><h1>三角定規パズル</h1><p>角を足して、引いて、並べて、ちょうどにする</p></div>'+
+  app.innerHTML='<div class="center" style="padding-top:20px"><h1>三角定規パズル</h1><p>三角定規の角を、辺でつないで確かめる</p></div>'+
   '<svg id="tsv" viewBox="0 0 260 260" role="img" aria-label="三角定規の角が順に足されて390度になるアニメーション"></svg>'+
   '<div class="counter" id="cnt">0°</div><p class="center" id="note" style="min-height:22px"></p>'+
   '<div class="row" style="justify-content:center;margin-top:10px"><button class="btn" id="go">はじめる</button></div>';
@@ -145,181 +156,165 @@ function title(){
   raf=requestAnimationFrame(frame);
 }
 
+/* ---------- 三角定規（実物の規格） ---------- */
+var R3=Math.sqrt(3),U=58,D2R=Math.PI/180;
+var TY={A:{v:[[0,0],[1,0],[0,1]],ang:[90,45,45],col:'var(--a45)'},B:{v:[[0,0],[R3,0],[0,1]],ang:[90,30,60],col:'var(--a30)'}};
+function nrm(a){return ((a%360)+360)%360}
+function eq(a,b){return Math.abs(((a-b)%360+540)%360-180)<1.5}
+function dist(a,b){return Math.hypot(a[0]-b[0],a[1]-b[1])}
+function u(a){return [Math.cos(a*D2R),Math.sin(a*D2R)]}
+function verts(p){var T=TY[p.type],c=Math.cos(p.rot*D2R),s=Math.sin(p.rot*D2R),f=p.flip?-1:1;return T.v.map(function(q){var kk=p.k||1,x=q[0]*U*kk*f,y=q[1]*U*kk;return [p.x+x*c-y*s,p.y+x*s+y*c]})}
+function dir(a,b){return nrm(Math.atan2(b[1]-a[1],b[0]-a[0])/D2R)}
+function sector(p,i){var vs=verts(p),a=vs[i],d1=dir(a,vs[(i+1)%3]),d2=dir(a,vs[(i+2)%3]),g=TY[p.type].ang[i];return {s:Math.abs(nrm(d2-d1)-g)<1.5?d1:d2,a:g,p:p,pt:a}}
+function place(type,vi,V,start,flip,k){var p={type:type,x:0,y:0,rot:0,flip:!!flip,k:k||1},sc=sector(p,vi);p.rot=nrm(start-sc.s);var v=verts(p)[vi];p.x=V[0]-v[0];p.y=V[1]-v[1];return p}
+function chain(L){var n=L.length;function go(cur,used,cnt){if(cnt===n)return true;for(var k=0;k<n;k++){if(used[k])continue;if(eq(L[k].s,cur.s+cur.a)){used[k]=1;if(go(L[k],used,cnt+1))return true;used[k]=0}}return false}
+  for(var i=0;i<n;i++){var us=[];us[i]=1;if(go(L[i],us,1))return true}return false}
+function clusters(P){var all=[],used=[],out=[];P.forEach(function(p){verts(p).forEach(function(q,i){all.push({q:q,i:i,p:p})})});
+  all.forEach(function(a,k){if(used[k])return;used[k]=1;var g=[a];all.forEach(function(b,m){if(!used[m]&&b.p!==a.p&&dist(a.q,b.q)<7){used[m]=1;g.push(b)}});if(g.length>1)out.push({c:a.q,L:g.map(function(x){return sector(x.p,x.i)})})});return out}
+function nearV(P,V){var o=[];P.forEach(function(p){verts(p).forEach(function(q,i){if(dist(q,V)<7)o.push(sector(p,i))})});return o}
+function solvedAt(P,V,st){var L=nearV(P,V);
+  if(st.k==='sum'){if(L.length<2||!L.some(function(x){return x.p.fixed}))return false;var t=0;L.forEach(function(x){t+=x.a});return t===st.t&&chain(L)}
+  if(st.k==='diff'){if(L.length!==2)return false;return eq(L[0].s,L[1].s)&&Math.abs(L[0].a-L[1].a)===st.t}return false}
+function clText(L){var tot=0;L.forEach(function(x){tot+=x.a});
+  if(L.length===2&&eq(L[0].s,L[1].s)){var a=L[0].a,b=L[1].a;return a===b?'ぴったり重なり':'差 '+Math.abs(a-b)+'°（'+Math.max(a,b)+'°−'+Math.min(a,b)+'°）'}
+  var m=tot===90?' 直角':tot===180?' 一直線':tot===360?' 一周':'';return chain(L)?'合計 '+tot+'°'+m:'合計 '+tot+'°（辺がずれ）'}
+function arcP(c,r,s,a){var p0=u(s),p1=u(s+a);return 'M'+(c[0]+r*p0[0]).toFixed(1)+' '+(c[1]+r*p0[1]).toFixed(1)+'A'+r+' '+r+' 0 '+(a>180?1:0)+' 1 '+(c[0]+r*p1[0]).toFixed(1)+' '+(c[1]+r*p1[1]).toFixed(1)}
+function drawPiece(p,sel,only){var T=TY[p.type],vs=verts(p),g=[(vs[0][0]+vs[1][0]+vs[2][0])/3,(vs[0][1]+vs[1][1]+vs[2][1])/3];
+  var f=function(q){return q[0].toFixed(1)+','+q[1].toFixed(1)};
+  var o='<polygon points="'+vs.map(f).join(' ')+'" fill="'+T.col+'" fill-opacity=".5" stroke="var(--ink)" stroke-width="'+(sel?2.8:1.4)+'" stroke-linejoin="round"/>';
+  o+='<polygon points="'+vs.map(function(q){return f([g[0]+(q[0]-g[0])*0.38,g[1]+(q[1]-g[1])*0.38])}).join(' ')+'" fill="var(--card)" fill-opacity=".75" stroke="var(--ink)" stroke-opacity=".35"/>';
+  for(var i=0;i<3;i++){if(only!==undefined&&i!==only)continue;var sc=sector(p,i),c=vs[i];
+    if(sc.a===90){var a=u(sc.s),b=u(sc.s+90);o+='<path d="M'+(c[0]+12*a[0]).toFixed(1)+' '+(c[1]+12*a[1]).toFixed(1)+'l'+(12*b[0]).toFixed(1)+' '+(12*b[1]).toFixed(1)+'l'+(-12*a[0]).toFixed(1)+' '+(-12*a[1]).toFixed(1)+'" fill="none" stroke="var(--ink)" stroke-width="1.2"/>'}
+    else o+='<path d="'+arcP(c,14,sc.s,sc.a)+'" fill="none" stroke="var(--ink)" stroke-width="1.2"/>';
+    var m=u(sc.s+sc.a/2);o+='<text x="'+(c[0]+27*m[0]).toFixed(1)+'" y="'+(c[1]+27*m[1]).toFixed(1)+'" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" fill="var(--ink)" stroke="var(--card)" stroke-width="3" style="paint-order:stroke">'+sc.a+'°</text>'}
+  return o}
+function scene(P,o){o=o||{};var s='';
+  if(o.tray)s+='<line x1="12" y1="334" x2="348" y2="334" stroke="var(--line)" stroke-dasharray="4 4"/><text x="14" y="348" font-size="10" fill="var(--sub)">三角定規</text>';
+  if(o.V)s+='<circle cx="'+o.V[0]+'" cy="'+o.V[1]+'" r="'+(o.ok?10:7)+'" fill="none" stroke="'+(o.ok?'var(--ok)':'var(--sub)')+'" stroke-width="2.2"/>';
+  P.forEach(function(p){s+=drawPiece(p,p.id===o.sel)});
+  for(var i=0;i<P.length;i++)for(var j=i+1;j<P.length;j++){var A=verts(P[i]),B=verts(P[j]);
+    for(var a=0;a<3;a++)for(var b=0;b<3;b++){var a0=A[a],a1=A[(a+1)%3],b0=B[b],b1=B[(b+1)%3];
+      if((dist(a0,b0)<5&&dist(a1,b1)<5)||(dist(a0,b1)<5&&dist(a1,b0)<5))s+='<line x1="'+a0[0].toFixed(1)+'" y1="'+a0[1].toFixed(1)+'" x2="'+a1[0].toFixed(1)+'" y2="'+a1[1].toFixed(1)+'" stroke="var(--ok)" stroke-width="4" stroke-linecap="round"/>'}}
+  clusters(P).forEach(function(c){var t=clText(c.L),w=t.length*11+18,vx=0,vy=0;c.L.forEach(function(z){var m=u(z.s+z.a/2);vx+=m[0];vy+=m[1]});var vl=Math.hypot(vx,vy);if(vl<0.3){vx=0;vy=-1;vl=1}var x=Math.min(Math.max(c.c[0]-vx/vl*44,w/2+4),356-w/2),y=Math.min(Math.max(c.c[1]-vy/vl*34-11,6),496);
+    s+='<rect x="'+(x-w/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+w+'" height="22" rx="11" fill="var(--card)" stroke="var(--line)"/><text x="'+x.toFixed(1)+'" y="'+(y+11).toFixed(1)+'" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="var(--ink)">'+t+'</text>'});
+  return s}
+
+/* ---------- タイトル（三角定規をぺたぺた並べて一周） ---------- */
+function title(){stop();
+  var C=[150,150],SEQ=[['A',0],['A',1],['A',2],['B',0],['B',2],['B',1]],pcs=[],tot=360;
+  (function(){var best=null;
+    for(var mi=0;mi<65&&!best;mi++){var mask=mi===0?34:mi-1,st=-90,k=1,res=[],first=0,prevEnd=0;
+      for(var i=0;i<6;i++){var ty=SEQ[i][0],vi=SEQ[i][1],a=TY[ty].ang[vi],fl=!!((mask>>i)&1),p=place(ty,vi,C,st,fl,1),vs=verts(p),l1=dist(vs[vi],vs[(vi+1)%3]),l2=dist(vs[vi],vs[(vi+2)%3]),d1=dir(vs[vi],vs[(vi+1)%3]),sl,el;
+        if(eq(d1,st)){sl=l1;el=l2}else{sl=l2;el=l1}
+        if(i===0){k=1;first=sl}else{k=prevEnd/sl}
+        res.push({t:ty,vi:vi,fl:fl,k:k,a:a,st:st});prevEnd=el*k;st+=a}
+      if(Math.abs(prevEnd-first)<1e-6*first)best=res}
+    best=best||SEQ.map(function(q,i){return {t:q[0],vi:q[1],fl:false,k:1,a:TY[q[0]].ang[q[1]],st:-90+[0,60,105,150,240,300][i]}});
+    var mx=0;best.forEach(function(r){var p=place(r.t,r.vi,C,r.st,r.fl,r.k);verts(p).forEach(function(q){mx=Math.max(mx,dist(q,C))})});
+    best.forEach(function(r){var p=place(r.t,r.vi,C,r.st,r.fl,r.k*118/mx);pcs.push({p:p,a:r.a,vi:r.vi,mid:r.st+r.a/2})})})();
+  app.innerHTML='<div class="center" style="padding-top:12px"><h1>三角定規パズル</h1><p>三角定規の角を、辺でつないで確かめる</p></div>'+
+   '<svg id="tsv" viewBox="0 0 300 300" role="img" aria-label="三角定規を順に並べて、一周（360度）にするアニメーション"></svg>'+
+   '<div id="expr" class="center" style="font-size:20px;font-weight:500;min-height:32px"></div><p class="center" id="note" style="min-height:22px"></p>'+
+   '<div class="row" style="justify-content:center;margin-top:10px"><button class="btn" id="go">はじめる</button></div>';
+  var gb=document.getElementById('go');gb.onclick=progress.tut?menu:tutorial;if(progress.m1.concat(progress.m2,progress.m3).some(Boolean))gb.textContent='つづきから';
+  var T=1000,HOLD=3400,total=SEQ.length*T+HOLD,t0=performance.now(),reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function ease(x){var c=1.2;return 1+(c+1)*Math.pow(x-1,3)+c*Math.pow(x-1,2)}
+  function frame(now){var el=reduce?total-1500:(now-t0)%total,svg=document.getElementById('tsv');if(!svg)return;
+    var g='',sum=0,parts=[],fade=el>total-500?(total-el)/500:1;
+    pcs.forEach(function(q,i){if(el<i*T)return;var p=Math.min(1,(el-i*T)/650),e=ease(p),d=(1-e)*150,m=u(q.mid),c=q.p;
+      g+='<g opacity="'+Math.min(1,p*3).toFixed(2)+'">'+drawPiece({type:c.type,x:c.x+m[0]*d,y:c.y+m[1]*d,rot:c.rot,flip:c.flip,k:c.k,id:0},false,q.vi)+'</g>';
+      if(p>=1){sum+=q.a;parts.push(q.a+'°')}});
+    var full=sum===tot,o=rim(150,150,122)+'<g opacity="'+fade.toFixed(2)+'">'+g+'</g>';
+    if(full){var k=Math.max(0,((el-SEQ.length*T)/1300)%1);o+='<circle cx="150" cy="150" r="'+(124+k*14)+'" fill="none" stroke="var(--ok)" stroke-width="2" stroke-opacity="'+(1-k).toFixed(2)+'"/>'}
+    svg.innerHTML=o;
+    document.getElementById('expr').textContent=parts.length?parts.join(' ＋ ')+(full?' ＝ 360°':''):'';
+    document.getElementById('note').textContent=full?'ちょうど一周。三角定規の角だけで、円ができる。':'三角定規の角を、1点に集めていく';
+    raf=requestAnimationFrame(frame)}
+  raf=requestAnimationFrame(frame)}
 /* ---------- メニュー ---------- */
-var MODES=[
- {id:'m1',name:'角を作る',desc:'三角定規の角を足し引きして、指定の角度にする',n:M1().length},
- {id:'m2',name:'回転パネル',desc:'パネルを15°ずつ回し、角の辺をつなげて一周以上の扇にする',n:M2().length},
- {id:'m3',name:'合体',desc:'角を選んで回し、途中の指定角度も同時に満たす',n:M3().length}];
-function menu(){
-  stop();
-  var h='<div class="tabs"><h2>ステージを選ぶ</h2><div class="row"><button class="btn ghost sm" id="hw">あそびかた</button><button class="btn ghost sm" id="bt">タイトル</button></div></div>';
-  var dn=0,tt=0;MODES.forEach(function(m){tt+=m.n;progress[m.id].forEach(function(v){if(v)dn++})});
-  h+='<div style="height:4px;border-radius:2px;background:var(--line);overflow:hidden"><div style="width:'+Math.round(dn/tt*100)+'%;height:100%;background:var(--ok);transition:width .4s"></div></div><p style="margin-top:6px">クリア '+dn+' / '+tt+(dn===tt?'　全面クリア！390°まで届いた。':'')+'</p>';
-  MODES.forEach(function(m){
-    h+='<div class="card"><h2>'+m.name+'</h2><p>'+m.desc+'</p><div class="row">';
-    for(var i=0;i<m.n;i++)h+='<button class="stagebtn'+(progress[m.id][i]?' done':'')+'" data-m="'+m.id+'" data-i="'+i+'" aria-label="'+m.name+' ステージ'+(i+1)+'">'+(i+1)+'</button>';
-    h+='</div></div>';
-  });
+var ST=[
+ {t:75,k:'sum',anc:['A',1],inv:['A','B'],hint:'45°の角を固定。もう1枚の角を辺でつないで、○の点に75°を集めよう。'},
+ {t:105,k:'sum',anc:['B',2],inv:['A','B'],hint:'60°の角に、別の角をつないで105°。'},
+ {t:150,k:'sum',anc:['A',0],inv:['B','A'],hint:'直角（90°）に足して150°。'},
+ {t:180,k:'sum',anc:['A',0],inv:['A','A','B'],hint:'一直線（180°）を作る。使う角は自由に選べる。'},
+ {k:'diff',t:15,anc:['A',1],inv:['B'],hint:'同じ辺から重ねて、はみ出した角が15°になるように。'},
+ {k:'diff',t:30,anc:['A',0],inv:['B'],hint:'直角に重ねて、差を30°にする。'},
+ {t:360,k:'sum',anc:['B',0],inv:['A','B','B'],hint:'角を集めてちょうど一周（360°）。'},
+ {t:390,k:'sum',anc:['A',0],inv:['A','B','B','B'],hint:'一周をこえて390°。重なる部分ができる。'}];
+function menu(){stop();var dn=0;progress.m1.forEach(function(v){if(v)dn++});
+  var h='<div class="tabs"><h2>ステージを選ぶ</h2><div class="row"><button class="btn ghost sm" id="hw">あそびかた</button><button class="btn ghost sm" id="bt">タイトル</button></div></div>'+
+   '<div style="height:4px;border-radius:2px;background:var(--line);overflow:hidden"><div style="width:'+Math.round(dn/ST.length*100)+'%;height:100%;background:var(--ok);transition:width .4s"></div></div><p style="margin-top:6px">クリア '+dn+' / '+ST.length+(dn===ST.length?'　全面クリア！':'')+'</p>'+
+   '<div class="card"><h2>角を集める</h2><p>固定された三角定規に、辺でつないで、指定の角度を作る。</p><div class="row">';
+  ST.forEach(function(s,i){h+='<button class="stagebtn'+(progress.m1[i]?' done':'')+'" data-i="'+i+'" aria-label="ステージ'+(i+1)+'">'+(i+1)+'</button>'});
+  h+='</div></div><div class="card"><h2>ひろば</h2><p>6枚の三角定規を自由に動かす。つないだ点の角の合計や、重ねた差が表示される。</p><button class="btn" id="sd">ひろばで遊ぶ</button></div>';
   app.innerHTML=h;
-  document.getElementById('bt').onclick=title;document.getElementById('hw').onclick=tutorial;
+  document.getElementById('bt').onclick=title;document.getElementById('hw').onclick=tutorial;document.getElementById('sd').onclick=function(){play('sand',0)};
+  Array.prototype.forEach.call(app.querySelectorAll('.stagebtn'),function(b){b.onclick=function(){play('m1',+b.dataset.i)}});
   var rb=document.createElement('button'),armed=false;rb.className='btn ghost';rb.textContent='記録を消す';rb.style.marginTop='8px';
-  rb.onclick=function(){if(!dn)return;if(!armed){armed=true;rb.textContent='もう一度押すと消えます';return}progress={m1:[],m2:[],m3:[]};try{localStorage.removeItem('sankaku')}catch(e){}menu()};
-  app.appendChild(rb);
-  Array.prototype.forEach.call(app.querySelectorAll('.stagebtn'),function(b){
-    b.onclick=function(){play(b.dataset.m,+b.dataset.i)};
-  });
-}
+  rb.onclick=function(){if(!dn)return;if(!armed){armed=true;rb.textContent='もう一度押すと消えます';return}progress={m1:[],m2:[],m3:[]};try{localStorage.removeItem('sankaku2')}catch(e){}menu()};
+  app.appendChild(rb)}
+
 /* ---------- あそびかた ---------- */
-function tutorial(){
-  stop();var s=0,sub=false,r=30;
-  var T=[['三角定規の角は4種類','30°・45°・60°・90°。どの三角定規にも、この中の角が入っている。'],
-   ['足したり、引いたり','角を並べて足すと大きく、重ねて引くと差になる。ボタンで切り替えてみよう。'],
-   ['一周をこえる','360°で一周。その先は、内側の小さな扇として続く。'],
-   ['パネルを回して辺をそろえる','図をタップすると、青い扇が15°ずつ回る。灰色の扇の終わりの辺に、始まりの辺を重ねよう。'],
-   ['印に合わせる（合体）','合体モードでは角の種類も変えられる。締の点線の印に、辺がちょうど来るように並べる。']];
-  function fin(){progress.tut=true;try{localStorage.setItem('sankaku',JSON.stringify(progress))}catch(e){}menu()}
-  function show(){
-    app.innerHTML='<div class="tabs"><strong>あそびかた '+(s+1)+' / '+T.length+'</strong><button class="btn ghost sm" id="sk">スキップ</button></div><div class="card"><h2>'+T[s][0]+'</h2><p>'+T[s][1]+'</p><svg id="tv" viewBox="0 0 260 260"></svg><div class="msg" id="tm"></div><div class="row" id="ex"></div></div><div class="row"><button class="btn ghost" id="pv"'+(s?'':' disabled')+'>戻る</button><button class="btn" id="nx2">'+(s===T.length-1?'始める':'次へ')+'</button></div>';
-    document.getElementById('sk').onclick=fin;
-    document.getElementById('pv').onclick=function(){s--;show()};
-    document.getElementById('nx2').onclick=function(){if(s===T.length-1)fin();else{s++;show()}};
-    if(s===1){var b=document.createElement('button');b.className='btn';b.textContent='足す／引く 切り替え';b.onclick=function(){sub=!sub;draw()};document.getElementById('ex').appendChild(b)}
-    if(s===3){document.getElementById('tv').id='fan';document.getElementById('fan').style.cursor='pointer';document.getElementById('fan').onclick=function(){r=(r+15)%360;draw()}}
-    draw();
-  }
-  function draw(){
-    var v=document.getElementById('tv')||document.getElementById('fan'),o=rim(130,130,108),m='',ok=false;
-    if(s===0){var cx=[20,80,145,200],A=[30,45,60,90];A.forEach(function(a,i){o+=wedge(cx[i],150,50,0,a,COL[a],0.85)+'<text x="'+(cx[i]+16)+'" y="190" text-anchor="middle" font-size="16" font-weight="700" fill="var(--ink)">'+a+'°</text>'});o=o.replace(rim(130,130,108),'')}
-    if(s===1){o+=wedge(130,130,108,0,45,COL[45],0.8)+(sub?wedge(130,130,108,45,15,'var(--ink)',0.35):wedge(130,130,108,45,75,COL[30],0.8));m=sub?'45° − 30° = 15°':'45° + 30° = 75°'}
-    if(s===2){for(var i=0;i<4;i++)o+=wedge(130,130,108,90*i,90*i+90,COL[90],0.8);o+=wedge(130,130,88,360,390,COL[30],0.9);m='90°×4 = 360°、さらに +30° = 390°'}
-    if(s===3){o+=wedge(130,130,108,0,90,'var(--ink)',0.25)+wedge(130,130,108,r,r+60,COL[60],0.85)+ray(130,130,120,90,true,'var(--a60)',2.5);ok=r===90;m=ok?'つながった！':'辺をそろえよう（あと'+(((90-r+360)%360)/15)+'回）'}
-    if(s===4){o+=wedge(130,130,108,0,30,COL[30],0.85)+wedge(130,130,108,30,75,COL[45],0.85)+ray(130,130,122,75,true,'var(--ok)',2.5);m='30°＋45°で、印の 75° にぴったり'}
-    v.innerHTML=o;var t=document.getElementById('tm');t.textContent=m;t.className='msg'+(ok?' ok':'');
-    if(ok&&!draw.hit){draw.hit=1;snapFx()}if(!ok)draw.hit=0;
-  }  show();
-}
-function header(name,i,len){
-  return '<div class="tabs"><button class="btn ghost sm" id="back">メニュー</button><strong>'+name+' '+(i+1)+' / '+len+'</strong></div>';
-}
+function tutorial(){stop();var s=0;
+  var T=[['三角定規は2種類','45°・45°・90° と、30°・60°・90°。辺の長さの比は 1：1：√2 と 1：√3：2。この決まった角だけで、いろいろな角度を作る。'],
+   ['角を一点に集める','辺をそろえて角を1つの点に集めると、角が足される。45°＋30°＝75°。緑の太線は、長さが同じ辺がぴったりつながった印。'],
+   ['重ねて、差を見る','同じ辺から2枚を重ねると、はみ出した部分が差になる。45°−30°＝15°。'],
+   ['操作','ドラッグで動かす。角が点に近づくと吸いつく。回転は15°刻みで、くっついた角を軸に回る。反転もできる。']];
+  var VB=['20 30 270 110','60 30 250 210','60 30 250 210','110 30 330 210'];
+  function sc(){var V=[170,170];
+    if(s===0)return scene([{type:'A',x:40,y:60,rot:0,flip:false,id:1},{type:'B',x:170,y:50,rot:0,flip:false,id:2}]);
+    if(s===1)return scene([place('A',1,V,-90),place('B',1,V,-45)],{V:V,ok:true});
+    if(s===2)return scene([place('A',1,V,-90),place('B',1,V,-90)],{V:V,ok:true});
+    return scene([place('A',1,[150,150],-90),place('B',2,[290,170],-45)])}
+  function fin(){progress.tut=true;try{localStorage.setItem('sankaku2',JSON.stringify(progress))}catch(e){}menu()}
+  function show(){app.innerHTML='<div class="tabs"><strong>あそびかた '+(s+1)+' / '+T.length+'</strong><button class="btn ghost sm" id="sk">スキップ</button></div><div class="card"><h2>'+T[s][0]+'</h2><p>'+T[s][1]+'</p><svg viewBox="'+VB[s]+'">'+sc()+'</svg></div><div class="row"><button class="btn ghost" id="pv"'+(s?'':' disabled')+'>戻る</button><button class="btn" id="nx2">'+(s===T.length-1?'始める':'次へ')+'</button></div>';
+    document.getElementById('sk').onclick=fin;document.getElementById('pv').onclick=function(){s--;show()};
+    document.getElementById('nx2').onclick=function(){if(s===T.length-1)fin();else{s++;show()}}}
+  show()}
 
-/* ---------- ① 角を作る ---------- */
-function M1(){return [
- {t:60,chips:[30,45,60,90],sub:false,hint:'1枚の角でちょうど。'},
- {t:75,chips:[30,45,60,90],sub:false,hint:'2枚を足す。'},
- {t:15,chips:[30,45,60,90],sub:true,hint:'角をタップするたびに 足す→引く→なし と変わる。'},
- {t:105,chips:[30,45,60,90,90],sub:true,hint:''},
- {t:135,chips:[30,45,60,90],sub:true,hint:''},
- {t:165,chips:[30,45,60,90,90],sub:true,hint:'3枚で作れる。'},
- {t:255,chips:[90,90,60,45,30,30],sub:true,hint:'引かずに足すだけでも届く。'},
- {t:150,max:2,chips:[30,45,60,90,90],sub:true,hint:'使える枚数に制限がある。'},
- {t:195,max:3,chips:[30,45,60,90,90],sub:true,hint:'制限内で、大きい角から考える。'},
- {t:390,chips:[90,90,60,60,45,45,30,30],sub:false,hint:'一周をこえた角度も、足していけば作れる。'}];}
-function playM1(i){
-  var S=M1(),st=S[i],use=st.chips.map(function(){return 0});
-  app.innerHTML=header('角を作る',i,S.length)+'<div class="card"><h2>目標 '+st.t+'°'+(st.max?'　'+st.max+'枚以内':'')+'</h2><p>'+st.hint+'</p>'+
-   '<svg id="dial" viewBox="0 0 260 260"></svg><div class="counter" id="sum">0°</div><div class="msg" id="msg"></div>'+
-   '<div class="row" id="chips"></div></div><div class="row"><button class="btn ghost" id="rs">やり直す</button></div>';
+/* ---------- プレイ ---------- */
+function play(mode,i){stop();
+  var st=mode==='sand'?null:ST[i],V=[180,160],id=0,P=[],sel=0,drag=null,done=false;
+  if(st){var an=place(st.anc[0],st.anc[1],V,-90);an.fixed=true;an.id=++id;P.push(an)}
+  var inv=st?st.inv:['A','A','A','B','B','B'];
+  inv.forEach(function(t,k){P.push({type:t,x:22+(k%3)*114,y:st?356+Math.floor(k/3)*80:80+Math.floor(k/3)*150,rot:0,flip:false,id:++id})});
+  sel=st?P[1].id:P[0].id;
+  app.innerHTML='<div class="tabs"><button class="btn ghost sm" id="back">メニュー</button><strong>'+(st?'ステージ '+(i+1)+' / '+ST.length:'ひろば')+'</strong></div>'+
+   '<div class="card" id="card" style="padding:14px"><h2>'+(st?(st.k==='sum'?'目標 '+st.t+'°を集める':'差を '+st.t+'° にする'):'三角定規を自由につなぐ')+'</h2><p>'+(st?st.hint:'辺と頂点をそろえてみよう。角が集まる点には合計が出る。')+'</p>'+
+   '<svg id="board" viewBox="0 0 360 520"></svg><div class="msg" id="msg"></div><div class="row"><button class="btn ghost sm" id="ccw3">⟲ 45°</button><button class="btn ghost sm" id="ccw">⟲ 15°</button><button class="btn ghost sm" id="cw">15° ⟳</button><button class="btn ghost sm" id="cw3">45° ⟳</button><button class="btn ghost sm" id="fl">反転</button></div></div>';
+  var board=document.getElementById('board'),card=document.getElementById('card'),msg=document.getElementById('msg');
   document.getElementById('back').onclick=menu;
-  var cw=document.getElementById('chips');
-  st.chips.forEach(function(a,k){
-    var b=document.createElement('button');b.className='chip';
-    b.onclick=function(){use[k]=st.sub?(use[k]===0?1:use[k]===1?-1:0):(use[k]?0:1);chipSfx(a,use[k]);draw()};
-    cw.appendChild(b);
-  });
-  document.getElementById('rs').onclick=function(){use=use.map(function(){return 0});draw()};
-  function draw(){
-    var cum=0,svg=rim(130,130,108),sum=0,any=false;
-    st.chips.forEach(function(a,k){
-      var b=cw.children[k];
-      b.className='chip'+(use[k]?' on':'');
-      b.style.background=use[k]?(use[k]>0?COL[a]:'var(--ink)'):'';
-      b.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" style="display:inline-block;vertical-align:middle;margin-right:4px">'+wedge(3,21,19,0,a,use[k]?'#fff':COL[a],0.9)+'</svg>'+(use[k]>0?'+':use[k]<0?'−':'')+a+'°';
-      b.setAttribute('aria-label',a+'度 '+(use[k]>0?'足す':use[k]<0?'引く':'未使用'));
-      if(!use[k])return;any=true;
-      var n=cum+use[k]*a;
-      var lap=Math.max(0,Math.floor(Math.min(cum,n)/360));
-      svg+=wedge(130,130,108-18*lap,cum,n,use[k]>0?COL[a]:'var(--ink)',use[k]>0?0.8:0.35);
-      cum=n;
-    });
-    sum=cum;
-    svg+=ray(130,130,120,st.t,true,'var(--ok)',2.5)+ray(130,130,108,0,true,'var(--sub)',1);
-    document.getElementById('dial').innerHTML=svg;
-    var sm=document.getElementById('sum');sm.textContent=sum+'°';sm.classList.remove('bump');void sm.offsetWidth;sm.classList.add('bump');
-    var cnt=use.filter(Boolean).length,ok=any&&sum===st.t&&(!st.max||cnt<=st.max),m=document.getElementById('msg');
-    m.className='msg'+(ok?' ok':'');m.textContent=ok?'ぴったり！':(any&&sum===st.t?cnt+'枚使っている。'+st.max+'枚以内で！':any?(sum<st.t?'あと '+(st.t-sum)+'°':''+(sum-st.t)+'° 多い'):'角を選んで足していこう');
-    if(ok)clear('m1',i,S.length);else unclear();
-  }
-  draw();
-}
+  function cur(){return P.filter(function(p){return p.id===sel})[0]}
+  function pivotOf(p){var tg=[];P.forEach(function(o){if(o!==p)verts(o).forEach(function(q){tg.push(q)})});if(st)tg.push(V);var vs=verts(p),best=null,bd=8;
+    vs.forEach(function(q){tg.forEach(function(t){var d=dist(q,t);if(d<bd){bd=d;best=q}})});return best||[(vs[0][0]+vs[1][0]+vs[2][0])/3,(vs[0][1]+vs[1][1]+vs[2][1])/3]}
+  function rot(dl){var p=cur();if(!p||p.fixed)return;var pv=pivotOf(p),c=Math.cos(dl*D2R),s=Math.sin(dl*D2R),dx=p.x-pv[0],dy=p.y-pv[1];p.x=pv[0]+dx*c-dy*s;p.y=pv[1]+dx*s+dy*c;p.rot=nrm(p.rot+dl);rotSfx(p.rot);draw()}
+  function flip(){var p=cur();if(!p||p.fixed)return;var pv=pivotOf(p);p.flip=!p.flip;p.rot=nrm(-p.rot);p.x=2*pv[0]-p.x;quiet=false;draw()}
+  document.getElementById('ccw').onclick=function(){rot(-15)};document.getElementById('cw').onclick=function(){rot(15)};
+  document.getElementById('ccw3').onclick=function(){rot(-45)};document.getElementById('cw3').onclick=function(){rot(45)};
+  document.getElementById('fl').onclick=flip;
+  function snap(p){var tg=[];P.forEach(function(o){if(o!==p)verts(o).forEach(function(q){tg.push(q)})});if(st)tg.push(V);var best=null,bd=18;
+    verts(p).forEach(function(q){tg.forEach(function(t){var d=dist(q,t);if(d<bd){bd=d;best=[t[0]-q[0],t[1]-q[1]]}})});if(best){p.x+=best[0];p.y+=best[1];snapFx()}
+    var vs=verts(p),mnx=Math.min(vs[0][0],vs[1][0],vs[2][0]),mxx=Math.max(vs[0][0],vs[1][0],vs[2][0]),mny=Math.min(vs[0][1],vs[1][1],vs[2][1]),mxy=Math.max(vs[0][1],vs[1][1],vs[2][1]);
+    if(mnx<4)p.x+=4-mnx;if(mxx>356)p.x-=mxx-356;if(mny<4)p.y+=4-mny;if(mxy>516)p.y-=mxy-516}
+  function pt(e){var r=board.getBoundingClientRect();return [(e.clientX-r.left)*360/r.width,(e.clientY-r.top)*520/r.height]}
+  function inTri(q,vs){function sg(a,b,c){return (a[0]-c[0])*(b[1]-c[1])-(b[0]-c[0])*(a[1]-c[1])}var d1=sg(q,vs[0],vs[1]),d2=sg(q,vs[1],vs[2]),d3=sg(q,vs[2],vs[0]);return !((d1<0||d2<0||d3<0)&&(d1>0||d2>0||d3>0))}
+  board.onpointerdown=function(e){var q=pt(e),hit=null;for(var k=P.length-1;k>=0;k--){if(inTri(q,verts(P[k]))){hit=P[k];break}}if(!hit)return;sel=hit.id;
+    if(!hit.fixed){P.splice(P.indexOf(hit),1);P.push(hit);drag={p:hit,dx:q[0]-hit.x,dy:q[1]-hit.y};try{board.setPointerCapture(e.pointerId)}catch(x){}}draw();e.preventDefault()};
+  board.onpointermove=function(e){if(!drag)return;var q=pt(e);drag.p.x=q[0]-drag.dx;drag.p.y=q[1]-drag.dy;draw()};
+  board.onpointerup=board.onpointercancel=function(){if(!drag)return;var p=drag.p;drag=null;snap(p);draw()};
+  function win(){done=true;progress.m1[i]=true;try{localStorage.setItem('sankaku2',JSON.stringify(progress))}catch(e){}chime();burst();card.classList.add('win');
+    var r=document.createElement('div');r.className='row';r.id='nxrow';r.style.marginTop='8px';r.innerHTML=(i+1<ST.length?'<button class="btn" id="nx">次のステージ</button>':'')+'<button class="btn ghost" id="mn">メニューへ</button>';card.appendChild(r);
+    if(document.getElementById('nx'))document.getElementById('nx').onclick=function(){play('m1',i+1)};document.getElementById('mn').onclick=menu}
+  function draw(){var ok=st?solvedAt(P,V,st):false;board.innerHTML=scene(P,{V:st?V:null,ok:ok,tray:!!st,sel:sel});
+    if(st){var L=nearV(P,V),tot=0;L.forEach(function(x){tot+=x.a});
+      if(ok){var an=L.filter(function(x){return x.p.fixed})[0];L.sort(function(a,b){return nrm(a.s-an.s)-nrm(b.s-an.s)});
+        msg.className='msg ok';msg.textContent=st.k==='sum'?'ぴったり！ '+L.map(function(x){return x.a+'°'}).join('＋')+'＝'+tot+'°':'ぴったり！ '+Math.max(L[0].a,L[1].a)+'°−'+Math.min(L[0].a,L[1].a)+'°＝'+st.t+'°'}
+      else{msg.className='msg';msg.textContent=L.length>1?'○の点の角：'+(st.k==='sum'?'合計 '+tot+'° / 目標 '+st.t+'°':'重ねた角 '+L.map(function(x){return x.a+'°'}).join('と')+' / 目標の差 '+st.t+'°'):'三角定規の角を○の点に合わせよう'}
+      if(ok&&!done)win();
+      if(!ok&&done){done=false;card.classList.remove('win');var r=document.getElementById('nxrow');if(r)r.remove()}}
+    else{msg.className='msg';msg.textContent='三角定規をドラッグ。点が近づくと吸いつく'}}
+  draw()}
 
-/* ---------- ② 回転パネル / ③ 合体 ---------- */
-// panels: [type, lockedRot or null]
-function M2(){return [
- {total:195,cp:[],cycle:false,p:[[90,0],[60,null],[45,null]],hint:'各パネルの始まりの辺を、前のパネルの終わりの辺に重ねる。鍵マークのパネルは動かせない。'},
- {total:360,cp:[],cycle:false,p:[[60,null],[90,60],[45,null],[45,null],[60,null],[60,null]],hint:'ちょうど一周になる。'},
- {total:270,cp:[],cycle:false,p:[[45,null],[45,null],[90,90],[90,null]],hint:'固定パネルから、前後の向きを順にたどる。'},
- {total:390,cp:[],cycle:false,p:[[45,null],[90,null],[60,null],[45,null],[90,240],[60,null]],hint:'360°をこえた分は、内側の小さな扇として描かれる。'}];}
-function M3(){return [
- {total:135,cp:[75],cycle:true,p:[[30,null],[30,null],[30,null]],hint:'パネルの角の種類を変えられる。75°の印に辺をそろえつつ、合計135°にする。'},
- {total:210,cp:[105],cycle:true,p:[[30,null],[30,null],[30,null],[30,null]],hint:'105°の印と、合計210°を同時に。'},
- {total:360,cp:[90,180,270],cycle:true,p:[[30,null],[30,null],[30,null],[30,null]],hint:'印が3つ。4枚で、ちょうど一周。'},
- {total:390,cp:[150,270,330],cycle:true,p:[[30,null],[30,null],[30,null],[30,null],[30,null],[30,null]],hint:'150°・270°・330°を通って、390°へ。'}];}
-var TYPES=[30,45,60,90];
-function cnt3(st){var n=st.p.length,c=0;(function r(k,s,ends){if(k===n){if(s===st.total&&st.cp.every(function(q){return ends.indexOf(q)>=0}))c++;return}TYPES.forEach(function(t){r(k+1,s+t,ends.concat(s+t))})})(0,0,[]);return c}
-function playPanel(mode,i){
-  var S=mode==='m2'?M2():M3(),st=S[i],name=mode==='m2'?'回転パネル':'合体';
-  var P=st.p.map(function(q,k){return {type:q[0],lock:q[1]!==null,rot:q[1]!==null?q[1]:(k*105+45)%360}});
-  var sel=P.findIndex(function(p){return !p.lock});var showHint=false;P.forEach(function(p){p.v=p.rot});
-  app.innerHTML=header(name,i,S.length)+'<div class="card"><h2>合計 '+st.total+'°'+(st.cp.length?'　印 '+st.cp.map(function(c){return c+'°'}).join('・'):'')+'</h2><p>'+st.hint+'</p>'+
-   '<svg id="fan" viewBox="0 0 260 260" style="cursor:pointer"></svg><p class="center" style="font-size:12px;margin:0">図をタップすると、選んだパネルが15°回ります</p><div class="msg" id="msg"></div>'+
-   '<div class="row" id="pans" style="margin-bottom:10px"></div>'+
-   '<div class="row"><button class="btn" id="ccw" aria-label="15度左に回す">⟲ 15°</button><button class="btn" id="cw" aria-label="15度右に回す">15° ⟳</button>'+
-   (st.cycle?'<button class="btn ghost" id="ty">角を変える</button>':'')+'<button class="btn ghost" id="hb">ヒント</button></div></div>';
-  document.getElementById('back').onclick=menu;
-  document.getElementById('hb').onclick=function(){showHint=!showHint;draw()};
-  document.getElementById('fan').onclick=function(){rot(15)};
-  function spin(){var f=0;(function s(){var go=false;P.forEach(function(p){var d=((p.rot-p.v+540)%360)-180;if(Math.abs(d)<1){p.v=p.rot}else{p.v+=d*0.35;go=true}});draw();if(go&&++f<40)requestAnimationFrame(s)})()}
-  function rot(d){var p=P[sel];if(!p||p.lock)return;p.rot=(p.rot+d+360)%360;rotSfx(p.rot);spin()}
-  document.getElementById('ccw').onclick=function(){rot(-15)};
-  document.getElementById('cw').onclick=function(){rot(15)};
-  if(st.cycle)document.getElementById('ty').onclick=function(){var p=P[sel];if(!p||p.lock)return;p.type=TYPES[(TYPES.indexOf(p.type)+1)%4];chipSfx(p.type,1);draw()};
-  function draw(){
-    var cum=0,svg=rim(130,130,108),hit=0,ends=[],pw=document.getElementById('pans');pw.innerHTML='';
-    P.forEach(function(p,k){
-      var lap=Math.floor(cum/360),R=108-18*lap,match=((p.rot%360)===(cum%360));
-      if(match)hit++;if(match&&p.mm===false)snapFx();else if(!match&&p.mm===true)voice(220,0,0.12,'triangle',0.08,0);p.mm=match;
-      svg+=wedge(130,130,R,p.v,p.v+p.type,COL[p.type],match?0.85:0.5,k===sel?'stroke-width="3"':'');
-      if(k===sel&&showHint)svg+=ray(130,130,122,cum%360,true,'var(--a60)',2.5);
-      cum+=p.type;ends.push(cum);
-      var b=document.createElement('button');b.className='pn'+(k===sel?' sel':'')+(match?' good':' bad');
-      b.setAttribute('aria-label','パネル'+(k+1)+' '+p.type+'度'+(p.lock?' 固定':''));
-      b.innerHTML='<svg viewBox="0 0 60 60">'+wedge(30,30,26,p.rot,p.rot+p.type,COL[p.type],0.85)+'</svg>'+(p.lock?'<span class="lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg></span>':'');
-      b.onclick=function(){sel=k;draw()};pw.appendChild(b);
-    });    st.cp.forEach(function(c){svg+=ray(130,130,122,c,true,'var(--ok)',2.5)});
-    svg+=ray(130,130,108,0,true,'var(--sub)',1);
-    document.getElementById('fan').innerHTML=svg;
-    var cpOk=st.cp.every(function(c){return ends.indexOf(c)>=0});
-    var ok=hit===P.length&&cum===st.total&&cpOk,m=document.getElementById('msg');
-    m.className='msg'+(ok?' ok':'');
-    m.textContent=ok?'すべての辺がつながった！'+(st.cycle?'　角の並べ方は全部で '+cnt3(st)+' 通り。':''):'つながった辺 '+hit+' / '+P.length+'　合計 '+cum+'°'+(cum!==st.total?'（目標 '+st.total+'°）':'')+(st.cp.length&&!cpOk?'　印に届いていない':'');
-    if(ok)clear(mode,i,S.length);else unclear();
-  }
-  draw();
-}
-
-/* ---------- 共通 ---------- */
-function unclear(){var c=document.querySelector('.card.win');if(c)c.classList.remove('win');var r=document.getElementById('nxrow');if(r)r.remove()}
-function clear(mode,i,len){
-  progress[mode][i]=true;
-  try{localStorage.setItem('sankaku',JSON.stringify(progress))}catch(e){}
-  var m=document.getElementById('msg');
-  var next=document.createElement('div');next.className='row';next.id='nxrow';next.style.marginTop='8px';
-  next.innerHTML=(i+1<len?'<button class="btn" id="nx">次のステージ</button>':'')+'<button class="btn ghost" id="mn">メニューへ</button>';
-  m.parentNode.classList.add('win');if(!document.getElementById('mn')){chime();burst();m.parentNode.appendChild(next);
-    if(document.getElementById('nx'))document.getElementById('nx').onclick=function(){play(mode,i+1)};
-    document.getElementById('mn').onclick=menu;}
-}
-function play(mode,i){stop();if(mode==='m1')playM1(i);else playPanel(mode,i)}
 var snd=true,AC=null;
 function beep(f,d,v){if(!snd)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();var o=AC.createOscillator(),g=AC.createGain();o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(v||0.05,AC.currentTime);g.gain.exponentialRampToValueAtTime(0.0001,AC.currentTime+d);o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}catch(e){}}
 function vib(p){try{if(snd&&navigator.vibrate)navigator.vibrate(p)}catch(e){}}
