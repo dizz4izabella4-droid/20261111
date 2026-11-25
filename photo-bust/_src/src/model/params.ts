@@ -26,7 +26,7 @@ export const BODY_DEFS: ParamDef[] = [
   { key: 'chestDepth', label: '胸郭の厚み', unit: 'cm', def: 0.19, min: 0.15, max: 0.25 },
   { key: 'underbustCirc', label: 'アンダーバスト周径', unit: 'cm', def: 0.67, min: 0.6, max: 0.9 },
   { key: 'underbustHeight', label: 'アンダーバストの高さ', unit: 'cm', def: 0.25, min: 0.24, max: 0.36, note: '下端から' },
-  { key: 'waistCirc', label: 'ウエスト周径', unit: 'cm', def: 0.59, min: 0.52, max: 0.9 },
+  { key: 'waistCirc', label: 'ウエスト周径', unit: 'cm', def: 0.57, min: 0.52, max: 0.9 },
   { key: 'waistHeight', label: 'ウエストの高さ', unit: 'cm', def: 0.14, min: 0.08, max: 0.2, note: '下端から' },
   { key: 'navelHeight', label: 'へその高さ', unit: 'cm', def: 0.05, min: 0.02, max: 0.1, note: '下端から' },
   { key: 'neckBaseWidth', label: '首の付け根の幅', unit: 'cm', def: 0.11, min: 0.09, max: 0.14 },
