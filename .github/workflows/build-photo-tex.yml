@@ -1,25 +1,25 @@
-name: Build photo-bust
-# Builds photo-bust/_src (Vite + TypeScript + three.js), runs the tests and a headless-Chromium
-# smoke test, then commits the static build (photo-bust/index.html + photo-bust/assets/) to main.
-# GitHub Pages of this repository (deploy from branch) then serves it at /photo-bust/.
+name: Build photo-tex
+# Builds photo-tex/_src (Vite + TypeScript + three.js), runs the tests and a headless-Chromium
+# smoke test, then commits the static build (photo-tex/index.html + photo-tex/assets/) to main.
+# GitHub Pages of this repository (deploy from branch) then serves it at /photo-tex/.
 on:
   push:
     branches: [main]
     paths:
-      - 'photo-bust/_src/**'
-      - '.github/workflows/build-photo-bust.yml'
+      - 'photo-tex/_src/**'
+      - '.github/workflows/build-photo-tex.yml'
   workflow_dispatch:
 permissions:
   contents: write
 concurrency:
-  group: build-photo-bust
+  group: build-photo-tex
   cancel-in-progress: false
 jobs:
   build:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: photo-bust/_src
+        working-directory: photo-tex/_src
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,7 +28,7 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-          cache-dependency-path: photo-bust/_src/package-lock.json
+          cache-dependency-path: photo-tex/_src/package-lock.json
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npm test
@@ -43,10 +43,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A photo-bust/index.html photo-bust/assets
+          git add -A photo-tex/index.html photo-tex/assets
           if git diff --cached --quiet; then
             echo "build output unchanged"
           else
-            git commit -m "photo-bust: build output (CI)"
+            git commit -m "photo-tex: build output (CI)"
             git push
           fi

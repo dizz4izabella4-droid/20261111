@@ -25,7 +25,7 @@ export function hexToLinear(hex: number): [number, number, number] {
   return [srgbToLinear(((hex >> 16) & 255) / 255), srgbToLinear(((hex >> 8) & 255) / 255), srgbToLinear((hex & 255) / 255)];
 }
 
-export function writeGlb(parts: GlbMeshPart[], empties: GlbEmpty[], generator = 'photo-bust'): ArrayBuffer {
+export function writeGlb(parts: GlbMeshPart[], empties: GlbEmpty[], generator = 'photo-tex'): ArrayBuffer {
   const chunks: Uint8Array[] = [];
   let offset = 0;
   const bufferViews: object[] = [];

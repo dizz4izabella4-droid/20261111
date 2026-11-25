@@ -1,4 +1,4 @@
-# 写真から胸像 3D（photo-bust）
+# 写真から胸像 3D（photo-tex）
 
 写真の陰影から胴の形を読み取り、素体（青）に肌色のパーツを重ねて GLB に書き出すブラウザアプリ。仕様は [SPEC.md](SPEC.md)、判断の記録は [ASSUMPTIONS.md](ASSUMPTIONS.md)、進み具合の報告は [reports/](reports/)。
 
@@ -28,4 +28,4 @@ npm run build
 ```
 
 - `npm run shots` のオプション：`--project <file>`（既定 `projects/default.json`）、`--preset light|standard|high`、`--ui`（画面全体と拡大図も撮る）、`--built`（本番ビルドで撮る）。
-- main に push すると `.github/workflows/build-photo-bust.yml` がテスト・ビルドを行い、出力をコミットします。
+- main に push すると `.github/workflows/build-photo-tex.yml` がテスト・ビルドを行い、出力をコミットします。

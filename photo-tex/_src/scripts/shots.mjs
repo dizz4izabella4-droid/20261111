@@ -1,6 +1,6 @@
 // Fixed-view screenshots (SPEC 13.2).
 //   npm run shots -- [--project projects/default.json] [--milestone M1] [--preset standard] [--ui] [--built]
-// --built serves the production build (photo-bust/index.html + assets/) instead of the dev server.
+// --built serves the production build (photo-tex/index.html + assets/) instead of the dev server.
 // Loads the app (Vite dev server, local only) in headless Chromium via Playwright, loads the
 // project file, and saves 4 fixed views (front, 3/4 front-left, left side, back) to
 // ../screenshots/<milestone>/. Camera distance, target and lighting are fixed in src/viewer.ts.

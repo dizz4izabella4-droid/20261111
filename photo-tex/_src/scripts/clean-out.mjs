@@ -1,4 +1,4 @@
-// Remove the previous build output (photo-bust/index.html and photo-bust/assets/).
+// Remove the previous build output (photo-tex/index.html and photo-tex/assets/).
 import { rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 const out = fileURLToPath(new URL('../../', import.meta.url));
