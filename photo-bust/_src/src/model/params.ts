@@ -22,7 +22,7 @@ export const UNIT_STEP: Record<Unit, number> = { cm: 0.1, mm: 1, deg: 1, index: 
 
 export const BODY_DEFS: ParamDef[] = [
   { key: 'torsoHeight', label: '胴の高さ（首の付け根〜下端）', unit: 'cm', def: 0.45, min: 0.4, max: 0.6 },
-  { key: 'shoulderWidth', label: '肩幅（肩関節中心間）', unit: 'cm', def: 0.34, min: 0.28, max: 0.42 },
+  { key: 'shoulderWidth', label: '肩幅（肩関節中心間）', unit: 'cm', def: 0.32, min: 0.28, max: 0.42 },
   { key: 'chestDepth', label: '胸郭の厚み', unit: 'cm', def: 0.19, min: 0.15, max: 0.25 },
   { key: 'underbustCirc', label: 'アンダーバスト周径', unit: 'cm', def: 0.7, min: 0.6, max: 0.9 },
   { key: 'underbustHeight', label: 'アンダーバストの高さ', unit: 'cm', def: 0.25, min: 0.24, max: 0.36, note: '下端から' },
