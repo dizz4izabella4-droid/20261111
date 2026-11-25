@@ -1,0 +1,2233 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>VOICE 声の素材づくり</title>
+<style>
+:root{
+  --bg:#f6f4ef; --panel:#fff; --ink:#1f2328; --sub:#5b6168; --line:#dcd8cf; --accent:#2b6cb0; --accent-ink:#fff;
+  --ok:#2f855a; --warn:#c05621; --bad:#c53030; --lab:#3a6ea5; --lab-low:#dd6b20; --lab-man:#2f855a; --phrase:#805ad5;
+  --chip:#edeae3; --wave:#4a5568; --sel:#f6e05e; --focus:#2b6cb0;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#16181b; --panel:#1f2226; --ink:#e7e9ec; --sub:#9aa1a9; --line:#33373d; --accent:#63a4ff; --accent-ink:#0b1220;
+    --ok:#68d391; --warn:#f6ad55; --bad:#fc8181; --lab:#63a4ff; --lab-low:#f6ad55; --lab-man:#68d391; --phrase:#b794f4;
+    --chip:#2a2e34; --wave:#a0aec0; --sel:#ecc94b;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
+body{padding-bottom:env(safe-area-inset-bottom)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer;min-height:36px}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.danger{color:var(--bad)}
+button:disabled{opacity:.45;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,canvas:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+input[type=text],input[type=number],select,textarea{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-height:36px}
+input[type=number]{width:6.5em}
+select{max-width:100%;min-width:0}
+.card{min-width:0}
+textarea{width:100%;min-height:72px;resize:vertical}
+header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+header h1{font-size:16px;margin:0 8px 0 0;letter-spacing:.08em}
+header .name{flex:1 1 160px;min-width:120px}
+header .status{font-size:12px;color:var(--sub);flex-basis:100%}
+nav{display:flex;gap:4px;padding:8px 16px 0;overflow-x:auto;scrollbar-width:none;position:sticky;top:var(--hh,58px);background:var(--bg);z-index:4}
+nav button{border-radius:8px 8px 0 0;border-bottom:none;white-space:nowrap;flex:0 0 auto}
+nav button[aria-selected=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+main{padding:0 16px 40px;max-width:1200px;margin:0 auto}
+section.tab{display:none;padding-top:14px}
+section.tab.on{display:block}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin:0 0 12px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.row.sp{justify-content:space-between}
+.muted{color:var(--sub);font-size:13px}
+.small{font-size:12px}
+h2{font-size:15px;margin:0 0 8px}
+h3{font-size:14px;margin:12px 0 6px}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{display:inline-flex;align-items:center;gap:2px;padding:2px 7px;border-radius:999px;background:var(--chip);font-size:13px;line-height:1.6;border:1px solid transparent}
+.chip.bad{background:transparent;border-color:var(--bad);color:var(--bad)}
+.chip.warn{border-color:var(--warn);color:var(--warn)}
+.chip.ok{border-color:var(--ok)}
+.chip.phrase{border-color:var(--phrase);color:var(--phrase)}
+.chip.now{background:var(--sel);color:#000}
+.chip.pause{opacity:.6}
+button.chip{min-height:0;cursor:pointer}
+.bar{height:8px;border-radius:4px;background:var(--chip);overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--ok)}
+.sent{display:grid;grid-template-columns:1fr auto;gap:6px 10px;padding:10px 0;border-top:1px solid var(--line)}
+.sent:first-of-type{border-top:none}
+.sent .k{font-size:13px;color:var(--sub)}
+.sent .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:start}
+.tag{font-size:12px;padding:1px 6px;border-radius:4px;border:1px solid var(--line);color:var(--sub);white-space:nowrap}
+.tag.ok{color:var(--ok);border-color:var(--ok)} .tag.warn{color:var(--warn);border-color:var(--warn)} .tag.bad{color:var(--bad);border-color:var(--bad)}
+.wavewrap{position:relative;border:1px solid var(--line);border-radius:8px;background:var(--panel);overflow:hidden;touch-action:pan-y}
+canvas#wave{display:block;width:100%;height:200px;cursor:crosshair}
+.zoomrow input[type=range]{flex:1;min-width:120px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:6px}
+.cell{border:1px solid var(--line);border-radius:8px;padding:4px;text-align:center;background:var(--panel);cursor:pointer;min-height:58px}
+.cell b{display:block;font-size:20px;line-height:1.2}
+.cell span{font-size:11px;color:var(--sub);white-space:nowrap}
+.cell.none{border-style:dashed;color:var(--bad)}
+.cell.warn{border-color:var(--warn)}
+.cell.sel{outline:2px solid var(--accent)}
+table{border-collapse:collapse;width:100%}
+td,th{border-bottom:1px solid var(--line);padding:5px 6px;text-align:left;font-size:14px;vertical-align:top}
+th{font-size:12px;color:var(--sub);font-weight:600}
+.tablewrap{overflow-x:auto}
+label.f{display:inline-flex;flex-direction:column;font-size:12px;color:var(--sub);gap:2px}
+label.f input[type=range]{width:150px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
+.overlay.on{display:flex}
+.overlay .box{background:var(--panel);border-radius:12px;padding:16px;max-width:720px;width:100%;max-height:92vh;overflow:auto}
+.bigk{font-size:30px;line-height:1.5;letter-spacing:.06em;margin:8px 0;word-break:break-all}
+.meter{height:14px;background:var(--chip);border-radius:7px;overflow:hidden}
+.meter>i{display:block;height:100%;width:0;background:var(--ok);transition:width .05s}
+.notice{border-left:4px solid var(--warn);padding:8px 10px;background:var(--panel);margin:8px 0;font-size:14px}
+.notice.bad{border-color:var(--bad)}
+.notice.ok{border-color:var(--ok)}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:30;max-width:calc(100% - 32px)}
+#toast.on{opacity:.95}
+.reading{font-size:18px;line-height:1.8;word-break:break-all}
+.reading .u{color:var(--bad);text-decoration:underline wavy}
+.hide{display:none!important}
+@media (max-width:640px){
+  .sent{grid-template-columns:1fr}
+  .sent .acts{justify-content:flex-start}
+  canvas#wave{height:160px}
+  .bigk{font-size:24px}
+}
+</style>
+</head>
+<body>
+<header id="hdr">
+  <h1>VOICE</h1>
+  <input class="name" id="projName" type="text" aria-label="プロジェクト名" value="">
+  <div class="row">
+    <button id="btnNew" type="button">新規</button>
+    <button id="btnOpen" type="button">開く</button>
+    <button id="btnSave" type="button" class="primary">保存</button>
+    <button id="btnSaveAs" type="button">別名で保存</button>
+  </div>
+  <div class="status" id="saveStatus" aria-live="polite"></div>
+</header>
+<nav role="tablist" id="tabs">
+  <button role="tab" data-tab="script" aria-selected="true">1 台本・録音</button>
+  <button role="tab" data-tab="cut">2 切り分け</button>
+  <button role="tab" data-tab="bank">3 素材</button>
+  <button role="tab" data-tab="speak">4 話す</button>
+  <button role="tab" data-tab="ledger">5 台帳・書き出し</button>
+  <button role="tab" data-tab="settings">設定</button>
+</nav>
+<main>
+  <div id="restoreBanner" class="notice hide"></div>
+  <div id="envNotice" class="notice hide"></div>
+
+  <!-- 1 script -->
+  <section class="tab on" id="tab-script" role="tabpanel">
+    <div class="card">
+      <div class="row sp"><h2>音のそろい具合</h2><span class="muted" id="covText"></span></div>
+      <div class="bar" aria-hidden="true"><i id="covBar" style="width:0"></i></div>
+      <h3>まだ無い音（切り分け後に数える）</h3>
+      <div class="chips" id="missingChips"></div>
+      <div class="row" style="margin-top:8px">
+        <button id="btnRecMissing" type="button">不足音を1つずつ録る</button>
+        <button id="btnCutReqAll" type="button" class="primary">切り分け依頼を書き出す（未切り分けの全録音）</button>
+        <button id="btnImportLabels1" type="button">labels.json を読み込む</button>
+      </div>
+      <p class="muted small">流れ: 例文を読んで録音 → 「切り分け依頼」を書き出して Claude Code に渡す → 返ってきた labels.json を読み込む → 「2 切り分け」で聞いて直す。</p>
+    </div>
+    <div class="card">
+      <div class="row sp"><h2>例文（声に出して、かなのとおりに読む）</h2>
+        <div class="row"><button id="btnBulkImport" type="button">音声をまとめて取り込む</button></div></div>
+      <p class="muted small">1文ずつ、ふだんの速さで、同じ高さを意識して平らに読みます。読点のところは少し間を空けてかまいません。ファイル名が s01〜s16 で始まる音声はまとめて取り込めます。</p>
+      <div id="sentList"></div>
+    </div>
+    <div class="card">
+      <h2>そのほかの録音</h2>
+      <div id="otherList" class="muted small">なし</div>
+      <h3>自分で文を足す</h3>
+      <div class="row">
+        <input type="text" id="addSentText" placeholder="文（表示用）" style="flex:1 1 180px">
+        <input type="text" id="addSentKana" placeholder="読みのかな（読むとおり）" style="flex:1 1 220px">
+        <button id="btnAddSent" type="button">足す</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 cut -->
+  <section class="tab" id="tab-cut" role="tabpanel">
+    <div class="card">
+      <div class="row">
+        <select id="cutRec" aria-label="録音" style="flex:1 1 220px"></select>
+        <button id="btnCutReqOne" type="button">この録音の切り分け依頼</button>
+        <button id="btnImportLabels2" type="button" class="primary">labels.json を読み込む</button>
+      </div>
+      <div class="muted small" id="cutInfo" style="margin-top:6px"></div>
+    </div>
+    <div class="card">
+      <div class="wavewrap"><canvas id="wave" tabindex="0" aria-label="波形と区切り。左右キーで移動、スペースで再生、Deleteで削除"></canvas></div>
+      <div class="row zoomrow" style="margin-top:6px">
+        <button id="zIn" type="button" aria-label="拡大">＋</button>
+        <button id="zOut" type="button" aria-label="縮小">－</button>
+        <button id="zFit" type="button">全体</button>
+        <input type="range" id="zScroll" min="0" max="1000" value="0" aria-label="表示位置">
+      </div>
+      <div class="row" style="margin-top:6px">
+        <button id="btnPlayAll" type="button">▶ 全体</button>
+        <button id="btnPlaySel" type="button">▶ 選んだ音</button>
+        <button id="btnStop" type="button">■</button>
+        <button id="btnNextLow" type="button">次の要確認へ</button>
+        <span class="muted small" id="lowCount"></span>
+      </div>
+      <h3>期待する音の並び</h3>
+      <div class="chips" id="expChips"></div>
+      <div id="mismatch" class="notice hide"></div>
+    </div>
+    <div class="card" id="selPanel">
+      <h2>選んだ区間</h2>
+      <div class="row">
+        <label class="f">かな<input type="text" id="selKana" style="width:6em"></label>
+        <label class="f">開始(秒)<input type="number" id="selStart" step="0.001"></label>
+        <label class="f">終了(秒)<input type="number" id="selEnd" step="0.001"></label>
+        <span class="muted small" id="selConf"></span>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button id="selOk" type="button">確認済みにする</button>
+        <button id="selMerge" type="button">次と結合</button>
+        <button id="selSplit" type="button">半分に分割</button>
+        <button id="selDel" type="button" class="danger">削除</button>
+      </div>
+      <p class="muted small">波形の上で: 区切り線をドラッグで移動／区間をタップで選んで再生／何も無い所をドラッグで新しい区間。</p>
+    </div>
+    <div class="card">
+      <h2>AIなしで切る</h2>
+      <div class="row">
+        <label class="f">無音のしきい値 <span id="vThr"></span><input type="range" id="silThr" min="-60" max="-15" step="1"></label>
+        <label class="f">最短の無音 <span id="vSil"></span><input type="range" id="silMin" min="40" max="600" step="10"></label>
+        <label class="f">最短の区間 <span id="vSeg"></span><input type="range" id="segMin" min="20" max="400" step="10"></label>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button id="btnAutoSil" type="button">無音で分割して順に割り当て</button>
+        <button id="btnEven" type="button">声の範囲を均等に割る</button>
+        <button id="btnClearLabels" type="button" class="danger">区切りを全部消す</button>
+      </div>
+      <p class="muted small">1音ずつ間を空けて読んだ録音は「無音で分割」でほぼ切れます。文の朗読は音のあいだに無音が無いので、「均等に割る」を出発点にして手で直してください。</p>
+    </div>
+  </section>
+
+  <!-- 3 bank -->
+  <section class="tab" id="tab-bank" role="tabpanel">
+    <div class="card">
+      <div class="row">
+        <label class="f">基準の高さ(Hz) 空欄=自動<input type="number" id="refHz" min="60" max="600" step="1"></label>
+        <span class="muted" id="refInfo"></span>
+        <button id="btnRefTone" type="button">♪ 基準の音</button>
+      </div>
+      <p class="muted small">同じ音が複数あるときは、基準の高さに最も近いテイクを自動で使います（★＝手で選んだもの、橙＝基準からのずれが大きい）。</p>
+    </div>
+    <div class="card"><div class="grid" id="bankGrid"></div></div>
+    <div class="card hide" id="bankDetail"></div>
+  </section>
+
+  <!-- 4 speak -->
+  <section class="tab" id="tab-speak" role="tabpanel">
+    <div class="card">
+      <label for="speakText" class="muted small">話す文（かな／漢字{よみ}／[よみ]／数字）</label>
+      <textarea id="speakText">きゃくが きた。ひゃくにんの ぎょうれつ{ぎょうれつ}です！</textarea>
+      <div class="row" style="margin-top:8px">
+        <button id="btnSpeak" type="button" class="primary">▶ 話す</button>
+        <button id="btnSpeakStop" type="button">■</button>
+        <button id="btnSpeakWav" type="button">WAVで保存</button>
+        <label class="row small"><input type="checkbox" id="autoDict" checked> {よみ} を辞書に登録</label>
+      </div>
+      <h3>読み</h3>
+      <div class="reading" id="readingView"></div>
+      <div class="row" style="margin-top:4px">
+        <input type="text" id="readingEdit" placeholder="読みを手で直すときはここに（空欄＝自動）" style="flex:1">
+      </div>
+      <h3>音節（紫＝定型句、赤＝素材なし）</h3>
+      <div class="chips" id="moraChips"></div>
+      <div id="speakWarn"></div>
+    </div>
+    <div class="card">
+      <h2>つなぎ方</h2>
+      <div class="row">
+        <label class="f">重なり <span id="vXf"></span><input type="range" id="xf" min="0" max="40" step="1"></label>
+        <label class="f">速さ <span id="vSpeed"></span><input type="range" id="speed" min="0.6" max="1.6" step="0.05"></label>
+        <label class="f">音節の間 <span id="vGap"></span><input type="range" id="gap" min="0" max="200" step="5"></label>
+        <label class="f">音量 <span id="vGain"></span><input type="range" id="gain" min="0.2" max="2" step="0.05"></label>
+        <label class="f">っ の長さ <span id="vSok"></span><input type="range" id="sok" min="30" max="200" step="5"></label>
+        <label class="f">ー の長さ <span id="vCho"></span><input type="range" id="cho" min="60" max="400" step="10"></label>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row sp"><h2>ユーザー辞書</h2>
+        <div class="row"><button id="dictExport" type="button">JSONで保存</button><button id="dictImport" type="button">JSONを読み込む</button></div></div>
+      <div class="row"><input type="text" id="dictKey" placeholder="漢字など"><input type="text" id="dictVal" placeholder="よみ"><button id="dictAdd" type="button">登録</button></div>
+      <div class="tablewrap"><table id="dictTable"></table></div>
+    </div>
+  </section>
+
+  <!-- 5 ledger -->
+  <section class="tab" id="tab-ledger" role="tabpanel">
+    <div class="card">
+      <div class="row sp"><h2>台帳（書き出す行）</h2>
+        <div class="row"><button id="lineImport" type="button">CSV/JSONを読み込む</button></div></div>
+      <div class="row"><input type="text" id="lineId" placeholder="id（例 boss.intro.1）" style="flex:0 1 180px"><input type="text" id="lineText" placeholder="文" style="flex:1 1 200px"><button id="lineAdd" type="button">足す</button></div>
+      <div class="tablewrap"><table id="lineTable"></table></div>
+    </div>
+    <div class="card">
+      <h2>定型句（丸ごと録る。合成より優先）</h2>
+      <div class="row"><input type="text" id="phText" placeholder="文" style="flex:1 1 160px"><input type="text" id="phKana" placeholder="読み（かな）" style="flex:1 1 160px">
+        <button id="phRec" type="button">録音</button><button id="phImport" type="button">取り込み</button></div>
+      <div class="tablewrap"><table id="phTable"></table></div>
+    </div>
+    <div class="card">
+      <h2>書き出しパック A</h2>
+      <p class="muted small" id="packEstimate"></p>
+      <div class="row">
+        <button id="packDir" type="button" class="primary">フォルダに書き出す</button>
+        <button id="packZip" type="button">ZIPでダウンロード</button>
+      </div>
+      <div id="packReport"></div>
+    </div>
+  </section>
+
+  <!-- settings -->
+  <section class="tab" id="tab-settings" role="tabpanel">
+    <div class="card">
+      <h2>加工・判定</h2>
+      <div class="row" id="setForm"></div>
+    </div>
+    <div class="card">
+      <h2>この環境</h2>
+      <div id="envInfo" class="muted small"></div>
+      <div class="row" style="margin-top:8px"><button id="btnClearAutosave" type="button" class="danger">自動退避を消す</button></div>
+    </div>
+  </section>
+</main>
+
+<div class="overlay" id="recOverlay" role="dialog" aria-modal="true" aria-labelledby="recTitle">
+  <div class="box">
+    <div class="row sp"><h2 id="recTitle">録音</h2><span class="muted" id="recTime">0.0 秒</span></div>
+    <div class="muted small" id="recSub"></div>
+    <div class="bigk" id="recKana"></div>
+    <div class="meter" aria-hidden="true"><i id="recMeter"></i></div>
+    <div class="row sp" style="margin-top:6px"><span id="recPitch" class="muted">高さ —</span><span id="recRef" class="muted"></span></div>
+    <div class="row" style="margin-top:12px">
+      <button id="recStart" type="button" class="primary">● 録音開始</button>
+      <button id="recStop" type="button" disabled>■ 止めて保存</button>
+      <button id="recTone" type="button">♪ 基準の音</button>
+      <button id="recCancel" type="button">やめる</button>
+    </div>
+    <p class="muted small" id="recHelp"></p>
+  </div>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<input type="file" id="fileAudio" accept="audio/*,.wav,.m4a,.mp3,.webm" class="hide" multiple>
+<input type="file" id="fileJson" accept=".json,application/json" class="hide">
+<input type="file" id="fileProj" accept=".voiceproj,.zip" class="hide">
+<input type="file" id="fileLines" accept=".csv,.json,.txt" class="hide">
+<script type="application/json" id="sample-sentences">
+[
+ {"id": "s01", "text": "客が急に教会へ走る", "kana": "きゃくが きゅうに きょうかいえ はしる"},
+ {"id": "s02", "text": "社長は手術の前に書類を読む", "kana": "しゃちょうわ しゅじゅつの まえに しょるいお よむ"},
+ {"id": "s03", "text": "お茶を注文して氷山を見る", "kana": "おちゃお ちゅうもんして ひょうざんお みる"},
+ {"id": "s04", "text": "六百匹のうさぎがぴょんぴょん跳ねる", "kana": "ろっぴゃっぴきの うさぎが ぴょんぴょん はねる"},
+ {"id": "s05", "text": "風がぴゅうぴゅう吹く夜のミュージカル", "kana": "かぜが ぴゅうぴゅう ふく よるの みゅうじかる"},
+ {"id": "s06", "text": "脈拍と名字を準備する女性", "kana": "みゃくはくと みょうじお じゅんびする じょせい"},
+ {"id": "s07", "text": "逆に牛丼と餃子を食べた", "kana": "ぎゃくに ぎゅうどんと ぎょうざお たべた"},
+ {"id": "s08", "text": "留学生と旅行の略図を描く", "kana": "りゅうがくせいと りょこうの りゃくずお かく"},
+ {"id": "s09", "text": "女房が百円でヒューズを買う", "kana": "にょうぼうが ひゃくえんで ひゅうずお かう"},
+ {"id": "s10", "text": "電車がびゅんびゅん走り三百人が乗る", "kana": "でんしゃが びゅんびゅん はしり さんびゃくにんが のる"},
+ {"id": "s11", "text": "ペンギンのパパはプリンを食べてぽかぽか眠る", "kana": "ぺんぎんの ぱぱわ ぷりんお たべて ぽかぽか ねむる"},
+ {"id": "s12", "text": "夢の中でぬいぐるみが蝋燭を燃やす", "kana": "ゆめの なかで ぬいぐるみが ろうそくお もやす"},
+ {"id": "s13", "text": "細い蛇が象牙の棒に絡む", "kana": "ほそい へびが ぞうげの ぼうに からむ"},
+ {"id": "s14", "text": "誰かがぶどうと鉛筆を拾う", "kana": "だれかが ぶどうと えんぴつお ひろう"},
+ {"id": "s15", "text": "今朝にゃんこが邪魔な牛乳をこぼす", "kana": "けさ にゃんこが じゃまな ぎゅうにゅうお こぼす"},
+ {"id": "s16", "text": "朝ご飯の後でバスで近くの病院へ行く", "kana": "あさごはんの あとで ばすで ちかくの びょういんえ いく"}
+]
+</script>
+<script>
+'use strict';
+/* =====================================================================
+ * VOICE — tools/voice.html. Design: tools/voice-DESIGN.md
+ * Single file, no external libraries, no network.
+ * ===================================================================== */
+const SR_WORK = 48000;
+
+/* ------------------------------------------------------------- Kana */
+const Kana = (() => {
+  const BASE = [...'あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわん'];
+  const DAK = [...'がぎぐげござじずぜぞだでどばびぶべぼぱぴぷぺぽ'];
+  const YOON = [];
+  for (const b of 'きしちにひみりぎじびぴ') for (const s of 'ゃゅょ') YOON.push(b + s);
+  const INVENTORY = [...BASE, ...DAK, ...YOON];
+  const FOREIGN = ['ふぁ', 'ふぃ', 'ふぇ', 'ふぉ', 'てぃ', 'でぃ', 'とぅ', 'どぅ', 'うぃ', 'うぇ', 'うぉ', 'しぇ', 'じぇ', 'ちぇ',
+    'つぁ', 'つぃ', 'つぇ', 'つぉ', 'いぇ', 'ゔぁ', 'ゔぃ', 'ゔ', 'ゔぇ', 'ゔぉ', 'ふゅ', 'てゅ', 'でゅ'];
+  const ALIASES = { 'を': 'お', 'ぢ': 'じ', 'づ': 'ず', 'ゎ': 'わ', 'ゐ': 'い', 'ゑ': 'え' };
+  const COMBOS = new Set([...YOON, ...FOREIGN.filter(f => f.length === 2), 'ぢゃ', 'ぢゅ', 'ぢょ']);
+  const SMALLV = 'ぁぃぅぇぉ', BIGV = 'あいうえお';
+  const INV_SET = new Set(INVENTORY), FOR_SET = new Set(FOREIGN);
+  const ROWS = [
+    ['あ', 'あいうえお'], ['か', 'かきくけこ'], ['さ', 'さしすせそ'], ['た', 'たちつてと'], ['な', 'なにぬねの'],
+    ['は', 'はひふへほ'], ['ま', 'まみむめも'], ['や', 'やゆよ'], ['ら', 'らりるれろ'], ['わ', 'わん'],
+    ['が', 'がぎぐげご'], ['ざ', 'ざじずぜぞ'], ['だ', 'だでど'], ['ば', 'ばびぶべぼ'], ['ぱ', 'ぱぴぷぺぽ']];
+  function kata2hira(s) {
+    let o = '';
+    for (const c of s) {
+      const u = c.charCodeAt(0);
+      o += (u >= 0x30A1 && u <= 0x30F6) ? String.fromCharCode(u - 0x60) : c;
+    }
+    return o;
+  }
+  function isKanaChar(c) {
+    const u = c.charCodeAt(0);
+    return (u >= 0x3041 && u <= 0x3096) || (u >= 0x30A1 && u <= 0x30FA) || c === 'ー' || c === 'ｰ';
+  }
+  function normalize(m) {
+    m = kata2hira(m);
+    if (m.length === 2 && ALIASES[m[0]] && 'ゃゅょ'.includes(m[1])) m = ALIASES[m[0]] + m[1];
+    return ALIASES[m] || m;
+  }
+  /** kana string -> morae (hiragana). Keeps っ and ー; drops anything else that is not kana. */
+  function splitMorae(s) {
+    s = kata2hira(s).replace(/ｰ/g, 'ー');
+    const out = [];
+    for (let i = 0; i < s.length; i++) {
+      let c = s[i];
+      if (!isKanaChar(c)) continue;
+      const n = s[i + 1];
+      if (n && COMBOS.has(c + n)) { out.push(c + n); i++; continue; }
+      if (SMALLV.includes(c)) c = BIGV[SMALLV.indexOf(c)];
+      else if (c === 'ゃ') c = 'や'; else if (c === 'ゅ') c = 'ゆ'; else if (c === 'ょ') c = 'よ';
+      out.push(c);
+    }
+    return out;
+  }
+  const isBankMora = m => INV_SET.has(m) || FOR_SET.has(m);
+  return { INVENTORY, FOREIGN, ALIASES, ROWS, kata2hira, isKanaChar, normalize, splitMorae, isBankMora, INV_SET, FOR_SET };
+})();
+
+/* ------------------------------------------------------------- Reading */
+const Reading = (() => {
+  const D = ['ぜろ', 'いち', 'に', 'さん', 'よん', 'ご', 'ろく', 'なな', 'はち', 'きゅう'];
+  function under1e4(n) {
+    let s = '';
+    const th = Math.floor(n / 1000), h = Math.floor(n / 100) % 10, t = Math.floor(n / 10) % 10, o = n % 10;
+    if (th) s += th === 1 ? 'せん' : th === 3 ? 'さんぜん' : th === 8 ? 'はっせん' : D[th] + 'せん';
+    if (h) s += h === 1 ? 'ひゃく' : h === 3 ? 'さんびゃく' : h === 6 ? 'ろっぴゃく' : h === 8 ? 'はっぴゃく' : D[h] + 'ひゃく';
+    if (t) s += t === 1 ? 'じゅう' : D[t] + 'じゅう';
+    if (o) s += D[o];
+    return s;
+  }
+  /** Integer 0..99,999,999 -> kana, or null when out of range. */
+  function intToKana(n) {
+    if (!Number.isInteger(n) || n < 0 || n > 99999999) return null;
+    if (n === 0) return 'ぜろ';
+    const man = Math.floor(n / 10000), rest = n % 10000;
+    return (man ? under1e4(man) + 'まん' : '') + (rest ? under1e4(rest) : '');
+  }
+  /** "12,345.67%" -> kana or null */
+  function numberToKana(str) {
+    const z = str.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(/[，,]/g, '').replace(/[．]/g, '.').replace(/％/g, '%');
+    const m = /^(\d+)(?:\.(\d+))?(%)?$/.exec(z);
+    if (!m) return null;
+    if (m[1].length > 1 && m[1][0] === '0' && !m[2]) return [...m[1]].map(d => D[+d]).join(''); // 007
+    const ip = intToKana(parseInt(m[1], 10));
+    if (ip == null) return null;
+    let s = ip;
+    if (m[2]) s += 'てん' + [...m[2]].map(d => D[+d]).join('');
+    if (m[3]) s += 'ぱーせんと';
+    return s;
+  }
+  const isDigit = c => /[0-9０-９]/.test(c);
+  const PAUSE = { '、': 'comma', '，': 'comma', ',': 'comma', '。': 'period', '．': 'period', '.': 'period', '？': 'q', '?': 'q', '！': 'q', '!': 'q', '…': 'comma' };
+  const isSpace = c => /\s|　/.test(c);
+  /**
+   * text -> { tokens, items }
+   * token: {t:'kana'|'pause'|'unresolved'|'number'|'dict'|'brace'|'bracket', src, kana?, kind?}
+   * items: [{t:'m', kana(raw), norm, tok} | {t:'p', kind, tok} | {t:'u', src, tok}]
+   */
+  function parse(text, dict, opts) {
+    dict = dict || {};
+    opts = opts || {};
+    const tokens = [];
+    const learned = {};
+    const keys = Object.keys(dict).filter(k => k).sort((a, b) => b.length - a.length);
+    let i = 0;
+    const s = text || '';
+    while (i < s.length) {
+      const c = s[i];
+      if (c === '[' || c === '［') {
+        const close = s.indexOf(c === '[' ? ']' : '］', i + 1);
+        if (close > i) { tokens.push({ t: 'bracket', src: s.slice(i, close + 1), kana: Kana.kata2hira(s.slice(i + 1, close)) }); i = close + 1; continue; }
+      }
+      if (isSpace(c)) { i++; continue; }
+      if (PAUSE[c] && !(c === '.' && isDigit(s[i - 1] || '') && isDigit(s[i + 1] || ''))) {
+        tokens.push({ t: 'pause', src: c, kind: PAUSE[c] }); i++; continue;
+      }
+      if (isDigit(c)) {
+        let j = i;
+        while (j < s.length && (isDigit(s[j]) || ((s[j] === ',' || s[j] === '，' || s[j] === '.' || s[j] === '．') && isDigit(s[j + 1] || '')))) j++;
+        if (s[j] === '%' || s[j] === '％') j++;
+        const src = s.slice(i, j);
+        const k = numberToKana(src);
+        tokens.push(k == null ? { t: 'unresolved', src } : { t: 'number', src, kana: k });
+        i = j; continue;
+      }
+      if (Kana.isKanaChar(c)) {
+        let j = i;
+        while (j < s.length && Kana.isKanaChar(s[j])) j++;
+        if (s[j] === '{' || s[j] === '｛') {
+          const close = s.indexOf(s[j] === '{' ? '}' : '｝', j + 1);
+          if (close > j) {
+            if (j - 1 > i) tokens.push({ t: 'kana', src: s.slice(i, j - 1), kana: Kana.kata2hira(s.slice(i, j - 1)) });
+            tokens.push({ t: 'brace', src: s[j - 1], kana: Kana.kata2hira(s.slice(j + 1, close)) });
+            i = close + 1; continue;
+          }
+        }
+        tokens.push({ t: 'kana', src: s.slice(i, j), kana: Kana.kata2hira(s.slice(i, j)) });
+        i = j; continue;
+      }
+      // a run of "other" characters (kanji, latin, symbols)
+      let j = i;
+      while (j < s.length && !Kana.isKanaChar(s[j]) && !isDigit(s[j]) && !isSpace(s[j]) && !PAUSE[s[j]] && !'[［{｛'.includes(s[j])) j++;
+      if (j === i) j = i + 1;
+      const run = s.slice(i, j);
+      if (s[j] === '{' || s[j] === '｛') {
+        const close = s.indexOf(s[j] === '{' ? '}' : '｝', j + 1);
+        if (close > j) {
+          const r = Kana.kata2hira(s.slice(j + 1, close));
+          tokens.push({ t: 'brace', src: run, kana: r });
+          if (opts.learn !== false && r) learned[run] = r;
+          i = close + 1; continue;
+        }
+      }
+      // dictionary longest match inside the run (a key may extend past the run)
+      let p = i;
+      let pend = '';
+      while (p < j) {
+        let hit = null;
+        for (const k of keys) if (s.startsWith(k, p)) { hit = k; break; }
+        if (hit) {
+          if (pend) { tokens.push({ t: 'unresolved', src: pend }); pend = ''; }
+          tokens.push({ t: 'dict', src: hit, kana: Kana.kata2hira(dict[hit]) });
+          p += hit.length;
+        } else { pend += s[p]; p++; }
+      }
+      if (pend) tokens.push({ t: 'unresolved', src: pend });
+      i = Math.max(p, j);
+    }
+    const items = [];
+    tokens.forEach((tok, ti) => {
+      if (tok.t === 'pause') items.push({ t: 'p', kind: tok.kind, tok: ti });
+      else if (tok.t === 'unresolved') items.push({ t: 'u', src: tok.src, tok: ti });
+      else for (const m of Kana.splitMorae(tok.kana)) items.push({ t: 'm', kana: m, norm: Kana.normalize(m), tok: ti });
+    });
+    return { tokens, items, learned };
+  }
+  function readingString(tokens) {
+    return tokens.map(t => t.t === 'pause' ? t.src : t.t === 'unresolved' ? '〓' : t.kana).join('');
+  }
+  return { parse, numberToKana, intToKana, readingString };
+})();
+
+/* ------------------------------------------------------------- DSP */
+const DSP = (() => {
+  function resample(x, from, to) {
+    if (from === to) return Float32Array.from(x);
+    const ratio = to / from, n = Math.max(1, Math.round(x.length * ratio));
+    const y = new Float32Array(n);
+    const fc = Math.min(1, ratio) * 0.95;
+    const half = 12; // zero crossings each side
+    const scale = 1 / ratio;
+    const radius = Math.ceil(half / fc);
+    for (let i = 0; i < n; i++) {
+      const t = i * scale, c = Math.floor(t);
+      let acc = 0, wsum = 0;
+      for (let k = c - radius + 1; k <= c + radius; k++) {
+        if (k < 0 || k >= x.length) continue;
+        const d = t - k, a = d * fc;
+        const sinc = a === 0 ? 1 : Math.sin(Math.PI * a) / (Math.PI * a);
+        const w = 0.5 + 0.5 * Math.cos(Math.PI * d / (radius));
+        const v = sinc * w;
+        acc += x[k] * v; wsum += v;
+      }
+      y[i] = wsum ? acc / wsum : 0;
+    }
+    return y;
+  }
+  function encodeWav(x, sr) {
+    const n = x.length, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+    const ws = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    ws(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); ws(8, 'WAVE'); ws(12, 'fmt ');
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true);
+    v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); ws(36, 'data'); v.setUint32(40, n * 2, true);
+    for (let i = 0; i < n; i++) { const s = Math.max(-1, Math.min(1, x[i])); v.setInt16(44 + i * 2, Math.round(s * 32767), true); }
+    return new Uint8Array(buf);
+  }
+  function decodeWav(bytes) {
+    const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const tag = o => String.fromCharCode(v.getUint8(o), v.getUint8(o + 1), v.getUint8(o + 2), v.getUint8(o + 3));
+    if (tag(0) !== 'RIFF' || tag(8) !== 'WAVE') throw new Error('WAVではありません');
+    let o = 12, fmt = null, data = null;
+    while (o + 8 <= bytes.byteLength) {
+      const id = tag(o), sz = v.getUint32(o + 4, true);
+      if (id === 'fmt ') fmt = { fmt: v.getUint16(o + 8, true), ch: v.getUint16(o + 10, true), sr: v.getUint32(o + 12, true), bits: v.getUint16(o + 22, true) };
+      else if (id === 'data') { data = { off: o + 8, len: Math.min(sz, bytes.byteLength - o - 8) }; }
+      o += 8 + sz + (sz & 1);
+    }
+    if (!fmt || !data) throw new Error('WAVの中身がありません');
+    const bps = fmt.bits / 8, frames = Math.floor(data.len / (bps * fmt.ch));
+    const x = new Float32Array(frames);
+    for (let i = 0; i < frames; i++) {
+      let acc = 0;
+      for (let c = 0; c < fmt.ch; c++) {
+        const p = data.off + (i * fmt.ch + c) * bps;
+        let s;
+        if (fmt.fmt === 3 && bps === 4) s = v.getFloat32(p, true);
+        else if (bps === 2) s = v.getInt16(p, true) / 32768;
+        else if (bps === 3) { let q = v.getUint8(p) | (v.getUint8(p + 1) << 8) | (v.getUint8(p + 2) << 16); if (q & 0x800000) q -= 0x1000000; s = q / 8388608; }
+        else if (bps === 4) s = v.getInt32(p, true) / 2147483648;
+        else s = (v.getUint8(p) - 128) / 128;
+        acc += s;
+      }
+      x[i] = acc / fmt.ch;
+    }
+    return { x, sr: fmt.sr };
+  }
+  function peak(x) { let p = 0; for (let i = 0; i < x.length; i++) { const a = Math.abs(x[i]); if (a > p) p = a; } return p; }
+  function rms(x, a = 0, b = x.length) { let s = 0; for (let i = a; i < b; i++) s += x[i] * x[i]; return b > a ? Math.sqrt(s / (b - a)) : 0; }
+  const db = v => 20 * Math.log10(Math.max(v, 1e-9));
+  function frameDb(x, sr, frameMs = 10) {
+    const hop = Math.max(1, Math.round(sr * frameMs / 1000)), n = Math.ceil(x.length / hop), out = new Float32Array(n);
+    for (let f = 0; f < n; f++) out[f] = db(rms(x, f * hop, Math.min(x.length, f * hop + hop)));
+    return { db: out, hop };
+  }
+  function biquad(x, sr, type, fc, q = Math.SQRT1_2) {
+    const w0 = 2 * Math.PI * fc / sr, cs = Math.cos(w0), al = Math.sin(w0) / (2 * q);
+    let b0, b1, b2;
+    if (type === 'hp') { b0 = (1 + cs) / 2; b1 = -(1 + cs); b2 = (1 + cs) / 2; } else { b0 = (1 - cs) / 2; b1 = 1 - cs; b2 = (1 - cs) / 2; }
+    const a0 = 1 + al, a1 = -2 * cs, a2 = 1 - al;
+    const y = new Float32Array(x.length);
+    let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+    for (let i = 0; i < x.length; i++) {
+      const v = (b0 * x[i] + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2) / a0;
+      x2 = x1; x1 = x[i]; y2 = y1; y1 = v; y[i] = v;
+    }
+    return y;
+  }
+  function gate(x, sr, thrDb) {
+    const hop = Math.max(1, Math.round(sr * 0.005)), thr = Math.pow(10, thrDb / 20);
+    const y = Float32Array.from(x);
+    let g = 1;
+    for (let a = 0; a < x.length; a += hop) {
+      const b = Math.min(x.length, a + hop), r = rms(x, a, b);
+      const target = r < thr ? Math.max(0, r / thr) ** 2 : 1;
+      for (let i = a; i < b; i++) { g += (target - g) * 0.02; y[i] *= g; }
+    }
+    return y;
+  }
+  function fade(x, sr, ms) {
+    const n = Math.min(Math.floor(x.length / 2), Math.round(sr * ms / 1000));
+    for (let i = 0; i < n; i++) { const g = i / n; x[i] *= g; x[x.length - 1 - i] *= g; }
+    return x;
+  }
+  /** YIN pitch. returns {f0: median Hz | null, frames:[...]} */
+  function pitch(x, sr, fmin = 70, fmax = 500) {
+    const y = sr === 16000 ? x : resample(x, sr, 16000);
+    const fs = 16000, W = 400, hop = 160, tmin = Math.floor(fs / fmax), tmax = Math.ceil(fs / fmin);
+    const vals = [];
+    const loud = db(rms(y)) - 25;
+    for (let s = 0; s + W + tmax < y.length; s += hop) {
+      if (db(rms(y, s, s + W)) < Math.max(loud, -55)) { vals.push(0); continue; }
+      const d = new Float32Array(tmax + 1);
+      for (let tau = 1; tau <= tmax; tau++) { let acc = 0; for (let j = 0; j < W; j++) { const e = y[s + j] - y[s + j + tau]; acc += e * e; } d[tau] = acc; }
+      let run = 0, best = -1;
+      for (let tau = 1; tau <= tmax; tau++) { run += d[tau]; const c = d[tau] * tau / (run || 1); d[tau] = c; }
+      for (let tau = tmin; tau <= tmax; tau++) { if (d[tau] < 0.15) { while (tau + 1 <= tmax && d[tau + 1] < d[tau]) tau++; best = tau; break; } }
+      if (best < 0) { vals.push(0); continue; }
+      const a = d[best - 1] || d[best], b = d[best], c = d[best + 1] || d[best];
+      const den = a - 2 * b + c, shift = den ? 0.5 * (a - c) / den : 0;
+      vals.push(fs / (best + shift));
+    }
+    const v = vals.filter(f => f > 0).sort((p, q) => p - q);
+    return { f0: v.length >= 2 ? v[Math.floor(v.length / 2)] : null, frames: vals };
+  }
+  function bandLevels(x, sr) {
+    const low = biquad(x, sr, 'lp', 300), high = biquad(x, sr, 'hp', 3000);
+    const mid = biquad(biquad(x, sr, 'hp', 300), sr, 'lp', 3000);
+    return { peakDb: db(peak(x)), rmsDb: db(rms(x)), lowDb: db(rms(low)), midDb: db(rms(mid)), highDb: db(rms(high)) };
+  }
+  function sine(hz, sec, sr) {
+    const n = Math.round(sec * sr), y = new Float32Array(n);
+    for (let i = 0; i < n; i++) y[i] = 0.25 * Math.sin(2 * Math.PI * hz * i / sr);
+    return fade(y, sr, 30);
+  }
+  const cents = (f, ref) => 1200 * Math.log2(f / ref);
+  return { resample, encodeWav, decodeWav, peak, rms, db, frameDb, biquad, gate, fade, pitch, bandLevels, sine, cents };
+})();
+
+/* ------------------------------------------------------------- Zip */
+const Zip = (() => {
+  const T = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; T[n] = c >>> 0; }
+  function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = T[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+  const hex = n => n.toString(16).padStart(8, '0');
+  const enc = new TextEncoder();
+  /** files: [{name, data:Uint8Array|string}] -> Uint8Array (stored) */
+  function write(files) {
+    const parts = [], central = [];
+    let off = 0;
+    const d = new Date(), dt = ((d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1)) & 0xFFFF,
+      dd = (((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate()) & 0xFFFF;
+    for (const f of files) {
+      const name = enc.encode(f.name), data = typeof f.data === 'string' ? enc.encode(f.data) : f.data;
+      const crc = crc32(data);
+      const h = new DataView(new ArrayBuffer(30));
+      h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true);
+      h.setUint16(10, dt, true); h.setUint16(12, dd, true); h.setUint32(14, crc, true); h.setUint32(18, data.length, true);
+      h.setUint32(22, data.length, true); h.setUint16(26, name.length, true); h.setUint16(28, 0, true);
+      parts.push(new Uint8Array(h.buffer), name, data);
+      const c = new DataView(new ArrayBuffer(46));
+      c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true);
+      c.setUint16(10, 0, true); c.setUint16(12, dt, true); c.setUint16(14, dd, true); c.setUint32(16, crc, true);
+      c.setUint32(20, data.length, true); c.setUint32(24, data.length, true); c.setUint16(28, name.length, true);
+      c.setUint32(42, off, true);
+      central.push(new Uint8Array(c.buffer), name);
+      off += 30 + name.length + data.length;
+    }
+    const csize = central.reduce((a, b) => a + b.length, 0);
+    const e = new DataView(new ArrayBuffer(22));
+    e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true);
+    e.setUint32(12, csize, true); e.setUint32(16, off, true);
+    const all = [...parts, ...central, new Uint8Array(e.buffer)];
+    const out = new Uint8Array(all.reduce((a, b) => a + b.length, 0));
+    let p = 0; for (const a of all) { out.set(a, p); p += a.length; }
+    return out;
+  }
+  /** -> Promise<Map<name, Uint8Array>> */
+  async function read(bytes) {
+    const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    let eocd = -1;
+    for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 65557); i--) if (v.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+    if (eocd < 0) throw new Error('ZIPではありません');
+    const n = v.getUint16(eocd + 10, true);
+    let p = v.getUint32(eocd + 16, true);
+    const out = new Map(), dec = new TextDecoder();
+    for (let k = 0; k < n; k++) {
+      if (v.getUint32(p, true) !== 0x02014b50) throw new Error('ZIPが壊れています');
+      const method = v.getUint16(p + 10, true), csz = v.getUint32(p + 20, true), nl = v.getUint16(p + 28, true),
+        xl = v.getUint16(p + 30, true), cl = v.getUint16(p + 32, true), lo = v.getUint32(p + 42, true);
+      const name = dec.decode(bytes.subarray(p + 46, p + 46 + nl));
+      const lnl = v.getUint16(lo + 26, true), lxl = v.getUint16(lo + 28, true);
+      const raw = bytes.subarray(lo + 30 + lnl + lxl, lo + 30 + lnl + lxl + csz);
+      let data;
+      if (method === 0) data = raw.slice();
+      else if (method === 8 && typeof DecompressionStream !== 'undefined') {
+        const ds = new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+        data = new Uint8Array(await new Response(ds).arrayBuffer());
+      } else throw new Error('対応していない圧縮形式: ' + name);
+      if (!name.endsWith('/')) out.set(name, data);
+      p += 46 + nl + xl + cl;
+    }
+    return out;
+  }
+  return { crc32, hex, write, read };
+})();
+
+/* ------------------------------------------------------------- Store (IndexedDB) */
+const Store = (() => {
+  let dbp = null;
+  function open() {
+    if (dbp) return dbp;
+    dbp = new Promise((res) => {
+      try {
+        // ?noidb: tests and previews run without touching the real autosave
+        if (!window.indexedDB || /[?&]noidb\b/.test(location.search)) return res(null);
+        const r = indexedDB.open('voice-tool', 1);
+        r.onupgradeneeded = () => { const d = r.result; d.createObjectStore('kv'); d.createObjectStore('chunks', { autoIncrement: true }); };
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => res(null);
+        r.onblocked = () => res(null);
+      } catch (e) { res(null); }
+    });
+    return dbp;
+  }
+  async function tx(store, mode, fn) {
+    const d = await open();
+    if (!d) return undefined;
+    return new Promise((res, rej) => {
+      try {
+        const t = d.transaction(store, mode), s = t.objectStore(store);
+        const r = fn(s);
+        t.oncomplete = () => res(r && 'result' in r ? r.result : undefined);
+        t.onerror = () => rej(t.error);
+        t.onabort = () => rej(t.error);
+      } catch (e) { rej(e); }
+    });
+  }
+  return {
+    available: async () => !!(await open()),
+    put: (k, v) => tx('kv', 'readwrite', s => s.put(v, k)),
+    get: (k) => tx('kv', 'readonly', s => s.get(k)),
+    del: (k) => tx('kv', 'readwrite', s => s.delete(k)),
+    addChunk: (c) => tx('chunks', 'readwrite', s => s.add(c)),
+    allChunks: () => tx('chunks', 'readonly', s => s.getAll()),
+    clearChunks: () => tx('chunks', 'readwrite', s => s.clear()),
+  };
+})();
+
+/* ------------------------------------------------------------- utilities */
+function fnv(s) { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } return h.toString(16).padStart(8, '0'); }
+function uid(p) { return p + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
+function nowIso() { const d = new Date(), z = -d.getTimezoneOffset(), s = z >= 0 ? '+' : '-', p = n => String(Math.abs(n)).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds()) + s + p(Math.floor(Math.abs(z) / 60)) + ':' + p(Math.abs(z) % 60); }
+function stamp() { const d = new Date(), p = n => String(n).padStart(2, '0'); return '' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes()); }
+const SENTENCES = JSON.parse(document.getElementById('sample-sentences').textContent);
+const DEFAULT_SETTINGS = {
+  refHz: null, crossfadeMs: 12, speed: 1, gapMs: 0, gain: 1, sokuonMs: 70, choonMs: 160,
+  pauseComma: 180, pausePeriod: 350, pauseQ: 350, targetRms: 0.12, peakMax: 0.6, fadeMs: 3, hpHz: 80, gateDb: -50,
+  lowConfidence: 0.5, pitchTolCents: 150, exportRate: 24000, silThresholdDb: -35, silMinMs: 120, segMinMs: 60, autoDict: true,
+};
+
+/* ------------------------------------------------------------- Project */
+const Project = (() => {
+  let P = null;               // project json
+  const audio = new Map();    // recId -> {x: Float32Array, sr}
+  const listeners = [];
+  function blank(name) {
+    return { format: 'voiceproj', version: 1, name: name || 'わたしの声', createdAt: nowIso(), updatedAt: nowIso(),
+      settings: { ...DEFAULT_SETTINGS }, recordings: [], picks: {}, lines: [], dictionary: {} };
+  }
+  function reset(name) { P = blank(name); audio.clear(); changed('reset'); }
+  function changed(what) { if (P) P.updatedAt = nowIso(); for (const f of listeners) { try { f(what); } catch (e) { console.error(e); } } }
+  function onChange(f) { listeners.push(f); }
+  function get() { return P; }
+  function rec(id) { return P.recordings.find(r => r.id === id); }
+  function wavBytes(id) { const a = audio.get(id); return DSP.encodeWav(a.x, a.sr); }
+  function addRecording(meta, x, sr) {
+    const id = meta.id || uid('r');
+    audio.set(id, { x, sr });
+    const r = { id, name: meta.name || id, kind: meta.kind || 'free', sentenceId: meta.sentenceId || null,
+      text: meta.text || '', kana: meta.kana || '', expected: meta.expected || [], sampleRate: sr, length: x.length,
+      crc32: '', createdAt: nowIso(), labels: meta.labels || [], labelsFrom: null };
+    if (meta.hash) r.hash = meta.hash;
+    r.crc32 = Zip.hex(Zip.crc32(DSP.encodeWav(x, sr)));
+    P.recordings.push(r);
+    changed('recording');
+    return r;
+  }
+  function removeRecording(id) {
+    P.recordings = P.recordings.filter(r => r.id !== id);
+    audio.delete(id);
+    for (const k of Object.keys(P.picks)) if (P.picks[k].startsWith(id + '#')) delete P.picks[k];
+    changed('recording');
+  }
+  function setLabels(id, labels, from) {
+    const r = rec(id);
+    r.labels = labels.map(l => ({ kana: l.kana, start: +l.start, end: +l.end, confidence: l.confidence == null ? null : +l.confidence, src: l.src || 'manual' }))
+      .sort((a, b) => a.start - b.start);
+    if (from !== undefined) r.labelsFrom = from;
+    for (const k of Object.keys(P.picks)) if (P.picks[k].startsWith(id + '#')) delete P.picks[k];
+    changed('labels');
+  }
+  async function toBytes() {
+    const files = [{ name: 'project.json', data: JSON.stringify(P, null, 1) }];
+    for (const r of P.recordings) if (audio.has(r.id)) files.push({ name: 'audio/' + r.id + '.wav', data: wavBytes(r.id) });
+    return Zip.write(files);
+  }
+  async function fromBytes(bytes) {
+    const m = await Zip.read(bytes);
+    const pj = m.get('project.json');
+    if (!pj) throw new Error('project.json がありません');
+    const j = JSON.parse(new TextDecoder().decode(pj));
+    if (j.format !== 'voiceproj') throw new Error('VOICE のプロジェクトではありません');
+    const newAudio = new Map();
+    for (const r of j.recordings) {
+      const w = m.get('audio/' + r.id + '.wav');
+      if (w) { const d = DSP.decodeWav(w); newAudio.set(r.id, d); }
+    }
+    j.settings = { ...DEFAULT_SETTINGS, ...(j.settings || {}) };
+    j.picks = j.picks || {}; j.lines = j.lines || []; j.dictionary = j.dictionary || {};
+    P = j; audio.clear(); for (const [k, v] of newAudio) audio.set(k, v);
+    changed('load');
+    return P;
+  }
+  function snapshot() { return { json: JSON.stringify(P), audio: P.recordings.filter(r => audio.has(r.id)).map(r => [r.id, audio.get(r.id).x, audio.get(r.id).sr]) }; }
+  function restore(s) {
+    const j = JSON.parse(s.json);
+    j.settings = { ...DEFAULT_SETTINGS, ...(j.settings || {}) };
+    P = j; audio.clear();
+    for (const [id, x, sr] of s.audio) audio.set(id, { x: x instanceof Float32Array ? x : new Float32Array(x), sr });
+    changed('load');
+  }
+  /** recIds -> {bytes, count} */
+  function cutRequest(recIds) {
+    const rid = 'req-' + stamp();
+    const recs = [];
+    const files = [];
+    for (const id of recIds) {
+      const r = rec(id); if (!r || !audio.has(id)) continue;
+      const w = wavBytes(id);
+      r.crc32 = Zip.hex(Zip.crc32(w));
+      files.push({ name: id + '.wav', data: w });
+      recs.push({ recId: id, file: id + '.wav', sampleRate: r.sampleRate, duration: +(r.length / r.sampleRate).toFixed(4), crc32: r.crc32,
+        text: r.text, kana: r.kana, expected: r.expected });
+    }
+    const req = { format: 'voice-cutreq', version: 1, requestId: rid, project: P.name, created: nowIso(), recordings: recs };
+    files.unshift({ name: 'request.json', data: JSON.stringify(req, null, 1) });
+    files.push({ name: 'README.txt', data: 'VOICE 切り分け依頼\n\nClaude Code で次を実行して labels.json を作り、VOICE の「labels.json を読み込む」で取り込みます。\n\n  python3 tools/voice-align/align.py <このファイル>.cutreq.zip -o labels.json\n\n詳しくは tools/voice-align/README.md\n' });
+    return { bytes: Zip.write(files), count: recs.length, requestId: rid };
+  }
+  /** labels.json object -> report */
+  function importLabels(j) {
+    const report = { applied: [], warnings: [] };
+    let list;
+    if (j && j.format === 'voice-labels' && Array.isArray(j.recordings)) list = j.recordings;
+    else if (j && j.recId && Array.isArray(j.labels)) list = [j];
+    else throw new Error('labels.json の形式ではありません');
+    for (const lr of list) {
+      const r = rec(lr.recId);
+      if (!r) { report.warnings.push(lr.recId + ': この録音はプロジェクトにありません'); continue; }
+      if (lr.crc32 && r.crc32 && lr.crc32 !== r.crc32) report.warnings.push(r.name + ': 音声が依頼時と違います（CRC不一致）。録り直した録音かもしれません');
+      const labs = (lr.labels || []).filter(l => isFinite(l.start) && isFinite(l.end) && l.end > l.start)
+        .map(l => ({ kana: String(l.kana), start: +l.start, end: +l.end, confidence: l.confidence == null ? null : +l.confidence, src: 'ai' }));
+      if (r.expected.length && labs.length !== r.expected.length) report.warnings.push(r.name + ': ラベル ' + labs.length + ' 個 / 期待 ' + r.expected.length + ' 音');
+      setLabels(r.id, labs, { generator: j.generator || '', method: lr.method || '', at: nowIso() });
+      for (const w of (lr.warnings || [])) report.warnings.push(r.name + ': ' + w);
+      report.applied.push({ id: r.id, name: r.name, n: labs.length, low: labs.filter(l => l.confidence != null && l.confidence < P.settings.lowConfidence).length, method: lr.method });
+    }
+    return report;
+  }
+  return { reset, get, rec, audio, addRecording, removeRecording, setLabels, toBytes, fromBytes, snapshot, restore, cutRequest, importLabels, changed, onChange, wavBytes };
+})();
+
+/* ------------------------------------------------------------- Bank */
+const Bank = (() => {
+  const mcache = new Map(), ucache = new Map();
+  function takes() {
+    const P = Project.get(), out = [];
+    for (const r of P.recordings) {
+      if (r.kind === 'phrase') continue;
+      r.labels.forEach((l, i) => {
+        const k = Kana.normalize(l.kana);
+        if (Kana.isBankMora(k)) out.push({ key: r.id + '#' + i, rec: r, i, kana: k, start: l.start, end: l.end, conf: l.confidence, src: l.src });
+      });
+    }
+    return out;
+  }
+  function seg(t) { const a = Project.audio.get(t.rec.id); if (!a) return null; return { x: a.x.subarray(Math.max(0, Math.floor(t.start * a.sr)), Math.min(a.x.length, Math.ceil(t.end * a.sr))), sr: a.sr }; }
+  function measure(t) {
+    const k = t.key + '@' + t.start.toFixed(4) + '-' + t.end.toFixed(4);
+    if (mcache.has(k)) return mcache.get(k);
+    const s = seg(t);
+    const m = s ? { f0: DSP.pitch(s.x, s.sr).f0, dur: t.end - t.start, rmsDb: DSP.db(DSP.rms(s.x)) } : { f0: null, dur: 0, rmsDb: -120 };
+    mcache.set(k, m);
+    return m;
+  }
+  function refHz(all) {
+    const P = Project.get();
+    if (P.settings.refHz) return +P.settings.refHz;
+    const f = (all || takes()).map(t => measure(t).f0).filter(Boolean).sort((a, b) => a - b);
+    return f.length ? f[Math.floor(f.length / 2)] : null;
+  }
+  function byKana(all) {
+    const m = new Map();
+    for (const t of (all || takes())) { if (!m.has(t.kana)) m.set(t.kana, []); m.get(t.kana).push(t); }
+    return m;
+  }
+  function rank(list, ref) {
+    return list.map(t => ({ t, m: measure(t) })).sort((a, b) => {
+      const ca = a.m.f0 && ref ? Math.abs(DSP.cents(a.m.f0, ref)) : 1e9, cb = b.m.f0 && ref ? Math.abs(DSP.cents(b.m.f0, ref)) : 1e9;
+      if (Math.abs(ca - cb) > 1) return ca - cb;
+      const ma = a.t.src === 'manual' ? 1 : 0, mb = b.t.src === 'manual' ? 1 : 0;
+      if (ma !== mb) return mb - ma;
+      return (b.t.conf == null ? 1 : b.t.conf) - (a.t.conf == null ? 1 : a.t.conf);
+    });
+  }
+  /** kana -> {take, measure, manual, cents} | null */
+  function chosen(kana, ctx) {
+    ctx = ctx || context();
+    const list = ctx.map.get(kana);
+    if (!list || !list.length) return null;
+    const P = Project.get();
+    const pk = P.picks[kana];
+    let pick = pk ? list.find(t => t.key === pk) : null;
+    const ranked = rank(list, ctx.ref);
+    const best = pick ? { t: pick, m: measure(pick) } : ranked[0];
+    return { take: best.t, m: best.m, manual: !!pick, cents: best.m.f0 && ctx.ref ? DSP.cents(best.m.f0, ctx.ref) : null, ranked };
+  }
+  function context() { const all = takes(); return { all, map: byKana(all), ref: refHz(all) }; }
+  /** processed unit (Float32Array at SR_WORK) for a region of a recording */
+  function processRegion(recId, start, end, key) {
+    const P = Project.get(), S = P.settings;
+    const ck = key + '|' + start.toFixed(4) + '|' + end.toFixed(4) + '|' + [S.hpHz, S.gateDb, S.targetRms, S.peakMax, S.fadeMs].join(',');
+    if (ucache.has(ck)) return ucache.get(ck);
+    const a = Project.audio.get(recId);
+    if (!a) return null;
+    const pre = Math.round(0.05 * a.sr);
+    const s0 = Math.max(0, Math.floor(start * a.sr)), s1 = Math.min(a.x.length, Math.ceil(end * a.sr));
+    if (s1 - s0 < 8) return null;
+    const p0 = Math.max(0, s0 - pre);
+    let y = DSP.biquad(a.x.subarray(p0, s1), a.sr, 'hp', S.hpHz).slice(s0 - p0);
+    y = DSP.gate(y, a.sr, S.gateDb);
+    y = DSP.resample(y, a.sr, SR_WORK);
+    // loudness: RMS of frames within 20 dB of the loudest
+    const fd = DSP.frameDb(y, SR_WORK, 10);
+    const mx = Math.max(...fd.db);
+    let acc = 0, n = 0;
+    fd.db.forEach((d, f) => { if (d > mx - 20) { const a0 = f * fd.hop, b0 = Math.min(y.length, a0 + fd.hop); for (let i = a0; i < b0; i++) { acc += y[i] * y[i]; n++; } } });
+    const r = n ? Math.sqrt(acc / n) : 0;
+    let g = r > 1e-6 ? S.targetRms / r : 1;
+    const pk = DSP.peak(y) * g;
+    if (pk > S.peakMax) g *= S.peakMax / pk;
+    for (let i = 0; i < y.length; i++) y[i] *= g;
+    DSP.fade(y, SR_WORK, S.fadeMs);
+    ucache.set(ck, y);
+    return y;
+  }
+  function unit(t) { return processRegion(t.rec.id, t.start, t.end, t.key); }
+  function phrases() {
+    const P = Project.get(), out = [];
+    for (const r of P.recordings) {
+      if (r.kind !== 'phrase' || !r.labels.length) continue;
+      const l = r.labels[0];
+      const morae = Reading.parse(r.kana, {}).items.filter(i => i.t === 'm').map(i => i.norm);
+      if (!morae.length) continue;
+      out.push({ rec: r, morae, stale: !!(r.hash && r.hash !== fnv(r.text)), start: l.start, end: l.end });
+    }
+    return out.sort((a, b) => b.morae.length - a.morae.length);
+  }
+  function phraseUnit(ph) { return processRegion(ph.rec.id, ph.start, ph.end, ph.rec.id + '#phrase'); }
+  function clear() { mcache.clear(); ucache.clear(); }
+  return { takes, measure, refHz, chosen, context, unit, phrases, phraseUnit, clear, byKana };
+})();
+
+/* ------------------------------------------------------------- Synth */
+const Synth = (() => {
+  /** items (Reading) -> steps */
+  function plan(items, phraseList, has) {
+    const steps = [];
+    for (let i = 0; i < items.length;) {
+      const it = items[i];
+      if (it.t === 'm') {
+        let hit = null;
+        for (const ph of phraseList) {
+          if (ph.stale) continue;
+          let ok = true;
+          for (let k = 0; k < ph.morae.length; k++) { const jt = items[i + k]; if (!jt || jt.t !== 'm' || jt.norm !== ph.morae[k]) { ok = false; break; } }
+          if (ok) { hit = ph; break; }
+        }
+        if (hit) { steps.push({ t: 'phrase', ph: hit, from: i, to: i + hit.morae.length }); i += hit.morae.length; continue; }
+        if (it.norm === 'っ') steps.push({ t: 'sokuon', from: i, to: i + 1 });
+        else if (it.norm === 'ー') steps.push({ t: 'choon', from: i, to: i + 1 });
+        else if (has(it.norm)) steps.push({ t: 'mora', kana: it.norm, from: i, to: i + 1 });
+        else steps.push({ t: 'missing', kana: it.norm, from: i, to: i + 1 });
+      } else if (it.t === 'p') steps.push({ t: 'pause', kind: it.kind, from: i, to: i + 1 });
+      else steps.push({ t: 'unresolved', src: it.src, from: i, to: i + 1 });
+      i++;
+    }
+    return steps;
+  }
+  function loopTo(seg, n, xf) {
+    const out = new Float32Array(n);
+    if (!seg.length) return out;
+    xf = Math.min(xf, Math.floor(seg.length / 3));
+    let pos = 0;
+    while (pos < n) {
+      for (let k = 0; k < seg.length && pos + k < n; k++) {
+        let v = seg[k];
+        if (pos > 0 && k < xf) { const a = k / xf; out[pos + k] = out[pos + k] * Math.cos(a * Math.PI / 2) + v * Math.sin(a * Math.PI / 2); continue; }
+        out[pos + k] = v;
+      }
+      pos += Math.max(1, seg.length - xf);
+    }
+    DSP.fade(out, SR_WORK, 2);
+    return out;
+  }
+  function stretch(u, factor, xfS) {
+    if (factor <= 1.001) return u;
+    const add = Math.round(u.length * (factor - 1));
+    const a = Math.floor(u.length * 0.55), b = Math.floor(u.length * 0.9);
+    const loop = loopTo(u.subarray(a, b), add + xfS * 2, xfS);
+    const out = new Float32Array(b + loop.length - 2 * xfS + (u.length - b));
+    out.set(u.subarray(0, b));
+    // crossfade loop in at b - xfS, then tail back in
+    let p = b - xfS;
+    for (let k = 0; k < loop.length; k++) {
+      if (k < xfS) { const g = k / xfS; out[p + k] = out[p + k] * Math.cos(g * Math.PI / 2) + loop[k] * Math.sin(g * Math.PI / 2); }
+      else out[p + k] = loop[k];
+    }
+    p += loop.length - xfS;
+    for (let k = 0; k < u.length - b; k++) {
+      const v = u[b + k];
+      if (k < xfS && p + k < out.length) { const g = k / xfS; out[p + k] = out[p + k] * Math.cos(g * Math.PI / 2) + v * Math.sin(g * Math.PI / 2); }
+      else if (p + k < out.length) out[p + k] = v;
+    }
+    return out;
+  }
+  /**
+   * steps -> {x, sr, timeline, warnings, missing}
+   * getUnit(step) -> Float32Array (SR_WORK) | null
+   */
+  function render(steps, getUnit, S) {
+    const sr = SR_WORK, xfS = Math.round(S.crossfadeMs * sr / 1000), gapS = Math.round(S.gapMs * sr / 1000);
+    const pauseMs = { comma: S.pauseComma, period: S.pausePeriod, q: S.pauseQ };
+    const units = steps.map(st => (st.t === 'mora' || st.t === 'phrase') ? getUnit(st) : null);
+    let cap = sr; units.forEach(u => { if (u) cap += u.length * Math.max(1, 1 / S.speed) + sr * 0.1; });
+    cap += steps.length * Math.round(sr * Math.max(S.choonMs, S.sokuonMs, S.pausePeriod, S.pauseComma, S.pauseQ, S.gapMs) / 1000 + 0.05);
+    let buf = new Float32Array(Math.ceil(cap));
+    let end = 0, lastAudio = false, prev = null;
+    const timeline = [], warnings = [], missing = [];
+    const place = (u, st, crossfade) => {
+      let start = end;
+      if (lastAudio && prev && crossfade) {
+        if (gapS > 0) { start = end + gapS; }
+        else {
+          let ov = xfS;
+          if (st.t === 'mora' && S.speed > 1) ov = Math.max(ov, Math.round(u.length - u.length / S.speed));
+          ov = Math.min(ov, Math.floor(0.4 * Math.min(prev.length, u.length)));
+          start = end - ov;
+          for (let k = 0; k < ov; k++) { const g = (k + 0.5) / ov; buf[start + k] = buf[start + k] * Math.cos(g * Math.PI / 2) + u[k] * Math.sin(g * Math.PI / 2); }
+          buf.set(u.subarray(ov), start + ov);
+          end = start + u.length; return start;
+        }
+      }
+      buf.set(u, start);
+      end = start + u.length;
+      return start;
+    };
+    steps.forEach((st, si) => {
+      if (st.t === 'mora' || st.t === 'phrase') {
+        let u = units[si];
+        if (!u) { missing.push(st.kana || '?'); timeline.push({ si, start: end, end }); return; }
+        if (st.t === 'mora' && S.speed < 1) u = stretch(u, 1 / S.speed, Math.round(0.006 * sr));
+        const s = place(u, st, true);
+        timeline.push({ si, start: s, end: s + u.length });
+        lastAudio = true; prev = u;
+      } else if (st.t === 'sokuon') {
+        if (lastAudio && prev) {
+          const cut = Math.round(prev.length * 0.2), newEnd = Math.max(0, end - cut), f = Math.round(0.005 * sr);
+          for (let k = 0; k < f && newEnd - f + k >= 0; k++) buf[newEnd - f + k] *= 1 - (k + 1) / f;
+          buf.fill(0, newEnd, end);
+          end = newEnd;
+        }
+        const n = Math.round(S.sokuonMs * sr / 1000);
+        timeline.push({ si, start: end, end: end + n });
+        end += n; lastAudio = false; prev = null;
+      } else if (st.t === 'choon') {
+        if (lastAudio && prev) {
+          const n = Math.round(S.choonMs * sr / 1000);
+          const seg = prev.subarray(Math.floor(prev.length * 0.55), Math.floor(prev.length * 0.9));
+          const u = loopTo(seg, n + xfS, Math.round(0.006 * sr));
+          const s = place(u, { t: 'choon' }, true);
+          timeline.push({ si, start: s, end: s + u.length });
+          prev = u;
+        } else { warnings.push('ー の前に音がありません'); timeline.push({ si, start: end, end }); }
+      } else if (st.t === 'pause') {
+        const n = Math.round((pauseMs[st.kind] || 0) * sr / 1000);
+        timeline.push({ si, start: end, end: end + n });
+        end += n; lastAudio = false; prev = null;
+      } else if (st.t === 'missing') {
+        missing.push(st.kana); timeline.push({ si, start: end, end });
+      } else {
+        warnings.push('読めない文字: ' + st.src); timeline.push({ si, start: end, end });
+      }
+    });
+    let x = buf.slice(0, end);
+    const g = S.gain;
+    for (let i = 0; i < x.length; i++) x[i] *= g;
+    const lim = S.peakMax * g, pk = DSP.peak(x);
+    if (pk > lim && pk > 0) { const k = lim / pk; for (let i = 0; i < x.length; i++) x[i] *= k; }
+    if (missing.length) warnings.unshift('素材が無い音を飛ばしました: ' + [...new Set(missing)].join(' '));
+    return { x, sr, timeline, warnings, missing };
+  }
+  /** convenience: text -> rendered audio using the project bank */
+  function speak(text, opts) {
+    opts = opts || {};
+    const P = Project.get();
+    const parsed = opts.reading ? Reading.parse(opts.reading, {}) : Reading.parse(text, P.dictionary, { learn: true });
+    const ctx = Bank.context();
+    const phs = Bank.phrases();
+    const steps = plan(parsed.items, phs, k => ctx.map.has(k));
+    const res = render(steps, st => st.t === 'phrase' ? Bank.phraseUnit(st.ph) : (() => { const c = Bank.chosen(st.kana, ctx); return c ? Bank.unit(c.take) : null; })(), P.settings);
+    return { parsed, steps, ...res };
+  }
+  return { plan, render, speak, stretch, loopTo };
+})();
+
+/* ------------------------------------------------------------- Pack (export A) */
+const PLAYER_SRC = String.raw`/* voice-player.js — written by tools/voice.html (voice pack format 1).
+ * Usage:
+ *   const voice = createVoicePlayer({ base: 'voice/' });   // folder with voice.json + voice.wav
+ *   voice.load();                       // fetch + decode once; never throws (resolves true/false)
+ *   voice.play('boss.intro.1');         // -> true if it started, false otherwise (show the text anyway)
+ *   voice.stop(); voice.setVolume(0.8); voice.setEnabled(false);
+ *   voice.onStart = id => {...}; voice.onEnd = id => {...};   // e.g. duck the BGM
+ * Only one voice at a time: a new line fades the previous one out in 30 ms.
+ */
+(function (global) {
+  'use strict';
+  function createVoicePlayer(opts) {
+    opts = opts || {};
+    var base = opts.base == null ? 'voice/' : opts.base;
+    if (base && base.charAt(base.length - 1) !== '/') base += '/';
+    var ctx = null, out = null, buffer = null, meta = null, cur = null, loading = null;
+    var enabled = true, volume = opts.volume == null ? 1 : opts.volume;
+    var api = { onStart: null, onEnd: null };
+    function getCtx() {
+      if (ctx) return ctx;
+      var AC = global.AudioContext || global.webkitAudioContext;
+      if (!AC) return null;
+      try { ctx = new AC(); out = ctx.createGain(); out.gain.value = volume; out.connect(ctx.destination); } catch (e) { ctx = null; }
+      return ctx;
+    }
+    function unlock() { var c = getCtx(); if (c && c.state === 'suspended' && c.resume) { try { c.resume(); } catch (e) {} } }
+    function first() {
+      unlock();
+      ['pointerdown', 'touchend', 'keydown'].forEach(function (t) { global.removeEventListener(t, first, true); });
+    }
+    if (global.addEventListener) ['pointerdown', 'touchend', 'keydown'].forEach(function (t) { global.addEventListener(t, first, true); });
+    function call(f, id) { if (typeof f === 'function') { try { f(id); } catch (e) {} } }
+    function stopCurrent(fade) {
+      if (!cur) return;
+      var o = cur; cur = null;
+      try {
+        var t = ctx.currentTime;
+        o.g.gain.cancelScheduledValues(t);
+        o.g.gain.setValueAtTime(o.g.gain.value, t);
+        o.g.gain.linearRampToValueAtTime(0, t + fade);
+        o.src.stop(t + fade + 0.01);
+      } catch (e) {}
+      call(api.onEnd, o.id);
+    }
+    api.load = function () {
+      if (loading) return loading;
+      loading = fetch(base + 'voice.json', { cache: 'no-cache' })
+        .then(function (r) { if (!r.ok) throw new Error('voice.json ' + r.status); return r.json(); })
+        .then(function (j) {
+          if (!j || j.format !== 1 || !j.lines) throw new Error('unknown voice pack format');
+          meta = j;
+          return fetch(base + (j.file || 'voice.wav') + '?v=' + encodeURIComponent(j.version || ''));
+        })
+        .then(function (r) { if (!r.ok) throw new Error('voice.wav ' + r.status); return r.arrayBuffer(); })
+        .then(function (ab) {
+          var c = getCtx();
+          if (!c) throw new Error('no Web Audio');
+          return new Promise(function (res, rej) { var p = c.decodeAudioData(ab, res, rej); if (p && p.then) p.then(res, rej); });
+        })
+        .then(function (b) { buffer = b; return true; })
+        .catch(function (e) { if (global.console) console.warn('[voice] not loaded:', e && e.message); return false; });
+      return loading;
+    };
+    api.isReady = function () { return !!buffer; };
+    api.has = function (id) { return !!(meta && Object.prototype.hasOwnProperty.call(meta.lines, id)); };
+    api.ids = function () { return meta ? Object.keys(meta.lines) : []; };
+    api.play = function (id) {
+      try {
+        if (!enabled || !buffer || !meta || !api.has(id)) return false;
+        var line = meta.lines[id], c = getCtx();
+        if (!c) return false;
+        unlock();
+        stopCurrent(0.03);
+        var src = c.createBufferSource(), g = c.createGain();
+        src.buffer = buffer;
+        g.gain.value = (line.gain == null ? 1 : line.gain) * (meta.gain == null ? 1 : meta.gain);
+        src.connect(g); g.connect(out);
+        var me = { src: src, g: g, id: id };
+        src.onended = function () { if (cur === me) { cur = null; call(api.onEnd, id); } };
+        src.start(0, line.start, line.dur);
+        cur = me;
+        call(api.onStart, id);
+        return true;
+      } catch (e) { return false; }
+    };
+    api.stop = function () { stopCurrent(0.03); };
+    api.setVolume = function (v) { volume = Math.max(0, Math.min(1, Number(v) || 0)); if (out) out.gain.value = volume; };
+    api.setEnabled = function (b) { enabled = !!b; if (!enabled) stopCurrent(0.03); };
+    api.isPlaying = function () { return !!cur; };
+    return api;
+  }
+  global.createVoicePlayer = createVoicePlayer;
+})(typeof window !== 'undefined' ? window : this);
+`;
+
+const Pack = (() => {
+  function lineStatus(line) {
+    const P = Project.get();
+    const parsed = Reading.parse(line.text, P.dictionary, { learn: false });
+    const unresolved = parsed.items.filter(i => i.t === 'u').map(i => i.src);
+    const ctx = Bank.context();
+    const steps = Synth.plan(parsed.items, Bank.phrases(), k => ctx.map.has(k));
+    const missing = steps.filter(s => s.t === 'missing').map(s => s.kana);
+    const phrase = steps.some(s => s.t === 'phrase');
+    const stale = line.exportedHash && line.exportedHash !== fnv(line.text);
+    let status = phrase && steps.every(s => s.t === 'phrase' || s.t === 'pause') ? '定型句' : phrase ? '定型句＋合成' : '合成';
+    let level = 'ok';
+    if (unresolved.length) { status = '読み未確定'; level = 'bad'; }
+    else if (missing.length) { status = '素材不足'; level = 'bad'; }
+    else if (!steps.some(s => s.t === 'mora' || s.t === 'phrase')) { status = '空'; level = 'bad'; }
+    return { status, level, stale, unresolved, missing, steps, parsed };
+  }
+  /** -> {wav, json, report} */
+  function build() {
+    const P = Project.get(), S = P.settings, rate = S.exportRate;
+    const pieces = [], lines = {}, report = { exported: [], skipped: [] };
+    let pos = 0;
+    const gap = Math.round(0.1 * rate);
+    for (const line of P.lines) {
+      const st = lineStatus(line);
+      if (st.level === 'bad') { report.skipped.push({ id: line.id, why: st.status + (st.unresolved.length ? '（' + st.unresolved.join(' ') + '）' : '') + (st.missing.length ? '（' + [...new Set(st.missing)].join(' ') + '）' : '') }); continue; }
+      const r = Synth.speak(line.text);
+      // a line starts and ends with sound: drop silence that 、。 put at either end
+      let a = 0, b = r.x.length;
+      while (a < b && r.x[a] === 0) a++;
+      while (b > a && r.x[b - 1] === 0) b--;
+      const y = DSP.resample(r.x.subarray(a, b), r.sr, rate);
+      if (pieces.length) { pieces.push(new Float32Array(gap)); pos += gap; }
+      lines[line.id] = { start: +(pos / rate).toFixed(3), dur: +(y.length / rate).toFixed(3), gain: 1.0, text: line.text, hash: fnv(line.text) };
+      pieces.push(y); pos += y.length;
+      report.exported.push(line.id);
+    }
+    const all = new Float32Array(pos);
+    let p = 0; for (const a of pieces) { all.set(a, p); p += a.length; }
+    const wav = DSP.encodeWav(all, rate);
+    const json = { format: 1, name: P.name, version: nowIso().slice(0, 16), file: 'voice.wav', sampleRate: rate, gain: 1.0, lines };
+    report.seconds = all.length / rate;
+    report.levels = all.length ? DSP.bandLevels(all, rate) : null;
+    report.bytes = wav.length;
+    return { wav, json, report, samples: all };
+  }
+  function estimate() {
+    const P = Project.get();
+    let sec = 0, n = 0;
+    for (const line of P.lines) {
+      const st = lineStatus(line);
+      if (st.level === 'bad') continue;
+      n++;
+      sec += st.parsed.items.filter(i => i.t === 'm').length * 0.16 + 0.1;
+    }
+    return { lines: n, seconds: sec, bytes: Math.round(sec * P.settings.exportRate * 2 + 44) };
+  }
+  function markExported(ids) { const P = Project.get(); for (const l of P.lines) if (ids.includes(l.id)) l.exportedHash = fnv(l.text); Project.changed('lines'); }
+  return { build, estimate, lineStatus, markExported };
+})();
+
+/* ------------------------------------------------------------- Audio playback */
+const Play = (() => {
+  let ctx = null, cur = null;
+  function getCtx() { if (!ctx) { const AC = window.AudioContext || window.webkitAudioContext; ctx = new AC(); } if (ctx.state === 'suspended') ctx.resume(); return ctx; }
+  function stop() { if (cur) { try { cur.src.onended = null; cur.src.stop(); } catch (e) {} const c = cur; cur = null; if (c.onEnd) c.onEnd(); } }
+  function play(x, sr, opts) {
+    opts = opts || {};
+    stop();
+    if (!x || !x.length) return null;
+    const c = getCtx();
+    const b = c.createBuffer(1, x.length, sr);
+    b.getChannelData(0).set(x);
+    const src = c.createBufferSource();
+    src.buffer = b; src.connect(c.destination);
+    const h = { src, t0: c.currentTime + 0.02, sr, len: x.length, onEnd: opts.onEnd };
+    src.onended = () => { if (cur === h) { cur = null; if (h.onEnd) h.onEnd(); } };
+    src.start(h.t0);
+    cur = h;
+    return h;
+  }
+  function position() { if (!cur) return null; return Math.max(0, (ctx.currentTime - cur.t0)) * cur.sr; }
+  return { play, stop, getCtx, position, playing: () => !!cur };
+})();
+
+/* ------------------------------------------------------------- Recorder */
+const Rec = (() => {
+  let stream = null, mr = null, chunks = [], target = null, session = null, seq = 0, analyser = null, actx = null, raf = 0, t0 = 0;
+  const ok = () => !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+  function pickMime() {
+    const c = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'];
+    for (const m of c) { try { if (MediaRecorder.isTypeSupported(m)) return m; } catch (e) {} }
+    return '';
+  }
+  async function start(t, ui) {
+    target = t;
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } });
+    const mime = pickMime();
+    mr = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    chunks = []; session = uid('rs'); seq = 0;
+    mr.ondataavailable = e => {
+      if (!e.data || !e.data.size) return;
+      chunks.push(e.data);
+      Store.addChunk({ session, seq: seq++, blob: e.data, mime: mr.mimeType || mime, target, at: Date.now() }).catch(() => {});
+    };
+    mr.start(1000);
+    actx = Play.getCtx();
+    const srcNode = actx.createMediaStreamSource(stream);
+    analyser = actx.createAnalyser(); analyser.fftSize = 2048;
+    srcNode.connect(analyser);
+    t0 = performance.now();
+    const buf = new Float32Array(analyser.fftSize);
+    let lastPitch = 0;
+    const tick = () => {
+      analyser.getFloatTimeDomainData(buf);
+      const r = DSP.rms(buf);
+      ui.level(Math.min(1, Math.max(0, (DSP.db(r) + 60) / 60)));
+      ui.time((performance.now() - t0) / 1000);
+      if (performance.now() - lastPitch > 120) {
+        lastPitch = performance.now();
+        ui.pitch(DSP.db(r) > -45 ? DSP.pitch(buf, actx.sampleRate).f0 : null);
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    tick();
+  }
+  function cleanup() { cancelAnimationFrame(raf); if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; analyser = null; }
+  function stop() {
+    return new Promise((res) => {
+      if (!mr) return res(null);
+      mr.onstop = async () => {
+        cleanup();
+        const blob = new Blob(chunks, { type: mr.mimeType || 'audio/webm' });
+        const t = target; mr = null;
+        res({ blob, target: t, session });
+      };
+      mr.stop();
+    });
+  }
+  function cancel() { if (mr) { mr.onstop = () => {}; try { mr.stop(); } catch (e) {} mr = null; } cleanup(); Store.clearChunks().catch(() => {}); }
+  return { ok, start, stop, cancel, recording: () => !!mr };
+})();
+
+async function decodeAny(arrayBuffer) {
+  const u8 = new Uint8Array(arrayBuffer);
+  if (u8.length > 12 && String.fromCharCode(...u8.subarray(0, 4)) === 'RIFF') {
+    try { return DSP.decodeWav(u8); } catch (e) { /* fall through */ }
+  }
+  const c = Play.getCtx();
+  const b = await new Promise((res, rej) => { const p = c.decodeAudioData(arrayBuffer.slice(0), res, rej); if (p && p.then) p.then(res, rej); });
+  const x = new Float32Array(b.length);
+  for (let ch = 0; ch < b.numberOfChannels; ch++) { const d = b.getChannelData(ch); for (let i = 0; i < x.length; i++) x[i] += d[i] / b.numberOfChannels; }
+  return { x, sr: b.sampleRate };
+}
+
+/* ------------------------------------------------------------- waveform Editor */
+const Editor = (() => {
+  const cv = () => document.getElementById('wave');
+  let recId = null, view = { t0: 0, t1: 1 }, sel = -1, drag = null, playhead = null, onSelect = () => {}, dpr = 1;
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  function data() { const r = recId && Project.rec(recId), a = recId && Project.audio.get(recId); return r && a ? { r, a, dur: a.x.length / a.sr } : null; }
+  function setRec(id) { recId = id; sel = -1; const d = data(); view = { t0: 0, t1: d ? d.dur : 1 }; draw(); onSelect(sel); }
+  function tx(t, w) { return (t - view.t0) / (view.t1 - view.t0) * w; }
+  function xt(x, w) { return view.t0 + x / w * (view.t1 - view.t0); }
+  function draw() {
+    const c = cv(); if (!c) return;
+    dpr = window.devicePixelRatio || 1;
+    const W = c.clientWidth, H = c.clientHeight;
+    if (!W) return;
+    if (c.width !== Math.round(W * dpr) || c.height !== Math.round(H * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+    const g = c.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.fillStyle = css('--panel'); g.fillRect(0, 0, W, H);
+    const d = data();
+    if (!d) { g.fillStyle = css('--sub'); g.font = '14px system-ui'; g.fillText('録音を選んでください', 12, 24); return; }
+    const S = Project.get().settings;
+    const top = 22, h = H - top - 16, mid = top + h / 2;
+    // labels
+    d.r.labels.forEach((l, i) => {
+      const x0 = tx(l.start, W), x1 = tx(l.end, W);
+      if (x1 < 0 || x0 > W) return;
+      const low = l.confidence != null && l.confidence < S.lowConfidence;
+      const col = l.src === 'manual' || l.confidence == null ? css('--lab-man') : low ? css('--lab-low') : css('--lab');
+      g.globalAlpha = i === sel ? 0.35 : low ? 0.22 : 0.13;
+      g.fillStyle = i === sel ? css('--sel') : col; g.fillRect(x0, top, x1 - x0, h);
+      g.globalAlpha = 1;
+      g.fillStyle = col; g.fillRect(x0, top, 1.5, h); g.fillRect(x1 - 1.5, top, 1.5, h);
+      g.fillStyle = low ? css('--lab-low') : css('--ink');
+      g.font = (x1 - x0 > 26 ? 15 : 11) + 'px system-ui';
+      const exp = d.r.expected[i];
+      const txt = l.kana + (low ? '?' : '') + (exp && Kana.normalize(exp) !== Kana.normalize(l.kana) ? '≠' : '');
+      g.fillText(txt, Math.max(2, x0 + 3), 16);
+    });
+    // waveform
+    g.strokeStyle = css('--wave'); g.beginPath();
+    const { x, sr } = d.a;
+    for (let px = 0; px < W; px++) {
+      const a = Math.max(0, Math.floor(xt(px, W) * sr)), b = Math.min(x.length, Math.floor(xt(px + 1, W) * sr));
+      let mn = 0, mx = 0;
+      for (let i = a; i < b; i++) { const v = x[i]; if (v < mn) mn = v; if (v > mx) mx = v; }
+      g.moveTo(px + 0.5, mid - mx * h / 2); g.lineTo(px + 0.5, mid - mn * h / 2 + 0.5);
+    }
+    g.stroke();
+    // ruler
+    g.fillStyle = css('--sub'); g.font = '10px system-ui';
+    const span = view.t1 - view.t0, step = [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10].find(s => span / s < W / 70) || 10;
+    for (let t = Math.ceil(view.t0 / step) * step; t < view.t1; t += step) { const px = tx(t, W); g.fillRect(px, H - 14, 1, 4); g.fillText(t.toFixed(step < 0.1 ? 2 : 1), px + 2, H - 3); }
+    if (playhead != null) { g.fillStyle = css('--bad'); g.fillRect(tx(playhead, W), top, 2, h); }
+  }
+  function hit(px, W) {
+    const d = data(); if (!d) return null;
+    const ls = d.r.labels;
+    let best = null, bd = 9;
+    ls.forEach((l, i) => {
+      for (const [edge, t] of [['start', l.start], ['end', l.end]]) { const dd = Math.abs(tx(t, W) - px); if (dd < bd) { bd = dd; best = { kind: 'edge', i, edge }; } }
+    });
+    if (best) return best;
+    const t = xt(px, W);
+    const i = ls.findIndex(l => t >= l.start && t <= l.end);
+    return i >= 0 ? { kind: 'region', i } : { kind: 'empty', t };
+  }
+  function attach(onSel) {
+    onSelect = onSel;
+    const c = cv();
+    c.addEventListener('pointerdown', e => {
+      const d = data(); if (!d) return;
+      const r = c.getBoundingClientRect(), px = e.clientX - r.left, W = r.width;
+      const h = hit(px, W);
+      drag = { h, x0: px, moved: false, W, id: e.pointerId };
+      if (h.kind === 'edge') { c.setPointerCapture(e.pointerId); e.preventDefault(); }
+      if (h.kind === 'empty') { c.setPointerCapture(e.pointerId); }
+    });
+    c.addEventListener('pointermove', e => {
+      const r = c.getBoundingClientRect(), px = e.clientX - r.left;
+      if (!drag) { const h = hit(px, r.width); c.style.cursor = h && h.kind === 'edge' ? 'ew-resize' : h && h.kind === 'region' ? 'pointer' : 'crosshair'; return; }
+      if (Math.abs(px - drag.x0) > 4) drag.moved = true;
+      const d = data(); if (!d || !drag.moved) return;
+      const t = Math.max(0, Math.min(d.dur, xt(px, drag.W)));
+      const ls = d.r.labels;
+      if (drag.h.kind === 'edge') {
+        const l = ls[drag.h.i], min = 0.01;
+        if (drag.h.edge === 'start') {
+          const prev = ls[drag.h.i - 1];
+          const joined = prev && Math.abs(prev.end - l.start) < 0.0015;
+          const lo = prev ? (joined ? prev.start + min : prev.end) : 0;
+          l.start = Math.max(lo, Math.min(l.end - min, t));
+          if (joined) prev.end = l.start;
+        } else {
+          const next = ls[drag.h.i + 1];
+          const joined = next && Math.abs(next.start - l.end) < 0.0015;
+          const hi = next ? (joined ? next.end - min : next.start) : d.dur;
+          l.end = Math.min(hi, Math.max(l.start + min, t));
+          if (joined) next.start = l.end;
+        }
+        l.src = 'manual'; l.confidence = null;
+        sel = drag.h.i;
+      } else if (drag.h.kind === 'empty') {
+        drag.newT = [Math.min(drag.h.t, t), Math.max(drag.h.t, t)];
+        playhead = null;
+      }
+      draw();
+      if (drag.h.kind === 'empty' && drag.newT) {
+        const g = c.getContext('2d'), W = drag.W; g.fillStyle = css('--sel'); g.globalAlpha = 0.3;
+        g.fillRect(tx(drag.newT[0], W), 0, tx(drag.newT[1], W) - tx(drag.newT[0], W), c.clientHeight); g.globalAlpha = 1;
+      }
+    });
+    const up = () => {
+      if (!drag) return;
+      const d = data(), h = drag.h;
+      if (d) {
+        if (h.kind === 'edge' && drag.moved) { Project.changed('labels'); onSelect(sel); }
+        else if (h.kind === 'region' || (h.kind === 'edge' && !drag.moved)) { select(h.i, true); }
+        else if (h.kind === 'empty' && drag.newT && drag.newT[1] - drag.newT[0] > 0.02) {
+          const ls = d.r.labels;
+          let [a, b] = drag.newT;
+          for (const l of ls) { if (l.end > a && l.end <= b && l.start < a) a = l.end; if (l.start < b && l.start >= a && l.end > b) b = l.start; }
+          const idx = ls.filter(l => l.start < a).length;
+          const kana = d.r.expected[idx] || '？';
+          ls.splice(idx, 0, { kana, start: a, end: b, confidence: null, src: 'manual' });
+          Project.changed('labels');
+          select(idx, true);
+        }
+      }
+      drag = null; draw();
+    };
+    c.addEventListener('pointerup', up);
+    c.addEventListener('pointercancel', () => { drag = null; draw(); });
+    c.addEventListener('keydown', e => {
+      const d = data(); if (!d) return;
+      if (e.key === 'ArrowRight') { select(Math.min(d.r.labels.length - 1, sel + 1), true); e.preventDefault(); }
+      else if (e.key === 'ArrowLeft') { select(Math.max(0, sel - 1), true); e.preventDefault(); }
+      else if (e.key === ' ') { playSel(); e.preventDefault(); }
+      else if (e.key === 'Delete' || e.key === 'Backspace') { delSel(); e.preventDefault(); }
+    });
+    c.addEventListener('wheel', e => { if (!e.ctrlKey && !e.metaKey) return; e.preventDefault(); const r = c.getBoundingClientRect(); zoom(e.deltaY < 0 ? 0.8 : 1.25, xt(e.clientX - r.left, r.width)); }, { passive: false });
+    window.addEventListener('resize', draw);
+  }
+  function select(i, play) {
+    const d = data(); if (!d) return;
+    sel = i;
+    const l = d.r.labels[i];
+    if (l && (l.start < view.t0 || l.end > view.t1)) { const span = view.t1 - view.t0; view.t0 = Math.max(0, Math.min(d.dur - span, (l.start + l.end) / 2 - span / 2)); view.t1 = view.t0 + span; }
+    draw(); onSelect(sel);
+    if (play) playSel();
+  }
+  function playRange(a, b) {
+    const d = data(); if (!d) return;
+    const s0 = Math.floor(a * d.a.sr), s1 = Math.ceil(b * d.a.sr);
+    Play.play(d.a.x.slice(s0, s1), d.a.sr, { onEnd: () => { playhead = null; draw(); } });
+    const anim = () => { const p = Play.position(); if (p == null) return; playhead = a + p / d.a.sr; if (playhead > b) { playhead = null; draw(); return; } draw(); requestAnimationFrame(anim); };
+    requestAnimationFrame(anim);
+  }
+  function playSel() { const d = data(); if (!d) return; const l = d.r.labels[sel]; if (l) playRange(l.start, l.end); }
+  function playAll() { const d = data(); if (d) playRange(view.t0, view.t1 >= d.dur - 0.01 ? d.dur : view.t1); }
+  function delSel() { const d = data(); if (!d || !d.r.labels[sel]) return; d.r.labels.splice(sel, 1); sel = Math.min(sel, d.r.labels.length - 1); Project.changed('labels'); draw(); onSelect(sel); }
+  function zoom(f, center) {
+    const d = data(); if (!d) return;
+    const c = center == null ? (view.t0 + view.t1) / 2 : center;
+    let span = Math.max(0.05, Math.min(d.dur, (view.t1 - view.t0) * f));
+    view.t0 = Math.max(0, Math.min(d.dur - span, c - span / 2)); view.t1 = view.t0 + span;
+    draw();
+  }
+  function scrollTo(frac) { const d = data(); if (!d) return; const span = view.t1 - view.t0; view.t0 = (d.dur - span) * frac; view.t1 = view.t0 + span; draw(); }
+  function fit() { const d = data(); if (d) { view = { t0: 0, t1: d.dur }; draw(); } }
+  return { attach, setRec, draw, select, playSel, playAll, delSel, zoom, fit, scrollTo, sel: () => sel, rec: () => recId, view: () => view };
+})();
+
+/* auto cutting without AI */
+const Cut = (() => {
+  function silenceSplit(x, sr, S) {
+    const { db, hop } = DSP.frameDb(x, sr, 10);
+    const mx = Math.max(...db);
+    const thr = mx + S.silThresholdDb;
+    const minSil = Math.round(S.silMinMs / 10), minSeg = Math.round(S.segMinMs / 10);
+    const segs = [];
+    let i = 0;
+    while (i < db.length) {
+      while (i < db.length && db[i] <= thr) i++;
+      if (i >= db.length) break;
+      let j = i, quiet = 0, lastLoud = i;
+      while (j < db.length) { if (db[j] > thr) { quiet = 0; lastLoud = j; } else if (++quiet >= minSil) break; j++; }
+      if (lastLoud + 1 - i >= minSeg) segs.push([i, lastLoud + 1]);
+      i = j + 1;
+    }
+    return segs.map(([a, b]) => ({ start: Math.max(0, a * hop / sr - 0.005), end: Math.min(x.length / sr, b * hop / sr + 0.01) }));
+  }
+  function speechSpan(x, sr, S) {
+    const segs = silenceSplit(x, sr, { ...S, silMinMs: 100000 });
+    if (!segs.length) return { start: 0, end: x.length / sr };
+    return { start: segs[0].start, end: segs[segs.length - 1].end };
+  }
+  function evenSplit(x, sr, n, S) {
+    const sp = speechSpan(x, sr, S), out = [];
+    for (let i = 0; i < n; i++) out.push({ start: sp.start + (sp.end - sp.start) * i / n, end: sp.start + (sp.end - sp.start) * (i + 1) / n });
+    return out;
+  }
+  return { silenceSplit, evenSplit, speechSpan };
+})();
+
+/* ------------------------------------------------------------- UI */
+const UI = (() => {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  let tab = 'script', fileHandle = null, saveTimer = 0, lastAutosave = null, bankSel = null, speakState = null;
+  function toast(msg, ms) { const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), ms || 2600); }
+  function download(bytes, name, type) {
+    const url = URL.createObjectURL(new Blob([bytes], { type: type || 'application/octet-stream' }));
+    const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+  function pickFile(input, multiple) {
+    return new Promise(res => {
+      const el = $(input); el.value = ''; el.multiple = !!multiple;
+      el.onchange = () => res([...el.files]);
+      el.click();
+    });
+  }
+  const safeName = s => (s || 'voice').replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 40);
+
+  /* ---------- tabs */
+  function showTab(name) {
+    tab = name;
+    document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === name ? 'true' : 'false'));
+    document.querySelectorAll('section.tab').forEach(s => s.classList.toggle('on', s.id === 'tab-' + name));
+    render();
+    if (name === 'cut') requestAnimationFrame(() => Editor.draw());
+  }
+
+  /* ---------- script tab */
+  function coverage() {
+    const ctx = Bank.context();
+    const have = Kana.INVENTORY.filter(k => ctx.map.has(k));
+    const missing = Kana.INVENTORY.filter(k => !ctx.map.has(k));
+    return { have, missing, ctx };
+  }
+  function sentenceRecs(sid) { return Project.get().recordings.filter(r => r.sentenceId === sid); }
+  function recState(r) {
+    if (!r.labels.length) return { t: '未切り分け', c: 'warn' };
+    const S = Project.get().settings;
+    const low = r.labels.filter(l => l.confidence != null && l.confidence < S.lowConfidence).length;
+    const mism = r.expected.length && r.expected.length !== r.labels.length;
+    if (mism) return { t: '数が不一致 ' + r.labels.length + '/' + r.expected.length, c: 'bad' };
+    if (low) return { t: '要確認 ' + low, c: 'warn' };
+    return { t: '切り分け済 ' + r.labels.length, c: 'ok' };
+  }
+  function renderScript() {
+    const P = Project.get();
+    const cov = coverage();
+    $('covText').textContent = cov.have.length + ' / ' + Kana.INVENTORY.length + ' 音';
+    $('covBar').style.width = (100 * cov.have.length / Kana.INVENTORY.length).toFixed(1) + '%';
+    $('missingChips').innerHTML = cov.missing.length ? cov.missing.map(k => '<span class="chip bad">' + k + '</span>').join('') : '<span class="chip ok">すべてそろいました</span>';
+    $('btnRecMissing').disabled = !cov.missing.length;
+    // sentence occurrences
+    const occ = {};
+    const all = [...SENTENCES, ...(P.customSentences || [])];
+    for (const s of all) for (const m of Kana.splitMorae(s.kana)) { const k = Kana.normalize(m); occ[k] = (occ[k] || 0) + 1; }
+    $('sentList').innerHTML = all.map(s => {
+      const recs = sentenceRecs(s.id);
+      const n = Kana.splitMorae(s.kana).length;
+      const tags = recs.length ? recs.map(r => { const st = recState(r); return '<span class="tag ' + st.c + '">' + esc(st.t) + '</span>'; }).join(' ') : '<span class="tag">未録音</span>';
+      const rare = Kana.splitMorae(s.kana).map(Kana.normalize).filter(k => occ[k] === 1);
+      return '<div class="sent" data-sid="' + s.id + '"><div><div><b>' + esc(s.id) + '</b> ' + esc(s.text) + '</div><div class="k">' + esc(s.kana) + '（' + n + '音）</div>' +
+        '<div class="row small" style="margin-top:2px">' + tags + (rare.length ? '<span class="muted">この文にしか無い音: ' + esc(rare.join(' ')) + '</span>' : '') + '</div></div>' +
+        '<div class="acts"><button type="button" data-act="rec">● 録音</button><button type="button" data-act="imp">取り込み</button>' +
+        (recs.length ? '<button type="button" data-act="cut">切り分けへ</button>' : '') + '</div></div>';
+    }).join('');
+    const others = P.recordings.filter(r => !r.sentenceId && r.kind !== 'phrase');
+    $('otherList').innerHTML = others.length ? others.map(r => { const st = recState(r); return '<div class="row" style="padding:4px 0"><span>' + esc(r.name) + '</span><span class="tag ' + st.c + '">' + esc(st.t) + '</span><button type="button" data-cut="' + r.id + '">切り分けへ</button><button type="button" class="danger" data-del="' + r.id + '">削除</button></div>'; }).join('') : 'なし';
+  }
+  function sentenceById(sid) { return [...SENTENCES, ...(Project.get().customSentences || [])].find(s => s.id === sid); }
+  function sentenceMeta(s) { return { kind: 'sentence', sentenceId: s.id, name: s.id + ' ' + s.text, text: s.text, kana: s.kana, expected: Kana.splitMorae(s.kana) }; }
+
+  /* ---------- cut tab */
+  function renderCut() {
+    const P = Project.get();
+    const recs = P.recordings;
+    const selEl = $('cutRec');
+    const cur = Editor.rec() && Project.rec(Editor.rec()) ? Editor.rec() : (recs[0] && recs[0].id);
+    selEl.innerHTML = recs.map(r => '<option value="' + r.id + '"' + (r.id === cur ? ' selected' : '') + '>' + esc(r.name) + '（' + esc(recState(r).t) + '）</option>').join('') || '<option value="">（録音がありません）</option>';
+    if (cur !== Editor.rec()) Editor.setRec(cur || null);
+    const r = cur && Project.rec(cur);
+    if (!r) { $('cutInfo').textContent = '先に「1 台本・録音」で録音するか取り込んでください。'; $('expChips').innerHTML = ''; $('mismatch').classList.add('hide'); $('lowCount').textContent = ''; Editor.draw(); return; }
+    const dur = r.length / r.sampleRate;
+    $('cutInfo').textContent = dur.toFixed(2) + ' 秒 ・ ' + r.sampleRate + ' Hz' + (r.labelsFrom ? ' ・ ラベル: ' + (r.labelsFrom.method || '') + ' ' + (r.labelsFrom.generator || '') : '') + (r.kana ? ' ・ ' + r.kana : '');
+    const S = P.settings;
+    $('expChips').innerHTML = r.expected.map((k, i) => {
+      const l = r.labels[i];
+      const cls = !l ? 'bad' : Kana.normalize(l.kana) !== Kana.normalize(k) ? 'warn' : (l.confidence != null && l.confidence < S.lowConfidence) ? 'warn' : 'ok';
+      return '<button type="button" class="chip ' + cls + '" data-i="' + i + '">' + esc(k) + '</button>';
+    }).join('');
+    const mm = $('mismatch');
+    if (r.expected.length && r.labels.length !== r.expected.length) { mm.textContent = '期待 ' + r.expected.length + ' 音 / 区間 ' + r.labels.length + ' 個。数が合っていません（区間を足す・消す・結合で合わせます）。'; mm.classList.remove('hide'); }
+    else mm.classList.add('hide');
+    const low = r.labels.filter(l => l.confidence != null && l.confidence < S.lowConfidence).length;
+    $('lowCount').textContent = low ? '要確認 ' + low + ' 個（橙）' : r.labels.length ? '要確認なし' : '';
+    Editor.draw();
+    renderSel(Editor.sel());
+  }
+  function renderSel(i) {
+    const r = Editor.rec() && Project.rec(Editor.rec());
+    const l = r && r.labels[i];
+    ['selKana', 'selStart', 'selEnd', 'selOk', 'selMerge', 'selSplit', 'selDel'].forEach(id => $(id).disabled = !l);
+    if (!l) { $('selKana').value = ''; $('selStart').value = ''; $('selEnd').value = ''; $('selConf').textContent = '区間を選んでください'; return; }
+    $('selKana').value = l.kana; $('selStart').value = l.start.toFixed(3); $('selEnd').value = l.end.toFixed(3);
+    $('selConf').textContent = '#' + (i + 1) + ' ・ ' + Math.round((l.end - l.start) * 1000) + 'ms ・ ' + (l.confidence == null ? '確認済み／手動' : '信頼度 ' + l.confidence.toFixed(2)) + (r.expected[i] ? ' ・ 期待: ' + r.expected[i] : '');
+  }
+
+  /* ---------- bank tab */
+  function renderBank() {
+    const P = Project.get();
+    const ctx = Bank.context();
+    $('refHz').value = P.settings.refHz || '';
+    $('refInfo').textContent = ctx.ref ? '使う基準: ' + ctx.ref.toFixed(1) + ' Hz' + (P.settings.refHz ? '' : '（全テイクの中央値）') : '（まだテイクがありません）';
+    const tol = P.settings.pitchTolCents;
+    const cells = [];
+    const all = [...Kana.INVENTORY, ...Kana.FOREIGN.filter(f => ctx.map.has(f))];
+    for (const k of all) {
+      const c = Bank.chosen(k, ctx);
+      const n = (ctx.map.get(k) || []).length;
+      let cls = 'cell', info = 'なし';
+      if (!c) cls += ' none';
+      else {
+        info = n + ' ・ ' + (c.cents == null ? '高さ—' : (c.cents >= 0 ? '+' : '') + Math.round(c.cents) + '¢');
+        if (c.cents != null && Math.abs(c.cents) > tol) cls += ' warn';
+      }
+      if (k === bankSel) cls += ' sel';
+      cells.push('<div class="' + cls + '" role="button" tabindex="0" data-k="' + k + '"><b>' + k + (c && c.manual ? '★' : '') + '</b><span>' + info + '</span></div>');
+    }
+    $('bankGrid').innerHTML = cells.join('');
+    renderBankDetail(ctx);
+  }
+  function renderBankDetail(ctx) {
+    const box = $('bankDetail');
+    if (!bankSel) { box.classList.add('hide'); return; }
+    box.classList.remove('hide');
+    const c = Bank.chosen(bankSel, ctx);
+    const P = Project.get();
+    if (!c) { box.innerHTML = '<h2>' + bankSel + '</h2><p class="muted">この音のテイクはまだありません。</p>'; return; }
+    box.innerHTML = '<div class="row sp"><h2>' + bankSel + ' のテイク</h2>' + (P.picks[bankSel] ? '<button type="button" data-auto="1">自動選択に戻す</button>' : '') + '</div>' +
+      '<div class="tablewrap"><table><tr><th>使う</th><th>録音</th><th>高さ</th><th>ずれ</th><th>長さ</th><th>信頼度</th><th></th></tr>' +
+      c.ranked.map(({ t, m }) => '<tr><td><input type="radio" name="take" data-key="' + t.key + '"' + (t.key === c.take.key ? ' checked' : '') + ' aria-label="このテイクを使う"></td><td>' + esc(t.rec.name) + ' #' + (t.i + 1) + '</td><td>' + (m.f0 ? m.f0.toFixed(0) + 'Hz' : '—') + '</td><td>' + (m.f0 && ctx.ref ? Math.round(DSP.cents(m.f0, ctx.ref)) + '¢' : '—') + '</td><td>' + Math.round(m.dur * 1000) + 'ms</td><td>' + (t.conf == null ? '確認済' : t.conf.toFixed(2)) + '</td><td><button type="button" data-play="' + t.key + '">▶ 加工後</button> <button type="button" data-goto="' + t.key + '">波形</button></td></tr>').join('') +
+      '</table></div>';
+  }
+
+  /* ---------- speak tab */
+  function speakSettingsUI() {
+    const S = Project.get().settings;
+    const m = [['xf', 'crossfadeMs', 'vXf', v => v + 'ms'], ['speed', 'speed', 'vSpeed', v => (+v).toFixed(2) + '倍'], ['gap', 'gapMs', 'vGap', v => v + 'ms'], ['gain', 'gain', 'vGain', v => (+v).toFixed(2)], ['sok', 'sokuonMs', 'vSok', v => v + 'ms'], ['cho', 'choonMs', 'vCho', v => v + 'ms']];
+    for (const [id, key, lab, f] of m) { $(id).value = S[key]; $(lab).textContent = f(S[key]); }
+    $('autoDict').checked = S.autoDict !== false;
+  }
+  function analyzeSpeak() {
+    const P = Project.get();
+    const text = $('speakText').value, rd = $('readingEdit').value.trim();
+    const parsed = rd ? Reading.parse(rd, {}) : Reading.parse(text, P.dictionary, { learn: true });
+    const ctx = Bank.context();
+    const steps = Synth.plan(parsed.items, Bank.phrases(), k => ctx.map.has(k));
+    return { parsed, steps, ctx };
+  }
+  function renderSpeak(now) {
+    const { parsed, steps } = analyzeSpeak();
+    $('readingView').innerHTML = parsed.tokens.map(t => t.t === 'unresolved' ? '<span class="u" title="読みが決まっていません">' + esc(t.src) + '</span>' : t.t === 'pause' ? esc(t.src) : esc(t.kana)).join('') || '<span class="muted">（空）</span>';
+    $('moraChips').innerHTML = steps.map((s, i) => {
+      const cls = s.t === 'phrase' ? 'phrase' : s.t === 'missing' || s.t === 'unresolved' ? 'bad' : s.t === 'pause' ? 'pause' : '';
+      const label = s.t === 'phrase' ? s.ph.rec.kana : s.t === 'mora' || s.t === 'missing' ? s.kana : s.t === 'sokuon' ? 'っ' : s.t === 'choon' ? 'ー' : s.t === 'pause' ? '・' : s.src;
+      return '<span class="chip ' + cls + (now === i ? ' now' : '') + '" data-si="' + i + '">' + esc(label) + '</span>';
+    }).join('');
+    const unr = parsed.items.filter(i => i.t === 'u').map(i => i.src), miss = steps.filter(s => s.t === 'missing').map(s => s.kana);
+    const w = [];
+    if (unr.length) w.push('<div class="notice bad">読みが決まっていない文字: ' + esc(unr.join(' ')) + '（<code>漢字{よみ}</code> と書くか辞書に登録。この部分は話しません）</div>');
+    if (miss.length) w.push('<div class="notice bad">素材が無い音: ' + esc([...new Set(miss)].join(' ')) + '（飛ばして話します）</div>');
+    $('speakWarn').innerHTML = w.join('');
+  }
+  function renderDict() {
+    const d = Project.get().dictionary;
+    const keys = Object.keys(d).sort();
+    $('dictTable').innerHTML = keys.length ? '<tr><th>文字</th><th>よみ</th><th></th></tr>' + keys.map(k => '<tr><td>' + esc(k) + '</td><td>' + esc(d[k]) + '</td><td><button type="button" class="danger" data-dk="' + esc(k) + '">削除</button></td></tr>').join('') : '<tr><td class="muted">登録なし</td></tr>';
+  }
+  function doSpeak(save) {
+    const P = Project.get();
+    const text = $('speakText').value, rd = $('readingEdit').value.trim();
+    const r = Synth.speak(text, { reading: rd || null });
+    if (!rd && P.settings.autoDict !== false && Object.keys(r.parsed.learned).length) { Object.assign(P.dictionary, r.parsed.learned); Project.changed('dict'); renderDict(); }
+    if (save) { download(DSP.encodeWav(r.x, r.sr), 'voice-' + stamp() + '.wav', 'audio/wav'); return r; }
+    if (!r.x.length) { toast('鳴らす音がありません'); return r; }
+    Play.play(r.x, r.sr, { onEnd: () => renderSpeak(-1) });
+    const anim = () => {
+      const p = Play.position(); if (p == null) return;
+      const k = r.timeline.findIndex(t => p >= t.start && p < t.end);
+      const si = k >= 0 ? r.timeline[k].si : -1;
+      if (si !== speakState) { speakState = si; renderSpeak(si); }
+      requestAnimationFrame(anim);
+    };
+    requestAnimationFrame(anim);
+    return r;
+  }
+
+  /* ---------- ledger tab */
+  function renderLedger() {
+    const P = Project.get();
+    $('lineTable').innerHTML = P.lines.length ? '<tr><th>id</th><th>文</th><th>状態</th><th></th></tr>' + P.lines.map((l, i) => {
+      const st = Pack.lineStatus(l);
+      const extra = st.unresolved.length ? '（' + st.unresolved.join(' ') + '）' : st.missing.length ? '（' + [...new Set(st.missing)].join(' ') + '）' : '';
+      return '<tr><td>' + esc(l.id) + '</td><td>' + esc(l.text) + '</td><td><span class="tag ' + (st.level === 'bad' ? 'bad' : 'ok') + '">' + esc(st.status + extra) + '</span>' + (st.stale ? ' <span class="tag warn">差替待ち</span>' : '') + '</td><td><button type="button" data-lplay="' + i + '">▶</button> <button type="button" class="danger" data-ldel="' + i + '">✕</button></td></tr>';
+    }).join('') : '<tr><td class="muted">行がありません。id と文を足すか、CSV（id,text）/JSON を読み込みます。</td></tr>';
+    const phs = P.recordings.filter(r => r.kind === 'phrase');
+    $('phTable').innerHTML = phs.length ? '<tr><th>文</th><th>読み</th><th>状態</th><th></th></tr>' + phs.map(r => {
+      const stale = r.hash && r.hash !== fnv(r.text);
+      return '<tr><td><input type="text" data-phtext="' + r.id + '" value="' + esc(r.text) + '" aria-label="定型句の文"></td><td>' + esc(r.kana) + '</td><td>' + (stale ? '<span class="tag warn">差替待ち</span>' : r.labels.length ? '<span class="tag ok">使える</span>' : '<span class="tag bad">区間なし</span>') + '</td><td><button type="button" data-phplay="' + r.id + '">▶</button> <button type="button" data-cut="' + r.id + '">波形</button> <button type="button" data-phre="' + r.id + '">録り直し</button> <button type="button" class="danger" data-del="' + r.id + '">✕</button></td></tr>';
+    }).join('') : '<tr><td class="muted">定型句はまだありません。</td></tr>';
+    const e = Pack.estimate();
+    $('packEstimate').textContent = '書き出せる行 ' + e.lines + ' / ' + P.lines.length + ' ・ 約 ' + e.seconds.toFixed(1) + ' 秒 ・ 約 ' + (e.bytes / 1024).toFixed(0) + ' KB（モノラル ' + P.settings.exportRate / 1000 + 'kHz 16bit、約 ' + (P.settings.exportRate * 2 / 1024).toFixed(0) + 'KB/秒）';
+    $('packDir').disabled = !window.showDirectoryPicker;
+    $('packDir').title = window.showDirectoryPicker ? '' : 'このブラウザではフォルダへの直接書き出しができません（ZIPを使ってください）';
+  }
+  async function exportPack(mode) {
+    const res = Pack.build();
+    const files = [
+      { name: 'voice.wav', data: res.wav },
+      { name: 'voice.json', data: JSON.stringify(res.json, null, 1) },
+      { name: 'voice-player.js', data: PLAYER_SRC },
+    ];
+    if (!res.report.exported.length) { toast('書き出せる行がありません'); showPackReport(res.report, null); return res; }
+    let where = '';
+    if (mode === 'dir') {
+      try {
+        const dir = await window.showDirectoryPicker({ mode: 'readwrite' });
+        for (const f of files) {
+          const fh = await dir.getFileHandle(f.name, { create: true });
+          const w = await fh.createWritable();
+          await w.write(typeof f.data === 'string' ? f.data : f.data); await w.close();
+        }
+        where = 'フォルダ「' + dir.name + '」';
+      } catch (e) { if (e && e.name === 'AbortError') return null; toast('フォルダに書き出せませんでした: ' + e.message); return null; }
+    } else {
+      download(Zip.write(files.map(f => ({ name: 'voice/' + f.name, data: f.data }))), safeName(Project.get().name) + '-voicepack-' + stamp() + '.zip', 'application/zip');
+      where = 'ZIP（中の voice/ フォルダをゲームのフォルダへ）';
+    }
+    Pack.markExported(res.report.exported);
+    showPackReport(res.report, where);
+    window.__lastPack = res;
+    return res;
+  }
+  function showPackReport(rp, where) {
+    const lv = rp.levels;
+    $('packReport').innerHTML = (where ? '<div class="notice ok">' + esc(where) + ' に書き出しました: ' + rp.exported.length + ' 行 ・ ' + (rp.seconds || 0).toFixed(2) + ' 秒 ・ ' + ((rp.bytes || 0) / 1024).toFixed(0) + ' KB' +
+      (lv ? '<br>ピーク ' + lv.peakDb.toFixed(1) + ' dBFS ・ 平均 ' + lv.rmsDb.toFixed(1) + ' dBFS ・ 帯域 低(〜300Hz) ' + lv.lowDb.toFixed(1) + ' / 中(300〜3kHz) ' + lv.midDb.toFixed(1) + ' / 高(3kHz〜) ' + lv.highDb.toFixed(1) + ' dBFS（耳での確認は未実施）' : '') + '</div>' : '') +
+      (rp.skipped.length ? '<div class="notice bad">書き出さなかった行: ' + rp.skipped.map(s => esc(s.id + ' ' + s.why)).join('、') + '</div>' : '');
+  }
+
+  /* ---------- settings tab */
+  const SET_FIELDS = [
+    ['lowConfidence', '要確認にする信頼度（未満）', 0, 1, 0.05], ['pitchTolCents', '高さのずれ警告（セント）', 10, 1200, 10],
+    ['targetRms', '素材の音量（RMS）', 0.02, 0.4, 0.01], ['peakMax', 'ピーク上限', 0.1, 0.99, 0.01], ['fadeMs', '端のフェード(ms)', 0, 20, 1],
+    ['hpHz', '低域カット(Hz)', 20, 300, 5], ['gateDb', 'ノイズゲート(dBFS)', -90, -20, 1],
+    ['pauseComma', '、の間(ms)', 0, 1000, 10], ['pausePeriod', '。の間(ms)', 0, 1500, 10], ['pauseQ', '？！の間(ms)', 0, 1500, 10],
+    ['exportRate', '書き出しのレート(Hz)', 8000, 48000, 1000]];
+  function renderSettings() {
+    const S = Project.get().settings;
+    $('setForm').innerHTML = SET_FIELDS.map(([k, l, mn, mx, st]) => '<label class="f">' + l + '<input type="number" data-set="' + k + '" min="' + mn + '" max="' + mx + '" step="' + st + '" value="' + S[k] + '"></label>').join('');
+    const sec = window.isSecureContext;
+    $('envInfo').innerHTML = [
+      '安全な場所（https / localhost）: ' + (sec ? 'はい' : '<b>いいえ</b>（マイクと上書き保存が使えません）'),
+      'マイク録音: ' + (Rec.ok() && sec ? '使える' : '使えない（取り込みで続けられます）'),
+      '上書き保存（File System Access）: ' + (window.showSaveFilePicker ? '使える' : '使えない（ダウンロードで保存）'),
+      '自動退避（IndexedDB）: <span id="idbState">確認中</span>',
+      '最後の自動退避: ' + (lastAutosave || '—')].join('<br>');
+    Store.available().then(v => { const e = $('idbState'); if (e) e.textContent = v ? '使える' : '使えない'; });
+  }
+
+  /* ---------- render dispatcher */
+  function render() {
+    $('projName').value = Project.get().name;
+    if (tab === 'script') renderScript();
+    else if (tab === 'cut') renderCut();
+    else if (tab === 'bank') renderBank();
+    else if (tab === 'speak') { speakSettingsUI(); renderSpeak(-1); renderDict(); }
+    else if (tab === 'ledger') renderLedger();
+    else if (tab === 'settings') renderSettings();
+  }
+
+  /* ---------- save / open / autosave */
+  function setStatus(msg) { $('saveStatus').textContent = msg; }
+  function statusLine() { setStatus((fileHandle ? '保存先: ' + fileHandle.name + ' ・ ' : '') + (lastAutosave ? '自動退避 ' + lastAutosave : '')); }
+  function scheduleAutosave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+      try { await Store.put('autosave', Project.snapshot()); lastAutosave = new Date().toLocaleTimeString(); statusLine(); } catch (e) { setStatus('自動退避に失敗: ' + e.message); }
+    }, 1500);
+  }
+  async function save(as) {
+    const bytes = await Project.toBytes();
+    const name = safeName(Project.get().name) + '.voiceproj';
+    if (window.showSaveFilePicker) {
+      try {
+        if (!fileHandle || as) fileHandle = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: 'VOICE プロジェクト', accept: { 'application/octet-stream': ['.voiceproj'] } }] });
+        const w = await fileHandle.createWritable(); await w.write(bytes); await w.close();
+        toast('保存しました: ' + fileHandle.name); statusLine(); return;
+      } catch (e) { if (e && e.name === 'AbortError') return; toast('上書き保存できないのでダウンロードします'); }
+    }
+    download(bytes, name); toast('ダウンロードしました: ' + name);
+  }
+  async function open() {
+    let file = null;
+    if (window.showOpenFilePicker) {
+      try { const [h] = await window.showOpenFilePicker({ types: [{ description: 'VOICE プロジェクト', accept: { 'application/octet-stream': ['.voiceproj', '.zip'] } }] }); file = await h.getFile(); fileHandle = h; }
+      catch (e) { if (e && e.name === 'AbortError') return; file = null; }
+    }
+    if (!file) { const fs = await pickFile('fileProj'); file = fs[0]; fileHandle = null; }
+    if (!file) return;
+    try { await Project.fromBytes(new Uint8Array(await file.arrayBuffer())); Bank.clear(); Editor.setRec(null); toast('開きました: ' + file.name); statusLine(); }
+    catch (e) { toast('開けませんでした: ' + e.message, 5000); }
+  }
+
+  /* ---------- recording overlay */
+  let recTarget = null;
+  function openRec(target) {
+    recTarget = target;
+    $('recTitle').textContent = target.title || '録音';
+    $('recSub').textContent = target.sub || '';
+    $('recKana').textContent = target.display || target.kana;
+    $('recStart').disabled = false; $('recStop').disabled = true; $('recMeter').style.width = '0';
+    $('recTime').textContent = '0.0 秒'; $('recPitch').textContent = '高さ —';
+    const ref = Bank.refHz();
+    $('recRef').textContent = ref ? '基準 ' + ref.toFixed(0) + ' Hz' : '基準 未設定';
+    const okMic = Rec.ok() && window.isSecureContext;
+    $('recHelp').textContent = okMic ? '「録音開始」→ 読む →「止めて保存」。録音中は1秒ごとにブラウザ内へ退避するので、タブを閉じても次に開いたとき復元できます。' :
+      'この環境ではマイクが使えません（https か localhost で開く必要があります）。ほかのアプリで録音して「取り込み」で読み込めます。';
+    $('recStart').disabled = !okMic;
+    $('recOverlay').classList.add('on');
+    $('recStart').focus();
+  }
+  async function recStart() {
+    try {
+      await Rec.start(recTarget.meta, {
+        level: v => { $('recMeter').style.width = (v * 100).toFixed(0) + '%'; },
+        time: s => { $('recTime').textContent = s.toFixed(1) + ' 秒'; },
+        pitch: f => { const ref = Bank.refHz(); $('recPitch').textContent = f ? '高さ ' + f.toFixed(0) + ' Hz' + (ref ? '（' + (DSP.cents(f, ref) >= 0 ? '+' : '') + Math.round(DSP.cents(f, ref)) + '¢）' : '') : '高さ —'; },
+      });
+      $('recStart').disabled = true; $('recStop').disabled = false; $('recStop').focus();
+    } catch (e) { toast('マイクを使えませんでした: ' + e.message + '。「取り込み」で続けられます。', 6000); }
+  }
+  async function recStop() {
+    $('recStop').disabled = true;
+    const res = await Rec.stop();
+    $('recOverlay').classList.remove('on');
+    if (!res) return;
+    try {
+      const d = await decodeAny(await res.blob.arrayBuffer());
+      const r = addFromDecoded(res.target, d);
+      await Store.clearChunks();
+      toast('録音しました: ' + r.name + '（' + (r.length / r.sampleRate).toFixed(1) + ' 秒）');
+    } catch (e) { toast('録音を読み込めませんでした: ' + e.message, 6000); }
+  }
+  function addFromDecoded(meta, d) {
+    if (meta.replace) Project.removeRecording(meta.replace);
+    const m = { ...meta }; delete m.replace;
+    const r = Project.addRecording(m, d.x, d.sr);
+    if (r.kind === 'single' || r.kind === 'phrase') autoCutRec(r);
+    return r;
+  }
+  function autoCutRec(r) {
+    const a = Project.audio.get(r.id), S = Project.get().settings;
+    if (r.kind === 'phrase') { const sp = Cut.speechSpan(a.x, a.sr, S); Project.setLabels(r.id, [{ kana: r.kana, start: sp.start, end: sp.end, confidence: null, src: 'auto' }]); return; }
+    const segs = Cut.silenceSplit(a.x, a.sr, S);
+    Project.setLabels(r.id, segs.map((s, i) => ({ kana: r.expected[i] || '？', start: s.start, end: s.end, confidence: r.expected.length === segs.length ? 0.9 : 0.3, src: 'auto' })));
+  }
+  async function importInto(meta) {
+    const fs = await pickFile('fileAudio');
+    if (!fs[0]) return;
+    try { const d = await decodeAny(await fs[0].arrayBuffer()); const r = addFromDecoded({ ...meta, name: meta.name || fs[0].name }, d); toast('取り込みました: ' + r.name); }
+    catch (e) { toast('読み込めない音声です: ' + e.message, 5000); }
+  }
+  async function bulkImport() {
+    const fs = await pickFile('fileAudio', true);
+    let n = 0;
+    for (const f of fs) {
+      try {
+        const d = await decodeAny(await f.arrayBuffer());
+        const m = /^(s\d\d)/i.exec(f.name);
+        const s = m && sentenceById(m[1].toLowerCase());
+        addFromDecoded(s ? sentenceMeta(s) : { kind: 'free', name: f.name }, d); n++;
+      } catch (e) { toast(f.name + ': ' + e.message, 4000); }
+    }
+    toast(n + ' 個の音声を取り込みました');
+  }
+  async function checkRestore() {
+    try {
+      const ch = await Store.allChunks();
+      if (!ch || !ch.length) return;
+      const bySes = {};
+      for (const c of ch) (bySes[c.session] = bySes[c.session] || []).push(c);
+      const sess = Object.values(bySes).sort((a, b) => b[0].at - a[0].at)[0].sort((a, b) => a.seq - b.seq);
+      const b = $('restoreBanner');
+      b.innerHTML = '途中で止まった録音があります（' + esc((sess[0].target && sess[0].target.name) || '') + '、約 ' + sess.length + ' 秒）。 <button type="button" id="rsYes" class="primary">復元する</button> <button type="button" id="rsNo">捨てる</button>';
+      b.classList.remove('hide');
+      $('rsYes').onclick = async () => {
+        try {
+          const blob = new Blob(sess.map(c => c.blob), { type: sess[0].mime });
+          const d = await decodeAny(await blob.arrayBuffer());
+          addFromDecoded({ ...(sess[0].target || { kind: 'free' }), name: ((sess[0].target && sess[0].target.name) || '録音') + '（復元）' }, d);
+          await Store.clearChunks(); b.classList.add('hide'); toast('録音を復元しました');
+        } catch (e) { toast('復元できませんでした: ' + e.message, 5000); }
+      };
+      $('rsNo').onclick = async () => { await Store.clearChunks(); b.classList.add('hide'); };
+    } catch (e) { /* ignore */ }
+  }
+
+  /* ---------- wiring */
+  function wire() {
+    $('tabs').addEventListener('click', e => { const b = e.target.closest('button[data-tab]'); if (b) showTab(b.dataset.tab); });
+    $('projName').addEventListener('change', () => { Project.get().name = $('projName').value.trim() || 'わたしの声'; Project.changed('name'); });
+    $('btnNew').onclick = () => { if (confirm('新しいプロジェクトにします。今のプロジェクトは保存しましたか？（自動退避も新しいものに置き換わります）')) { fileHandle = null; Project.reset(); Bank.clear(); Editor.setRec(null); } };
+    $('btnOpen').onclick = open;
+    $('btnSave').onclick = () => save(false);
+    $('btnSaveAs').onclick = () => save(true);
+    // script
+    $('sentList').addEventListener('click', e => {
+      const b = e.target.closest('button[data-act]'); if (!b) return;
+      const s = sentenceById(b.closest('.sent').dataset.sid);
+      if (b.dataset.act === 'rec') openRec({ title: s.id + ' を読む', sub: s.text, kana: s.kana, meta: sentenceMeta(s) });
+      else if (b.dataset.act === 'imp') importInto(sentenceMeta(s));
+      else if (b.dataset.act === 'cut') { const r = sentenceRecs(s.id).slice(-1)[0]; Editor.setRec(r.id); showTab('cut'); }
+    });
+    $('otherList').addEventListener('click', onCommonClick);
+    $('btnRecMissing').onclick = () => {
+      const miss = coverage().missing;
+      openRec({ title: '不足音を1つずつ', sub: '1音ずつ、1秒くらい間を空けて、同じ高さで読みます', kana: miss.join(' '), display: miss.join('　'), meta: { kind: 'single', name: '不足音 ' + miss.slice(0, 6).join('') + (miss.length > 6 ? '…' : ''), text: '', kana: miss.join(' '), expected: miss } });
+    };
+    $('btnAddSent').onclick = () => {
+      const t = $('addSentText').value.trim(), k = $('addSentKana').value.trim();
+      if (!k) { toast('読みのかなを入れてください'); return; }
+      const P = Project.get(); P.customSentences = P.customSentences || [];
+      P.customSentences.push({ id: 'u' + String(P.customSentences.length + 1).padStart(2, '0'), text: t || k, kana: Kana.kata2hira(k) });
+      $('addSentText').value = ''; $('addSentKana').value = ''; Project.changed('sentences');
+    };
+    $('btnBulkImport').onclick = bulkImport;
+    const cutReq = ids => {
+      if (!ids.length) { toast('依頼する録音がありません'); return; }
+      const r = Project.cutRequest(ids);
+      download(r.bytes, safeName(Project.get().name) + '-' + r.requestId + '.cutreq.zip', 'application/zip');
+      toast(r.count + ' 本の録音を切り分け依頼にしました');
+    };
+    $('btnCutReqAll').onclick = () => cutReq(Project.get().recordings.filter(r => r.expected.length && r.kind !== 'phrase' && !r.labels.some(l => l.src === 'manual')).map(r => r.id));
+    $('btnCutReqOne').onclick = () => { const id = Editor.rec(); if (id) cutReq([id]); };
+    const importLabels = async () => {
+      const fs = await pickFile('fileJson'); if (!fs[0]) return;
+      try {
+        const rep = Project.importLabels(JSON.parse(await fs[0].text()));
+        const msg = rep.applied.map(a => a.name + ': ' + a.n + ' 個（要確認 ' + a.low + '）').join(' / ');
+        toast('取り込みました ' + msg, 5000);
+        if (rep.warnings.length) alert('注意:\n' + rep.warnings.join('\n'));
+        if (rep.applied[0]) { Editor.setRec(rep.applied[0].id); }
+      } catch (e) { toast('labels.json を読めませんでした: ' + e.message, 5000); }
+    };
+    $('btnImportLabels1').onclick = importLabels;
+    $('btnImportLabels2').onclick = importLabels;
+    // cut
+    $('cutRec').onchange = () => { Editor.setRec($('cutRec').value); renderCut(); };
+    Editor.attach(i => renderSel(i));
+    $('zIn').onclick = () => Editor.zoom(0.5);
+    $('zOut').onclick = () => Editor.zoom(2);
+    $('zFit').onclick = () => Editor.fit();
+    $('zScroll').oninput = () => Editor.scrollTo($('zScroll').value / 1000);
+    $('btnPlayAll').onclick = () => Editor.playAll();
+    $('btnPlaySel').onclick = () => Editor.playSel();
+    $('btnStop').onclick = () => Play.stop();
+    $('btnNextLow').onclick = () => {
+      const r = Project.rec(Editor.rec()); if (!r) return;
+      const S = Project.get().settings, n = r.labels.length;
+      for (let k = 1; k <= n; k++) { const i = (Editor.sel() + k + n) % n; const l = r.labels[i]; if (l.confidence != null && l.confidence < S.lowConfidence) { Editor.select(i, true); return; } }
+      toast('要確認の区間はありません');
+    };
+    $('expChips').addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (b) { const r = Project.rec(Editor.rec()); if (r && r.labels[+b.dataset.i]) Editor.select(+b.dataset.i, true); } });
+    const selLabel = () => { const r = Project.rec(Editor.rec()); return r && r.labels[Editor.sel()]; };
+    $('selKana').onchange = () => { const l = selLabel(); if (l) { l.kana = Kana.kata2hira($('selKana').value.trim()) || l.kana; l.src = 'manual'; l.confidence = null; Project.changed('labels'); } };
+    const numEdit = (id, key) => { $(id).onchange = () => { const l = selLabel(); const v = parseFloat($(id).value); if (l && isFinite(v)) { l[key] = v; if (l.end - l.start < 0.01) l.end = l.start + 0.01; l.src = 'manual'; l.confidence = null; Project.get().recordings.find(r => r.id === Editor.rec()).labels.sort((a, b) => a.start - b.start); Project.changed('labels'); } }; };
+    numEdit('selStart', 'start'); numEdit('selEnd', 'end');
+    $('selOk').onclick = () => { const l = selLabel(); if (l) { l.confidence = null; l.src = 'manual'; Project.changed('labels'); Editor.select(Math.min(Editor.sel() + 1, Project.rec(Editor.rec()).labels.length - 1), false); } };
+    $('selDel').onclick = () => Editor.delSel();
+    $('selMerge').onclick = () => { const r = Project.rec(Editor.rec()), i = Editor.sel(); if (!r || !r.labels[i + 1]) return; r.labels[i].end = r.labels[i + 1].end; r.labels[i].src = 'manual'; r.labels[i].confidence = null; r.labels.splice(i + 1, 1); Project.changed('labels'); };
+    $('selSplit').onclick = () => { const r = Project.rec(Editor.rec()), i = Editor.sel(); const l = r && r.labels[i]; if (!l) return; const m = (l.start + l.end) / 2; r.labels.splice(i + 1, 0, { kana: r.expected[i + 1] || '？', start: m, end: l.end, confidence: null, src: 'manual' }); l.end = m; l.src = 'manual'; l.confidence = null; Project.changed('labels'); };
+    const sl = [['silThr', 'silThresholdDb', 'vThr', v => v + 'dB'], ['silMin', 'silMinMs', 'vSil', v => v + 'ms'], ['segMin', 'segMinMs', 'vSeg', v => v + 'ms']];
+    for (const [id, key, lab, f] of sl) $(id).oninput = () => { Project.get().settings[key] = +$(id).value; $(lab).textContent = f($(id).value); Project.changed('settings-quiet'); };
+    $('btnAutoSil').onclick = () => {
+      const r = Project.rec(Editor.rec()); if (!r) return;
+      if (r.labels.length && !confirm('今の区切りを置き換えます。よろしいですか？')) return;
+      const a = Project.audio.get(r.id), segs = Cut.silenceSplit(a.x, a.sr, Project.get().settings);
+      Project.setLabels(r.id, segs.map((s, i) => ({ kana: r.expected[i] || '？', start: s.start, end: s.end, confidence: null, src: 'auto' })));
+      toast(segs.length + ' 個に分けました' + (r.expected.length ? '（期待 ' + r.expected.length + '）' : ''));
+    };
+    $('btnEven').onclick = () => {
+      const r = Project.rec(Editor.rec()); if (!r) return;
+      if (!r.expected.length) { toast('期待する音の並びがない録音です'); return; }
+      if (r.labels.length && !confirm('今の区切りを置き換えます。よろしいですか？')) return;
+      const a = Project.audio.get(r.id), segs = Cut.evenSplit(a.x, a.sr, r.expected.length, Project.get().settings);
+      Project.setLabels(r.id, segs.map((s, i) => ({ kana: r.expected[i], start: s.start, end: s.end, confidence: 0, src: 'auto' })));
+    };
+    $('btnClearLabels').onclick = () => { const r = Project.rec(Editor.rec()); if (r && confirm('この録音の区切りを全部消します')) Project.setLabels(r.id, []); };
+    // bank
+    $('bankGrid').addEventListener('click', e => { const c = e.target.closest('[data-k]'); if (c) { bankSel = c.dataset.k; renderBank(); const ch = Bank.chosen(bankSel); if (ch) { const u = Bank.unit(ch.take); if (u) Play.play(u, SR_WORK); } } });
+    $('bankGrid').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.target.click(); } });
+    $('bankDetail').addEventListener('click', e => {
+      const P = Project.get();
+      const t = e.target;
+      if (t.dataset.auto) { delete P.picks[bankSel]; Project.changed('picks'); }
+      else if (t.dataset.key) { P.picks[bankSel] = t.dataset.key; Project.changed('picks'); }
+      else if (t.dataset.play) { const tk = Bank.takes().find(x => x.key === t.dataset.play); if (tk) Play.play(Bank.unit(tk), SR_WORK); }
+      else if (t.dataset.goto) { const [rid, i] = t.dataset.goto.split('#'); Editor.setRec(rid); showTab('cut'); Editor.select(+i, false); }
+    });
+    $('refHz').onchange = () => { const v = parseFloat($('refHz').value); Project.get().settings.refHz = isFinite(v) && v > 0 ? v : null; Project.changed('settings'); };
+    const tone = () => { const f = Bank.refHz() || 200; Play.play(DSP.sine(f, 1.2, SR_WORK), SR_WORK); };
+    $('btnRefTone').onclick = tone; $('recTone').onclick = tone;
+    // speak
+    let sTimer = 0;
+    const reSpeak = () => { clearTimeout(sTimer); sTimer = setTimeout(() => renderSpeak(-1), 150); };
+    $('speakText').addEventListener('input', reSpeak); $('readingEdit').addEventListener('input', reSpeak);
+    $('btnSpeak').onclick = () => doSpeak(false);
+    $('btnSpeakStop').onclick = () => Play.stop();
+    $('btnSpeakWav').onclick = () => doSpeak(true);
+    const m = [['xf', 'crossfadeMs'], ['speed', 'speed'], ['gap', 'gapMs'], ['gain', 'gain'], ['sok', 'sokuonMs'], ['cho', 'choonMs']];
+    for (const [id, key] of m) $(id).oninput = () => { Project.get().settings[key] = +$(id).value; speakSettingsUI(); Project.changed('settings-quiet'); };
+    $('autoDict').onchange = () => { Project.get().settings.autoDict = $('autoDict').checked; Project.changed('settings-quiet'); };
+    $('dictAdd').onclick = () => { const k = $('dictKey').value.trim(), v = Kana.kata2hira($('dictVal').value.trim()); if (!k || !v) return; Project.get().dictionary[k] = v; $('dictKey').value = ''; $('dictVal').value = ''; Project.changed('dict'); };
+    $('dictTable').addEventListener('click', e => { const k = e.target.dataset.dk; if (k != null) { delete Project.get().dictionary[k]; Project.changed('dict'); } });
+    $('dictExport').onclick = () => download(JSON.stringify(Project.get().dictionary, null, 1), 'voice-dictionary.json', 'application/json');
+    $('dictImport').onclick = async () => { const fs = await pickFile('fileJson'); if (!fs[0]) return; try { const j = JSON.parse(await fs[0].text()); let n = 0; for (const [k, v] of Object.entries(j)) if (typeof v === 'string') { Project.get().dictionary[k] = Kana.kata2hira(v); n++; } Project.changed('dict'); toast(n + ' 件を登録しました'); } catch (e) { toast('読めませんでした: ' + e.message); } };
+    // ledger
+    $('lineAdd').onclick = () => {
+      const id = $('lineId').value.trim(), text = $('lineText').value.trim();
+      if (!id || !text) { toast('id と文を入れてください'); return; }
+      const P = Project.get(), ex = P.lines.find(l => l.id === id);
+      if (ex) ex.text = text; else P.lines.push({ id, text, exportedHash: null });
+      $('lineId').value = ''; $('lineText').value = ''; Project.changed('lines');
+    };
+    $('lineTable').addEventListener('click', e => {
+      const P = Project.get();
+      if (e.target.dataset.ldel != null) { P.lines.splice(+e.target.dataset.ldel, 1); Project.changed('lines'); }
+      else if (e.target.dataset.lplay != null) { const r = Synth.speak(P.lines[+e.target.dataset.lplay].text); if (r.x.length) Play.play(r.x, r.sr); if (r.warnings.length) toast(r.warnings.join(' / ')); }
+    });
+    $('lineImport').onclick = async () => {
+      const fs = await pickFile('fileLines'); if (!fs[0]) return;
+      const txt = await fs[0].text(), P = Project.get();
+      let rows = [];
+      try {
+        if (/^\s*[\[{]/.test(txt)) { const j = JSON.parse(txt); rows = Array.isArray(j) ? j.map(o => [o.id, o.text]) : Object.entries(j.lines || j).map(([k, v]) => [k, typeof v === 'string' ? v : v.text]); }
+        else rows = txt.split(/\r?\n/).filter(l => l.trim()).map(l => { const i = l.indexOf(','); return [l.slice(0, i).trim(), l.slice(i + 1).trim().replace(/^"|"$/g, '').replace(/""/g, '"')]; }).filter(r => r[0] && r[0] !== 'id');
+      } catch (e) { toast('読めませんでした: ' + e.message); return; }
+      let n = 0;
+      for (const [id, text] of rows) { if (!id || !text) continue; const ex = P.lines.find(l => l.id === id); if (ex) ex.text = text; else P.lines.push({ id, text, exportedHash: null }); n++; }
+      Project.changed('lines'); toast(n + ' 行を読み込みました');
+    };
+    const phMeta = () => {
+      const text = $('phText').value.trim(), kana = Kana.kata2hira($('phKana').value.trim() || text);
+      if (!kana || Reading.parse(kana, {}).items.some(i => i.t === 'u')) { toast('定型句の読みを、かなで入れてください'); return null; }
+      return { kind: 'phrase', name: '定型句 ' + (text || kana), text: text || kana, kana, expected: [], hash: fnv(text || kana) };
+    };
+    $('phRec').onclick = () => { const m = phMeta(); if (m) openRec({ title: '定型句を録る', sub: m.text, kana: m.kana, meta: m }); };
+    $('phImport').onclick = () => { const m = phMeta(); if (m) importInto(m); };
+    $('phTable').addEventListener('click', onCommonClick);
+    $('phTable').addEventListener('change', e => {
+      const id = e.target.dataset.phtext; if (!id) return;
+      const r = Project.rec(id); r.text = e.target.value; Project.changed('phrase');
+    });
+    $('packDir').onclick = () => exportPack('dir');
+    $('packZip').onclick = () => exportPack('zip');
+    // settings
+    $('setForm').addEventListener('change', e => { const k = e.target.dataset.set; if (!k) return; const v = parseFloat(e.target.value); if (isFinite(v)) { Project.get().settings[k] = v; Bank.clear(); Project.changed('settings'); } });
+    $('btnClearAutosave').onclick = async () => { if (confirm('ブラウザ内の自動退避を消します（ファイルに保存したものは消えません）')) { await Store.del('autosave'); await Store.clearChunks(); lastAutosave = null; toast('消しました'); render(); } };
+    // recording overlay
+    $('recStart').onclick = recStart;
+    $('recStop').onclick = recStop;
+    $('recCancel').onclick = () => { Rec.cancel(); $('recOverlay').classList.remove('on'); };
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('recOverlay').classList.contains('on') && !Rec.recording()) $('recOverlay').classList.remove('on'); });
+    const hh = () => document.documentElement.style.setProperty('--hh', $('hdr').offsetHeight + 'px');
+    window.addEventListener('resize', hh); hh();
+  }
+  function onCommonClick(e) {
+    const t = e.target;
+    if (t.dataset.cut) { Editor.setRec(t.dataset.cut); showTab('cut'); }
+    else if (t.dataset.del) { const r = Project.rec(t.dataset.del); if (r && confirm('「' + r.name + '」を削除します')) Project.removeRecording(r.id); }
+    else if (t.dataset.phplay) { const ph = Bank.phrases().find(p => p.rec.id === t.dataset.phplay); if (ph) Play.play(Bank.phraseUnit(ph), SR_WORK); else toast('区間がありません'); }
+    else if (t.dataset.phre) { const r = Project.rec(t.dataset.phre); openRec({ title: '定型句を録り直す', sub: r.text, kana: r.kana, meta: { kind: 'phrase', name: r.name, text: r.text, kana: r.kana, expected: [], hash: fnv(r.text), replace: r.id } }); }
+  }
+  async function init() {
+    Project.onChange(what => {
+      if (what !== 'settings-quiet') Bank.clear();
+      if (what === 'labels' || what === 'recording' || what === 'load' || what === 'reset') {/* bank measures depend on labels */}
+      scheduleAutosave();
+      if (what !== 'settings-quiet') render();
+    });
+    let restored = false;
+    try { const s = await Store.get('autosave'); if (s && s.json) { Project.restore(s); restored = true; lastAutosave = '（前回の続き）'; } } catch (e) { /* ignore */ }
+    if (!restored) Project.reset();
+    wire();
+    const S = Project.get().settings;
+    $('silThr').value = S.silThresholdDb; $('vThr').textContent = S.silThresholdDb + 'dB';
+    $('silMin').value = S.silMinMs; $('vSil').textContent = S.silMinMs + 'ms';
+    $('segMin').value = S.segMinMs; $('vSeg').textContent = S.segMinMs + 'ms';
+    if (!window.isSecureContext) { const n = $('envNotice'); n.textContent = 'この開き方（' + location.protocol + '）ではマイク録音と上書き保存が使えません。GitHub Pages か localhost で開くか、録音済みの音声を「取り込み」で読み込んでください。'; n.classList.remove('hide'); }
+    statusLine();
+    render();
+    checkRestore();
+  }
+  return { init, render, showTab, exportPack, doSpeak, toast, save, coverage };
+})();
+
+window.VoiceCore = { Kana, Reading, DSP, Zip, Store, Project, Bank, Synth, Pack, Cut, Editor, UI, Play, SENTENCES, PLAYER_SRC, DEFAULT_SETTINGS, SR_WORK, fnv, decodeAny };
+window.addEventListener('DOMContentLoaded', () => { UI.init().then(() => { window.__voiceReady = true; }); });
+</script>
+</body>
+</html>
