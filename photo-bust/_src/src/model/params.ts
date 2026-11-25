@@ -21,11 +21,11 @@ export const UNIT_LABEL: Record<Unit, string> = { cm: 'cm', mm: 'mm', deg: '°',
 export const UNIT_STEP: Record<Unit, number> = { cm: 0.1, mm: 1, deg: 1, index: 1 };
 
 export const BODY_DEFS: ParamDef[] = [
-  { key: 'torsoHeight', label: '胴の高さ（首の付け根〜下端）', unit: 'cm', def: 0.5, min: 0.4, max: 0.6 },
+  { key: 'torsoHeight', label: '胴の高さ（首の付け根〜下端）', unit: 'cm', def: 0.47, min: 0.4, max: 0.6 },
   { key: 'shoulderWidth', label: '肩幅（肩関節中心間）', unit: 'cm', def: 0.34, min: 0.28, max: 0.42 },
   { key: 'chestDepth', label: '胸郭の厚み', unit: 'cm', def: 0.19, min: 0.15, max: 0.25 },
   { key: 'underbustCirc', label: 'アンダーバスト周径', unit: 'cm', def: 0.7, min: 0.6, max: 0.9 },
-  { key: 'underbustHeight', label: 'アンダーバストの高さ', unit: 'cm', def: 0.3, min: 0.24, max: 0.36, note: '下端から' },
+  { key: 'underbustHeight', label: 'アンダーバストの高さ', unit: 'cm', def: 0.27, min: 0.24, max: 0.36, note: '下端から' },
   { key: 'waistCirc', label: 'ウエスト周径', unit: 'cm', def: 0.61, min: 0.52, max: 0.9 },
   { key: 'waistHeight', label: 'ウエストの高さ', unit: 'cm', def: 0.14, min: 0.08, max: 0.2, note: '下端から' },
   { key: 'navelHeight', label: 'へその高さ', unit: 'cm', def: 0.05, min: 0.02, max: 0.1, note: '下端から' },
@@ -37,7 +37,7 @@ export const BREAST_DEFS: ParamDef[] = [
   { key: 'projection', label: '前方への張り出し', unit: 'mm', def: 0.018, min: 0, max: 0.12 },
   { key: 'baseWidth', label: '付け根の幅', unit: 'mm', def: 0.17, min: 0.07, max: 0.18 },
   { key: 'baseHeight', label: '付け根の高さ', unit: 'mm', def: 0.16, min: 0.06, max: 0.17 },
-  { key: 'centerHeight', label: '高さ位置（中心）', unit: 'cm', def: 0.37, min: 0.3, max: 0.44, note: '下端から' },
+  { key: 'centerHeight', label: '高さ位置（中心）', unit: 'cm', def: 0.345, min: 0.3, max: 0.44, note: '下端から' },
   { key: 'spacing', label: '左右の間隔（中心間）', unit: 'mm', def: 0.13, min: 0.12, max: 0.26 },
   { key: 'outwardAngle', label: '外向きの角度', unit: 'deg', def: 10, min: 0, max: 30 },
   { key: 'ptosis', label: '下垂', unit: 'index', def: 15, min: 0, max: 100 },

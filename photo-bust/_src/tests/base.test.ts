@@ -163,7 +163,7 @@ describe('5.3-2 breast monotonicity', () => {
   });
   it('ptosis -> apex Y relative to centerHeight decreases', () => {
     const xs = [0, 25, 50, 75, 100];
-    const vals = xs.map((v) => sampleLeftBreast(withBreast({ ptosis: v })).apexY - 0.37);
+    const vals = xs.map((v) => sampleLeftBreast(withBreast({ ptosis: v })).apexY - defaultParams().breast.centerHeight);
     expectIncreasing('ptosis_negApexYrel', vals.map((v) => -v), xs);
   });
   it('nippleDiameter -> measured nipple diameter', () => {
