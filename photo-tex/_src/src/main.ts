@@ -1,5 +1,5 @@
 import './style.css';
-import { BODY_DEFS, BREAST_DEFS, PRESETS, defaultParams, type PresetName } from './model/params';
+import { BODY_DEFS, BREAST_DEFS, BODY_PRESETS, PRESETS, presetParams, type BodyPresetName, type PresetName } from './model/params';
 import { buildBaseMesh, type BaseMesh } from './model/mesh';
 import { exportBaseGlb } from './export/exportBase';
 import { Viewer, type ViewName } from './viewer';
@@ -15,7 +15,7 @@ function defaultPreset(): PresetName {
 const shotsMode = new URLSearchParams(location.search).has('shots');
 if (shotsMode) document.body.classList.add('shots');
 
-const state: Project = { preset: defaultPreset(), params: defaultParams() };
+const state: Project = { preset: defaultPreset(), bodyPreset: 'female', params: presetParams('female') };
 const viewer = new Viewer(document.getElementById('c') as HTMLCanvasElement);
 let current: BaseMesh | null = null;
 
@@ -76,6 +76,24 @@ function updateStats(): void {
 
 const controls: Record<string, ParamControl> = {};
 heading(panel, '体型（胴）');
+const bodyLine = document.createElement('div');
+bodyLine.className = 'line';
+bodyLine.innerHTML = '<label for="bodyPreset">体型プリセット</label>';
+const bodySel = document.createElement('select');
+bodySel.id = 'bodyPreset';
+for (const [k, v] of Object.entries(BODY_PRESETS)) {
+  const o = document.createElement('option');
+  o.value = k;
+  o.textContent = v.label;
+  bodySel.appendChild(o);
+}
+bodySel.value = state.bodyPreset;
+bodySel.addEventListener('change', () => {
+  const name = bodySel.value as BodyPresetName;
+  applyProject({ preset: state.preset, bodyPreset: name, params: presetParams(name) });
+});
+bodyLine.appendChild(bodySel);
+panel.appendChild(bodyLine);
 const bodyNote = document.createElement('p');
 bodyNote.className = 'note';
 bodyNote.textContent = '初期値は仮の値です（統計データにもとづくものではありません）。';
@@ -120,6 +138,8 @@ document.querySelectorAll<HTMLButtonElement>('#viewButtons button').forEach((b) 
 
 function applyProject(p: Project): void {
   state.preset = p.preset;
+  state.bodyPreset = p.bodyPreset;
+  bodySel.value = p.bodyPreset;
   state.params = p.params;
   presetSel.value = p.preset;
   for (const d of BODY_DEFS) controls['body.' + d.key].set((p.params.body as any)[d.key]);
