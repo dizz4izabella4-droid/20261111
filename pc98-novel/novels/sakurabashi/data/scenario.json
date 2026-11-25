@@ -1,0 +1,1226 @@
+{
+ "_note": "このファイルは scenario.txt から build.js が作ります。直すときは scenario.txt を直してください。",
+ "start": "opening",
+ "scenes": {
+  "opening": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "証拠保管庫",
+     "place": "閲覧室",
+     "chapter": "M-06"
+    },
+    {
+     "type": "BG",
+     "id": "reading_room",
+     "fade": 600
+    },
+    {
+     "type": "BGM",
+     "id": "calm"
+    },
+    {
+     "type": "BGM",
+     "id": "hum",
+     "channel": "env"
+    },
+    {
+     "type": "TEXT",
+     "text": "証拠保管庫の閲覧室は、紙と埃の匂いがした。"
+    },
+    {
+     "type": "TEXT",
+     "text": "机に置かれた綴じ資料の背表紙には、「M-06　桜橋水門管理室殺人事件」とある。"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「その事件は、送致も裁判も、とうに終わっています。読み返すだけの記録ですよ」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "TEXT",
+     "text": "「分かっています。どうやって結論に辿り着いたのかを、順に追いたいんです」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「でしたら、ひとつだけ。記録に書かれたことと、読む人が思ったことは、別々に数えてください」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "SE",
+     "id": "click"
+    },
+    {
+     "type": "TEXT",
+     "text": "「（見たこと。聞いたこと。そう思ったこと。――分けて読む）」",
+     "speaker": "me"
+    },
+    {
+     "type": "JUMP",
+     "to": "book1"
+    }
+   ]
+  },
+  "book1": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "証拠保管庫",
+     "place": "M-06 第1冊",
+     "chapter": "初動捜査・現場確認簿"
+    },
+    {
+     "type": "BG",
+     "id": "floodgate_night",
+     "fade": 800
+    },
+    {
+     "type": "BGM",
+     "id": "mystery"
+    },
+    {
+     "type": "TEXT",
+     "text": "第1冊は、桜橋署・刑事第一係の「初動捜査・現場確認簿」。"
+    },
+    {
+     "type": "TEXT",
+     "text": "平成七年二月十七日、午後九時十二分。桜橋水門の管理棟、記録室で、県施設監査員の本庄信行が遺体で発見された。"
+    },
+    {
+     "type": "TEXT",
+     "text": "第一発見者は、夜間警備員の塚原弘。"
+    },
+    {
+     "type": "SE",
+     "id": "door"
+    },
+    {
+     "type": "BG",
+     "id": "records_room",
+     "fade": 500
+    },
+    {
+     "type": "TEXT",
+     "text": "記録室の扉は閉まっていたが、施錠はされていなかった。椅子が倒れ、書類が散らばっている。外部から押し入った痕跡はない。"
+    },
+    {
+     "type": "TEXT",
+     "text": "記録には、はっきり書いてある。「死亡時刻を発見時刻と同一視せず、捜査を開始した」。"
+    },
+    {
+     "type": "TEXT",
+     "text": "本庄は午後七時五十二分に管理棟へ着き、八時十分に監査用の帳簿を受け取った。"
+    },
+    {
+     "type": "TEXT",
+     "text": "八時三十三分、守衛室へ内線が入る。翌朝の照会に使う施設写真を出してほしい、という依頼だった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "この通話には塚原が直接応対し、内容を守衛日誌に記している。"
+    },
+    {
+     "type": "INFO",
+     "id": "call_2033",
+     "silent": true
+    },
+    {
+     "type": "TEXT",
+     "text": "八時三十八分頃。保守会社の瀬戸直人に「似た」人物が、図面筒を持って搬入口側へ歩くのを、塚原が見た。"
+    },
+    {
+     "type": "TEXT",
+     "text": "照明は暗く、顔の識別には自信がない、とある。"
+    },
+    {
+     "type": "INFO",
+     "id": "sighting_2038",
+     "silent": true
+    },
+    {
+     "type": "TEXT",
+     "text": "机には『第二排水弁交換　四基』と書かれた請求書の写しがあった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "写真台帳の該当欄には、交換した弁は二基に見える、と鉛筆の注。"
+    },
+    {
+     "type": "INFO",
+     "id": "cost_gap",
+     "silent": true
+    },
+    {
+     "type": "TEXT",
+     "text": "監査員が持ち込んだはずの照合表の原本は、見当たらない。机の下には、青い複写紙の小さな断片が落ちていた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "保守作業用の鍵B-4は、その日、貸し出されていた。現場では見つかっていない。"
+    },
+    {
+     "type": "INFO",
+     "id": "key_b4",
+     "silent": true
+    },
+    {
+     "type": "TEXT",
+     "text": "最後の頁に、捜査メモの一文が残る。警備員の曖昧な目撃と書類の差異を、単独で犯人認定の根拠にしない、と。"
+    },
+    {
+     "type": "SE",
+     "id": "get"
+    },
+    {
+     "type": "TEXT",
+     "text": "手がかりを、情報画面（INFO）に記録した。"
+    },
+    {
+     "type": "LABEL",
+     "name": "q1"
+    },
+    {
+     "type": "CHOICE",
+     "options": [
+      {
+       "text": "21:12　遺体が発見された時刻",
+       "next": "#q1_w1",
+       "once": true,
+       "correct": false
+      },
+      {
+       "text": "20:33　守衛室への内線に、塚原が直接応対した時刻",
+       "next": "#q1_ok",
+       "correct": true
+      },
+      {
+       "text": "20:38　搬入口で人影が見られた時刻",
+       "next": "#q1_w2",
+       "once": true,
+       "correct": false
+      }
+     ],
+     "id": "q1",
+     "prompt": "記録から確かに言える、本庄の「最後の生存の時刻」は？"
+    },
+    {
+     "type": "LABEL",
+     "name": "q1_w1"
+    },
+    {
+     "type": "FLAG",
+     "set": {
+      "m1": true
+     }
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「発見の時刻は、亡くなった時刻ではありません。第1頁にも、そう書いてあったはずです」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "JUMP",
+     "to": "#q1"
+    },
+    {
+     "type": "LABEL",
+     "name": "q1_w2"
+    },
+    {
+     "type": "FLAG",
+     "set": {
+      "m1": true
+     }
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「それは別の人物が見られた時刻でしょう。本庄本人の生死を支える記録を探してください」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "JUMP",
+     "to": "#q1"
+    },
+    {
+     "type": "LABEL",
+     "name": "q1_ok"
+    },
+    {
+     "type": "IF",
+     "cond": "!m1",
+     "else": "#__if1_else"
+    },
+    {
+     "type": "FLAG",
+     "add": {
+      "score": 1
+     }
+    },
+    {
+     "type": "LABEL",
+     "name": "__if1_else"
+    },
+    {
+     "type": "SE",
+     "id": "select"
+    },
+    {
+     "type": "TEXT",
+     "text": "「内線に塚原が直接応対して、日誌に残した。本庄は、少なくとも八時三十三分まで生きていた」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「そして、八時三十八分の人影は『瀬戸に似た誰か』だ。まだ、誰とも言えない」",
+     "speaker": "me"
+    },
+    {
+     "type": "JUMP",
+     "to": "book2"
+    }
+   ]
+  },
+  "book2": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "証拠保管庫",
+     "place": "M-06 第2冊",
+     "chapter": "鍵の管理と関係者供述"
+    },
+    {
+     "type": "BG",
+     "id": "reading_room",
+     "fade": 600
+    },
+    {
+     "type": "BGM",
+     "id": "calm"
+    },
+    {
+     "type": "TEXT",
+     "text": "第2冊は、桜橋署・聴取室の供述の簿冊。"
+    },
+    {
+     "type": "TEXT",
+     "text": "塚原の供述。午後八時十二分、瀬戸直人へ鍵B-4を渡し、受領簿に署名をもらった。報告書を取りに来た、という説明だった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "瀬戸の主張は、八時十八分に鍵を返して退館した、というもの。"
+    },
+    {
+     "type": "TEXT",
+     "text": "ただし塚原は、その返却を見ていない。塚原が鍵を受け取ったのは九時七分で、返却票へ時刻を書いている。"
+    },
+    {
+     "type": "TEXT",
+     "text": "受領簿の「八時十八分」は、後から瀬戸が申告した時刻を余白へ転記したものだ、と区別して記されていた。"
+    },
+    {
+     "type": "INFO",
+     "id": "key_slip",
+     "silent": true
+    },
+    {
+     "type": "TEXT",
+     "text": "瀬戸は続ける。八時二十分には会社車庫に戻り、九時まで出荷予定の整理をしていた、と。"
+    },
+    {
+     "type": "TEXT",
+     "text": "車庫の日報には『20:45　在庫点検』とある。だが日報は、作業のあとでまとめて清書する形式で、押印欄に時刻がない。"
+    },
+    {
+     "type": "TEXT",
+     "text": "事務員は、瀬戸が夜遅くに事務所へ戻ったことは覚えている。八時台に本人を見た、とは言っていない。"
+    },
+    {
+     "type": "TEXT",
+     "text": "県施設課の吉村恵は、八時二十五分頃まで本庄と話し、八時三十二分のバスに間に合うよう、北門から出た。運転手による本人確認はない。"
+    },
+    {
+     "type": "TEXT",
+     "text": "吉村の手帳には『二基確認、四基請求』。瀬戸が再計算に難色を示した、とも話している。"
+    },
+    {
+     "type": "TEXT",
+     "text": "ただし、監査資料をめぐる対立は複数の業者に及んでいた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "塚原が八時三十八分の人影を瀬戸だと思ったのは、青い図面筒と作業服の肩章のためだった。同じ肩章は、同社の従業員が皆つけている。"
+    },
+    {
+     "type": "TEXT",
+     "text": "最後の頁。瀬戸は、鍵を九時七分に返したのは、車庫へ戻る途中でポケットに残っているのに気付いたからだ、と説明を変えた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "これでは「八時十八分に返却した」という先の供述とは両立しない。"
+    },
+    {
+     "type": "SE",
+     "id": "get"
+    },
+    {
+     "type": "TEXT",
+     "text": "手がかりを、情報画面（INFO）に記録した。"
+    },
+    {
+     "type": "LABEL",
+     "name": "q2"
+    },
+    {
+     "type": "CHOICE",
+     "options": [
+      {
+       "text": "20:18に鍵を返して退館した",
+       "next": "#q2_w1",
+       "once": true,
+       "correct": false
+      },
+      {
+       "text": "20:45に車庫で在庫点検をしていた",
+       "next": "#q2_w2",
+       "once": true,
+       "correct": false
+      },
+      {
+       "text": "21:07に鍵を返した",
+       "next": "#q2_ok",
+       "correct": true
+      }
+     ],
+     "id": "q2",
+     "prompt": "瀬戸の説明のうち、「独立した記録」に支えられているのはどれ？"
+    },
+    {
+     "type": "LABEL",
+     "name": "q2_w1"
+    },
+    {
+     "type": "FLAG",
+     "set": {
+      "m2": true
+     }
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「その時刻は、瀬戸本人の申告を余白に写したものです。誰かが見た時刻ではありません」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "JUMP",
+     "to": "#q2"
+    },
+    {
+     "type": "LABEL",
+     "name": "q2_w2"
+    },
+    {
+     "type": "FLAG",
+     "set": {
+      "m2": true
+     }
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「日報は、作業のあとでまとめて清書する様式でした。押印欄に時刻もありません。予定を示す記録と、本人の所在は別です」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "JUMP",
+     "to": "#q2"
+    },
+    {
+     "type": "LABEL",
+     "name": "q2_ok"
+    },
+    {
+     "type": "IF",
+     "cond": "!m2",
+     "else": "#__if2_else"
+    },
+    {
+     "type": "FLAG",
+     "add": {
+      "score": 1
+     }
+    },
+    {
+     "type": "LABEL",
+     "name": "__if2_else"
+    },
+    {
+     "type": "SE",
+     "id": "select"
+    },
+    {
+     "type": "TEXT",
+     "text": "「返却票は塚原が書いた。二十一時七分に鍵が戻ったことは、瀬戸自身も否定していない」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「でも、それだけでは『その間ずっと管理棟にいた』とは言えない。鍵の所持は、殺害の証明じゃない」",
+     "speaker": "me"
+    },
+    {
+     "type": "JUMP",
+     "to": "book3"
+    }
+   ]
+  },
+  "book3": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "証拠保管庫",
+     "place": "M-06 第3冊",
+     "chapter": "工事原票・紙片照合記録"
+    },
+    {
+     "type": "BG",
+     "id": "records_room",
+     "fade": 600
+    },
+    {
+     "type": "BGM",
+     "id": "mystery"
+    },
+    {
+     "type": "TEXT",
+     "text": "第3冊は、県警捜査資料係の「工事原票・紙片照合記録」。"
+    },
+    {
+     "type": "TEXT",
+     "text": "県施設課の工事完了写真の原簿には、第二排水弁の交換完了を示す写真が、二基分しか綴られていなかった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "旧部品の引取票も二基分。残る二基の入庫票も、作業者の立会署名も、見つからない。"
+    },
+    {
+     "type": "TEXT",
+     "text": "写真の枚数だけで施工件数は確定しない。それでも「四基交換済み」という会社の説明には、裏付けが欠けている。"
+    },
+    {
+     "type": "TEXT",
+     "text": "次に、机の下の青い複写紙片。"
+    },
+    {
+     "type": "TEXT",
+     "text": "保守会社が監査への回答に使っていた、三枚複写の訂正票と、材質が一致した。ただし、同じ材質の紙は役所の中にもある。材質だけでは、所有者を特定しなかった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "瀬戸の事務机から出された、未使用の訂正票の綴りには、一枚分の欠けがあった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "その切断端と現場の紙片を、実物で重ねる。紙の繊維の凹凸と、二つの小さな破れ目が、連続した。"
+    },
+    {
+     "type": "SE",
+     "id": "shock"
+    },
+    {
+     "type": "INFO",
+     "id": "paper_match",
+     "silent": true
+    },
+    {
+     "type": "TEXT",
+     "text": "手順は写真と寸法図に記録され、封印番号で「あとから切り合わせたものではない」ことも確認されている。"
+    },
+    {
+     "type": "TEXT",
+     "text": "報告書は、念を押している。会社の一般的な印刷用紙との一致と、断端が一致する個別の紙とは、証明力が異なる。二つの照合結果を、混同しない。"
+    },
+    {
+     "type": "TEXT",
+     "text": "二月二十二日の立会確認。保守会社の予備資料箱に、未提出の監査照合表が挟まっていた。"
+    },
+    {
+     "type": "BG",
+     "id": "reading_room",
+     "fade": 500
+    },
+    {
+     "type": "TEXT",
+     "text": "箱は共同倉庫にあり、出入りできる従業員は複数いる。発見場所だけで、瀬戸の所有物とは断定できない。"
+    },
+    {
+     "type": "TEXT",
+     "text": "ただし封筒の宛名は本庄で、記入済みの鉛筆修正と紙端の折り目が、現場写真の控えと一致した。"
+    },
+    {
+     "type": "TEXT",
+     "text": "瀬戸は最初、この表を見たことがないと述べていた。だが、予備資料箱の管理は本人の担当業務だった。"
+    },
+    {
+     "type": "INFO",
+     "id": "hidden_table",
+     "silent": true
+    },
+    {
+     "type": "SE",
+     "id": "get"
+    },
+    {
+     "type": "TEXT",
+     "text": "手がかりを、情報画面（INFO）に記録した。"
+    },
+    {
+     "type": "LABEL",
+     "name": "q3"
+    },
+    {
+     "type": "CHOICE",
+     "options": [
+      {
+       "text": "瀬戸が当夜、その紙を引き裂いたこと",
+       "next": "#q3_w1",
+       "once": true,
+       "correct": false
+      },
+      {
+       "text": "その紙片が、瀬戸の事務机の綴りから分かれた紙だということ",
+       "next": "#q3_ok",
+       "correct": true
+      },
+      {
+       "text": "役所にも同じ紙があるので、照合に意味はないこと",
+       "next": "#q3_w2",
+       "once": true,
+       "correct": false
+      }
+     ],
+     "id": "q3",
+     "prompt": "青い紙片の断端が一致したことから、言えるのはどれ？"
+    },
+    {
+     "type": "LABEL",
+     "name": "q3_w1"
+    },
+    {
+     "type": "FLAG",
+     "set": {
+      "m3": true
+     }
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「第3頁を。紙が綴りから分かれたことは示せても、誰が引き裂いたかまでは、直接分かりません。訂正票は同僚も使えました」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "JUMP",
+     "to": "#q3"
+    },
+    {
+     "type": "LABEL",
+     "name": "q3_w2"
+    },
+    {
+     "type": "FLAG",
+     "set": {
+      "m3": true
+     }
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「材質が同じだというのは、一般的な照合です。断端がぴたりと重なるのは、個別の紙の照合です。報告書は、その二つを分けて書いています」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "JUMP",
+     "to": "#q3"
+    },
+    {
+     "type": "LABEL",
+     "name": "q3_ok"
+    },
+    {
+     "type": "IF",
+     "cond": "!m3",
+     "else": "#__if3_else"
+    },
+    {
+     "type": "FLAG",
+     "add": {
+      "score": 1
+     }
+    },
+    {
+     "type": "LABEL",
+     "name": "__if3_else"
+    },
+    {
+     "type": "SE",
+     "id": "select"
+    },
+    {
+     "type": "TEXT",
+     "text": "「示せたのは『紙の由来』まで。でも、隠されていた照合表と合わせると、話は別の線とつながりはじめる」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「ただ、ここまでは、他人が持ち出した可能性を完全には除外できていない。そう記録も言っている」",
+     "speaker": "me"
+    },
+    {
+     "type": "JUMP",
+     "to": "book4"
+    }
+   ]
+  },
+  "book4": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "証拠保管庫",
+     "place": "M-06 第4冊",
+     "chapter": "供述照合・送致結論"
+    },
+    {
+     "type": "BG",
+     "id": "reading_room",
+     "fade": 600
+    },
+    {
+     "type": "BGM",
+     "id": "tension"
+    },
+    {
+     "type": "TEXT",
+     "text": "最後の第4冊は、桜橋署・事件整理係の「供述照合・送致結論」。"
+    },
+    {
+     "type": "TEXT",
+     "text": "三月十一日。瀬戸直人は先の退館供述を撤回し、八時三十八分頃に管理棟へ戻ったと認めた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "照合表を持ち帰らせてほしいと本庄に求め、拒まれ、口論になり、結果として死なせた、という供述だった。"
+    },
+    {
+     "type": "TEXT",
+     "text": "動機は、請求書に四基と書きながら、実際の交換は二基だったこと。監査で代金の返還を求められるのを恐れていた。"
+    },
+    {
+     "type": "TEXT",
+     "text": "記録は、供述の存在だけで全項目を真実とはしない。独立した資料で確認できる部分を、整理している。"
+    },
+    {
+     "type": "TEXT",
+     "text": "瀬戸は説明した。照合表の一部が青い複写票に挟まっていたこと。紙を引いた時に片端が裂けたこと。図面筒とは別に、書類を持ち出したこと。"
+    },
+    {
+     "type": "TEXT",
+     "text": "裂けた紙の位置と、欠けた訂正票の形は、現場で撮影済みの記録と一致した。この位置の詳細は、それまで公表されていなかった。"
+    },
+    {
+     "type": "SE",
+     "id": "shock"
+    },
+    {
+     "type": "INFO",
+     "id": "confession_detail",
+     "silent": true
+    },
+    {
+     "type": "TEXT",
+     "text": "予備資料箱への移動の経緯も具体的で、最初に箱を確認した時の封筒と照合された。"
+    },
+    {
+     "type": "TEXT",
+     "text": "八時三十八分から九時七分の行動は、鍵の所持と返却の時刻、警備員の目撃、照合表の消失と、どれとも矛盾しない。"
+    },
+    {
+     "type": "SE",
+     "id": "get"
+    },
+    {
+     "type": "TEXT",
+     "text": "手がかりを、情報画面（INFO）に記録した。"
+    },
+    {
+     "type": "LABEL",
+     "name": "q4"
+    },
+    {
+     "type": "CHOICE",
+     "options": [
+      {
+       "text": "バスに乗ったので、完全な不在証明が成り立つ",
+       "next": "#q4_w1",
+       "once": true,
+       "correct": false
+      },
+      {
+       "text": "不正を指摘した人物であることと、行為者であることは別。結びつく独立資料は得られなかった",
+       "next": "#q4_ok",
+       "correct": true
+      },
+      {
+       "text": "帳簿の差異を指摘した以上、動機があるので犯人だ",
+       "next": "#q4_w2",
+       "once": true,
+       "correct": false
+      }
+     ],
+     "id": "q4",
+     "prompt": "最初に嫌疑を受けた吉村恵について、記録が言っているのはどれ？"
+    },
+    {
+     "type": "LABEL",
+     "name": "q4_w1"
+    },
+    {
+     "type": "FLAG",
+     "set": {
+      "m4": true
+     }
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「記録には『完全な不在証明をしたわけではない』とあります。運転手による本人確認はありませんでした」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "JUMP",
+     "to": "#q4"
+    },
+    {
+     "type": "LABEL",
+     "name": "q4_w2"
+    },
+    {
+     "type": "FLAG",
+     "set": {
+      "m4": true
+     }
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「疑わしい印象と、説明の成り立つ証拠は別です。紙片や鍵の移動に、彼女を結びつける独立資料はありませんでした」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "JUMP",
+     "to": "#q4"
+    },
+    {
+     "type": "LABEL",
+     "name": "q4_ok"
+    },
+    {
+     "type": "IF",
+     "cond": "!m4",
+     "else": "#__if4_else"
+    },
+    {
+     "type": "FLAG",
+     "add": {
+      "score": 1
+     }
+    },
+    {
+     "type": "LABEL",
+     "name": "__if4_else"
+    },
+    {
+     "type": "SE",
+     "id": "select"
+    },
+    {
+     "type": "TEXT",
+     "text": "「吉村を『除外できた』んじゃない。結びつける証拠が、どの線からも出てこなかった」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "最後の頁。桜橋署は、瀬戸直人を本庄信行殺害の被疑者として送致した。"
+    },
+    {
+     "type": "TEXT",
+     "text": "その後の裁判記録の整理欄には、供述と現場記録、紙片の照合、監査表の回収状況が整合することを理由に、有罪の認定が記されている。"
+    },
+    {
+     "type": "TEXT",
+     "text": "工事の過大請求は、別に会計上の調査対象とされ、殺人の証明とは混同されていない。"
+    },
+    {
+     "type": "LABEL",
+     "name": "q5"
+    },
+    {
+     "type": "CHOICE",
+     "options": [
+      {
+       "text": "塚原が搬入口の人影を瀬戸だと見たから",
+       "next": "#q5_w1",
+       "once": true,
+       "correct": false
+      },
+      {
+       "text": "本人が自白したから、それだけで十分だった",
+       "next": "#q5_w2",
+       "once": true,
+       "correct": false
+      },
+      {
+       "text": "断端の一致、隠された照合表、非公開の現場状況と一致する供述、鍵の時刻。複数の独立資料が重なった",
+       "next": "#q5_ok",
+       "correct": true
+      }
+     ],
+     "id": "q5",
+     "prompt": "瀬戸直人を送致した根拠として、記録にもっとも近いのはどれ？"
+    },
+    {
+     "type": "LABEL",
+     "name": "q5_w1"
+    },
+    {
+     "type": "FLAG",
+     "set": {
+      "m5": true
+     }
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「警備員の人物の同定は、保留のままでした。第4冊の第3頁にも、それだけで結論を作ったわけではない、とあります」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "JUMP",
+     "to": "#q5"
+    },
+    {
+     "type": "LABEL",
+     "name": "q5_w2"
+    },
+    {
+     "type": "FLAG",
+     "set": {
+      "m5": true
+     }
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「供述の存在だけで全項目を真実とはしていません。独立した資料と、一致するかどうかを見ています」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "JUMP",
+     "to": "#q5"
+    },
+    {
+     "type": "LABEL",
+     "name": "q5_ok"
+    },
+    {
+     "type": "IF",
+     "cond": "!m5",
+     "else": "#__if5_else"
+    },
+    {
+     "type": "FLAG",
+     "add": {
+      "score": 1
+     }
+    },
+    {
+     "type": "LABEL",
+     "name": "__if5_else"
+    },
+    {
+     "type": "SE",
+     "id": "get"
+    },
+    {
+     "type": "TEXT",
+     "text": "「どれか一本では足りない。目撃は曖昧で、自白は単独では弱く、紙片は由来しか示せない」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT",
+     "text": "「でも、四つの別々の線が、同じ人物のところで重なった」",
+     "speaker": "me"
+    },
+    {
+     "type": "JUMP",
+     "to": "finale"
+    }
+   ]
+  },
+  "finale": {
+   "commands": [
+    {
+     "type": "STATUS",
+     "date": "証拠保管庫",
+     "place": "閲覧室",
+     "chapter": "M-06 閲覧終了"
+    },
+    {
+     "type": "BG",
+     "id": "reading_room",
+     "fade": 800
+    },
+    {
+     "type": "BGM",
+     "id": "calm"
+    },
+    {
+     "type": "TEXT",
+     "text": "簿冊を閉じる。背表紙の「解決済み」の印が、ランプの光を受けた。"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「本件は、犯人が判明した事件として収蔵されています」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "TEXT",
+     "text": "「ただし、目撃だけで犯人が確定したわけではありません。複数の独立した資料を重ねて、最初の解釈が改められた事件です」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "ENDING"
+    }
+   ]
+  },
+  "ep_true": {
+   "commands": [
+    {
+     "type": "BGM",
+     "id": "ending"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「五つとも、記録のとおりでした。読み方に、ぶれがありませんね」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "TEXT",
+     "text": "「見たこと、聞いたこと、思ったこと。分けて数えれば、記録は嘘をつかない」",
+     "speaker": "me"
+    },
+    {
+     "type": "TEXT_STYLE",
+     "mode": "CUSTOM",
+     "charMs": 60,
+     "fadeMs": 400,
+     "lineMs": 600
+    },
+    {
+     "type": "TEXT",
+     "text": "二十時三十三分に、本庄は生きていた。\n二十一時七分に、鍵は戻った。\n紙の端は、重なった。"
+    },
+    {
+     "type": "TEXT_STYLE",
+     "mode": "RESET"
+    },
+    {
+     "type": "ENDING"
+    }
+   ]
+  },
+  "ep_good": {
+   "commands": [
+    {
+     "type": "BGM",
+     "id": "ending"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「結論には、届いています。ただ、いくつかは印象で選びましたね」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "TEXT",
+     "text": "「記録が言っていることと、自分が思ったこと。もう一度、頁を戻して数え直そう」",
+     "speaker": "me"
+    },
+    {
+     "type": "ENDING"
+    }
+   ]
+  },
+  "ep_normal": {
+   "commands": [
+    {
+     "type": "BGM",
+     "id": "ending"
+    },
+    {
+     "type": "CHARACTER",
+     "id": "clerk",
+     "expr": "normal",
+     "pos": "center"
+    },
+    {
+     "type": "TEXT",
+     "text": "「結論は、記録にも書いてあります。けれど、どこまでが証拠かは、まだ読み切れていないようです」",
+     "speaker": "clerk"
+    },
+    {
+     "type": "HIDE_CHARACTER",
+     "id": "all"
+    },
+    {
+     "type": "TEXT",
+     "text": "「疑わしい人と、証拠のある人は違う。……次に読むときは、頁の数字から追おう」",
+     "speaker": "me"
+    },
+    {
+     "type": "ENDING"
+    }
+   ]
+  }
+ }
+}
