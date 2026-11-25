@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>追跡</title></head><body>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#000000"><title>追跡</title></head><body>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
@@ -14,10 +14,12 @@
 /**
  * @file    src/00_core.js
  * @card    C1b, C1c, C9
+ * @author  dizz (制作: dizz / Created by dizz)
  * @author  ソフィア (Claude Sonnet 5.5, claude.ai chat)
  * @author  Codex GPT-6 Sol
- * @date    2026-11-23
- * @revision 4
+ * @author  Claude Sonnet 5.5 (claude.ai chat) — dizz の指示で、スマートフォン対応（タッチ UI・iOS の誤操作防止・縦横 FOV・画質既定）を追加
+ * @date    2026-11-25
+ * @revision 5
  */
 /* 00_core.js — 追跡 core (C1)
  * 設計書 v1.1 §3 準拠。担当: M1 core
@@ -236,13 +238,21 @@
 
   // ---- DOM / UI -------------------------------------------------------------
   const ui = {};
-  let subHideAt = 0;
+  let subHideAt = 0, endShownAt = 0;
+  // タッチ端末（スマートフォン / タブレット）か。文言・既定画質・終了画面のタップ操作を切り替える。
+  const IS_TOUCH = !!(global.navigator && global.navigator.maxTouchPoints > 0) || ('ontouchstart' in global);
 
   function buildUI() {
     const css =
       'html,body{margin:0;height:100%;background:#000;overflow:hidden;color:#ddd;' +
       'font-family:system-ui,"Hiragino Sans","Yu Gothic",sans-serif}' +
       'canvas{display:block}' +
+      // iOS: ダブルタップ拡大・ピンチ・長押しメニュー・文字選択・ゴムバンドスクロールを止める
+      'html,body{position:fixed;width:100%;touch-action:none;overscroll-behavior:none;-webkit-touch-callout:none;' +
+      '-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}' +
+      'canvas,.ts-layer,#ts-hud{touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}' +
+      '@media(max-width:700px){.ts-h1{font-size:44px}#ts-end .ts-h1{font-size:36px}.ts-p{font-size:13px;padding:0 16px}#ts-sub{font-size:17px}}' +
+      '@media(max-height:480px){.ts-h1{font-size:40px}.ts-q{margin-top:10px}.ts-go{margin-top:12px}.ts-p{margin:3px 0}}' +
       '.ts-layer{position:fixed;left:0;top:0;right:0;bottom:0;display:none;align-items:center;' +
       'justify-content:center;flex-direction:column;text-align:center;pointer-events:none;z-index:10}' +
       '.ts-dim{background:rgba(0,0,0,.72)}' +
@@ -276,7 +286,10 @@
     ui.title = el('div', 'ts-title', 'ts-layer ts-dim');
     el('h1', null, 'ts-h1', '追跡', ui.title);
     el('div', null, 'ts-p', '3D FPS', ui.title);
-    el('div', null, 'ts-p', 'WASD 移動 ／ マウス 視点（右ドラッグでも可）／ クリック 発砲 ／ R リセット', ui.title);
+    el('div', null, 'ts-p', IS_TOUCH
+      ? '左半分 スティックで移動（素早く払うと一歩進む）／ 右半分 ドラッグ・フリックで視点 ／ タップ か ● で発砲'
+      : 'WASD 移動 ／ マウス 視点（右ドラッグでも可）／ クリック 発砲 ／ R リセット', ui.title);
+    if (IS_TOUCH) el('div', null, 'ts-p', '横向きでのプレイを推奨します', ui.title);
     const qrow = el('div', null, 'ts-q', '画質（1〜4 キーでも切替）', ui.title);
     ui.qBtns = QUALITY_NAMES.map(function (n, i) {
       const b = el('span', null, 'ts-qb', (i + 1) + ' ' + QUALITY_LABELS[n], qrow);
@@ -284,14 +297,21 @@
       b.addEventListener('click', function (ev) { ev.stopPropagation(); if (!G.quality || G.quality.name !== n) setQuality(n); });
       return b;
     });
-    el('div', null, 'ts-go', 'クリックで開始', ui.title);
+    el('div', null, 'ts-go', IS_TOUCH ? 'タップで開始' : 'クリックで開始', ui.title);
     ui.loading = el('div', 'ts-loading', 'ts-layer ts-dim', '読込中…');
     ui.hud = el('div', 'ts-hud');
     el('div', 'ts-cross', null, null, ui.hud);
     ui.sub = el('div', 'ts-sub');
     ui.end = el('div', 'ts-end', 'ts-layer ts-dim');
     ui.endH = el('h1', null, 'ts-h1', '', ui.end);
-    el('div', null, 'ts-p', 'R キーでもう一度', ui.end);
+    el('div', null, 'ts-p', IS_TOUCH ? 'タップでもう一度' : 'R キーでもう一度', ui.end);
+    if (IS_TOUCH) {
+      // 死んだ瞬間の連打タップで即リセットされないよう、表示から 1.2 秒は受け付けない
+      ui.end.style.pointerEvents = 'auto';
+      ui.end.addEventListener('click', function () {
+        if ((state.phase === 'win' || state.phase === 'lose') && performance.now() - endShownAt > 1200) resetGame();
+      });
+    }
     ui.endStats = el('div', 'ts-end-stats', 'ts-p', '', ui.end);
     ui.debug = el('pre', 'ts-debug');
   }
@@ -347,6 +367,7 @@
   function setPhase(p) {
     state.phase = p;
     if (p === 'win' || p === 'lose') {
+      endShownAt = performance.now();
       runStats.time = state.time;
       ui.endStats.textContent = '時間 ' + runStats.time.toFixed(1) + '秒 ／ 発砲 ' + runStats.shots +
         ' ／ 命中 ' + runStats.hits + ' ／ ヘッドショット ' + runStats.headshots;
@@ -541,6 +562,7 @@
     if (q.get('skipintro')) G.cfg.skipIntro = true;
 
     buildUI();
+    installTouchGuards();
     setDebug(G.cfg.debug);
     setPhase('loading');
 
@@ -553,7 +575,7 @@
     }
     // 画質：保存値 → なければ（ソフトウェア描画なら low、GPU なら high）。他モジュールは生成時に G.quality を読む。
     const dpr = global.devicePixelRatio || 1;
-    G.quality = qualityPreset(storedQuality() || (isSoftwareGL(renderer) ? 'low' : 'high'), dpr);
+    G.quality = qualityPreset(storedQuality() || (isSoftwareGL(renderer) ? 'low' : IS_TOUCH ? 'medium' : 'high'), dpr);
     markQuality();
     renderer.setPixelRatio(G.quality.pixelRatio);
     renderer.setSize(global.innerWidth, global.innerHeight);
@@ -570,6 +592,7 @@
     scene.fog = new THREE.FogExp2(0x060607, 0.035);
     const camera = new THREE.PerspectiveCamera(75, global.innerWidth / global.innerHeight, 0.05, 60);
     camera.rotation.order = 'YXZ';
+    fitFov(camera, global.innerWidth, global.innerHeight);
     camera.position.fromArray(G.cfg.eyeStart);
 
     G.renderer = renderer;
@@ -601,12 +624,44 @@
     });
   };
 
+  // 縦長の画面でも横方向の視野が狭くなりすぎないよう、縦 FOV を広げる（横長は従来どおり 75°）。
+  function fitFov(camera, w, h) {
+    const aspect = w / h, base = 75 * Math.PI / 180, minAspect = 1.3;
+    let fov = 75;
+    if (aspect < minAspect) {
+      const hfov = 2 * Math.atan(Math.tan(base / 2) * minAspect);
+      fov = Math.min(100, (2 * Math.atan(Math.tan(hfov / 2) / aspect)) * 180 / Math.PI);
+    }
+    camera.fov = fov;
+    camera.updateProjectionMatrix();
+  }
+
+  // iOS（Safari）の誤操作を受け付けない: ピンチ、ダブルタップ拡大、長押しメニュー、文字選択、ドラッグ、スクロール。
+  // 画面をタップしても click は通す（開始・リスタート・画質ボタンのため）。
+  function installTouchGuards() {
+    const opt = { passive: false };
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (n) {
+      global.addEventListener(n, function (e) { e.preventDefault(); }, opt);
+    });
+    global.addEventListener('touchmove', function (e) { e.preventDefault(); }, opt);
+    global.addEventListener('touchstart', function (e) { if (e.touches.length > 1) e.preventDefault(); }, opt);
+    let lastEnd = 0;
+    global.addEventListener('touchend', function (e) {
+      const now = Date.now();
+      if (now - lastEnd < 350) e.preventDefault(); // 350ms 以内の 2 回目＝ダブルタップ
+      lastEnd = now;
+    }, opt);
+    ['dblclick', 'contextmenu', 'selectstart', 'dragstart'].forEach(function (n) {
+      document.addEventListener(n, function (e) { e.preventDefault(); });
+    });
+  }
+
   function onResize() {
     const w = global.innerWidth;
     const h = global.innerHeight;
     G.renderer.setSize(w, h);
     G.camera.aspect = w / h;
-    G.camera.updateProjectionMatrix();
+    fitFov(G.camera, w, h);
     callSafe('fx', 'resize', w, h);
   }
 
@@ -979,9 +1034,11 @@ Object.assign(G.assets, {
 /**
  * @file    src/02_player.js
  * @card    C10
+ * @author  dizz (制作: dizz / Created by dizz)
  * @author  Codex GPT-6 Sol
- * @date    2026-11-23
- * @revision 1
+ * @author  Claude Sonnet 5.5 (claude.ai chat) — dizz の指示で、タッチ操作（スティック・フリック・タップ発砲）を追加
+ * @date    2026-11-25
+ * @revision 2
  */
 G.define('player', [], function (ctx) {
   'use strict';
@@ -1096,6 +1153,115 @@ G.define('player', [], function (ctx) {
     }
   }
   ctx.bus.on(G.E.GAME_START, lockPointer);
+
+  // ---- タッチ操作（スマートフォン / タブレット）--------------------------------------
+  // 左半分: 触れた所に浮動スティックが出て移動。素早く払う（フリック）と、その向きへ少し進む。
+  // 右半分: ドラッグ／フリックで視点（離したあとも慣性で少し回る）。短いタップで発砲。右下の ● でも発砲。
+  const TC = { f: 0, s: 0, flickF: 0, flickS: 0, flickLeft: 0, lookX: 0, lookY: 0 };
+  const tcOut = { f: 0, s: 0 };
+  const TC_R = 56, TC_FLICK = 0.7;
+  let tcLeft = null, tcRight = null, tcUI = null, tcBase = null, tcKnob = null, tcFire = null;
+  const isTouchDevice = (navigator.maxTouchPoints > 0) || ('ontouchstart' in window);
+  function clampPitch(v) { return Math.max(-1.4, Math.min(1.4, v)); }
+  function tcBox(css) { const d = document.createElement('div'); d.style.cssText = css; return d; }
+  function tcBuild() {
+    tcUI = tcBox('position:fixed;left:0;top:0;right:0;bottom:0;pointer-events:none;z-index:6;display:none;touch-action:none');
+    tcBase = tcBox('position:absolute;width:112px;height:112px;margin:-56px 0 0 -56px;border-radius:50%;' +
+      'border:2px solid rgba(255,255,255,.28);background:rgba(255,255,255,.06);display:none');
+    tcKnob = tcBox('position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;background:rgba(255,255,255,.35)');
+    tcBase.appendChild(tcKnob);
+    tcFire = tcBox('position:absolute;right:calc(28px + env(safe-area-inset-right,0px));bottom:calc(32px + env(safe-area-inset-bottom,0px));' +
+      'width:84px;height:84px;border-radius:50%;border:2px solid rgba(255,255,255,.35);background:rgba(200,40,40,.28);pointer-events:auto;touch-action:none');
+    tcUI.appendChild(tcBase); tcUI.appendChild(tcFire); document.body.appendChild(tcUI);
+    // 発砲ボタン。window へ伝えない（視点ドラッグ・タップ発砲と二重に反応させない）
+    tcFire.addEventListener('touchstart', function (e) { e.preventDefault(); e.stopPropagation(); if (active()) fire(); }, { passive: false });
+    setInterval(function () { const on = active(); tcUI.style.display = on ? 'block' : 'none'; if (!on) tcReset(); }, 150);
+  }
+  function tcReset() {
+    tcLeft = tcRight = null;
+    TC.f = TC.s = TC.flickLeft = TC.lookX = TC.lookY = 0;
+    if (tcBase) tcBase.style.display = 'none';
+  }
+  window.addEventListener('touchstart', function (e) {
+    if (!active() || !tcUI) return;
+    tcUI.style.display = 'block';
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const c = e.changedTouches[i], now = performance.now();
+      const p = { id: c.identifier, x0: c.clientX, y0: c.clientY, x: c.clientX, y: c.clientY, t0: now, tLast: now, vx: 0, vy: 0, moved: 0 };
+      if (c.clientX < window.innerWidth * 0.5) {
+        if (!tcLeft) {
+          tcLeft = p;
+          tcBase.style.left = p.x0 + 'px'; tcBase.style.top = p.y0 + 'px'; tcBase.style.display = 'block';
+          tcKnob.style.transform = 'translate(0px,0px)';
+        }
+      } else if (!tcRight) { tcRight = p; TC.lookX = TC.lookY = 0; }
+    }
+    e.preventDefault(); // 続けて発生するマウスイベント（二重発砲）を止める
+  }, { passive: false });
+  window.addEventListener('touchmove', function (e) {
+    if (!active()) return;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const c = e.changedTouches[i];
+      if (tcLeft && c.identifier === tcLeft.id) {
+        const dx = c.clientX - tcLeft.x0, dy = c.clientY - tcLeft.y0, len = Math.hypot(dx, dy);
+        const kx = len > TC_R ? TC_R / len : 1;
+        tcKnob.style.transform = 'translate(' + (dx * kx) + 'px,' + (dy * kx) + 'px)';
+        const m = Math.min(1, len / TC_R), dz = 0.14, k = m < dz ? 0 : (m - dz) / (1 - dz); // デッドゾーン
+        TC.s = len > 0 ? (dx / len) * k : 0;
+        TC.f = len > 0 ? (-dy / len) * k : 0;
+      } else if (tcRight && c.identifier === tcRight.id) {
+        const now = performance.now(), dt = Math.max(1, now - tcRight.tLast) / 1000;
+        const ddx = c.clientX - tcRight.x, ddy = c.clientY - tcRight.y;
+        yaw -= ddx * 0.0052; pitch = clampPitch(pitch - ddy * 0.0042);
+        tcRight.vx = 0.5 * tcRight.vx + 0.5 * (-ddx * 0.0052 / dt);
+        tcRight.vy = 0.5 * tcRight.vy + 0.5 * (-ddy * 0.0042 / dt);
+        tcRight.x = c.clientX; tcRight.y = c.clientY; tcRight.tLast = now;
+        tcRight.moved = Math.max(tcRight.moved, Math.hypot(c.clientX - tcRight.x0, c.clientY - tcRight.y0));
+        applyView(ctx.state.time);
+      }
+    }
+    e.preventDefault();
+  }, { passive: false });
+  function tcEnd(e) {
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const c = e.changedTouches[i], now = performance.now(), ended = e.type === 'touchend';
+      if (tcLeft && c.identifier === tcLeft.id) {
+        const dx = c.clientX - tcLeft.x0, dy = c.clientY - tcLeft.y0, len = Math.hypot(dx, dy);
+        if (ended && now - tcLeft.t0 < 260 && len > 40) { TC.flickF = -dy / len; TC.flickS = dx / len; TC.flickLeft = TC_FLICK; } // フリックで一歩
+        tcLeft = null; TC.f = TC.s = 0; tcBase.style.display = 'none';
+      } else if (tcRight && c.identifier === tcRight.id) {
+        if (ended) {
+          if (tcRight.moved < 12 && now - tcRight.t0 < 280) { if (active()) fire(); } // 短いタップ＝発砲
+          else if (now - tcRight.tLast < 80) { // 動いたまま離した＝フリック。慣性で回す
+            TC.lookX = Math.max(-4, Math.min(4, tcRight.vx)); TC.lookY = Math.max(-2.5, Math.min(2.5, tcRight.vy));
+          }
+        }
+        tcRight = null;
+      }
+    }
+    if (active()) e.preventDefault();
+  }
+  window.addEventListener('touchend', tcEnd, { passive: false });
+  window.addEventListener('touchcancel', tcEnd, { passive: false });
+  // 毎フレーム: 視点の慣性を進め、タッチ由来の移動入力（前後 f / 左右 s）を返す
+  function tcStep(dt) {
+    if (TC.lookX || TC.lookY) {
+      if (tcRight) TC.lookX = TC.lookY = 0;
+      else {
+        yaw += TC.lookX * dt; pitch = clampPitch(pitch + TC.lookY * dt);
+        const k = Math.exp(-dt / 0.3); TC.lookX *= k; TC.lookY *= k;
+        if (Math.abs(TC.lookX) < 0.02 && Math.abs(TC.lookY) < 0.02) TC.lookX = TC.lookY = 0;
+      }
+    }
+    let f = TC.f, s = TC.s;
+    if (TC.flickLeft > 0) {
+      const k = TC.flickLeft / TC_FLICK; f += TC.flickF * k; s += TC.flickS * k;
+      TC.flickLeft = Math.max(0, TC.flickLeft - dt);
+    }
+    tcOut.f = f; tcOut.s = s;
+    return tcOut;
+  }
+  if (isTouchDevice) tcBuild();
   // Solve the moving axis against the circular cross-section of each box.
   function moveAxis(axis, amount) {
     const other = axis === 'x' ? 'z' : 'x', old = eye[axis];
@@ -1117,11 +1283,13 @@ G.define('player', [], function (ctx) {
     if (!active()) return;
     if (keys.ArrowLeft) yaw += 1.5 * dt;
     if (keys.ArrowRight) yaw -= 1.5 * dt;
-    const forward = (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0);
-    const side = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0);
-    const oldX = eye.x, oldZ = eye.z;
-    if (forward || side) {
-      const speed = 2.6 * dt / Math.hypot(forward,side);
+    const tv = tcStep(dt);
+    const forward = (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0) + tv.f;
+    const side = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0) + tv.s;
+    const oldX = eye.x, oldZ = eye.z, mag = Math.hypot(forward, side);
+    if (mag > 1e-4) {
+      // キーは従来どおり一定速度。スティックは倒し具合（0〜1）で速さが変わる
+      const speed = 2.6 * dt * Math.min(1, mag) / mag;
       moveAxis('x', (-Math.sin(yaw) * forward + Math.cos(yaw) * side) * speed);
       moveAxis('z', (-Math.cos(yaw) * forward - Math.sin(yaw) * side) * speed);
     }
@@ -1138,6 +1306,7 @@ G.define('player', [], function (ctx) {
   function reset() {
     eye.fromArray(ctx.cfg.eyeStart); yaw = pitch = recoil = bob = 0; lastFire = -Infinity; dragging = false;
     Object.keys(keys).forEach(k => { keys[k] = false; });
+    tcReset();
     camera.rotation.set(0,0,0,'YXZ'); gun.position.z = -0.35; camera.updateMatrixWorld(true);
   }
   reset();
@@ -2023,9 +2192,9 @@ G.define('world', ['texgen'], function (ctx) {
  * @card    C5
  * @author  dizz (制作: dizz / Created by dizz)
  * @author  Codex GPT-6 Sol
- * @author  Claude Sonnet 5.5 (claude.ai chat) — dizz の指示で、立ちすくみの揺れ・突進・攻撃の動きを改修
- * @date    2026-11-23
- * @revision 2
+ * @author  Claude Sonnet 5.5 (claude.ai chat) — dizz の指示で、立ちすくみの揺れ・突進・攻撃の動きを改修、近づくまで動かない仕様に変更
+ * @date    2026-11-25
+ * @revision 3
  */
 G.define('killer', ['killer_model', 'player'], function (ctx) {
   'use strict';
@@ -2090,9 +2259,10 @@ G.define('killer', ['killer_model', 'player'], function (ctx) {
         }
         break;
       case KS.THREATEN:
+        // 近づかれるまで動かない（時間切れの突進はしない）。
+        // 銃を向けられて 3m 以内なら後退、狙われないまま 2.5m 以内へ寄られたら突進。
         if(aimed && d<3)enter(KS.RETREAT);
         else if(unaimed+1e-9>=1 && d<2.5)enter(KS.CHARGE);
-        else if(tState+1e-9>=10)enter(KS.CHARGE);
         break;
       case KS.RETREAT:
         if(root.position.z<=-6.4+1e-9)enter(KS.CORNERED);
@@ -2648,9 +2818,9 @@ G.define('fx', [], function (ctx) {
  * @author  Claude Sonnet 5.5 (claude.ai chat) — dizz の指示で実装
  * @author  Codex GPT-6 Sol
  * @author  Claude Opus 5.5 (Claude Code) — C13 見た目改修
- * @author  Claude Sonnet 5.5 (claude.ai chat) — dizz の指示で、立ちすくみ・突進・攻撃のモーションを改修
- * @date    2026-11-23
- * @revision 6
+ * @author  Claude Sonnet 5.5 (claude.ai chat) — dizz の指示で、立ちすくみ・突進・攻撃のモーションを改修、立ちすくみは静止に変更
+ * @date    2026-11-25
+ * @revision 7
  */
 /* 08_killer_model.js — 犯人の 3D モデルとポーズ (order S3 / card C3)
  * 制作: dizz
@@ -3152,21 +3322,17 @@ G.define('fx', [], function (ctx) {
           S(J.elbowL, -0.2, 0, 0);
           break;
         case 'threaten':
-          // 立ちすくむ。足は接地したまま、体重をゆっくり左右に移すだけ（体は滑らない）。
-          s = Math.sin((2 * PI * t) / 3.2); // 体重移動
-          e = Math.sin((2 * PI * t) / 4.4 + 1); // 上体のひねり（周期をずらして機械的に見せない）
-          S(J.hips, 0, 0, 0.06 * s);
-          S(J.spine, 0.12 + 0.025 * Math.sin((2 * PI * t) / 3.2 + 0.6), 0, 0);
-          S(J.chest, 0, 0.05 * e, -0.035 * s);
-          S(J.head, 0.06, -0.04 * e, 0.03 * s);
-          S(J.shoulderR, -2.7 + 0.015 * Math.sin(2 * PI * t * 1.1), 0, -0.25);
-          S(J.elbowR, -0.6 + 0.02 * Math.sin(2 * PI * t * 1.7), 0, 0);
+          // 近づかれるまで動かない。斧を構えて立つだけ（呼吸は writeJoints 側）。足は接地。
+          S(J.spine, 0.12, 0, 0);
+          S(J.head, 0.06, 0, 0);
+          S(J.shoulderR, -2.7, 0, -0.25);
+          S(J.elbowR, -0.6, 0, 0);
           S(J.shoulderL, -1.1, 0, 0.25);
           S(J.elbowL, -0.5, 0, 0);
-          S(J.hipL, -0.15, 0, -0.06 * s); // 腰の傾きを打ち消して脚を鉛直に保つ
-          S(J.hipR, 0.1, 0, -0.06 * s);
-          S(J.kneeL, 0.15 + 0.06 * (1 + s), 0, 0); // 荷重の逆側の膝がゆるむ
-          S(J.kneeR, 0.15 + 0.06 * (1 - s), 0, 0);
+          S(J.hipL, -0.15, 0, 0);
+          S(J.hipR, 0.1, 0, 0);
+          S(J.kneeL, 0.21, 0, 0);
+          S(J.kneeR, 0.21, 0, 0);
           target[HIPS_Y] = groundedHipsY(1);
           break;
         case 'retreat':
