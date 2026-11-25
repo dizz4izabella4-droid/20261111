@@ -11,14 +11,12 @@
   ul{list-style:none;margin:0;padding:0}
   li{margin:0 0 10px}
   a{color:#111;text-decoration:underline}
-  p{color:#666;font-size:14px}
 </style>
 </head>
 <body>
 <main>
   <h1>既存パズル</h1>
   <ul id="list"></ul>
-  <p id="msg"></p>
 </main>
 <script>
 (function () {
@@ -32,7 +30,7 @@
         li.appendChild(a); list.appendChild(li);
       });
     })
-    .catch(function () { document.getElementById('msg').textContent = '一覧を読み込めませんでした。'; });
+    .catch(function () {});
 })();
 </script>
 </body>
