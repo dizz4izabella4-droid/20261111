@@ -2021,19 +2021,24 @@ G.define('world', ['texgen'], function (ctx) {
 /**
  * @file    src/05_killer.js
  * @card    C5
+ * @author  dizz (制作: dizz / Created by dizz)
  * @author  Codex GPT-6 Sol
+ * @author  Claude Sonnet 5.5 (claude.ai chat) — dizz の指示で、立ちすくみの揺れ・突進・攻撃の動きを改修
  * @date    2026-11-23
- * @revision 1
+ * @revision 2
  */
 G.define('killer', ['killer_model', 'player'], function (ctx) {
   'use strict';
   var THREE=ctx.THREE, E=G.E, KS=G.KS, model=ctx.mod('killer_model'), player=ctx.mod('player');
   var root=model.root, tState=0, unaimed=0, vocalTime=0, stepDistance=0, swung=false;
-  var chest=new THREE.Vector3(), anchor=new THREE.Vector3(), hitDir=new THREE.Vector3(0,0,-1);
+  var chest=new THREE.Vector3(), hitDir=new THREE.Vector3(0,0,-1);
   var vocalPos=new THREE.Vector3(),stepPos=new THREE.Vector3(),swingPos=new THREE.Vector3();
   var transition={from:KS.IDLE,to:KS.IDLE},vocal={type:'breath',pos:vocalPos};
   var footstep={pos:stepPos,heavy:false},swing={pos:swingPos,hit:false},damage={amount:50,from:'killer'};
   var lastPose=null,poseTime=0,WOUND_DEATH=3;
+  // 突進・攻撃の動き。RUN_STRIDE は走りの 1 歩の長さ（足音もこの間隔で鳴らす）。
+  var RUN_SPEED=3.2,RUN_STRIDE=RUN_SPEED*0.55/2,ATTACK_RANGE=1.9,SWING_AT=0.6,STRIKE_AT=0.8,ATTACK_END=1.65,LUNGE=0.3,HIT_REACH=1.5;
+  var runSpeed=0,carryV=0,gaitDist=0,lunged=0,struck=false;
   var api={root:root,state:KS.IDLE,headPos:function(out){return model.headPos(out);},update:update,reset:reset};
   Object.defineProperty(api,'hittables',{enumerable:true,get:function(){return model.hittables;}});
   function emitVocal(type) {
@@ -2042,8 +2047,9 @@ G.define('killer', ['killer_model', 'player'], function (ctx) {
   function enter(next) {
     transition.from=api.state;transition.to=next;api.state=next;
     tState=0;vocalTime=0;stepDistance=0;swung=false;
+    carryV=next===KS.ATTACK?runSpeed:0;runSpeed=0;gaitDist=0;lunged=0;struck=false;
     G.bus.emit(E.KILLER_STATE,transition);
-    if(next===KS.THREATEN){anchor.copy(root.position);emitVocal('growl');}
+    if(next===KS.THREATEN)emitVocal('growl');
     else if(next===KS.CHARGE)emitVocal('scream');
     else if(next===KS.HIT)emitVocal('pain');
     else if(next===KS.DEATH){root.rotation.y=Math.atan2(-hitDir.x,-hitDir.z);G.state.killerWounds=WOUND_DEATH;emitVocal('pain');}
@@ -2061,6 +2067,11 @@ G.define('killer', ['killer_model', 'player'], function (ctx) {
         stepDistance-=interval;stepPos.copy(root.position);footstep.heavy=heavy;G.bus.emit(E.KILLER_STEP,footstep);
       }
     }
+  }
+  function ease(u){u=u<0?0:u>1?1:u;return u*u*(3-2*u);}
+  // プレイヤーへ dist だけ進む。minD より近づかない。
+  function approach(dx,dz,d,dist,minD) {
+    var m=Math.min(dist,d-minD);if(m>1e-9)move(dx/d,dz/d,m,false,0);
   }
   function periodicBreath(period) {
     while(vocalTime+1e-9>=period){vocalTime-=period;emitVocal('breath');}
@@ -2091,41 +2102,59 @@ G.define('killer', ['killer_model', 'player'], function (ctx) {
         if(tState+1e-9>=2.5 || d<1.8)enter(KS.CHARGE);
         break;
       case KS.CHARGE:
-        if(d<1.1)enter(KS.ATTACK);
+        if(d<ATTACK_RANGE)enter(KS.ATTACK);
         break;
       case KS.ATTACK:
-        if(tState+1e-9>=1.65)enter(KS.THREATEN);
+        if(tState+1e-9>=ATTACK_END)enter(KS.THREATEN);
         break;
       case KS.HIT:
         if(tState+1e-9>=0.5)enter(G.state.killerWounds>=2?KS.CHARGE:KS.RETREAT);
         break;
     }
-    var name='idle',poseT=tState;
+    var name='idle',poseT=tState,amp;
     switch(api.state) {
       case KS.IDLE:name='idle';periodicBreath(3);break;
       case KS.THREATEN:
-        name='threaten';root.position.x=anchor.x+0.2*Math.sin(2*Math.PI*tState/2.4);clampPosition();periodicBreath(3);break;
+        name='threaten';periodicBreath(3);break; // 体は動かさない。揺れは model 側の体重移動だけ
       case KS.RETREAT:
         name='retreat';
         var tx=Math.max(-3,Math.min(3,root.position.x))-root.position.x,tz=-6.5-root.position.z,len=Math.hypot(tx,tz);
-        if(len>1e-9)move(tx/len,tz/len,Math.min(len,0.6*dt),false,0.5);
-        break;
+        if(len>1e-9){var rs=Math.min(len,0.6*dt);move(tx/len,tz/len,rs,false,0.3);gaitDist+=rs;} // 足運びは進んだ距離に同期
+        poseT=gaitDist/0.6;break;
       case KS.CORNERED:name='cornered';periodicBreath(1.2);break;
       case KS.CHARGE:
-        name='charge';if(d>0.9)move(dx/d,dz/d,Math.min(3.2*dt,d-0.9),true,1);break;
+        // 一気に最高速にせず、0.55 秒かけて加速する。足の運びは進んだ距離に同期（滑らない）。
+        name='charge';runSpeed=RUN_SPEED*(0.2+0.8*ease(tState/0.55));
+        if(d>0.9){var st=Math.min(runSpeed*dt,d-0.9);move(dx/d,dz/d,st,true,RUN_STRIDE);gaitDist+=st;}
+        poseT=gaitDist/RUN_SPEED+0.1375;amp=runSpeed/RUN_SPEED;break;
       case KS.ATTACK:
-        name=tState<0.6-1e-9?'attack_wind':'attack_swing';poseT=name==='attack_swing'?Math.max(0,tState-0.6):tState;break;
-      case KS.HIT:name='hit';move(hitDir.x,hitDir.z,0.6*dt,false,0);break;
+        name=tState<SWING_AT-1e-9?'attack_wind':'attack_swing';poseT=name==='attack_swing'?Math.max(0,tState-SWING_AT):tState;
+        // 走ってきた勢いは溜めの間に殺す（急停止して滑らない）。振り下ろしに合わせて一歩踏み込む。
+        if(tState<0.45)approach(dx,dz,d,carryV*Math.pow(1-tState/0.45,2)*dt,0.8);
+        var lg=LUNGE*ease((tState-(SWING_AT-0.04))/0.24);
+        if(lg>lunged){approach(dx,dz,d,lg-lunged,0.7);lunged=lg;}
+        break;
+      case KS.HIT:name='hit';move(hitDir.x,hitDir.z,1.8*Math.pow(1-Math.min(1,tState/0.5),2)*dt,false,0.3);break; // 合計 0.3m。のけぞりから一歩よろける（model の hit と同じ式）
       case KS.DEATH:name='death';break;
     }
     if(api.state!==KS.DEATH)root.rotation.y=Math.atan2(player.eye.x-root.position.x,player.eye.z-root.position.z);
-    if(api.state===KS.ATTACK && tState+1e-9>=0.6 && !swung) {
-      swung=true;swing.hit=d<1.4;
-      swingPos.set(root.position.x+Math.sin(root.rotation.y)*0.8,1.4,root.position.z+Math.cos(root.rotation.y)*0.8);
-      G.bus.emit(E.KILLER_SWING,swing);if(swing.hit)G.bus.emit(E.PLAYER_DAMAGED,damage);
+    if(api.state===KS.ATTACK) {
+      if(!swung && tState+1e-9>=SWING_AT) {
+        // 振り始め＝風切り音だけ。当たりは刃がプレイヤーに届く瞬間（STRIKE_AT）に PLAYER_DAMAGED で別に知らせる。
+        swung=true;swing.hit=false;
+        swingPos.set(root.position.x+Math.sin(root.rotation.y)*0.8,1.4,root.position.z+Math.cos(root.rotation.y)*0.8);
+        G.bus.emit(E.KILLER_SWING,swing);
+      }
+      if(!struck && tState+1e-9>=STRIKE_AT) {
+        struck=true;
+        stepPos.copy(root.position);footstep.heavy=true;G.bus.emit(E.KILLER_STEP,footstep); // 踏み込みの足音
+        if(Math.hypot(player.eye.x-root.position.x,player.eye.z-root.position.z)<HIT_REACH)G.bus.emit(E.PLAYER_DAMAGED,damage);
+      }
     }
     if(name!==lastPose){lastPose=name;poseTime=0;}else poseTime+=dt;
-    model.pose(name,poseT,poseTime>=0.2-1e-9?1:Math.min(1,poseTime/0.2));
+    var bl=poseTime>=0.2-1e-9?1:Math.min(1,poseTime/0.2);
+    if(name==='attack_swing')bl=1; // wind の終端と swing の始端は連続しているのでブレンドしない（振りが鈍るため）
+    model.pose(name,poseT,bl,amp);
   }
   G.bus.on(E.HIT,function(e){
     if(e.owner!=='killer' || api.state===KS.DEATH || G.state.phase!=='play' || e.zone==='axe')return;
@@ -2138,8 +2167,8 @@ G.define('killer', ['killer_model', 'player'], function (ctx) {
   });
   function reset() {
     api.state=KS.IDLE;G.state.killerWounds=0;root.position.fromArray(G.cfg.killerStart);root.rotation.y=0;
-    tState=0;unaimed=0;vocalTime=0;stepDistance=0;swung=false;poseTime=0;lastPose=null;
-    hitDir.set(0,0,-1);anchor.copy(root.position);model.pose('idle',0,1);
+    tState=0;unaimed=0;vocalTime=0;stepDistance=0;swung=false;poseTime=0;lastPose=null;runSpeed=0;carryV=0;gaitDist=0;lunged=0;struck=false;
+    hitDir.set(0,0,-1);model.pose('idle',0,1);
   }
   reset();return api;
 });
@@ -2619,8 +2648,9 @@ G.define('fx', [], function (ctx) {
  * @author  Claude Sonnet 5.5 (claude.ai chat) — dizz の指示で実装
  * @author  Codex GPT-6 Sol
  * @author  Claude Opus 5.5 (Claude Code) — C13 見た目改修
+ * @author  Claude Sonnet 5.5 (claude.ai chat) — dizz の指示で、立ちすくみ・突進・攻撃のモーションを改修
  * @date    2026-11-23
- * @revision 5
+ * @revision 6
  */
 /* 08_killer_model.js — 犯人の 3D モデルとポーズ (order S3 / card C3)
  * 制作: dizz
@@ -3073,10 +3103,43 @@ G.define('fx', [], function (ctx) {
     function clamp01(u) {
       return u < 0 ? 0 : u > 1 ? 1 : u;
     }
+    var tmpPose = new Float32Array(SIZE);
+    var intensity = 1; // 走りの強さ 0..1（killer が速さから渡す。省略時 1）
+
+    // 脚の関節角から、足裏が床に着く腰の高さを求める（足首の rest 高さ 0.05、脚長 0.9）。
+    // k=1 で完全に接地、小さいほど浮く（走りの滞空）。立ち・踏み込みで足が浮いたり沈んだりしない。
+    // 走りの脚の運び（左脚の位相 phi。右脚は phi+PI）。接地中(m=PI/2..3PI/2)は足が一定の速さで後ろへ流れる＝
+    // 体の前進に合わせれば地面を滑らない。遊脚中は膝を畳んで素早く前へ戻す（エルミート曲線で接地と速度をつなぐ）。
+    function gaitM(phi) {
+      var m = phi % (2 * PI);
+      return m < 0 ? m + 2 * PI : m;
+    }
+    function gaitSwingX(m) { // 遊脚の進み 0..1（接地中は -1）
+      if (m >= PI / 2 && m <= 1.5 * PI) return -1;
+      return (m < PI / 2 ? m + PI / 2 : m - 1.5 * PI) / PI;
+    }
+    function gaitHip(phi, A) {
+      var m = gaitM(phi), x = gaitSwingX(m);
+      if (x < 0) return -A + (2 * A * (m - PI / 2)) / PI;
+      var x2 = x * x, x3 = x2 * x;
+      return (2 * x3 - 3 * x2 + 1) * A + (x3 - 2 * x2 + x) * 2 * A + (-2 * x3 + 3 * x2) * -A + (x3 - x2) * 2 * A;
+    }
+    function gaitKnee(phi, K) {
+      var x = gaitSwingX(gaitM(phi));
+      return 0.12 + (x < 0 ? 0 : K * Math.sin(PI * x));
+    }
+    function groundedHipsY(k) {
+      var hl = target[J.hipL * 3], kl = target[J.kneeL * 3];
+      var hr = target[J.hipR * 3], kr = target[J.kneeR * 3];
+      var l = 0.45 * Math.cos(hl) + 0.45 * Math.cos(hl + kl);
+      var r = 0.45 * Math.cos(hr) + 0.45 * Math.cos(hr + kr);
+      var ik = 0.05 + Math.max(l, r);
+      return 0.95 - k * (0.95 - ik);
+    }
 
     // 目標角を target に書く（純粋な関数。new なし）
     function computeTarget(name, t) {
-      var i, u, e, s, p, k, k2;
+      var i, u, e, s, p, k, k2, a, amp, es, rv;
       for (i = 0; i < SIZE; i++) target[i] = 0;
       target[HIPS_Y] = 0.95;
       switch (name) {
@@ -3089,20 +3152,25 @@ G.define('fx', [], function (ctx) {
           S(J.elbowL, -0.2, 0, 0);
           break;
         case 'threaten':
-          target[HIPS_Y] = 0.93;
-          S(J.spine, 0.12, 0, 0);
-          S(J.chest, 0, 0.2 * Math.sin((2 * PI * t) / 2.4), 0);
-          S(J.head, 0.05, 0, 0);
-          S(J.shoulderR, -2.7, 0, -0.25);
-          S(J.elbowR, -0.6, 0, 0);
+          // 立ちすくむ。足は接地したまま、体重をゆっくり左右に移すだけ（体は滑らない）。
+          s = Math.sin((2 * PI * t) / 3.2); // 体重移動
+          e = Math.sin((2 * PI * t) / 4.4 + 1); // 上体のひねり（周期をずらして機械的に見せない）
+          S(J.hips, 0, 0, 0.06 * s);
+          S(J.spine, 0.12 + 0.025 * Math.sin((2 * PI * t) / 3.2 + 0.6), 0, 0);
+          S(J.chest, 0, 0.05 * e, -0.035 * s);
+          S(J.head, 0.06, -0.04 * e, 0.03 * s);
+          S(J.shoulderR, -2.7 + 0.015 * Math.sin(2 * PI * t * 1.1), 0, -0.25);
+          S(J.elbowR, -0.6 + 0.02 * Math.sin(2 * PI * t * 1.7), 0, 0);
           S(J.shoulderL, -1.1, 0, 0.25);
           S(J.elbowL, -0.5, 0, 0);
-          S(J.hipL, -0.15, 0, 0);
-          S(J.hipR, 0.1, 0, 0);
-          S(J.kneeL, 0.15, 0, 0);
-          S(J.kneeR, 0.15, 0, 0);
+          S(J.hipL, -0.15, 0, -0.06 * s); // 腰の傾きを打ち消して脚を鉛直に保つ
+          S(J.hipR, 0.1, 0, -0.06 * s);
+          S(J.kneeL, 0.15 + 0.06 * (1 + s), 0, 0); // 荷重の逆側の膝がゆるむ
+          S(J.kneeR, 0.15 + 0.06 * (1 - s), 0, 0);
+          target[HIPS_Y] = groundedHipsY(1);
           break;
         case 'retreat':
+          // 後ろ歩き。t は「進んだ距離 / 0.6」（killer が渡す）。1 歩 0.3m。足は接地中に体に対して前へ流れる（逆向きの歩き）。
           p = (2 * PI * t) / 1.0;
           target[HIPS_Y] = 0.94;
           S(J.spine, 0.1, 0, 0);
@@ -3111,81 +3179,107 @@ G.define('fx', [], function (ctx) {
           S(J.elbowR, -0.6, 0, 0);
           S(J.shoulderL, -1.0, 0, 0.25);
           S(J.elbowL, -0.5, 0, 0);
-          S(J.hipL, 0.35 * Math.sin(p), 0, 0);
-          S(J.hipR, -0.35 * Math.sin(p), 0, 0);
-          S(J.kneeL, 0.4 * Math.max(0, Math.cos(p)), 0, 0);
-          S(J.kneeR, 0.4 * Math.max(0, -Math.cos(p)), 0, 0);
+          S(J.hipL, gaitHip(-p, 0.17), 0, 0);
+          S(J.hipR, gaitHip(-p + PI, 0.17), 0, 0);
+          S(J.kneeL, gaitKnee(-p, 0.3), 0, 0);
+          S(J.kneeR, gaitKnee(-p + PI, 0.3), 0, 0);
+          target[HIPS_Y] = groundedHipsY(1);
           break;
         case 'cornered':
-          target[HIPS_Y] = 0.9;
-          S(J.spine, 0.25, 0, 0);
-          S(J.head, 0.3, 0, 0);
-          S(J.shoulderR, -2.2 + 0.03 * Math.sin(40 * t), 0, -0.2);
-          S(J.elbowR, -0.8, 0, 0);
-          S(J.shoulderL, -0.9, 0, 0.3);
-          S(J.elbowL, -0.6, 0, 0);
+          // 追い詰められて身を縮め、荒い息で震える（息の周期 1.2 秒は killer の呼吸音と同じ）。
+          s = Math.sin((2 * PI * t) / 1.2);
+          S(J.spine, 0.25 + 0.03 * s, 0, 0);
+          S(J.chest, 0, 0.04 * Math.sin(17 * t), 0.02 * Math.sin(13 * t + 1));
+          S(J.head, 0.3 + 0.04 * Math.sin(23 * t), 0.06 * Math.sin(7 * t), 0);
+          S(J.shoulderR, -2.2 + 0.03 * Math.sin(40 * t) + 0.04 * s, 0, -0.2);
+          S(J.elbowR, -0.8 + 0.05 * Math.sin(33 * t), 0, 0);
+          S(J.shoulderL, -0.9 + 0.04 * s, 0, 0.3);
+          S(J.elbowL, -0.6 + 0.05 * Math.sin(29 * t + 2), 0, 0);
           S(J.hipL, -0.2, 0, 0);
           S(J.hipR, -0.2, 0, 0);
-          S(J.kneeL, 0.4, 0, 0);
-          S(J.kneeR, 0.4, 0, 0);
+          S(J.kneeL, 0.4 + 0.03 * s, 0, 0);
+          S(J.kneeR, 0.4 + 0.03 * s, 0, 0);
+          target[HIPS_Y] = groundedHipsY(1);
           break;
         case 'charge':
+          // 走り。t は「進んだ距離 / 3.2」＝歩幅に同期した時間（killer が渡す）。intensity は速さ 0..1。
+          // 股関節の振り幅は 0.51rad（以前は 0.9 で、足が体の倍の速さで空回りしていた）。
+          a = intensity;
           p = (2 * PI * t) / 0.55;
-          target[HIPS_Y] = 0.93 + 0.04 * Math.abs(Math.sin(p));
-          S(J.spine, 0.35, 0, 0);
-          S(J.head, 0, 0, 0);
-          S(J.shoulderR, -2.9, 0, -0.2);
-          S(J.elbowR, -0.8, 0, 0);
-          S(J.shoulderL, 0.6 * Math.sin(p), 0, 0);
+          amp = 0.3 + 0.21 * a; // 0.51rad ＝ 1 歩 0.88m（体の前進と一致）
+          S(J.spine, 0.16 + 0.22 * a, 0, 0);
+          S(J.chest, 0, 0.16 * a * Math.sin(p), 0); // 左足が前のとき右肩が前
+          S(J.head, -0.12 * a, -0.16 * a * Math.sin(p), 0); // 頭は正面を向いたまま
+          S(J.shoulderR, -2.45 + 0.05 * Math.sin(2 * p), 0, -0.22);
+          S(J.elbowR, -0.75, 0, 0);
+          S(J.shoulderL, -0.35 + 0.65 * a * Math.sin(p), 0, 0.15);
           S(J.elbowL, -0.9, 0, 0);
-          S(J.hipL, -0.9 * Math.sin(p), 0, 0);
-          S(J.hipR, 0.9 * Math.sin(p), 0, 0);
-          S(J.kneeL, 0.9 * Math.max(0, Math.sin(p + 1.57)), 0, 0);
-          S(J.kneeR, 0.9 * Math.max(0, -Math.sin(p + 1.57)), 0, 0);
+          S(J.hipL, gaitHip(p, amp), 0, 0);
+          S(J.hipR, gaitHip(p + PI, amp), 0, 0);
+          S(J.kneeL, gaitKnee(p, 0.5 + 0.7 * a), 0, 0);
+          S(J.kneeR, gaitKnee(p + PI, 0.5 + 0.7 * a), 0, 0);
+          target[HIPS_Y] = groundedHipsY(0.5); // 半分だけ接地に合わせる＝程よい上下動と滞空
           break;
         case 'attack_wind':
-          u = clamp01(t / 0.6);
-          target[HIPS_Y] = 0.93;
-          S(J.spine, lerp(0.1, -0.15, u), 0, 0);
-          S(J.chest, 0, lerp(0, 0.3, u), 0);
-          S(J.head, 0, 0, 0);
-          S(J.shoulderR, lerp(-2.7, -3.1, u), 0, -0.2);
-          S(J.elbowR, lerp(-0.6, -1.2, u), 0, 0);
-          S(J.shoulderL, -1.0, 0, 0.3);
-          S(J.elbowL, -0.6, 0, 0);
-          S(J.hipL, -0.3, 0, 0);
-          S(J.hipR, 0.2, 0, 0);
-          S(J.kneeL, 0.2, 0, 0);
-          S(J.kneeR, 0.2, 0, 0);
+          // 0.00-0.38: 踏み込んで体を反らし、右肩ごと斧を後ろへ引く ／ 0.38-0.60: 振りかぶったまま一瞬止める（溜め。小さく震える）
+          u = smooth(clamp01(t / 0.38));
+          k = smooth(clamp01((t - 0.38) / 0.06));
+          S(J.spine, lerp(0.3, -0.2, u), 0, 0);
+          S(J.chest, 0, lerp(0, -0.5, u), 0); // 右肩が後ろへ（以前は逆に前へ出ていた）
+          S(J.head, lerp(0, 0.22, u), 0, 0);
+          S(J.shoulderR, lerp(-2.5, -3.05, u) + 0.02 * k * Math.sin(60 * t), 0, lerp(-0.22, -0.35, u));
+          S(J.elbowR, lerp(-0.75, -1.3, u), 0, 0);
+          S(J.shoulderL, lerp(-0.3, -1.25, u), 0, lerp(0.15, 0.35, u));
+          S(J.elbowL, lerp(-0.9, -0.4, u), 0, 0);
+          S(J.hipL, lerp(-0.1, -0.45, u), 0, 0); // 前足
+          S(J.hipR, lerp(0.1, 0.3, u), 0, 0); // 後ろ足
+          S(J.kneeL, lerp(0.3, 0.4, u), 0, 0);
+          S(J.kneeR, lerp(0.3, 0.15, u), 0, 0);
+          target[HIPS_Y] = groundedHipsY(1);
           break;
         case 'attack_swing':
-          e = smooth(clamp01(t / 0.25));
-          target[HIPS_Y] = lerp(0.93, 0.85, e);
-          S(J.spine, lerp(-0.15, 0.55, e), 0, 0);
-          S(J.chest, 0, lerp(0.3, -0.3, e), 0);
-          S(J.head, lerp(0, 0.2, e), 0, 0);
-          S(J.shoulderR, lerp(-3.1, -0.9, e), 0, lerp(-0.2, 0, e));
-          S(J.elbowR, lerp(-1.2, -0.2, e), 0, 0);
-          S(J.shoulderL, -0.5, 0, 0.3);
-          S(J.elbowL, -0.4, 0, 0);
-          S(J.hipL, -0.5, 0, 0);
-          S(J.hipR, 0.3, 0, 0);
-          S(J.kneeL, 0.4, 0, 0);
-          S(J.kneeR, 0.4, 0, 0);
+          // t = 振り始めからの秒。0-0.24: 加速しながら振り下ろす（刃は終端で最速）。
+          // 0.24 以降: 余勢で少し行き過ぎ、0.4-1.05 でゆっくり構え（threaten）へ戻る。
+          if (t < 0.24) e = (t / 0.24) * (t / 0.24);
+          else e = 1 + 0.3 * (1 - Math.exp(-(t - 0.24) / 0.036));
+          es = Math.min(e, 1.12);
+          S(J.spine, lerp(-0.2, 0.45, es), 0, 0);
+          S(J.chest, 0, lerp(-0.5, 0.35, es), 0);
+          S(J.head, lerp(0.22, -0.05, es), 0, 0);
+          S(J.shoulderR, lerp(-3.05, -1.15, e), 0, lerp(-0.35, -0.05, es));
+          S(J.elbowR, lerp(-1.3, -0.25, e), 0, 0);
+          S(J.shoulderL, lerp(-1.25, 0.2, es), 0, lerp(0.35, 0.2, es));
+          S(J.elbowL, lerp(-0.4, -0.3, es), 0, 0);
+          S(J.hipL, lerp(-0.45, -0.12, es), 0, 0); // 前足は踏んだまま、腰が前足の上へ
+          S(J.hipR, lerp(0.3, 0.62, es), 0, 0);
+          S(J.kneeL, lerp(0.4, 0.8, es), 0, 0);
+          S(J.kneeR, lerp(0.15, 0.25, es), 0, 0);
+          target[HIPS_Y] = groundedHipsY(1);
+          rv = smooth(clamp01((t - 0.4) / 0.65));
+          if (rv > 0) {
+            tmpPose.set(target);
+            computeTarget('threaten', 0);
+            for (i = 0; i < SIZE; i++) target[i] = tmpPose[i] + (target[i] - tmpPose[i]) * rv;
+          }
           break;
         case 'hit':
-          s = Math.sin(PI * clamp01(t / 0.5));
-          target[HIPS_Y] = 0.92;
-          S(J.spine, lerp(0, -0.3, s), 0, 0);
-          S(J.head, lerp(0, -0.4, s), 0, 0);
-          S(J.shoulderR, -2.2, 0, 0);
-          S(J.elbowR, -0.7, 0, 0);
-          S(J.shoulderL, -0.4, 0, 0.3);
-          S(J.elbowL, -0.4, 0, 0);
-          S(J.hipL, -0.1, 0, 0);
-          S(J.hipR, -0.1, 0, 0);
-          S(J.kneeL, 0.2, 0, 0);
-          S(J.kneeR, 0.2, 0, 0);
+          // 被弾。素早くのけぞり（0.12 秒）、ゆっくり戻る。足は一歩だけ後ろへよろける。
+          // 体の後退量は killer 側の 0.3*(1-(1-u)^3)（u=t/0.5）と同じ式で、足運びはその距離に同期＝足が滑らない。
+          u = clamp01(t / 0.5);
+          s = t < 0.12 ? smooth(t / 0.12) : 1 - smooth(clamp01((t - 0.12) / 0.38));
+          p = PI * (1 - (1 - u) * (1 - u) * (1 - u));
+          S(J.spine, -0.35 * s, 0, 0);
+          S(J.chest, 0, 0.25 * s, 0);
+          S(J.head, -0.45 * s, 0.2 * s, 0);
+          S(J.shoulderR, -2.2 + 0.3 * s, 0, -0.1 * s);
+          S(J.elbowR, -0.7 - 0.3 * s, 0, 0);
+          S(J.shoulderL, -0.4 - 0.9 * s, 0, 0.3 + 0.4 * s); // 反射的に腕が跳ね上がる
+          S(J.elbowL, -0.4 - 0.4 * s, 0, 0);
+          S(J.hipL, gaitHip(-p, 0.17), 0, 0);
+          S(J.hipR, gaitHip(-p + PI, 0.17), 0, 0);
+          S(J.kneeL, gaitKnee(-p, 0.3) + 0.15 * s, 0, 0);
+          S(J.kneeR, gaitKnee(-p + PI, 0.3) + 0.15 * s, 0, 0);
+          target[HIPS_Y] = groundedHipsY(1);
           break;
         case 'death':
           k = clamp01(t / 1.2);
@@ -3254,7 +3348,8 @@ G.define('fx', [], function (ctx) {
     // ----------------------------------------------------------------------
     // 公開関数
     // ----------------------------------------------------------------------
-    function pose(name, t, blend) {
+    function pose(name, t, blend, amp) {
+      intensity = amp === undefined ? 1 : amp;
       if (!POSE_NAMES[name]) {
         if (!warned[name]) {
           warned[name] = true;
