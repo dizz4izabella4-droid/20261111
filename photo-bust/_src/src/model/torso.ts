@@ -127,8 +127,11 @@ export class Torso {
     const nbw = body.neckBaseWidth;
     const xs = this.xs;
     const secs: Section[] = [
-      { a: aW * 1.16, bf: dW * 0.55, bb: dW * 0.55, cz: 0, p: 2.4 }, // bottom (cz=0, bf=bb: origin at midpoint)
-      { a: aW * 1.1, bf: dW * 1.06 * 0.52, bb: dW * 1.06 * 0.48, cz: 0, p: 2.4 }, // navel
+      // bottom and navel follow the ribcage (underbust / chest depth), not the waist, so that a
+      // smaller waist circumference makes a narrower waist instead of a thinner lower torso.
+      // Ratios chosen to match the previous shape at the default parameters.
+      { a: aU * 1.021, bf: cd * 0.5, bb: cd * 0.5, cz: 0, p: 2.4 }, // bottom (cz=0, bf=bb: origin at midpoint)
+      { a: aU * 0.968, bf: cd * 0.964 * 0.52, bb: cd * 0.964 * 0.48, cz: 0, p: 2.4 }, // navel
       { a: aW, ...waistSec }, // waist
       { a: aU, ...ubSec }, // underbust
       { a: aU * 1.1, bf: cd * 0.5, bb: cd * 0.5, cz: 0, p: 2.5 }, // bust (ribcage + lateral chest)

@@ -26,7 +26,7 @@ export const BODY_DEFS: ParamDef[] = [
   { key: 'chestDepth', label: '胸郭の厚み', unit: 'cm', def: 0.19, min: 0.15, max: 0.25 },
   { key: 'underbustCirc', label: 'アンダーバスト周径', unit: 'cm', def: 0.7, min: 0.6, max: 0.9 },
   { key: 'underbustHeight', label: 'アンダーバストの高さ', unit: 'cm', def: 0.3, min: 0.24, max: 0.36, note: '下端から' },
-  { key: 'waistCirc', label: 'ウエスト周径', unit: 'cm', def: 0.64, min: 0.52, max: 0.9 },
+  { key: 'waistCirc', label: 'ウエスト周径', unit: 'cm', def: 0.61, min: 0.52, max: 0.9 },
   { key: 'waistHeight', label: 'ウエストの高さ', unit: 'cm', def: 0.14, min: 0.08, max: 0.2, note: '下端から' },
   { key: 'navelHeight', label: 'へその高さ', unit: 'cm', def: 0.05, min: 0.02, max: 0.1, note: '下端から' },
   { key: 'neckBaseWidth', label: '首の付け根の幅', unit: 'cm', def: 0.11, min: 0.09, max: 0.14 },
@@ -34,7 +34,7 @@ export const BODY_DEFS: ParamDef[] = [
 
 export const BREAST_DEFS: ParamDef[] = [
   { key: 'size', label: '大きさ（ボリューム）', unit: 'index', def: 50, min: 0, max: 100 },
-  { key: 'projection', label: '前方への張り出し', unit: 'mm', def: 0.024, min: 0, max: 0.12 },
+  { key: 'projection', label: '前方への張り出し', unit: 'mm', def: 0.018, min: 0, max: 0.12 },
   { key: 'baseWidth', label: '付け根の幅', unit: 'mm', def: 0.17, min: 0.07, max: 0.18 },
   { key: 'baseHeight', label: '付け根の高さ', unit: 'mm', def: 0.16, min: 0.06, max: 0.17 },
   { key: 'centerHeight', label: '高さ位置（中心）', unit: 'cm', def: 0.37, min: 0.3, max: 0.44, note: '下端から' },
