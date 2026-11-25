@@ -108,6 +108,33 @@
     return IZ.esc(text.slice(0, i)) + '<mark>' + IZ.esc(text.slice(i, i + needle.length)) + '</mark>' + IZ.esc(text.slice(i + needle.length));
   }
 
+  // 台帳の group が同じ作品は、一覧では1枚のカードにまとめ、そのページへリンクする
+  var GROUPS = { 'puzzles-existing': { title: '既存パズル', summary: 'エッグ・棒・ぷにょ・あの宝石・ワイヤダをまとめたページ。', path: 'puzzles-existing/' } };
+  function groupCard(id, g, members) {
+    var rep = members.slice().sort(function (a, b) { return (b.first || '') < (a.first || '') ? -1 : 1; })[0];
+    var devs = [];
+    members.forEach(function (m) { m.devices.forEach(function (d) { if (devs.indexOf(d) < 0) devs.push(d); }); });
+    var c = Object.assign({}, members[0]);
+    c.id = 'group:' + id; c.title = g.title; c.titleEn = ''; c.summary = g.summary; c.url = IZ.ROOT + g.path; c.path = g.path;
+    c.devices = devs; c.sticker = ''; c.statusNote = ''; c.version = ''; c.status = 'stable'; c.icon = 'star';
+    c.updateBadge = undefined; c.newBadge = undefined; c.isNew = false; c.isUpdated = false; c.gallery = true;
+    c.first = rep.first; c.last = members.map(function (m) { return m.last || ''; }).sort().slice(-1)[0] || null;
+    c.history = rep.history; c.dateState = rep.dateState; c.order = Math.min.apply(null, members.map(function (m) { return m.order; }));
+    c._h = '';
+    return c;
+  }
+  function collapse(list) {
+    var out = [], seen = {};
+    list.forEach(function (w) {
+      var g = w.group && GROUPS[w.group];
+      if (!g) { out.push(w); return; }
+      if (seen[w.group]) return;
+      seen[w.group] = true;
+      out.push(groupCard(w.group, g, list.filter(function (x) { return x.group === w.group; })));
+    });
+    return out;
+  }
+
   function card(w) {
     var dv = IZ.deviceText(w), cat = IZ.CATS[w.category], lab = w.category === 'lab', tool = w.category === 'tool';
     var badges = '';
@@ -167,11 +194,11 @@
   function render() {
     var nq = norm(state.q);
     var base = all.filter(function (w) { return devOK(w) && (!nq || w._h.indexOf(nq) >= 0); });
-    var list = base.filter(function (w) { return !state.cat || w.category === state.cat; });
+    var list = collapse(base.filter(function (w) { return !state.cat || w.category === state.cat; }));
     // しぼり込みボタンの件数は、検索・端末の条件を反映した数
     document.querySelectorAll('[data-n]').forEach(function (el) {
       var c = el.getAttribute('data-n');
-      el.textContent = base.filter(function (w) { return !c || w.category === c; }).length;
+      el.textContent = collapse(base.filter(function (w) { return !c || w.category === c; })).length;
     });
     grid.innerHTML = sorted(list).map(card).join('');
     $('empty').hidden = list.length > 0;
