@@ -139,6 +139,7 @@ button[aria-pressed="true"],button.on{background:#2a2f38;border-color:var(--tag)
 .basis .res b{color:var(--tag)}
 /* 事件の選択・一覧の見どころ行 */
 #tabs select{max-width:min(46vw,21em)}
+#tabs button{white-space:nowrap;flex:none}
 #tabs button[data-nav]{padding:6px 10px;font-size:15px;line-height:1}
 .tbl tr.has-theme td{border-bottom:0;padding-bottom:2px}
 .tbl td.theme{padding-top:0;font-size:12px;color:var(--dim);line-height:1.7}
@@ -154,6 +155,30 @@ button[aria-pressed="true"],button.on{background:#2a2f38;border-color:var(--tag)
 .strip .bar{background-image:linear-gradient(to right,rgba(255,255,255,.08) 1px,transparent 1px);background-size:25% 100%;background-color:#0d1117}
 .strip.ax .bar{background-image:none}
 
+/* ===== 基礎知識・解剖所見・先生の着眼点 ===== */
+.main{display:flex;flex-direction:column;gap:14px;min-width:0}
+.sheet.auto{border-top-color:#5a1f1f}
+.sheet.auto .row{grid-template-columns:6em minmax(0,1fr)}
+.sheet.auto .fl{margin:0;padding:0 0 0 1.1em}
+.sheet.auto .fl li{margin:0 0 3px;line-height:1.6}
+.sheet.auto .anote{margin:6px 0 0;font-size:13.5px;line-height:1.8}
+.photo .fig2{filter:blur(5px)}
+.teacher .focus{margin:10px 0;padding:8px 12px;border-left:3px solid var(--tag);background:rgba(210,166,58,.07);line-height:1.9}
+.teacher .focus b{color:var(--tag)}
+.inl{display:inline;padding:1px 8px;margin:0 2px;font-size:inherit;line-height:1.6;border-radius:2px;border-color:var(--tag);color:var(--tag)}
+.learn .prof{padding:12px 14px;border:1px solid var(--line);border-left:3px solid var(--tag);background:#10141a}
+.learn .prof p{margin:6px 0;line-height:1.8;font-size:14px}
+.learn .prof .who{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;color:var(--dim)}
+.learn .prof .who .badge{padding:2px 8px;border:1px solid var(--tag);color:var(--tag);letter-spacing:.1em}
+.lesson{margin:6px 0;border:1px solid var(--line);background:#10141a}
+.lesson summary{cursor:pointer;padding:9px 12px;font-size:14px}
+.lesson summary:hover{color:var(--tag)}
+.lesson[open] summary{border-bottom:1px solid var(--line);color:var(--tag)}
+.lesson p{margin:0;padding:8px 14px;line-height:1.9;font-size:14px}
+.lesson .cases{padding-top:4px;padding-bottom:12px}
+.strip .seg.ext{background:var(--tag)}
+.brow .rg.ext{background:#c4a24c}
+
 @media (max-width:720px){
   #win{left:0;top:0;width:100%;height:100vh;height:100dvh;transform:none;border:0;box-shadow:none;padding-top:env(safe-area-inset-top,0px)}
   .titlebar{cursor:default;padding-right:58px} /* 共通基盤の全画面ボタン（右上）を避ける */
@@ -164,6 +189,9 @@ button[aria-pressed="true"],button.on{background:#2a2f38;border-color:var(--tag)
   .tbl .vl{display:none}
   .tbl td:first-child{white-space:nowrap}
   .tbl td.theme{white-space:normal}
+  .tbl td:nth-child(4){white-space:normal}
+  .toolbar #tabs{flex-wrap:nowrap;width:100%}
+  #tabs select{flex:1 1 auto;min-width:0;max-width:none}
   .strip{grid-template-columns:3.2em minmax(0,1fr) 7.2em;gap:6px;font-size:11px}
   .sheet .stamp{display:none} /* 文字に重なって読みにくいため */
 }
@@ -459,7 +487,24 @@ var DECOMP = {
 var SITE = {back:'背中側',front:'体の前面',side:'体の側面',legs:'足・下半身'};
 var POS  = {supine:'仰向け',prone:'うつ伏せ',side:'横向き',sitting:'座位',hanging:'懸垂'};
 var EXPECT_SITE = {supine:'back',prone:'front',side:'side',sitting:'legs',hanging:'legs'};
-var KEYJP = {temp:'体温',livor:'死斑',rigor:'死後硬直',decomp:'腐敗'};
+var CORNEA = {
+  clear:{r:[0,6],t:'澄んでいる'},
+  hazy:{r:[3,24],t:'わずかに白く濁り始めている'},
+  cloudy:{r:[12,INF],t:'強く濁っている'}
+};
+var STOMACH = {
+  full:{r:[0,2],t:'食べ物がほとんど消化されずに残っている'},
+  partial:{r:[1,4],t:'一部が消化され、まだ残っている'},
+  mostly:{r:[3,6],t:'ほとんど消化が進んでいる'},
+  empty:{r:[5,12],t:'ほぼ空'}
+};
+var INSECT = {
+  eggs:{r:[2,30],t:'ハエの卵が付着している'},
+  larvae:{r:[24,240],t:'ハエの幼虫（ウジ）が見られる'},
+  pupae:{r:[120,INF],t:'さなぎが見られる'}
+};
+var KEYJP = {temp:'体温',livor:'死斑',rigor:'死後硬直',decomp:'腐敗',cornea:'角膜',stomach:'胃内容物',insect:'昆虫',alive:'最終生存確認'};
+var KEYSHORT = {temp:'体温',livor:'死斑',rigor:'硬直',decomp:'腐敗',cornea:'角膜',stomach:'胃内容',insect:'昆虫',alive:'生存確認'};
 
 /* ===== サンプル事件（州をまたぐ連続事件の想定） ===== */
 var CASES = [
@@ -580,19 +625,297 @@ var CASES = [
     notes:['窓を閉め切った寝室で発見。'] }
 ];
 
-// 事件のまとまり（内容はすべて架空）。compare:true は、事件どうしを時間帯で比べる対象
-var GROUPS = [
-  { id:'serial', short:'連続事件', compare:true,
-    title:'州間高速 連続殺人事件（サンプル）',
-    summary:'6件の事件。被害者は州境をまたいで発見されています。死亡推定の時間帯を、時差・管轄・発見状況の違いに注意して見比べてください。' },
-  { id:'misc', short:'状況別', compare:false,
-    title:'状況別サンプル集',
-    summary:'さまざまな状況での、検死所見の読み方を見るためのサンプルです。互いに関連のない事件で、ポイントを一言添えています。' }
+/* ===== 既存事件への補足（死因・解剖所見・先生の着眼点） ===== */
+var NECKA = '頸部圧迫による窒息（索状物による絞頸）';
+var ENRICH = {
+ 'A-01':{cause:'neck',series:'serial',theme:'連続事件の1件目。所見がそろい、時間帯がきれいに絞れます。',
+  autopsy:{done:true,cod:NECKA,manner:'他殺',findings:['前頸部に水平方向の索状痕（幅約8mm、ほぼ一周）','眼瞼結膜と顔面に溢血点、顔面のうっ血','舌骨に骨折なし','爪の下に皮膚片なし（抵抗の痕跡は乏しい）'],pending:['索状痕の幅から凶器の候補を絞る']},
+  focus:[['索状痕の幅と走り方','首の痕は、凶器の「サイン」だ。幅が約8ミリで水平に一周しているなら、細い帯状のものを後ろから引いた可能性を考える。この痕を、他の被害者と見比べるのが連続事件の基本だよ。'],
+         ['抵抗の痕跡が少ない','爪の下に何も無い。不意を突かれたのか、顔見知りだったのか。時刻の話とは別だが、頭の片隅に置いておきなさい。']]},
+ 'B-02':{cause:'neck',series:'serial',theme:'検視官（Coroner）の管轄で解剖なし。所見が粗く、幅が広がります。',
+  autopsy:{done:false,note:'検視官の判断で解剖は行われず、外表の観察のみ。死因は「頸部圧迫の疑い」とされている。'},
+  focus:[['解剖がないということ','解剖が行われていないと、首の中の出血や骨の状態が分からない。同じ連続事件でも、管轄が違うだけで情報の質がこれほど変わる。推定の幅が広いのは、手を抜いたからではなく、材料が少ないからだ。']]},
+ 'C-03':{cause:'neck',series:'serial',theme:'屋外の寒さで冷却が速く、死斑の位置から遺体の移動が疑われます。',
+  autopsy:{done:true,cod:NECKA,manner:'他殺',findings:['前頸部に索状痕（A-01と近い幅）','眼瞼結膜に溢血点','背部・四肢に付着した土と、発見場所の土質が一致しない'],pending:['付着した土の鑑定']},
+  focus:[['死斑の位置','発見時は仰向けなのに、死斑は体の前面にある。死斑は固まると動かない。つまり、亡くなったあと、うつ伏せの状態で長く置かれ、その後に仰向けにされた。ここで殺されたのではない、ということだ。'],
+         ['屋外の体温','屋外は風や地面の冷たさで冷え方が読みにくい。体温だけで時刻を決めてはいけないよ。']]},
+ 'D-04':{cause:'neck',series:'serial',theme:'発見まで数日。腐敗が進み、他の証拠での絞り込みが必要です。',
+  autopsy:{done:true,cod:'頸部圧迫の疑い（腐敗により所見が不明瞭）',manner:'他殺の疑い',findings:['腹部の緑変、全身の硬直は消失','頸部の索状痕は一部のみ確認できる','舌骨の状態は腐敗のため評価困難'],pending:['携帯の通信記録など、外部の証拠との照合']},
+  focus:[['時間が経つと、体は語らなくなる','体温は室温と同じ、硬直は消え、残るのは腐敗だけ。こうなると幅は日単位になる。ここから先は、通信記録や目撃など、体の外の情報の出番だ。']]},
+ 'E-05':{cause:'stab',theme:'連続事件で、1人だけ死因も時間帯も異なります（模倣犯の疑い）。',
+  autopsy:{done:true,cod:'刺創による失血（腹部）',manner:'他殺',findings:['腹部に刺創1か所（長さ約2.5cm）','他の被害者に見られた索状痕はない','防御創なし'],pending:['凶器の特定']},
+  focus:[['手口の違い','他の被害者は首を絞められていたが、この方は刺されている。時間帯も昼間で、他の事件とずれる。偶然かもしれないが、手口と時間の両方が違うなら、別の人物を疑う理由になる。']]},
+ 'F-06':{cause:'neck',series:'serial',theme:'暖房で冷却が遅れ、体温だけだと死後の時間を短く見積もります。',
+  autopsy:{done:true,cod:NECKA,manner:'他殺',findings:['前頸部に水平方向の索状痕','眼瞼結膜に溢血点','室温82°F（暖房）で保温された状態'],pending:[]},
+  focus:[['暖房の部屋','室温が高いと、体はなかなか冷えない。体温だけを見ると「死んだばかり」と思ってしまう。死斑と硬直がそれより進んでいたら、体温を疑いなさい。']]},
+ 'M-01':{cause:'nat',theme:'死後ほどなく発見。体温は高く、死斑も硬直もまだ出ていません。',
+  autopsy:{done:true,cod:'虚血性心疾患（急性心筋梗塞の疑い）',manner:'病死',findings:['冠動脈に高度の狭窄','外傷なし、頸部に異常なし','他の死因を示す所見なし'],pending:[]},
+  focus:[['早すぎる発見','死後すぐは、体温も高く、死斑も硬直もまだ出ていない。所見が少ないので、幅は狭いが根拠も少ない。「温かい」は「死んだばかり」と同じ意味ではないよ。']]},
+ 'M-02':{cause:'drown',theme:'水中で発見。水は熱を速く奪うので、冷える速さを補正しています。',
+  autopsy:{done:true,cod:'溺水',manner:'事故（不詳）',findings:['気道に細かい泡沫、肺は膨隆','胃内に水','外傷なし'],pending:['珪藻検査']},
+  focus:[['水の中の体温','水は空気の何倍も熱を奪う。同じ死後時間でも、体はずっと冷たい。水温を測り忘れたら、時刻の計算は台無しだ。']]},
+ 'M-03':{cause:'tox',theme:'死後数時間。死斑が出始め、硬直は顎・首だけ。複数の所見で幅が絞れます。',
+  autopsy:{done:true,cod:'薬物中毒の疑い（毒物検査待ち）',manner:'不詳',findings:['肺水腫','外傷・頸部の損傷なし','胃内に未消化の錠剤様の物'],pending:['血中薬物濃度','胃内容物の成分分析']},
+  focus:[['検査結果を待つ','死因が中毒かもしれない、という段階では、まだ決めつけない。血液の結果が出るまでは「疑い」だ。ただし時刻の推定は、検査を待たずに進められる。']]},
+ 'M-04':{cause:'blunt',theme:'硬直が緩み始めた段階。「約1日」を示す所見が重なり、幅が小さく絞れます。',
+  autopsy:{done:true,cod:'頭部外傷（硬膜下血腫）',manner:'他殺の疑い',findings:['後頭部に挫創と頭蓋骨の線状骨折','硬膜下に血腫','腕に防御創なし'],pending:[]},
+  focus:[['1日ごろの目印','死斑が固定し、硬直が緩み始める。この2つが重なるのが、およそ1日目だ。ここまで来ると、体温は参考程度でいい。']]},
+ 'M-05':{cause:'nat',theme:'死斑は固定なのに硬直は弱い。痩せた高齢者では硬直が弱く出ます。',
+  autopsy:{done:true,cod:'虚血性心疾患',manner:'病死',findings:['冠動脈の高度狭窄','著しい痩せ（筋肉量が少ない）','外傷なし'],pending:[]},
+  focus:[['硬直の強さは筋肉の量で変わる','この方は痩せていて、筋肉が少ない。だから硬直が弱く、顎・首だけに見える。死斑の固定と食い違って見えるが、体格を考えれば説明がつく。所見の食い違いは、まず「体の事情」を疑いなさい。']]},
+ 'M-06':{cause:'cold',theme:'雪の屋外で発見。寒さで冷却が速く、体温の推定はずれやすい。',
+  autopsy:{done:true,cod:'低体温症（凍死）',manner:'事故',findings:['衣類の一部が脱げていた（矛盾脱衣）','死斑は鮮やかな赤みを帯びる','胃粘膜に点状の出血','外傷なし'],pending:[]},
+  focus:[['脱げた服','寒さで亡くなった人が、服を脱いで見つかることがある。乱暴されたと早合点しやすいが、低体温の特徴だ。知らないと、とんだ見当違いをするよ。']]},
+ 'M-07':{cause:'stab',theme:'うつ伏せで発見されたのに死斑は背中側。死後に動かされた可能性があります。',
+  autopsy:{done:true,cod:'刺創による失血（胸部）',manner:'他殺',findings:['胸部に刺創2か所','両前腕に防御創','衣服の血痕の分布と、発見場所の血痕の少なさが合わない'],pending:['第一現場の特定']},
+  focus:[['現場に血が少ない','胸を刺されたのに、発見場所に血がほとんど無い。死斑の位置と合わせると、別の場所で亡くなって、運ばれてきたと考えるのが自然だ。'],
+         ['防御創','両腕の傷は、抵抗した証拠だ。不意打ちではなかったことになる。']]},
+ 'M-08':{cause:'nat',theme:'発見が遅く、腐敗が進行。「少なくとも約3日」としか言えず、上限が出ません。',
+  autopsy:{done:false,note:'検視官の判断で解剖は行われず。腐敗が高度で、死因は不詳とされている。'},
+  focus:[['上限が出ない','腐敗が進むと「少なくともこれ以上」としか言えなくなる。いつまで生きていたかという記録が見つかれば、上限が決まる。体の外に目を向けなさい。']]},
+ 'M-09':{cause:'tox',theme:'アラスカ時間（AKST）のケース。死斑が鮮紅色の一酸化炭素中毒。',
+  livorNote:'鮮紅色',
+  autopsy:{done:true,cod:'一酸化炭素中毒',manner:'事故',findings:['死斑が鮮やかな赤色','血中の一酸化炭素の値が高い','山荘の薪ストーブの煙道が詰まっていた'],pending:[]},
+  focus:[['鮮やかな赤','死斑は普通、紫がかっている。鮮やかな赤なら、一酸化炭素か寒冷を疑う。この色の違いに気づけるかどうかが、ベテランと新人の差だよ。']]},
+ 'M-10':{cause:'gun',theme:'座った姿勢で発見。死斑は足に出るため、体位と一致し、移動の疑いはありません。',
+  autopsy:{done:true,cod:'銃創（胸部）による出血性ショック',manner:'他殺',findings:['射入口は左胸部に1か所','周囲に火薬粒子による点状の痕なし（至近距離ではない）','弾丸は体内に残存'],pending:['弾丸の線条痕の照合']},
+  focus:[['座った人の死斑','座ったまま亡くなると、血は足の方にたまる。足の死斑は「ここで座って亡くなった」と一致している。位置が合っているのも、立派な所見だ。']]},
+ 'M-11':{cause:'blunt',theme:'暖かい地域のケース。室温が高いと冷え方がゆるやかです。',
+  autopsy:{done:true,cod:'頭部外傷',manner:'他殺の疑い',findings:['頭部に挫創、頭蓋内に出血','防御創なし','窓を閉め切った室内'],pending:[]},
+  focus:[['暖かい地域','室温が78°F（約26℃）だと、体はゆっくり冷える。標準の速さで計算すると、実際より短く出てしまう。地域と季節を、必ず考えなさい。']]}
+};
+(function(){
+  for(var i=0;i<CASES.length;i++){
+    var en=ENRICH[CASES[i].id];
+    if(en){ for(var k in en){ if(CASES[i][k]==null || k==='theme') CASES[i][k]=en[k]; } }
+  }
+})();
+
+/* ===== 追加事件（解剖を伴う事件・様々な環境）その1 ===== */
+CASES.push(
+ { id:'S-01', cause:'stab', scene:'indoor',
+  theme:'失血で死斑が淡い。胃の内容物と通話記録が加わり、幅が絞れます。',
+  victim:{label:'被害者 S1',sex:'男性',age:'40代'}, place:'テキサス州（アパートの台所）', tz:{abbr:'CST',offset:-6},
+  office:{type:'ME',name:'郡 監察医務局（Medical Examiner）'},
+  found:'2026-11-14 08:00', roomF:70, rectalF:84.0,
+  livor:'spreading', livorSite:'back', livorNote:'淡い（失血のため）', foundPos:'supine', rigor:'full',
+  lastMeal:'2026-11-13 19:30', stomach:'partial', lastAlive:'2026-11-13 21:40', aliveLabel:'友人との通話',
+  timeline:['11/13 19:30 夕食（本人がSNSに投稿）','11/13 21:40 友人との通話が終了（最後の生存確認）'],
+  notes:['出勤しないため、同僚が通報して発見。'],
+  autopsy:{done:true,cod:'刺創による失血（胸部・大血管の損傷）',manner:'他殺',
+   findings:['左前胸部に刺創1か所（長さ約2cm、深さ約10cm）','両手のひらと前腕に切創（防御創）','胸腔内に多量の血液','創の周囲に生活反応あり（生前の受傷）'],
+   pending:['血中アルコール','刃の幅・形から凶器を絞る']},
+  focus:[['死斑が淡い理由','血が大量に失われると、下側にたまる血が少なく、死斑は淡くなる。「淡いからまだ早い」と読むと、とんでもなく見誤る。体温や硬直と照らし合わせなさい。'],
+         ['胃の中の食事','夕食の時刻が分かっている。胃の中が「一部消化された」状態なら、食後1〜4時間ほど。食事の時刻に、この幅を足すと、亡くなった時刻が絞れる。'],
+         ['手のひらの傷','手のひらと腕の傷は防御創だ。抵抗したということは、不意打ちではない。犯人と顔見知りだったかどうかの手がかりにもなる。']]},
+ { id:'S-02', cause:'stab', scene:'outdoor',
+  theme:'寒冷な屋外で発見。防犯カメラの時刻が、体温の幅を絞ります。',
+  victim:{label:'被害者 S2',sex:'女性',age:'20代'}, place:'ミネソタ州（商業施設の駐車場）', tz:{abbr:'CST',offset:-6},
+  office:{type:'ME',name:'郡 監察医務局（Medical Examiner）'},
+  found:'2026-12-02 06:30', roomF:25, ambientLabel:'気温', rectalF:70,
+  livor:'fixed', livorSite:'front', foundPos:'prone', rigor:'full', env:['outdoor'],
+  lastAlive:'2026-12-01 18:20', aliveLabel:'防犯カメラ',
+  timeline:['12/01 18:20 店を出る姿が防犯カメラに映る（最後の生存確認）'],
+  notes:['早朝の除雪作業員が発見。気温は約25°F。'],
+  autopsy:{done:true,cod:'刺創による失血（腹部臓器の損傷）',manner:'他殺',
+   findings:['腹部に刺創3か所（向きと深さはまちまち）','衣服の損傷位置と皮膚の傷が一致','防御創なし'],
+   pending:['衣服の繊維の鑑定']},
+  focus:[['防犯カメラの時刻','体温だけでは、寒い屋外の幅は広い。そこに「18時20分に生きていた」という記録が加わると、上限が決まる。体の所見と外の記録は、互いに補い合うものだ。'],
+         ['傷の向きがまちまち','傷の向きや深さが揃っていないなら、混乱の中で複数回刺された可能性がある。1か所だけの傷とは、犯人の様子が違ってくる。']]},
+ { id:'N-01', cause:'neck', scene:'indoor',
+  theme:'手による頸部圧迫（扼頸）。角膜と胃の内容物も重なり、4〜6時間に絞れます。',
+  victim:{label:'被害者 N1',sex:'女性',age:'40代'}, place:'ジョージア州（自宅の居間）', tz:{abbr:'EST',offset:-5},
+  office:{type:'ME',name:'州 監察医務局（Medical Examiner）'},
+  found:'2026-11-15 16:00', roomF:74, rectalF:90.7,
+  livor:'spreading', livorSite:'back', foundPos:'supine', rigor:'jaw', cornea:'hazy',
+  lastMeal:'2026-11-15 09:00', stomach:'partial',
+  timeline:['11/15 09:00 朝食（家族が確認）'],
+  notes:['外出から戻った家族が発見。室内に争った形跡。'],
+  autopsy:{done:true,cod:'頸部圧迫による窒息（扼頸）',manner:'他殺',
+   findings:['前頸部と側頸部に指頭大の皮下出血が複数','爪による表皮剥離','眼瞼結膜と顔面に溢血点','舌骨に骨折','爪の下に皮膚片'],
+   pending:['爪の下の皮膚片のDNA型']},
+  focus:[['首の骨','手で絞められると、首の骨（舌骨）が折れることがある。ひもで絞めた場合と比べて、折れやすさが違う。首の中の所見は、解剖でないと分からない。'],
+         ['爪の下','被害者が抵抗して、相手の皮膚をひっかくことがある。爪の下の皮膚片は、DNAで犯人にたどり着く強力な手がかりだ。'],
+         ['3つの所見が重なる','体温・死斑・硬直・角膜・胃。5つが「4〜6時間」で重なった。多くの指標が重なるほど、推定は頼もしくなる。']]},
+ { id:'N-02', cause:'neck', scene:'indoor',
+  theme:'口鼻の閉塞による窒息。所見に乏しく、消去法で結論に近づきます。',
+  victim:{label:'被害者 N2',sex:'男性',age:'50代'}, place:'アリゾナ州（自宅の寝室。夏時間なし）', tz:{abbr:'MST',offset:-7},
+  office:{type:'ME',name:'郡 監察医務局（Medical Examiner）'},
+  found:'2026-11-16 09:30', roomF:66, rectalF:84.6,
+  livor:'partial', livorSite:'side', foundPos:'side', rigor:'full',
+  lastMeal:'2026-11-15 22:00', stomach:'full',
+  timeline:['11/15 22:00 夕食を済ませたあと、友人と会う予定だったと家族が証言'],
+  notes:['朝、連絡が取れず家族が訪ねて発見。飲酒の形跡あり。'],
+  autopsy:{done:true,cod:'窒息の疑い（所見に乏しい）',manner:'他殺の疑い（確定せず）',
+   findings:['口唇の内側に小さな擦過傷（歯による）','顔面の軽度のうっ血、眼瞼に溢血点がわずか','心臓・脳に死因となる異常なし','頸部に損傷なし'],
+   pending:['血中アルコール・薬物の検査']},
+  focus:[['所見に乏しい窒息','口や鼻をふさがれた窒息は、跡がほとんど残らないことがある。心臓や脳に異常がなく、他の死因が見つからない。そこで「窒息の疑い」と言う。消去法の結論だ。'],
+         ['胃がいっぱい','夕食の直後なら、胃は満たされている。この方は胃が「いっぱい」だった。夕食から間もなく亡くなったことになる。']]},
+ { id:'B-01', cause:'blunt', scene:'garage',
+  theme:'頭部外傷。受傷した時刻と、亡くなった時刻が違います（生存時間）。',
+  victim:{label:'被害者 B1',sex:'男性',age:'60代'}, place:'ウィスコンシン州（自宅の車庫）', tz:{abbr:'CST',offset:-6},
+  office:{type:'ME',name:'郡 監察医務局（Medical Examiner）'},
+  found:'2026-12-05 11:00', roomF:38, ambientLabel:'車庫内の温度', rectalF:81.0,
+  livor:'partial', livorSite:'legs', foundPos:'sitting', rigor:'full',
+  timeline:['12/04 21:30 隣人が口論と物音を聞く（受傷時刻の目安）'],
+  notes:['車庫の壁にもたれて座った姿勢で発見。暖房のない車庫。'],
+  autopsy:{done:true,cod:'頭部外傷（硬膜下血腫・脳の腫脹）',manner:'他殺の疑い',
+   findings:['後頭部に挫創、頭蓋骨に線状骨折','硬膜下に血腫、脳が腫れている','脳の腫れの進み具合から、受傷後およそ数時間生存したと推定'],
+   pending:[]},
+  focus:[['怪我の時刻と死亡の時刻','21時30分に物音があった。でも、亡くなったのは、体の所見からすると深夜1時〜3時ごろだ。数時間のずれがある。怪我をした時刻と、亡くなった時刻は違うのだよ。'],
+         ['座った姿勢','壁にもたれて座ったまま亡くなると、血は足にたまる。足の死斑が姿勢と合っているから、動かされていない。']]},
+ { id:'G-01', cause:'gun', scene:'indoor',
+  theme:'銃声の通報時刻が上限を決め、6〜8時間に絞れます。',
+  victim:{label:'被害者 G1',sex:'男性',age:'30代'}, place:'ルイジアナ州（アパートの居間）', tz:{abbr:'CST',offset:-6},
+  office:{type:'ME',name:'郡 監察医務局（Medical Examiner）'},
+  found:'2026-11-18 07:30', roomF:64, rectalF:86.4,
+  livor:'spreading', livorSite:'back', foundPos:'supine', rigor:'full',
+  lastAlive:'2026-11-17 23:42', aliveLabel:'銃声の通報',
+  timeline:['11/17 23:42 隣人が「銃声のような音」を通報（この時刻より後に死亡）'],
+  notes:['通報を受けた巡回が、翌朝、再訪して発見。'],
+  autopsy:{done:true,cod:'銃創（胸部）による出血性ショック',manner:'他殺',
+   findings:['左胸部に射入口1か所','周囲に火薬粒子による点状の痕なし（至近距離ではない）','射出口なし、弾丸は体内に残存','弾道は左前方から右後方'],
+   pending:['弾丸の線条痕の照合（NIBIN）']},
+  focus:[['通報の時刻','隣人の通報は23時42分。この時刻より前に亡くなった可能性は低い。体の所見が示す幅の上限を、この記録がぴたりと押さえてくれる。'],
+         ['至近距離ではない','射入口の周りに火薬の痕がなければ、銃口は離れていた。撃たれた位置関係を考える材料になる。']]}
+);
+
+/* ===== 追加事件（解剖を伴う事件・様々な環境）その2 ===== */
+CASES.push(
+ { id:'W-01', cause:'drown', scene:'water',
+  theme:'水中の遺体。生きて水に入ったのか、亡くなってから入ったのかを調べます。',
+  victim:{label:'被害者 W1',sex:'男性',age:'20代'}, place:'ミシガン州（運河）', tz:{abbr:'EST',offset:-5},
+  office:{type:'ME',name:'郡 監察医務局（Medical Examiner）'},
+  found:'2026-11-20 10:00', roomF:48, ambientLabel:'水温', rateF:2.2, rectalF:62,
+  foundPos:'prone', rigor:'full', cornea:'hazy', env:['water'],
+  lastAlive:'2026-11-19 19:00', aliveLabel:'バイト先の退勤記録',
+  timeline:['11/19 19:00 退勤の記録（最後の生存確認）'],
+  notes:['釣り人が運河に浮かぶ遺体を発見。死斑は水中のため評価困難。'],
+  autopsy:{done:true,cod:'溺水',manner:'不詳（他殺の疑い）',
+   findings:['気道に細かい泡沫、肺は膨隆','胃内に水','骨髄から運河の水と同種の珪藻を検出','後頭部に挫傷（転落か殴打か判別できず）'],
+   pending:['頭部の傷の成因の鑑定']},
+  focus:[['生きて水に入ったか','骨髄から運河と同じ珪藻が出た。つまり、生きて水を吸い込んだ。亡くなってから投げ込まれたのではない。ただし、頭の傷が溺れる前にできたのかは、別の問題だ。'],
+         ['水温','水温48°Fでは、体の冷え方が速い。標準の速さで計算すると、時刻を見誤るよ。']]},
+ { id:'H-01', cause:'heat', scene:'vehicle',
+  theme:'死亡時の体温が高かった例。平熱で計算すると、死後の時間を短く見積もります。',
+  victim:{label:'被害者 H1',sex:'男性',age:'50代'}, place:'アリゾナ州（日向に停めた車内。夏時間なし）', tz:{abbr:'MST',offset:-7},
+  office:{type:'ME',name:'郡 監察医務局（Medical Examiner）'},
+  found:'2026-11-21 14:00', roomF:92, ambientLabel:'車内温度', initF:106, rectalF:100.4,
+  livor:'early', livorSite:'legs', foundPos:'sitting', rigor:'jaw',
+  lastAlive:'2026-11-21 08:30', aliveLabel:'ガソリンスタンドの防犯カメラ',
+  timeline:['11/21 08:30 給油する姿が防犯カメラに映る（最後の生存確認）'],
+  notes:['ドアが故障して開かなくなった車内で発見。室温が高かった。'],
+  autopsy:{done:true,cod:'高体温（熱中症）',manner:'事故（不詳）',
+   findings:['外傷なし','死亡直後の直腸温は106°F（約41℃）前後と推定','脱水所見','車のドアロックが内側から作動しない'],
+   pending:[]},
+  focus:[['体温が平熱より高い','直腸温が100.4°F。平熱で計算すると「まだ死後間もない」と出てしまう。ところが死因が熱中症なら、亡くなった時点で体温は106°Fあった。そこから冷え始めたと考えるべきだ。'],
+         ['死因から逆に考える','体温の数字だけでなく、死因が何かを先に考える。死因が分かって初めて、体温の読み方が決まる。']]},
+ { id:'T-01', cause:'tox', scene:'indoor',
+  theme:'停電した山小屋での一酸化炭素中毒。死斑が鮮紅色です。',
+  victim:{label:'被害者 T1',sex:'男性',age:'50代'}, place:'メイン州（停電した別荘）', tz:{abbr:'EST',offset:-5},
+  office:{type:'ME',name:'州 監察医務局（Medical Examiner）'},
+  found:'2026-12-03 08:00', roomF:40, ambientLabel:'室内温度', rectalF:62,
+  livor:'fixed', livorSite:'side', livorNote:'鮮紅色', foundPos:'side', rigor:'full',
+  lastAlive:'2026-12-02 17:30', aliveLabel:'友人との電話',
+  timeline:['12/02 17:30 停電のため、これから発電機を使うと友人に電話'],
+  notes:['雪嵐による停電中。室内に発電機が置かれていた。'],
+  autopsy:{done:true,cod:'一酸化炭素中毒',manner:'事故',
+   findings:['死斑が鮮やかな赤色','血中の一酸化炭素の値が著しく高い','外傷なし','発電機が室内で稼働した形跡'],
+   pending:[]},
+  focus:[['死斑の色','紫ではなく、鮮やかな赤。この色を見たら、一酸化炭素と寒冷を思い浮かべなさい。外から見て気づける、数少ない手がかりだ。'],
+         ['冷え切った小屋','停電で暖房が止まり、室温は40°F。冷え方が速いので、体温の幅は広くなる。電話の記録がなければ、時刻は大きくぼやけただろう。']]},
+ { id:'R-01', cause:'fire', scene:'fire',
+  theme:'火災現場。体温も死斑も使えません。亡くなったのは出火の前だったのか。',
+  victim:{label:'被害者 R1',sex:'男性',age:'50代'}, place:'オレゴン州（全焼した住宅）', tz:{abbr:'PST',offset:-8},
+  office:{type:'ME',name:'郡 監察医務局（Medical Examiner）'},
+  found:'2026-12-06 04:10', noTemp:true, noTempReason:'焼損・高熱にさらされたため、体温・死斑・硬直は参考にならない',
+  foundPos:'supine', lastMeal:'2026-12-05 19:00', stomach:'partial',
+  lastAlive:'2026-12-05 22:50', aliveLabel:'友人との最後の通話',
+  timeline:['12/05 19:00 夕食（宅配の記録）','12/05 22:50 友人との通話が終了（最後の生存確認）','12/05 23:55 火災報知器が作動','12/06 00:05 近隣が通報'],
+  notes:['消火後、居間から発見。両腕を曲げた姿勢（熱による筋肉の収縮で、生前の姿勢ではない）。'],
+  autopsy:{done:true,cod:'頭部外傷（焼損のため詳細は限定的）',manner:'他殺の疑い',
+   findings:['気道に煤なし','血中の一酸化炭素の値は低い（生前に煙を吸っていない）','頭部に骨折','胃内容物は夕食（宅配）と一致'],
+   pending:['出火原因の調査']},
+  focus:[['煙を吸っていない','生きて火災に遭えば、気道に煤が入り、血中の一酸化炭素も増える。この方はどちらも無い。火が出る前に、すでに亡くなっていた可能性がある。'],
+         ['体が使えないとき','焼損では、体温も死斑も当てにならない。使えるのは、胃の食事と、最後の通話の記録だ。2つが「22時台」を指し、出火は23時55分。順番を確かめなさい。'],
+         ['曲げた腕','火に焼かれると、筋肉が縮んで腕が曲がる。これは「抵抗した姿勢」でも「生前の姿勢」でもない。見かけで判断しないことだ。']]},
+ { id:'L-01', cause:'nat', scene:'indoor',
+  theme:'暖房をつけたままの一人暮らし。腐敗と虫の所見に、最後の生存確認が上限を与えます。',
+  victim:{label:'被害者 L1',sex:'男性',age:'70代'}, place:'マサチューセッツ州（アパート）', tz:{abbr:'EST',offset:-5},
+  office:{type:'ME',name:'州 監察医務局（Medical Examiner）'},
+  found:'2026-11-24 10:00', roomF:74, rectalF:75,
+  livor:'fixed', livorSite:'front', foundPos:'prone', rigor:'gone', decomp:'bloat', insect:'larvae',
+  lastAlive:'2026-11-17 14:00', aliveLabel:'郵便物の受け取り',
+  timeline:['11/17 14:00 郵便配達員に手渡しで受け取る（最後の生存確認）'],
+  notes:['異臭の通報で管理人が発見。暖房は入ったまま。'],
+  autopsy:{done:true,cod:'虚血性心疾患',manner:'病死',
+   findings:['冠動脈に高度の狭窄','腐敗が高度（ガスによる膨張）','ハエの幼虫を確認','外傷なし、頸部に異常なし'],
+   pending:[]},
+  focus:[['虫が教えてくれること','ハエの幼虫がいる。卵から幼虫になるまでに、おおよそ1日以上かかる。幼虫が見られるなら、少なくとも1日以上が経っている。腐敗と合わせれば、「3日以上」という幅が出る。'],
+         ['郵便配達員の記録','最後に生きていた記録があるのは大きい。それで、上限が決まる。腐敗だけでは「3日以上」としか言えなかったのが、「3日以上、約7日以内」に絞れた。'],
+         ['病死でも解剖','外から見ただけでは、病死か事件か見分けられない。他の死因を一つずつ除く。それが私たちの仕事だよ。']]}
+);
+
+/* ===== 死因カテゴリ（基礎知識の材料） ===== */
+var CAUSES = [
+ {id:'stab', name:'刺殺（刺創・切創）', short:'刺創',
+  blurb:'刃物による傷が死因のケース。傷の数・位置・向き・深さ、そして防御創の有無が着眼点です。',
+  timeNote:'大量に出血すると、体の下側にたまる血が減り、死斑が淡くなります。「淡い＝死後間もない」と読んではいけません。',
+  qa:[['防御創とは？','襲われたとき、とっさに手や腕で身を守ってできる傷です。手のひら・指・前腕の外側に出やすく、「不意を突かれたのか、抵抗したのか」の手がかりになります。'],
+      ['生活反応とは？','生きている間にできた傷には、出血や腫れなどの反応が起きます。死後にできた傷にはこれがほとんど見られません。傷がいつできたかを見分ける大切な目印です。']]},
+ {id:'neck', name:'絞殺・窒息（頸部圧迫など）', short:'絞殺・窒息',
+  blurb:'首の圧迫や、口・鼻をふさがれて息ができなくなったケース。首の痕、目や顔の点状出血、首の骨の折れ具合が着眼点です。',
+  timeNote:'窒息では死斑が濃く出ることがあります。ただし所見が乏しい窒息もあり、「何も見つからない」ことが「何も無かった」を意味するとは限りません。',
+  qa:[['溢血点とは？','顔や目の粘膜に出る、針の先ほどの小さな出血点です。首が圧迫されて血の流れが乱れたときに出やすい所見ですが、これだけで死因は決まりません。'],
+      ['索状痕とは？','ひもや帯などで首を絞めたときに残る、筋状の痕です。幅や走り方、一周しているかどうかが、凶器の推定や、他の死因との見分けに使われます。']]},
+ {id:'blunt', name:'鈍的外傷（頭部外傷など）', short:'鈍的外傷',
+  blurb:'殴打や転倒など、刃物以外の力による外傷。頭蓋骨の骨折や頭の中の出血が着眼点です。',
+  timeNote:'頭の怪我では、受傷してから亡くなるまで数時間かかることがあります。「怪我をした時刻」と「亡くなった時刻」は別物です。',
+  qa:[['生存時間とは？','怪我をしてから亡くなるまでの時間のことです。脳の腫れや血のかたまりの進み具合から、おおよそを推定します。数分のこともあれば、数時間・数日のこともあります。']]},
+ {id:'gun', name:'銃創', short:'銃創',
+  blurb:'銃で撃たれたケース。射入口と射出口、傷の周囲の火薬の痕、弾丸の行き先が着眼点です。',
+  timeNote:'銃声の通報や防犯カメラなど、外部の記録が時刻の強い手がかりになります。体の所見は、それを裏付けるために使います。',
+  qa:[['射入口と射出口の違いは？','弾が入った傷が射入口、出た傷が射出口です。傷の形や縁の様子が違い、弾がどの向きに通ったかの手がかりになります。弾が体内に残ることもあり、その場合は摘出して調べます。']]},
+ {id:'drown', name:'溺水（水中での死亡）', short:'溺水',
+  blurb:'水の中で亡くなったケース。生きたまま水に入ったのか、亡くなってから水に入ったのかの見分けが最大の着眼点です。',
+  timeNote:'水は空気より熱を速く奪うため、体温の下がり方が大きく変わります。水中の遺体では死斑も使いにくくなります。',
+  qa:[['珪藻（けいそう）検査とは？','水中にいる微小なプランクトンの殻を調べる検査です。生きて水を吸い込むと、殻が血流に乗って臓器や骨髄に届きます。亡くなってから水に入った場合は、そこまで届きにくいと考えられています。']]},
+ {id:'cold', name:'低体温（凍死）', short:'低体温',
+  blurb:'寒さで体温が下がって亡くなったケース。服の乱れや、皮膚・胃の特徴的な所見が着眼点です。',
+  timeNote:'寒冷では冷却が速く、体温から時刻を出しにくくなります。死斑が鮮やかな赤みを帯びることもあります。',
+  qa:[['矛盾脱衣とは？','強い低体温のとき、寒いはずなのに衣服を脱いだ状態で見つかることがあります。争った跡と見間違えやすいため、知っておくと誤認を避けられます。']]},
+ {id:'heat', name:'高体温（熱中症など）', short:'高体温',
+  blurb:'高温の環境で体温が上がって亡くなったケース。亡くなった時点の体温が、そもそも高かったことが最大の着眼点です。',
+  timeNote:'死亡時の体温が平熱より高いと、平熱で計算した場合に、死後の時間を短く見積もってしまいます。',
+  qa:[['なぜ体温が高いと時刻がずれるのですか？','体温から時刻を出す式は「平熱からどれだけ下がったか」を見ます。最初から高ければ、下がり始める位置が高く、同じ体温でも、より長い時間が経っていることになります。']]},
+ {id:'tox', name:'中毒（一酸化炭素・薬物）', short:'中毒',
+  blurb:'ガスや薬物が原因のケース。血液検査の結果と、死斑の色などが着眼点です。',
+  timeNote:'一酸化炭素中毒では、死斑が鮮やかな赤色になります。色で見落とされやすい一方、検査結果が出るまで死因は確定しません。',
+  qa:[['なぜ一酸化炭素で死斑が赤くなるのですか？','一酸化炭素は血液中の成分と強く結びつき、血液が鮮やかな赤色になります。そのため、死斑も紫ではなく鮮紅色になります。']]},
+ {id:'fire', name:'火災（焼損）', short:'火災',
+  blurb:'火災現場で見つかったケース。生きている間に火災に遭ったのか、亡くなった後に焼かれたのかが最大の着眼点です。',
+  timeNote:'焼損では体温・死斑・硬直がほとんど使えません。出火時刻や通話記録など、体の外の情報が頼りになります。',
+  qa:[['気道の煤（すす）は何を示しますか？','生きて呼吸していれば、煙を吸い込んで気道に煤が入り、血液中の一酸化炭素も増えます。気道が清潔で血中の値が低ければ、火災の前に亡くなっていた可能性があります。']]},
+ {id:'nat', name:'病死・死因不詳', short:'病死・不詳',
+  blurb:'病気による死亡や、死因がはっきりしないケース。事件性があるのかを見分けるため、解剖で他の死因を一つずつ除いていきます。',
+  timeNote:'一人暮らしの方で発見が遅れると、腐敗や虫の所見が中心になり、幅が広がります。最後に生きていた記録が頼りです。',
+  qa:[['なぜ病死でも解剖するのですか？','外から見ただけでは、病死と事件を見分けられないことがあるからです。解剖で他の死因が見つからなければ、病死と判断します。']]},
+ {id:'other', name:'その他', short:'その他', blurb:'', timeNote:'', qa:[]}
 ];
-var SERIES = GROUPS[0];
-function groupOf(c){
-  for(var i=0;i<GROUPS.length;i++) if(GROUPS[i].id===c.group || (!c.group && GROUPS[i].id==='serial')) return GROUPS[i].id;
-  return 'misc';
+function causeOf(c){
+  var k=c&&c.cause;
+  for(var i=0;i<CAUSES.length;i++) if(CAUSES[i].id===k) return CAUSES[i];
+  return CAUSES[CAUSES.length-1];
+}
+function getCause(id){ for(var i=0;i<CAUSES.length;i++) if(CAUSES[i].id===id) return CAUSES[i]; return null; }
+
+// 連続事件（A〜F）のまとめ。事件どうしを時間帯で比べる対象（内容はすべて架空）
+var SERIES = { id:'serial', title:'州間高速 連続殺人事件（サンプル）',
+  summary:'A-01〜F-06 は同一の連続事件（架空）。被害者は州境をまたいで発見されています。時間帯を見比べてください。' };
+function orderedCases(){
+  var out=[];
+  CAUSES.forEach(function(k){ CASES.forEach(function(c){ if(causeOf(c).id===k.id) out.push(c); }); });
+  return out;
 }
 
 /* ===== 状態 ===== */
@@ -624,8 +947,11 @@ function fmtTemp(f){
   if(S.unit==='FC') s += '（'+r1(fToC(f)).toFixed(1)+'℃）';
   return s;
 }
+function fmtDays(x){ return Math.round(x/12)/2; }
 function fmtHours(lo,hi){
-  return hi===INF ? lo+'時間以上' : lo+'〜'+hi+'時間';
+  var t = hi===INF ? lo+'時間以上' : lo+'〜'+hi+'時間';
+  if(lo>=48 || (hi!==INF && hi>=72)) t += hi===INF ? '（約'+fmtDays(lo)+'日以上）' : '（約'+fmtDays(lo)+'〜'+fmtDays(hi)+'日）';
+  return t;
 }
 function getCase(id){
   for(var i=0;i<CASES.length;i++) if(CASES[i].id===id) return CASES[i];
@@ -633,11 +959,12 @@ function getCase(id){
 }
 
 /* ===== 時刻 ===== */
-function foundUTC(c){
-  var m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})$/.exec(c.found||'');
-  if(!m || !c.tz || typeof c.tz.offset!=='number') return NaN;
-  return Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5]) - c.tz.offset*3600000;
+function toUTC(str,tz){
+  var m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})$/.exec(str||'');
+  if(!m || !tz || typeof tz.offset!=='number') return NaN;
+  return Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5]) - tz.offset*3600000;
 }
+function foundUTC(c){ return toUTC(c.found,c.tz); }
 function viewTz(c){
   return S.tz==='local' ? {off:c.tz.offset,abbr:c.tz.abbr} : TZS[S.tz];
 }
@@ -658,24 +985,49 @@ function fmtRange(a,b,tz){
 
 /* ===== 推定 ===== */
 function estimate(c){
+  var f=foundUTC(c);
+  if(isNaN(f)) return null;
   var room=+c.roomF, rect=+c.rectalF;
-  if(!isFinite(room)||!isFinite(rect)||isNaN(foundUTC(c))) return null;
+  var haveTemp = !c.noTemp && isFinite(room) && isFinite(rect);
+  if(!c.noTemp && !haveTemp) return null;
   var coroner = !!(c.office && c.office.type==='Coroner');
-  var rate = clamp(c.rateF!=null ? +c.rateF : BASE_RATE+(BASE_ROOM-room)*0.03, 0.8, 2.2);
-  var reached = rect <= room+1.5;
-  var h, tr, margin=0;
-  if(reached){
-    h = (BODY_F-(room+1.5))/rate;
-    tr = [Math.max(0,h), INF];
-  }else{
-    h = Math.max(0,(BODY_F-rect)/rate);
-    margin = Math.max(2,0.25*h)*(coroner?1.5:1);
-    tr = [Math.max(0,h-margin), h+margin];
+  var init = (c.initF!=null && isFinite(+c.initF)) ? +c.initF : BODY_F;
+  var rate=null, reached=false, h=null, tr=null, margin=0, ind=[];
+  if(haveTemp){
+    rate = clamp(c.rateF!=null ? +c.rateF : BASE_RATE+(BASE_ROOM-room)*0.03, 0.8, 2.2);
+    reached = rect <= room+1.5;
+    if(reached){
+      h = (init-(room+1.5))/rate;
+      tr = [Math.max(0,h), INF];
+    }else{
+      h = Math.max(0,(init-rect)/rate);
+      margin = Math.max(2,0.25*h)*(coroner?1.5:1);
+      tr = [Math.max(0,h-margin), h+margin];
+    }
+    ind.push({key:'temp',r:tr});
   }
-  var ind=[{key:'temp',r:tr}];
   if(LIVOR[c.livor])  ind.push({key:'livor', r:LIVOR[c.livor].r});
   if(RIGOR[c.rigor])  ind.push({key:'rigor', r:RIGOR[c.rigor].r});
   if(DECOMP[c.decomp]) ind.push({key:'decomp',r:DECOMP[c.decomp].r});
+  if(CORNEA[c.cornea]) ind.push({key:'cornea',r:CORNEA[c.cornea].r});
+  if(INSECT[c.insect]) ind.push({key:'insect',r:INSECT[c.insect].r});
+  var d, t0;
+  if(STOMACH[c.stomach] && c.lastMeal){
+    t0=toUTC(c.lastMeal,c.tz);
+    if(!isNaN(t0)){
+      d=(f-t0)/3600000;
+      var sr=STOMACH[c.stomach].r;
+      if(d-sr[0]>0) ind.push({key:'stomach', r:[Math.max(0,d-sr[1]), d-sr[0]]});
+    }
+  }
+  if(c.lastAlive){
+    t0=toUTC(c.lastAlive,c.tz);
+    if(!isNaN(t0)){
+      d=(f-t0)/3600000;
+      if(d>0) ind.push({key:'alive', r:[0,d]});
+    }
+  }
+  if(!ind.length) return null;
 
   var lo=-INF, hi=INF, i;
   for(i=0;i<ind.length;i++){ lo=Math.max(lo,ind[i].r[0]); hi=Math.min(hi,ind[i].r[1]); }
@@ -699,9 +1051,8 @@ function estimate(c){
   if((c.livor==='partial'||c.livor==='fixed') && c.livorSite && c.foundPos && EXPECT_SITE[c.foundPos])
     moved = EXPECT_SITE[c.foundPos]!==c.livorSite;
 
-  var f=foundUTC(c);
   return {
-    rate:rate, reached:reached, tempH:h, margin:margin, tempRange:tr,
+    rate:rate, reached:reached, tempH:h, margin:margin, tempRange:tr, init:init, noTemp:!haveTemp,
     ind:ind, lo:lo, hi:hi, conflict:conflict, odd:odd, moved:moved, coroner:coroner,
     startUTC:(hi===INF)?null:f-hi*3600000, endUTC:f-lo*3600000, foundUTC:f
   };
@@ -709,114 +1060,188 @@ function estimate(c){
 
 /* ===== 解説（専門家） ===== */
 function expertHTML(c,e){
-  var p=[], tr=e.tempRange, amb=c.ambientLabel||'室温';
-  if(e.reached)
-    p.push('<p><span class="k">体温（algor mortis）</span>直腸温 '+fmtTemp(+c.rectalF)+'／'+esc(amb)+' '+fmtTemp(+c.roomF)+'。室温近傍に到達しており、経過時間は下限のみ（≧'+r1(tr[0])+'h）。</p>');
-  else
-    p.push('<p><span class="k">体温（algor mortis）</span>直腸温 '+fmtTemp(+c.rectalF)+'／'+esc(amb)+' '+fmtTemp(+c.roomF)+'。冷却 '+(+e.rate.toFixed(2))+'°F/h と仮定 → '+r1(e.tempH)+'h（'+r1(tr[0])+'〜'+r1(tr[1])+'h）。</p>');
+  var p=[], tr=e.tempRange, amb=c.ambientLabel||'室温', tz=viewTz(c), d, t0;
+  function line(k,t){ p.push('<p><span class="k">'+k+'</span>'+t+'</p>'); }
+  if(c.autopsy && c.autopsy.done!==false) line('死因','<b>'+esc(c.autopsy.cod||'不詳')+'</b>'+(c.autopsy.manner?'／'+esc(c.autopsy.manner):''));
+  else if(c.autopsy) line('死因','解剖なし。外表所見のみ。');
+  if(e.noTemp) line('体温','使用不可。'+esc(c.noTempReason||''));
+  else if(e.reached) line('体温（algor mortis）','直腸温 '+fmtTemp(+c.rectalF)+'／'+esc(amb)+' '+fmtTemp(+c.roomF)+'。環境温近傍に到達しており、下限のみ（≧'+r1(tr[0])+'h）。');
+  else line('体温（algor mortis）','直腸温 '+fmtTemp(+c.rectalF)+'／'+esc(amb)+' '+fmtTemp(+c.roomF)+'。初期体温 '+fmtTemp(e.init)+'、冷却 '+(+e.rate.toFixed(2))+'°F/h と仮定 → '+r1(e.tempH)+'h（'+r1(tr[0])+'〜'+r1(tr[1])+'h）。');
   if(LIVOR[c.livor]){
     var lr=LIVOR[c.livor].r;
-    p.push('<p><span class="k">死斑（livor mortis）</span>'+(SITE[c.livorSite]?SITE[c.livorSite]+'、':'')+LIVOR[c.livor].t+' → '+fmtHours(lr[0],lr[1])+'</p>');
+    line('死斑（livor mortis）',(SITE[c.livorSite]?SITE[c.livorSite]+'、':'')+LIVOR[c.livor].t+(c.livorNote?'、'+esc(c.livorNote):'')+' → '+fmtHours(lr[0],lr[1]));
   }
-  if(RIGOR[c.rigor]){
-    var gr=RIGOR[c.rigor].r;
-    p.push('<p><span class="k">硬直（rigor mortis）</span>'+RIGOR[c.rigor].t+' → '+fmtHours(gr[0],gr[1])+'</p>');
+  if(RIGOR[c.rigor]) line('硬直（rigor mortis）',RIGOR[c.rigor].t+' → '+fmtHours(RIGOR[c.rigor].r[0],RIGOR[c.rigor].r[1]));
+  if(CORNEA[c.cornea]) line('角膜',CORNEA[c.cornea].t+' → '+fmtHours(CORNEA[c.cornea].r[0],CORNEA[c.cornea].r[1]));
+  if(DECOMP[c.decomp]) line('腐敗（decomposition）',DECOMP[c.decomp].t+' → '+fmtHours(DECOMP[c.decomp].r[0],DECOMP[c.decomp].r[1]));
+  if(INSECT[c.insect]) line('昆虫（entomology）',INSECT[c.insect].t+' → '+fmtHours(INSECT[c.insect].r[0],INSECT[c.insect].r[1]));
+  if(STOMACH[c.stomach] && c.lastMeal){
+    t0=toUTC(c.lastMeal,c.tz);
+    if(!isNaN(t0)){
+      d=(e.foundUTC-t0)/3600000; var sr=STOMACH[c.stomach].r;
+      line('胃内容物','最終食事から発見まで '+r1(d)+'h。'+STOMACH[c.stomach].t+'（食後 '+fmtHours(sr[0],sr[1])+'）→ 死後 '+r1(Math.max(0,d-sr[1]))+'〜'+r1(d-sr[0])+'h');
+    }
   }
-  if(DECOMP[c.decomp]){
-    var dr=DECOMP[c.decomp].r;
-    p.push('<p><span class="k">腐敗（decomposition）</span>'+DECOMP[c.decomp].t+' → '+fmtHours(dr[0],dr[1])+'</p>');
+  if(c.lastAlive){
+    t0=toUTC(c.lastAlive,c.tz);
+    if(!isNaN(t0)){ d=(e.foundUTC-t0)/3600000; line(esc(c.aliveLabel||'最終生存確認'),tAt(c.lastAlive,c)+' に生存 → 死後 ≦ '+r1(d)+'h'); }
   }
-  var tz=viewTz(c);
-  p.push('<p><span class="k">統合（PMI）</span>'+fmtHours(e.lo,e.hi)+(e.conflict?'（所見間に不一致あり）':'')+'</p>');
-  p.push('<p><span class="k">推定死亡時刻</span>'+esc(rangeText(e,tz))+'</p>');
+  line('統合（PMI）',fmtHours(e.lo,e.hi)+(e.conflict?'（所見間に不一致あり）':''));
+  line('推定死亡時刻',esc(rangeText(e,tz)));
   if(e.moved) p.push('<p class="note">死斑の分布（'+SITE[c.livorSite]+'）が発見時体位（'+POS[c.foundPos]+'）と不一致。死後の体位変換・移動を示唆。</p>');
   if(e.coroner) p.push('<p class="note">Coroner管轄。解剖なし・外表所見中心のため、幅を拡大（±1h、体温の誤差×1.5）。</p>');
-  return '<div class="who"><span class="badge">解剖の先生</span><span>ヘイズ医師</span><span>／ 専門家向け</span></div><div class="calc">'+p.join('')+'</div>';
+  if(c.focus && c.focus.length) line('着眼点',c.focus.map(function(f){ return esc(f[0]); }).join(' ／ '));
+  return '<div class="who"><span class="badge">解剖の先生</span><span>ヘイズ医師（監察医）</span><span>／ 専門家向け</span></div><div class="calc">'+p.join('')+'</div>';
 }
 
 function rangeText(e,tz){
   return fmtRange(e.startUTC, e.endUTC, tz);
 }
 
-/* ===== 解説（初心者） ===== */
+/* ===== 解説（初心者）：知的な年配の監察医、ヘイズ医師が語る ===== */
+function qaList(list){
+  return (list||[]).map(function(q){ return '<details><summary>'+esc(q[0])+'</summary><p>'+esc(q[1])+'</p></details>'; }).join('');
+}
 function noviceHTML(c,e){
-  var h=[], tz=viewTz(c), tr=e.tempRange, n=1;
+  var h=[], tz=viewTz(c), tr=e.tempRange, n=1, t0, d;
   var amb=c.ambientLabel||'室温';
   var place=(amb==='水温')?'まわりの水':(amb==='気温'?'外気':(amb==='室温'?'部屋':'周囲'));
   var isWater=!!(c.env && c.env.indexOf('water')>=0);
-  var circ=['①','②','③','④','⑤','⑥'];
-  function head(t){ h.push('<h4>'+circ[n-1]+' '+t+'</h4>'); n++; }
+  var K=causeOf(c), a=c.autopsy;
+  var circ=['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫'];
+  function head(t){ h.push('<h4>'+(circ[n-1]||(n+'.'))+' '+t+'</h4>'); n++; }
+  function when(r){ return '<b>'+fmtHours(r[0],r[1])+'</b>'; }
 
-  h.push('<div class="who"><span class="badge">解剖の先生</span><span>ヘイズ医師</span><span>／ 初心者向け</span></div>');
-  h.push('<p>順番にご説明します。体温・死斑・死後硬直'+(DECOMP[c.decomp]?'・腐敗':'')+'の所見から、それぞれ「死後どれくらいか」を読み、重なる時間帯を探します。</p>');
+  h.push('<div class="who"><span class="badge">解剖の先生</span><span>ヘイズ医師（監察医）</span><span>／ 初心者向け</span></div>');
+  h.push('<p>やあ、よく来たね。この方が何を語っているのか、いっしょに読んでいこう。急ぐ必要はない。落ち着いて、一つずつ見るのがコツだ。</p>');
+
+  /* 死因 */
+  if(a && a.done!==false){
+    h.push('<p>まず、この事件の死因は <b>'+esc(a.cod)+'</b>。'+(K.timeNote?esc(K.timeNote)+'':'')+' そのことを頭に置いて、時刻の手がかりを見ていこう。</p>');
+  }else if(a){
+    h.push('<p>この事件では、解剖が行われていない。'+esc(a.note||'')+'体の中の所見が分からないぶん、推定の幅は広めに取るしかない。</p>');
+  }
 
   /* 体温 */
-  head('体温（どれくらい冷えたか）');
-  h.push('<p>人は亡くなると体温をつくれなくなり、まわりの温度に向かって少しずつ冷えていきます。熱いコーヒーを置いておくと、ゆっくりぬるくなるのと同じです。</p>');
-  var rateNote = isWater
-    ? '水中では空気中より熱が速く奪われるため、冷える速さは1時間あたり約'+(+e.rate.toFixed(2))+'°Fと見ました。'
-    : (Math.abs(e.rate-BASE_RATE)>0.01)
-      ? esc(amb)+'が'+fmtTemp(+c.roomF)+'なので、冷える速さは1時間あたり約'+(+e.rate.toFixed(2))+'°Fと見ました（寒いほど速く、暖かいほどゆっくり冷えます）。'
-      : place+'は'+fmtTemp(+c.roomF)+'なので、1時間に約1.5°F下がると見ます。';
-  if(e.reached){
-    h.push('<p>この方の直腸温は <b>'+fmtTemp(+c.rectalF)+'</b>。すでに'+esc(amb)+'（'+fmtTemp(+c.roomF)+'）のすぐ近くまで冷えています。冷えきったコーヒーを見ても、いつ冷めたのか分からないのと同じで、体温からは「少なくとも約<b>'+Math.round(tr[0])+'時間</b>は経っている」としか言えません。</p>');
+  if(e.noTemp){
+    head('体温（今回は使えない）');
+    h.push('<p>'+esc(c.noTempReason||'この事件では体温を使えない。')+'。こういうときは、体温の計算はきっぱりあきらめる。使えない道具にしがみつくのが、いちばん危ないのだよ。</p>');
   }else{
-    var diff = BODY_F-(+c.rectalF);
-    h.push('<p>平熱は約98.6°F（約37℃）。この方の直腸温は <b>'+fmtTemp(+c.rectalF)+'</b> で、平熱との差は <b>'+r1(diff).toFixed(1)+'°F</b> です。'+rateNote+'</p>');
-    h.push('<p>'+r1(diff).toFixed(1)+' ÷ '+(+e.rate.toFixed(2))+' ≒ <b>'+r1(e.tempH)+'時間</b>。つまり体温からは「死後およそ'+Math.round(e.tempH)+'時間、前後'+r1(e.margin)+'時間ほど」と読めます。</p>');
-    if(Math.abs(e.rate-BASE_RATE)>=0.2){
-      h.push('<p>参考までに、もし標準の速さ（1.5°F/時）のまま計算すると '+r1(diff/BASE_RATE)+'時間になり、実際の見積もりとずれてしまいます。まわりの温度によって冷え方が変わるので、室温（水温・気温）は必ず確認します。</p>');
+    head('体温（どれくらい冷えたか）');
+    h.push('<p>人は亡くなると、自分で熱をつくれなくなる。あとは、まわりの温度に向かって、少しずつ冷えていくだけだ。熱いコーヒーを置いておくと、ゆっくりぬるくなるだろう。あれと同じだよ。</p>');
+    var hot=e.init>BODY_F+0.5;
+    var rateNote = isWater
+      ? '水中では空気中より熱が速く奪われるから、冷える速さは1時間あたり約'+(+e.rate.toFixed(2))+'°Fと見る。'
+      : (Math.abs(e.rate-BASE_RATE)>0.01)
+        ? esc(amb)+'が'+fmtTemp(+c.roomF)+'だから、冷える速さは1時間あたり約'+(+e.rate.toFixed(2))+'°Fと見る（寒いほど速く、暖かいほどゆっくり冷える）。'
+        : place+'は'+fmtTemp(+c.roomF)+'。1時間に約1.5°F下がると見る。';
+    if(e.reached){
+      h.push('<p>この方の直腸温は <b>'+fmtTemp(+c.rectalF)+'</b>。もう'+esc(amb)+'（'+fmtTemp(+c.roomF)+'）のすぐ近くまで冷えている。冷めきったコーヒーを見ても、いつ冷めたのか分からないだろう。体温からは「少なくとも約<b>'+Math.round(tr[0])+'時間</b>は経っている」としか言えない。</p>');
+    }else{
+      var diff=e.init-(+c.rectalF);
+      if(hot) h.push('<p>ここが肝心だ。この方は、亡くなった時点で、すでに体温が高かった（約<b>'+fmtTemp(e.init)+'</b>）。死因が高体温なのだから、当然だね。だから、平熱ではなく、この温度から冷え始めたと考える。</p>');
+      h.push('<p>'+(hot?'出発点が':'平熱は約98.6°F（約37℃）。この方の直腸温は <b>'+fmtTemp(+c.rectalF)+'</b>。')+(hot?fmtTemp(e.init)+'、直腸温は <b>'+fmtTemp(+c.rectalF)+'</b>。':'')+'差は <b>'+r1(diff).toFixed(1)+'°F</b>。'+rateNote+'</p>');
+      h.push('<p>'+r1(diff).toFixed(1)+' ÷ '+(+e.rate.toFixed(2))+' ≒ <b>'+r1(e.tempH)+'時間</b>。体温からは「死後およそ'+Math.round(e.tempH)+'時間、前後'+r1(e.margin)+'時間」と読める。</p>');
+      if(hot){
+        var naive=Math.max(0,(BODY_F-(+c.rectalF))/e.rate);
+        h.push('<p>もし平熱から計算していたら、約'+r1(naive)+'時間（まるで死んだばかり）と出てしまう。死因を先に考えるのは、そのためだ。</p>');
+      }else if(Math.abs(e.rate-BASE_RATE)>=0.2){
+        h.push('<p>参考までに、標準の速さ（1.5°F/時）のまま計算すると '+r1(diff/BASE_RATE)+'時間になり、実際の見積もりとずれてしまう。まわりの温度は、必ず確かめなさい。</p>');
+      }
     }
   }
 
   /* 死斑 */
   if(LIVOR[c.livor]){
     head('死斑（血がたまった跡）');
-    h.push('<p>心臓が止まると、血が重力で体の下側にたまり、紫がかった斑点になります。泥水を置いておくと、泥が底にたまるのに似ています。時間が経つと血の成分が皮膚にしみ込み、指で押しても消えなくなります。</p>');
-    var lr=LIVOR[c.livor].r;
-    h.push('<p>この方は'+(SITE[c.livorSite]?'<b>'+SITE[c.livorSite]+'</b>に':'')+'死斑があり、状態は<b>'+LIVOR[c.livor].t+'</b>。これは死後 <b>'+fmtHours(lr[0],lr[1])+'</b>ごろの状態です。</p>');
+    h.push('<p>心臓が止まると、血は重力に従って、体の低いほうへたまる。泥水を置いておくと、泥が底にしずむようなものだ。時間が経つと、血の成分が皮膚にしみ込み、指で押しても消えなくなる。</p>');
+    h.push('<p>この方は'+(SITE[c.livorSite]?'<b>'+SITE[c.livorSite]+'</b>に':'')+'死斑があり、状態は<b>'+LIVOR[c.livor].t+'</b>。死後 '+when(LIVOR[c.livor].r)+'ごろの状態だ。</p>');
+    if(c.livorNote){
+      var ln=c.livorNote;
+      h.push('<p>色や濃さにも目を向けよう。この方の死斑は <b>'+esc(ln)+'</b>。'+(/鮮紅/.test(ln)?'普通は紫がかるものが、鮮やかな赤になる。一酸化炭素や強い寒さが関わっているときに見られる、有名な手がかりだ。':(/淡/.test(ln)?'血が大量に失われると、たまる血が少なく、死斑は淡くなる。「淡い＝まだ早い」と早合点してはいけない。':''))+'</p>');
+    }
   }
 
   /* 硬直 */
   if(RIGOR[c.rigor]){
     head('死後硬直（筋肉のこわばり）');
-    h.push('<p>筋肉を動かすためのエネルギーが尽きると、筋肉がゆるまなくなり、固くなります。顎や首など小さな筋肉から始まり、全身に広がり、1日以上たつと再びゆるんでいきます。</p>');
-    var gr=RIGOR[c.rigor].r;
-    h.push('<p>この方は<b>'+RIGOR[c.rigor].t+'</b>。これは死後 <b>'+fmtHours(gr[0],gr[1])+'</b>ごろの状態です。</p>');
+    h.push('<p>筋肉を動かすエネルギーが尽きると、筋肉がゆるまなくなり、固くなる。顎や首など小さな筋肉から始まり、全身に広がって、1日以上たつと、また、ゆるんでいく。</p>');
+    h.push('<p>この方は<b>'+RIGOR[c.rigor].t+'</b>。死後 '+when(RIGOR[c.rigor].r)+'ごろの状態だ。</p>');
+  }
+
+  /* 角膜 */
+  if(CORNEA[c.cornea]){
+    head('角膜（目の濁り）');
+    h.push('<p>黒目の表面（角膜）は、亡くなると、時間とともに白く濁っていく。目が開いていたかどうかで進み方が変わるので、補助的な手がかりだ。</p>');
+    h.push('<p>この方の角膜は<b>'+CORNEA[c.cornea].t+'</b>。死後 '+when(CORNEA[c.cornea].r)+'ごろの状態だ。</p>');
   }
 
   /* 腐敗 */
   if(DECOMP[c.decomp]){
     head('腐敗（体の変化）');
-    h.push('<p>体の中の細菌が増えると、お腹のあたりが緑がかり、やがてガスで膨らみます。暖かいほど早く進み、寒いと遅くなります。</p>');
-    var dr=DECOMP[c.decomp].r;
-    h.push('<p>この方は<b>'+DECOMP[c.decomp].t+'</b>。死後 <b>'+fmtHours(dr[0],dr[1])+'</b>ごろの状態です。</p>');
+    h.push('<p>体の中の細菌が増えると、お腹のあたりが緑がかり、やがてガスで膨らむ。暖かいほど早く進み、寒ければ遅くなる。</p>');
+    h.push('<p>この方は<b>'+DECOMP[c.decomp].t+'</b>。死後 '+when(DECOMP[c.decomp].r)+'ごろの状態だ。</p>');
+  }
+
+  /* 昆虫 */
+  if(INSECT[c.insect]){
+    head('昆虫（ハエの成長）');
+    h.push('<p>ハエは、亡くなった体に卵を産む。卵は幼虫になり、やがてさなぎになる。この成長の段階から、経過時間を見積もる専門の分野もあるくらいだ。暖かいほど早く進む。</p>');
+    h.push('<p>この方は<b>'+INSECT[c.insect].t+'</b>。死後 '+when(INSECT[c.insect].r)+'ごろの状態だ。</p>');
+  }
+
+  /* 胃の内容物 */
+  if(STOMACH[c.stomach] && c.lastMeal){
+    t0=toUTC(c.lastMeal,c.tz);
+    if(!isNaN(t0)){
+      d=(e.foundUTC-t0)/3600000; var sr=STOMACH[c.stomach].r;
+      head('胃の内容物（最後の食事から）');
+      h.push('<p>食べ物は、時間とともに、胃から腸へ送られていく。最後の食事の時刻が分かれば、胃の中の消化の進み具合から、「食べてから何時間後に亡くなったか」が読める。個人差が大きいので、幅は広めに見ておく。</p>');
+      h.push('<p>最後の食事は <b>'+tAt(c.lastMeal,c)+'</b>、発見までは約'+r1(d)+'時間。胃は<b>'+STOMACH[c.stomach].t+'</b>で、食後 '+when(sr)+'ごろの状態だ。つまり、死後およそ <b>'+r1(Math.max(0,d-sr[1]))+'〜'+r1(d-sr[0])+'時間</b>になる。</p>');
+    }
+  }
+
+  /* 体の外の情報 */
+  if(c.lastAlive){
+    t0=toUTC(c.lastAlive,c.tz);
+    if(!isNaN(t0)){
+      d=(e.foundUTC-t0)/3600000;
+      head('体の外の情報（最後に生きていた記録）');
+      h.push('<p>体の所見だけに頼らないのが、ベテランの流儀だ。'+esc(c.aliveLabel||'最終生存確認')+'の記録によれば、<b>'+tAt(c.lastAlive,c)+'</b>には、まだ生きていた。亡くなったのは、それより後だ。発見までは約'+r1(d)+'時間だから、死後の時間は、多くてもそこまでになる。</p>');
+    }
   }
 
   /* まとめ */
   head('まとめ（重なる時間帯）');
   if(e.conflict){
     var names=e.odd.map(function(k){return KEYJP[k];}).join('・');
-    h.push('<p>今回は、所見ごとの時間帯がきれいに重なりませんでした。特に<b>'+names+'</b>が他の所見と食い違っています。環境（暖房・寒さ・服装）で冷え方が変わった、遺体が動かされた、などが考えられます。そこで、全体をおおまかな幅で示します。</p>');
+    h.push('<p>今回は、所見ごとの時間帯が、きれいには重ならなかった。特に<b>'+names+'</b>が、他の所見と食い違っている。環境の影響、体格、遺体が動かされた可能性など、理由を探してみるといい。ここでは、全体を広い幅で示しておく。</p>');
   }else{
-    h.push('<p>それぞれの所見に共通する時間帯を取ると、死後 <b>'+fmtHours(e.lo,e.hi)+'</b>です。</p>');
+    h.push('<p>それぞれの所見に共通する時間帯を取ると、死後 <b>'+fmtHours(e.lo,e.hi)+'</b>だ。重なる所見が多いほど、頼もしい結論になる。</p>');
   }
-  h.push('<p>発見は <b>'+esc(fmtTime(e.foundUTC,tz))+'</b>。そこから逆算すると、亡くなったのは <b>'+esc(rangeText(e,tz))+'</b>ごろと考えられます。</p>');
+  h.push('<p>発見は <b>'+esc(fmtTime(e.foundUTC,tz))+'</b>。そこから逆算すると、亡くなったのは <b>'+esc(rangeText(e,tz))+'</b>ごろと考えられる。</p>');
+
+  /* 着眼点 */
+  if(c.focus && c.focus.length){
+    head('ここに注目（先生の着眼点）');
+    c.focus.forEach(function(f){ h.push('<p class="focus"><b>'+esc(f[0])+'</b><br>'+esc(f[1])+'</p>'); });
+  }
 
   /* 注意 */
   var cav=[];
-  if(e.moved) cav.push('<p class="note"><b>遺体が動かされた可能性があります。</b>死斑は固まると位置が動きません。この方は発見時<b>'+POS[c.foundPos]+'</b>でしたが、死斑は<b>'+SITE[c.livorSite]+'</b>に出ています。亡くなった場所と発見された場所が違うかもしれません。</p>');
-  if(e.coroner) cav.push('<p class="note">この事件は検視官（Coroner）の管轄で、解剖を伴わない外表の観察が中心です。そのため、いつもより幅を広めに取っています。</p>');
-  if(c.env && c.env.indexOf('outdoor')>=0) cav.push('<p class="note">屋外で発見されています。風・日光・地面の冷たさで冷え方が大きく変わるため、体温による推定は特にずれやすくなります。</p>');
-  if(isWater) cav.push('<p class="note">水中で発見されています。水は空気より熱を速く奪うため、体温の下がり方は大きく変わります。死斑も出にくくなるので、この事件では使っていません。推定はずれやすくなります。</p>');
-  if(c.env && c.env.indexOf('heated')>=0) cav.push('<p class="note">暖房で室温が高かったため、冷え方はゆるやかでした。そのぶん、見た目の体温だけで判断すると、死後の時間を短く見積もってしまいます。犯人が暖房で時刻をずらそうとした可能性も、頭に置いておきます。</p>');
+  if(e.moved) cav.push('<p class="note"><b>遺体が動かされた可能性がある。</b>死斑は固まると位置が動かない。この方は発見時<b>'+POS[c.foundPos]+'</b>だったが、死斑は<b>'+SITE[c.livorSite]+'</b>に出ている。亡くなった場所と発見された場所が違うのかもしれない。</p>');
+  if(e.coroner) cav.push('<p class="note">この事件は検視官（Coroner）の管轄で、解剖を伴わない外表の観察が中心だ。そのため、いつもより幅を広めに取っている。</p>');
+  if(c.env && c.env.indexOf('outdoor')>=0) cav.push('<p class="note">屋外で発見されている。風・日光・地面の冷たさで冷え方が大きく変わるので、体温による推定は特にずれやすい。</p>');
+  if(isWater) cav.push('<p class="note">水中で発見されている。水は空気より熱を速く奪うので、体温の下がり方は大きく変わる。死斑も出にくく、この事件では使っていない。</p>');
+  if(c.env && c.env.indexOf('heated')>=0) cav.push('<p class="note">暖房で室温が高く、冷え方はゆるやかだった。そのぶん、見た目の体温だけで判断すると、死後の時間を短く見積もってしまう。犯人が暖房で時刻をずらそうとした可能性も、頭に置いておく。</p>');
   head('注意しておきたいこと');
-  h.push('<p>これは確実な時刻ではなく、「この範囲の可能性が高い」という見積もりです。体温の下がり方は、服装・体格・室温・風・入浴後や発熱の有無で変わります。天気予報の降水確率のように、幅をもって読んでください。</p>');
+  h.push('<p>これは確実な時刻ではなく、「この範囲の可能性が高い」という見積もりだ。体温の下がり方は、服装・体格・室温・風・入浴後や発熱の有無で変わる。天気予報の降水確率のように、幅をもって読みなさい。</p>');
   h.push(cav.join(''));
+  h.push('<p>結論を急がないことだ。幅で読み、ほかの証拠と突き合わせる。四十年この仕事をして、私が学んだのは、結局のところそれに尽きるよ。</p>');
 
   /* もっと詳しく */
   h.push('<p class="qa-h">もっと詳しく知りたいとき</p>');
-  h.push(QA);
+  h.push(qaList(K.qa)+QA);
   return h.join('');
 }
 
@@ -831,24 +1256,53 @@ var QA = [
 ].map(function(q){ return '<details><summary>'+esc(q[0])+'</summary><p>'+esc(q[1])+'</p></details>'; }).join('');
 
 /* ===== 画面 ===== */
+/* 現場の種類（資料画像の背景を変える）と、遺体の姿勢（ぼかしたシルエット） */
+var SCENE_JP = {indoor:'屋内',outdoor:'屋外',snow:'雪の屋外',water:'水中',vehicle:'車内',garage:'車庫',fire:'火災現場'};
+var SCENE_COL = {indoor:['#454a4e','#1c1f22'],outdoor:['#3f4b40','#151a16'],snow:['#8d949b','#4d535b'],water:['#335066','#0e1c27'],vehicle:['#3b3f46','#15171b'],garage:['#4b4741','#1a1816'],fire:['#5c3420','#130905']};
+function sceneOf(c){
+  if(c.scene && SCENE_COL[c.scene]) return c.scene;
+  var env=c.env||[], pl=c.place||'';
+  if(env.indexOf('water')>=0) return 'water';
+  if(pl.indexOf('雪')>=0) return 'snow';
+  if(env.indexOf('outdoor')>=0) return 'outdoor';
+  if(pl.indexOf('車内')>=0) return 'vehicle';
+  return 'indoor';
+}
+function figSVG(pos){
+  var sup='<ellipse cx="102" cy="152" rx="24" ry="22"/><rect x="128" y="128" width="132" height="50" rx="22"/>'
+    +'<path d="M140 132 L196 98 L212 112 L160 150 Z"/><path d="M146 176 L190 214 L174 228 L132 186 Z"/>'
+    +'<path d="M256 134 L338 126 L342 146 L258 160 Z"/><path d="M256 150 L330 170 L322 190 L254 172 Z"/>';
+  if(pos==='prone') return '<g transform="translate(0 300) scale(1 -1) rotate(-5 200 150)">'+sup+'</g>';
+  if(pos==='side') return '<circle cx="118" cy="150" r="22"/><ellipse cx="205" cy="158" rx="82" ry="30" transform="rotate(-6 205 158)"/>'
+    +'<path d="M270 160 L332 128 L348 148 L290 186 Z"/><path d="M270 172 L324 198 L312 216 L262 192 Z"/><path d="M150 140 L120 188 L138 196 L170 150 Z"/>';
+  if(pos==='sitting') return '<circle cx="200" cy="66" r="22"/><rect x="172" y="92" width="56" height="96" rx="24"/>'
+    +'<rect x="176" y="178" width="100" height="28" rx="12"/><rect x="254" y="196" width="26" height="74" rx="12"/><path d="M178 100 L148 172 L166 180 L192 118 Z"/>';
+  return sup;
+}
+function sceneSVG(sc){
+  if(sc==='water') return '<g class="fig2" fill="none" stroke="#a8cadb" stroke-opacity=".28" stroke-width="3">'
+    +'<path d="M-10 60 q40 -14 80 0 t80 0 t80 0 t80 0 t80 0"/><path d="M-10 120 q40 -14 80 0 t80 0 t80 0 t80 0 t80 0"/>'
+    +'<path d="M-10 210 q40 -14 80 0 t80 0 t80 0 t80 0 t80 0"/><path d="M-10 262 q40 -14 80 0 t80 0 t80 0 t80 0 t80 0"/></g>';
+  if(sc==='vehicle') return '<g class="fig2" fill="none" stroke="#c9c3b2" stroke-opacity=".3" stroke-width="3"><path d="M20 30 L150 30 L176 100 L20 100 Z"/><path d="M196 30 L380 30 L380 100 L214 100 Z"/><circle cx="92" cy="232" r="46"/></g>';
+  if(sc==='garage') return '<g class="fig2" fill="none" stroke="#c9c3b2" stroke-opacity=".22" stroke-width="3"><path d="M0 214 L400 214"/><path d="M300 0 L300 214"/><rect x="316" y="40" width="64" height="120"/></g>';
+  if(sc==='outdoor') return '<g class="fig2" fill="#06100a" fill-opacity=".5"><ellipse cx="56" cy="70" rx="54" ry="30"/><ellipse cx="340" cy="244" rx="70" ry="30"/><ellipse cx="372" cy="62" rx="40" ry="26"/></g>';
+  if(sc==='snow') return '<g class="fig2" fill="#fff" fill-opacity=".22"><ellipse cx="80" cy="244" rx="90" ry="26"/><ellipse cx="320" cy="70" rx="80" ry="24"/></g>';
+  if(sc==='fire') return '<rect width="400" height="300" fill="url(#fg)"/><g class="fig2" fill="#000" fill-opacity=".45"><rect x="20" y="30" width="22" height="230"/><rect x="350" y="46" width="18" height="214"/></g>';
+  return '<g class="fig2" fill="#000" fill-opacity=".25"><rect x="0" y="236" width="400" height="64"/><rect x="326" y="40" width="48" height="140"/></g>';
+}
 function silhouette(c,e){
-  var id = esc(c.id);
+  var id = esc(c.id), sc=sceneOf(c), col=SCENE_COL[sc];
   var ruler='M40 268 L360 268';
   for(var i=0;i<=20;i++){ ruler+=' M'+(40+i*16)+' 268 L'+(40+i*16)+' '+(268-(i%5===0?12:6)); }
   return '<div class="photo" aria-hidden="true">'
    +'<svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">'
-   +'<defs><linearGradient id="fl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#454a4e"/><stop offset="1" stop-color="#1c1f22"/></linearGradient>'
+   +'<defs><linearGradient id="fl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+col[0]+'"/><stop offset="1" stop-color="'+col[1]+'"/></linearGradient>'
+   +'<radialGradient id="fg" cx=".5" cy=".85" r=".8"><stop offset="0" stop-color="#ff8a3a" stop-opacity=".55"/><stop offset="1" stop-color="#ff5a1a" stop-opacity="0"/></radialGradient>'
    +'<radialGradient id="lc" cx=".3" cy=".22" r=".62"><stop offset="0" stop-color="#fff" stop-opacity=".13"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><radialGradient id="vg" cx=".5" cy=".5" r=".75"><stop offset=".45" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".78"/></radialGradient>'
    +'<filter id="nz"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 .5  0 0 0 0 .5  0 0 0 0 .5  0 0 0 .6 0"/></filter></defs>'
    +'<rect width="400" height="300" fill="url(#fl)"/>'
-   +'<g class="fig" fill="#0c0d0f">'
-   +'<ellipse cx="102" cy="152" rx="24" ry="22"/>'
-   +'<rect x="128" y="128" width="132" height="50" rx="22"/>'
-   +'<path d="M140 132 L196 98 L212 112 L160 150 Z"/>'
-   +'<path d="M146 176 L190 214 L174 228 L132 186 Z"/>'
-   +'<path d="M256 134 L338 126 L342 146 L258 160 Z"/>'
-   +'<path d="M256 150 L330 170 L322 190 L254 172 Z"/>'
-   +'</g>'
+   +sceneSVG(sc)
+   +'<g class="fig" fill="#0c0d0f">'+figSVG(c.foundPos)+'</g>'
    +'<rect width="400" height="300" fill="url(#lc)"/>'
    +'<rect width="400" height="300" filter="url(#nz)" opacity=".4"/>'
    +'<rect width="400" height="300" fill="url(#vg)"/>'
@@ -856,9 +1310,76 @@ function silhouette(c,e){
    +'</svg>'
    +'<span class="tag mono">EXHIBIT '+id+'</span>'
    +'<span class="stampdt mono">'+esc(fmtTime(e.foundUTC,viewTz(c)))+'</span>'
-   +'<span class="cap">資料画像（ぼかし処理済み）</span>'
+   +'<span class="cap">資料画像（ぼかし処理済み）｜現場：'+esc(SCENE_JP[sc])+'</span>'
    +'</div>';
 }
+
+/* ===== 基礎知識ページ（ヘイズ医師の講義） ===== */
+var LESSONS = [
+ ['まず心得：死亡時刻は「点」ではなく「幅」',[
+  '死亡時刻は、ぴたりと一つには決まらない。「何時から何時のあいだ」と、幅で答えるのが基本だ。',
+  '体の変化は、気温・服装・体格・病気などで進み方が変わる。ひとつの所見だけでは決めきれないから、いくつかの所見を重ねて、重なる範囲を探す。',
+  '重なる所見が多いほど幅は狭く、少ないほど広くなる。発見が遅い事件ほど、使える所見が減って、幅が広がるものだ。']],
+ ['体温（どれくらい冷えたか）',[
+  '亡くなると、体は熱をつくれなくなり、まわりの温度に向かって冷えていく。目安として、最初の数時間は1時間に約1.5°F（約0.8℃）下がる。',
+  '計算の型は「（出発点の体温 − いまの体温）÷ 冷える速さ」。平熱は約98.6°F（約37℃）だ。',
+  '気をつけること：室温・服装・風・水の中かどうかで、冷える速さは変わる。体温が環境の温度に近づいたら、もう時刻は読めない。「少なくとも○時間」としか言えなくなる。']],
+ ['死斑（血がたまった跡）',[
+  '血が重力で体の低い側にたまり、紫がかった斑になる。出始め（2〜6時間ごろ）は、指で押すと消える。半日前後で固定され、押しても消えず、体の向きを変えても動かなくなる。',
+  '位置を見る：仰向けなら背中側に出る。発見時の体位と位置が合わなければ、亡くなったあとに動かされた可能性がある。',
+  '色や濃さを見る：鮮やかな赤は、一酸化炭素や強い寒さのサイン。淡いときは、大量の失血を疑う。']],
+ ['死後硬直（筋肉のこわばり）',[
+  '顎・首から始まり（2〜6時間）、全身に及び（6〜24時間）、1日以上たつと緩んでいく（24〜48時間）。',
+  '暖かいと早く進み、寒いと遅れる。筋肉の少ない高齢者や痩せた方では、弱く出る。強さは「体の事情」で変わるので、食い違って見えたら、まず体格を考えるといい。']],
+ ['補助の手がかり（角膜・胃・昆虫・腐敗）',[
+  '角膜：黒目の表面は、時間とともに白く濁る。補助的な手がかりだ。',
+  '胃の内容物：最後の食事の時刻が分かれば、消化の進み具合から「食後何時間で亡くなったか」を読める。個人差が大きく、幅は広めだ。',
+  '昆虫：ハエの卵・幼虫・さなぎの成長段階から、日単位の経過を見積もる。暖かいほど早く進む。',
+  '腐敗：お腹の緑変（1.5日以降）、ガスによる膨張（3日以降）。暖かいと早く進む。']],
+ ['体の外の情報を重ねる',[
+  '体の所見だけに頼らないのが、ベテランの流儀だ。最後に生きていた記録（通話、防犯カメラ、郵便物の受け取り）、通報の時刻、食事の時刻などは、強い手がかりになる。',
+  '「この時刻まで生きていた」という記録は、推定の上限を決める。体の所見が下限、外の記録が上限。両方が揃うと、幅がぐっと絞れる。']],
+ ['環境が変える：暖房・寒冷・水・屋外・車内',[
+  '暖房の効いた部屋では、冷え方がゆるやか。見かけの体温だけだと、死後の時間を短く見積もってしまう。',
+  '寒い屋外や水の中では、冷え方が速い。水は空気より、はるかに速く熱を奪う。',
+  '日向の車内のように高温の場所では、逆に、体温が下がりにくい。死亡時刻をずらす目的で環境が使われた可能性も、頭に置いておく。']],
+ ['死亡時の体温：高体温と低体温',[
+  '熱中症のように、亡くなった時点で体温が高かった場合は、平熱ではなく、その高い温度から冷え始めたと考える。平熱で計算すると、時間を短く見積もってしまう。',
+  '低体温では、冷却がきわめて速く、体温から時刻を読むのは難しい。死因を先に考えることが、体温の正しい読み方につながる。']],
+ ['受傷した時刻と、亡くなった時刻は別',[
+  '頭の怪我などでは、受傷してから亡くなるまでに、数時間かかることがある。物音や口論があった時刻は「怪我をした時刻」であって、「亡くなった時刻」とは限らない。',
+  '解剖で、脳の腫れや血のかたまりの進み具合から、生存時間を推定する。']],
+ ['制度とタイムゾーン（米国）',[
+  '監察医（ME）は医師の資格を持つ専門職で、解剖を行う。検視官（Coroner）は選挙などで選ばれる役職で、郡によっては医師とは限らない。管轄が違うと、所見の質も変わる。',
+  '米国には複数のタイムゾーンがある。11月は夏時間が終わっていて、東部EST（−5）、中部CST（−6）、山岳MST（−7）、太平洋PST（−8）、アラスカAKST（−9）、ハワイHST（−10）。アリゾナ州は夏時間を使わない。事件どうしを比べるときは、同じタイムゾーンにそろえて見る。']],
+ ['この資料の限界',[
+  'この資料は、ゲーム用の簡易モデルだ。数値はすべて目安で、実際の鑑定の根拠にはならない。',
+  'ただし、「幅で読む」「複数の所見を重ねる」「死因を先に考える」「体の外の情報を使う」という考え方は、本物の現場でも通用する基本だよ。']]
+];
+
+function learnView(){
+  var h='<div class="learn">';
+  h+='<div class="prof"><div class="who"><span class="badge">解剖の先生</span><span>ヘイズ医師（監察医）</span></div>'
+    +'<p>郡の監察医を四十年あまり務めた。穏やかで、事実と推測をきっちり分けて話す。この資料では、死亡時刻を読む基礎と、死因ごとの見方を、先生がやさしく教えてくれる。</p>'
+    +'<p class="hint" style="margin:0">捜査の参考にするための読み物です。クイズはありません。事件の所見書でわからなくなったら、いつでも戻ってきてください。</p></div>';
+  h+='<h3 class="series" style="margin-top:18px">時刻を読む基本</h3>';
+  h+=LESSONS.map(function(l,i){
+    return '<details class="lesson"'+(i===0?' open':'')+'><summary>'+esc(l[0])+'</summary>'+l[1].map(function(p){ return '<p>'+esc(p)+'</p>'; }).join('')+'</details>';
+  }).join('');
+  h+='<h3 class="series" style="margin-top:22px">死因ごとの見方</h3><p class="hint">死因によって、着眼点も、時刻の読み方も変わります。サンプル事件へも移動できます。</p>';
+  h+=CAUSES.filter(function(k){ return k.id!=='other'; }).map(function(k){
+    var cs=orderedCases().filter(function(c){ return causeOf(c).id===k.id; });
+    return '<details class="lesson"><summary>'+esc(k.name)+'（サンプル'+cs.length+'件）</summary>'
+      +'<p>'+esc(k.blurb)+'</p>'
+      +(k.timeNote?'<p><b>時刻を読むうえで：</b>'+esc(k.timeNote)+'</p>':'')
+      +(k.qa||[]).map(function(q){ return '<p><b>'+esc(q[0])+'</b><br>'+esc(q[1])+'</p>'; }).join('')
+      +(cs.length?'<p class="cases">サンプル事件：'+cs.map(function(c){ return '<button class="inl" data-case="'+esc(c.id)+'">'+esc(c.id)+'</button>'; }).join(' ')+'</p>':'')
+      +'</details>';
+  }).join('');
+  return h+'</div>';
+}
+
+function tAt(str,c){ var t=toUTC(str,c.tz); return isNaN(t)?esc(str):esc(fmtTime(t,viewTz(c))); }
 
 function sheetHTML(c,e){
   var tz=viewTz(c), v=c.victim||{};
@@ -868,12 +1389,21 @@ function sheetHTML(c,e){
   if(c.place) row('場所', esc(c.place));
   if(c.office) row('管轄', esc(c.office.name||c.office.type));
   row('発見', esc(fmtTime(e.foundUTC,tz)));
-  row(esc(c.ambientLabel||'室温'), fmtTemp(+c.roomF));
-  row('直腸温', fmtTemp(+c.rectalF));
-  if(LIVOR[c.livor]) row('死斑', esc((SITE[c.livorSite]?SITE[c.livorSite]+'：':'')+LIVOR[c.livor].t));
+  if(e.noTemp){
+    row('体温', esc(c.noTempReason||'この事件では使用できません'));
+  }else{
+    row(esc(c.ambientLabel||'室温'), fmtTemp(+c.roomF));
+    row('直腸温', fmtTemp(+c.rectalF));
+    if(e.init>BODY_F+0.5) row('死亡時体温', fmtTemp(e.init)+'（高体温・推定）');
+  }
+  if(LIVOR[c.livor]) row('死斑', esc((SITE[c.livorSite]?SITE[c.livorSite]+'：':'')+LIVOR[c.livor].t+(c.livorNote?'／'+c.livorNote:'')));
   if(RIGOR[c.rigor]) row('死後硬直', esc(RIGOR[c.rigor].t));
+  if(CORNEA[c.cornea]) row('角膜', esc(CORNEA[c.cornea].t));
   if(DECOMP[c.decomp]) row('腐敗', esc(DECOMP[c.decomp].t));
+  if(INSECT[c.insect]) row('昆虫', esc(INSECT[c.insect].t));
+  if(STOMACH[c.stomach]) row('胃内容物', esc(STOMACH[c.stomach].t)+(c.lastMeal?'（最後の食事：'+tAt(c.lastMeal,c)+'）':''));
   if(POS[c.foundPos]) row('発見時体位', esc(POS[c.foundPos]));
+  if(c.timeline && c.timeline.length) row('経過メモ', c.timeline.map(esc).join('<br>'));
   if(c.notes && c.notes.length) row('備考', c.notes.map(esc).join('<br>'));
 
   var flags='';
@@ -881,7 +1411,7 @@ function sheetHTML(c,e){
   if(e.moved) flags+='<p class="flag">死斑の位置が発見時の体位と合いません。遺体が移動された可能性があります。</p>';
   if(e.coroner) flags+='<p class="flag">検視官（Coroner）管轄。外表所見中心のため、推定の幅は広めです。</p>';
 
-  return '<div class="sheet"><div class="hd"><div><h2>検死所見</h2><p class="sub" style="margin:2px 0 0">AUTOPSY SUMMARY ／ 簡易モデルによる推定</p></div>'
+  return '<div class="sheet"><div class="hd"><div><h2>検死所見</h2><p class="sub" style="margin:2px 0 0">EXTERNAL EXAMINATION ／ 簡易モデルによる推定</p></div>'
     +'<span class="no">CASE '+esc(c.id)+'</span></div>'
     +'<span class="stamp" aria-hidden="true">CONFIDENTIAL</span>'
     +'<dl>'+rows.join('')+'</dl>'
@@ -890,15 +1420,29 @@ function sheetHTML(c,e){
     + flags + '</div>';
 }
 
+/* 解剖所見（解剖が行われた事件のみ。テキストのみで、写実的な描写は避けている） */
+function autopsyHTML(c){
+  var a=c.autopsy; if(!a) return '';
+  var head='<div class="hd"><div><h2>解剖所見</h2><p class="sub" style="margin:2px 0 0">AUTOPSY REPORT</p></div><span class="no">'+(a.done===false?'解剖なし':'解剖あり')+'</span></div>';
+  if(a.done===false) return '<div class="sheet auto">'+head+'<p class="anote">'+esc(a.note||'解剖は行われていません。')+'</p></div>';
+  var rows='';
+  function row(k,val){ rows+='<div class="row"><dt>'+k+'</dt><dd>'+val+'</dd></div>'; }
+  row('死因', '<b>'+esc(a.cod||'不詳')+'</b>');
+  if(a.manner) row('死の種類', esc(a.manner));
+  if(a.findings && a.findings.length) row('主な所見', '<ul class="fl">'+a.findings.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('')+'</ul>');
+  if(a.pending && a.pending.length) row('検査待ち', '<ul class="fl">'+a.pending.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join('')+'</ul>');
+  return '<div class="sheet auto">'+head+'<dl>'+rows+'</dl></div>';
+}
+
 /* 所見ごとの時間帯の図（死後の経過時間。重なる範囲を帯で示す） */
 function basisHTML(c,e){
   var mx=0, i, j, v, t;
   for(i=0;i<e.ind.length;i++) for(j=0;j<2;j++){ v=e.ind[i].r[j]; if(v!==INF && v>mx) mx=v; }
   if(e.hi!==INF && e.hi>mx) mx=e.hi;
   if(e.lo>mx) mx=e.lo;
-  var steps=[24,48,72,120], AX=120, need=(e.hi===INF)?mx/0.8:mx;
+  var steps=[24,48,72,120,240], AX=240, need=(e.hi===INF)?mx/0.8:mx;
   for(i=0;i<steps.length;i++){ if(need<=steps[i]){ AX=steps[i]; break; } }
-  var tick = AX<=24 ? 6 : (AX<=72 ? 12 : 24);
+  var tick = AX<=24 ? 6 : (AX<=72 ? 12 : (AX<=120 ? 24 : 48));
   function pc(x){ return Math.min(x,AX)/AX*100; }
   var grid='', ticks='';
   for(t=0;t<=AX;t+=tick){
@@ -909,10 +1453,10 @@ function basisHTML(c,e){
   var rows=e.ind.map(function(it){
     var a=it.r[0], b=it.r[1], open=(b===INF);
     var w=Math.max(1.2, pc(open?AX:b)-pc(a));
-    return '<div class="brow"><span class="bl">'+KEYJP[it.key]+'</span><span class="bt"><i class="rg'+(open?' open':'')+'" style="left:'+pc(a)+'%;width:'+w+'%"></i></span></div>';
+    return '<div class="brow"><span class="bl">'+KEYSHORT[it.key]+'</span><span class="bt"><i class="rg'+(open?' open':'')+(it.key==='alive'?' ext':'')+'" style="left:'+pc(a)+'%;width:'+w+'%"></i></span></div>';
   }).join('');
   return '<div class="basis"><h4>所見ごとの時間帯</h4>'
-    +'<p class="sub">各所見が示す「死後の経過時間」（単位：時間）。黄色の帯が、重なる範囲です。</p>'
+    +'<p class="sub">各所見が示す「死後の経過時間」（単位：時間）。黄色の帯が、重なる範囲です。'+(e.noTemp?'この事件では体温を使えません。':'')+'</p>'
     +'<div class="bchart"><div class="bgrid">'+grid+'<i class="band" style="left:'+bandL+'%;width:'+Math.max(1,bandR-bandL)+'%"></i></div>'
     +rows+'<div class="brow ax"><span class="bl"></span><span class="bt">'+ticks+'</span></div></div>'
     +'<p class="res">重なる範囲 → 死後 <b>'+esc(fmtHours(e.lo,e.hi))+'</b>'+(e.conflict?'（所見に食い違いあり。全体の幅を表示）':'')+'</p></div>';
@@ -920,19 +1464,21 @@ function basisHTML(c,e){
 
 function caseView(c){
   var e=estimate(c);
-  if(!e) return '<div class="err">この事件の所見データが不足しています（発見時刻・室温・直腸温・タイムゾーンが必要です）。</div>';
-  return '<div class="case-grid">'+sheetHTML(c,e)+'<div class="side">'+silhouette(c,e)+basisHTML(c,e)+'</div></div>'
+  if(!e) return '<div class="err">この事件の所見データが不足しています（発見時刻・タイムゾーンと、体温または他の所見が必要です）。</div>';
+  return '<div class="case-grid"><div class="main">'+sheetHTML(c,e)+autopsyHTML(c)+'</div><div class="side">'+silhouette(c,e)+basisHTML(c,e)+'</div></div>'
     +'<div class="teacher">'+(S.mode==='expert'?expertHTML(c,e):noviceHTML(c,e))+'</div>';
 }
 
-function caseRow(c,g){
+function caseRow(c){
   var e=estimate(c), tz=viewTz(c), id=esc(c.id);
   if(!e) return '<tr class="clk" data-id="'+id+'"><td>'+id+'</td><td colspan="5">データ不足</td></tr>';
   var flag=[];
+  if(c.series==='serial') flag.push('<span class="pill">連続事件</span>');
   if(e.moved) flag.push('<span class="pill warn">移動の疑い</span>');
   if(e.conflict) flag.push('<span class="pill warn">所見の不一致</span>');
-  if(e.coroner) flag.push('<span class="pill">Coroner</span>');
-  var theme=(g.id!=='serial' && c.theme)?c.theme:'';
+  if(c.autopsy && c.autopsy.done===false) flag.push('<span class="pill warn">解剖なし</span>');
+  else if(e.coroner) flag.push('<span class="pill">Coroner</span>');
+  var theme=c.theme||'';
   var row='<tr class="clk'+(theme?' has-theme':'')+'" data-id="'+id+'"><td class="mono">'+id+'<br><span class="vl" style="color:var(--dim)">'+esc((c.victim&&c.victim.label)||'')+'</span></td>'
     +'<td class="hide-s">'+esc(c.place||'')+'</td>'
     +'<td class="hide-s">'+esc(fmtTime(e.foundUTC,tz))+'</td>'
@@ -944,65 +1490,62 @@ function caseRow(c,g){
 }
 
 function listView(){
-  var h='<p class="hint">事件をクリックすると所見書を開きます。'
+  var h='<p class="hint">死因ごとに分けた事件の一覧です。事件をクリックすると所見書を開きます。はじめての方は、先に<button class="inl" data-view="learn">基礎知識</button>を読むのがおすすめです。'
     +(S.tz==='local'?'いまは各事件の現地時間で表示しています。事件どうしを比べるときは、上の「時刻表示」を共通のタイムゾーンに切り替えてください。':'すべての時刻を同じタイムゾーンにそろえて表示しています。')
     +'</p>';
-  GROUPS.forEach(function(g){
-    var cs=CASES.filter(function(c){ return groupOf(c)===g.id; });
+  CAUSES.forEach(function(k){
+    var cs=CASES.filter(function(c){ return causeOf(c).id===k.id; });
     if(!cs.length) return;
-    h+='<h3 class="series" style="margin-top:14px">'+esc(g.title)+'（'+cs.length+'件）</h3><p class="hint">'+esc(g.summary)+'</p>'
+    h+='<h3 class="series" style="margin-top:16px">'+esc(k.name)+'（'+cs.length+'件）</h3>'+(k.blurb?'<p class="hint">'+esc(k.blurb)+'</p>':'')
       +'<table class="tbl"><thead><tr><th>事件</th><th class="hide-s">場所</th><th class="hide-s">発見</th><th>推定死後経過</th><th>推定死亡時刻</th><th class="hide-s">注意</th></tr></thead><tbody>'
-      +cs.map(function(c){ return caseRow(c,g); }).join('')+'</tbody></table>';
+      +cs.map(caseRow).join('')+'</tbody></table>';
   });
   return h+stripsHTML();
 }
 
-/* 1日の中のどの時間帯か（選んだタイムゾーンで比べる。compare:true のグループが対象） */
+/* 1日の中のどの時間帯か（選んだタイムゾーンで比べる。連続事件が対象） */
 function stripsHTML(){
-  var targets=GROUPS.filter(function(g){ return g.compare && CASES.some(function(c){ return groupOf(c)===g.id; }); });
-  if(!targets.length) return '';
-  var h='<h3 class="series" style="margin-top:22px">推定死亡時刻の時間帯（1日の中）</h3>';
+  var cs=CASES.filter(function(c){ return c.series===SERIES.id; });
+  if(!cs.length) return '';
+  var h='<h3 class="series" style="margin-top:22px">'+esc(SERIES.title)+'：推定死亡時刻の時間帯（1日の中）</h3>';
   if(S.tz==='local'){
     return h+'<p class="hint">上の「時刻表示」で共通のタイムゾーン（EST・CST など）を選ぶと、事件どうしの時間帯を並べて見られます。</p>';
   }
-  var tz=TZS[S.tz], out=[];
-  targets.forEach(function(g){
-    var rows=[];
-    CASES.filter(function(c){ return groupOf(c)===g.id; }).forEach(function(c){
-      var e=estimate(c); if(!e) return;
-      var label='<span class="mono">'+esc(c.id)+'</span>', segs='', note='';
-      if(e.startUTC==null){
-        note='下限のみ';
-      }else if(e.endUTC-e.startUTC>=24*3600000){
-        segs='<i class="seg wide" style="left:0;width:100%"></i>'; note='24時間以上の幅';
-      }else{
-        var hs=hod(e.startUTC,tz.off), he=hod(e.endUTC,tz.off);
-        if(hs<=he) segs=seg(hs,he);
-        else segs=seg(hs,24)+seg(0,he);
-        note=fmtHM(e.startUTC,tz.off)+'〜'+fmtHM(e.endUTC,tz.off);
-      }
-      rows.push('<div class="strip"><div class="lab">'+label+'</div><div class="bar">'+segs+'</div><div class="nt">'+esc(note)+'</div></div>');
-    });
-    out.push((targets.length>1?'<p class="hint" style="margin:10px 0 2px">'+esc(g.title)+'</p>':'')+rows.join(''));
+  var tz=TZS[S.tz], rows=[];
+  cs.forEach(function(c){
+    var e=estimate(c); if(!e) return;
+    var label='<span class="mono">'+esc(c.id)+'</span>', segs='', note='';
+    if(e.startUTC==null){
+      note='下限のみ';
+    }else if(e.endUTC-e.startUTC>=24*3600000){
+      segs='<i class="seg wide" style="left:0;width:100%"></i>'; note='24時間以上の幅';
+    }else{
+      var hs=hod(e.startUTC,tz.off), he=hod(e.endUTC,tz.off);
+      if(hs<=he) segs=seg(hs,he);
+      else segs=seg(hs,24)+seg(0,he);
+      note=fmtHM(e.startUTC,tz.off)+'〜'+fmtHM(e.endUTC,tz.off);
+    }
+    rows.push('<div class="strip"><div class="lab">'+label+'</div><div class="bar">'+segs+'</div><div class="nt">'+esc(note)+'</div></div>');
   });
   var ticks='<div class="strip ax"><div class="lab"></div><div class="bar">'
     +[0,6,12,18,24].map(function(t){return '<span style="left:'+(t/24*100)+'%">'+t+'</span>';}).join('')
     +'</div><div class="nt">'+esc(tz.abbr)+'</div></div>';
-  return h+'<p class="hint">帯が重なる時間帯が、事件に共通する時間帯の手がかりです。幅の広い事件（検視官の管轄や、発見が遅い事件）は、帯が長くなります。</p>'+out.join('')+ticks;
+  return h+'<p class="hint">帯が重なる時間帯が、事件に共通する時間帯の手がかりです。幅の広い事件（解剖がない事件や、発見が遅い事件）は、帯が長くなります。</p>'+rows.join('')+ticks;
 }
 function hod(ms,off){ var d=new Date(ms+off*3600000); return d.getUTCHours()+d.getUTCMinutes()/60; }
 function seg(a,b){ return '<i class="seg" style="left:'+(a/24*100)+'%;width:'+Math.max(0.8,(b-a)/24*100)+'%"></i>'; }
 
 function renderTabs(){
-  var opts='<option value=""'+(S.view==='list'?' selected':'')+' disabled>事件を選ぶ…</option>';
-  GROUPS.forEach(function(g){
-    var cs=CASES.filter(function(c){ return groupOf(c)===g.id; });
+  var opts='<option value=""'+(S.view==='list'||S.view==='learn'?' selected':'')+' disabled>事件を選ぶ…</option>';
+  CAUSES.forEach(function(k){
+    var cs=CASES.filter(function(c){ return causeOf(c).id===k.id; });
     if(!cs.length) return;
-    opts+='<optgroup label="'+esc(g.short||g.title)+'">'+cs.map(function(c){
+    opts+='<optgroup label="'+esc(k.short||k.name)+'">'+cs.map(function(c){
       return '<option value="'+esc(c.id)+'"'+(S.view===c.id?' selected':'')+'>'+esc(c.id+'　'+(c.place||''))+'</option>';
     }).join('')+'</optgroup>';
   });
   $('tabs').innerHTML='<button data-view="list" class="'+(S.view==='list'?'on':'')+'">一覧</button>'
+    +'<button data-view="learn" class="'+(S.view==='learn'?'on':'')+'">基礎知識</button>'
     +'<button data-nav="-1" aria-label="前の事件">‹</button>'
     +'<select id="selCase" aria-label="事件を選ぶ">'+opts+'</select>'
     +'<button data-nav="1" aria-label="次の事件">›</button>';
@@ -1014,9 +1557,9 @@ function render(keepScroll){
   $('mNovice').setAttribute('aria-pressed', S.mode==='novice');
   $('mExpert').setAttribute('aria-pressed', S.mode==='expert');
   $('selUnit').value=S.unit; $('selTz').value=S.tz;
-  var c = S.view==='list' ? null : getCase(S.view);
-  if(!c) S.view='list';
-  $('content').innerHTML = c ? caseView(c) : listView();
+  var c = (S.view==='list'||S.view==='learn') ? null : getCase(S.view);
+  if(!c && S.view!=='learn') S.view='list';
+  $('content').innerHTML = S.view==='learn' ? learnView() : (c ? caseView(c) : listView());
   $('content').scrollTop = top;
 }
 
@@ -1025,17 +1568,19 @@ $('tabs').addEventListener('click',function(ev){
   var b=ev.target.closest('button'); if(!b) return;
   if(b.hasAttribute('data-view')){ S.view=b.getAttribute('data-view'); render(false); return; }
   if(b.hasAttribute('data-nav')){
-    var n=CASES.length; if(!n) return;
+    var oc=orderedCases(), n=oc.length; if(!n) return;
     var dir=+b.getAttribute('data-nav'), idx=-1, i;
-    for(i=0;i<n;i++) if(CASES[i].id===S.view) idx=i;
+    for(i=0;i<n;i++) if(oc[i].id===S.view) idx=i;
     idx = idx<0 ? (dir>0?0:n-1) : (idx+dir+n)%n;
-    S.view=CASES[idx].id; render(false);
+    S.view=oc[idx].id; render(false);
   }
 });
 $('tabs').addEventListener('change',function(ev){
   if(ev.target.id==='selCase' && ev.target.value){ S.view=ev.target.value; render(false); }
 });
 $('content').addEventListener('click',function(ev){
+  var bt=ev.target.closest('button[data-view],button[data-case]');
+  if(bt){ S.view=bt.getAttribute('data-view')||bt.getAttribute('data-case'); render(false); return; }
   var tr=ev.target.closest('tr[data-id]'); if(!tr) return;
   S.view=tr.getAttribute('data-id'); render(false);
 });
@@ -1097,7 +1642,7 @@ window.ShibouSuitei = {
   addCase:function(c){ if(c && c.id && !getCase(c.id)){ CASES.push(c); render(true); } },
   estimate:estimate,
   series:function(){ return SERIES; },
-  groups:function(){ return GROUPS.slice(); },
+  causes:function(){ return CAUSES.slice(); },
   cases:function(){ return CASES.slice(); }
 };
 
