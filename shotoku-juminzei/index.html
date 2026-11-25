@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>所得税と住民税 ― 同じ所得から、なぜ税額が二つ出る?</title>
+<style>
+:root{
+  --kuni:#1f5fbf;--kuni-l:#e8f0fc;
+  --chi:#1e8a4c;--chi-l:#e6f5ec;
+  --kyo:#6b7280;--kyo-l:#f1f2f4;
+  --ink:#1f2328;--line:#d8dbe0;--bg:#fafafa;--warn:#b45309;--warn-l:#fff7e6;--ng:#c62828;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;color:var(--ink);background:var(--bg);line-height:1.7;padding-bottom:84px;font-size:15px}
+body.bigtxt{font-size:18px}
+body.bigtxt .grid2{grid-template-columns:1fr}
+body.bigtxt .amt{font-size:26px}
+header{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line)}
+.band{font-size:12px;background:var(--kyo-l);padding:4px 12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.band b.k{color:var(--kuni)}.band b.c{color:var(--chi)}
+.ttl{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;gap:6px}
+.ttl h1{font-size:16px;margin:0}
+.ttl button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;white-space:nowrap}
+main{max-width:980px;margin:0 auto;padding:12px}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);display:flex;z-index:30}
+nav button{flex:1;border:0;background:none;padding:8px 0 10px;font-size:12px;cursor:pointer;color:var(--kyo)}
+nav button span{display:block;font-size:20px}
+nav button.on{color:var(--ink);font-weight:bold;border-top:3px solid var(--ink)}
+section.tab{display:none}section.tab.on{display:block}
+h2{font-size:1.3em;margin:8px 0 12px}
+h3{font-size:1.05em;margin:18px 0 8px}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;margin:10px 0}
+.btn{display:inline-block;border:2px solid var(--ink);background:var(--ink);color:#fff;border-radius:10px;padding:10px 18px;font-size:1em;cursor:pointer;font-weight:bold}
+.btn.sub{background:#fff;color:var(--ink);border:1px solid var(--line);font-weight:normal}
+.btn:focus,button:focus,input:focus,select:focus,[tabindex]:focus{outline:3px solid #f59e0b;outline-offset:2px}
+.link{background:none;border:0;color:var(--kuni);text-decoration:underline;cursor:pointer;padding:0;font-size:.95em;text-align:left}
+.badge{display:inline-block;min-width:24px;text-align:center;border:1.5px solid var(--ink);border-radius:6px;font-size:12px;font-weight:bold;padding:0 6px;margin-right:6px;background:#fff}
+.mk{display:inline-block;font-size:11px;font-weight:bold;color:#fff;border-radius:4px;padding:0 5px;margin-right:4px}
+.mk.k{background:var(--kuni)}.mk.c{background:var(--chi)}.mk.s{background:var(--kyo)}
+.warn{background:var(--warn-l);border-left:4px solid var(--warn);padding:8px 10px;border-radius:6px;font-size:13px;margin:10px 0}
+.note{font-size:12px;color:var(--kyo)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.col{border-radius:10px;padding:10px}
+.col.k{background:var(--kuni-l);border-top:4px solid var(--kuni)}
+.col.c{background:var(--chi-l);border-top:4px solid var(--chi)}
+.col.s{background:var(--kyo-l);border-top:4px solid var(--kyo)}
+.col .lb{font-size:12px;font-weight:bold}
+.col.k .lb{color:var(--kuni)}.col.c .lb{color:var(--chi)}
+.amt{font-size:22px;font-weight:bold;letter-spacing:.5px}
+.amt.big{font-size:28px}
+.step{background:#fff;border:1px solid var(--line);border-radius:12px;margin:10px 0;overflow:hidden}
+.step .hd{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#fff;cursor:pointer}
+.step .bd{padding:0 12px 12px}
+.step .fx{display:none;font-size:13px;margin-top:6px;white-space:pre-line}
+.step.open .fx{display:block}
+.diff{text-align:center;font-size:13px;margin-top:6px;color:var(--kyo)}
+.why{border:1px solid var(--ink);background:#fff;border-radius:14px;font-size:12px;padding:1px 10px;cursor:pointer}
+.split{text-align:center;font-size:13px;font-weight:bold;margin:6px 0;padding:6px;border:2px dashed var(--kyo);border-radius:10px;color:var(--kyo)}
+.cases{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.cases button{text-align:left;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer;font-size:14px}
+.cases button.rec{border:2px solid var(--ink)}
+.cases button small{display:block;color:var(--kyo);font-size:11px}
+.form label{display:block;font-weight:bold;margin:10px 0 4px}
+.form input,.form select,.inp{width:100%;font-size:16px;padding:8px;border:1px solid var(--line);border-radius:8px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.seg{gap:0;margin:6px 0}
+.seg button{border:1px solid var(--line);background:#fff;padding:6px 12px;cursor:pointer;font-size:.9em}
+.seg button:first-child{border-radius:8px 0 0 8px}.seg button:last-child{border-radius:0 8px 8px 0}
+.seg button.on{background:var(--ink);color:#fff}
+table{border-collapse:collapse;width:100%;font-size:13px;background:#fff}
+th,td{border:1px solid var(--line);padding:6px 8px;text-align:right}
+th{background:var(--kyo-l);text-align:center}
+td.l{text-align:left}
+th.k{background:var(--kuni);color:#fff}th.c{background:var(--chi);color:#fff}
+tr.cur td{background:var(--chi-l);font-weight:bold}
+.tw{overflow-x:auto}
+.flow{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:13px}
+.flow .bx{border-radius:10px;padding:8px 12px;text-align:center;min-width:200px}
+.flow .ar{color:var(--kyo);font-size:13px;line-height:1.3;text-align:center}
+.flow .two{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
+.bars .br{display:flex;align-items:center;gap:6px;margin:4px 0;font-size:13px}
+.bars .br .nm{width:120px}
+.bars .br .tr{flex:1;background:var(--kyo-l);border-radius:4px;height:16px;overflow:hidden;display:block}
+.bars .br .fl{height:100%;background:var(--kyo);display:block}
+.bars .br.weak .tr{outline:2px solid var(--ink)}
+.flip{min-height:260px;cursor:pointer}
+.flip .back{display:none}.flip.on .front{display:none}.flip.on .back{display:block}
+.q{font-size:1.25em;font-weight:bold;margin:12px 0}
+.mis{font-size:13px;margin-top:8px}.mis b{color:var(--ng)}
+.bubble{background:var(--kyo-l);border-radius:14px;padding:10px 12px;margin:8px 0;font-size:.95em}
+.choice{display:block;width:100%;text-align:left;margin:10px 0;padding:12px;font-size:1em;background:#fff;border:1px solid var(--line);border-radius:10px;cursor:pointer}
+.ok{color:var(--chi);font-weight:bold;font-size:20px}.ng{color:var(--ng);font-weight:bold;font-size:20px}
+.prog{height:6px;background:var(--kyo-l);border-radius:3px;overflow:hidden;margin:6px 0}
+.prog i{display:block;height:100%;background:var(--kyo)}
+.list li{margin:4px 0}
+.chips button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:4px 12px;margin:3px;cursor:pointer;font-size:.9em}
+.chips button.on{background:var(--ink);color:#fff}
+.sheet{position:fixed;left:0;right:0;bottom:0;max-height:75vh;overflow:auto;background:#fff;border-radius:16px 16px 0 0;box-shadow:0 -4px 20px rgba(0,0,0,.2);padding:16px;z-index:50;display:none}
+.sheet.on{display:block}
+.cover{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:40;display:none}.cover.on{display:block}
+svg text{font-size:10px;fill:#555}
+.legend span{display:inline-flex;align-items:center;gap:4px;margin-right:12px;font-size:12px}
+.legend i{width:14px;height:4px;display:inline-block}
+.hl{box-shadow:0 0 0 3px #f59e0b}
+.done{color:var(--chi);font-weight:bold}
+.selfrow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+.locbox{border:2px solid var(--chi);border-radius:12px;padding:12px;background:#fff;margin:10px 0}
+@media (min-width:860px){
+  .wide{display:grid;grid-template-columns:330px 1fr;gap:16px;align-items:start}
+  .sheet{left:auto;top:0;width:400px;max-height:none;border-radius:0}
+}
+@media (max-width:340px){.grid2,.selfrow{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="band">令和8年分の所得 → <b class="k">国 所得税 令和8年分</b> / <b class="c">地 住民税 令和9年度分</b><span class="note" id="locBand"></span></div>
+  <div class="ttl"><h1>同じ所得から、なぜ税額が二つ出る?</h1>
+    <span class="row"><button onclick="toggleBig()" aria-label="文字の大きさ">文字 大/小</button><button onclick="go('find')" aria-label="検索">🔍 検索</button></span></div>
+</header>
+
+<main>
+<!-- ===== ホーム ===== -->
+<section class="tab on" id="t-home">
+  <div class="card">
+    <button class="btn" id="contBtn" onclick="cont()">学びはじめる</button>
+    <p id="homeRec" class="note"></p>
+    <p><button class="link" onclick="overview()">はじめての方へ(3分で全体像)</button></p>
+  </div>
+  <div id="locHome"></div>
+  <div class="card">
+    <h2>計算は途中まで同じ、そこから二つに分かれる</h2>
+    <div class="flow">
+      <div class="bx col s"><b>給与収入</b></div><div class="ar">↓<br>給与所得控除(最低保障額は共通で74万円)</div>
+      <div class="bx col s"><b>給与所得(共通)</b></div>
+      <div class="ar">↓</div>
+      <div class="split" style="width:100%">ここから別々に計算(所得控除から)</div>
+      <div class="two">
+        <div class="col k"><div class="lb">国 所得税(全国共通)</div>基礎控除 最高104万円<br>税率 5〜45%(超過累進)<br>復興特別所得税 2.1%<br><b>本人が申告</b>(申告納税)</div>
+        <div class="col c"><div class="lb">地 住民税(自治体の条例による部分あり)</div>基礎控除 43万円<br>所得割 標準税率10%<br>均等割 標準税率4,000円(+森林環境税1,000円)<br>非課税の基準:<b>均等割は自治体ごと</b><br><b>自治体が計算</b>(賦課課税)・翌年度に課税</div>
+      </div>
+    </div>
+  </div>
+  <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+    <div class="card"><span class="badge">A</span><b>税の役割</b><p class="note">所得税は負担できる力に応じて(応能負担)、住民税は地域で広く分け合う(負担分任)</p></div>
+    <div class="card"><span class="badge">B</span><b>税額の決め方</b><p class="note">所得税は本人が申告、住民税は前年の所得で自治体が計算</p></div>
+    <div class="card"><span class="badge">C</span><b>制度の歴史</b><p class="note">平成19年の税源移譲で一律10%と調整控除が生まれた</p></div>
+  </div>
+  <div class="card"><h3>進み具合</h3><div class="bars" id="homeBars"></div></div>
+  <div class="card">
+    <h3>給与収入と税額の関係(独身・社会保険料15%の場合)</h3>
+    <div class="legend"><span><i style="background:var(--kuni)"></i>所得税(復興特別所得税を含む)</span><span><i style="background:var(--chi)"></i>住民税(均等割・森林環境税を含む)</span></div>
+    <div id="chart"></div>
+    <p class="note" id="chartNote"></p>
+  </div>
+  <div class="warn">学習用の概算です。住民税の非課税の基準(均等割)、均等割・所得割の税率(超過課税)、減免は自治体の条例で決まります。実際の税額は、各自治体の条例や通知書で確認してください。</div>
+</section>
+
+<!-- ===== 計算 ===== -->
+<section class="tab" id="t-calc">
+  <h2>🧮 同じ給与から、税額はどう分かれる?</h2>
+  <div class="wide">
+    <div>
+      <div id="locCalc"></div>
+      <div class="card">
+        <b>例を選ぶ</b><p class="note">社会保険料は収入の15%と仮定</p>
+        <div class="cases" id="caseBtns"></div>
+      </div>
+      <div class="card form">
+        <b>自分で条件を入れる</b>
+        <label for="inS">1年間の給与収入(万円)</label><input id="inS" type="number" min="0" max="10000" inputmode="numeric" value="200">
+        <label for="inSi">1年間の社会保険料(万円)</label><input id="inSi" type="number" min="0" inputmode="numeric" placeholder="空欄なら収入×15%">
+        <label for="inSp">配偶者(所得62万円以下)</label>
+        <select id="inSp"><option value="none">いない</option><option value="gen">いる(70歳未満)</option><option value="eld">いる(70歳以上)</option></select>
+        <label>扶養している家族(所得62万円以下・16歳以上)</label>
+        <div class="grid2">
+          <div><span class="note">一般</span><input id="dGen" type="number" min="0" max="9" value="0"></div>
+          <div><span class="note">特定(19〜22歳)</span><input id="dSpec" type="number" min="0" max="9" value="0"></div>
+          <div><span class="note">老人(70歳以上)</span><input id="dEld" type="number" min="0" max="9" value="0"></div>
+          <div><span class="note">同居老親等</span><input id="dCoh" type="number" min="0" max="9" value="0"></div>
+        </div>
+        <label for="dU16">16歳未満の子(扶養控除なし・非課税の判定にだけ使う)</label>
+        <input id="dU16" type="number" min="0" max="9" value="0">
+        <p class="note">所得が62万円以下(給与だけなら136万円以下)の家族が対象です。</p>
+        <p id="inErr" class="note" style="color:var(--ng)"></p>
+        <p><button class="btn" onclick="calcFromForm()">計算する</button></p>
+      </div>
+    </div>
+    <div id="result"></div>
+  </div>
+</section>
+
+<!-- ===== 学ぶ ===== -->
+<section class="tab" id="t-learn">
+  <h2>📖 違いは、3つの原因から生まれる</h2>
+  <div class="chips" id="causeChips"></div>
+  <div id="learnList"></div>
+  <div id="learnCard"></div>
+
+  <h3>住民税の非課税の基準:法律で全国共通の部分と、自治体ごとの部分</h3>
+  <div class="tw"><table>
+    <tr><th>区分</th><th>決まり方</th><th>単身の場合</th><th>扶養がある場合(N=本人+同一生計配偶者+扶養親族の人数)</th></tr>
+    <tr><td class="l">所得割の非課税</td><td class="l">地方税法で全国共通</td><td>合計所得 45万円以下</td><td class="l">35万円×N+10万円+32万円 以下</td></tr>
+    <tr><td class="l">均等割の非課税</td><td class="l"><b>政令の基準をもとに、各自治体が条例で定める</b>(生活保護の級地区分に応じた額)</td><td>下の表(級地ごと)</td><td class="l">下の表(級地ごと)</td></tr>
+    <tr><td class="l">障害者・未成年者・寡婦・ひとり親</td><td class="l">地方税法で全国共通</td><td colspan="2" class="l">前年の合計所得135万円以下なら、所得割・均等割とも非課税</td></tr>
+  </table></div>
+  <h3>均等割の非課税の基準(政令の基準・級地別)</h3>
+  <div class="tw"><table id="kyuTbl"></table></div>
+  <p class="note">実際の基準は、各自治体の条例と、その自治体の級地区分で確認してください。給与収入の目安は、令和9年度(給与所得控除の最低保障額74万円)で単身・給与だけの場合です。所得割の非課税(単身45万円以下)は全国共通のため、所得割が0円になる給与収入の目安は全国で119万円以下です。</p>
+
+  <h3>控除額の比較(令和8年分 所得税 / 令和9年度 住民税)</h3>
+  <div class="tw"><table>
+    <tr><th>控除</th><th class="k">所得税</th><th class="c">住民税</th><th>調整控除で使う差</th></tr>
+    <tr><td class="l">基礎控除</td><td>最高104万円<br><span class="note">合計所得489万円以下</span></td><td>43万円</td><td>5万円(定額)</td></tr>
+    <tr><td class="l">配偶者控除(一般)</td><td>38万円</td><td>33万円</td><td>5万円</td></tr>
+    <tr><td class="l">配偶者控除(老人)</td><td>48万円</td><td>38万円</td><td>⚠ 確認中</td></tr>
+    <tr><td class="l">扶養控除(一般)</td><td>38万円</td><td>33万円</td><td>5万円</td></tr>
+    <tr><td class="l">扶養控除(特定 19〜22歳)</td><td>63万円</td><td>45万円</td><td>18万円</td></tr>
+    <tr><td class="l">扶養控除(老人)</td><td>48万円</td><td>38万円</td><td>10万円</td></tr>
+    <tr><td class="l">扶養控除(同居老親等)</td><td>58万円</td><td>45万円</td><td>13万円</td></tr>
+  </table></div>
+  <p class="note">配偶者控除は本人の合計所得900万円以下の場合。人的控除額の差は自治体の公式資料で確認済みで、法令の原文で最終確認の予定です。</p>
+  <h3>所得税の速算表</h3>
+  <div class="tw"><table id="rateTbl"><tr><th>課税所得</th><th>税率</th><th>控除額</th><th>税率の図</th></tr></table></div>
+  <h3>上乗せの税の移り変わり</h3>
+  <div class="tw"><table>
+    <tr><th>所得の年分</th><th>復興特別所得税</th><th>防衛特別所得税</th><th>合計</th></tr>
+    <tr><td class="l">平成25年分〜令和8年分</td><td>2.1%</td><td>―</td><td>2.1%</td></tr>
+    <tr><td class="l">令和9年分〜令和29年分</td><td>1.1%</td><td>1.0%</td><td>2.1%</td></tr>
+    <tr><td class="l">令和30年分以後</td><td>―</td><td>1.0%</td><td>1.0%</td></tr>
+  </table></div>
+</section>
+
+<!-- ===== 確認 ===== -->
+<section class="tab" id="t-quiz">
+  <h2>✅ 理由で答えられるか確かめよう</h2>
+  <div id="quizArea"></div>
+</section>
+
+<!-- ===== 検索・設定 ===== -->
+<section class="tab" id="t-find">
+  <h2>🔍 用語・カードを探す</h2>
+  <input id="findIn" type="search" placeholder="例:天引き、引っ越し、級地、調整控除" class="inp" oninput="find()">
+  <div class="chips" id="popular"></div>
+  <div id="findOut"></div>
+  <h3>自治体の設定</h3>
+  <div id="locFind"></div>
+  <h3>出典一覧</h3>
+  <ul class="list" id="srcList"></ul>
+  <h3>このアプリについて</h3>
+  <div class="card">
+    <p>データの年分:所得税 令和8年分/住民税 令和9年度分</p>
+    <p>全国共通で計算するもの:所得税のすべて、住民税の所得控除、所得割の非課税の基準、調整控除、森林環境税(国税・1,000円)。</p>
+    <p><b>自治体ごとに設定が必要なもの</b>:均等割の非課税の基準(級地区分または条例の額)、均等割の税額(超過課税がある場合)、所得割の税率(超過課税がある場合)。設定がないときは、結果が級地によって変わる範囲で「⚠ 自治体の基準で異なる」と表示します。</p>
+    <p>計算に含まないもの:配偶者特別控除、各種保険料控除、医療費控除、住宅ローン控除、ふるさと納税、障害者・ひとり親などの非課税(135万円以下)、独自の減免。</p>
+    <p>住民税の所得割は道府県民税と市町村民税を合算した概算です(実際は別々に端数処理)。</p>
+    <p>確認中の項目:老人配偶者の人的控除額の差/均等割の非課税の基準(政令の基準額は法令原文で最終確認)/T1〜T8の金額の検算・照合</p>
+    <p>学習の記録と設定はこの端末にだけ保存され、サーバーには送られません。データ確認日:2026年11月24日</p>
+    <p class="row"><button class="btn sub" onclick="welcome()">使い方をもう一度見る</button>
+    <button class="btn sub" onclick="if(confirm('学習の記録と設定をすべて消しますか?')){try{localStorage.removeItem('zeiApp')}catch(e){}location.reload()}">記録を消す</button></p>
+  </div>
+</section>
+</main>
+
+<nav>
+  <button data-t="home" class="on" onclick="go('home')"><span>🏠</span>ホーム</button>
+  <button data-t="calc" onclick="go('calc')"><span>🧮</span>計算</button>
+  <button data-t="learn" onclick="go('learn')"><span>📖</span>学ぶ</button>
+  <button data-t="quiz" onclick="go('quiz')"><span>✅</span>確認</button>
+</nav>
+
+<div class="cover" id="cover" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+
+<script>
+/* ================= 設定データ(全国共通) ================= */
+const CFG={
+  it:{basic:[[4890000,1040000],[6550000,670000],[23500000,620000],[24000000,480000],[24500000,320000],[25000000,160000],[Infinity,0]],
+      spouse:[[9000000,380000,480000],[9500000,260000,320000],[10000000,130000,160000]],
+      dep:{gen:380000,spec:630000,eld:480000,coh:580000},
+      rates:[[1949000,.05,0],[3299000,.10,97500],[6949000,.20,427500],[8999000,.23,636000],[17999000,.33,1536000],[39999000,.40,2796000],[Infinity,.45,4796000]],
+      surtax:.021},
+  rt:{basic:[[24000000,430000],[24500000,290000],[25000000,150000],[Infinity,0]],
+      spouse:[[9000000,330000,380000],[9500000,220000,260000],[10000000,110000,130000]],
+      dep:{gen:330000,spec:450000,eld:380000,coh:450000},
+      forest:1000,
+      /* 所得割の非課税:地方税法で全国共通 */
+      levyNonTax:{per:350000,add:100000,depAdd:320000,single:450000},
+      /* 均等割の非課税:政令の基準(級地別)。実際は各自治体の条例で定める */
+      perNonTax:{'1':{per:350000,depAdd:210000},'2':{per:315000,depAdd:189000},'3':{per:280000,depAdd:168000},add:100000},
+      adj:{rate:.05,min:50000,th:2000000,basic:50000,spGen:[50000,40000,20000],dep:{gen:50000,spec:180000,eld:100000,coh:130000}}}
+};
+const STD={pref:1000,muni:3000,rate:10};
+const KYU_LABEL={'':'未設定','1':'1級地の基準','2':'2級地の基準','3':'3級地の基準','custom':'条例の額を直接入力'};
+
+const yen=n=>Math.round(n).toLocaleString('ja-JP')+'円';
+const man=n=>(n/10000).toLocaleString('ja-JP')+'万円';
+const f1000=n=>Math.max(0,Math.floor(n/1000)*1000);
+const pick=(t,x)=>t.find(r=>x<=r[0]);
+const toNum=s=>+String(s).replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-65248)).replace(/[^0-9]/g,'');
+
+/* ================= 記録と自治体の設定 ================= */
+let saved={};try{saved=JSON.parse(localStorage.getItem('zeiApp')||'{}')}catch(e){}
+const ST=Object.assign({cards:{},quiz:{},last:null,lastCase:'T3',selfDone:[],big:false},saved);
+ST.loc=Object.assign({name:'',kyu:'',custSingle:'',custPer:'',custDep:'',pref:STD.pref,muni:STD.muni,rate:STD.rate},ST.loc||{});
+const save=()=>{try{localStorage.setItem('zeiApp',JSON.stringify(ST))}catch(e){}};
+
+function salDed(s){
+  if(s<=2200000) return Math.min(740000,s);
+  if(s<=3600000) return s*.3+80000;
+  if(s<=6600000) return s*.2+440000;
+  if(s<=8500000) return s*.1+1100000;
+  return 1950000;
+}
+/* 均等割の非課税の限度額(級地または条例の額) */
+function perLimit(k,N,hasDep){
+  const P=CFG.rt.perNonTax,L=ST.loc;
+  if(k==='custom'){
+    if(!hasDep) return L.custSingle===''?null:+L.custSingle*10000;
+    if(L.custPer===''||L.custDep==='') return null;
+    return +L.custPer*10000*N+P.add+ +L.custDep*10000;
+  }
+  const b=P[k];return b.per*N+P.add+(hasDep?b.depAdd:0);
+}
+function levyLimit(N,hasDep){const L=CFG.rt.levyNonTax;return hasDep?L.per*N+L.add+L.depAdd:L.single}
+
+function calc(p){
+  const sd=salDed(p.s), inc=Math.max(0,Math.floor(p.s-sd));
+  const d=p.dep, depN=d.gen+d.spec+d.eld+d.coh, u16=p.u16||0;
+  const spRow=t=>{const r=pick(t,inc);return r?(p.sp==='gen'?r[1]:p.sp==='eld'?r[2]:0):0};
+  /* 所得税 */
+  const itB=pick(CFG.it.basic,inc)[1], itSp=p.sp==='none'?0:spRow(CFG.it.spouse);
+  const itD=d.gen*CFG.it.dep.gen+d.spec*CFG.it.dep.spec+d.eld*CFG.it.dep.eld+d.coh*CFG.it.dep.coh;
+  const itDed=p.si+itB+itSp+itD, itTx=f1000(inc-itDed);
+  const r=pick(CFG.it.rates,itTx), itBase=itTx<1000?0:Math.max(0,itTx*r[1]-r[2]);
+  const itTotal=Math.floor(itBase*(1+CFG.it.surtax)/100)*100;
+  /* 住民税 */
+  const R=CFG.rt,L=ST.loc, rate=(+L.rate||STD.rate)/100;
+  const rtB=pick(R.basic,inc)[1], rtSp=p.sp==='none'?0:spRow(R.spouse);
+  const rtD=d.gen*R.dep.gen+d.spec*R.dep.spec+d.eld*R.dep.eld+d.coh*R.dep.coh;
+  const rtDed=p.si+rtB+rtSp+rtD, rtTx=f1000(inc-rtDed);
+  /* 非課税の判定 */
+  const N=1+(p.sp==='none'?0:1)+depN+u16, hasDep=N>1;
+  const lvLim=levyLimit(N,hasDep), levyNon=inc<=lvLim;
+  let perNon=false,perPending=false,perLim=null,perRange=null;
+  const k=L.kyu;
+  if(k==='1'||k==='2'||k==='3'||(k==='custom'&&perLimit('custom',N,hasDep)!==null)){perLim=perLimit(k,N,hasDep);perNon=inc<=perLim}
+  else{
+    const lo=perLimit('3',N,hasDep),hi=perLimit('1',N,hasDep);perRange=[lo,hi];
+    if(inc<=lo)perNon=true;else if(inc>hi)perNon=false;else perPending=true;
+  }
+  const levy=levyNon?0:rtTx*rate;
+  /* 調整控除 */
+  let adj=0,adjPending=false,diffSum=0,diffParts=[];
+  if(inc<=25000000&&levy>0){
+    diffSum=R.adj.basic;diffParts.push('基礎 5万円');
+    if(p.sp==='gen'&&inc<=10000000){const i=inc<=9000000?0:inc<=9500000?1:2;diffSum+=R.adj.spGen[i];diffParts.push('配偶者 '+man(R.adj.spGen[i]))}
+    if(p.sp==='eld'&&inc<=10000000) adjPending=true;
+    for(const kk of ['gen','spec','eld','coh']) if(d[kk]){diffSum+=d[kk]*R.adj.dep[kk];diffParts.push({gen:'一般扶養',spec:'特定扶養',eld:'老人扶養',coh:'同居老親等'}[kk]+' '+man(R.adj.dep[kk])+'×'+d[kk])}
+    if(!adjPending){
+      adj=rtTx<=R.adj.th?Math.min(diffSum,rtTx)*R.adj.rate:Math.max(diffSum-(rtTx-R.adj.th),R.adj.min)*R.adj.rate;
+      adj=Math.min(adj,levy);
+    }
+  }
+  const levyAfter=levy-adj, per=perNon?0:(+L.pref)+(+L.muni), forest=perNon?0:R.forest;
+  return {p,sd,inc,it:{b:itB,sp:itSp,d:itD,si:p.si,ded:itDed,tx:itTx,rate:itTx<1000?0:r[1],rc:itTx<1000?0:r[2],base:itBase,total:itTotal},
+    rt:{b:rtB,sp:rtSp,d:rtD,si:p.si,ded:rtDed,tx:rtTx,rate,levy,adj,adjPending,diffSum,diffParts,levyAfter,per,forest,
+        N,hasDep,lvLim,levyNon,perNon,perPending,perLim,perRange,total:levyAfter+per+forest}};
+}
+
+/* ================= 事例データ ================= */
+const D0={gen:0,spec:0,eld:0,coh:0};
+const CASES=[
+ {id:'T1',s:1000000,si:150000,sp:'none',dep:D0,lb:'独身・100万円',pt:'所得割・均等割とも非課税(どの級地でも)'},
+ {id:'T2',s:1500000,si:225000,sp:'none',dep:D0,lb:'独身・150万円',pt:'所得税0円・住民税あり'},
+ {id:'T3',s:2000000,si:300000,sp:'none',dep:D0,lb:'独身・200万円',pt:'★おすすめ:控除の差だけで分かれる',rec:1},
+ {id:'T4',s:3000000,si:450000,sp:'none',dep:D0,lb:'独身・300万円',pt:'控除で差が出る'},
+ {id:'T5',s:5000000,si:750000,sp:'none',dep:D0,lb:'独身・500万円',pt:'調整控除は最低額'},
+ {id:'T6',s:8000000,si:1200000,sp:'none',dep:D0,lb:'独身・800万円',pt:'所得税の基礎控除が67万円に'},
+ {id:'T7',s:3000000,si:450000,sp:'gen',dep:D0,lb:'配偶者あり・300万円',pt:'配偶者控除の違い'},
+ {id:'T8',s:5000000,si:750000,sp:'gen',dep:{gen:0,spec:1,eld:0,coh:0},lb:'配偶者+特定扶養・500万円',pt:'特定扶養と調整控除'},
+ {id:'T9',s:1160000,si:174000,sp:'none',dep:D0,lb:'独身・116万円',pt:'均等割が自治体の基準で分かれる例'}
+];
+
+/* ================= 理由データ ================= */
+const R=[
+ {id:'A1',c:'A',q:'所得税は段階的、住民税は一律の税率なのはなぜ?',it:'5〜45%の超過累進税率',rt:'所得割 標準税率10%(一律)',why:'所得税は<b>応能負担</b>と所得の再分配を担うため、所得が多いほど高い税率をかけます。住民税は地域の費用を広く分け合う<b>負担分任</b>の税なので、一律の税率です。',res:'高い所得ほど所得税の割合が大きくなります。なお、住民税の税率は標準税率で、超過課税をしている自治体もあります。',mis:'住民税も所得が多いほど税率が上がる',cs:'T6',hl:'A1'},
+ {id:'A2',c:'A',q:'住民税にだけ、定額の部分があるのはなぜ?',it:'なし',rt:'均等割 標準税率4,000円(道府県1,000円+市町村3,000円)',why:'住民税は地域社会の会費という性格(<b>応益性</b>・負担分任)があり、所得に関係なく広く負担する部分を持っています。',res:'森林環境税1,000円(国税)と合わせ、標準税率の場合は年5,000円です。超過課税をしている自治体では、これより高くなります。',mis:'均等割はどこでも5,000円(5,000円は森林環境税を含む標準税率の場合の額)',cs:'T2',hl:'A2'},
+ {id:'A3',c:'A',q:'住民税の控除額が所得税より小さいのはなぜ?',it:'基礎控除 最高104万円 など',rt:'基礎控除 43万円 など',why:'住民税は負担分任の考え方から、より多くの人に少しずつ負担してもらうため、控除額を小さく設定しています。',res:'同じ所得でも、住民税の課税所得のほうが大きくなります。',mis:'控除額は所得税と住民税で同じ',cs:'T3',hl:'A3'},
+ {id:'A4',c:'A',q:'所得税は0円なのに、住民税がかかるのはなぜ?',it:'課税所得0円 → 0円',rt:'課税所得あり → 所得割+均等割',why:'A2(均等割)とA3(小さい控除額)の結果です。',res:'給与収入150万〜200万円程度で起きやすい現象です。',mis:'所得税がかからなければ住民税もかからない',cs:'T3',hl:'A3'},
+ {id:'A5',c:'A',q:'住民税がかからない人がいるのは、なぜ? 基準はどこでも同じ?',it:'非課税限度額の仕組みなし',rt:'所得割:法律で全国共通/均等割:自治体の条例(級地区分に応じた額)',why:'生活に必要な最低限の所得には課税しないため、<b>非課税限度額</b>があります。<b>所得割</b>の基準は地方税法で全国共通です(単身は合計所得45万円以下)。<b>均等割</b>の基準は、政令の基準をもとに各自治体が条例で定め、生活保護の<b>級地</b>区分によって額が違います(単身は1級地45万円・2級地41.5万円・3級地38万円が政令の基準)。',res:'単身で給与だけの場合、令和9年度の所得割が0円になる目安は全国で給与収入119万円以下です。均等割の目安は、1級地119万円・2級地115.5万円・3級地112万円以下(政令の基準の場合)で、自治体の条例で確認が必要です。',mis:'非課税ラインは全国どこでも同じ119万円',cs:'T9',hl:'A2'},
+ {id:'B1',c:'B',q:'所得税は申告、住民税は通知で決まるのはなぜ?',it:'申告納税(本人が計算・申告)',rt:'賦課課税(自治体が計算・通知)',why:'国は本人の申告で税額を確定させ(<b>申告納税</b>)、自治体は集まった資料をもとに税額を計算して通知します(<b>賦課課税</b>)。',res:'住民税は「税額決定通知書」「納税通知書」で知らされます。',mis:'住民税も自分で税額を計算して納める'},
+ {id:'B2',c:'B',q:'退職した年にも住民税がかかるのはなぜ?',it:'その年の所得に、その年のうちに課税',rt:'前年の所得に、翌年度課税',why:'住民税は、前年の所得が確定してから自治体が計算する仕組みのためです。',res:'所得がなくなった年にも、前年分の住民税を納めます。',mis:'退職したら住民税はすぐかからなくなる',sc:'住民税は前の年の所得をもとに計算する仕組みのため、退職された年にも前年分の税額がかかります。',cs:'T4',hl:'B6'},
+ {id:'B6',c:'B',q:'「令和8年分」と「令和9年度分」がつながるのはなぜ?',it:'令和8年分(1〜12月の所得)',rt:'令和9年度分(6月から翌年5月に徴収)',why:'住民税は前年の所得をもとに翌年度に課税するため、呼び方がずれます(<b>年分と年度</b>)。',res:'<b>特別徴収</b>(天引き)は6月から翌年5月までです。',mis:'令和8年分と令和8年度分は同じ所得の税',cs:'T4',hl:'B6'},
+ {id:'B3',c:'B',q:'1月に引っ越しても、前の市町村から住民税が来るのはなぜ?',it:'住所による区分なし(国税)',rt:'1月1日(賦課期日)の住所地で課税',why:'住民税は、1月1日(<b>賦課期日</b>)に住んでいた市町村がその年度分を課税します。均等割の非課税の基準や超過課税も、その市町村の条例が使われます。',res:'年の途中で転出しても、その年度分は前の市町村に納めます。',mis:'引っ越したら新しい市町村に払い直す'},
+ {id:'B4',c:'B',q:'確定申告をしたら、住民税の申告がいらないのはなぜ?',it:'確定申告書を税務署へ',rt:'住民税の申告をしたとみなす',why:'所得税の確定申告書の情報が市町村に送られるため、住民税の申告書も出したとみなされます(<b>みなし申告</b>)。',res:'二重に申告する必要は通常ありません。',mis:'確定申告とは別に、必ず住民税の申告が必要',sc:'通常は不要です。確定申告書を出すと、住民税の申告もしたとみなされます。'},
+ {id:'B5',c:'B',q:'確定申告書の第二表に住民税の欄があるのはなぜ?',it:'第一表・第二表で申告',rt:'第二表の「住民税に関する事項」を使う',why:'みなし申告の仕組みがあるため、住民税だけに必要な情報も確定申告書で集めます。',res:'特別徴収か普通徴収かの選択などを書きます。',mis:'第二表は所得税のためだけの欄'},
+ {id:'C1',c:'C',q:'控除額が税ごとに別々に決まっているのはなぜ?',it:'所得税法で決める',rt:'地方税法で決める(一部は自治体の条例)',why:'昭和37年度から、住民税は所得税と切り離して、独自の控除額を定める方式になりました。',res:'改正のたびに、両方の額が同じとは限りません(令和8年度改正で基礎控除は所得税だけ引き上げ)。',mis:'所得税が変われば住民税も自動で変わる'},
+ {id:'C2',c:'C',q:'平成19年に税率が大きく変わったのはなぜ?',it:'税率の段階を見直し(5%からに)',rt:'所得割を標準税率10%に',why:'三位一体の改革で、国から地方へ税源を移しました(<b>税源移譲</b>)。',res:'住民税の割合が増え、所得税の割合が減りました。',mis:'税源移譲で税の総額が大きく増えた'},
+ {id:'C3',c:'C',q:'住民税の所得割が一律10%になったのはなぜ?',it:'累進税率のまま',rt:'道府県民税4%+市町村民税6%(標準税率)',why:'税源移譲のとき、地域の税収の偏りを小さくするため、比例税率(フラット)にしました。',res:'所得の多い少ないにかかわらず同じ税率です(超過課税の自治体を除く)。',mis:'住民税は昔から一律10%',cs:'T5',hl:'A1'},
+ {id:'C4',c:'C',q:'調整控除があるのはなぜ?',it:'なし',rt:'調整控除(所得割から差し引く)',why:'税源移譲で、人的控除額の差によって負担が増える人が出ないようにするためです。差は税源移譲のときに決めた額を使い、基礎控除は<b>定額5万円</b>です(104万−43万=61万円は使いません)。',res:'今回の基礎控除引き上げへの調整は、住宅ローン控除とふるさと納税の限度額計算で別に行われます。',mis:'所得税の基礎控除が上がると、調整控除も大きくなる',cs:'T8',hl:'C4'},
+ {id:'S3',c:'S',q:'給与所得の金額は、所得税と住民税で同じ?',it:'給与所得控除 最低74万円',rt:'給与所得控除 最低74万円',why:'所得金額の計算は共通で、分かれるのは所得控除からです。74万円は本則69万円+時限的な上乗せ5万円です。',res:'令和10年分(所得税)・令和11年度分(住民税)からは69万円になります(今の法律どおりの場合)。',mis:'住民税には74万円の上乗せがない',cs:'T4',hl:'S3'},
+ {id:'S1',c:'S',q:'所得税に2.1%が上乗せされるのはなぜ?',it:'復興特別所得税 2.1%(令和8年分まで)',rt:'なし',why:'東日本大震災からの復興の財源です。令和9年分からは復興1.1%+防衛特別所得税1.0%になります。',res:'令和8年分は、所得税額×102.1%(100円未満切り捨て)。',mis:'上乗せの2.1%は、ずっと復興特別所得税だけ',cs:'T4',hl:'A2'},
+ {id:'S2',c:'S',q:'森林環境税は住民税の一部?',it:'国税',rt:'均等割と一緒に市町村が徴収',why:'森林環境税は国税ですが、令和6年度から住民税の均等割と併せて徴収されています。',res:'年1,000円(全国共通)。均等割が非課税の人には課されません。',mis:'森林環境税は住民税の一部'}
+];
+const CAUSE={A:'税の役割',B:'税額の決め方',C:'制度の歴史',S:'補足'};
+
+/* ================= 問題データ ================= */
+const QS=[
+ {id:'Q01',t:'ox',q:'所得税の税率は5〜45%の超過累進税率で、住民税の所得割は標準税率で一律10%である。',a:0,e:'所得税は応能負担、住民税は負担分任の考え方です。',r:['A1']},
+ {id:'Q02',t:'reason',q:'所得税の税率が段階的に上がる主な理由は?',ch:['負担できる力に応じて負担し、所得を再分配するため','地域の費用を広く分け合うため','税源移譲で国の税収を増やすため'],a:0,e:'応能負担と再分配の役割があるためです。',r:['A1']},
+ {id:'Q03',t:'ox',q:'森林環境税は住民税の一部である。',a:1,e:'森林環境税は国税で、住民税の均等割と一緒に徴収されているだけです。',r:['S2']},
+ {id:'Q04',t:'ox',q:'令和9年度分の住民税の基礎控除は、最高43万円である。',a:0,e:'令和8年度改正で引き上げられたのは所得税の基礎控除だけです。',r:['A3','C1']},
+ {id:'Q05',t:'ox',q:'令和9年分の所得からも、復興特別所得税は2.1%である。',a:1,e:'令和9年分からは復興特別所得税1.1%と防衛特別所得税1.0%で、合計2.1%です。',r:['S1']},
+ {id:'Q06',t:'ox',q:'給与所得の金額の計算は、所得税と住民税で共通である。',a:0,e:'最低保障額もどちらも74万円です。分かれるのは所得控除からです。',r:['S3']},
+ {id:'Q07',t:'ox',q:'配偶者控除(一般)の額は、所得税38万円、住民税33万円である(本人の合計所得900万円以下)。',a:0,e:'住民税の控除額は、負担分任の考え方から所得税より小さく設定されています。',r:['A3']},
+ {id:'Q08',t:'ox',q:'令和8年分の所得にかかる住民税は、令和9年度分である。',a:0,e:'住民税は前年の所得をもとに翌年度に課税します。',r:['B6']},
+ {id:'Q09',t:'counter',q:'「退職したのに、住民税の通知の金額が高いのはなぜ?」と聞かれました。',ch:['住民税は前の年の所得をもとに計算するため','退職すると住民税の税率が上がるため','退職金に必ず住民税がかかるため'],a:0,e:'前年の所得に翌年度課税する仕組みです。',sc:'住民税は前の年の所得をもとに計算する仕組みのため、退職された年にも前年分の税額がかかります。',r:['B2']},
+ {id:'Q10',t:'counter',q:'「確定申告をしたけど、住民税の申告もしないといけない?」と聞かれました。',ch:['通常は不要。確定申告で住民税も申告したとみなされる','必ず別に住民税の申告が必要','住民税は申告しなくても一切課税されない'],a:0,e:'みなし申告の仕組みです。',sc:'通常は不要です。確定申告書を出すと、住民税の申告もしたとみなされます。',r:['B4']},
+ {id:'Q11',t:'ox',q:'確定申告書の第二表には、住民税に関する事項を書く欄がある。',a:0,e:'みなし申告の仕組みがあるため、住民税に必要な情報も確定申告書で集めます。',r:['B5']},
+ {id:'Q12',t:'ox',q:'調整控除は、住民税の所得割から直接差し引く税額控除である。',a:0,e:'調整控除は、税源移譲のときに決めた人的控除の差をもとに計算します。',r:['C4']},
+ {id:'Q13',t:'cause',q:'「住民税にだけ均等割がある」──主な原因はどれ?',ch:['A 税の役割','B 税額の決め方','C 制度の歴史'],a:0,e:'地域社会の会費(負担分任)という役割からです。',r:['A2']},
+ {id:'Q14',t:'cause',q:'「住民税は自治体が税額を計算して通知する」──主な原因はどれ?',ch:['A 税の役割','B 税額の決め方','C 制度の歴史'],a:1,e:'賦課課税方式です。',r:['B1']},
+ {id:'Q15',t:'cause',q:'「住民税の所得割が一律10%になった」──主な原因はどれ?',ch:['A 税の役割','B 税額の決め方','C 制度の歴史'],a:2,e:'平成19年の税源移譲です。',r:['C3','C2']},
+ {id:'Q16',t:'situation',q:'令和8年分の給与所得にかかる住民税は、特別徴収(天引き)でいつ納める?',ch:['令和9年6月から令和10年5月まで','令和8年1月から12月まで','令和9年1月から12月まで'],a:0,e:'令和9年度分として、6月から翌年5月まで給与から引かれます。',r:['B6']},
+ {id:'Q17',t:'situation',q:'令和9年1月10日にA市からB市へ転居。令和9年度分の住民税を課税するのは?',ch:['A市(1月1日の住所地)','B市(現在の住所地)','A市とB市で月割り'],a:0,e:'賦課期日(1月1日)の住所地が課税します。',r:['B3']},
+ {id:'Q18',t:'reason',q:'住民税が「前年の所得」で計算される主な理由は?',ch:['自治体が、確定した前年の所得の資料をもとに計算するため','住民税の税率が毎年変わるため','所得税より先に納めてもらうため'],a:0,e:'賦課課税のため、所得が確定してから自治体が計算します。',r:['B2','B1']},
+ {id:'Q19',t:'situation',q:'単身で給与だけの人。令和9年度の住民税の「所得割」が0円になる給与収入の目安は?(全国共通の基準)',ch:['119万円以下','110万円以下','160万円以下'],a:0,e:'所得割の基準は地方税法で全国共通(単身は合計所得45万円以下)。45万円+給与所得控除74万円=119万円です。均等割の基準は自治体ごとに違うので、別に確認します。',r:['A5']},
+ {id:'Q20',t:'cause',q:'「控除額が所得税と住民税で別々に決まっている」──主な原因はどれ?',ch:['A 税の役割','B 税額の決め方','C 制度の歴史'],a:2,e:'昭和37年度から、住民税は独自の控除額を定める方式になりました。',r:['C1']},
+ {id:'Q21',t:'counter',q:'「所得税は引かれていないのに、住民税の通知が来た」と聞かれました。',ch:['住民税は控除が小さく均等割もあるため、低い所得から課税される','計算の誤りなので取り消される','住民税は所得に関係なく全員に同じ額がかかる'],a:0,e:'控除額の差(A3)と均等割(A2)が原因です。なお、非課税になるかどうかは、所得割は全国共通の基準、均等割はお住まいの自治体の条例の基準で判定します。',sc:'住民税は所得税より控除が小さく、均等割もあるため、より低い所得から課税されます。',r:['A4','A3','A2']},
+ {id:'Q22',t:'calc',q:'給与収入200万円・社会保険料30万円・独身。住民税の課税所得(1,000円未満切り捨て)は?',a:530000,h:'給与所得126万円から、社会保険料30万円と基礎控除43万円を引きます。',e:'126万円−30万円−43万円=53万円。所得税は基礎控除104万円なので課税所得0円です。',r:['A3','A4']},
+ {id:'Q23',t:'calc',q:'所得税の課税所得が300万円のとき、復興特別所得税を加える前の所得税額は?',a:202500,h:'速算表の控除額(9万7,500円)を引きましたか?',e:'300万円×10%−97,500円=202,500円。この金額の2.1%が復興特別所得税として加わります。',r:['A1','S1'],pair:'Q24'},
+ {id:'Q24',t:'calc',q:'住民税の課税所得が300万円のとき、所得割(標準税率・調整控除の前)は?',a:300000,h:'住民税の所得割は標準税率で一律10%です。',e:'300万円×10%=300,000円。',r:['A1','C3'],pair:'Q23',cmp:'同じ300万円でも、所得税は段階的な税率、住民税は一律10%'},
+ {id:'Q26',t:'ox',q:'住民税の均等割の標準税率は、道府県民税と市町村民税を合わせて年4,000円である。',a:0,e:'道府県民税1,000円+市町村民税3,000円。超過課税をしている自治体ではこれより高くなります。森林環境税1,000円は国税で、別の税です。',r:['A2','S2']},
+ {id:'Q27',t:'ox',q:'令和8年分は所得税の基礎控除が最高104万円になるので、調整控除で使う基礎控除の差も61万円になる。',a:1,e:'調整控除で使う基礎控除の差は、定額5万円のままです。',r:['C4']},
+ {id:'Q28',t:'ox',q:'住民税の「均等割」が非課税になる所得の基準は、全国どの市町村でも同じである。',a:1,e:'均等割の基準は、政令の基準をもとに各自治体が条例で定め、級地区分によって額が違います(単身は45万円・41.5万円・38万円)。全国共通なのは所得割の基準です。',r:['A5']},
+ {id:'Q29',t:'counter',q:'「友人の住む市では非課税なのに、同じ収入の私には均等割がかかった」と聞かれました。',ch:['均等割の非課税の基準は自治体の条例で決まり、地域(級地)によって額が違うため','所得税の計算が間違っているため','均等割は収入に関係なく全員にかかるため'],a:0,e:'均等割の非課税の基準は、自治体ごとに条例で定められています。',sc:'均等割が非課税になる所得の基準は、お住まいの市町村の条例で決まっており、地域によって金額が異なります。',r:['A5','B3']}
+];
+const QTYPE={ox:'○×',reason:'理由を選ぶ',counter:'窓口対応',situation:'状況を判断',cause:'原因を当てる',calc:'計算'};
+
+/* ================= 用語データ ================= */
+const G=[
+ ['応能負担','おうのうふたん','国','負担できる力が大きい人ほど多く負担するという考え方','A1',['累進']],
+ ['超過累進税率','ちょうかるいしんぜいりつ','国','所得の段階を超えた部分だけに、より高い税率をかける方式','A1',['速算表','税率']],
+ ['負担分任','ふたんぶんにん','地','地域の費用を住民が広く分け合うという考え方','A2',['会費']],
+ ['応益性','おうえきせい','地','行政サービスを受けることへの対価という性格','A2',[]],
+ ['均等割','きんとうわり','地','所得に関係なくかかる住民税の定額部分(標準税率4,000円。超過課税の自治体あり)','A2',['定額','森林環境税']],
+ ['所得割','しょとくわり','地','所得に応じてかかる住民税の部分(標準税率10%)','C3',['10%']],
+ ['超過課税','ちょうかかぜい','地','自治体が条例で、標準税率を超える税率で課税すること','A2',['標準税率','条例']],
+ ['非課税限度額','ひかぜいげんどがく','地','住民税をかけない所得の基準。所得割は法律で全国共通(単身45万円以下)、均等割は政令の基準をもとに自治体が条例で定める','A5',['非課税','119万円','条例']],
+ ['級地','きゅうち','地','生活保護の基準で地域を区分したもの。均等割の非課税の基準(政令の基準)の額が級地ごとに違う','A5',['1級地','2級地','3級地','地域']],
+ ['申告納税','しんこくのうぜい','国','本人が計算して申告し、税額を確定させる方式','B1',['確定申告']],
+ ['賦課課税','ふかかぜい','地','自治体などが税額を計算して通知する方式','B1',['通知書']],
+ ['賦課期日','ふかきじつ','地','住民税の課税の条件を判定する基準日(1月1日)','B3',['1月1日','引っ越し','転出','転居']],
+ ['みなし申告','みなししんこく','共','所得税の確定申告書を出すと、住民税の申告書も出したとみなされる仕組み','B4',['住民税の申告','第二表']],
+ ['年分と年度','ねんぶんとねんど','共','令和8年分の所得には令和9年度分の住民税がかかる','B6',['前年','翌年度']],
+ ['特別徴収','とくべつちょうしゅう','地','住民税を6月から翌年5月まで給与から天引きする方法','B6',['天引き','給与から']],
+ ['調整控除','ちょうせいこうじょ','地','税源移譲で負担が増えないよう、所得割から差し引く税額控除。基礎控除の差は定額5万円(計算のしかたの一部は確認中)','C4',['税源移譲','人的控除']]
+];
+
+/* ================= 出典 ================= */
+const SRC=[
+ ['財務省','令和8年度税制改正の大綱の概要','https://www.mof.go.jp/tax_policy/tax_reform/outline/fy2026/08taikou_gaiyou.htm'],
+ ['財務省','令和8年度税制改正の大綱(防衛特別所得税)','https://www.mof.go.jp/tax_policy/tax_reform/outline/fy2026/08taikou_06.htm'],
+ ['国税庁','No.1199 基礎控除','https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1199.htm'],
+ ['国税庁','No.1410 給与所得控除','https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1410.htm'],
+ ['国税庁','No.1180 扶養控除','https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm'],
+ ['国税庁','No.2260 所得税の税率','https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm'],
+ ['国税庁','防衛特別所得税及び復興特別所得税Q&A(PDF)','https://www.nta.go.jp/publication/pamph/pdf/0026005-024_03.pdf'],
+ ['総務省','令和8年度地方税制改正等に関する留意事項(PDF)','https://www.soumu.go.jp/main_content/001053325.pdf'],
+ ['総務省','個人住民税の基礎控除等について(PDF)','https://www.soumu.go.jp/main_content/001075462.pdf'],
+ ['総務省','個人住民税','https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/150790_06.html'],
+ ['総務省','森林環境税及び森林環境譲与税','https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/150790_18.html'],
+ ['e-Gov','地方税法','https://elaws.e-gov.go.jp/document?lawid=325AC0000000226_20261119_508AC0000000002'],
+ ['e-Gov','法令検索(地方税法施行令:均等割の非課税の基準は原文で確認)','https://laws.e-gov.go.jp/'],
+ ['自治体','各自治体の市町村税条例(均等割の非課税の基準・超過課税)','https://laws.e-gov.go.jp/'],
+ ['自治体','調布市 調整控除(法令原文で確認予定)','https://www.city.chofu.lg.jp/030010/p014042.html'],
+ ['自治体','練馬区 調整控除(法令原文で確認予定)','https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/zeigakukojo/choseikojo.html']
+];
+
+/* ================= 共通 ================= */
+function go(t){
+  document.querySelectorAll('section.tab').forEach(s=>s.classList.toggle('on',s.id==='t-'+t));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  if(t!=='find'&&t!=='home'){ST.last=t;save()}
+  if(t==='home')renderHome();
+  window.scrollTo(0,0);
+}
+function toggleBig(){ST.big=!ST.big;save();document.body.classList.toggle('bigtxt',ST.big)}
+function sheet(html){const s=document.getElementById('sheet');s.innerHTML=html+'<p><button class="btn sub" onclick="closeSheet()">閉じる</button></p>';s.classList.add('on');document.getElementById('cover').classList.add('on');const b=s.querySelector('button');if(b)b.focus()}
+function closeSheet(){document.getElementById('sheet').classList.remove('on');document.getElementById('cover').classList.remove('on')}
+const isTyping=()=>['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName);
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape')closeSheet();
+  if(e.key==='/'&&!isTyping()){e.preventDefault();go('find');document.getElementById('findIn').focus()}
+});
+const rById=id=>R.find(r=>r.id===id);
+function why(id){
+  const r=rById(id);if(!r)return;
+  sheet(`<p><span class="badge">${r.c}</span>${CAUSE[r.c]}</p><h3>${r.q}</h3>
+  <div class="grid2"><div class="col k"><div class="lb">国 所得税</div>${r.it}</div><div class="col c"><div class="lb">地 住民税</div>${r.rt}</div></div>
+  <p>${r.why}</p><p class="note">${r.res}</p>
+  <p><button class="link" onclick="closeSheet();openCard('${r.id}')">カードで詳しく</button></p>`);
+}
+function welcome(){
+  sheet('<h3>ようこそ</h3><p>同じ所得から、なぜ税額が二つ出る? 理由から覚えるアプリです。</p><div class="grid2"><div class="col k"><div class="lb">国 所得税</div>いつも左・青</div><div class="col c"><div class="lb">地 住民税</div>いつも右・緑</div></div><p>灰色は所得税・住民税で共通の部分です。「なぜ?」を押すと理由が出ます。</p><div class="warn">住民税の均等割の非課税の基準と、超過課税は自治体ごとに違います。はじめに「自治体の設定」で、お住まいの(または研修で扱う)自治体の級地区分などを設定してください。設定しなくても学習はできます。</div><button class="btn" onclick="closeSheet();go(\'find\');document.getElementById(\'locFind\').scrollIntoView()">自治体の設定へ</button>');
+}
+function overview(){
+  sheet(`<h3>3分で全体像</h3>
+  <div class="card"><span class="badge">A</span><b>税の役割</b><p>所得税は負担できる力に応じて払う(応能負担・再分配)/住民税は地域の費用を広く分け合う(負担分任)</p><p class="note">→ 税率の形、均等割、控除額、非課税の基準の違い</p></div>
+  <div class="card"><span class="badge">B</span><b>税額の決め方</b><p>所得税は自分で申告する/住民税は自治体が計算する</p><p class="note">→ 前年の所得、1月1日の住所(その自治体の条例が使われる)、みなし申告</p></div>
+  <div class="card"><span class="badge">C</span><b>制度の歴史</b><p>平成19年の税源移譲</p><p class="note">→ 住民税の税率が一律10%に、調整控除の誕生</p></div>
+  <p><b>細かい違いは、この3つから説明できます。</b></p>
+  <button class="btn" onclick="closeSheet();go('learn');selCause('A')">Aから学ぶ</button>`);
+}
+
+/* ================= 自治体の設定 ================= */
+function locSummary(){
+  const L=ST.loc,std=+L.pref===STD.pref&&+L.muni===STD.muni&&+L.rate===STD.rate;
+  const nm=L.name?L.name+':':'';
+  const k=L.kyu?KYU_LABEL[L.kyu]:'未設定';
+  return `${nm}均等割の非課税の基準=${k}/税率=${std?'標準税率':'超過課税あり(均等割'+yen(+L.pref+ +L.muni)+'・所得割'+L.rate+'%)'}`;
+}
+function locBox(where){
+  const L=ST.loc;
+  return `<div class="locbox"><b>🏛 自治体の設定</b> <button class="why" onclick="why('A5')">なぜ必要?</button>
+   <p class="note">${locSummary()}</p>
+   ${where==='full'?`
+   <div class="form">
+    <label for="lcName">自治体名(表示用・任意)</label><input id="lcName" value="${L.name}" placeholder="例:○○町">
+    <label for="lcKyu">均等割の非課税の基準</label>
+    <select id="lcKyu">${Object.keys(KYU_LABEL).map(k=>`<option value="${k}" ${L.kyu===k?'selected':''}>${KYU_LABEL[k]}</option>`).join('')}</select>
+    <p class="note">自治体の条例(多くは生活保護の級地区分に応じた額)で確認してください。わからないときは「未設定」のままにすると、級地で結果が変わる範囲を「⚠」で表示します。</p>
+    <div id="lcCust" style="display:${L.kyu==='custom'?'block':'none'}">
+     <label>条例の額(万円)</label>
+     <div class="grid2">
+      <div><span class="note">単身の基準</span><input id="lcCs" type="number" step="0.1" value="${L.custSingle}" placeholder="例:45"></div>
+      <div><span class="note">扶養ありの1人あたりの額</span><input id="lcCp" type="number" step="0.1" value="${L.custPer}" placeholder="例:35"></div>
+      <div><span class="note">扶養ありの加算額</span><input id="lcCd" type="number" step="0.1" value="${L.custDep}" placeholder="例:21"></div>
+     </div>
+     <p class="note">扶養ありの基準=1人あたりの額×人数+10万円+加算額</p>
+    </div>
+    <label>均等割の税額(円)<span class="note"> 標準税率:道府県民税1,000円・市町村民税3,000円</span></label>
+    <div class="grid2"><div><span class="note">道府県民税</span><input id="lcPref" type="number" value="${L.pref}"></div><div><span class="note">市町村民税</span><input id="lcMuni" type="number" value="${L.muni}"></div></div>
+    <label for="lcRate">所得割の税率(%)<span class="note"> 標準税率10%</span></label><input id="lcRate" type="number" step="0.01" value="${L.rate}">
+    <p class="row"><button class="btn" onclick="saveLoc()">設定を保存</button><button class="btn sub" onclick="resetLoc()">標準税率・未設定に戻す</button></p>
+    <p id="lcMsg" class="note"></p>
+   </div>`:`<button class="link" onclick="go('find');setTimeout(()=>document.getElementById('locFind').scrollIntoView(),50)">設定を変える</button>`}
+  </div>`;
+}
+function renderLoc(){
+  document.getElementById('locFind').innerHTML=locBox('full');
+  document.getElementById('locHome').innerHTML=locBox('short');
+  document.getElementById('locCalc').innerHTML=locBox('short');
+  document.getElementById('locBand').textContent='学習用の概算 / '+(ST.loc.name||'自治体')+':'+(ST.loc.kyu?KYU_LABEL[ST.loc.kyu]:'非課税基準 未設定');
+  const k=document.getElementById('lcKyu');if(k)k.onchange=()=>{document.getElementById('lcCust').style.display=k.value==='custom'?'block':'none'};
+  renderKyuTbl();
+}
+function saveLoc(){
+  const v=i=>document.getElementById(i).value.trim(),msg=document.getElementById('lcMsg');
+  const pref=+v('lcPref'),muni=+v('lcMuni'),rate=+v('lcRate');
+  if(!(pref>=0&&muni>=0&&rate>0&&rate<=20)){msg.textContent='税額・税率の値を確認してください';return}
+  ST.loc={name:v('lcName'),kyu:v('lcKyu'),custSingle:v('lcCs'),custPer:v('lcCp'),custDep:v('lcCd'),pref,muni,rate};
+  save();renderLoc();refreshAll();
+  document.getElementById('lcMsg').textContent='保存しました。計算の結果に反映されます。';
+}
+function resetLoc(){ST.loc={name:ST.loc.name,kyu:'',custSingle:'',custPer:'',custDep:'',pref:STD.pref,muni:STD.muni,rate:STD.rate};save();renderLoc();refreshAll()}
+function refreshAll(){if(curRes){const c=curRes.c;curRes.r=calc(curRes.r.p);renderResult()}drawChart();renderCaseBtns()}
+function renderKyuTbl(){
+  const P=CFG.rt.perNonTax,k=ST.loc.kyu;
+  document.getElementById('kyuTbl').innerHTML=`<tr><th>級地(政令の基準)</th><th>単身の基準(合計所得)</th><th>扶養ありの基準</th><th class="c">単身・給与だけの給与収入の目安(令和9年度)</th></tr>`+
+   ['1','2','3'].map(x=>{const s=P[x].per+P.add;return `<tr class="${k===x?'cur':''}"><td class="l">${x}級地${k===x?'(設定中)':''}</td><td>${man(s)}以下</td><td class="l">${man(P[x].per)}×N+10万円+${man(P[x].depAdd)}</td><td>${man(s+740000)}以下</td></tr>`}).join('')+
+   (k==='custom'&&ST.loc.custSingle!==''?`<tr class="cur"><td class="l">条例の額(設定中)</td><td>${ST.loc.custSingle}万円以下</td><td class="l">${ST.loc.custPer||'?'}万円×N+10万円+${ST.loc.custDep||'?'}万円</td><td>${man(+ST.loc.custSingle*10000+740000)}以下</td></tr>`:'');
+}
+
+/* ================= ホーム ================= */
+function renderHome(){
+  const b=document.getElementById('homeBars');
+  b.innerHTML=['A','B','C','S'].map(c=>{const ids=R.filter(r=>r.c===c),ok=ids.filter(r=>ST.cards[r.id]==='ok').length;
+    return `<div class="br"><span class="nm"><span class="badge">${c==='S'?'補':c}</span>${CAUSE[c]}</span><span class="tr"><span class="fl" style="width:${ok/ids.length*100}%"></span></span><span>${ok}/${ids.length}${ok===ids.length?' ✓':''}</span></div>`}).join('')+
+    `<p class="note">クイズ:${ST.lastQuiz?`前回 ${ST.lastQuiz.n}問中${ST.lastQuiz.ok}問 正解${ST.lastQuiz.weak?'(苦手:'+ST.lastQuiz.weak+')':''}`:'まだ解いていません'}/自分で計算:${ST.selfDone.length}事例を完了</p>`;
+  const again=Object.values(ST.cards).filter(v=>v==='again').length;
+  const unopened=['A','B','C'].find(c=>!R.some(r=>r.c===c&&ST.cards[r.id]));
+  let rec='';
+  if(again>=3)rec=`<button class="link" onclick="go('learn');review()">次のおすすめ:復習するカードが${again}枚あります</button>`;
+  else if(ST.lastQuiz&&ST.lastQuiz.weak)rec=`<button class="link" onclick="go('learn');selCause('${ST.lastQuiz.weak}')">次のおすすめ:${ST.lastQuiz.weak}をもう一度学びましょう</button>`;
+  else if(unopened)rec=`<button class="link" onclick="go('learn');selCause('${unopened}')">次のおすすめ:次は${unopened}の${CAUSE[unopened]}へ</button>`;
+  else rec=`<button class="link" onclick="go('quiz')">次のおすすめ:クイズで確かめましょう</button>`;
+  document.getElementById('homeRec').innerHTML=rec;
+  const lbl={learn:'続きから学ぶ',calc:'計算の続き',quiz:'クイズの続き'};
+  document.getElementById('contBtn').textContent=lbl[ST.last]||'学びはじめる';
+  drawChart();
+}
+function cont(){if(['learn','calc','quiz'].includes(ST.last))go(ST.last);else overview()}
+function drawChart(){
+  const W=620,H=260,P=40,xs=[],it=[],rt=[];let pend=[];
+  for(let s=600000;s<=10000000;s+=100000){const r=calc({s,si:Math.round(s*.15),sp:'none',dep:D0});xs.push(s);it.push(r.it.total);rt.push(r.rt.total);if(r.rt.perPending)pend.push(s)}
+  const mx=Math.max(...it,...rt),X=i=>P+(W-P-10)*i/(xs.length-1),Y=v=>H-P-(H-P-10)*v/mx;
+  const line=(a,c)=>`<polyline fill="none" stroke="${c}" stroke-width="2.5" points="${a.map((v,i)=>X(i)+','+Y(v)).join(' ')}"/>`;
+  let g='';for(let v=0;v<=mx;v+=200000)g+=`<line x1="${P}" x2="${W-10}" y1="${Y(v)}" y2="${Y(v)}" stroke="#eee"/><text x="2" y="${Y(v)+3}">${v/10000}万</text>`;
+  for(let i=0;i<xs.length;i+=10)g+=`<text x="${X(i)-10}" y="${H-P+14}">${xs[i]/10000}万</text>`;
+  const cross=xs.findIndex((s,i)=>it[i]>rt[i]);
+  const mark=cross>0?`<line x1="${X(cross)}" x2="${X(cross)}" y1="10" y2="${H-P}" stroke="#999" stroke-dasharray="4"/><text x="${Math.min(X(cross)+4,W-200)}" y="22">ここから所得税が上回る(約${xs[cross]/10000}万円)</text>`:'';
+  let band='';
+  if(pend.length){const i0=xs.indexOf(pend[0]),i1=xs.indexOf(pend[pend.length-1]);band=`<rect x="${X(i0)-3}" y="10" width="${X(i1)-X(i0)+6}" height="${H-P-10}" fill="#f59e0b" opacity=".25"/><text x="${X(i0)}" y="40">⚠均等割は自治体で異なる</text>`}
+  document.getElementById('chart').innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="給与収入ごとの所得税と住民税のグラフ">${band}${g}<line x1="${P}" y1="${H-P}" x2="${W-10}" y2="${H-P}" stroke="#999"/>${line(it,'#1f5fbf')}${line(rt,'#1e8a4c')}${mark}<text x="${W/2-30}" y="${H-6}">給与収入</text></svg>`;
+  document.getElementById('chartNote').innerHTML=`給与収入が低い範囲では住民税のほうが高くなります。基礎控除の差(104万円と43万円)と均等割があるためです。住民税は「${locSummary()}」で計算しています。${pend.length?'色を付けた範囲は、均等割が非課税かどうかが自治体の基準(級地)で変わるため、課税として描いています。':''}`;
+}
+
+/* ================= 計算 ================= */
+let mode='all',stepN=1,curRes=null,selfK=0,selfTry=0;
+function renderCaseBtns(){
+  document.getElementById('caseBtns').innerHTML=CASES.map(c=>`<button class="${c.rec?'rec':''}" onclick="runCase('${c.id}')"><b>${c.id}</b> ${c.lb}${ST.selfDone.includes(c.id)?' <span class="done">✓</span>':''}<small>${c.pt}</small></button>`).join('');
+}
+function runCase(id,hl){const c=CASES.find(x=>x.id===id);ST.lastCase=id;save();showResult(calc(c),c,hl)}
+function calcFromForm(){
+  const v=i=>document.getElementById(i).value, err=document.getElementById('inErr');err.textContent='';
+  if(v('inS')===''){err.textContent='給与収入を入れてください';return}
+  let s=Math.round(+v('inS')*10000);if(!(s>=0)){err.textContent='0以上の数字を入れてください';return}
+  if(s>100000000){s=100000000;err.textContent='学習用のため1億円までで計算します'}
+  const si=v('inSi')===''?Math.round(s*.15):Math.round(+v('inSi')*10000);
+  if(!(si>=0)){err.textContent='社会保険料は0以上の数字を入れてください';return}
+  if(si>s){err.textContent='社会保険料が給与収入より大きくなっています';return}
+  const n=i=>Math.min(9,Math.max(0,Math.floor(+v(i)||0)));
+  showResult(calc({s,si,sp:v('inSp'),dep:{gen:n('dGen'),spec:n('dSpec'),eld:n('dEld'),coh:n('dCoh')},u16:n('dU16')}),null);
+}
+function showResult(r,c,hl){curRes={r,c};stepN=1;selfK=0;selfTry=0;renderResult(hl)}
+function setMode(m){mode=m;stepN=1;selfK=0;selfTry=0;renderResult()}
+function two(a,b,fa,fb,whyId,title,extra){
+  return {title,whyId,html:`<div class="grid2"><div class="col k"><div class="lb">国 所得税</div><div class="amt">${a}</div><div class="fx">${fa}</div></div><div class="col c"><div class="lb">地 住民税</div><div class="amt">${b}</div><div class="fx">${fb}</div></div></div>${extra||''}`};
+}
+function nonTaxText(T){
+  const lv=`所得割:合計所得 ${T.hasDep?'35万円×'+T.N+'人+10万円+32万円=':''}${yen(T.lvLim)}以下なら非課税(全国共通)→ ${T.levyNon?'非課税':'課税'}`;
+  let pe;
+  if(T.perPending)pe=`均等割:基準は自治体の条例で決まり、級地によって ${yen(T.perRange[0])}〜${yen(T.perRange[1])} の間で異なります。この所得はその範囲内のため ⚠ 自治体の基準で異なります(ここでは課税として計算)`;
+  else if(T.perLim!==null)pe=`均等割:${KYU_LABEL[ST.loc.kyu]}で ${yen(T.perLim)}以下なら非課税 → ${T.perNon?'非課税':'課税'}`;
+  else pe=`均等割:自治体の基準が未設定ですが、どの級地の基準でも ${T.perNon?'非課税':'課税'} になる所得です`;
+  return lv+'\n'+pe+(T.hasDep?`\n(人数N=本人+配偶者+扶養親族+16歳未満の子=${T.N}人)`:'');
+}
+function buildSteps(r){
+  const I=r.it,T=r.rt,p=r.p;
+  const dd=(x,y)=>`<div class="diff">差 ${yen(Math.abs(x-y))}</div>`;
+  const dedTxt=o=>`社会保険料 ${yen(o.si)}\n基礎控除 ${yen(o.b)}${o.sp?'\n配偶者控除 '+yen(o.sp):''}${o.d?'\n扶養控除 '+yen(o.d):''}`;
+  const rp=(T.rate*100).toFixed(2).replace(/\.?0+$/,'');
+  const perTxt=`均等割 ${yen(T.per)}(道府県${yen(+ST.loc.pref)}+市町村${yen(+ST.loc.muni)}${+ST.loc.pref+ +ST.loc.muni===4000?'・標準税率':'・条例の税率'})\n森林環境税 1,000円(国税・住民税と一緒に徴収)`;
+  return [
+   {title:'① 所得金額(共通)',whyId:'S3',html:`<div class="col s"><div class="lb">共 所得税・住民税</div><div class="amt">${yen(r.inc)}</div><div class="fx">給与収入 ${yen(p.s)} − 給与所得控除 ${yen(r.sd)} = ${yen(r.inc)}</div></div>`},
+   {split:1},
+   {title:'⓪ 住民税の非課税の判定',whyId:'A5',html:`<div class="col c"><div class="lb">地 住民税だけ</div><div class="amt">${T.levyNon&&T.perNon?'すべて非課税':T.levyNon?'所得割は非課税':'課税'}${T.perPending?' ⚠':''}</div><div class="fx">${nonTaxText(T)}</div></div>`},
+   two(yen(I.ded),yen(T.ded),dedTxt(I),dedTxt(T),'A3','② 所得控除',dd(I.ded,T.ded)),
+   two(yen(I.tx),yen(T.tx),`${yen(r.inc)} − ${yen(I.ded)}\n(1,000円未満切り捨て)`,`${yen(r.inc)} − ${yen(T.ded)}\n(1,000円未満切り捨て)`,'A3','③ 課税所得',dd(I.tx,T.tx)),
+   two(yen(I.base),T.levyNon?'非課税':yen(T.levy),`税率 ${(I.rate*100).toFixed(0)}%\n${yen(I.tx)} × ${(I.rate*100).toFixed(0)}% − ${yen(I.rc)}`,T.levyNon?'所得割の非課税の基準以下のため0円':`所得割 ${rp}%${rp==='10'?'(標準税率)':'(条例の税率)'}\n${yen(T.tx)} × ${rp}%`,'A1','④ 税率と税額'),
+   two('なし',T.levyNon?'―':T.adjPending?'⚠ 確認中':'− '+yen(T.adj),'MVPでは税額控除なし',T.levyNon?'所得割が非課税のため計算しません':T.adjPending?'老人配偶者の人的控除額の差は確認中のため、調整控除を計算していません':`調整控除\n人的控除額の差の合計 ${yen(T.diffSum)}\n(${T.diffParts.join(' + ')})\n${T.tx<=2000000?'差の合計と課税所得の少ないほう':'{差−(課税所得−200万円)}、最低5万円'} × 5%`,'C4','⑤ 税額控除'),
+   two('+ 2.1%',T.perNon?'非課税':'+ '+yen(T.per+T.forest)+(T.perPending?' ⚠':''),`復興特別所得税\n${yen(I.base)} × 102.1% → 100円未満切り捨て`,T.perNon?'均等割の非課税の基準以下のため、均等割・森林環境税とも0円':perTxt+(T.perPending?'\n⚠ 自治体の基準によっては非課税になります':''),'A2','⑥ 加わる税'),
+   two('令和8年分','令和9年度分','翌年2〜3月の確定申告、または年末調整で精算','6月から翌年5月まで(特別徴収)','B6','⑦ 納める時期')
+  ];
+}
+function selfQs(r){
+  const I=r.it,T=r.rt;
+  const q=[
+   {t:'① 所得金額(共通)',f:[['共通',r.inc]],h:`給与収入 − 給与所得控除(${yen(r.sd)})`,w:'S3'},
+   {t:'② 所得控除の合計',f:[['所得税',I.ded],['住民税',T.ded]],h:'社会保険料+基礎控除(所得税104万円・住民税43万円 など)+配偶者・扶養',w:'A3'},
+   {t:'③ 課税所得',f:[['所得税',I.tx],['住民税',T.tx]],h:'所得金額 − 所得控除。1,000円未満切り捨て、マイナスは0円',w:'A3'},
+   {t:'④ 税額(所得税)/所得割(住民税)',f:[['所得税',I.base],['住民税',T.levy]],h:'所得税は速算表(課税所得×税率−控除額)、住民税は×税率(所得割が非課税なら0円)',w:'A1'}
+  ];
+  if(!T.adjPending&&!T.levyNon)q.push({t:'⑤ 調整控除(住民税)',f:[['住民税',T.adj]],h:'人的控除額の差の合計(基礎は5万円)×5%。課税所得200万円超は別の式',w:'C4'});
+  if(!T.adjPending&&!T.perPending)q.push({t:'⑥ 最終の税額',f:[['所得税',I.total],['住民税',T.total]],h:'所得税は×102.1%で100円未満切り捨て。住民税は所得割−調整控除+均等割+森林環境税',w:'A2'});
+  return q;
+}
+function renderSelf(r,c){
+  const qs=selfQs(r);
+  const doneHtml=qs.slice(0,selfK).map(s=>`<div class="card"><b>${s.t}</b> <span class="done">○</span><div class="selfrow">${s.f.map(f=>`<div class="col ${f[0]==='所得税'?'k':f[0]==='住民税'?'c':'s'}"><div class="lb">${f[0]}</div><div class="amt">${yen(f[1])}</div></div>`).join('')}</div></div>`).join('');
+  if(selfK>=qs.length){
+    if(c&&!ST.selfDone.includes(c.id)){ST.selfDone.push(c.id);save();renderCaseBtns()}
+    const skip=r.rt.adjPending?'老人配偶者の調整控除は確認中のため、⑥は出題していません。':r.rt.perPending?'均等割が自治体の基準で変わる所得のため、⑥は出題していません。自治体の設定をすると出題されます。':'';
+    return doneHtml+`<div class="card"><p class="ok">○ 最後まで計算できました</p>${skip?`<p class="note">${skip}</p>`:''}<button class="btn" onclick="setMode('all')">全部の計算式を見る</button></div>`;
+  }
+  const s=qs[selfK];
+  return doneHtml+`<div class="card"><b>${s.t}</b> <button class="why" onclick="why('${s.w}')">なぜ?</button>
+   <div class="selfrow">${s.f.map((f,i)=>`<div><span class="note">${f[0]}(円)</span><input class="inp" id="sf${i}" inputmode="numeric"></div>`).join('')}</div>
+   <p id="selfMsg" class="note" style="color:var(--ng)"></p>
+   <button class="btn" onclick="checkSelf()">答え合わせ</button> <button class="link" onclick="selfK++;selfTry=0;renderResult()">答えを見て進む</button></div>`;
+}
+function checkSelf(){
+  const s=selfQs(curRes.r)[selfK],msg=document.getElementById('selfMsg');
+  const vals=s.f.map((f,i)=>document.getElementById('sf'+i).value.trim());
+  if(vals.some(v=>v==='')){msg.textContent='すべての欄に入れてください';return}
+  if(s.f.every((f,i)=>toNum(vals[i])===f[1])){selfK++;selfTry=0;renderResult();return}
+  selfTry++;
+  msg.textContent=selfTry===1?'× ヒント:'+s.h:'× 正解は '+s.f.map(f=>f[0]+' '+yen(f[1])).join('、')+'。「答えを見て進む」で次へ進めます';
+}
+function renderResult(hl){
+  if(!curRes)return;const {r,c}=curRes,I=r.it,T=r.rt,p=r.p;
+  const steps=buildSteps(r);
+  const diff=T.total-I.total;
+  const msg=I.total===0&&T.total>0?'所得税はかからないのに、住民税はかかります。なぜ?':I.total===0&&T.total===0?'この収入では、どちらもかかりません':`同じ給与でも、税額の差は${yen(Math.abs(diff))}です`;
+  const mx=Math.max(I.total,T.total,1);
+  const order=[0,1,2,3,4,5,6,7,8];
+  const shown=mode==='step'?steps.slice(0,Math.min(steps.length,stepN+1)):steps;
+  const nDep=p.dep.gen+p.dep.spec+p.dep.eld+p.dep.coh;
+  const head=`<div class="seg row" role="group" aria-label="表示">${[['all','全部見る'],['step','1段ずつ'],['self','自分で計算']].map(([k,l])=>`<button class="${mode===k?'on':''}" onclick="setMode('${k}')">${l}</button>`).join('')}</div>
+  <div class="card">
+    <p class="note">${c?c.id+' '+c.lb:'自分の条件'}:給与 ${man(p.s)}・社会保険料 ${man(p.si)}${p.sp==='gen'?'・配偶者あり(70歳未満)':p.sp==='eld'?'・配偶者あり(70歳以上)':''}${nDep?'・扶養'+nDep+'人':''}${p.u16?'・16歳未満の子'+p.u16+'人':''}<br>住民税:${locSummary()}</p>
+    ${mode==='self'?'<p><b>段階ごとに、所得税と住民税の金額を自分で計算してみましょう。</b></p>':`
+    <div class="grid2"><div class="col k"><div class="lb">国 所得税</div><div class="amt big">${yen(I.total)}</div></div><div class="col c"><div class="lb">地 住民税</div><div class="amt big">${yen(T.total)}${T.perPending?' ⚠':''}</div>${T.adjPending?'<span class="note">調整控除の前</span>':''}${T.perPending?`<span class="note">自治体の基準によっては ${yen(T.levyAfter)}(均等割・森林環境税が非課税)</span>`:''}</div></div>
+    <p><b>${msg}</b> <button class="why" onclick="why('A4')">なぜ?</button></p>
+    ${T.perPending?`<div class="warn">この所得は、均等割が非課税かどうかが自治体の基準(級地区分・条例)で変わります。<button class="link" onclick="go('find');setTimeout(()=>document.getElementById('locFind').scrollIntoView(),50)">自治体の設定をする</button></div>`:''}
+    <div class="bars"><div class="br"><span class="nm" style="color:var(--kuni)">所得税</span><span class="tr"><span class="fl" style="background:var(--kuni);width:${I.total/mx*100}%"></span></span></div>
+    <div class="br"><span class="nm" style="color:var(--chi)">住民税</span><span class="tr"><span class="fl" style="background:var(--chi);width:${T.total/mx*100}%"></span></span></div></div>`}
+  </div>`;
+  const body=mode==='self'?renderSelf(r,c):shown.map(s=>s.split?'<div class="split">↓ ここから別々に計算(所得控除から) <button class="why" onclick="why(\'C1\')">なぜ?</button></div>':
+   `<div class="step ${hl&&hl===s.whyId?'hl open':''}${s.whyId==='A5'&&(T.perPending||T.levyNon||T.perNon)?' open':''}"><div class="hd" tabindex="0" onclick="this.parentNode.classList.toggle('open')" onkeydown="if(event.key==='Enter'){event.preventDefault();this.click()}"><b>${s.title}</b><span><button class="why" onclick="event.stopPropagation();why('${s.whyId}')">なぜ?</button> ▾</span></div><div class="bd">${s.html}</div></div>`).join('')+
+   (mode==='step'&&stepN+1<steps.length?`<p><button class="btn" onclick="stepN++;renderResult()">次の段階へ</button></p>`:'')+'<p class="note">カードを押すと計算式が開きます。</p>';
+  document.getElementById('result').innerHTML=head+body+`
+  <div class="card"><b>この計算に含まれないもの</b>
+  <ul class="list note"><li>配偶者特別控除、特定親族特別控除(第2段階)</li><li>生命保険料・地震保険料・医療費控除、住宅ローン控除、ふるさと納税、給与以外の所得</li><li>障害者・未成年者・寡婦・ひとり親の非課税(前年の合計所得135万円以下)、独自の減免</li><li>年末調整の「給与所得控除後の給与等の金額の表」との差、道府県民税・市町村民税ごとの端数処理</li></ul>
+  <p class="note">均等割の非課税の基準と超過課税は、自治体の設定で反映します(未設定のときは、級地で結果が変わる範囲を⚠で表示)。</p></div>
+  <div class="warn">学習用の概算です。実際の税額は各自治体の条例や通知書で確認してください。</div>`;
+  const f=document.getElementById('sf0');if(f){f.focus();document.querySelectorAll('[id^=sf]').forEach(x=>x.onkeydown=e=>{if(e.key==='Enter')checkSelf()})}
+}
+
+/* ================= 学ぶ ================= */
+let curCause='A',curIdx=0,reviewList=null;
+function selCause(c){reviewList=null;curCause=c;curIdx=0;renderLearn()}
+function renderLearn(){
+  const again=Object.values(ST.cards).filter(v=>v==='again').length;
+  document.getElementById('causeChips').innerHTML=Object.keys(CAUSE).map(c=>`<button class="${!reviewList&&c===curCause?'on':''}" onclick="selCause('${c}')"><span class="badge">${c==='S'?'補':c}</span>${CAUSE[c]}</button>`).join('')+
+   `<button class="${reviewList?'on':''}" onclick="review()">↻ 復習(${again})</button>`;
+  const list=reviewList||R.filter(r=>r.c===curCause);
+  document.getElementById('learnList').innerHTML=`<div class="card">${reviewList?'<b>↻ 復習するカード</b>':`<b><span class="badge">${curCause==='S'?'補':curCause}</span>${CAUSE[curCause]}</b>`}<ol class="list">${list.map((r,i)=>`<li><button class="link" onclick="curIdx=${i};renderCard()">${r.q}</button> ${ST.cards[r.id]==='ok'?'✓':ST.cards[r.id]==='again'?'↻':''}</li>`).join('')}</ol></div>`;
+  renderCard();
+}
+function review(){
+  const order='ABCS';
+  const l=R.filter(r=>ST.cards[r.id]==='again').sort((a,b)=>order.indexOf(a.c)-order.indexOf(b.c));
+  if(!l.length){alert('復習するカードはありません');return}
+  reviewList=l;curIdx=0;renderLearn();
+}
+function openCard(id){const r=rById(id);if(!r)return;go('learn');reviewList=null;curCause=r.c;curIdx=R.filter(x=>x.c===r.c).findIndex(x=>x.id===id);renderLearn()}
+function renderCard(){
+  const list=reviewList||R.filter(r=>r.c===curCause),r=list[curIdx];
+  const el=document.getElementById('learnCard');
+  if(!r){
+    const nx={A:'B',B:'C',C:'S'}[curCause];
+    el.innerHTML=`<div class="card"><b>${reviewList?'復習を終えました。':'この原因を学び終えました。'}</b><p class="row">${!reviewList&&nx?`<button class="btn" onclick="selCause('${nx}')">次へ(${nx==='S'?'補足':nx})</button>`:`<button class="btn" onclick="go('quiz')">クイズで確かめる</button>`}<button class="btn sub" onclick="review()">↻ 復習する</button></p></div>`;
+    return;
+  }
+  el.innerHTML=`<div class="card flip" id="flip" tabindex="0" onclick="if(event.target.tagName!=='BUTTON')this.classList.toggle('on')" onkeydown="if(event.key===' '&&event.target===this){event.preventDefault();this.classList.toggle('on')}">
+   <div class="row" style="justify-content:space-between"><span><span class="badge">${r.c==='S'?'補':r.c}</span>${CAUSE[r.c]}</span><span class="note">${curIdx+1}/${list.length}</span></div>
+   <div class="prog"><i style="width:${(curIdx+1)/list.length*100}%"></i></div>
+   <div class="front"><p class="q">${r.q}</p><p class="note">自分の考えを一言思い浮かべてから、カードを押してください(スペースキーでも裏返ります)</p><button class="btn" onclick="document.getElementById('flip').classList.add('on')">答えを見る</button></div>
+   <div class="back">
+    <p class="q" style="font-size:1em">${r.q}</p>
+    <div class="grid2"><div class="col k"><div class="lb">国 所得税</div>${r.it}</div><div class="col c"><div class="lb">地 住民税</div>${r.rt}</div></div>
+    <p><b>理由:</b>${r.why}</p><p><b>結果:</b>${r.res}</p>
+    <p class="mis"><b>× よくある誤解:</b>「${r.mis}」</p>
+    ${r.sc?`<div class="bubble">💬 窓口での説明の例:${r.sc}</div>`:''}
+    <p>${r.cs?`<button class="link" onclick="go('calc');mode='all';runCase('${r.cs}','${r.hl||''}')">計算で確かめる(${r.cs})</button>`:''}</p>
+    <div class="row"><button class="btn" onclick="rate('${r.id}','ok')">わかった</button><button class="btn sub" onclick="rate('${r.id}','again')">もう一度</button></div>
+    <p class="note">キー操作:1=わかった、2=もう一度、←→=前後のカード</p>
+   </div></div>
+   <div class="row"><button class="btn sub" onclick="curIdx=Math.max(0,curIdx-1);renderCard()">← 前へ</button><button class="btn sub" onclick="curIdx++;renderCard()">次へ →</button></div>`;
+}
+function rate(id,v){
+  ST.cards[id]=v;save();
+  if(reviewList){if(v==='ok')reviewList=reviewList.filter(r=>r.id!==id);else curIdx++}
+  else curIdx++;
+  renderLearn();
+  const f=document.getElementById('flip');if(f)f.focus();
+}
+document.addEventListener('keydown',e=>{
+  if(!document.getElementById('t-learn').classList.contains('on')||isTyping()||document.getElementById('sheet').classList.contains('on'))return;
+  const list=reviewList||R.filter(r=>r.c===curCause),r=list[curIdx],f=document.getElementById('flip');
+  if(e.key==='ArrowRight'){curIdx=Math.min(list.length,curIdx+1);renderCard()}
+  if(e.key==='ArrowLeft'){curIdx=Math.max(0,curIdx-1);renderCard()}
+  if(r&&f&&f.classList.contains('on')){if(e.key==='1')rate(r.id,'ok');if(e.key==='2')rate(r.id,'again')}
+});
+function renderRates(){
+  document.getElementById('rateTbl').innerHTML+=CFG.it.rates.map((r,i,a)=>{const lo=i?a[i-1][0]+1000:1000;
+   return `<tr><td>${man(lo)}〜${r[0]===Infinity?'':man(r[0])}</td><td>${Math.round(r[1]*100)}%</td><td>${yen(r[2])}</td><td class="l"><span style="display:inline-block;height:10px;background:var(--kuni);width:${r[1]*200}px"></span></td></tr>`}).join('')+
+   `<tr><td colspan="3">住民税 所得割(比較・標準税率)</td><td class="l"><span style="display:inline-block;height:10px;background:var(--chi);width:20px"></span> 一律10%</td></tr>`;
+}
+
+/* ================= 確認 ================= */
+let qz=null;
+const qById=id=>QS.find(q=>q.id===id);
+const causesOf=q=>[...new Set(q.r.map(id=>id[0]))];
+const cntC=c=>QS.filter(q=>q.r.some(id=>id[0]===c)).length;
+function quizSetup(){
+  qz=null;
+  const last=ST.lastQuiz,wrongN=QS.filter(q=>ST.quiz[q.id]===false).length;
+  document.getElementById('quizArea').innerHTML=`<div class="card">
+   <b>範囲</b><div class="seg row" id="qRange">${[['all','全部'],['A','A'],['B','B'],['C','C']].map(([k,l],i)=>`<button class="${i?'':'on'}" data-v="${k}" onclick="selSeg(this);rangeNote()">${l}</button>`).join('')}</div>
+   <p class="note" id="rangeNote">全部で${QS.length}問</p>
+   <b>問題数</b><div class="seg row" id="qNum"><button data-v="5" onclick="selSeg(this)">5問</button><button class="on" data-v="10" onclick="selSeg(this)">10問</button></div>
+   <p><button class="link" onclick="startQuiz('counter')">窓口対応の問題だけ解く(${QS.filter(q=>q.t==='counter').length}問)</button></p>
+   <button class="btn" onclick="startQuiz()">はじめる</button>
+   ${last?`<p class="note">前回:${last.n}問中${last.ok}問 正解${last.weak?'(苦手:'+last.weak+')':''}</p>`:''}
+   ${wrongN?`<p><button class="link" onclick="wrongList()">間違えた問題の一覧(${wrongN}問)</button></p>`:''}</div>
+   <p class="note">キー操作:1・2・3で選択肢を選ぶ(○×は1=○、2=×)、Enterで次へ</p>`;
+}
+function rangeNote(){const v=document.querySelector('#qRange .on').dataset.v;document.getElementById('rangeNote').textContent=v==='all'?`全部で${QS.length}問`:`${v}の問題は${cntC(v)}問`}
+function selSeg(b){b.parentNode.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on')}
+function addPairs(list){
+  const out=[];list.forEach(q=>{if(out.includes(q))return;out.push(q);if(q.pair){const p=qById(q.pair);if(!out.includes(p))out.push(p)}});
+  return out;
+}
+function spread(list){
+  const out=[],rest=list.slice();
+  while(rest.length){
+    const l=out.slice(-2);let i=rest.findIndex(q=>!(l.length===2&&l.every(x=>x.t===q.t)));
+    if(i<0)i=0;const q=rest.splice(i,1)[0];out.push(q);
+    if(q.pair){const j=rest.findIndex(x=>x.id===q.pair);if(j>=0)out.push(rest.splice(j,1)[0])}
+  }
+  return out;
+}
+function startQuiz(only,ids){
+  let pool,note='';
+  if(ids)pool=ids.map(qById);
+  else if(only)pool=QS.filter(q=>q.t===only);
+  else{
+    const rg=document.querySelector('#qRange .on').dataset.v,n=+document.querySelector('#qNum .on').dataset.v;
+    pool=rg==='all'?QS.slice():QS.filter(q=>q.r.some(id=>id[0]===rg));
+    const pri=q=>ST.quiz[q.id]===undefined?0:ST.quiz[q.id]===false?1:2;
+    pool=pool.map(q=>({q,k:pri(q),r:Math.random()})).sort((a,b)=>a.k-b.k||a.r-b.r).map(x=>x.q);
+    if(pool.length<n&&rg!=='all')note=`${rg}は${pool.length}問です`;
+    pool=addPairs(pool.slice(0,n));
+    if(pool.length>n){const extra=pool.filter(q=>!q.pair);while(pool.length>n&&extra.length){const x=extra.pop();pool=pool.filter(q=>q!==x)}}
+  }
+  pool=spread(addPairs(pool));
+  qz={list:pool,k:0,res:[],tries:0,note};showQ();
+}
+function showQ(){
+  const q=qz.list[qz.k];if(!q)return quizResult();
+  let ch=q.ch?q.ch.map((c,i)=>({c,i})):null;
+  if(ch&&q.t!=='cause')ch.sort(()=>Math.random()-.5);
+  qz.order=ch;
+  document.getElementById('quizArea').innerHTML=`<div class="card">${qz.note&&qz.k===0?`<p class="note">${qz.note}</p>`:''}
+  <div class="row" style="justify-content:space-between"><span>${qz.k+1}/${qz.list.length}</span><button class="link" onclick="stopQuiz()">やめる</button></div>
+  <div class="prog"><i style="width:${(qz.k+1)/qz.list.length*100}%"></i></div>
+  <span class="note">${QTYPE[q.t]}</span> ${causesOf(q).map(c=>`<span class="badge">${c==='S'?'補':c}</span>`).join('')}
+  ${q.t==='counter'?`<div class="bubble">🙋 ${q.q}</div><p>どう説明しますか?</p>`:`<p class="q">${q.q}</p>`}
+  ${q.t==='ox'?`<div class="grid2"><button class="choice" style="text-align:center;font-size:28px" onclick="answer(0)" aria-label="○">○</button><button class="choice" style="text-align:center;font-size:28px" onclick="answer(1)" aria-label="×">×</button></div>`:
+   q.t==='calc'?`<input id="calcIn" class="inp" inputmode="numeric" placeholder="円単位で入力" oninput="fmtIn(this)"><p id="hint" class="note" style="color:var(--ng)"></p><button class="btn" onclick="answerCalc()">答える</button>`:
+   ch.map((o,n)=>`<button class="choice" onclick="answer(${o.i})">${n+1}. ${o.c}</button>`).join('')}</div>`;
+  const ci=document.getElementById('calcIn');if(ci){ci.focus();ci.onkeydown=e=>{if(e.key==='Enter')answerCalc()}}
+}
+function fmtIn(el){el.value=el.value.trim()===''||!/[0-9０-９]/.test(el.value)?'':toNum(el.value).toLocaleString('ja-JP')}
+function stopQuiz(){
+  if(!qz||!qz.res.length){quizSetup();return}
+  if(confirm('ここまでの結果を記録して終わりますか?'))quizResult();
+}
+function answerCalc(){
+  const el=document.getElementById('calcIn');
+  if(!el||el.value.trim()==='')return;
+  const q=qz.list[qz.k],v=toNum(el.value);
+  if(v===q.a)return answer(q.a);
+  if(qz.tries===0){qz.tries=1;document.getElementById('hint').textContent='× ヒント:'+q.h+'(もう1回だけ答えられます)';el.select();return}
+  answer(-1,v);
+}
+function answer(a,raw){
+  const q=qz.list[qz.k],ok=a===q.a;qz.tries=0;qz.res.push({q,ok});ST.quiz[q.id]=ok;
+  if(!ok)q.r.forEach(id=>ST.cards[id]='again');
+  save();
+  const ans=q.t==='ox'?['○','×'][q.a]:q.t==='calc'?yen(q.a):q.ch[q.a];
+  const mine=ok?'':q.t==='ox'?['○','×'][a]:q.t==='calc'?(raw!==undefined?yen(raw):''):q.ch[a];
+  document.getElementById('quizArea').innerHTML=`<div class="card"><p class="${ok?'ok':'ng'}">${ok?'○ 正解':'× 不正解'}</p>
+  ${ok?`<p class="note">この理由で答えられましたか? <button class="link" onclick="this.parentNode.textContent='OK'">はい</button> / <button class="link" onclick="ST.cards['${q.r[0]}']='again';save();this.parentNode.textContent='復習の対象に加えました'">あてずっぽう</button></p><p><b>正しい答え:</b>${ans}</p>`:
+   `<div class="grid2"><div class="col s"><div class="lb">あなたの答え</div>${mine}</div><div class="col s"><div class="lb">正しい答え</div><b>${ans}</b></div></div>`}
+  <p>${q.e}</p>${q.sc?`<div class="bubble">💬 説明の例:${q.sc}</div>`:''}
+  ${q.cmp&&qz.list.some(x=>x.id===q.pair)&&qz.list.indexOf(q)>qz.list.findIndex(x=>x.id===q.pair)?`<div class="warn">${q.cmp}</div>`:''}
+  <p class="row"><button class="link" onclick="openCard('${q.r[0]}')">カードで復習</button>${q.t==='calc'?`<button class="link" onclick="go('find')">出典を見る</button>`:''}</p>
+  <button class="btn" id="nx" onclick="qz.k++;showQ()">${qz.k+1<qz.list.length?'次へ':'結果を見る'}</button></div>`;
+  document.getElementById('nx').focus();
+}
+document.addEventListener('keydown',e=>{
+  if(!document.getElementById('t-quiz').classList.contains('on')||isTyping()||!qz)return;
+  const q=qz.list[qz.k];if(!q||document.getElementById('nx'))return;
+  const n=+e.key;if(!(n>=1&&n<=3))return;
+  if(q.t==='ox'&&n<=2)answer(n-1);
+  else if(qz.order&&qz.order[n-1])answer(qz.order[n-1].i);
+});
+function quizResult(){
+  if(!qz||!qz.res.length){quizSetup();return}
+  const res=qz.res,by={};
+  res.forEach(x=>causesOf(x.q).forEach(c=>{by[c]=by[c]||{n:0,ok:0};by[c].n++;if(x.ok)by[c].ok++}));
+  const cand=['A','B','C'].filter(c=>by[c]&&by[c].n>=3);
+  let weak=null;
+  if(cand.some(c=>by[c].ok/by[c].n<.8)){
+    weak=cand.slice().sort((a,b)=>(by[a].ok/by[a].n-by[b].ok/by[b].n)||((by[b].n-by[b].ok)-(by[a].n-by[a].ok))||(a<b?-1:1))[0];
+  }
+  const ok=res.filter(x=>x.ok).length;ST.lastQuiz={n:res.length,ok,weak};save();
+  const one={A:'所得税は負担できる力に応じて、住民税は地域で広く分け合う。ここから考えましょう',B:'住民税は前年の所得をもとに自治体が計算する。ここから考えましょう',C:'平成19年の税源移譲で今の形になった。ここから考えましょう'};
+  const wrong=res.filter(x=>!x.ok),wid=wrong.map(x=>x.q.id);
+  const tips=[];
+  if(wid.includes('Q03'))tips.push('森林環境税は住民税ではなく国税です');
+  if(['Q08','Q16','Q17'].filter(i=>wid.includes(i)).length>=2)tips.push('年分・年度と時期の問題をまとめて復習しましょう(B6・B3)');
+  if(wid.includes('Q10')||wid.includes('Q11'))tips.push('確定申告をすると住民税の申告もしたとみなされます(B4)');
+  if(wid.includes('Q01')||wid.includes('Q02'))tips.push('税率の形の違いを復習しましょう(A1)');
+  if(['Q19','Q28','Q29'].some(i=>wid.includes(i)))tips.push('非課税の基準は、所得割は全国共通、均等割は自治体の条例で決まります(A5)');
+  document.getElementById('quizArea').innerHTML=`<div class="card"><h3>${res.length}問中 ${ok}問 正解</h3>
+  <div class="bars">${Object.keys(CAUSE).filter(c=>by[c]).map(c=>`<div class="br ${c===weak?'weak':''}"><span class="nm"><span class="badge">${c==='S'?'補':c}</span>${CAUSE[c]}</span><span class="tr"><span class="fl" style="width:${by[c].ok/by[c].n*100}%"></span></span><span>${by[c].ok}/${by[c].n}</span></div>`).join('')}</div>
+  <p class="note">複数の原因にまたがる問題は、それぞれの原因に1問として数えています。苦手の判定は3問以上解いたA・B・Cが対象です。</p>
+  ${weak?`<p><b>${weak}をもう一度学びましょう。</b>${one[weak]}</p><button class="btn" onclick="go('learn');selCause('${weak}')">${weak}を復習する</button>`:'<p>苦手な原因はありません。</p><button class="btn" onclick="quizSetup()">もう一度解く</button>'}
+  ${tips.map(t=>`<div class="warn">${t}</div>`).join('')}
+  <p class="row">${wrong.length?`<button class="link" onclick="wrongList()">間違えた問題を見る(${wrong.length}問)</button>`:''}<button class="link" onclick="quizSetup()">もう一度解く</button></p></div>`;
+  qz=null;
+}
+function wrongList(){
+  const w=QS.filter(q=>ST.quiz[q.id]===false);
+  if(!w.length){quizSetup();return}
+  document.getElementById('quizArea').innerHTML=`<div class="card"><h3>間違えた問題の一覧</h3><p class="note">最後に解いたときに間違えた問題です。正解すると一覧から外れます。</p>
+  <ul class="list">${w.map(q=>`<li><span class="badge">${causesOf(q)[0]==='S'?'補':causesOf(q)[0]}</span><button class="link" onclick="showExp('${q.id}')">${q.q}</button></li>`).join('')}</ul>
+  <div id="expBox"></div>
+  <button class="btn" onclick="startQuiz(null,${JSON.stringify(w.map(q=>q.id)).replace(/"/g,"'")})">もう一度解く</button>
+  <p><button class="link" onclick="quizSetup()">出題の設定に戻る</button></p></div>`;
+}
+function showExp(id){
+  const q=qById(id),ans=q.t==='ox'?['○','×'][q.a]:q.t==='calc'?yen(q.a):q.ch[q.a];
+  document.getElementById('expBox').innerHTML=`<div class="card"><b>正しい答え:</b>${ans}<p>${q.e}</p>${q.sc?`<div class="bubble">💬 ${q.sc}</div>`:''}<button class="link" onclick="openCard('${q.r[0]}')">カードで復習</button></div>`;
+}
+
+/* ================= 検索 ================= */
+const norm=s=>String(s).replace(/<[^>]+>/g,'').replace(/[ァ-ヶ]/g,c=>String.fromCharCode(c.charCodeAt(0)-96)).replace(/[Ａ-Ｚａ-ｚ０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-65248)).toLowerCase();
+function find(){
+  const k=norm(document.getElementById('findIn').value.trim()),o=document.getElementById('findOut');
+  if(!k){o.innerHTML='';return}
+  const g=G.filter(t=>[t[0],t[1],t[3],...t[5]].some(x=>norm(x).includes(k)));
+  const r=R.filter(x=>norm(x.q+x.why+x.it+x.rt).includes(k)||g.some(t=>t[4]===x.id));
+  const q=QS.filter(x=>norm(x.q).includes(k));
+  o.innerHTML=(!g.length&&!r.length&&!q.length)?'<p>見つかりませんでした。<button class="link" onclick="go(\'learn\')">原因A・B・Cから探す</button></p>':
+   `${g.length?'<h3>用語</h3>'+g.slice(0,3).map(termHtml).join(''):''}${r.length?'<h3>カード</h3>'+r.slice(0,3).map(x=>`<div class="card"><span class="badge">${x.c==='S'?'補':x.c}</span><button class="link" onclick="openCard('${x.id}')">${x.q}</button></div>`).join(''):''}${q.length?'<h3>問題</h3><ul class="list">'+q.slice(0,3).map(x=>`<li>${x.q} <button class="link" onclick="openCard('${x.r[0]}')">関連カード</button></li>`).join('')+'</ul>':''}`;
+}
+function termHtml(t){const m={国:'k',地:'c',共:'s'}[t[2]];const r=rById(t[4]);return `<div class="card"><b>${t[0]}</b> <span class="note">(${t[1]})</span> <span class="mk ${m}">${t[2]}</span><span class="badge">${r.c==='S'?'補':r.c}</span><p>${t[3]}</p><button class="link" onclick="openCard('${t[4]}')">カードで詳しく(${t[4]})</button></div>`}
+function renderFind(){
+  document.getElementById('popular').innerHTML='<span class="note">よく調べられる用語:</span>'+['負担分任','賦課期日','みなし申告','調整控除','級地','天引き'].map(w=>`<button onclick="document.getElementById('findIn').value='${w}';find()">${w}</button>`).join('');
+  const order=['国税庁','総務省','財務省','e-Gov','自治体'];
+  document.getElementById('srcList').innerHTML=SRC.slice().sort((a,b)=>order.indexOf(a[0])-order.indexOf(b[0])).map(s=>`<li><span class="badge">${s[0]}</span><a href="${s[2]}" target="_blank" rel="noopener">${s[1]}</a> <span class="note">確認日 2026-11-24</span></li>`).join('');
+}
+
+/* ================= 起動 ================= */
+document.body.classList.toggle('bigtxt',!!ST.big);
+renderLoc();renderCaseBtns();renderRates();renderLearn();quizSetup();renderFind();renderHome();runCase(ST.lastCase||'T3');
+if(!ST.onb){ST.onb=1;save();welcome()}
+</script>
+</body>
+</html>
