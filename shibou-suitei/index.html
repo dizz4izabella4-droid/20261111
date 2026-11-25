@@ -2,159 +2,135 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#10181d">
 <title>死亡推定時刻</title>
 <style>
-:root{--bg:#0b0e13;--ink:#e9e4d8;--dim:#9aa0a8;--line:#3a3f48;--tag:#d2a63a;--panel:#14181f;--bar:#1b2028;--paper:#e8e2d2;--paperink:#23201a;--paperline:#a89f88;--red:#8a2b2b;font-size:15px}
-*{box-sizing:border-box}
-[hidden]{display:none!important}
-html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Sans","Yu Gothic","Noto Sans JP",system-ui,sans-serif;-webkit-text-size-adjust:100%}
-body{overflow:hidden}
-button,select{font:inherit;font-size:13px;color:var(--ink);background:var(--bar);border:1px solid var(--line);padding:6px 11px;border-radius:2px;cursor:pointer}
-button:hover,button:focus-visible,select:focus-visible{border-color:var(--tag);outline:none}
-button[aria-pressed="true"],button.on{background:#2a2f38;border-color:var(--tag);color:#fff}
-.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,"Noto Sans Mono CJK JP",monospace}
-
-/* 机（ウィンドウの背景） */
-#desk{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:20px;background:radial-gradient(ellipse at center,#141922 0%,#0b0e13 70%)}
-#desk h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.18em}
-#desk p{margin:0;font-size:12px;color:var(--dim);line-height:1.7}
-
-/* ウィンドウ */
-#win{position:fixed;z-index:10;left:50%;top:50%;width:min(980px,96vw);height:min(88vh,780px);transform:translate(calc(-50% + var(--dx,0px)),calc(-50% + var(--dy,0px)));display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);box-shadow:0 18px 60px rgba(0,0,0,.65)}
-.titlebar{display:flex;align-items:center;gap:10px;padding:7px 8px 7px 14px;background:var(--bar);border-bottom:1px solid var(--line);cursor:grab;user-select:none;-webkit-user-select:none;touch-action:none}
-.titlebar:active{cursor:grabbing}
-.titlebar .ttl{flex:1;font-size:13px;letter-spacing:.12em;color:var(--dim)}
-.titlebar .ttl b{color:var(--ink);font-weight:600}
-.toolbar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);background:#10141a}
-.toolbar .grp{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
-.toolbar label{font-size:11px;color:var(--dim);margin-right:2px}
-.content{flex:1;overflow:auto;padding:14px;-webkit-overflow-scrolling:touch}
-.foot{padding:6px 12px;border-top:1px solid var(--line);font-size:11px;color:var(--dim);background:#10141a}
-
-/* 所見書 */
-.case-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px;align-items:start}
-.sheet{background:var(--paper);color:var(--paperink);padding:16px 18px;border:1px solid #b9b19b;font-family:ui-monospace,"SF Mono",Menlo,Consolas,"Noto Sans Mono CJK JP",monospace}
-.sheet h2{margin:0 0 2px;font-size:16px;letter-spacing:.14em}
-.sheet .sub{margin:0 0 10px;font-size:11px;color:#5d5647;letter-spacing:.06em}
-.sheet dl{margin:0}
-.row{display:grid;grid-template-columns:7.2em minmax(0,1fr);gap:2px 8px;padding:5px 0;border-bottom:1px dotted var(--paperline);font-size:13.5px;line-height:1.6}
-.row dt{color:#5d5647}
-.row dd{margin:0;word-break:break-word}
-.result{margin-top:12px;padding:10px 12px;border:2px solid var(--paperink);font-size:14px;line-height:1.7}
-.result .big{display:block;font-size:16px;font-weight:700}
-.flag{margin:8px 0 0;padding:6px 9px;border-left:4px solid var(--red);background:rgba(138,43,43,.12);font-size:12.5px;line-height:1.6}
-
-/* 資料画像（ぼかし） */
-.photo{position:relative;aspect-ratio:4/3;overflow:hidden;border:1px solid var(--line);background:#1d2024}
-.photo svg{position:absolute;inset:0;width:100%;height:100%}
-.photo .fig{filter:blur(9px)}
-.photo .tag{position:absolute;left:8px;top:7px;padding:2px 6px;font-size:11px;letter-spacing:.08em;background:rgba(232,226,210,.92);color:#23201a}
-.photo .cap{position:absolute;left:0;right:0;bottom:0;padding:5px 8px;font-size:11px;color:#c9c3b2;background:linear-gradient(transparent,rgba(0,0,0,.7))}
-
-/* 先生 */
-.teacher{margin-top:14px;background:#10141a;border:1px solid var(--line);padding:14px 16px}
-.teacher .who{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;color:var(--dim)}
-.teacher .who .badge{padding:2px 8px;border:1px solid var(--tag);color:var(--tag);letter-spacing:.1em}
-.teacher h4{margin:16px 0 4px;font-size:14px;color:var(--tag);letter-spacing:.04em}
-.teacher p{margin:6px 0;line-height:1.9;font-size:14px}
-.teacher b{color:#fff}
-.teacher .calc p{margin:4px 0;line-height:1.7;font-size:13px;color:#d6d0c0}
-.teacher .calc .k{display:inline-block;min-width:9.5em;color:var(--dim)}
-.teacher .note{border-left:3px solid var(--red);padding:2px 0 2px 10px;color:#e0c9c9}
-.teacher details{margin-top:8px;border-top:1px solid var(--line);padding:8px 0}
-.teacher summary{cursor:pointer;font-size:13.5px;color:var(--ink)}
-.teacher summary:hover{color:var(--tag)}
-.qa-h{margin:18px 0 0;font-size:12px;color:var(--dim);letter-spacing:.1em}
-
-/* 一覧 */
-.tbl{width:100%;border-collapse:collapse;font-size:13px}
-.tbl th,.tbl td{text-align:left;padding:8px 8px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.6}
-.tbl th{font-size:11px;color:var(--dim);font-weight:400;letter-spacing:.08em}
-.tbl tr.clk{cursor:pointer}
-.tbl tr.clk:hover td{background:#171c24}
-.series{margin:0 0 6px;font-size:14px;font-weight:600;letter-spacing:.06em;color:var(--tag)}
-.strip{display:grid;grid-template-columns:3.6em minmax(0,1fr) 9.5em;gap:8px;align-items:center;padding:5px 0;font-size:12px}
-.strip .bar{position:relative;height:16px;background:#0d1117;border:1px solid var(--line)}
-.strip .seg{position:absolute;top:0;bottom:0;background:#a9863a;opacity:.85}
-.strip .seg.wide{background:repeating-linear-gradient(135deg,#5a4a22 0 4px,#2a2418 4px 8px);opacity:1}
-.strip .nt{color:var(--dim);white-space:nowrap}
-.strip.ax .bar{height:14px;border:0;background:none}
-.strip.ax .bar span{position:absolute;top:0;transform:translateX(-50%);font-size:10px;color:var(--dim)}
-.hint{margin:0 0 10px;font-size:12px;color:var(--dim);line-height:1.7}
-.err{padding:14px;border:1px solid var(--red);color:#e0c9c9;font-size:14px;line-height:1.7}
-
-/* ===== ビジュアル改善 ===== */
-/* 机：うっすら方眼 */
-#desk{background:linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px) 0 0/44px 44px,linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px) 0 0/44px 44px,radial-gradient(ellipse at center,#161b25 0%,#0b0e13 72%)}
-#desk h1{text-shadow:0 0 24px rgba(210,166,58,.18)}
-#launcher{margin-top:6px;padding:9px 20px;border-color:var(--tag);letter-spacing:.1em}
-/* ウィンドウ */
-#win{box-shadow:0 22px 70px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.035) inset}
-.titlebar{background:linear-gradient(#212733,#181d26);border-bottom:1px solid #4a4f58;box-shadow:inset 0 -2px 0 rgba(210,166,58,.35)}
-.titlebar .ttl b{letter-spacing:.2em}
-.toolbar{background:#0f1319}
-#tabs button{font-variant-numeric:tabular-nums;border-radius:2px 2px 0 0;border-bottom:2px solid var(--line);letter-spacing:.04em}
-#tabs button.on{border-bottom-color:var(--tag);background:#262c36}
-.content>*{animation:fin .2s ease-out both}
-@keyframes fin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion:reduce){.content>*{animation:none}}
-/* 所見書：紙の質感・書類らしい見出し・押印 */
-.sheet{position:relative;overflow:hidden;background:var(--paper) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .3 0 0 0 0 .2 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");box-shadow:0 6px 22px rgba(0,0,0,.5),inset 0 0 40px rgba(120,100,60,.18);border-top:6px solid #23201a}
-.sheet .hd{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding-bottom:8px;margin-bottom:6px;border-bottom:2px solid var(--paperink)}
-.sheet .hd h2{margin:0;font-size:17px}
-.sheet .hd .no{padding:3px 8px;border:1px solid var(--paperink);font-size:12px;letter-spacing:.1em;white-space:nowrap}
-.sheet .stamp{position:absolute;right:14px;top:56px;transform:rotate(-9deg);padding:2px 10px;border:2px solid rgba(138,43,43,.5);color:rgba(138,43,43,.5);font-size:13px;font-weight:700;letter-spacing:.22em;pointer-events:none}
-.sheet .row dt{font-size:12px;letter-spacing:.06em;padding-top:1px}
-.sheet .row dd{font-variant-numeric:tabular-nums}
-.result{position:relative;margin-top:14px;padding:12px 14px 12px 18px;border:2px solid var(--paperink);outline:1px solid var(--paperink);outline-offset:3px;background:rgba(255,255,255,.18)}
-.result::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--paperink)}
-.result .lbl{display:block;font-size:11px;letter-spacing:.14em;color:#5d5647;margin-top:6px}
-.result .lbl:first-child{margin-top:0}
-.result .big{font-size:18px;letter-spacing:.04em;font-variant-numeric:tabular-nums}
-.flag::before{content:"▲ ";color:var(--red)}
-/* 資料画像：カメラ風の表示 */
-.photo{box-shadow:0 6px 22px rgba(0,0,0,.5)}
-.photo::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 1px,transparent 1px 3px)}
-.photo .stampdt{position:absolute;right:8px;top:8px;z-index:2;font-size:12px;color:#e4b24a;letter-spacing:.06em;text-shadow:0 0 4px rgba(0,0,0,.9)}
-.photo .tag,.photo .cap{z-index:2}
-/* 所見ごとの時間帯の図 */
-.side{display:flex;flex-direction:column;gap:14px;min-width:0}
-.basis{background:#10141a;border:1px solid var(--line);padding:12px 14px 10px}
-.basis h4{margin:0 0 2px;font-size:13px;color:var(--tag);letter-spacing:.06em}
-.basis .sub{margin:0 0 10px;font-size:11.5px;color:var(--dim);line-height:1.6}
-.bchart{position:relative}
-.bgrid{position:absolute;top:0;bottom:20px;left:calc(5.2em + 8px);right:0;pointer-events:none}
-.bgrid .gl{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,.08)}
-.bgrid .band{position:absolute;top:-2px;bottom:-2px;background:rgba(210,166,58,.17);border-left:1px dashed var(--tag);border-right:1px dashed var(--tag)}
-.brow{display:grid;grid-template-columns:5.2em minmax(0,1fr);gap:8px;align-items:center;height:26px;position:relative}
-.brow .bl{font-size:12px;color:#cfc9b9;white-space:nowrap}
-.brow .bt{position:relative;height:12px}
-.brow .rg{position:absolute;top:0;bottom:0;background:#6d7682;border-radius:1px}
-.brow .rg.open{background:linear-gradient(90deg,#6d7682 70%,rgba(109,118,130,.25))}
-.brow.ax{height:18px}
-.brow.ax .bt{height:14px}
-.brow.ax .bt span{position:absolute;top:0;transform:translateX(-50%);font-size:10px;color:var(--dim);font-variant-numeric:tabular-nums}
-.basis .res{margin:6px 0 0;font-size:12.5px;color:var(--ink);line-height:1.6}
-.basis .res b{color:var(--tag)}
-/* 先生・一覧の仕上げ */
-.teacher{border-left:3px solid var(--tag)}
-.teacher h4{padding-bottom:3px;border-bottom:1px solid #262c36}
-.tbl td{font-variant-numeric:tabular-nums}
-.tbl tbody tr:nth-child(even) td{background:rgba(255,255,255,.015)}
-.pill{display:inline-block;margin:0 4px 3px 0;padding:0 7px;border:1px solid var(--line);border-radius:9px;font-size:11px;color:#d8c58f;white-space:nowrap}
-.pill.warn{border-color:#7a3a3a;color:#e0b4b4}
-.strip .bar{background-image:linear-gradient(to right,rgba(255,255,255,.08) 1px,transparent 1px);background-size:25% 100%;background-color:#0d1117}
-.strip.ax .bar{background-image:none}
-
-@media (max-width:720px){
-  #win{left:0;top:0;width:100%;height:100vh;height:100dvh;transform:none;border:0;box-shadow:none;padding-top:env(safe-area-inset-top,0px)}
-  .titlebar{cursor:default;padding-right:58px} /* 共通基盤の全画面ボタン（右上）を避ける */
-  .case-grid{grid-template-columns:1fr}
-  .content{padding:10px}
-  .tbl .hide-s{display:none}
-  .strip{grid-template-columns:3.2em minmax(0,1fr) 7.2em;gap:6px;font-size:11px}
-  .sheet .stamp{display:none} /* 文字に重なって読みにくいため */
+:root {
+  color-scheme:dark; --background:#10181d; --panel:#18242a; --border:#3b4c51;
+  --text:#ebefec; --muted:#acbbb8; --accent:#acd4bf; --paper:#f0eee3; --ink:#202b2a;
+  font: 16px/1.65 "Hiragino Sans","Yu Gothic",Meiryo,system-ui,sans-serif;
+  -webkit-text-size-adjust:100%;
+}
+* { box-sizing:border-box; }
+[hidden] { display:none !important; }
+html,body { height:100%; margin:0; }
+body { background:var(--background); color:var(--text); }
+button,input,select { font:inherit; }
+button,select,input { border:1px solid var(--border); border-radius:7px; background:#1b292f; color:var(--text); }
+button,select { cursor:pointer; }
+button { padding:7px 13px; }
+button:hover { border-color:var(--accent); }
+:focus-visible { outline:2px solid #77bc9d; outline-offset:3px; }
+h1,h2,h3,p { margin-block:0; }
+h1 { font-size:clamp(1.65rem,4vw,2.5rem); line-height:1.3; letter-spacing:.015em; overflow-wrap:anywhere; }
+h2 { font-size:1.22rem; margin-bottom:12px; }
+h3 { font-size:1rem; margin:18px 0 5px; }
+p { overflow-wrap:anywhere; }
+a { color:inherit; text-decoration-thickness:1px; text-underline-offset:3px; overflow-wrap:anywhere; }
+#win { height:100%; height:100dvh; display:flex; flex-direction:column; padding-top:env(safe-area-inset-top); }
+.app-header { background:#121f24; border-bottom:1px solid var(--border); }
+.bar { width:min(100%,1120px); margin:auto; display:flex; gap:20px; align-items:center; padding:11px 24px; }
+.brand { font-weight:800; margin-right:auto; flex-shrink:0; }
+.main-nav { display:flex; align-items:center; gap:6px; }
+.main-nav button { background:transparent; border-color:transparent; }
+.main-nav button[aria-pressed="true"],.stages button[aria-current] { color:var(--accent); background:#253932; border-color:#617f71; }
+#btnClose { line-height:1; padding:9px 12px; font-size:1.25rem; }
+#desk { display:grid; place-content:center; justify-items:center; gap:18px; height:100%; padding:20px; text-align:center; background:radial-gradient(ellipse at center,#253738,var(--background) 72%); }
+.options { display:flex; gap:11px; flex-wrap:wrap; background:#152126; border-bottom:1px solid var(--border); padding:6px max(16px,calc((100% - 1072px)/2)); }
+.options label,.filters label { color:var(--muted); font-size:.85rem; }
+.options select { margin-left:7px; padding:3px 7px; }
+#timingOptions { display:flex; gap:11px; flex-wrap:wrap; }
+.content { min-height:0; flex:1; overflow:auto; }
+.page { width:min(100%,1120px); margin:auto; padding:30px 24px 45px; }
+.list-heading { margin-bottom:14px; font-size:1.35rem; }
+.filters { display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr); gap:12px; }
+.filters label { display:grid; gap:5px; min-width:0; }
+.filters input,.filters select { width:100%; min-width:0; padding:9px 11px; font-size:1rem; }
+.filters input::placeholder { color:#9daaa9; opacity:1; }
+.count,.case-meta { color:var(--muted); font-size:.84rem; margin:14px 0 9px; }
+.case-list { display:grid; gap:8px; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.case-card { display:grid; grid-template-columns:3.55em minmax(0,1fr) auto; gap:10px; align-items:center; text-align:left; min-height:74px; padding:9px 12px; }
+.case-card strong { display:block; overflow-wrap:anywhere; }
+.case-card small { display:block; color:var(--muted); margin-top:3px; overflow-wrap:anywhere; }
+.case-id,.arrow { color:var(--accent); }
+.case-id { font:600 .9rem/1.2 ui-monospace,SFMono-Regular,monospace; }
+.arrow { font-size:1.45rem; }
+.empty,.muted { color:var(--muted); }
+.case-head { margin-bottom:18px; }
+.case-head .case-meta { margin:9px 0 5px; }
+.text-button { color:var(--accent); padding:3px 8px; margin:3px 6px 3px 0; background:transparent; text-align:left; }
+.stages { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:6px; margin-bottom:12px; }
+.stages button { font-size:.88rem; padding:7px 4px; min-height:40px; }
+.sheet {
+  color-scheme:light; color:var(--ink); background:var(--paper); padding:clamp(15px,3vw,27px);
+  border:1px solid #d8d6c7; border-radius:10px; min-height:180px; line-height:1.85;
+}
+.sheet h2 { padding-bottom:8px; border-bottom:1px solid #bdc0b2; }
+.sheet h3:first-child { margin-top:0; }
+.sheet p + p { margin-top:9px; }
+.sheet .muted { color:#4b5e58; margin-top:12px; }
+.record { margin:7px 0 0; }
+.record > div { display:grid; grid-template-columns:minmax(90px,10em) minmax(0,1fr); gap:12px; padding:8px 0; border-bottom:1px solid #c7cbbf; }
+.record dt { color:#4d615a; }
+.record dd { margin:0; overflow-wrap:anywhere; }
+.callout { padding:8px 12px; margin-top:12px; border-left:3px solid #638675; background:#dce8de; }
+.doctor-guide {
+  display:grid; grid-template-columns:106px minmax(0,1fr); gap:13px; align-items:center;
+  padding:11px; margin:17px 0 0; border:1px solid #416a60; border-radius:7px; background:#192f2c;
+  color:var(--text); font-size:.95rem; line-height:1.6;
+}
+.doctor-guide img {
+  display:block; width:100%; height:85px; object-fit:cover; object-position:42% 28%; border-radius:5px;
+}
+.doctor-guide .doctor-name { color:var(--accent); font-weight:700; margin-bottom:4px; }
+.doctor-guide p + p { margin-top:0; }
+.sheet .doctor-guide { background:#e0eade; color:var(--ink); border-color:#a7bbaa; }
+.sheet .doctor-guide .doctor-name { color:#2d5849; }
+@media (max-width:500px) {
+  .doctor-guide { grid-template-columns:77px minmax(0,1fr); gap:9px; padding:9px; }
+  .doctor-guide img { height:77px; }
+}
+.step-controls { display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-top:12px; }
+.primary { color:#102520; background:var(--accent); border-color:#719f88; font-weight:700; }
+.primary:hover { background:#c5e7d5; }
+.assessment { padding:10px 14px; background:#dce8de; border-radius:6px; }
+.assessment h3 { font-size:1.28rem; line-height:1.5; margin:4px 0 0; }
+.status { display:inline-block; border:1px solid #688775; border-radius:4px; padding:0 7px; font-size:.82rem; font-weight:700; }
+.chain ol { list-style:none; display:flex; flex-wrap:wrap; gap:7px; padding:0; margin:0; }
+.chain li { padding:6px 10px; border:1px solid #bdc0b2; background:#e5e9dd; border-radius:5px; }
+.chain small { display:block; color:#486057; }
+.time-bound { padding:11px 14px; background:#dce8de; border:1px solid #aec0b1; border-radius:6px; }
+.time-bound strong { display:block; font-size:1.12rem; overflow-wrap:anywhere; }
+.time-bound p { font-size:.9rem; }
+.window-line { display:flex; align-items:center; justify-content:space-between; width:min(320px,94%); height:4px; background:#638675; margin:12px 0; }
+.window-line span { width:9px; height:9px; border-radius:50%; background:#365d4d; }
+.sources { margin-top:14px; }
+.sources summary { cursor:pointer; font-weight:600; font-size:.88rem; }
+.sources ul { padding-left:22px; }
+.sources li { margin-bottom:4px; }
+.model { padding:9px 12px; border:1px solid #bdc0b2; border-radius:5px; }
+.model p { margin-top:8px; }
+.reference-block { margin-top:22px; }
+.note-card,.reference-entry { background:var(--panel); border:1px solid var(--border); border-radius:7px; }
+.note-card,.reference-body { padding:12px; }
+.note-card p,.reference-body p { margin-bottom:7px; }
+.reference-entry { margin:6px 0; }
+.reference-entry > summary { cursor:pointer; padding:10px 12px; font-weight:700; }
+.reference-entry[open] > summary { color:var(--accent); border-bottom:1px solid var(--border); }
+@media (max-width:640px) {
+  .bar { gap:8px; padding:7px 10px; flex-wrap:wrap; }
+  .brand { font-size:.93rem; }
+  .main-nav button { padding:6px; font-size:.82rem; }
+  #btnClose { padding:7px 9px; }
+  .options { padding:5px 12px; }
+  .page { padding:18px 12px 30px; }
+  .case-list { grid-template-columns:1fr; }
+  .stages { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .record > div { grid-template-columns:minmax(70px,6.1em) minmax(0,1fr); gap:8px; }
+}
+@media (max-width:350px) {
+  .filters { grid-template-columns:1fr; }
 }
 </style>
 <!--IZ-GAME-BASE:START-->
@@ -369,45 +345,33 @@ button[aria-pressed="true"],button.on{background:#2a2f38;border-color:var(--tag)
 <!--IZ-GAME-BASE:END-->
 </head>
 <body>
-
-<div id="desk">
-  <h1>死亡推定時刻</h1>
-  <p>検死所見ビューア（試作）<br>体温・死斑・死後硬直から、死亡時刻の幅を読む資料です。</p>
-  <button id="launcher" hidden>検死所見を開く</button>
+<div id="desk" hidden>
+  <h1>所見</h1>
+  <button id="launcher" type="button">開く</button>
 </div>
-
-<section id="win" role="dialog" aria-label="死亡推定時刻" hidden>
-  <div class="titlebar" id="titlebar">
-    <div class="ttl"><b>死亡推定時刻</b> ／ 検死所見ビューア</div>
-    <button id="btnClose" aria-label="閉じる">×</button>
-  </div>
-  <div class="toolbar">
-    <div class="grp" id="tabs" role="tablist" aria-label="事件"></div>
-    <div class="grp"><label>解説</label>
-      <button id="mNovice" data-mode="novice">初心者</button>
-      <button id="mExpert" data-mode="expert">専門家</button>
+<div id="win">
+  <header class="app-header">
+    <div class="bar">
+      <span class="brand">所見</span>
+      <nav class="main-nav" aria-label="主な画面">
+        <button type="button" data-view="list">一覧</button>
+        <button type="button" data-view="learn">所見の読み方</button>
+      </nav>
+      <button id="btnClose" type="button" aria-label="所見を閉じる">×</button>
     </div>
-    <div class="grp"><label for="selUnit">温度</label>
-      <select id="selUnit"><option value="F">°F</option><option value="FC">°F＋℃</option></select>
-    </div>
-    <div class="grp"><label for="selTz">時刻表示</label>
-      <select id="selTz">
-        <option value="local">現地時間</option>
-        <option value="UTC">UTC</option>
-        <option value="EST">東部（EST）</option>
-        <option value="CST">中部（CST）</option>
-        <option value="MST">山岳（MST）</option>        <option value="PST">太平洋（PST）</option>
-      </select>
+  </header>
+  <div id="caseOptions" class="options" hidden>
+    <label>解説モード<select id="viewMode"><option value="novice">初心者モード</option><option value="expert">専門家モード</option></select></label>
+    <div id="timingOptions" hidden>
+      <label>温度<select id="selUnit"><option value="FC">°F＋℃</option><option value="F">°F</option></select></label>
+      <label>時刻<select id="selTz"><option value="local">現地</option><option>JST</option><option>UTC</option><option>EST</option><option>CST</option><option>MST</option><option>PST</option><option>AKST</option><option>HST</option></select></label>
     </div>
   </div>
-  <div class="content" id="content"></div>
-  <div class="foot">※ゲーム用の簡易モデルです。実際の法医学的な鑑定の根拠にはなりません。数値は目安です。</div>
-</section>
-
+  <div class="content" id="scrollArea"><main class="page" id="content"></main></div>
+</div>
 <script>
-(function(){
+(() => {
 'use strict';
-
 /* ===== 定数と簡易モデル ===== */
 var BODY_F = 98.6;      // 平熱（°F）
 var BASE_RATE = 1.5;    // 基準の冷却速度（°F/時）
@@ -416,8 +380,9 @@ var INF = Infinity;
 
 // 表示用タイムゾーン（11月＝夏時間が終わった標準時）
 var TZS = {
-  UTC:{off:0,abbr:'UTC'}, EST:{off:-5,abbr:'EST'}, CST:{off:-6,abbr:'CST'},
-  MST:{off:-7,abbr:'MST'}, PST:{off:-8,abbr:'PST'}
+  JST:{off:9,abbr:'JST'}, UTC:{off:0,abbr:'UTC'}, EST:{off:-5,abbr:'EST'}, CST:{off:-6,abbr:'CST'},
+  MST:{off:-7,abbr:'MST'}, PST:{off:-8,abbr:'PST'},
+  AKST:{off:-9,abbr:'AKST'}, HST:{off:-10,abbr:'HST'}
 };
 
 // 所見ごとの「死後何時間くらいか」の目安（簡易）
@@ -443,53 +408,60 @@ var DECOMP = {
 var SITE = {back:'背中側',front:'体の前面',side:'体の側面',legs:'足・下半身'};
 var POS  = {supine:'仰向け',prone:'うつ伏せ',side:'横向き',sitting:'座位',hanging:'懸垂'};
 var EXPECT_SITE = {supine:'back',prone:'front',side:'side',sitting:'legs',hanging:'legs'};
-var KEYJP = {temp:'体温',livor:'死斑',rigor:'死後硬直',decomp:'腐敗'};
+var CORNEA = {
+  clear:{r:[0,6],t:'澄んでいる'},
+  hazy:{r:[3,24],t:'わずかに白く濁り始めている'},
+  cloudy:{r:[12,INF],t:'強く濁っている'}
+};
+var STOMACH = {
+  full:{r:[0,2],t:'食べ物がほとんど消化されずに残っている'},
+  partial:{r:[1,4],t:'一部が消化され、まだ残っている'},
+  mostly:{r:[3,6],t:'ほとんど消化が進んでいる'},
+  empty:{r:[5,12],t:'ほぼ空'}
+};
+var INSECT = {
+  eggs:{r:[2,30],t:'ハエの卵が付着している'},
+  larvae:{r:[24,240],t:'ハエの幼虫（ウジ）が見られる'},
+  pupae:{r:[120,INF],t:'さなぎが見られる'}
+};
+var KEYJP = {temp:'体温',livor:'死斑',rigor:'死後硬直',decomp:'腐敗',cornea:'角膜',stomach:'胃内容物',insect:'昆虫',alive:'最終生存確認'};
+var KEYSHORT = {temp:'体温',livor:'死斑',rigor:'硬直',decomp:'腐敗',cornea:'角膜',stomach:'胃内容',insect:'昆虫',alive:'生存確認'};
 
-/* ===== サンプル事件（州をまたぐ連続事件の想定） ===== */
-var CASES = [
-  { id:'A-01', victim:{label:'被害者 A',sex:'男性',age:'30代'},
-    place:'イリノイ州（シカゴ近郊）', tz:{abbr:'CST',offset:-6},
-    office:{type:'ME',name:'郡 監察医務局（Medical Examiner）'},
-    found:'2026-11-03 07:00', roomF:68, rectalF:85,
-    livor:'partial', livorSite:'back', foundPos:'supine', rigor:'full',
-    notes:['自宅の寝室で発見。暖房は通常の設定。'] },
-  { id:'B-02', victim:{label:'被害者 B',sex:'女性',age:'20代'},
-    place:'コロラド州（山間部）', tz:{abbr:'MST',offset:-7},
-    office:{type:'Coroner',name:'郡 検視官（Coroner）'},
-    found:'2026-11-07 18:30', roomF:55, rectalF:61,
-    livor:'fixed', livorSite:'back', foundPos:'supine', rigor:'full',
-    notes:['暖房のない山小屋で発見。解剖は行われず、外表所見のみ。'] },
-  { id:'C-03', victim:{label:'被害者 C',sex:'男性',age:'40代'},
-    place:'ネバダ州（郊外の空き地）', tz:{abbr:'PST',offset:-8},
-    office:{type:'ME',name:'郡 監察医務局（Medical Examiner）'},
-    found:'2026-11-12 14:00', roomF:42, rectalF:66,
-    livor:'fixed', livorSite:'front', foundPos:'supine', rigor:'full',
-    env:['outdoor'], notes:['屋外で発見。発見時の気温は約42°F。'] },
-  { id:'D-04', victim:{label:'被害者 D',sex:'女性',age:'30代'},
-    place:'オクラホマ州（農地の納屋）', tz:{abbr:'CST',offset:-6},
-    office:{type:'ME',name:'州 監察医務局（Medical Examiner）'},
-    found:'2026-11-16 10:00', roomF:52, rectalF:53,
-    livor:'fixed', livorSite:'back', foundPos:'supine', rigor:'gone', decomp:'green',
-    notes:['発見まで数日経過。携帯の通信記録など、別の証拠での絞り込みが必要。'] },
-  { id:'E-05', victim:{label:'被害者 E',sex:'男性',age:'50代'},
-    place:'ミズーリ州（路肩の自家用車内）', tz:{abbr:'CST',offset:-6},
-    office:{type:'ME',name:'郡 監察医務局（Medical Examiner）'},
-    found:'2026-11-19 07:00', roomF:66, rectalF:73.5,
-    livor:'fixed', livorSite:'back', foundPos:'supine', rigor:'full',
-    notes:['車内で発見。窓は閉まっていた。'] },
-  { id:'F-06', victim:{label:'被害者 F',sex:'女性',age:'30代'},
-    place:'ユタ州（自宅の居間）', tz:{abbr:'MST',offset:-7},
-    office:{type:'ME',name:'州 監察医務局（Medical Examiner）'},
-    found:'2026-11-22 08:00', roomF:82, rectalF:89.4,
-    livor:'partial', livorSite:'back', foundPos:'supine', rigor:'full',
-    env:['heated'], notes:['発見時、暖房が強く入っていた（室温82°F）。'] }
+
+
+const CASES = [
+  {"id":"A-01","victim":{"label":"被害者 A","sex":"男性","age":"30代"},"place":"イリノイ州（シカゴ近郊）","tz":{"abbr":"CST","offset":-6},"office":{"type":"ME","name":"郡 監察医務局（Medical Examiner）"},"found":"2026-11-03 07:00","roomF":68,"rectalF":85,"livor":"partial","livorSite":"back","foundPos":"supine","rigor":"full","notes":["自宅の寝室で発見。暖房は通常の設定。"],"series":"serial"},
+  {"id":"B-02","victim":{"label":"被害者 B","sex":"女性","age":"20代"},"place":"コロラド州（山間部）","tz":{"abbr":"MST","offset":-7},"office":{"type":"Coroner","name":"郡 検視官（Coroner）"},"found":"2026-11-07 18:30","roomF":55,"rectalF":61,"livor":"fixed","livorSite":"back","foundPos":"supine","rigor":"full","notes":["暖房のない山小屋で発見。解剖は行われず、外表所見のみ。"],"series":"serial"},
+  {"id":"C-03","victim":{"label":"被害者 C","sex":"男性","age":"40代"},"place":"ネバダ州（郊外の空き地）","tz":{"abbr":"PST","offset":-8},"office":{"type":"ME","name":"郡 監察医務局（Medical Examiner）"},"found":"2026-11-12 14:00","roomF":42,"rectalF":66,"livor":"fixed","livorSite":"front","foundPos":"supine","rigor":"full","notes":["屋外で発見。発見時の気温は約42°F。"],"env":["outdoor"],"ambientLabel":"気温","series":"serial"},
+  {"id":"D-04","victim":{"label":"被害者 D","sex":"女性","age":"30代"},"place":"オクラホマ州（農地の納屋）","tz":{"abbr":"CST","offset":-6},"office":{"type":"ME","name":"州 監察医務局（Medical Examiner）"},"found":"2026-11-16 10:00","roomF":52,"rectalF":53,"livor":"fixed","livorSite":"back","foundPos":"supine","rigor":"gone","notes":["発見まで数日経過。携帯の通信記録など、別の証拠での絞り込みが必要。"],"decomp":"green","series":"serial"},
+  {"id":"E-05","victim":{"label":"被害者 E","sex":"男性","age":"50代"},"place":"ミズーリ州（路肩の自家用車内）","tz":{"abbr":"CST","offset":-6},"office":{"type":"ME","name":"郡 監察医務局（Medical Examiner）"},"found":"2026-11-19 07:00","roomF":66,"rectalF":73.5,"livor":"fixed","livorSite":"back","foundPos":"supine","rigor":"full","notes":["車内で発見。窓は閉まっていた。"]},
+  {"id":"F-06","victim":{"label":"被害者 F","sex":"女性","age":"30代"},"place":"ユタ州（自宅の居間）","tz":{"abbr":"MST","offset":-7},"office":{"type":"ME","name":"州 監察医務局（Medical Examiner）"},"found":"2026-11-22 08:00","roomF":82,"rectalF":89.4,"livor":"partial","livorSite":"back","foundPos":"supine","rigor":"full","notes":["発見時、暖房が強く入っていた（室温82°F）。"],"env":["heated"],"series":"serial"},
+  {"id":"M-01","victim":{"label":"被害者 M1","sex":"男性","age":"60代"},"place":"ニューヨーク州（集合住宅の寝室）","tz":{"abbr":"EST","offset":-5},"office":{"type":"ME","name":"市 監察医務局（Medical Examiner）"},"found":"2026-11-09 06:30","roomF":70,"rectalF":96,"livor":"none","foundPos":"supine","rigor":"none","notes":["朝、訪ねてきた家族が発見。"],"group":"misc"},
+  {"id":"M-02","victim":{"label":"被害者 M2","sex":"男性","age":"40代"},"place":"フロリダ州（自宅のプール）","tz":{"abbr":"EST","offset":-5},"office":{"type":"ME","name":"郡 監察医務局（Medical Examiner）"},"found":"2026-11-10 09:00","roomF":72,"rectalF":78,"rigor":"full","notes":["水中で発見。死斑は水中のため所見に採用していない。"],"env":["water"],"ambientLabel":"水温","rateF":2,"group":"misc"},
+  {"id":"M-03","victim":{"label":"被害者 M3","sex":"女性","age":"30代"},"place":"ネバダ州（ホテルの一室）","tz":{"abbr":"PST","offset":-8},"office":{"type":"ME","name":"郡 監察医務局（Medical Examiner）"},"found":"2026-11-11 03:30","roomF":72,"rectalF":93.5,"livor":"early","livorSite":"back","foundPos":"supine","rigor":"jaw","notes":["連絡のない宿泊客の部屋を、清掃担当者が確認して発見。"],"group":"misc"},
+  {"id":"M-04","victim":{"label":"被害者 M4","sex":"男性","age":"50代"},"place":"アイオワ州（農家の作業小屋）","tz":{"abbr":"CST","offset":-6},"office":{"type":"ME","name":"郡 監察医務局（Medical Examiner）"},"found":"2026-11-12 17:00","roomF":60,"rectalF":62,"livor":"fixed","livorSite":"back","foundPos":"supine","rigor":"passing","notes":["暖房のない小屋で発見。"],"group":"misc"},
+  {"id":"M-05","victim":{"label":"被害者 M5","sex":"女性","age":"70代"},"place":"オハイオ州（暖房の強い居間）","tz":{"abbr":"EST","offset":-5},"office":{"type":"ME","name":"郡 監察医務局（Medical Examiner）"},"found":"2026-11-13 10:00","roomF":82,"rectalF":88,"livor":"fixed","livorSite":"back","foundPos":"supine","rigor":"jaw","notes":["発見時、暖房が強く入っていた（室温82°F）。"],"env":["heated"],"group":"misc"},
+  {"id":"M-06","victim":{"label":"被害者 M6","sex":"男性","age":"20代"},"place":"モンタナ州（雪の林道脇）","tz":{"abbr":"MST","offset":-7},"office":{"type":"ME","name":"州 監察医務局（Medical Examiner）"},"found":"2026-12-04 08:30","roomF":20,"rectalF":55,"livor":"fixed","livorSite":"front","foundPos":"prone","rigor":"full","notes":["積雪あり。発見時の気温は約20°F。"],"env":["outdoor"],"ambientLabel":"気温","group":"misc"},
+  {"id":"M-07","victim":{"label":"被害者 M7","sex":"女性","age":"30代"},"place":"バージニア州（公園の遊歩道）","tz":{"abbr":"EST","offset":-5},"office":{"type":"ME","name":"州 監察医務局（Medical Examiner）"},"found":"2026-11-20 09:15","roomF":45,"rectalF":72,"livor":"partial","livorSite":"back","foundPos":"prone","rigor":"full","notes":["早朝の散歩者が発見。"],"env":["outdoor"],"ambientLabel":"気温","group":"misc"},
+  {"id":"M-08","victim":{"label":"被害者 M8","sex":"男性","age":"40代"},"place":"ミシシッピ州（川沿いの空き家）","tz":{"abbr":"CST","offset":-6},"office":{"type":"Coroner","name":"郡 検視官（Coroner）"},"found":"2026-11-18 12:00","roomF":62,"rectalF":63,"livor":"fixed","livorSite":"back","foundPos":"supine","rigor":"gone","notes":["近隣の通報で発見。解剖は行われず、外表所見のみ。"],"decomp":"bloat","group":"misc"},
+  {"id":"M-09","victim":{"label":"被害者 M9","sex":"男性","age":"30代"},"place":"アラスカ州（山間の山荘）","tz":{"abbr":"AKST","offset":-9},"office":{"type":"ME","name":"州 監察医務局（Medical Examiner）"},"found":"2026-11-21 08:00","roomF":50,"rectalF":80,"livor":"partial","livorSite":"back","foundPos":"supine","rigor":"full","notes":["暖房の弱い山荘で発見。"],"livorNote":"鮮紅色","group":"misc"},
+  {"id":"M-10","victim":{"label":"被害者 M10","sex":"男性","age":"50代"},"place":"ペンシルベニア州（路上駐車の車内）","tz":{"abbr":"EST","offset":-5},"office":{"type":"ME","name":"郡 監察医務局（Medical Examiner）"},"found":"2026-11-17 07:40","roomF":40,"rectalF":70,"livor":"fixed","livorSite":"legs","foundPos":"sitting","rigor":"full","notes":["運転席で発見。エンジンは停止していた。"],"ambientLabel":"車内温度","group":"misc"},
+  {"id":"M-11","victim":{"label":"被害者 M11","sex":"女性","age":"40代"},"place":"ハワイ州（ホノルル近郊の自宅）","tz":{"abbr":"HST","offset":-10},"office":{"type":"ME","name":"郡 監察医務局（Medical Examiner）"},"found":"2026-11-23 07:00","roomF":78,"rectalF":90,"livor":"spreading","livorSite":"back","foundPos":"supine","rigor":"full","notes":["窓を閉め切った寝室で発見。"],"group":"misc"},
+  {"id":"S-01","victim":{"label":"被害者 S1","sex":"男性","age":"40代"},"place":"テキサス州（アパートの台所）","tz":{"abbr":"CST","offset":-6},"office":{"type":"ME","name":"郡 監察医務局（Medical Examiner）"},"found":"2026-11-14 08:00","roomF":70,"rectalF":84,"livor":"spreading","livorSite":"back","foundPos":"supine","rigor":"full","notes":["出勤しないため、同僚が通報して発見。"],"timeline":["11/13 19:30 夕食（本人がSNSに投稿）","11/13 21:40 友人との通話が終了（最後の生存確認）"],"lastMeal":"2026-11-13 19:30","stomach":"partial","lastAlive":"2026-11-13 21:40","aliveLabel":"友人との通話","livorNote":"淡い（失血のため）","scene":"indoor"},
+  {"id":"S-02","victim":{"label":"被害者 S2","sex":"女性","age":"20代"},"place":"ミネソタ州（商業施設の駐車場）","tz":{"abbr":"CST","offset":-6},"office":{"type":"ME","name":"郡 監察医務局（Medical Examiner）"},"found":"2026-12-02 06:30","roomF":25,"rectalF":70,"livor":"fixed","livorSite":"front","foundPos":"prone","rigor":"full","notes":["早朝の除雪作業員が発見。気温は約25°F。"],"env":["outdoor"],"ambientLabel":"気温","timeline":["12/01 18:20 店を出る姿が防犯カメラに映る（最後の生存確認）"],"lastAlive":"2026-12-01 18:20","aliveLabel":"防犯カメラ","scene":"outdoor"},
+  {"id":"N-01","victim":{"label":"被害者 N1","sex":"女性","age":"40代"},"place":"ジョージア州（自宅の居間）","tz":{"abbr":"EST","offset":-5},"office":{"type":"ME","name":"州 監察医務局（Medical Examiner）"},"found":"2026-11-15 16:00","roomF":74,"rectalF":90.7,"livor":"spreading","livorSite":"back","foundPos":"supine","rigor":"jaw","notes":["外出から戻った家族が発見。室内に争った形跡。"],"cornea":"hazy","timeline":["11/15 09:00 朝食（家族が確認）"],"lastMeal":"2026-11-15 09:00","stomach":"partial","scene":"indoor"},
+  {"id":"N-02","victim":{"label":"被害者 N2","sex":"男性","age":"50代"},"place":"アリゾナ州（自宅の寝室。夏時間なし）","tz":{"abbr":"MST","offset":-7},"office":{"type":"ME","name":"郡 監察医務局（Medical Examiner）"},"found":"2026-11-16 09:30","roomF":66,"rectalF":84.6,"livor":"partial","livorSite":"side","foundPos":"side","rigor":"full","notes":["朝、連絡が取れず家族が訪ねて発見。飲酒の形跡あり。"],"timeline":["11/15 22:00 夕食を済ませたあと、友人と会う予定だったと家族が証言"],"lastMeal":"2026-11-15 22:00","stomach":"full","scene":"indoor"},
+  {"id":"B-01","victim":{"label":"被害者 B1","sex":"男性","age":"60代"},"place":"ウィスコンシン州（自宅の車庫）","tz":{"abbr":"CST","offset":-6},"office":{"type":"ME","name":"郡 監察医務局（Medical Examiner）"},"found":"2026-12-05 11:00","roomF":38,"rectalF":81,"livor":"partial","livorSite":"legs","foundPos":"sitting","rigor":"full","notes":["車庫の壁にもたれて座った姿勢で発見。暖房のない車庫。"],"ambientLabel":"車庫内の温度","timeline":["12/04 21:30 隣人が口論と物音を聞く（受傷時刻の目安）"],"scene":"garage"},
+  {"id":"G-01","victim":{"label":"被害者 G1","sex":"男性","age":"30代"},"place":"ルイジアナ州（アパートの居間）","tz":{"abbr":"CST","offset":-6},"office":{"type":"ME","name":"郡 監察医務局（Medical Examiner）"},"found":"2026-11-18 07:30","roomF":64,"rectalF":86.4,"livor":"spreading","livorSite":"back","foundPos":"supine","rigor":"full","notes":["通報を受けた巡回が、翌朝、再訪して発見。"],"timeline":["11/17 23:42 隣人が「銃声のような音」を通報（この時刻より後に死亡）"],"lastAlive":"2026-11-17 23:42","aliveLabel":"銃声の通報","scene":"indoor"},
+  {"id":"W-01","victim":{"label":"被害者 W1","sex":"男性","age":"20代"},"place":"ミシガン州（運河）","tz":{"abbr":"EST","offset":-5},"office":{"type":"ME","name":"郡 監察医務局（Medical Examiner）"},"found":"2026-11-20 10:00","roomF":48,"rectalF":62,"foundPos":"prone","rigor":"full","notes":["釣り人が運河に浮かぶ遺体を発見。死斑は水中のため評価困難。"],"env":["water"],"ambientLabel":"水温","cornea":"hazy","timeline":["11/19 19:00 退勤の記録（最後の生存確認）"],"lastAlive":"2026-11-19 19:00","aliveLabel":"バイト先の退勤記録","rateF":2.2,"scene":"water"},
+  {"id":"H-01","victim":{"label":"被害者 H1","sex":"男性","age":"50代"},"place":"アリゾナ州（日向に停めた車内。夏時間なし）","tz":{"abbr":"MST","offset":-7},"office":{"type":"ME","name":"郡 監察医務局（Medical Examiner）"},"found":"2026-11-21 14:00","roomF":92,"rectalF":100.4,"livor":"early","livorSite":"legs","foundPos":"sitting","rigor":"jaw","notes":["ドアが故障して開かなくなった車内で発見。室温が高かった。"],"ambientLabel":"車内温度","timeline":["11/21 08:30 給油する姿が防犯カメラに映る（最後の生存確認）"],"lastAlive":"2026-11-21 08:30","aliveLabel":"ガソリンスタンドの防犯カメラ","initF":106,"scene":"vehicle"},
+  {"id":"T-01","victim":{"label":"被害者 T1","sex":"男性","age":"50代"},"place":"メイン州（停電した別荘）","tz":{"abbr":"EST","offset":-5},"office":{"type":"ME","name":"州 監察医務局（Medical Examiner）"},"found":"2026-12-03 08:00","roomF":40,"rectalF":62,"livor":"fixed","livorSite":"side","foundPos":"side","rigor":"full","notes":["雪嵐による停電中。室内に発電機が置かれていた。"],"ambientLabel":"室内温度","timeline":["12/02 17:30 停電のため、これから発電機を使うと友人に電話"],"lastAlive":"2026-12-02 17:30","aliveLabel":"友人との電話","livorNote":"鮮紅色","scene":"indoor"},
+  {"id":"R-01","victim":{"label":"被害者 R1","sex":"男性","age":"50代"},"place":"オレゴン州（全焼した住宅）","tz":{"abbr":"PST","offset":-8},"office":{"type":"ME","name":"郡 監察医務局（Medical Examiner）"},"found":"2026-12-06 04:10","foundPos":"supine","notes":["消火後、居間から発見。両腕を曲げた姿勢（熱による筋肉の収縮で、生前の姿勢ではない）。"],"timeline":["12/05 19:00 夕食（宅配の記録）","12/05 22:50 友人との通話が終了（最後の生存確認）","12/05 23:55 火災報知器が作動","12/06 00:05 近隣が通報"],"lastMeal":"2026-12-05 19:00","stomach":"partial","lastAlive":"2026-12-05 22:50","aliveLabel":"友人との最後の通話","noTemp":true,"noTempReason":"焼損・高熱にさらされたため、体温・死斑・硬直は参考にならない","scene":"fire"},
+  {"id":"L-01","victim":{"label":"被害者 L1","sex":"男性","age":"70代"},"place":"マサチューセッツ州（アパート）","tz":{"abbr":"EST","offset":-5},"office":{"type":"ME","name":"州 監察医務局（Medical Examiner）"},"found":"2026-11-24 10:00","roomF":74,"rectalF":75,"livor":"fixed","livorSite":"front","foundPos":"prone","rigor":"gone","notes":["異臭の通報で管理人が発見。暖房は入ったまま。"],"decomp":"bloat","timeline":["11/17 14:00 郵便配達員に手渡しで受け取る（最後の生存確認）"],"lastAlive":"2026-11-17 14:00","aliveLabel":"郵便物の受け取り","insect":"larvae","scene":"indoor"}
 ];
 
-// サンプル事件のまとまり（連続事件の想定。内容はすべて架空）
-var SERIES = {
-  title:'州間高速 連続殺人事件（サンプル）',
-  summary:'6件の事件。被害者は州境をまたいで発見されています。死亡推定の時間帯を、時差・管轄・発見状況の違いに注意して見比べてください。'
-};
+
+const SERIES = {id:'serial', title:'州間の関連事例（架空）', summary:'異なる場所の事例。発見時刻と死亡時刻、死因と関連性は個別に評価します。'};
 
 /* ===== 状態 ===== */
 var S = { mode:'novice', unit:'FC', tz:'local', view:'list' };
@@ -500,7 +472,7 @@ function loadSet(){
     if(o){
       if(o.mode==='novice'||o.mode==='expert') S.mode=o.mode;
       if(o.unit==='F'||o.unit==='FC') S.unit=o.unit;
-      if(o.tz==='local'||TZS[o.tz]) S.tz=o.tz;
+      if(o.tz==='local'||Object.hasOwn(TZS,o.tz)) S.tz=o.tz;
     }
   }catch(e){}
 }
@@ -520,8 +492,11 @@ function fmtTemp(f){
   if(S.unit==='FC') s += '（'+r1(fToC(f)).toFixed(1)+'℃）';
   return s;
 }
+function fmtDays(x){ return Math.round(x/12)/2; }
 function fmtHours(lo,hi){
-  return hi===INF ? lo+'時間以上' : lo+'〜'+hi+'時間';
+  var t = hi===INF ? lo+'時間以上' : lo+'〜'+hi+'時間';
+  if(lo>=48 || (hi!==INF && hi>=72)) t += hi===INF ? '（約'+fmtDays(lo)+'日以上）' : '（約'+fmtDays(lo)+'〜'+fmtDays(hi)+'日）';
+  return t;
 }
 function getCase(id){
   for(var i=0;i<CASES.length;i++) if(CASES[i].id===id) return CASES[i];
@@ -529,11 +504,12 @@ function getCase(id){
 }
 
 /* ===== 時刻 ===== */
-function foundUTC(c){
-  var m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})$/.exec(c.found||'');
-  if(!m || !c.tz || typeof c.tz.offset!=='number') return NaN;
-  return Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5]) - c.tz.offset*3600000;
+function toUTC(str,tz){
+  var m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})$/.exec(str||'');
+  if(!m || !tz || typeof tz.offset!=='number') return NaN;
+  return Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5]) - tz.offset*3600000;
 }
+function foundUTC(c){ return toUTC(c.found,c.tz); }
 function viewTz(c){
   return S.tz==='local' ? {off:c.tz.offset,abbr:c.tz.abbr} : TZS[S.tz];
 }
@@ -554,24 +530,48 @@ function fmtRange(a,b,tz){
 
 /* ===== 推定 ===== */
 function estimate(c){
+  var f=foundUTC(c);
+  if(isNaN(f)) return null;
   var room=+c.roomF, rect=+c.rectalF;
-  if(!isFinite(room)||!isFinite(rect)||isNaN(foundUTC(c))) return null;
+  var haveTemp = !c.noTemp && validNumber(c.roomF) && validNumber(c.rectalF);
   var coroner = !!(c.office && c.office.type==='Coroner');
-  var rate = clamp(c.rateF!=null ? +c.rateF : BASE_RATE+(BASE_ROOM-room)*0.03, 0.8, 2.2);
-  var reached = rect <= room+1.5;
-  var h, tr, margin=0;
-  if(reached){
-    h = (BODY_F-(room+1.5))/rate;
-    tr = [Math.max(0,h), INF];
-  }else{
-    h = Math.max(0,(BODY_F-rect)/rate);
-    margin = Math.max(2,0.25*h)*(coroner?1.5:1);
-    tr = [Math.max(0,h-margin), h+margin];
+  var init = (c.initF!=null && isFinite(+c.initF)) ? +c.initF : BODY_F;
+  var rate=null, reached=false, h=null, tr=null, margin=0, ind=[];
+  if(haveTemp){
+    rate = clamp(c.rateF!=null ? +c.rateF : BASE_RATE+(BASE_ROOM-room)*0.03, 0.8, 2.2);
+    reached = rect <= room+1.5;
+    if(reached){
+      h = (init-(room+1.5))/rate;
+      tr = [Math.max(0,h), INF];
+    }else{
+      h = Math.max(0,(init-rect)/rate);
+      margin = Math.max(2,0.25*h)*(coroner?1.5:1);
+      tr = [Math.max(0,h-margin), h+margin];
+    }
+    ind.push({key:'temp',r:tr});
   }
-  var ind=[{key:'temp',r:tr}];
   if(LIVOR[c.livor])  ind.push({key:'livor', r:LIVOR[c.livor].r});
   if(RIGOR[c.rigor])  ind.push({key:'rigor', r:RIGOR[c.rigor].r});
   if(DECOMP[c.decomp]) ind.push({key:'decomp',r:DECOMP[c.decomp].r});
+  if(CORNEA[c.cornea]) ind.push({key:'cornea',r:CORNEA[c.cornea].r});
+  if(INSECT[c.insect]) ind.push({key:'insect',r:INSECT[c.insect].r});
+  var d, t0;
+  if(STOMACH[c.stomach] && c.lastMeal){
+    t0=toUTC(c.lastMeal,c.tz);
+    if(!isNaN(t0)){
+      d=(f-t0)/3600000;
+      var sr=STOMACH[c.stomach].r;
+      if(d-sr[0]>0) ind.push({key:'stomach', r:[Math.max(0,d-sr[1]), d-sr[0]]});
+    }
+  }
+  if(c.lastAlive){
+    t0=toUTC(c.lastAlive,c.tz);
+    if(!isNaN(t0)){
+      d=(f-t0)/3600000;
+      if(d>0) ind.push({key:'alive', r:[0,d]});
+    }
+  }
+  if(!ind.length) return null;
 
   var lo=-INF, hi=INF, i;
   for(i=0;i<ind.length;i++){ lo=Math.max(lo,ind[i].r[0]); hi=Math.min(hi,ind[i].r[1]); }
@@ -583,7 +583,9 @@ function estimate(c){
     var mlo=Math.max.apply(null,los), mhi=Math.min.apply(null,his);
     // 食い違いの原因になっている所見（最も遅く始まる／最も早く終わる）を挙げる
     for(i=0;i<ind.length;i++){ if(ind[i].r[0]===mlo || ind[i].r[1]===mhi) odd.push(ind[i].key); }
-    lo=Math.min.apply(null,los); hi=Math.max.apply(null,his);
+    lo=Math.min.apply(null,los);
+    var fin=his.filter(function(x){ return x!==INF; });
+    hi=fin.length?Math.max.apply(null,fin):INF;
   }
   lo=Math.floor(lo+1e-9);
   hi=(hi===INF)?INF:Math.ceil(hi-1e-9);
@@ -593,374 +595,810 @@ function estimate(c){
   if((c.livor==='partial'||c.livor==='fixed') && c.livorSite && c.foundPos && EXPECT_SITE[c.foundPos])
     moved = EXPECT_SITE[c.foundPos]!==c.livorSite;
 
-  var f=foundUTC(c);
   return {
-    rate:rate, reached:reached, tempH:h, margin:margin, tempRange:tr,    ind:ind, lo:lo, hi:hi, conflict:conflict, odd:odd, moved:moved, coroner:coroner,
+    rate:rate, reached:reached, tempH:h, margin:margin, tempRange:tr, init:init, noTemp:!haveTemp,
+    ind:ind, lo:lo, hi:hi, conflict:conflict, odd:odd, moved:moved, coroner:coroner,
     startUTC:(hi===INF)?null:f-hi*3600000, endUTC:f-lo*3600000, foundUTC:f
   };
 }
 
-/* ===== 解説（専門家） ===== */
-function expertHTML(c,e){
-  var p=[], tr=e.tempRange;
-  if(e.reached)
-    p.push('<p><span class="k">体温（algor mortis）</span>直腸温 '+fmtTemp(+c.rectalF)+'／室温 '+fmtTemp(+c.roomF)+'。室温近傍に到達しており、経過時間は下限のみ（≧'+r1(tr[0])+'h）。</p>');
-  else
-    p.push('<p><span class="k">体温（algor mortis）</span>直腸温 '+fmtTemp(+c.rectalF)+'／室温 '+fmtTemp(+c.roomF)+'。冷却 '+(+e.rate.toFixed(2))+'°F/h と仮定 → '+r1(e.tempH)+'h（'+r1(tr[0])+'〜'+r1(tr[1])+'h）。</p>');
-  if(LIVOR[c.livor]){
-    var lr=LIVOR[c.livor].r;
-    p.push('<p><span class="k">死斑（livor mortis）</span>'+(SITE[c.livorSite]?SITE[c.livorSite]+'、':'')+LIVOR[c.livor].t+' → '+fmtHours(lr[0],lr[1])+'</p>');
-  }
-  if(RIGOR[c.rigor]){
-    var gr=RIGOR[c.rigor].r;
-    p.push('<p><span class="k">硬直（rigor mortis）</span>'+RIGOR[c.rigor].t+' → '+fmtHours(gr[0],gr[1])+'</p>');
-  }
-  if(DECOMP[c.decomp]){
-    var dr=DECOMP[c.decomp].r;
-    p.push('<p><span class="k">腐敗（decomposition）</span>'+DECOMP[c.decomp].t+' → '+fmtHours(dr[0],dr[1])+'</p>');
-  }
-  var tz=viewTz(c);
-  p.push('<p><span class="k">統合（PMI）</span>'+fmtHours(e.lo,e.hi)+(e.conflict?'（所見間に不一致あり）':'')+'</p>');
-  p.push('<p><span class="k">推定死亡時刻</span>'+esc(rangeText(e,tz))+'</p>');
-  if(e.moved) p.push('<p class="note">死斑の分布（'+SITE[c.livorSite]+'）が発見時体位（'+POS[c.foundPos]+'）と不一致。死後の体位変換・移動を示唆。</p>');
-  if(e.coroner) p.push('<p class="note">Coroner管轄。解剖なし・外表所見中心のため、幅を拡大（±1h、体温の誤差×1.5）。</p>');
-  return '<div class="who"><span class="badge">解剖の先生</span><span>ヘイズ医師</span><span>／ 専門家向け</span></div><div class="calc">'+p.join('')+'</div>';
+
+
+const sources = {
+  certificate: ['厚生労働省｜死亡診断書（死体検案書）記入マニュアル', 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/kenkou_iryou/iryou/sibousinndannsyo.html'],
+  guide: ['英国王立病理医協会（RCPath）｜剖検ガイドライン一覧', 'https://www.rcpath.org/profession/guidelines/autopsy-guidelines-series.html'],
+  wounds: ['Trauma Forensics in Blunt and Sharp Force Injuries｜外傷の分類', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC9802595/'],
+  bruise: ['Interpreting Bruises at Necropsy｜皮下出血と死後変化', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC1731416/'],
+  brain: ['RCPath｜外傷性脳損傷の剖検', 'https://www.rcpath.org/static/263764cd-19a6-4ba2-84ac1371bddf13a1/guidelines-autopsy-practice-traumatic-brain-injury.pdf'],
+  neck: ['Pitfalls and Artifacts in the Neck at Autopsy｜頸部所見の落とし穴', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC6474509/'],
+  trauma: ['Forensic Pathologist Testimony, Part 1｜外傷・窒息などの解釈', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC11558648/'],
+  water: ['RCPath｜水中から発見された遺体の剖検', 'https://www.rcpath.org/static/a0eab7db-454b-4556-b9961ecfd8356307/06f19d98-8ca1-40c3-ab3d757e7c258281/Guidelines-on-autopsy-practice-Autopsy-for-bodies-recovered-from-water.pdf'],
+  cardiac: ['RCPath｜心疾患が疑われる突然死の剖検', 'https://www.rcpath.org/asset/823DFCF4-8EBA-40F7-81B7E174675ECDD9/'],
+  tox: ['RCPath｜薬物や中毒が疑われる場合の剖検', 'https://www.rcpath.org/resourceLibrary/g169-guidelines-on-autopsy-practice-autopsy-when-drugs-or-poisoning-may-be-involved.html'],
+  toxlim: ['Application of Professional Best Practices in Postmortem Forensic Toxicology｜死後薬毒物検査の解釈', 'https://academic.oup.com/jat/article/49/8/529/8195729'],
+  environment: ['Earth, Air, Water, and Fire｜環境による死亡の組織病理', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC6490596/'],
+  pmi: ['Postmortem Changes｜死後変化の基礎', 'https://www.ncbi.nlm.nih.gov/books/NBK539741/'],
+  cool: ['Algor Mortis｜冷却から推定する際の限界', 'https://www.ncbi.nlm.nih.gov/sites/books/NBK534875/'],
+  pmiReview: ['死後経過時間推定に関する系統的レビュー', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC12346081/'],
+  sepsis: ['Post-mortem Diagnosis of Sepsis｜敗血症の死後診断', 'https://pubmed.ncbi.nlm.nih.gov/33346330/'],
+  micro: ['Postmortem Microbiology in Forensic Diagnostics｜死後微生物検査', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC12839914/'],
+  dka: ['Postmortem Diagnosis of Diabetes Mellitus and Its Complications｜糖尿病の死後診断', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC4500977/'],
+  allergy: ['RCPath｜アナフィラキシーが疑われる場合の剖検', 'https://www.rcpath.org/resourceLibrary/g170-guidelines-on-autopsy-practice-autopsy-for-suspected-acute-anaphylaxis.html'],
+  epilepsy: ['RCPath｜てんかん患者の死亡と突然死の剖検', 'https://www.rcpath.org/static/15a26420-ce7b-4858-ad538b210328d973/950d5510-c733-4eba-888c84a1e57afbb4/G175-Guidelines-on-autopsy-practice-Deaths-in-patients-with-epilepsy-including-sudden-deaths.pdf'],
+  choking: ['Café Coronary Deaths｜食物による気道閉塞の症例研究', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC12753523/']
+};
+
+const groups = [
+  ['stab','鋭的外傷'], ['blunt','鈍的外傷'], ['gun','銃創'], ['neck','頸部圧迫・気道閉塞'],
+  ['drown','水中での死亡'], ['cold','寒冷'], ['heat','暑熱'], ['fire','火災'],
+  ['tox','薬毒物'], ['nat','心臓・血管・脳'], ['disease','呼吸器・感染・代謝など'], ['unknown','死因保留・不詳']
+];
+
+const groupSources = {
+  stab:['wounds','trauma'], blunt:['wounds','brain'], gun:['trauma'], neck:['neck','trauma'],
+  drown:['water'], cold:['environment'], heat:['environment'], fire:['environment','brain'],
+  tox:['tox','toxlim'], nat:['cardiac'], disease:['guide'], unknown:['guide','certificate']
+};
+
+// 各事例は「観察」「その解釈」「結論」を別に持つ。解剖実施と死因の確からしさも独立。
+const dossiers = Object.create(null);
+function dossier(id, group, title, status, external, internal, tests, cause, reason, limits, manner, extra) {
+  dossiers[id] = Object.assign({
+    group, title, status, external, internal, tests, cause, reason, limits, manner
+  }, extra);
+}
+const supported = '死因を支持';
+const provisional = '検査待ち';
+const unclear = '不詳';
+const undissected = '解剖未実施';
+const unclassified = '不詳（状況調査が必要）';
+
+dossier('A-01','neck','皮膚の痕と深部所見',supported,
+  '前頸部に帯状の圧痕。眼瞼結膜に点状出血。',
+  '圧痕に対応する頸部軟部組織に限局した出血。舌骨の骨折は見られない。',
+  '蘇生処置の記録を照会し、対応する頸部への処置は確認されなかった。',
+  '頸部圧迫', '頸部表面の圧痕と深部の出血が対応し、外から頸部に力が加わったことを支持する。',
+  '点状出血は他の状況でも生じる。舌骨に骨折がない例もある。痕の幅だけで物品や関与者は特定できない。',unclassified);
+dossier('B-02','unknown','外表だけの検案',undissected,
+  '頸部に線状の変色を認める。外表観察のみ。',
+  '未実施。深部出血、骨・軟骨、臓器の状態は未確認。',
+  '薬毒物検査・画像検査の資料はない。',
+  '死因不詳', '頸部圧迫は検討候補。線状の変色だけでは圧迫の有無や致死性を判断できない。',
+  '外表所見だけでは死後の圧痕、疾患、中毒などとの区別がつかない。解剖所見がないことと、異常がないことは区別する。','不詳',{sources:['neck']});
+dossier('C-03','neck','屋外発見と頸部の所見',supported,
+  '前頸部に圧痕。眼瞼結膜に点状出血。衣服に土が付着。',
+  '圧痕の位置に対応して頸部軟部組織に出血。頭蓋内に致死的損傷を認めない。',
+  '付着土と現場土壌の比較結果は未着。',
+  '頸部圧迫', '頸部の所見を死因評価に使う。死斑と発見時の体位の不一致は、死後の体位変化を検討する別の手がかりになる。',
+  '死斑から移動の場所・時刻・関与者は特定できない。別例と似た圧痕だけで関連は証明できない。',unclassified);
+dossier('D-04','unknown','腐敗で評価が難しい頸部',unclear,
+  '腹部に緑色変化。頸部に線状の変色の一部が残る。',
+  '腐敗により軟部組織の変色を識別しにくく、深部頸部損傷は評価困難。',
+  '組織の保存状態が悪く、疑わしい変色の由来は判定できなかった。',
+  '死因不詳', '外表の変色は候補を挙げる資料になるが、臓器や深部組織の変化を判読できず、死因を裏付けられない。',
+  '判読不能な所見を「異常なし」と扱わない。本人の行動記録や現場資料も再確認する。','不詳',{sources:['neck','pmi']});
+dossier('E-05','stab','腹部の小さな創と腹腔内出血',supported,
+  '腹部に創口が1か所。皮膚表面から分かるのは創口の位置と形態。',
+  '腹壁の創管が腸間膜血管損傷に連続し、腹腔内に多量の血液を認める。',
+  '衣服と創口の位置を記録。薬毒物検査に競合する死因を示す所見はない。',
+  '腹部刺創による腹腔内出血', '外表の創口から深部の血管まで連続し、その損傷で腹腔内出血を説明できる。',
+  '表面の大きさだけでは深さや損傷の重さは読めない。別の事例と死因が異なっても、関与者の異同は判断できない。',unclassified);
+dossier('F-06','neck','暖房下での頸部所見',supported,
+  '前頸部に帯状の痕。眼瞼結膜に点状出血。',
+  '頸部の深部軟部組織に痕と対応する限局性出血。胸腹部に競合する致死的病変は見つからない。',
+  '暖房の運転履歴を確認。発見時以前の室温の推移は分からない。',
+  '頸部圧迫', '死因の根拠は頸部の損傷。暖房の履歴は体温から死後経過を考えるための別資料。',
+  '発見時の室温が死亡後ずっと続いたとは限らない。外観だけでは頸部圧迫の詳しい経緯も分からない。',unclassified);
+dossier('M-01','nat','突然の倒れ込みと冠動脈',supported,
+  '救急処置痕以外に目立つ外傷を認めない。',
+  '冠動脈の粥腫破綻部に新鮮血栓を認め、内腔が閉塞。心筋の肉眼上、明瞭な壊死は見えない。',
+  '組織検査で血栓と粥腫破綻を確認。病歴では直前に胸痛。',
+  '冠動脈粥状硬化に伴う急性冠動脈血栓症', '胸痛と冠動脈の急性閉塞が整合する。発症から短時間なら心筋壊死が肉眼で見えない場合がある。',
+  '単なる狭窄と急性の血栓閉塞を区別する。致死性不整脈の発生時刻は解剖で直接測れない。','病死');
+dossier('M-02','drown','水中発見と肺の所見',supported,
+  '外表に明らかな致死的外傷なし。目撃者が水面での呼吸困難を確認。',
+  '気管支内に泡沫状液体。肺の膨隆と水腫。心臓・脳に競合する致死的病変を認めない。',
+  '薬毒物検査で経過を説明する別の原因は見つからなかった。救助記録を確認。',
+  '溺水', '水に沈む過程の目撃情報を、水中での呼吸障害と整合する肺・気道所見が補強する。',
+  '泡沫や水腫は心疾患や中毒でも起こる。単独の所見からは溺水を確定できない。','事故（目撃情報による）');
+dossier('M-03','tox','肺水腫と錠剤様の内容物',provisional,
+  '目立つ外傷なし。現場に処方薬の容器。',
+  '両肺に水腫。胃に錠剤様の内容物。肉眼所見から説明できる致死的臓器病変は見つからない。',
+  '末梢血などの薬毒物分析と服薬歴の確認が進行中。',
+  '薬物中毒を検討中', '薬物への曝露が疑われる。肺水腫と胃の内容物は検査を選ぶ手がかりになる。',
+  '外観で薬剤は同定できない。検出後も、検体部位、死後再分布、併用薬、耐性、病歴を検討する。','保留');
+dossier('M-04','blunt','頭皮の挫創と脳圧迫',supported,
+  '後頭部に挫創。創縁に擦過と皮下出血。',
+  '頭蓋骨の線状骨折、広い急性硬膜下血腫。脳が片側へ圧排され、ヘルニアを認める。',
+  '死後CTで骨折の分布を確認。軟部組織と脳の所見は解剖で照合。',
+  '鈍的頭部外傷による急性硬膜下血腫', '頭蓋内の血腫が脳を強く圧迫し、脳ヘルニアに至った。頭皮創だけでは、この重症度は分からない。',
+  '転倒と他者による外力は、骨折や血腫だけで区別できない。現場の状況と目撃情報が必要。',unclassified,{chain:['急性硬膜下血腫','鈍的頭部外傷']});
+dossier('M-05','nat','慢性の冠動脈病変をどう読むか',supported,
+  '明らかな外傷なし。やせが目立つ。',
+  '冠動脈の高度狭窄に加え、対応する心筋に陳旧性梗塞瘢痕。新鮮血栓は確認されない。',
+  '組織で心筋線維化を確認。既往に心筋梗塞。薬毒物検査で競合する原因なし。',
+  '慢性虚血性心疾患', '高度狭窄、既往、心筋瘢痕が整合し、全身検索でより妥当な競合死因が見つからない。',
+  '慢性の瘢痕は過去の病変。急性心筋梗塞や終末時の不整脈を直接証明する所見ではない。','病死');
+dossier('M-06','cold','雪中発見と低体温の評価',supported,
+  '雪のある屋外で発見。衣類が濡れていた。死斑は赤みを帯びる。',
+  '胃粘膜に点状の暗色斑。明らかな致死的外傷なし。',
+  '気象記録と行動記録が長時間の寒冷曝露を支持。薬毒物検査で主死因に相当する所見を認めない。',
+  '寒冷曝露による低体温症', '寒冷曝露の状況、矛盾しない所見、他の致死的病変がないことを合わせた判断。',
+  '胃粘膜斑も死斑の色も単独では特異的でない。死後に冷えた体温を生前の体温と取り違えない。','事故（現場資料と併せた判断）');
+dossier('M-07','stab','胸腔内に隠れた出血',supported,
+  '胸部に創口。前腕に切創。発見場所の外部血痕は少量。',
+  '胸壁の創管が肺血管の損傷に連続。片側胸腔に大量の血液。',
+  '衣服と現場の血痕は別途比較中。',
+  '胸部刺創による血胸・失血', '損傷した血管から胸腔内へ出血したため、外部血痕が少なくても重篤な失血を説明できる。',
+  '前腕の傷だけから受傷時の行動は決められない。外部血痕の少なさだけで現場の移動を判断しない。',unclassified);
+dossier('M-08','unknown','腐敗が進み解剖資料もない例',undissected,
+  '腐敗による膨張と変色。外表からの損傷評価は限定的。',
+  '未実施。臓器の状態は確認されていない。',
+  '検査の記録なし。最後に本人が生存していたことを確認できる資料も未入手。',
+  '死因不詳', '死後変化は進んでいるが、死亡を引き起こした傷病の根拠が得られていない。',
+  '腐敗の進み方は気温や環境で変わる。程度だけで「少なくとも何日」と固定しない。','不詳',{sources:['pmiReview']});
+dossier('M-09','tox','赤い死斑と血中の検査',supported,
+  '死斑が通常より鮮やかな赤色。大きな外傷なし。',
+  '臓器の肉眼所見からは、単独で死を説明する病変が見つからない。',
+  '血液で一酸化炭素ヘモグロビン（COHb）の著しい上昇を確認。現場調査も曝露を支持。',
+  '一酸化炭素中毒', '外表の色をきっかけに分析し、血液中のCOHbと曝露状況を照合した。',
+  '鮮紅色の死斑は寒冷でもみられる。COHbは検体、治療歴、現場の事情を踏まえて解釈する。','事故（現場調査による）');
+dossier('M-10','gun','画像で分かることと臓器で分かること',supported,
+  '胸部に銃創を疑う創。位置と周囲の状態を記録。',
+  '胸腔内に多量の血液。創路に沿って肺血管に損傷。',
+  '死後CTで体内の金属異物を確認。解剖で創路と血管損傷を照合。',
+  '胸部銃創による大量出血', '画像は異物位置を、解剖は出血源と臓器損傷を示す。',
+  '外表に火薬由来の痕が見えないことだけで射距離を決められない。発見時体位と死斑の一致は移動がなかった証明にはならない。',unclassified);
+dossier('M-11','blunt','脳挫傷と脳の腫脹',supported,
+  '側頭部に挫創と擦過傷。',
+  '側頭葉に脳挫傷、周囲にくも膜下出血。脳の腫脹と圧迫を確認。',
+  '頭皮・頭蓋内の損傷を分けて記録。目撃記録は未入手。',
+  '鈍的頭部外傷による脳挫傷', '頭部への外力と深部脳損傷が対応し、二次的な腫脹を含めて死亡を説明できる。',
+  'くも膜下出血は自然発症でも起こる。分布や脳血管を調べる。腫脹だけで生存時間を決めない。',unclassified);
+dossier('S-01','stab','胸部の刺創と手の切創',supported,
+  '胸部に刺創、手掌・前腕に切創。死斑は淡い。',
+  '胸部創管に連続する胸腔内血管損傷と大量の血液。手の傷は表在にとどまる。',
+  '出血源と損傷の連続性を確認。友人との通話で最後の生存を確認。',
+  '胸部刺創による胸腔内出血', '同じ鋭的外傷でも、死亡を説明するのは深部の血管損傷。手の傷は別に評価する。',
+  '出血の多寡は死斑を左右する。胃内容や傷の長さを、死亡時刻や特定の器具に直接換算できない。',unclassified);
+dossier('S-02','stab','衣服と腹部の損傷',supported,
+  '腹部に複数の創口。一部は衣服の損傷と位置が対応。',
+  '腹壁を越える創管の一つが肝実質の損傷に連続。腹腔内に多量の血液。',
+  '衣服の比較資料を記録。防犯カメラで生存を確認。',
+  '腹部刺創による肝損傷・腹腔内出血', '各創を個別に評価し、肝損傷へ続く創が出血の主因と判断した。',
+  '創の数、向き、深さの違いだけで、受傷順序や関与者の行動を復元できない。',unclassified);
+dossier('N-01','neck','舌骨の骨折と周囲の出血',supported,
+  '頸部に複数の皮下出血と小さな表皮剝脱。結膜に点状出血。',
+  '舌骨の骨折に接して軟組織の出血。背景の死斑性変化とは分布が異なる。',
+  '頸部の画像と解剖所見を照合。救急処置の記録を確認。',
+  '頸部圧迫', '表面と深部の損傷が重なり、外部からの圧迫を支持する。',
+  '舌骨の形態差や蘇生関連の損傷も確認する。骨折の有無だけで圧迫の手段や死因は決まらない。',unclassified);
+dossier('N-02','unknown','説明のつかない小さな口唇損傷',provisional,
+  '口唇内側に小さな擦過傷。眼瞼に少数の点状出血。',
+  '頸部に明らかな損傷なし。気道の閉塞物なし。心臓と脳に肉眼上の致死的病変なし。',
+  '血中アルコール・薬物分析と、発見・蘇生状況の確認待ち。',
+  '死因保留', '口鼻閉塞の仮説は残るが、口唇傷と点状出血の組合せは特異的でない。',
+  '他の死因が見つからないことだけで窒息は証明できない。薬毒物、病歴、現場の独立した根拠を確認する。','保留',{sources:['neck','tox']});
+dossier('B-01','blunt','受傷と死亡の間隔',supported,
+  '後頭部に挫創。',
+  '頭蓋骨線状骨折、急性硬膜下血腫、脳腫脹と脳圧迫。',
+  '隣人が前夜に物音を聞いたが、受傷時刻や生存を直接確認していない。',
+  '鈍的頭部外傷による急性硬膜下血腫', '頭皮創、骨折、頭蓋内の病変をつなげると、外傷後の脳圧迫で死亡を説明できる。',
+  '音は受傷や生存を確定する証拠にはならない。脳の腫れだけで「受傷後何時間生存した」とは言えない。',unclassified);
+dossier('G-01','gun','銃創と通報記録',supported,
+  '胸部に銃創を疑う創口。',
+  '創路に沿う肺および胸腔内血管損傷と大量出血。',
+  '画像と解剖で体内の異物と臓器損傷を照合。通報には銃声に似た音の記録。',
+  '胸部銃創による大量出血', '創路と臓器・血管損傷の連続性が死因の根拠となる。',
+  '通報時刻は事件の経過を照合する情報。本人がその時刻に生存していたことまでは示さない。',unclassified);
+dossier('W-01','drown','運河で発見された遺体',provisional,
+  '後頭部に打撲を疑う変色。外表の死斑評価は水中環境の影響で限定的。',
+  '肺の膨隆と気道内の泡沫。頭部に、現段階で死因を説明するほどの頭蓋内損傷は見つからない。',
+  '珪藻検査は補助資料。環境試料や汚染の管理記録、薬毒物検査を確認中。',
+  '溺水を検討中', '呼吸器所見は溺水に矛盾しない。事故、転落を引き起こした病気や中毒、死後の水中移動も検討する。',
+  '珪藻陽性だけで生前の吸水や経緯は断定できない。頭部の傷の成因も別に検討する。','保留');
+dossier('H-01','heat','高温曝露と生前の測定値',supported,
+  '救出時に意識障害。救急隊が蘇生開始前の著しい高体温を記録。',
+  '肺水腫とうっ血。死を説明する外傷や明らかな感染巣は見られない。',
+  '救急記録の高体温と、車内での暑熱曝露を現場記録で確認。',
+  '暑熱曝露による熱中症', '死後の体温より、生前の高体温・意識障害と曝露が主要な根拠。',
+  '肺水腫は非特異的。高温環境では死亡時の体温も周囲の温度も通常の冷却モデルの前提から外れる。','事故（現場・救急記録による）');
+dossier('T-01','tox','赤い死斑を低体温と見分ける',supported,
+  '赤みの強い死斑。致死的外傷を示す外表所見なし。',
+  '明らかな臓器の破裂・大出血なし。肺うっ血は非特異的。',
+  '血中COHbの著しい上昇。室内の機器の運転状況を現場で確認。',
+  '一酸化炭素中毒', '寒冷も死斑の色の候補だが、この事例ではCOHbと曝露資料が中毒を支持する。',
+  '死亡時刻はCOHbから逆算できない。暖房停止後の室温推移も不明。','事故（現場調査による）');
+dossier('R-01','fire','焼損と頭部損傷の順序',unclear,
+  '熱による姿勢変化と皮膚損傷。外表から受傷時期の判断は困難。',
+  '頭蓋に骨折。熱の影響が強く、外傷性の骨折・出血と熱の影響を区別しきれない。',
+  '気道内に明瞭な煤を認めず、血中COHbは低値。出火原因を調査中。',
+  '死因不詳', '外傷と熱・煙の影響を候補として残す。火災で発見されたことと死因は独立に評価する。',
+  '煤やCOHb上昇がない場合でも、出火前死亡を単独では証明できない。熱による骨折や血腫様所見もある。','不詳');
+dossier('L-01','unknown','腐敗した遺体の冠動脈狭窄',unclear,
+  'ガス膨張と昆虫の幼虫を確認。外表の損傷評価には制約がある。',
+  '冠動脈に高度の狭窄。腐敗が強く、心筋やその他の軟部組織の評価は限定的。',
+  '昆虫は種・発育段階と温度履歴が未評価。郵便の手渡し記録で生存を確認。',
+  '死因不詳', '冠動脈疾患は候補だが、更なる病変や競合死因を十分評価できず確定はできない。',
+  '腐敗や幼虫は正確な時計にはならない。昆虫で評価するのは通常、定着後の経過の下限に関わる情報。','不詳',{sources:['cardiac','pmi']});
+
+sources.imaging = ['RCPath／英国王立放射線科医協会｜死後の断層画像検査', 'https://www.rcpath.org/asset/666DBF95-DE06-44AD-89C3B4E5F1CEAB79/'];
+sources.thrombus = ['Cadaver Clots｜生前の血栓と死後凝血に関する系統的レビュー', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC12799637/'];
+
+function addSample(id, day, place, alive, found, notes, observations) {
+  const prefix = '2026-12-' + day + ' ';
+  CASES.push(Object.assign({
+    id, place, tz:{abbr:'JST',offset:9}, found:prefix+found, notes:[notes],
+    lastAlive:alive ? prefix+alive : undefined, aliveLabel:'目撃・診療記録'
+  }, observations));
+}
+addSample('J-01','08','自宅', '07:20','08:10','息苦しさを家族に訴えた。数日前から片脚が腫れていた。',{rigor:'none',livor:'none'});
+dossier('J-01','nat','肺血栓塞栓症と下肢の血栓',supported,
+  '片側の下腿に腫脹。明らかな致死的外傷なし。',
+  '肺動脈の両主枝に及ぶ塞栓。深部下肢静脈にも血栓。',
+  '血栓の形態と組織像を評価。診療記録に直前の息切れと下肢腫脹。',
+  '肺血栓塞栓症', '肺動脈を閉塞する塞栓と、由来となり得る下肢深部静脈血栓が対応し、突然の呼吸・循環の悪化を説明できる。',
+  '血管内に血の塊があるだけで生前の血栓とは言えない。形態、血管壁との関係、発生部位を合わせる。','病死',
+  {chain:['肺血栓塞栓症','下肢深部静脈血栓症'],sources:['cardiac','thrombus']});
+addSample('J-02','09','自宅', '13:15','13:45','突然の胸背部痛を家族が確認。高血圧の治療歴がある。',{rigor:'none'});
+dossier('J-02','nat','大動脈解離と心タンポナーデ',supported,
+  '明らかな胸部外傷なし。',
+  '上行大動脈に内膜の裂け目と壁内の解離。心嚢腔へ破綻し、多量の血液が心臓を圧迫。',
+  '肉眼所見と組織で病変の連続性を確認。診療記録で高血圧を確認。',
+  '大動脈解離の心嚢内破裂による心タンポナーデ', '大動脈の破裂から心嚢への出血が起き、心臓への血液の戻りが妨げられた。',
+  '心嚢内の血液には他の出血源もある。心筋梗塞後の心破裂や外傷による損傷と区別する。','病死',
+  {chain:['心タンポナーデ','上行大動脈解離の心嚢内破裂'],contributor:'高血圧の既往あり。因果関係の記載は診療情報と病変の評価による。'});
+addSample('J-03','10','自宅', '06:40','07:25','急激な頭痛を本人が訴えた後、家族が倒れているところを発見。',{rigor:'none'});
+dossier('J-03','nat','自然発症のくも膜下出血',supported,
+  '前額に小さな擦過傷。転倒でも説明できるが、原因は未確定。',
+  '脳底部のくも膜下腔に広い出血。脳動脈瘤の破裂部に出血の中心がある。',
+  '頭蓋骨に骨折なし。出血の分布と脳動脈の破綻部を解剖で照合。',
+  '脳動脈瘤破裂によるくも膜下出血', '出血源が脳動脈瘤にあり、病歴上の突然の頭痛とも整合する。',
+  '皮膚の傷を見て頭部外傷と結論しない。自然発症の直後に転倒して傷ができることもある。','病死',
+  {chain:['くも膜下出血','脳動脈瘤破裂']});
+addSample('J-04','11','療養施設', '04:10','05:05','数日前から発熱と咳。診療記録に血圧低下と臓器障害の進行。',{rigor:'none',livor:'early'});
+dossier('J-04','disease','肺炎から進んだ敗血症',supported,
+  '目立つ外傷なし。治療のための処置痕を記録。',
+  '肺の一部が硬く、含気が減少。断面に肺炎を疑う病変。',
+  '肺胞中の好中球を組織で確認。生前血液培養と死後の肺病変から同じ菌種を検出。',
+  '細菌性肺炎に伴う敗血症', '肺に感染巣があり、培養・組織所見と、生前の全身性の臓器障害が一致する。',
+  '死後培養の単独陽性には汚染や細菌の移動があり得る。感染巣と生前の経過を照合する。','病死',
+  {chain:['敗血症','細菌性肺炎'],sources:['sepsis','micro']});
+addSample('J-05','12','自宅', '09:20','12:00','前日から嘔吐と口渇。糖尿病の治療歴がある。',{rigor:'jaw',livor:'early'});
+dossier('J-05','disease','形に現れにくい糖尿病性ケトアシドーシス',supported,
+  '目立つ外傷なし。',
+  '死亡を単独で説明する出血や破裂を認めない。肉眼だけでは代謝異常を評価できない。',
+  '硝子体液の糖とβ-ヒドロキシ酪酸が高値。診療記録の糖尿病歴と急性症状を照合。',
+  '糖尿病性ケトアシドーシス', '生化学と糖尿病歴を合わせ、糖代謝の異常とケトン体の増加が死亡を説明すると判断した。',
+  'ケトン体の上昇には飢餓やアルコールに伴うものもある。死後の血糖値を生前の血糖と同じようには読めない。','病死',
+  {chain:['糖尿病性ケトアシドーシス','糖尿病'],sources:['dka']});
+addSample('J-06','13','飲食店', '19:04','19:38','食事中、急に声が出ず倒れた。確認時刻は医師の死亡確認記録。',{scheduleLabel:'死亡確認',rigor:'none',livor:'none'});
+dossier('J-06','neck','食物が物理的に気道を閉じた例',supported,
+  '口腔内に少量の食物残渣。体表に致死的外傷なし。',
+  '喉頭入口部を大きな食塊が閉塞。気管の先に閉塞を説明する別病変なし。',
+  '食事中に咳き込み、発声できなくなったという複数の目撃記録。',
+  '食塊による上気道閉塞', '発症の経過と解剖時の閉塞位置が一致する。',
+  '口や胃に食物があるだけでは窒息の根拠にならない。閉塞位置、蘇生時の操作、発症の順序を照合する。','事故（目撃・救急記録による）',
+  {sources:['choking','trauma']});
+addSample('J-07','14','医療施設', '11:10','11:28','治療直後にじんましん、喘鳴と血圧低下を記録。',{scheduleLabel:'死亡確認',rigor:'none'});
+dossier('J-07','disease','アナフィラキシーの評価',supported,
+  '診療記録に急なじんましん。死後の皮膚所見は目立たない。',
+  '喉頭に浮腫。肺のうっ血と水腫。いずれも単独では原因を決められない。',
+  '適切に採取した死後血のトリプターゼ上昇。診療記録の曝露と直後の症状を照合。',
+  'アナフィラキシー', '急な曝露後に皮膚、呼吸器、循環器の症状が重なり、検査も仮説を補強する。',
+  'トリプターゼ高値だけでは確定できず、値が正常でも完全には除外できない。薬剤との因果や死因の種類は状況を確認する。','分類は治療経過を確認中',
+  {sources:['allergy']});
+addSample('J-08','15','自宅', '22:00','23:30','てんかんの既往。就寝後に家族が発見。',{rigor:'none'});
+dossier('J-08','disease','てんかん患者の突然死',supported,
+  '大きな外傷を認めない。口腔内に小さな損傷。',
+  '神経病理を含む全身解剖で、死を説明する構造的な病変や気道閉塞を認めない。',
+  'てんかんの診療歴を確認。薬毒物と状況調査で、別の説明やてんかん重積状態の証拠を認めない。',
+  'てんかんに伴う突然死（SUDEP）', '既知のてんかん、突然の死亡、状況と解剖・検査に基づく他の原因の評価を合わせた結論。',
+  '舌や口の傷だけで発作を証明できない。SUDEPは単一の臓器所見による診断ではない。','病死',
+  {sources:['epilepsy']});
+addSample('J-09','16','道路沿い', '06:15','06:28','自転車で走る姿を映像が捉え、その後に単独での転倒が記録された。',{rigor:'none'});
+dossier('J-09','blunt','腹部鈍的外傷による脾損傷',supported,
+  '側腹部の擦過傷と皮下出血。皮膚に深い開放創はない。',
+  '脾臓の被膜と実質に裂創。腹腔内に多量の血液。腹壁から腹腔に通じる開放創はない。',
+  '死後画像と解剖で出血部位を比較。転倒の映像を確認。',
+  '腹部鈍的外傷による脾破裂・腹腔内出血', '皮膚が開かなくても衝撃は深部に伝わる。脾臓の裂け目と血液の分布から出血源を確認した。',
+  '脾破裂の背景に脾腫などの病変がある場合もあり、外力と臓器の状態は別々に評価する。','事故（映像による）',
+  {chain:['脾破裂による腹腔内出血','腹部鈍的外傷'],sources:['wounds','imaging']});
+addSample('J-10','17','火災現場', '02:30','03:47','通話後に火災が発生。消火活動後に発見。',{noTemp:true,noTempReason:'火災による温度履歴の変化'});
+dossier('J-10','fire','煙の吸入を支持する所見の組合せ',supported,
+  '体表に熱による損傷。外表の損傷と煙の影響を分けて評価。',
+  '気管支内に煤の付着。喉頭粘膜に浮腫。競合する致死的外傷なし。',
+  '血中COHbの著しい上昇。火災調査によって屋内での煙曝露が確認された。',
+  '火災での煙吸入による一酸化炭素中毒', '深部気道の煤、血中COHb、現場資料が煙を吸入したことと整合する。',
+  '体表の熱損傷の程度は煙吸入量を示さない。火災による死因は熱傷、吸入、中毒や外傷が重なることもある。','出火事情の調査中');
+addSample('J-11','18','自宅', '08:50','09:20','慢性肝疾患の既往。家族が突然の吐血を目撃。',{rigor:'none'});
+dossier('J-11','disease','食道静脈瘤の破裂',supported,
+  '口周囲に血液の付着。口腔と顔面に出血を説明する外傷なし。',
+  '食道下部の拡張静脈に破綻部。食道と胃内に大量の血液。肝に結節状の変化。',
+  '肝の組織像は肝硬変に合致。診療歴にも門脈圧亢進の記録。',
+  '食道静脈瘤破裂による消化管出血', '門脈圧亢進によって生じた静脈瘤の破綻が、吐血と消化管内の血液を説明する。',
+  '口の血液には肺、口腔、消化管など複数の出所がある。流出部位だけで出血源を判断しない。','病死',
+  {chain:['食道静脈瘤破裂による上部消化管出血','門脈圧亢進','肝硬変'],sources:['guide']});
+addSample('J-12','19','自宅', '00:30','08:15','若年成人の原因不明の突然死。家族にも若年突然死の既往。',{rigor:'full',livor:'spreading',livorSite:'back',foundPos:'supine'});
+dossier('J-12','unknown','肉眼で原因が見つからない突然死',unclear,
+  '致死的外傷や処置痕なし。',
+  '心臓を含め、全身の肉眼検査と組織検査で死亡を説明する病変が見つからない。',
+  '薬毒物と行動記録から致死的曝露は確認されない。家族歴を踏まえ、専門的な遺伝学的評価を検討。',
+  '死因不詳', '心臓の電気的な異常など、形に現れない原因は残る。現時点で特定の不整脈を証明した資料はない。',
+  '遺伝子の変異が見つかっても病的意義や家族歴との対応の評価が必要。陰性でも原因がないとは言えない。','不詳',
+  {sources:['cardiac']});
+
+const referenceSections = [
+  ['外傷の見分け方', [
+    ['擦過傷・表皮剝脱','皮膚表面がこすれて剝がれた損傷。分布、形、衣服や周囲との関係を見る。','乾燥や死後の取り扱いでも似た外観ができる。擦過傷の有無だけで受傷時期は決められない。',['M-04','J-03'],['wounds']],
+    ['皮下出血と死斑','皮下出血は血液が組織内へ漏れた状態。死斑は重力に従い主として血管内に血液がたまる。分布と組織の状態を比較する。','死斑に伴う出血が重なる場合もある。あざの色から日数を決めない。',['C-03','J-09'],['bruise','neck']],
+    ['挫創・裂創','鈍い力で組織が裂けた創。縁に擦過や挫滅があり、創の奥に組織の橋が残ることがある。','頭皮などでは切創のように見える場合がある。表面と深部を合わせて記録する。',['M-04','M-11'],['wounds']],
+    ['切創と刺創','切創では一般に体表の長さが深さより大きく、刺創では深さが体表の長さより大きい。皮膚と臓器の損傷を対応させる。','皮膚の伸縮や体位で寸法は変わる。傷の長さだけで器具や受傷順序を決められない。',['S-01','E-05','S-02'],['wounds','trauma']],
+    ['骨折と深部の損傷','骨折、周囲の出血、直下の臓器損傷を別々に記録する。肋骨骨折は救命処置でも起こり得る。','骨折の有無だけで致死性や生前・死後を決めない。救急記録や死後画像も照合する。',['B-01','J-09'],['brain','imaging']],
+    ['創路と臓器損傷','銃創などでは表面の損傷、体内で通る経路、臓器・血管の損傷を対応させる。画像は骨や異物の位置を確認しやすい。','外表の創だけでは、損傷の程度や現場での経緯を確定できない。',['M-10','G-01'],['trauma','imaging']],
+    ['熱傷・熱による変化','皮膚、上気道、肺、骨を分けて扱う。火災では気道内の煤や血中COHbも調べる。','熱による骨折や筋の収縮が外傷・姿勢に見えることがある。',['R-01','J-10'],['environment']],
+    ['生前の傷と死後の変化','出血の組織内分布や炎症などの反応を、受傷から死亡までの経過、蘇生、腐敗と合わせて考える。','短時間で死亡すると反応が乏しいことがある。反応の有無だけで時刻を決めない。',['A-01','D-04'],['wounds','neck','bruise']]
+  ]],
+  ['臓器と体腔', [
+    ['脳・頭蓋','硬膜下血腫、くも膜下出血、脳挫傷、腫脹を、出血する場所と出血源で区別する。','頭皮の傷と出血源は別に確認。脳が腫れているだけでは受傷時刻を示せない。',['M-04','M-11','J-03'],['brain','cardiac']],
+    ['頸部・喉頭','皮膚の圧痕、深部軟部組織、舌骨・喉頭軟骨、気道内の閉塞物をそれぞれ調べる。','骨の形態差、死後のうっ血、救急処置による損傷が紛らわしい。',['A-01','N-01','J-06'],['neck','choking']],
+    ['心臓・冠動脈','冠動脈の狭窄、急性血栓、心筋の瘢痕や炎症、心臓全体の形と重さを評価する。','狭窄と急性閉塞を区別する。死亡直前の不整脈は通常、形として残らない。',['M-01','M-05','J-12'],['cardiac']],
+    ['大動脈・心嚢','血管壁内の解離、破裂箇所、血液が流れ込んだ場所を確認する。心嚢にたまる血液は心臓を圧迫し得る。','心嚢内に血液がある場合は、心筋や血管など出血源を探す。',['J-02'],['cardiac']],
+    ['肺・気道・肺動脈','肺水腫、肺炎、気道の閉塞、肺動脈の塞栓は、部位も意味も異なる。肺動脈の塞栓では下肢深部静脈も検討する。','肺水腫は溺水、心臓病、中毒など多くの場面で生じる。',['M-02','M-03','J-01','J-04'],['water','cardiac','thrombus']],
+    ['胸腔・胸壁','胸腔に血液がたまる血胸と、空気がたまる気胸を区別する。胸壁、肺、血管を対応づける。','死後のガスと生前の異常を区別するには、画像、腐敗状態、処置記録も見る。',['M-07','M-10'],['trauma','imaging']],
+    ['肝臓・脾臓・腹腔','肝や脾の被膜・実質の損傷、血管損傷、腹腔内の出血を照合する。肝硬変のような背景疾患も記録する。','皮膚の傷が小さい例や開放創のない例でも、深部の出血を見落とさない。',['S-02','J-09','J-11'],['wounds','guide']],
+    ['食道・胃・腸','消化管内の血液、出血源、穿孔や炎症、内容物を区別して記録する。','内容物は曝露や食事の種類を調べる手がかり。消化速度のばらつきが大きく、死亡時刻へ単純換算できない。',['M-03','J-11','R-01'],['tox','guide','pmiReview']],
+    ['腎臓と代謝の評価','腎の慢性病変は背景疾患の資料。急性の糖代謝異常などは、臓器の見た目で原因が分からないことがある。','死後変化を受ける検査項目がある。硝子体液など、目的に合った検体と病歴を組み合わせる。',['J-05'],['dka']]
+  ]],
+  ['補助検査', [
+    ['組織検査','肉眼で見つけた変化を顕微鏡で調べる。心筋の瘢痕、肺の炎症、血管病変などを評価する。','採取部位で結果が変わり、腐敗や自己融解が組織像の判読を難しくする。',['M-01','M-05','J-04'],['cardiac','sepsis']],
+    ['薬毒物分析','末梢血などで、薬物が何か、どの程度含まれるかを調べる。必要に応じて尿や胃内容物と照合する。','検出は摂取や曝露の手がかり。死後再分布、併用薬、耐性、未検査物質を考慮する。',['M-03','N-02','M-09'],['tox','toxlim']],
+    ['死後生化学','硝子体液などから、糖代謝やケトン体の異常を評価できることがある。','単一項目の高値に飛びつかず、病歴や検体の状態と照合する。',['J-05'],['dka']],
+    ['微生物検査','培養・分子検査で感染を調べ、炎症の部位や生前の臓器障害と結びつける。','死後の汚染や細菌の移動を区別する。陰性でも治療歴などにより感染が残る。',['J-04'],['sepsis','micro']],
+    ['死後画像（PMCTなど）','骨折、異物、体腔の液体やガスの分布を記録し、解剖所見と照合する。','画像の種類や条件によって、軟部組織・微小な病変・中毒・代謝異常を評価しにくい。',['M-04','M-10','J-09'],['imaging']],
+    ['珪藻検査','水中発見例で、必要に応じて試料と環境水の比較を行う補助検査。','混入や環境の違いを考慮する。陽性だけで溺水、陰性だけで非溺水とは判断できない。',['W-01'],['water']],
+    ['死後遺伝学的評価','十分に調べても形態異常が見つからない突然死で、病歴や家族歴に応じて検討する。','変異の検出と病的意義の判断は別。専門的分類や家族の情報と組み合わせる。',['J-12'],['cardiac']]
+  ]]
+];
+
+const timeLessons = [
+  ['体温（死後冷却）','測定時の温度だけでなく、衣服、体格、死亡時の体温、接触面、水・外気、温度の推移を確認する。環境温に近い場合や高温にさらされた場合、温度からの推定は特に難しい。'],
+  ['死斑','分布と圧迫による色の変化を見る。体位との不一致は再配置の可能性を示すが、移動時刻・場所を特定できない。失血や寒冷などで見え方も変わる。'],
+  ['硬直','筋肉の硬さの分布と程度を観察する。硬直が見られない場合には発現前と消退後があり、温度や体の状態も評価する。'],
+  ['腐敗・角膜・昆虫','腐敗や角膜の変化は環境と露出条件に左右される。昆虫の発育は種・温度・接触できた時期を調べ、定着してからの時間の下限を検討する。'],
+  ['胃内容物','食事の記録や摂食内容と照合できるが、消化は食事内容、疾患、薬や個人差に左右される。一律の食後時間としては扱えない。'],
+  ['最終生存確認と発見','本人の映像や直接会話など、生存を裏付ける記録がある場合、死亡はその確認以後、死亡状態での発見までの間。通報音、携帯の通信、発症や受傷だけでは、生存や死亡の時刻は決まらない。']
+];
+
+const noCooling = {
+  'B-02':'低温の山小屋で、死亡時から発見までの温度履歴が不明。',
+  'C-03':'屋外の風、地面との接触、体位の変化の影響が評価できない。',
+  'D-04':'環境とほぼ同温で腐敗が進み、体温の時間情報が乏しい。',
+  'F-06':'暖房で温度履歴が不明。単一の室温で計算しない。',
+  'E-05':'車内の温度履歴が不明。',
+  'M-04':'暖房のない小屋で、発見以前の温度変化が不明。',
+  'M-05':'暖房下での温度履歴が不明。',
+  'M-10':'車内の温度履歴が不明。',
+  'M-07':'屋外発見で、温度履歴と体位変化の影響が不明。',
+  'M-02':'水中での冷却。入水時刻と水温の推移が分からない。',
+  'M-06':'寒冷曝露が疑われ、死亡時の体温を通常の値に仮定できない。',
+  'M-08':'腐敗が進行し、標準的な冷却モデルを適用できない。',
+  'M-09':'発見前の室温の推移が不明。',
+  'M-11':'高い室温の履歴が不明。',
+  'S-02':'寒冷な屋外で冷却条件の履歴が不明。',
+  'B-01':'冷えた車庫で、発見前の温度の推移が不明。',
+  'W-01':'水中での冷却。入水前後の環境を一つの温度で扱えない。',
+  'H-01':'暑熱曝露と生前の高体温。通常の冷却モデルを適用できない。',
+  'T-01':'停電により暖房が停止し、室温の履歴が不明。',
+  'R-01':'火災の熱で通常の死後変化の読み方を適用できない。',
+  'L-01':'腐敗が進み、体温が環境温に近い。'
+};
+
+for (const c of CASES) {
+  const d = dossiers[c.id];
+  if (!d) continue;
+  c.cause = d.group;
+  c.theme = d.title;
+  c.autopsy = {
+    done:d.status !== undissected, cod:d.cause, manner:d.manner,
+    findings:[d.external, d.internal], tests:d.tests
+  };
+  if (!c.autopsy.done) c.autopsy.note = d.internal;
+}
+delete CASES.find(c => c.id === 'G-01').lastAlive;
+delete CASES.find(c => c.id === 'G-01').aliveLabel;
+delete CASES.find(c => c.id === 'W-01').lastAlive;
+delete CASES.find(c => c.id === 'W-01').aliveLabel;
+
+const sceneUpdates = {
+  'D-04': {notes:['納屋で発見。最後の生存確認に使える資料はまだない。']},
+  'M-01': {notes:['朝、訪ねてきた家族が胸痛の訴えを聞いた。その後に反応がなくなった。']},
+  'M-02': {notes:['目撃者が水面で呼吸に苦しむ様子を確認。その後、救助隊が引き上げた。']},
+  'N-01': {lastAlive:'2026-11-15 09:00',aliveLabel:'家族が朝食時に直接確認'},
+  'B-01': {timeline:['12/04 21:30 隣人が口論と物音を聞いた。本人の受傷・生存は直接確認されていない。']},
+  'G-01': {timeline:['11/17 23:42 隣人が銃声に似た音を通報。音源と本人の生存は確認されていない。']},
+  'W-01': {timeline:['11/19 19:00 退勤打刻。本人の姿を確認できる資料は未入手。']},
+  'H-01': {notes:['救出時に意識障害と高体温。後に死亡が確認された。車のドアに故障があった。'],scheduleLabel:'死亡確認'},
+  'R-01': {timeline:['12/05 19:00 宅配の記録（摂食時刻は未確認）','12/05 22:50 最後の通話','12/05 23:55 火災報知器が作動','12/06 00:05 近隣が通報']}
+};
+for (const c of CASES) if (sceneUpdates[c.id]) Object.assign(c, sceneUpdates[c.id]);
+
+
+const stages = ['現場・病歴','外表所見','臓器・体腔','補助検査','死因の評価','死亡時刻'];
+const detailed = () => S.mode === 'expert';
+let stage = 0;
+let query = '';
+let filter = '';
+
+const portraitSrc = 'data:image/jpeg;base64,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';
+
+function doctorGuide(message) {
+  return '<aside class="doctor-guide" aria-label="ヘイズ医師の解説">'
+    +'<img src="'+portraitSrc+'" width="360" height="240" alt="">'
+    +'<div><p class="doctor-name">ヘイズ医師</p><p>'+esc(message)+'</p></div></aside>';
 }
 
-function rangeText(e,tz){
-  return fmtRange(e.startUTC, e.endUTC, tz);
+const beginnerFocus = Object.freeze({
+  stab:['まず、表面のどこにどんな傷があるか見てください。傷の小ささだけで、体の奥まで届いていないとは言えません。',
+    '皮膚の傷と体の奥の傷をたどり、どの臓器や血管までつながっているかを見ます。出血がどこにたまったかも読みましょう。'],
+  blunt:['皮膚のすり傷、皮下のあざ、皮膚が裂けた傷に注目しましょう。外から見える傷の大きさと、体の中の損傷の重さは別です。',
+    '骨の折れた場所と、脳や腹部の臓器の損傷を照らし合わせましょう。外の傷が小さくても、中に大きな損傷が隠れることがあります。'],
+  gun:['皮膚で見えるのは傷の入口や周囲の状態です。何が傷ついたかは体の中を見て確認しましょう。',
+    '体の中で傷がどこまで続き、どの血管や臓器が損傷しているかを確かめます。出血の位置と合わせて読みましょう。'],
+  neck:['首の跡や目の小さな出血は、次に調べる場所を教えてくれます。表面の跡だけで何が起きたかは決めずに読み進めましょう。',
+    '首の表面と深いところの損傷が対応するか、息の通り道をふさぐ物があるかを、事例ごとに確認しましょう。'],
+  drown:['発見された場所と、亡くなるまでに起きたことを分けて考えましょう。水の中で見つかったことだけでは原因は決まりません。',
+    '肺や気道を見たら、ほかの臓器にも注目してください。水に入る前に、病気や外傷が起きていた可能性も考えます。'],
+  cold:['発見時の体が冷たいことと、生きている間に体温が下がったことを分けましょう。現場や気象の記録が大切です。',
+    '寒さに合う変化を探しながら、ほかに死を説明できる傷や病気が見つかっていないかも読みましょう。'],
+  heat:['生きている間や救出直後に、どんな状態が記録されたかに注目してください。発見後の体温と区別して読みます。',
+    '臓器の変化だけで原因を一つに絞れないときは、意識の状態、体温、高温にさらされた記録を合わせて読みます。'],
+  fire:['外から見た熱による傷と、生きている間に煙を吸ったかどうかは、別の問いです。',
+    '息の通り道に煤があるか、熱による変化に紛れて別の傷がないかを確認します。血液検査の結果と合わせて考えましょう。'],
+  tox:['死斑の色や近くにある容器は、調べる手がかりです。体の中に何がどれだけ入ったのかは、検査で確かめます。',
+    '肺がむくんでいるなどの変化は、別の原因でも見られます。死因を絞るには、薬物や有害物質の検査を待つことがあります。'],
+  nat:['外から目立った傷が見えなくても、体の中で出血したり、血の流れが途絶えたりすることがあります。',
+    '見つかった病変が、以前からあった変化なのか、今回の急変を説明できる変化なのかに注目しましょう。'],
+  disease:['外に傷がなくても、病歴や急変するまでの症状に注目しましょう。解剖や検査で確かめる場所が見えてきます。',
+    '臓器の見た目だけでは判断しにくい病気もあります。症状と、臓器や検査で確かめられたことを組み合わせて考えましょう。'],
+  unknown:['書いてある観察結果と、まだ確かめられていないことを分けて読みましょう。',
+    '「異常が見つからなかった」「調べていない」「変化が進んで見分けられない」は、意味が違います。どれがこの事例に当てはまるでしょうか。']
+});
+
+const beginnerConclusions = {
+  'A-01':'首の表面にあった跡と、すぐ下の組織の出血を照らし合わせました。この二つが対応したことが、首に外から力が加わったと考える根拠です。',
+  'B-02':'首に線のような変色があります。ただ、解剖が行われていないため、首の奥や臓器に何が起きたかは分かりません。',
+  'C-03':'首の奥の出血は死因を考える手がかりです。死斑が体の向きと合わないことは、発見前の体の向きを考える手がかりです。',
+  'D-04':'首の変色は残っていましたが、腐敗のために深いところの出血を見分けられませんでした。この記録だけで死因は決められません。',
+  'E-05':'腹の表面の傷をたどると、体の奥の血管に届いていました。その血管からお腹の中に大量の血が流れ出たと考えます。',
+  'F-06':'首の深いところの出血は死因の根拠です。暖房は体温がどう変わったかを考えるときに使う、別の資料です。',
+  'M-01':'胸が痛んだ直後の急変と、心臓に血を送る血管が新しい血の塊で詰まっていたことがつながります。',
+  'M-02':'肺の泡やむくみだけなら原因は一つに決まりません。この事例では、水の中で息に苦しんでいたという目撃が判断を支えます。',
+  'M-03':'胃に錠剤のような物があり、肺もむくんでいます。薬物の可能性を調べる理由にはなりますが、薬物検査の結果を待つ段階です。',
+  'M-04':'頭の皮膚の傷だけでなく、頭蓋骨の内側にたまった血が脳を圧迫していました。この圧迫が死亡につながったと考えます。',
+  'M-05':'心臓の血管が狭く、心臓の筋肉に古い傷あとがありました。この事例では慢性の病気が死因を支えますが、今回新しく血管が詰まった証拠はありません。',
+  'M-06':'体が冷えていたことだけで決めず、長時間寒さにさらされた記録と、解剖で見つかった変化を合わせて考えます。',
+  'M-07':'外に血が少なくても、胸の中には多くたまっていました。傷が肺の血管まで続いたことから、出血のもとを確認できました。',
+  'M-08':'腐敗が進んでいたことは分かります。けれど、体の中を調べた記録がないため、何が死亡を引き起こしたかは決められません。',
+  'M-09':'死斑の赤い色を手がかりに血液を調べました。決め手は、血液の検査と現場の状況がそろって一酸化炭素を示したことです。',
+  'M-10':'画像で体内の異物の位置を確認し、解剖で血管の傷と胸の中の出血を確かめました。二つの資料は、それぞれ違う問いに答えています。',
+  'M-11':'頭の表面の傷と、脳そのものの損傷が対応していました。脳が腫れ、圧迫された経過も、死因の説明につながります。',
+  'S-01':'胸と手の両方に傷があります。胸の傷は奥の血管まで届いて大量出血につながり、手の傷は表面にとどまっていました。',
+  'S-02':'腹部の傷を一つずつ調べると、肝臓まで続く傷がありました。そこから腹の中への出血が起きたと考えます。',
+  'N-01':'首の中の小さな骨の折れ方だけで判断せず、周りの出血と、表面にあった傷を合わせて見ています。',
+  'N-02':'口や目に小さな傷はありましたが、窒息を示す決め手は見つかっていません。薬物検査や現場の記録も必要です。',
+  'B-01':'頭の中の出血は死因の説明になります。一方、物音を聞いた時刻が、その人がけがをした時刻だとはまだ言えません。',
+  'G-01':'胸の中で傷が血管まで続いていたことが、出血で亡くなったという判断を支えます。通報の時刻は別に検討します。',
+  'W-01':'肺や気道の変化は溺水の可能性と合います。水の中で亡くなったか、入水の前に別のことが起きたかは、まだ判断を保留します。',
+  'H-01':'救出時の体温と意識の記録が、暑さの中で体温が上がって亡くなったという判断を支えます。',
+  'T-01':'寒い部屋で見つかっても、血液の検査と現場の記録が一酸化炭素への曝露を支えています。死斑の色だけではこの区別はつきません。',
+  'R-01':'火の熱による変化と、火災前にできたかもしれない傷を分けきれませんでした。煙の痕跡が少ないことだけで、出火前に亡くなったとは言えません。',
+  'L-01':'心臓に血を送る血管は狭くなっていましたが、腐敗のためほかの臓器も十分には調べられず、死因を決められませんでした。',
+  'J-01':'脚の深い静脈と、肺へ血を送る血管の両方に血の塊が見つかりました。肺の血管がふさがったことが、突然の息苦しさとつながります。',
+  'J-02':'太い血管が破れ、心臓を包む袋に血がたまりました。心臓が外から押され、血液を送り出しにくくなったと考えます。',
+  'J-03':'額に小さな傷がありましたが、脳の出血元は破れた動脈瘤でした。倒れたときの傷と、倒れた原因を分けて考えます。',
+  'J-04':'肺に感染があり、それが全身の臓器の働きに影響したと考えます。生前の経過と、肺を調べた結果がつながりました。',
+  'J-05':'臓器の形に決め手がなくても、目の中の液やケトン体の検査、糖尿病の記録から、体内の糖の利用に異常が起きたと分かります。',
+  'J-06':'食物が口に残っていただけでなく、実際に息の通り道をふさいでいました。食事中に声が出なくなった目撃とも合います。',
+  'J-07':'治療後すぐに、皮膚、呼吸、血圧に急な変化が出ています。これらの経過に、アレルギー反応を調べる検査結果が加わります。',
+  'J-08':'てんかんの病歴と突然の死亡を踏まえ、解剖や検査でほかの説明を探したうえでの判断です。口の傷だけで決まったわけではありません。',
+  'J-09':'皮膚に深い傷は見えませんでしたが、腹の中の脾臓が裂けて出血していました。転倒の記録と合わせて判断します。',
+  'J-10':'気道の奥に煤があり、血液にも煙を吸ったことを支える結果がありました。外から見たやけどの程度だけでは、ここまでは分かりません。',
+  'J-11':'口に血が付いていたので、出血元を体の中で確かめました。食道の広がった静脈に破れた場所が見つかりました。',
+  'J-12':'臓器や検査で死を説明する異常が見つかりませんでした。心臓の電気的な異常などは候補に残りますが、特定には至っていません。'
+};
+
+function beginnerMessage(c,d) {
+  if (stage === 0) return 'まず、誰がいつ何を見たかを読みましょう。発見された時刻と、それより前に本人が生きていたと確認できる時刻を区別します。';
+  if (stage === 1 || stage === 2) {
+    const focus = Object.hasOwn(beginnerFocus,c.cause) ? beginnerFocus[c.cause] : beginnerFocus.unknown;
+    return focus[stage-1];
+  }
+  if (stage === 3) return d.status === provisional
+    ? 'ここは検査の途中です。「結果待ち」は結果が出ていないという意味です。候補に挙がった原因が確かめられたか、次の画面で見ましょう。'
+    : '何を調べて、どの候補が残ったかを確認しましょう。記録にない検査は、異常がなかったという意味ではありません。';
+  if (stage === 4) return dossiers[c.id] && beginnerConclusions[c.id]
+    || '見つかった傷や病気が、どう死亡につながったと考えられるかを読みましょう。根拠が足りなければ、判断は保留されます。';
+  if (!Number.isFinite(foundUTC(c))) return '発見の時刻が分からないと、死後の経過を時刻に置き換えられません。どんな記録があるかを先に見ましょう。';
+  if (toUTC(c.lastAlive,c.tz) < foundUTC(c)) return '本人が生きていたことを最後に確認できた時刻と、死亡が確認された時刻を見比べましょう。その二つの間のどこかで亡くなったと分かります。';
+  return '最後に生きていた時刻が分からないときは、発見時刻から「その時刻より前」と言えるところまでです。体温、死斑、硬直は状況に合わせて読みましょう。';
 }
 
-/* ===== 解説（初心者） ===== */
-function noviceHTML(c,e){
-  var h=[], tz=viewTz(c), tr=e.tempRange, n=1;
-  var circ=['①','②','③','④','⑤','⑥'];
-  function head(t){ h.push('<h4>'+circ[n-1]+' '+t+'</h4>'); n++; }
-
-  h.push('<div class="who"><span class="badge">解剖の先生</span><span>ヘイズ医師</span><span>／ 初心者向け</span></div>');
-  h.push('<p>順番にご説明します。体温・死斑・死後硬直'+(DECOMP[c.decomp]?'・腐敗':'')+'の所見から、それぞれ「死後どれくらいか」を読み、重なる時間帯を探します。</p>');
-
-  /* 体温 */
-  head('体温（どれくらい冷えたか）');
-  h.push('<p>人は亡くなると体温をつくれなくなり、まわりの温度に向かって少しずつ冷えていきます。熱いコーヒーを置いておくと、ゆっくりぬるくなるのと同じです。</p>');
-  var rateNote = (Math.abs(e.rate-BASE_RATE)>0.01)
-    ? '室温が'+fmtTemp(+c.roomF)+'なので、冷える速さは1時間あたり約'+(+e.rate.toFixed(2))+'°Fと見ました（寒い部屋ほど速く、暖かい部屋ほどゆっくり冷えます）。'
-    : '部屋は'+fmtTemp(+c.roomF)+'なので、1時間に約1.5°F下がると見ます。';
-  if(e.reached){
-    h.push('<p>この方の直腸温は <b>'+fmtTemp(+c.rectalF)+'</b>。すでに室温（'+fmtTemp(+c.roomF)+'）のすぐ近くまで冷えています。冷えきったコーヒーを見ても、いつ冷めたのか分からないのと同じで、体温からは「少なくとも約<b>'+Math.round(tr[0])+'時間</b>は経っている」としか言えません。</p>');
-  }else{
-    var diff = BODY_F-(+c.rectalF);
-    h.push('<p>平熱は約98.6°F（約37℃）。この方の直腸温は <b>'+fmtTemp(+c.rectalF)+'</b> で、平熱との差は <b>'+r1(diff).toFixed(1)+'°F</b> です。'+rateNote+'</p>');
-    h.push('<p>'+r1(diff).toFixed(1)+' ÷ '+(+e.rate.toFixed(2))+' ≒ <b>'+r1(e.tempH)+'時間</b>。つまり体温からは「死後およそ'+Math.round(e.tempH)+'時間、前後'+r1(e.margin)+'時間ほど」と読めます。</p>');
-    if(Math.abs(e.rate-BASE_RATE)>=0.2){
-      h.push('<p>参考までに、もし標準の速さ（1.5°F/時）のまま計算すると '+r1(diff/BASE_RATE)+'時間になり、実際の見積もりとずれてしまいます。部屋の温度によって冷え方が変わるので、室温は必ず確認します。</p>');
-    }
-  }
-
-  /* 死斑 */
-  if(LIVOR[c.livor]){
-    head('死斑（血がたまった跡）');
-    h.push('<p>心臓が止まると、血が重力で体の下側にたまり、紫がかった斑点になります。泥水を置いておくと、泥が底にたまるのに似ています。時間が経つと血の成分が皮膚にしみ込み、指で押しても消えなくなります。</p>');
-    var lr=LIVOR[c.livor].r;
-    h.push('<p>この方は'+(SITE[c.livorSite]?'<b>'+SITE[c.livorSite]+'</b>に':'')+'死斑があり、状態は<b>'+LIVOR[c.livor].t+'</b>。これは死後 <b>'+fmtHours(lr[0],lr[1])+'</b>ごろの状態です。</p>');
-  }
-
-  /* 硬直 */
-  if(RIGOR[c.rigor]){
-    head('死後硬直（筋肉のこわばり）');
-    h.push('<p>筋肉を動かすためのエネルギーが尽きると、筋肉がゆるまなくなり、固くなります。顎や首など小さな筋肉から始まり、全身に広がり、1日以上たつと再びゆるんでいきます。</p>');
-    var gr=RIGOR[c.rigor].r;
-    h.push('<p>この方は<b>'+RIGOR[c.rigor].t+'</b>。これは死後 <b>'+fmtHours(gr[0],gr[1])+'</b>ごろの状態です。</p>');
-  }
-
-  /* 腐敗 */
-  if(DECOMP[c.decomp]){
-    head('腐敗（体の変化）');
-    h.push('<p>体の中の細菌が増えると、お腹のあたりが緑がかり、やがてガスで膨らみます。暖かいほど早く進み、寒いと遅くなります。</p>');
-    var dr=DECOMP[c.decomp].r;
-    h.push('<p>この方は<b>'+DECOMP[c.decomp].t+'</b>。死後 <b>'+fmtHours(dr[0],dr[1])+'</b>ごろの状態です。</p>');
-  }
-
-  /* まとめ */
-  head('まとめ（重なる時間帯）');
-  if(e.conflict){
-    var names=e.odd.map(function(k){return KEYJP[k];}).join('・');
-    h.push('<p>今回は、所見ごとの時間帯がきれいに重なりませんでした。特に<b>'+names+'</b>が他の所見と食い違っています。環境（暖房・寒さ・服装）で冷え方が変わった、遺体が動かされた、などが考えられます。そこで、全体をおおまかな幅で示します。</p>');
-  }else{
-    h.push('<p>それぞれの所見に共通する時間帯を取ると、死後 <b>'+fmtHours(e.lo,e.hi)+'</b>です。</p>');
-  }
-  h.push('<p>発見は <b>'+esc(fmtTime(e.foundUTC,tz))+'</b>。そこから逆算すると、亡くなったのは <b>'+esc(rangeText(e,tz))+'</b>ごろと考えられます。</p>');
-
-  /* 注意 */
-  var cav=[];
-  if(e.moved) cav.push('<p class="note"><b>遺体が動かされた可能性があります。</b>死斑は固まると位置が動きません。この方は発見時<b>'+POS[c.foundPos]+'</b>でしたが、死斑は<b>'+SITE[c.livorSite]+'</b>に出ています。亡くなった場所と発見された場所が違うかもしれません。</p>');
-  if(e.coroner) cav.push('<p class="note">この事件は検視官（Coroner）の管轄で、解剖を伴わない外表の観察が中心です。そのため、いつもより幅を広めに取っています。</p>');
-  if(c.env && c.env.indexOf('outdoor')>=0) cav.push('<p class="note">屋外で発見されています。風・日光・地面の冷たさで冷え方が大きく変わるため、体温による推定は特にずれやすくなります。</p>');
-  if(c.env && c.env.indexOf('heated')>=0) cav.push('<p class="note">暖房で室温が高かったため、冷え方はゆるやかでした。そのぶん、見た目の体温だけで判断すると、死後の時間を短く見積もってしまいます。犯人が暖房で時刻をずらそうとした可能性も、頭に置いておきます。</p>');
-  head('注意しておきたいこと');
-  h.push('<p>これは確実な時刻ではなく、「この範囲の可能性が高い」という見積もりです。体温の下がり方は、服装・体格・室温・風・入浴後や発熱の有無で変わります。天気予報の降水確率のように、幅をもって読んでください。</p>');
-  h.push(cav.join(''));
-
-  /* もっと詳しく */
-  h.push('<p class="qa-h">もっと詳しく知りたいとき</p>');
-  h.push(QA);
-  return h.join('');
-}
-
-var QA = [
-  ['体温はなぜ下がるのですか？','生きている間は、体が熱をつくり続けて体温を保っています。亡くなるとその熱がつくられなくなり、体は空気や床へ熱を逃がしながら、まわりの温度に近づいていきます。なお、亡くなってすぐは体温があまり下がらない時間帯があることも知られています。'],
-  ['室温や服装が違うと、どうなりますか？','寒い部屋や屋外では熱がどんどん逃げるので速く冷え、暖かい部屋や厚着ではゆっくり冷えます。たとえば同じ死後10時間でも、真冬の屋外と暖房の効いた寝室では体温がかなり違います。このビューアでは、室温に応じて冷える速さを少しだけ補正しています。'],
-  ['死斑が「消える」「消えない」の違いは？','血が皮膚の下にたまっているだけの間は、指で押すと血が押しのけられて白くなります（消える）。時間が経つと血の成分が組織にしみ込み、押しても動かなくなります（固定）。この変わり目が、およそ半日前後です。'],
-  ['死斑の位置から何が分かりますか？','血は重力で下へたまります。仰向けなら背中側、うつ伏せなら体の前面です。固定されたあとで体の向きを変えても、死斑は元の位置に残ります。発見時の体位と死斑の位置が合わなければ、死後に動かされた可能性があります。'],
-  ['なぜ「幅」で答えるのですか？','体温・死斑・硬直は、いずれも環境や個人差で進み方が変わるからです。1つの所見だけでは決めきれないので、複数の所見を重ね、その範囲で答えます。発見が遅いほど所見は少なくなり、幅は広がります。'],
-  ['監察医（ME）と検視官（Coroner）の違いは？','米国では州や郡で制度が違います。MEは医師の資格を持つ専門職で、解剖を行います。Coronerは選挙などで選ばれる役職で、郡によっては医師とは限りません。そのため、同じ連続事件でも、管轄ごとに所見の精度が異なることがあります。'],
-  ['州をまたぐと、時刻はどう読みますか？','米国には複数のタイムゾーンがあります。11月は夏時間が終わっていて、東部はEST（UTC−5）、中部はCST（−6）、山岳はMST（−7）、太平洋はPST（−8）です。複数の事件を比べるときは、同じタイムゾーンにそろえて見ます（上の「時刻表示」で切り替えられます）。なお夏時間の期間は、アリゾナ州のように夏時間を使わない州があり、隣の州との時差が季節で変わります。']
-].map(function(q){ return '<details><summary>'+esc(q[0])+'</summary><p>'+esc(q[1])+'</p></details>'; }).join('');
-
-/* ===== 画面 ===== */
-function silhouette(c,e){
-  var id = esc(c.id);
-  var ruler='M40 268 L360 268';
-  for(var i=0;i<=20;i++){ ruler+=' M'+(40+i*16)+' 268 L'+(40+i*16)+' '+(268-(i%5===0?12:6)); }
-  return '<div class="photo" aria-hidden="true">'
-   +'<svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">'
-   +'<defs><linearGradient id="fl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#454a4e"/><stop offset="1" stop-color="#1c1f22"/></linearGradient>'
-   +'<radialGradient id="lc" cx=".3" cy=".22" r=".62"><stop offset="0" stop-color="#fff" stop-opacity=".13"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><radialGradient id="vg" cx=".5" cy=".5" r=".75"><stop offset=".45" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".78"/></radialGradient>'
-   +'<filter id="nz"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 .5  0 0 0 0 .5  0 0 0 0 .5  0 0 0 .6 0"/></filter></defs>'
-   +'<rect width="400" height="300" fill="url(#fl)"/>'
-   +'<g class="fig" fill="#0c0d0f">'
-   +'<ellipse cx="102" cy="152" rx="24" ry="22"/>'
-   +'<rect x="128" y="128" width="132" height="50" rx="22"/>'
-   +'<path d="M140 132 L196 98 L212 112 L160 150 Z"/>'
-   +'<path d="M146 176 L190 214 L174 228 L132 186 Z"/>'
-   +'<path d="M256 134 L338 126 L342 146 L258 160 Z"/>'
-   +'<path d="M256 150 L330 170 L322 190 L254 172 Z"/>'
-   +'</g>'
-   +'<rect width="400" height="300" fill="url(#lc)"/>'
-   +'<rect width="400" height="300" filter="url(#nz)" opacity=".4"/>'
-   +'<rect width="400" height="300" fill="url(#vg)"/>'
-   +'<path d="'+ruler+'" fill="none" stroke="#c9c3b2" stroke-opacity=".55" stroke-width="1"/>'
-   +'</svg>'
-   +'<span class="tag mono">EXHIBIT '+id+'</span>'
-   +'<span class="stampdt mono">'+esc(fmtTime(e.foundUTC,viewTz(c)))+'</span>'
-   +'<span class="cap">資料画像（ぼかし処理済み）</span>'
-   +'</div>';
-}
-
-function sheetHTML(c,e){
-  var tz=viewTz(c), v=c.victim||{};
-  var rows=[];
-  function row(k,val){ rows.push('<div class="row"><dt>'+k+'</dt><dd>'+val+'</dd></div>'); }
-  row('被害者', esc((v.label||'')+((v.sex||v.age)?'（'+[v.sex,v.age].filter(Boolean).join('・')+'）':'')));
-  if(c.place) row('場所', esc(c.place));
-  if(c.office) row('管轄', esc(c.office.name||c.office.type));
-  row('発見', esc(fmtTime(e.foundUTC,tz)));
-  row('室温', fmtTemp(+c.roomF));
-  row('直腸温', fmtTemp(+c.rectalF));
-  if(LIVOR[c.livor]) row('死斑', esc((SITE[c.livorSite]?SITE[c.livorSite]+'：':'')+LIVOR[c.livor].t));
-  if(RIGOR[c.rigor]) row('死後硬直', esc(RIGOR[c.rigor].t));
-  if(DECOMP[c.decomp]) row('腐敗', esc(DECOMP[c.decomp].t));
-  if(POS[c.foundPos]) row('発見時体位', esc(POS[c.foundPos]));
-  if(c.notes && c.notes.length) row('備考', c.notes.map(esc).join('<br>'));
-
-  var flags='';
-  if(e.conflict) flags+='<p class="flag">所見の食い違いあり（'+esc(e.odd.map(function(k){return KEYJP[k];}).join('・'))+'）。幅を広げて表示しています。</p>';
-  if(e.moved) flags+='<p class="flag">死斑の位置が発見時の体位と合いません。遺体が移動された可能性があります。</p>';
-  if(e.coroner) flags+='<p class="flag">検視官（Coroner）管轄。外表所見中心のため、推定の幅は広めです。</p>';
-
-  return '<div class="sheet"><div class="hd"><div><h2>検死所見</h2><p class="sub" style="margin:2px 0 0">AUTOPSY SUMMARY ／ 簡易モデルによる推定</p></div>'
-    +'<span class="no">CASE '+esc(c.id)+'</span></div>'
-    +'<span class="stamp" aria-hidden="true">CONFIDENTIAL</span>'
-    +'<dl>'+rows.join('')+'</dl>'
-    +'<div class="result"><span class="lbl">推定死後経過</span><span class="big">'+esc(fmtHours(e.lo,e.hi))+'</span>'
-    +'<span class="lbl">推定死亡時刻</span><span class="big">'+esc(rangeText(e,tz))+'</span></div>'
-    + flags + '</div>';
-}
-
-/* 所見ごとの時間帯の図（死後の経過時間。重なる範囲を帯で示す） */
-function basisHTML(c,e){
-  var mx=0, i, j, v, t;
-  for(i=0;i<e.ind.length;i++) for(j=0;j<2;j++){ v=e.ind[i].r[j]; if(v!==INF && v>mx) mx=v; }
-  if(e.hi!==INF && e.hi>mx) mx=e.hi;
-  if(e.lo>mx) mx=e.lo;
-  var steps=[24,48,72,120], AX=120;
-  for(i=0;i<steps.length;i++){ if(mx<=steps[i]){ AX=steps[i]; break; } }
-  var tick = AX<=24 ? 6 : (AX<=72 ? 12 : 24);
-  function pc(x){ return Math.min(x,AX)/AX*100; }
-  var grid='', ticks='';
-  for(t=0;t<=AX;t+=tick){
-    grid+='<i class="gl" style="left:'+pc(t)+'%"></i>';
-    ticks+='<span style="left:'+pc(t)+'%">'+t+'</span>';
-  }
-  var bandL=pc(e.lo), bandR=(e.hi===INF)?100:pc(e.hi);
-  var rows=e.ind.map(function(it){
-    var a=it.r[0], b=it.r[1], open=(b===INF);    var w=Math.max(1.2, pc(open?AX:b)-pc(a));
-    return '<div class="brow"><span class="bl">'+KEYJP[it.key]+'</span><span class="bt"><i class="rg'+(open?' open':'')+'" style="left:'+pc(a)+'%;width:'+w+'%"></i></span></div>';
-  }).join('');
-  return '<div class="basis"><h4>所見ごとの時間帯</h4>'
-    +'<p class="sub">各所見が示す「死後の経過時間」（単位：時間）。黄色の帯が、重なる範囲です。</p>'
-    +'<div class="bchart"><div class="bgrid">'+grid+'<i class="band" style="left:'+bandL+'%;width:'+Math.max(1,bandR-bandL)+'%"></i></div>'
-    +rows+'<div class="brow ax"><span class="bl"></span><span class="bt">'+ticks+'</span></div></div>'
-    +'<p class="res">重なる範囲 → 死後 <b>'+esc(fmtHours(e.lo,e.hi))+'</b>'+(e.conflict?'（所見に食い違いあり。全体の幅を表示）':'')+'</p></div>';
-}
-
-function caseView(c){
-  var e=estimate(c);
-  if(!e) return '<div class="err">この事件の所見データが不足しています（発見時刻・室温・直腸温・タイムゾーンが必要です）。</div>';
-  return '<div class="case-grid">'+sheetHTML(c,e)+'<div class="side">'+silhouette(c,e)+basisHTML(c,e)+'</div></div>'
-    +'<div class="teacher">'+(S.mode==='expert'?expertHTML(c,e):noviceHTML(c,e))+'</div>';
-}
-
-function listView(){
-  var rows=CASES.map(function(c){
-    var e=estimate(c), tz=viewTz(c);
-    if(!e) return '<tr class="clk" data-id="'+esc(c.id)+'"><td>'+esc(c.id)+'</td><td colspan="4">データ不足</td></tr>';
-    var flag=[];
-    if(e.moved) flag.push('<span class="pill warn">移動の疑い</span>');
-    if(e.conflict) flag.push('<span class="pill warn">所見の不一致</span>');
-    if(e.coroner) flag.push('<span class="pill">Coroner</span>');
-    return '<tr class="clk" data-id="'+esc(c.id)+'"><td class="mono">'+esc(c.id)+'<br><span style="color:var(--dim)">'+esc((c.victim&&c.victim.label)||'')+'</span></td>'
-      +'<td class="hide-s">'+esc(c.place||'')+'</td>'
-      +'<td>'+esc(fmtTime(e.foundUTC,tz))+'</td>'
-      +'<td>'+esc(fmtHours(e.lo,e.hi))+'</td>'
-      +'<td>'+esc(rangeText(e,tz))+'</td>'
-      +'<td class="hide-s">'+flag.join('')+'</td></tr>';
-  }).join('');
-  return '<h3 class="series">'+esc(SERIES.title)+'</h3><p class="hint">'+esc(SERIES.summary)+'</p>'
-    +'<p class="hint">事件をクリックすると所見書を開きます。'
-    +(S.tz==='local'?'いまは各事件の現地時間で表示しています。事件どうしを比べるときは、上の「時刻表示」を共通のタイムゾーンに切り替えてください。':'すべての時刻を同じタイムゾーンにそろえて表示しています。')
-    +'</p><table class="tbl"><thead><tr><th>事件</th><th class="hide-s">場所</th><th>発見</th><th>推定死後経過</th><th>推定死亡時刻</th><th class="hide-s">注意</th></tr></thead><tbody>'+rows+'</tbody></table>'+stripsHTML();
-}
-
-/* 1日の中のどの時間帯か（選んだタイムゾーンで比べる） */
-function stripsHTML(){
-  var h='<h3 class="series" style="margin-top:22px">推定死亡時刻の時間帯（1日の中）</h3>';
-  if(S.tz==='local'){
-    return h+'<p class="hint">上の「時刻表示」で共通のタイムゾーン（EST・CST など）を選ぶと、事件どうしの時間帯を並べて見られます。</p>';
-  }
-  var tz=TZS[S.tz], rows=[];
-  CASES.forEach(function(c){
-    var e=estimate(c); if(!e) return;
-    var label='<span class="mono">'+esc(c.id)+'</span>', segs='', note='';
-    if(e.startUTC==null){
-      note='下限のみ';
-    }else if(e.endUTC-e.startUTC>=24*3600000){
-      segs='<i class="seg wide" style="left:0;width:100%"></i>'; note='24時間以上の幅';
-    }else{
-      var hs=hod(e.startUTC,tz.off), he=hod(e.endUTC,tz.off);
-      if(hs<=he) segs=seg(hs,he);
-      else segs=seg(hs,24)+seg(0,he);
-      note=fmtHM(e.startUTC,tz.off)+'〜'+fmtHM(e.endUTC,tz.off);
-    }
-    rows.push('<div class="strip"><div class="lab">'+label+'</div><div class="bar">'+segs+'</div><div class="nt">'+esc(note)+'</div></div>');
+function sourceLinks(ids) {
+  const links = [...new Set(ids)].map(id => {
+    const [title, url] = sources[id];
+    return '<li><a target="_blank" rel="noopener noreferrer" href="'+esc(url)+'">'+esc(title)+'</a></li>';
   });
-  var ticks='<div class="strip ax"><div class="lab"></div><div class="bar">'
-    +[0,6,12,18,24].map(function(t){return '<span style="left:'+(t/24*100)+'%">'+t+'</span>';}).join('')
-    +'</div><div class="nt">'+esc(tz.abbr)+'</div></div>';
-  return h+'<p class="hint">帯が重なる時間帯が、事件に共通する時間帯の手がかりです。幅の広い事件（検視官の管轄や、発見が遅い事件）は、帯が長くなります。</p>'+rows.join('')+ticks;
+  return '<details class="sources"><summary>参考資料</summary><ul>'+links.join('')+'</ul></details>';
 }
-function hod(ms,off){ var d=new Date(ms+off*3600000); return d.getUTCHours()+d.getUTCMinutes()/60; }
-function seg(a,b){ return '<i class="seg" style="left:'+(a/24*100)+'%;width:'+Math.max(0.8,(b-a)/24*100)+'%"></i>'; }
 
-function renderTabs(){
-  var h='<button role="tab" data-view="list" class="'+(S.view==='list'?'on':'')+'">一覧</button>';
-  CASES.forEach(function(c){
-    h+='<button role="tab" data-view="'+esc(c.id)+'" class="'+(S.view===c.id?'on':'')+'">'+esc(c.id)+'</button>';
+function groupOf(c) {
+  return groups.find(([id]) => id === c.cause) || groups[groups.length-1];
+}
+
+function caseButton(id) {
+  const d = dossiers[id];
+  return '<button class="text-button" type="button" data-case="'+esc(id)+'">'+esc(id+' '+(d ? d.title : '事例'))+'</button>';
+}
+
+function rows(entries) {
+  return '<dl class="record">'+entries.map(([label, value]) => value == null || value === ''
+    ? '' : '<div><dt>'+esc(label)+'</dt><dd>'+esc(value)+'</dd></div>').join('')+'</dl>';
+}
+
+function listResults() {
+  const tokens = query.toLowerCase().normalize('NFKC').trim().split(/\s+/).filter(Boolean);
+  const matching = CASES.filter(c => {
+    const d = dossiers[c.id];
+    const [id, name] = groupOf(c);
+    const haystack = [c.id, c.place, name, d?.title || c.theme, d?.external, d?.internal, d?.tests, d?.cause]
+      .filter(Boolean).join(' ').toLowerCase().normalize('NFKC');
+    return (!filter || id === filter) && tokens.every(term => haystack.includes(term));
   });
-  $('tabs').innerHTML=h;
+  $('resultsCount').textContent = matching.length+'件';
+  $('caseList').innerHTML = matching.length ? matching.map(c => {
+    const d = dossiers[c.id];
+    return '<button class="case-card" type="button" data-case="'+esc(c.id)+'"><span class="case-id">'+esc(c.id)
+      +'</span><span><strong>'+esc(d?.title || c.theme || c.place || '追加事例')+'</strong><small>'
+      +esc([groupOf(c)[1],c.place].filter(Boolean).join(' ／ '))+'</small></span><span class="arrow" aria-hidden="true">›</span></button>';
+  }).join('') : '<p class="empty">一致する事例がありません。</p>';
 }
 
-function render(keepScroll){
-  var top = keepScroll ? $('content').scrollTop : 0;
-  renderTabs();
-  $('mNovice').setAttribute('aria-pressed', S.mode==='novice');
-  $('mExpert').setAttribute('aria-pressed', S.mode==='expert');
-  $('selUnit').value=S.unit; $('selTz').value=S.tz;
-  var c = S.view==='list' ? null : getCase(S.view);
-  if(!c) S.view='list';
-  $('content').innerHTML = c ? caseView(c) : listView();
-  $('content').scrollTop = top;
+function listView() {
+  return '<h1 class="list-heading" id="listTitle">所見一覧</h1><section aria-labelledby="listTitle"><div class="filters">'
+    +'<label for="caseQuery">所見を検索<input type="search" id="caseQuery" placeholder="臓器・所見・事例番号" value="'+esc(query)+'"></label>'
+    +'<label for="groupFilter">分類<select id="groupFilter"><option value="">すべての分類</option>'
+    +groups.map(([id,label]) => '<option value="'+id+'"'+(id===filter?' selected':'')+'>'+esc(label)+'</option>').join('')
+    +'</select></label></div><p class="count" id="resultsCount" role="status"></p><div class="case-list" id="caseList"></div></section>';
 }
 
-/* ===== 操作 ===== */
-$('tabs').addEventListener('click',function(ev){
-  var b=ev.target.closest('button[data-view]'); if(!b) return;
-  S.view=b.getAttribute('data-view'); render(false);
-});
-$('content').addEventListener('click',function(ev){
-  var tr=ev.target.closest('tr[data-id]'); if(!tr) return;
-  S.view=tr.getAttribute('data-id'); render(false);
-});
-['mNovice','mExpert'].forEach(function(id){
-  $(id).addEventListener('click',function(){ S.mode=this.getAttribute('data-mode'); saveSet(); render(true); });
-});
-$('selUnit').addEventListener('change',function(){ S.unit=this.value; saveSet(); render(true); });
-$('selTz').addEventListener('change',function(){ S.tz=this.value; saveSet(); render(true); });
-
-/* ウィンドウ：開閉とドラッグ */
-var win=$('win'), bar=$('titlebar'), pos={x:0,y:0}, drag=null;
-function applyPos(){ win.style.setProperty('--dx',pos.x+'px'); win.style.setProperty('--dy',pos.y+'px'); }
-function clampPos(){
-  var w=win.offsetWidth, h=win.offsetHeight, iw=innerWidth, ih=innerHeight;
-  pos.x=clamp(pos.x, -(iw/2+w/2-80), iw/2+w/2-80);
-  pos.y=clamp(pos.y, h/2-ih/2, ih/2+h/2-40);
+function learnView() {
+  return '<h1>所見の読み方</h1>'
+    +'<section class="reference-block"><h2>解剖から死因へ</h2><div class="note-card">'
+    +'<p><b>死因</b>は死亡につながった傷病です。<b>死亡の機序</b>は、その傷病で身体に何が起きたかです。たとえば大動脈解離の破裂で心臓の周囲に血液がたまり、心臓が圧迫されるのが心タンポナーデです。</p>'
+    +'<p><b>死因の種類</b>は病死や外因死などの区分で、外傷が生じた事情を含めて評価します。<b>死因の連鎖</b>は、直接死因からその原因へさかのぼります。直接の連鎖の外で死亡に影響した病態は別欄に記載します。</p>'
+    +caseButton('J-02')+caseButton('J-11')+sourceLinks(['certificate','guide'])+'</div></section>'
+    +referenceSections.map(([title, items]) => '<section class="reference-block"><h2>'+esc(title)+'</h2>'
+      +items.map(([label, finding, limit, examples, refs]) => '<details class="reference-entry"><summary>'+esc(label)+'</summary>'
+        +'<div class="reference-body"><p>'+esc(finding)+'</p><p class="muted">'+esc(limit)+'</p>'
+        +examples.map(caseButton).join('')+sourceLinks(refs)+'</div></details>').join('')+'</section>').join('')
+    +'<section class="reference-block"><h2>死亡時刻と死後変化</h2>'
+    +timeLessons.map(([title, body]) => '<details class="reference-entry"><summary>'+esc(title)+'</summary><div class="reference-body"><p>'+esc(body)+'</p></div></details>').join('')
+    +sourceLinks(['pmi','cool','pmiReview'])+'</section><section class="reference-block"><h2>出典一覧</h2>'+sourceLinks(Object.keys(sources))+'</section>';
 }
-bar.addEventListener('pointerdown',function(ev){
-  if(ev.target.closest('button')||innerWidth<=720) return;
-  drag={x:ev.clientX,y:ev.clientY,px:pos.x,py:pos.y};
-  try{ bar.setPointerCapture(ev.pointerId); }catch(e){}
-});
-bar.addEventListener('pointermove',function(ev){
-  if(!drag) return;
-  pos.x=drag.px+ev.clientX-drag.x; pos.y=drag.py+ev.clientY-drag.y;
-  clampPos(); applyPos();
-});
-function endDrag(){ drag=null; }
-bar.addEventListener('pointerup',endDrag);
-bar.addEventListener('pointercancel',endDrag);
-window.addEventListener('resize',function(){ clampPos(); applyPos(); });
 
-function openWin(){ win.hidden=false; $('launcher').hidden=true; render(true); }
-function closeWin(){
-  win.hidden=true; $('launcher').hidden=false;
-  try{ window.dispatchEvent(new CustomEvent('shibousuitei:close')); }catch(e){}
+function suppliedDossier(c) {
+  const a = c.autopsy;
+  return {
+    title:c.theme || c.place || '追加事例', external:'外表所見の独立した記録はありません。',
+    internal: a?.done === false ? a.note || '解剖未実施。'
+      : (a?.findings || []).join('／') || '資料なし。臓器所見は評価できません。',
+    tests: [a?.tests, ...(a?.pending || []).map(x => '結果待ち：'+x)].filter(Boolean).join('／') || '記録なし。',
+    cause:a?.cod || '死因不詳', manner:a?.manner || '不詳',
+    status:a?.done === false ? undissected : a?.pending?.length ? provisional : '登録資料',
+    reason:'登録された所見と結論です。',
+    limits:'記録のない部位・検査については評価できません。'
+  };
+}
+
+function foundLabel(c) {
+  return c.scheduleLabel || '死亡状態での発見';
+}
+
+function validNumber(value) {
+  return value != null && value !== '' && Number.isFinite(Number(value));
+}
+
+function timingView(c) {
+  const t0 = toUTC(c.lastAlive,c.tz), t1 = foundUTC(c);
+  const found = Number.isFinite(t1), seenAlive = found && Number.isFinite(t0) && t0 < t1;
+  const tz = found ? viewTz(c) : null;
+  const date = ms => fmtTime(ms,tz);
+  const measured = validNumber(c.roomF) && validNumber(c.rectalF);
+  const nearAmbient = measured && Number(c.rectalF)-Number(c.roomF) <= 1.5;
+  const restriction = (dossiers[c.id] && noCooling[c.id]) || c.noTempReason
+    || (c.noTemp ? '体温を使える条件が確認できない。' : '')
+    || (c.env?.length ? '屋外・水中などの環境履歴を確認できない。' : '')
+    || (nearAmbient ? '体温が環境温に近いか下回るため、冷却モデルを適用しない。' : '')
+    || (measured && Number(c.rectalF)>BODY_F ? '測定値がモデルの初期体温を超えている。' : '');
+  const hasModel = found && measured && !restriction;
+  const model = hasModel ? estimate(Object.assign({}, c, {
+    office:null, cornea:null, stomach:null, insect:null, decomp:null, lastAlive:null
+  })) : null;
+  const bound = seenAlive ? fmtRange(t0,t1,tz) : found ? date(t1)+' 以前' : '時刻資料なし';
+  const observed = rows([
+    ['最終生存確認',seenAlive ? date(t0)+(c.aliveLabel ? '（'+c.aliveLabel+'）' : '') : '確認資料なし'],
+    [foundLabel(c),found ? date(t1) : '記録なし'],
+    [c.ambientLabel||'環境温',validNumber(c.roomF) ? fmtTemp(Number(c.roomF)) : '記録なし'],
+    ['直腸温',validNumber(c.rectalF) ? fmtTemp(Number(c.rectalF)) : '記録なし'],
+    ['死斑',LIVOR[c.livor] ? [SITE[c.livorSite],LIVOR[c.livor].t,c.livorNote].filter(Boolean).join('／') : '未記録・評価不能'],
+    ['発見時の体位',POS[c.foundPos]],
+    ['死後硬直',RIGOR[c.rigor]?.t || '未記録・評価不能'],
+    ['角膜',CORNEA[c.cornea]?.t],
+    ['腐敗',DECOMP[c.decomp]?.t],
+    ['昆虫',INSECT[c.insect]?.t],
+    ['胃内容物',STOMACH[c.stomach]?.t]
+  ]);
+  const chart = seenAlive ? '<div class="window-line" aria-hidden="true"><span></span><span></span></div>' : '';
+  const moved = ['partial','fixed'].includes(c.livor) && EXPECT_SITE[c.foundPos] && c.livorSite && EXPECT_SITE[c.foundPos]!==c.livorSite;
+  let modelHtml = '';
+  if (model) {
+    const explanation = model.conflict
+      ? 'モデル上の所見の範囲が重なりません。まとめた推定時刻は表示しません。'
+      : '仮の条件で所見が重なる時間帯は '+fmtRange(model.startUTC,model.endUTC,tz)+' です。';
+    modelHtml = '<details class="sources model"><summary>冷却・死斑・硬直の参考計算</summary><p>'+esc(explanation)
+      +'</p><p>冷却速度を仮定し、死斑・硬直の時間の目安と照合しています。表示した範囲は統計的な信頼区間ではありません。</p>'
+      +rows(model.ind.map(it => [KEYJP[it.key],fmtHours(it.r[0],it.r[1])]))+'</details>';
+  }
+  return '<div class="time-bound"><h3>記録から言える時間の範囲</h3><strong>'+esc(bound)+'</strong>'+chart
+    +'<p>'+ (seenAlive ? '最後に生存が確認された時刻から、死亡状態が確認された時刻まで。'
+       : '生存を裏づける時刻がないため、死亡時刻をこの記録だけで両側から絞れません。')+'</p></div>'
+    +'<h3>死後変化と測定値</h3>'+observed
+    +(moved ? '<p class="callout">死斑の分布と体位が一致しません。死後の体位変化の可能性を検討します。変化した時刻や場所までは分かりません。</p>' : '')
+    +(restriction ? '<p class="callout">'+esc(restriction)+'</p>' : '')
+    +((c.id==='G-01'||c.id==='B-01'||c.id==='W-01') ? '<p class="callout">通報音、物音、退勤記録など、本人の生存を直接裏づけない記録は時間の境界に使いません。</p>' : '')
+    +(c.id==='R-01' ? '<p class="callout">火災報知器の作動時刻は現場の経過を示します。出火前に死亡していたかどうかは、所見と記録を合わせても確定できません。</p>' : '')
+    +'<p class="muted">胃内容・角膜・腐敗・昆虫の所見は記録し、一律の時間換算には使いません。</p>'
+    +modelHtml+sourceLinks(['pmi','cool','pmiReview']);
+}
+
+function assessment(c,d) {
+  const chain = d.chain || (d.status === supported ? [d.cause] : []);
+  const chainHtml = chain.length ? '<section class="chain"><h3>死因の連鎖</h3><ol>'+chain.map((x,i) =>
+    '<li><small>'+ (i===0?'直接死因':'その原因')+'</small>'+esc(x)+'</li>').join('')+'</ol></section>' : '';
+  return '<div class="assessment"><span class="status">'+esc(d.status)+'</span><h3>'+esc(d.cause)+'</h3></div>'
+    +'<h3>結論を支える根拠</h3><p>'+esc(d.reason)+'</p>'+chainHtml
+    +'<h3>鑑別と判断の限界</h3><p>'+esc(d.limits)+'</p>'
+    +rows([['死因の種類（事例内）',d.manner],['その他の関連病態',d.contributor]])
+    +sourceLinks([...(d.sources || groupSources[groupOf(c)[0]] || []),'certificate']);
+}
+
+function stageBody(c,d) {
+  if (stage === 0) return rows([
+    ['場所',c.place],[foundLabel(c),Number.isFinite(foundUTC(c)) ? fmtTime(foundUTC(c),viewTz(c)) : null],
+    ['記録',c.notes?.join('／')],['経過',c.timeline?.join('／')],['事例対象',[c.victim?.sex, c.victim?.age].filter(Boolean).join('・')]
+  ]);
+  if (stage === 1) return '<p>'+esc(d.external)+'</p>';
+  if (stage === 2) return '<p>'+esc(d.internal)+'</p>';
+  if (stage === 3) return '<p>'+esc(d.tests)+'</p>';
+  if (stage === 4) return assessment(c,d);
+  return timingView(c);
+}
+
+function caseView(c) {
+  const d = dossiers[c.id] || suppliedDossier(c);
+  return '<header class="case-head"><button type="button" class="text-button" data-view="list">‹ 所見一覧</button><p class="case-meta">'
+    +esc(c.id)+'</p><h1>'+esc(d.title)+'</h1></header>'
+    +'<nav class="stages" aria-label="所見を読む順序">'+stages.map((label, i) =>
+      '<button type="button" data-stage="'+i+'"'+(i===stage?' aria-current="step"':'')+'>'+esc(label)+'</button>').join('')
+    +'</nav><section class="sheet" aria-labelledby="stageTitle"><h2 id="stageTitle" tabindex="-1">'+esc(stages[stage])+'</h2>'
+    +stageBody(c,d)+(!detailed() ? doctorGuide(beginnerMessage(c,d)) : '')+'</section><div class="step-controls">'
+    +(stage>0 ? '<button type="button" data-stage="'+(stage-1)+'">← '+esc(stages[stage-1])+'</button>' : '<span></span>')
+    +(stage<stages.length-1 ? '<button type="button" class="primary" data-stage="'+(stage+1)+'">'+esc(stages[stage+1])+' →</button>'
+      : '<button type="button" class="primary" data-view="list">所見一覧に戻る</button>')+'</div>';
+}
+
+function render(keepScroll) {
+  const content = $('content');
+  const scrollArea = $('scrollArea');
+  const priorTop = keepScroll ? scrollArea.scrollTop : 0;
+  const c = getCase(S.view);
+  const section = c || S.view === 'learn' ? S.view : 'list';
+  const isTime = Boolean(c && stage === 5);
+  $('caseOptions').hidden = !c;
+  $('timingOptions').hidden = !isTime;
+  $('selUnit').value=S.unit;
+  $('selTz').value=S.tz;
+  $('viewMode').value=S.mode;
+  document.querySelectorAll('.main-nav button').forEach(b => {
+    b.setAttribute('aria-pressed', b.dataset.view === (section === 'learn' ? 'learn' : 'list'));
+  });
+  content.innerHTML = c ? caseView(c) : section === 'learn' ? learnView() : listView();
+  if (section === 'list') listResults();
+  scrollArea.scrollTop = priorTop;
+}
+
+function openView(id) {
+  S.view = id;
+  stage = 0;
+  render(false);
+  const heading = $('content').querySelector('h1');
+  heading.tabIndex=-1;
+  heading.focus({preventScroll:true});
+}
+
+document.addEventListener('click', ev => {
+  const button = ev.target.closest('button[data-view],button[data-case],button[data-stage]');
+  if (!button) return;
+  if (button.hasAttribute('data-stage')) {
+    stage = +button.dataset.stage;
+    render(false);
+    $('stageTitle').focus({preventScroll:true});
+  } else {
+    openView(button.dataset.case || button.dataset.view);
+  }
+});
+$('content').addEventListener('input', ev => {
+  if (ev.target.id !== 'caseQuery') return;
+  query = ev.target.value;
+  listResults();
+});
+$('content').addEventListener('change', ev => {
+  if (ev.target.id !== 'groupFilter') return;
+  filter = ev.target.value;
+  listResults();
+});
+$('viewMode').addEventListener('change', ev => { S.mode=ev.target.value; saveSet(); render(true); });
+$('selUnit').addEventListener('change', ev => { S.unit=ev.target.value; saveSet(); render(true); });
+$('selTz').addEventListener('change', ev => { S.tz=ev.target.value; saveSet(); render(true); });
+
+function openWin() {
+  $('win').hidden=false;
+  $('desk').hidden=true;
+  render(false);
+}
+function closeWin() {
+  $('win').hidden=true;
+  $('desk').hidden=false;
+  $('launcher').focus();
+  window.dispatchEvent(new CustomEvent('shibousuitei:close'));
 }
 $('btnClose').addEventListener('click',closeWin);
 $('launcher').addEventListener('click',openWin);
 
-/* ===== 公開API（別ゲームから呼ぶ） ===== */
+const CAUSES = [...groups, ['other','その他']].map(([id,name]) => ({id,name,short:name,blurb:'',timeNote:'',qa:[]}));
 window.ShibouSuitei = {
-  version:'1.0',
-  // open() 一覧を開く／open('A-01') その事件を開く／open({...事件データ}) 追加して開く
-  open:function(arg){
-    if(arg && typeof arg==='object'){
-      var i, found=false;
-      for(i=0;i<CASES.length;i++) if(CASES[i].id===arg.id){ CASES[i]=arg; found=true; }
-      if(!found) CASES.push(arg);
+  version:'2.0',
+  open(arg) {
+    if (arg && typeof arg === 'object' && arg.id) {
+      const index = CASES.findIndex(c => c.id===arg.id);
+      if (index < 0) CASES.push(arg);
+      else {
+        CASES[index] = arg;
+        delete dossiers[arg.id];
+      }
       S.view=arg.id;
-    }else if(typeof arg==='string' && getCase(arg)){
-      S.view=arg;
-    }
+    } else if (typeof arg === 'string' && getCase(arg)) S.view=arg;
+    stage=0;
     openWin();
   },
   close:closeWin,
-  setMode:function(m){ if(m==='novice'||m==='expert'){ S.mode=m; saveSet(); render(true); } },
-  setTimezone:function(t){ if(t==='local'||TZS[t]){ S.tz=t; saveSet(); render(true); } },
-  addCase:function(c){ if(c && c.id && !getCase(c.id)){ CASES.push(c); render(true); } },
-  estimate:estimate,
-  series:function(){ return SERIES; },
-  cases:function(){ return CASES.slice(); }
+  setMode(m) { if (m==='novice'||m==='expert') { S.mode=m; saveSet(); render(true); } },
+  setTimezone(t) { if (t==='local'||Object.hasOwn(TZS,t)) { S.tz=t; saveSet(); render(true); } },
+  addCase(c) { if (c?.id && !getCase(c.id)) { CASES.push(c); render(true); } },
+  estimate,
+  series() { return SERIES; },
+  causes() { return CAUSES.slice(); },
+  cases() { return CASES.slice(); }
 };
 
-/* ===== 起動 ===== */
 loadSet();
-(function(){
-  var q=new URLSearchParams(location.search);
-  if(q.get('mode')==='expert'||q.get('mode')==='novice') S.mode=q.get('mode');
-  if(q.get('tz')&&(q.get('tz')==='local'||TZS[q.get('tz')])) S.tz=q.get('tz');
-  if(q.get('case')&&getCase(q.get('case'))) S.view=q.get('case');
-})();
+const params = new URLSearchParams(location.search);
+if (['expert','novice'].includes(params.get('mode'))) S.mode=params.get('mode');
+if (params.get('tz')==='local'||Object.hasOwn(TZS,params.get('tz'))) S.tz=params.get('tz');
+if (params.get('case') && getCase(params.get('case'))) S.view=params.get('case');
 openWin();
+
 })();
 </script>
 </body>
