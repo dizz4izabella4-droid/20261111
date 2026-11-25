@@ -1,4 +1,4 @@
-# 写真から胸像 3D（photo-tex）
+# 写真分析成形（photo-tex）
 
 写真の陰影から胴の形を読み取り、素体（青）に肌色のパーツを重ねて GLB に書き出すブラウザアプリ。仕様は [SPEC.md](SPEC.md)、判断の記録は [ASSUMPTIONS.md](ASSUMPTIONS.md)、進み具合の報告は [reports/](reports/)。
 

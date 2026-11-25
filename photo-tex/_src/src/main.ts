@@ -40,7 +40,7 @@ function scheduleRebuild(): void {
 
 // ---------------- panel ----------------
 const panel = document.getElementById('panel') as HTMLElement;
-heading(panel, '写真から胸像 3D — 素体', 'h1');
+heading(panel, '写真分析成形 — 素体', 'h1');
 
 heading(panel, '表示');
 const presetLine = document.createElement('div');
