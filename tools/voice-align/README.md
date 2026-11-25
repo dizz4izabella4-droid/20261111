@@ -29,6 +29,8 @@ done
 .venv-voice/bin/python tools/voice-align/tests/check_sync.py
 ```
 
+アプリ全体（録音・取り込み・依頼・取り込み・話す・書き出し・試験ページ）は `tests/e2e_playwright.py`（先頭のコメントに手順。Playwright が必要）。
+
 ## 中身
 
 - `align.py` 本体（Julius 強制アラインメント → だめなら信号解析）

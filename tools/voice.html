@@ -29,6 +29,8 @@ button:disabled{opacity:.45;cursor:default}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,canvas:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 input[type=text],input[type=number],select,textarea{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-height:36px}
 input[type=number]{width:6.5em}
+select{max-width:100%;min-width:0}
+.card{min-width:0}
 textarea{width:100%;min-height:72px;resize:vertical}
 header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
 header h1{font-size:16px;margin:0 8px 0 0;letter-spacing:.08em}
@@ -67,10 +69,10 @@ button.chip{min-height:0;cursor:pointer}
 .wavewrap{position:relative;border:1px solid var(--line);border-radius:8px;background:var(--panel);overflow:hidden;touch-action:pan-y}
 canvas#wave{display:block;width:100%;height:200px;cursor:crosshair}
 .zoomrow input[type=range]{flex:1;min-width:120px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:6px}
 .cell{border:1px solid var(--line);border-radius:8px;padding:4px;text-align:center;background:var(--panel);cursor:pointer;min-height:58px}
 .cell b{display:block;font-size:20px;line-height:1.2}
-.cell span{font-size:11px;color:var(--sub)}
+.cell span{font-size:11px;color:var(--sub);white-space:nowrap}
 .cell.none{border-style:dashed;color:var(--bad)}
 .cell.warn{border-color:var(--warn)}
 .cell.sel{outline:2px solid var(--accent)}
@@ -1284,7 +1286,11 @@ const Pack = (() => {
       const st = lineStatus(line);
       if (st.level === 'bad') { report.skipped.push({ id: line.id, why: st.status + (st.unresolved.length ? '（' + st.unresolved.join(' ') + '）' : '') + (st.missing.length ? '（' + [...new Set(st.missing)].join(' ') + '）' : '') }); continue; }
       const r = Synth.speak(line.text);
-      const y = DSP.resample(r.x, r.sr, rate);
+      // a line starts and ends with sound: drop silence that 、。 put at either end
+      let a = 0, b = r.x.length;
+      while (a < b && r.x[a] === 0) a++;
+      while (b > a && r.x[b - 1] === 0) b--;
+      const y = DSP.resample(r.x.subarray(a, b), r.sr, rate);
       if (pieces.length) { pieces.push(new Float32Array(gap)); pos += gap; }
       lines[line.id] = { start: +(pos / rate).toFixed(3), dur: +(y.length / rate).toFixed(3), gain: 1.0, text: line.text, hash: fnv(line.text) };
       pieces.push(y); pos += y.length;
