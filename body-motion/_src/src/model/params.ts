@@ -45,12 +45,12 @@ export const GROUPS: Group[] = [
       {
         key: 'head',
         label: '頭（仮の箱）',
-        params: [P('headWidth', '頭の幅', 'cm', 0.15, 0.11, 0.21), P('headDepth', '頭の奥行き', 'cm', 0.19, 0.14, 0.25), P('headHeight', '頭の高さ', 'cm', 0.22, 0.17, 0.28)],
+        params: [P('headWidth', '頭の幅', 'cm', 0.135, 0.11, 0.21), P('headDepth', '頭の奥行き', 'cm', 0.17, 0.14, 0.25), P('headHeight', '頭の高さ', 'cm', 0.195, 0.17, 0.28)],
       },
       {
         key: 'neck',
         label: '首',
-        params: [P('neckLength', '首の長さ', 'cm', 0.08, 0.03, 0.15), P('neckBaseWidth', '首の付け根の幅', 'cm', 0.09, 0.07, 0.15)],
+        params: [P('neckLength', '首の長さ', 'cm', 0.07, 0.03, 0.15), P('neckBaseWidth', '首の付け根の幅', 'cm', 0.09, 0.07, 0.15)],
       },
     ],
   },
@@ -80,7 +80,7 @@ export const GROUPS: Group[] = [
         params: [
           P('hipCirc', 'ヒップ周径', 'cm', 0.88, 0.72, 1.3),
           P('hipHeight', 'ヒップの高さ（いちばん太い所）', 'cm', 0.09, 0.03, 0.18, '股から'),
-          P('hipJointSpacing', '股関節の間隔', 'cm', 0.17, 0.12, 0.26),
+          P('hipJointSpacing', '股関節の間隔', 'cm', 0.16, 0.12, 0.26),
         ],
       },
     ],
@@ -129,18 +129,18 @@ export const GROUPS: Group[] = [
     key: 'arm',
     label: '腕',
     sections: [
-      { key: 'upper', label: '上腕', params: [P('upperArmLength', '上腕の長さ（肩〜肘）', 'cm', 0.28, 0.2, 0.38), P('upperArmCirc', '上腕周径', 'cm', 0.25, 0.17, 0.4), P('elbowCirc', '肘周径', 'cm', 0.21, 0.15, 0.33)] },
-      { key: 'fore', label: '前腕', params: [P('forearmLength', '前腕の長さ（肘〜手首）', 'cm', 0.23, 0.17, 0.32), P('forearmCirc', '前腕周径', 'cm', 0.21, 0.15, 0.33), P('wristCirc', '手首周径', 'cm', 0.15, 0.11, 0.21)] },
-      { key: 'hand', label: '手（仮の箱）', params: [P('handLength', '手の長さ', 'cm', 0.17, 0.13, 0.22), P('handWidth', '手の幅', 'cm', 0.075, 0.055, 0.1), P('handThickness', '手の厚み', 'cm', 0.03, 0.02, 0.05)] },
+      { key: 'upper', label: '上腕', params: [P('upperArmLength', '上腕の長さ（肩〜肘）', 'cm', 0.255, 0.2, 0.38), P('upperArmCirc', '上腕周径', 'cm', 0.235, 0.17, 0.4), P('elbowCirc', '肘周径', 'cm', 0.2, 0.15, 0.33)] },
+      { key: 'fore', label: '前腕', params: [P('forearmLength', '前腕の長さ（肘〜手首）', 'cm', 0.21, 0.17, 0.32), P('forearmCirc', '前腕周径', 'cm', 0.2, 0.15, 0.33), P('wristCirc', '手首周径', 'cm', 0.142, 0.11, 0.21)] },
+      { key: 'hand', label: '手（仮の箱）', params: [P('handLength', '手の長さ', 'cm', 0.16, 0.13, 0.22), P('handWidth', '手の幅', 'cm', 0.07, 0.055, 0.1), P('handThickness', '手の厚み', 'cm', 0.027, 0.02, 0.05)] },
     ],
   },
   {
     key: 'leg',
     label: '脚',
     sections: [
-      { key: 'thigh', label: '太もも', params: [P('thighLength', '太ももの長さ（股関節〜ひざ）', 'cm', 0.38, 0.3, 0.52), P('thighCirc', '太もも周径（付け根）', 'cm', 0.52, 0.38, 0.75), P('kneeCirc', 'ひざ周径', 'cm', 0.34, 0.27, 0.46)] },
-      { key: 'shin', label: 'すね', params: [P('shinLength', 'すねの長さ（ひざ〜足首）', 'cm', 0.34, 0.27, 0.46), P('calfCirc', 'ふくらはぎ周径', 'cm', 0.33, 0.25, 0.48), P('ankleCirc', '足首周径', 'cm', 0.2, 0.16, 0.29)] },
-      { key: 'foot', label: '足（仮の箱）', params: [P('footLength', '足の長さ', 'cm', 0.23, 0.19, 0.3), P('footWidth', '足の幅', 'cm', 0.09, 0.07, 0.12), P('ankleHeight', '足首の高さ', 'cm', 0.07, 0.05, 0.11)] },
+      { key: 'thigh', label: '太もも', params: [P('thighLength', '太ももの長さ（股関節〜ひざ）', 'cm', 0.355, 0.3, 0.52), P('thighCirc', '太もも周径（付け根）', 'cm', 0.5, 0.38, 0.75), P('kneeCirc', 'ひざ周径', 'cm', 0.32, 0.27, 0.46)] },
+      { key: 'shin', label: 'すね', params: [P('shinLength', 'すねの長さ（ひざ〜足首）', 'cm', 0.32, 0.27, 0.46), P('calfCirc', 'ふくらはぎ周径', 'cm', 0.31, 0.25, 0.48), P('ankleCirc', '足首周径', 'cm', 0.195, 0.16, 0.29)] },
+      { key: 'foot', label: '足（仮の箱）', params: [P('footLength', '足の長さ', 'cm', 0.22, 0.19, 0.3), P('footWidth', '足の幅', 'cm', 0.085, 0.07, 0.12), P('ankleHeight', '足首の高さ', 'cm', 0.065, 0.05, 0.11)] },
     ],
   },
 ];
@@ -178,7 +178,8 @@ export type BodyPresetName = 'female' | 'male';
 /**
  * 女性 = the torso and breasts the user tuned in photo-tex (2026-11-26), with the heights moved
  * from photo-tex's bottom cut to the crotch (+14 cm), and rough limb / head proportions of an adult
- * woman about 160 cm tall. 男性 = rough placeholder values.
+ * woman; the limbs, neck and head were fitted to the size of the tuned torso (2026-11-26, user
+ * feedback: the tuned parts looked too small for the limbs). 男性 = a clearly rugged build.
  */
 export const BODY_PRESETS: Record<BodyPresetName, { label: string; params: BodyParams }> = {
   female: { label: '女性', params: defaultParams() },
@@ -186,15 +187,21 @@ export const BODY_PRESETS: Record<BodyPresetName, { label: string; params: BodyP
     label: '男性',
     params: {
       ...defaultParams(),
-      headWidth: 0.16, headDepth: 0.2, headHeight: 0.23, neckLength: 0.09, neckBaseWidth: 0.12,
-      torsoHeight: 0.64, shoulderWidth: 0.38, chestDepth: 0.22, underbustCirc: 0.86, underbustHeight: 0.43,
-      waistCirc: 0.78, waistHeight: 0.29, navelHeight: 0.2, hipCirc: 0.92, hipHeight: 0.08, hipJointSpacing: 0.18,
-      size: 30, projection: 0.004, baseWidth: 0.17, baseHeight: 0.12, upperFullness: 44, lowerFullness: 56,
-      centerHeight: 0.52, spacing: 0.2, outwardAngle: 15, ptosis: 9, nippleDiameter: 0.006, nippleProjection: 0.0015, areolaDiameter: 0.025,
-      upperArmLength: 0.31, upperArmCirc: 0.29, elbowCirc: 0.25, forearmLength: 0.26, forearmCirc: 0.26, wristCirc: 0.17,
-      handLength: 0.19, handWidth: 0.085, handThickness: 0.032,
-      thighLength: 0.43, thighCirc: 0.55, kneeCirc: 0.38, shinLength: 0.39, calfCirc: 0.37, ankleCirc: 0.23,
-      footLength: 0.26, footWidth: 0.1, ankleHeight: 0.08,
+      // 頭・首：太い首、大きめの頭
+      headWidth: 0.175, headDepth: 0.21, headHeight: 0.245, neckLength: 0.085, neckBaseWidth: 0.145,
+      // 胴：広い肩、厚い胸郭、太い胴回り（くびれ少なめ）
+      torsoHeight: 0.67, shoulderWidth: 0.45, chestDepth: 0.27, underbustCirc: 1.02, underbustHeight: 0.45,
+      waistCirc: 0.9, waistHeight: 0.3, navelHeight: 0.21, hipCirc: 1.0, hipHeight: 0.08, hipJointSpacing: 0.21,
+      // 胸：平らで広い胸筋
+      size: 45, projection: 0.014, baseWidth: 0.21, baseHeight: 0.13, upperFullness: 70, lowerFullness: 30,
+      centerHeight: 0.53, spacing: 0.22, outwardAngle: 12, ptosis: 0,
+      nippleDiameter: 0.007, nippleProjection: 0.0015, areolaDiameter: 0.026, areolaProjection: 0,
+      // 腕：太く長い
+      upperArmLength: 0.33, upperArmCirc: 0.37, elbowCirc: 0.29, forearmLength: 0.275, forearmCirc: 0.31, wristCirc: 0.195,
+      handLength: 0.205, handWidth: 0.098, handThickness: 0.042,
+      // 脚：太く長い
+      thighLength: 0.45, thighCirc: 0.66, kneeCirc: 0.42, shinLength: 0.41, calfCirc: 0.43, ankleCirc: 0.26,
+      footLength: 0.285, footWidth: 0.112, ankleHeight: 0.09,
     },
   },
 };

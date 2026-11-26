@@ -6,8 +6,8 @@ import type { Pose } from './motion/retarget';
 export type ViewName = 'front' | 'threeQuarterLeft' | 'left' | 'back';
 
 /** fixed views for screenshots: same target and distance for every view and project */
-export const VIEW_TARGET = new THREE.Vector3(0, 0.85, 0);
-export const VIEW_DISTANCE = 3.6;
+export const VIEW_TARGET = new THREE.Vector3(0, 0.95, 0);
+export const VIEW_DISTANCE = 4.1;
 const VIEW_DIRS: Record<ViewName, [number, number, number]> = {
   front: [0, 0, 1],
   threeQuarterLeft: [Math.SQRT1_2, 0, Math.SQRT1_2],
