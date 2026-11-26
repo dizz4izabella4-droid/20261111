@@ -86,7 +86,16 @@ export class AnalysisPanel {
     fileLine.append(fileBtn, file);
     const viewSel = document.createElement('select');
     viewSel.setAttribute('aria-label', '写真の向き');
-    for (const [k, v] of Object.entries(VIEW_LABELS)) viewSel.add(new Option(v, k));
+    // directions are always seen from the person in the photo (their own left/right)
+    const VIEW_OPTIONS: Record<ViewId, string> = {
+      front: '正面（本人の正面から）',
+      back: '背面（本人の背中側から）',
+      left: '左側面（本人の左側から／写真では左向き）',
+      right: '右側面（本人の右側から／写真では右向き）',
+      obliqueLeft: '斜め・左前（本人の左前から）',
+      obliqueRight: '斜め・右前（本人の右前から）',
+    };
+    for (const [k, v] of Object.entries(VIEW_OPTIONS)) viewSel.add(new Option(v, k));
     viewSel.addEventListener('change', () => {
       if (!this.photo) return;
       this.photo.view = viewSel.value as ViewId;
@@ -95,9 +104,13 @@ export class AnalysisPanel {
       this.renderList();
     });
     const vl = document.createElement('label');
-    vl.textContent = '向き';
+    vl.textContent = '写真の向き（本人から見て）';
     fileLine.append(vl, viewSel);
     this.el.viewSel = viewSel;
+    const lrNote = document.createElement('p');
+    lrNote.className = 'note';
+    lrNote.textContent = '向きも目印の「右・左」も、写っている本人から見た右・左です。正面の写真では、本人の右は写真の左側に写ります。鏡に映した自撮りは左右が逆になります。';
+    p.appendChild(lrNote);
     const photoName = document.createElement('div');
     photoName.className = 'note';
     p.appendChild(photoName);
@@ -147,18 +160,23 @@ export class AnalysisPanel {
     const sum = document.createElement('summary');
     sum.textContent = 'カメラの手動調整';
     det.appendChild(sum);
+    // wide ranges (user request 2026-11-26); the position range follows the photo size
     const ov: [keyof PhotoState['override'], string, number, number, number][] = [
-      ['yaw', '左右の回転（°）', -30, 30, 0.5],
-      ['pitch', '上下の回転（°）', -30, 30, 0.5],
-      ['roll', '傾き（°）', -30, 30, 0.5],
-      ['scale', '大きさ（%）', -30, 30, 0.5],
-      ['dx', '左右の位置（px）', -300, 300, 1],
-      ['dy', '上下の位置（px）', -300, 300, 1],
+      ['yaw', '左右の回転（°）', -180, 180, 0.5],
+      ['pitch', '上下の回転（°）', -90, 90, 0.5],
+      ['roll', '傾き（°）', -180, 180, 0.5],
+      ['scale', '大きさ（%）', -80, 300, 0.5],
+      ['dx', '左右の位置（px）', -3000, 3000, 1],
+      ['dy', '上下の位置（px）', -3000, 3000, 1],
     ];
     this.el.ovInputs = document.createElement('div');
+    const ovNote = document.createElement('p');
+    ovNote.className = 'note';
+    ovNote.textContent = '目印で合わせたカメラに上乗せする量です。スライダーで大きく、数字で細かく動かせます。';
+    this.el.ovInputs.appendChild(ovNote);
     for (const [key, label, min, max, step] of ov) {
       const row = document.createElement('div');
-      row.className = 'line';
+      row.className = 'line ovrow';
       const l = document.createElement('label');
       l.textContent = label;
       l.style.minWidth = '9em';
@@ -169,16 +187,27 @@ export class AnalysisPanel {
       r.step = String(step);
       r.value = '0';
       r.dataset.key = key;
-      const v = document.createElement('span');
-      v.textContent = '0';
-      r.addEventListener('input', () => {
-        if (!this.photo) return;
-        this.photo.override[key] = Number(r.value);
-        v.textContent = r.value;
+      const num = document.createElement('input');
+      num.type = 'number';
+      num.min = r.min;
+      num.max = r.max;
+      num.step = String(step);
+      num.value = '0';
+      num.style.width = '5.5em';
+      num.dataset.key = key;
+      num.setAttribute('aria-label', label);
+      const apply = (v: number) => {
+        if (!this.photo || !Number.isFinite(v)) return;
+        const c = Math.min(Number(r.max), Math.max(Number(r.min), v));
+        this.photo.override[key] = c;
+        r.value = String(c);
+        num.value = String(c);
         this.updateWire();
         this.markStale();
-      });
-      row.append(l, r, v);
+      };
+      r.addEventListener('input', () => apply(Number(r.value)));
+      num.addEventListener('change', () => apply(Number(num.value)));
+      row.append(l, r, num);
       this.el.ovInputs.appendChild(row);
     }
     det.appendChild(this.el.ovInputs);
@@ -325,6 +354,14 @@ export class AnalysisPanel {
     this.el.photoName.textContent = `${name}（${w}×${h}）`;
     this.undo = [];
     this.redo = [];
+    this.el.ovInputs.querySelectorAll<HTMLInputElement>('input').forEach((i) => {
+      i.value = '0';
+      if (i.dataset.key === 'dx' || i.dataset.key === 'dy') {
+        const lim = Math.max(w, h);
+        i.min = String(-lim);
+        i.max = String(lim);
+      }
+    });
     this.selected = this.nextUnplaced();
     this.editor.setPhoto({ bitmap, width: w, height: h });
     this.refit();
@@ -465,10 +502,7 @@ export class AnalysisPanel {
   private resetOverride(): void {
     if (!this.photo) return;
     this.photo.override = { yaw: 0, pitch: 0, roll: 0, scale: 0, dx: 0, dy: 0 };
-    this.el.ovInputs.querySelectorAll('input').forEach((i) => {
-      (i as HTMLInputElement).value = '0';
-      (i.nextElementSibling as HTMLElement).textContent = '0';
-    });
+    this.el.ovInputs.querySelectorAll('input').forEach((i) => ((i as HTMLInputElement).value = '0'));
     this.updateWire();
     this.markStale();
   }
