@@ -26,6 +26,8 @@ export interface CaseDef {
   spots: boolean;
   perturbLandmarks: boolean;
   zeroDisplacement: boolean;
+  /** partial photo: camera zoomed onto the chest (only the breasts and their surroundings are visible) */
+  partial?: boolean;
 }
 
 export const CASES: CaseDef[] = [
@@ -34,6 +36,8 @@ export const CASES: CaseDef[] = [
   { name: 'C', seed: 33, noise: true, spots: true, perturbLandmarks: false, zeroDisplacement: false },
   { name: 'D', seed: 44, noise: true, spots: false, perturbLandmarks: true, zeroDisplacement: false },
   { name: 'E', seed: 55, noise: true, spots: false, perturbLandmarks: false, zeroDisplacement: true },
+  // not in SPEC 13.1: partial photo (chest only), added with the finer landmarks on 2026-11-26
+  { name: 'F', seed: 66, noise: true, spots: false, perturbLandmarks: false, zeroDisplacement: false, partial: true },
 ];
 
 interface Bump { s: number; y: number; amp: number; sigma: number }
@@ -68,7 +72,7 @@ export function generate(c: CaseDef, size = 1024): Synthetic {
       const sign = rnd() < 0.5 ? -1 : 1;
       bumps.push({
         s: -0.1 + 0.2 * rnd(),
-        y: 0.08 + 0.28 * rnd(),
+        y: c.partial ? params.breast.centerHeight - 0.08 + 0.14 * rnd() : 0.08 + 0.28 * rnd(),
         amp: sign * (0.002 + 0.008 * rnd()),
         sigma: 0.015 + 0.025 * rnd(),
       });
@@ -139,8 +143,9 @@ export function generate(c: CaseDef, size = 1024): Synthetic {
     }
 
   // ---- camera (unknown to the pipeline) ----
-  const s = (0.8 * size) / Ytop;
-  const camera: Camera = { yaw: 0.06, pitch: -0.04, roll: 0.03, s, tx: size / 2 + 0.01 * size, ty: size / 2 + (Ytop / 2) * s };
+  const yCenter = c.partial ? params.breast.centerHeight : Ytop / 2;
+  const s = c.partial ? (0.95 * size) / 0.22 : (0.8 * size) / Ytop; // partial: about 22 cm across the photo
+  const camera: Camera = { yaw: 0.06, pitch: -0.04, roll: 0.03, s, tx: size / 2 + 0.01 * size, ty: size / 2 + yCenter * s };
   const SS = 2; // supersampling
   const camHi: Camera = { ...camera, s: camera.s * SS, tx: camera.tx * SS, ty: camera.ty * SS };
   const W = size * SS;
@@ -200,6 +205,8 @@ export function generate(c: CaseDef, size = 1024): Synthetic {
   for (const d of FRONT_LANDMARKS) {
     const X = landmark3D(model, d.id);
     const [u, v] = P.project(X[0], X[1], X[2]);
+    // a person can only place the landmarks that are inside the photo
+    if (u < 10 || v < 10 || u > size - 10 || v > size - 10) continue;
     landmarks[d.id] = c.perturbLandmarks ? [u + (rnd() * 4 - 2), v + (rnd() * 4 - 2)] : [u, v];
   }
   return { image: { width: size, height: size, data: out }, landmarks, params, camera, bumps, spots, dTrue };

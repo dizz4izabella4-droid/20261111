@@ -392,7 +392,20 @@ export class AnalysisPanel {
     }
     const res = this.fit?.residuals ?? {};
     const longSide = Math.max(this.photo.width, this.photo.height);
+    const hint = document.createElement('div');
+    hint.className = 'note';
+    const need = Math.max(4, minLandmarks(this.photo.view));
+    hint.textContent = `写っている所だけ置けば大丈夫です（${need}点以上。多いほど正確になります）。胸だけの写真なら「胸のまわり」の目印を使ってください。`;
+    list.appendChild(hint);
+    let lastGroup = '';
     for (const d of landmarkDefs(this.photo.view)) {
+      if (d.group !== lastGroup) {
+        lastGroup = d.group;
+        const gh = document.createElement('div');
+        gh.className = 'lmgroup';
+        gh.textContent = d.group === 'breast' ? '胸のまわり' : '胴';
+        list.appendChild(gh);
+      }
       const row = document.createElement('label');
       row.className = 'lm' + (d.id === this.selected ? ' sel' : '');
       const r = document.createElement('input');
@@ -407,7 +420,7 @@ export class AnalysisPanel {
       const placed = !!this.photo.landmarks[d.id];
       const e = res[d.id];
       const t = document.createElement('span');
-      t.textContent = `${placed ? '✓' : '・'} ${d.label}${d.optional ? '（任意）' : ''}`;
+      t.textContent = `${placed ? '✓' : '・'} ${d.label}`;
       const rr = document.createElement('span');
       rr.className = 'res';
       if (e !== undefined) {

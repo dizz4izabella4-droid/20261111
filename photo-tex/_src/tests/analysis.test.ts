@@ -31,6 +31,7 @@ const THRESHOLDS: Record<string, { corr?: number; rmseRel?: number; rmsMaxMm?: n
   C: { corr: 0.8 },
   D: { corr: 0.85, rmseRel: 0.35 },
   E: { rmsMaxMm: 1.0 },
+  F: {}, // partial photo: no SPEC threshold (informational), only "no inverted relief"
 };
 
 describe('13.1 synthetic single-photo analysis (Standard settings)', () => {
