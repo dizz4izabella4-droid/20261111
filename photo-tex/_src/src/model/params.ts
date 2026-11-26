@@ -21,28 +21,28 @@ export const UNIT_LABEL: Record<Unit, string> = { cm: 'cm', mm: 'mm', deg: '°',
 export const UNIT_STEP: Record<Unit, number> = { cm: 0.1, mm: 1, deg: 1, index: 1 };
 
 export const BODY_DEFS: ParamDef[] = [
-  { key: 'torsoHeight', label: '胴の高さ（首の付け根〜下端）', unit: 'cm', def: 0.45, min: 0.4, max: 0.6 },
-  { key: 'shoulderWidth', label: '肩幅（肩関節中心間）', unit: 'cm', def: 0.32, min: 0.28, max: 0.42 },
-  { key: 'chestDepth', label: '胸郭の厚み', unit: 'cm', def: 0.19, min: 0.15, max: 0.25 },
-  { key: 'underbustCirc', label: 'アンダーバスト周径', unit: 'cm', def: 0.67, min: 0.6, max: 0.9 },
-  { key: 'underbustHeight', label: 'アンダーバストの高さ', unit: 'cm', def: 0.25, min: 0.24, max: 0.36, note: '下端から' },
+  { key: 'torsoHeight', label: '胴の高さ（首の付け根〜下端）', unit: 'cm', def: 0.458, min: 0.4, max: 0.6 },
+  { key: 'shoulderWidth', label: '肩幅（肩関節中心間）', unit: 'cm', def: 0.316, min: 0.28, max: 0.42 },
+  { key: 'chestDepth', label: '胸郭の厚み', unit: 'cm', def: 0.202, min: 0.15, max: 0.25 },
+  { key: 'underbustCirc', label: 'アンダーバスト周径', unit: 'cm', def: 0.663, min: 0.6, max: 0.9 },
+  { key: 'underbustHeight', label: 'アンダーバストの高さ', unit: 'cm', def: 0.24, min: 0.18, max: 0.36, note: '下端から' },
   { key: 'waistCirc', label: 'ウエスト周径', unit: 'cm', def: 0.57, min: 0.52, max: 0.9 },
-  { key: 'waistHeight', label: 'ウエストの高さ', unit: 'cm', def: 0.14, min: 0.08, max: 0.2, note: '下端から' },
-  { key: 'navelHeight', label: 'へその高さ', unit: 'cm', def: 0.05, min: 0.02, max: 0.1, note: '下端から' },
-  { key: 'neckBaseWidth', label: '首の付け根の幅', unit: 'cm', def: 0.11, min: 0.09, max: 0.14 },
+  { key: 'waistHeight', label: 'ウエストの高さ', unit: 'cm', def: 0.187, min: 0.08, max: 0.24, note: '下端から' },
+  { key: 'navelHeight', label: 'へその高さ', unit: 'cm', def: 0.091, min: 0.02, max: 0.14, note: '下端から' },
+  { key: 'neckBaseWidth', label: '首の付け根の幅', unit: 'cm', def: 0.09, min: 0.07, max: 0.14 },
 ];
 
 export const BREAST_DEFS: ParamDef[] = [
-  { key: 'size', label: '大きさ（ボリューム）', unit: 'index', def: 50, min: 0, max: 100 },
-  { key: 'projection', label: '前方への張り出し', unit: 'mm', def: 0.026, min: 0, max: 0.12 },
-  { key: 'baseWidth', label: '付け根の幅', unit: 'mm', def: 0.17, min: 0.07, max: 0.18 },
-  { key: 'baseHeight', label: '付け根の高さ', unit: 'mm', def: 0.16, min: 0.06, max: 0.17 },
-  { key: 'centerHeight', label: '高さ位置（中心）', unit: 'cm', def: 0.345, min: 0.3, max: 0.44, note: '下端から' },
-  { key: 'spacing', label: '左右の間隔（中心間）', unit: 'mm', def: 0.13, min: 0.12, max: 0.26 },
-  { key: 'outwardAngle', label: '外向きの角度', unit: 'deg', def: 10, min: 0, max: 30 },
-  { key: 'ptosis', label: '下垂', unit: 'index', def: 0, min: 0, max: 100 },
-  { key: 'upperFullness', label: '上側の丸み', unit: 'index', def: 15, min: 0, max: 100 },
-  { key: 'lowerFullness', label: '下側の丸み', unit: 'index', def: 70, min: 0, max: 100 },
+  { key: 'size', label: '大きさ（ボリューム）', unit: 'index', def: 26, min: 0, max: 100 },
+  { key: 'projection', label: '前方への張り出し', unit: 'mm', def: 0.033, min: 0, max: 0.12 },
+  { key: 'baseWidth', label: '付け根の幅', unit: 'mm', def: 0.172, min: 0.07, max: 0.22 },
+  { key: 'baseHeight', label: '付け根の高さ', unit: 'mm', def: 0.16, min: 0.06, max: 0.21 },
+  { key: 'centerHeight', label: '高さ位置（中心）', unit: 'cm', def: 0.347, min: 0.3, max: 0.44, note: '下端から' },
+  { key: 'spacing', label: '左右の間隔（中心間）', unit: 'mm', def: 0.121, min: 0.1, max: 0.26 },
+  { key: 'outwardAngle', label: '外向きの角度', unit: 'deg', def: 17, min: 0, max: 30 },
+  { key: 'ptosis', label: '下垂', unit: 'index', def: 60, min: 0, max: 100 },
+  { key: 'upperFullness', label: '上側の丸み', unit: 'index', def: 19, min: 0, max: 100 },
+  { key: 'lowerFullness', label: '下側の丸み', unit: 'index', def: 81, min: 0, max: 100 },
   { key: 'nippleOffsetX', label: '乳頭の位置（左右）', unit: 'mm', def: 0, min: -0.02, max: 0.02, note: '＋で外側' },
   { key: 'nippleOffsetY', label: '乳頭の位置（上下）', unit: 'mm', def: 0, min: -0.025, max: 0.025, note: '＋で上' },
   { key: 'nippleDiameter', label: '乳頭の直径', unit: 'mm', def: 0.01, min: 0.004, max: 0.02 },
@@ -106,7 +106,7 @@ export function clampToRange(defs: ParamDef[], obj: Record<string, number>): voi
 
 // ---------------- body-type presets (女性 / 男性) ----------------
 // Not part of SPEC (one female template). Added on the user's request 2026-11-26.
-// 女性 = the values the user tuned on 2026-11-26 (also the parameter defaults above).
+// 女性 = the values the user tuned on 2026-11-26 (twice; also the parameter defaults above).
 // 男性 = the flat version (breasts removed), see below.
 
 export type BodyPresetName = 'female' | 'male';
@@ -116,12 +116,12 @@ export const BODY_PRESETS: Record<BodyPresetName, { label: string; params: Model
     label: '女性',
     params: {
       body: {
-        torsoHeight: 0.45, shoulderWidth: 0.32, chestDepth: 0.19, underbustCirc: 0.67, underbustHeight: 0.25,
-        waistCirc: 0.57, waistHeight: 0.14, navelHeight: 0.05, neckBaseWidth: 0.11,
+        torsoHeight: 0.458, shoulderWidth: 0.316, chestDepth: 0.202, underbustCirc: 0.663, underbustHeight: 0.24,
+        waistCirc: 0.57, waistHeight: 0.187, navelHeight: 0.091, neckBaseWidth: 0.09,
       },
       breast: {
-        size: 50, projection: 0.026, baseWidth: 0.17, baseHeight: 0.16, centerHeight: 0.345, spacing: 0.13,
-        outwardAngle: 10, ptosis: 0, upperFullness: 15, lowerFullness: 70, nippleOffsetX: 0, nippleOffsetY: 0,
+        size: 26, projection: 0.033, baseWidth: 0.172, baseHeight: 0.16, centerHeight: 0.347, spacing: 0.121,
+        outwardAngle: 17, ptosis: 60, upperFullness: 19, lowerFullness: 81, nippleOffsetX: 0, nippleOffsetY: 0,
         nippleDiameter: 0.01, nippleProjection: 0, areolaDiameter: 0.035, areolaProjection: 0,
       },
     },
@@ -137,7 +137,7 @@ export const BODY_PRESETS: Record<BodyPresetName, { label: string; params: Model
       },
       breast: {
         size: 50, projection: 0, baseWidth: 0.12, baseHeight: 0.11, centerHeight: 0.37, spacing: 0.15,
-        outwardAngle: 10, ptosis: 15, upperFullness: 40, lowerFullness: 60, nippleOffsetX: 0, nippleOffsetY: 0,
+        outwardAngle: 10, ptosis: 9, upperFullness: 44, lowerFullness: 56, nippleOffsetX: 0, nippleOffsetY: 0,
         nippleDiameter: 0.01, nippleProjection: 0, areolaDiameter: 0.035, areolaProjection: 0,
       },
     },

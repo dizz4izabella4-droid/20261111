@@ -174,15 +174,16 @@ describe('5.3-2 breast monotonicity', () => {
 
 describe('5.3-4 no self-intersection (Standard)', () => {
   const corners: [string, ModelParams][] = [];
-  const ext = { size: [0, 100], projection: [0, 0.12], ptosis: [0, 100], baseWidth: [0.07, 0.18] };
+  const rng = (k: string) => { const d = BREAST_DEFS.find((x) => x.key === k)!; return [d.min, d.max]; };
+  const ext = { size: rng('size'), projection: rng('projection'), ptosis: rng('ptosis'), baseWidth: rng('baseWidth') };
   for (let m = 0; m < 16; m++) {
     const o: Record<string, number> = {};
     Object.entries(ext).forEach(([k, v], i) => (o[k] = v[(m >> i) & 1]));
     corners.push([`corner${m.toString(2).padStart(4, '0')}`, withBreast(o)]);
   }
   // extra extremes of the other breast parameters on top of the largest breast
-  const big = { size: 100, projection: 0.12, ptosis: 100, baseWidth: 0.18, baseHeight: 0.17 };
-  corners.push(['big+out30+narrow', withBreast({ ...big, outwardAngle: 30, spacing: 0.12 })]);
+  const big = { size: 100, projection: 0.12, ptosis: 100, baseWidth: rng('baseWidth')[1], baseHeight: rng('baseHeight')[1] };
+  corners.push(['big+out30+narrow', withBreast({ ...big, outwardAngle: 30, spacing: rng('spacing')[0] })]);
   corners.push(['big+out0+wide', withBreast({ ...big, outwardAngle: 0, spacing: 0.26 })]);
   corners.push(['big+high', withBreast({ ...big, centerHeight: 0.44 })]);
   corners.push(['big+low', withBreast({ ...big, centerHeight: 0.3, upperFullness: 100, lowerFullness: 100 })]);

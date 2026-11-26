@@ -51,12 +51,21 @@ export function radialCenter(torso: Torso, br: BreastParams): [number, number, n
 }
 export const RADIAL_DEPTH = 0.32;
 
-export function fullnessShape(fullness01: number, size01: number): { k: number; m: number } {
-  const k0 = 2 + 3 * fullness01; // 2 (bell) .. 5 (round, full)
-  const m = 2.6 - 1.0 * fullness01; // 2.6 .. 1.6, always > 1 => smooth at the base edge
-  const k = 1.5 + (k0 - 1.5) * (0.4 + 1.2 * size01); // size = volume at fixed projection
+/**
+ * Fullness index (0..100) → profile shape. The index spans a wider effect than the first version
+ * (2026-11-26, user asked for more slider travel): f = −0.3 .. 1.3, where the old 0 and 100 are now
+ * about 19 and 81.
+ */
+export function fullnessShape(index: number, size01: number): { k: number; m: number } {
+  const f = -0.3 + 1.6 * (index / 100);
+  const k0 = 2 + 3 * f; // 1.1 (pointed bell) .. 5.9 (very round)
+  const m = Math.max(1.15, 2.6 - 1.0 * f); // 2.9 .. 1.3, always > 1 => smooth at the base edge
+  const k = Math.max(1.2, 1.5 + (k0 - 1.5) * (0.4 + 1.2 * size01)); // size = volume at fixed projection
   return { k, m };
 }
+
+/** maximum downward shift of the apex at ptosis 100, as a fraction of the half base height (was 0.3) */
+export const PTOSIS_MAX_SHIFT = 0.5;
 
 export function makeBreastFrames(torso: Torso, br: BreastParams): BreastFrame[] {
   const out: BreastFrame[] = [];
@@ -65,8 +74,8 @@ export function makeBreastFrames(torso: Torso, br: BreastParams): BreastFrame[] 
   const tabC = new ArcTable(secC);
   const W2 = br.baseWidth / 2;
   const H2 = br.baseHeight / 2;
-  const up = fullnessShape(br.upperFullness / 100, br.size / 100);
-  const low = fullnessShape(br.lowerFullness / 100, br.size / 100);
+  const up = fullnessShape(br.upperFullness, br.size / 100);
+  const low = fullnessShape(br.lowerFullness, br.size / 100);
   const alpha = (br.outwardAngle * Math.PI) / 180;
   for (const sigma of [-1, 1] as const) {
     // base center B: front surface point with |x| = spacing/2 at height yc
@@ -88,7 +97,7 @@ export function makeBreastFrames(torso: Torso, br: BreastParams): BreastFrame[] 
     const gammaB = Math.atan2(sigma * (pB[0] - O[0]), pB[2] - O[2]);
     const P = br.projection;
     const cS = clamp(P * Math.tan(alpha - gammaB), -0.35 * W2, 0.35 * W2);
-    const cT = -(br.ptosis / 100) * 0.3 * H2;
+    const cT = -(br.ptosis / 100) * PTOSIS_MAX_SHIFT * H2;
     const nS = cS + br.nippleOffsetX;
     const nT = cT + br.nippleOffsetY;
     const yN = yc + nT;
