@@ -9,14 +9,38 @@
 :root{--bg:#14161a;--panel:#1d2025;--line:#323741;--text:#e7e9ee;--sub:#9aa1ae;--acc:#5fd0c5;--rec:#ff6b5e}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,"Hiragino Sans","Noto Sans JP",sans-serif}
-#app{display:grid;grid-template-columns:1fr 390px;height:100%}
-#stage{position:relative;min-width:0}
+body{min-width:1120px;overflow-x:auto;overflow-y:hidden}
+#app{display:grid;grid-template-columns:minmax(560px,1fr) clamp(520px,38vw,680px);height:100dvh;min-width:1120px}
+#previewPane{display:grid;grid-template-rows:minmax(0,1fr) auto;min-width:0;min-height:0}
+#playbackDock{display:grid;grid-template-columns:130px minmax(120px,1fr) 180px;gap:8px 16px;margin:0;padding:14px 20px;background:#1b1e23;border-top:1px solid var(--line)}
+#playbackDock h2{grid-column:1;grid-row:1;margin:0;align-self:center}
+#playbackDock>.desc{display:none}
+#playbackDock>.row{grid-column:1;grid-row:2;margin:0}
+#playbackDock>.row button{width:100%;min-height:36px}
+#playbackDock>label{grid-column:2/4;grid-row:1;justify-self:end;font-size:12.5px}
+#playbackDock .v:has(#sTime){grid-column:2;grid-row:2;grid-template-columns:36px minmax(0,1fr) 0}
+#playbackDock .v:has(#sSpeed){grid-column:3;grid-row:2;grid-template-columns:36px minmax(0,1fr) 28px}
+#playbackDock #info{grid-column:1/-1;grid-row:3;margin:0;min-height:18px}
+#stage{position:relative;min-width:0;min-height:0;overflow:hidden}
 #cv{width:100%;height:100%;display:block}
 #flatView{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 #flatView[hidden]{display:none}
 #pip{position:absolute;right:12px;bottom:12px;width:220px;border:1px solid var(--line);border-radius:6px;background:#000}
 #status{position:absolute;left:12px;top:12px;background:#000a;padding:6px 10px;border-radius:6px;color:var(--sub);max-width:70%}
-#side{background:var(--panel);border-left:1px solid var(--line);overflow:auto;padding:14px}
+#side{background:var(--panel);border-left:1px solid var(--line);overflow:auto;min-height:0;padding:20px 24px;scrollbar-gutter:stable}
+#side>h1{position:sticky;top:-20px;z-index:3;margin:-20px -24px 16px;padding:18px 24px;background:var(--panel);border-bottom:1px solid var(--line);font-size:20px}
+#side section{padding:18px 0}
+#side h2{font-size:14px}
+#side .v{grid-template-columns:110px minmax(0,1fr) 46px;gap:10px;min-height:34px}
+#side .desc{font-size:13px;line-height:1.7}
+#side .help{line-height:1.7}
+#side button,#side .btn{padding:8px 12px;min-height:36px}
+#side summary{cursor:pointer;padding:5px 0}
+.finish-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px;margin:12px 0}
+.finish-options>label:first-child{grid-column:1/-1}
+.finish-options>label:first-child select{flex:1;min-width:0}
+.finish-options>label{align-items:flex-start;font-size:13px}
+.finish-options input[type=checkbox]{flex-shrink:0;margin-top:4px}
 h1{font-size:16px;margin:0 0 10px}
 section{border-top:1px solid var(--line);padding:12px 0}
 h2{font-size:13px;margin:0 0 8px;color:var(--acc)}
@@ -62,27 +86,46 @@ pre{background:#0d0f12;border:1px solid var(--line);border-radius:6px;padding:8p
 .desc{color:var(--sub);font-size:12.5px;margin:0 0 8px}
 .step{display:inline-block;background:var(--acc);color:#0b1f1d;border-radius:50%;width:20px;height:20px;text-align:center;line-height:20px;font-size:12px;margin-right:6px}
 .help{color:var(--sub);font-size:12px;margin:2px 0 8px}
-#hint{position:sticky;bottom:-14px;background:#0d0f12;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:10px;min-height:56px}
-#guide{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#14161aee;border:1px solid var(--line);border-radius:10px;padding:16px 20px;max-width:420px}
+#hint{position:sticky;bottom:-20px;background:#0d0f12;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:10px;min-height:56px}
+#guide{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#14161aee;border:1px solid var(--line);border-radius:10px;padding:20px 24px;width:420px;max-width:calc(100% - 48px)}
 #guide h3{margin:0 0 8px;font-size:15px}#guide ol{margin:0;padding-left:20px}#guide li{margin:4px 0}
-@media(max-width:800px){#app{grid-template-columns:1fr;grid-template-rows:55% 45%}#side{border-left:0;border-top:1px solid var(--line)}}
+
 </style>
 </head>
 <body>
 <div id="app">
+  <main id="previewPane" aria-label="動きのプレビュー">
   <div id="stage">
     <canvas id="cv"></canvas>
     <canvas id="flatView" aria-label="骨格の正面プレビュー"></canvas>
-    <div id="guide"><h3>はじめかた</h3><ol><li>右の「カメラを使う」か「動画を選ぶ」を押す</li><li>全身が映るように立って、録画開始（動画は自動で解析）</li><li>なめらかさなどを調整して、JSONを保存</li></ol><div class="help">3D画面はドラッグで回転、ホイールで拡大縮小。動画ファイルはこの画面にドラッグしても取り込めます。スペースキーで再生・一時停止。</div></div>
+    <div id="guide"><h3>はじめかた</h3><ol><li>「撮影範囲」で映っている部位を選ぶ</li><li>「動画を選ぶ」で取り込むか、「カメラを使う」から録画開始</li><li>なめらかさなどを調整して、JSONを保存</li></ol><div class="help">3D画面はドラッグで回転、ホイールで拡大縮小。動画ファイルはこの画面にドラッグしても取り込めます。スペースキーで再生・一時停止。</div></div>
     <div id="status">カメラか動画を選んでください</div>
     <video id="pip" playsinline webkit-playsinline muted preload="auto" style="display:none"></video>
   </div>
+    <section id="playbackDock" aria-label="再生操作">
+      <h2><span class="step">3</span>動きを確認する</h2>
+      <p class="desc">整えた動きを3D画面で繰り返し再生します。スライダーで好きな場面に移動できます。</p>
+      <div class="row"><button id="bPlay" disabled data-help="再生と一時停止を切り替えます。取り込みが終わると有効になります。">再生 / 一時停止</button></div>
+      <label data-help="ゲーム用プレイヤー（保存できる dizz-mocap-player.js と同じもの）で動かす確認用の人形を、右側に表示します。ここで人形が正しく動けば、ゲームの骨に当てはめたときも同じ動きになります。"><input id="cRig" type="checkbox" checked>確認用の人形を表示</label>
+      <div class="v" data-help="再生の速さです。1が元の速さ。小さくすると、動きの細かいところをゆっくり確認できます。">速さ<input id="sSpeed" type="range" min="0.1" max="2" step="0.1" value="1"><span id="oSpeed">1</span></div>
+      <div class="v" data-help="再生位置です。動かすと一時停止して、その場面を表示します。">場面<input id="sTime" type="range" min="0" max="1" step="0.001" value="0" disabled><span></span></div>
+      <p class="help" id="info" data-help="ぶれ = 1フレームごとの加速度の平均（mm）。処理前→処理後で小さいほど滑らかです。素早い本物の動きも含まれるので、設定を変えて比べる目安に使ってください。"></p>
+    </section>
+  </main>
   <aside id="side">
     <h1>モーションキャプチャーツール</h1>
     <div id="next"><b>次にやること:</b> <span id="nextTxt">カメラを使うか、動画を選んでください</span></div>
     <section>
       <h2><span class="step">1</span>動きを取り込む</h2>
-      <p class="desc">人の動きが映っているカメラ映像か動画から、3Dの骨格を読み取ります。全身が映っているほど精度が上がります。</p>
+      <p class="desc">人の動きが映っているカメラ映像か動画から、3Dの骨格を読み取ります。全身・上半身・片腕などの部分収録に対応します。取り込む前に撮影範囲を選んでください。</p>
+      <label for="captureArea">撮影範囲</label>
+      <select id="captureArea" style="width:100%">
+        <option value="auto">自動（見えている部位だけ動かす）</option>
+        <option value="full">全身</option><option value="upper">上半身</option>
+        <option value="lower">下半身</option><option value="leftArm">左腕（本人から見て）</option>
+        <option value="rightArm">右腕（本人から見て）</option><option value="head">頭部</option>
+      </select>
+      <p class="help">選択範囲外・画面外・検出の確度が低い部位は、直前の向きを保ちます。最初から見えない部位は標準姿勢に固定します。固定部位は付け根の移動には追従します。片腕は肩〜手先が映るように撮影してください。変更は次の取り込みから適用されます。腰と肩が見えない収録では全体の移動量を付けません。足先を検出できないときは体の向きに合わせます。検出できた向きは約0.12秒の安定を確認して使い、切り替えは滑らかにつなぎます。</p>
       <div class="row">
         <button id="bCam" data-help="パソコンやスマホのカメラで、いま動いている自分を撮ります。許可を求められたら許可してください。">カメラを使う</button>
         <label class="btn" id="videoPicker" data-help="撮影済みの動画ファイル（MOV・MP4など）を選びます。長い動画は解析に時間がかかります。">動画を選ぶ<input id="fVid" type="file" accept="video/*,video/quicktime,video/x-m4v,.mov,.mp4,.m4v"></label>
@@ -151,16 +194,18 @@ pre{background:#0d0f12;border:1px solid var(--line);border-radius:6px;padding:8p
         <button class="pre" data-p="walk">歩き・走り</button><button class="pre" data-p="attack">攻撃・素早い動き</button><button class="pre" data-p="idle">待機・ゆったり</button>
       </div>
       <p class="help">用途を選ぶと、なめらかさと繰り返し設定が自動で決まります。</p>
+      <label data-help="関節の付け根に対する約1cm以内の変化を保留し、微振動を抑えます。小さくても動きが積み重なれば追従します。細かな表情や指先の動きまで残したい場合はオフにします。"><input id="cMicro" type="checkbox" checked>微細な揺れを抑える（低感度）</label>
+      <p class="help">標準は低感度です。小さな震えは保留し、はっきりした動きに追従します。急な位置や向きの変化は途中を補間し、一瞬で飛ばないようにします。</p>
       <canvas id="qcv" width="340" height="28" style="width:100%;border:1px solid var(--line);border-radius:4px" data-help="取り込んだ全時間の「読み取りの悪さ」です。赤い棒が高い所は、手足が画面外や物陰に入って不安定でした。緑の帯が、いま使っている区間です。"></canvas>
       <p class="help">赤い棒 = 読み取りが不安定な所 / 橙 = 人物を検出できなかった区間 / 緑の帯 = 使う区間</p>
-      <div class="v" data-help="大きいほど、細かな震えやゆらゆらが消えて滑らかになります。上げすぎると素早い動き（攻撃など）がぼやけます。まず0.5が目安です。">なめらかさ<input id="sSmooth" type="range" min="0" max="0.9" step="0.05" value="0.5"><span id="oSmooth">0.5</span></div>
+      <div class="v" data-help="大きいほど、細かな震えやゆらゆらが消えて滑らかになります。上げすぎると素早い動き（攻撃など）がぼやけます。標準は0.7で、小さな揺れを抑えます。">なめらかさ<input id="sSmooth" type="range" min="0" max="0.9" step="0.05" value="0.7"><span id="oSmooth">0.7</span></div>
       <div class="v" data-help="取り込んだ動きのうち、使い始める位置（秒）です。録画の最初の準備している部分を切り落とすのに使います。">使い始め（秒）<input id="sStart" type="range" min="0" max="1" step="0.01" value="0"><span id="oStart">0</span></div>
       <div class="v" data-help="使い終わる位置（秒）です。終わりの余計な部分を切り落とします。">使い終わり（秒）<input id="sEnd" type="range" min="0" max="1" step="0.01" value="1"><span id="oEnd">0</span></div>
-      <div class="row">
+      <div class="row finish-options">
         <label>平滑化<select id="filterMode"><option value="offline">前後のフレームを使う</option><option value="oneEuro">One Euro Filter（速度に追従）</option></select></label>
       <label data-help="一番低い足の高さを床（高さ0）にそろえます。キャラが浮いたり床に埋まったりするのを防ぎます。ジャンプの高さはそのまま残ります。"><input id="cGround" type="checkbox" checked>床に合わせる</label>
         <label data-help="1〜2フレームだけ突然ずれる「飛び値」（関節が一瞬あらぬ方向へ跳ぶ誤読）を取り除きます。正常な素早い動きは残ります。"><input id="cMed" type="checkbox" checked>飛び値を取り除く</label>
-        <label data-help="素早い動き（殺人鬼の襲撃など）はなめらか処理を弱め、ゆっくりした部分の震えだけを消します。切ると全体に同じ強さでなめらかになりますが、速い動きがぼやけます。"><input id="cKeep" type="checkbox" checked>素早い動きは残す</label>
+        <label data-help="素早い動き（殺人鬼の襲撃など）はなめらか処理を弱め、ゆっくりした部分の震えだけを消します。切ると全体に同じ強さでなめらかになりますが、速い動きがぼやけます。"><input id="cKeep" type="checkbox">素早い動きは残す</label>
         <label data-help="カメラ映像での位置とカメラの画角から、キャラ全体が前後左右・上下にどれだけ動いたかを推定して root として書き出します。歩いて近づく動きなどに使います。位置は最初の場面を0とします。画角を実際のカメラに合わせないと距離がずれます。"><input id="cRoot" type="checkbox">移動量も使う（実験的）</label>
         <label data-help="手足の長さが、フレームごとに伸び縮みするのを防ぎます。動画から読み取った3Dは奥行きの誤差で腕や脚が伸び縮みしがちなので、そろえるとゲームのキャラに当てはめたときの崩れが減ります。"><input id="cLock" type="checkbox" checked>手足の長さをそろえる</label>
         <label data-help="動きを左右入れ替えます。右手で撮った動きを左手の動きとして使いたいときに使います。"><input id="cMirror" type="checkbox">左右反転</label>
@@ -168,15 +213,7 @@ pre{background:#0d0f12;border:1px solid var(--line);border-radius:6px;padding:8p
       </div>
       <div class="v" data-help="撮影したカメラの縦方向の画角（度）です。スマホの標準カメラはおよそ60〜70、広角は80以上。大きいほど、移動量の奥行きが大きく見積もられます。">カメラの画角<input id="sFov" type="range" min="40" max="90" step="1" value="60"><span id="oFov">60</span></div>
     </section>
-    <section>
-      <h2><span class="step">3</span>動きを確認する</h2>
-      <p class="desc">整えた動きを3D画面で繰り返し再生します。スライダーで好きな場面に移動できます。</p>
-      <div class="row"><button id="bPlay" disabled data-help="再生と一時停止を切り替えます。取り込みが終わると有効になります。">再生 / 一時停止</button></div>
-      <label data-help="ゲーム用プレイヤー（保存できる dizz-mocap-player.js と同じもの）で動かす確認用の人形を、右側に表示します。ここで人形が正しく動けば、ゲームの骨に当てはめたときも同じ動きになります。"><input id="cRig" type="checkbox" checked>確認用の人形を右に表示（ゲーム用プレイヤーのテスト）</label>
-      <div class="v" data-help="再生の速さです。1が元の速さ。小さくすると、動きの細かいところをゆっくり確認できます。">速さ<input id="sSpeed" type="range" min="0.1" max="2" step="0.1" value="1"><span id="oSpeed">1</span></div>
-      <div class="v" data-help="再生位置です。動かすと一時停止して、その場面を表示します。">場面<input id="sTime" type="range" min="0" max="1" step="0.001" value="0" disabled><span></span></div>
-      <p class="help" id="info" data-help="ぶれ = 1フレームごとの加速度の平均（mm）。処理前→処理後で小さいほど滑らかです。素早い本物の動きも含まれるので、設定を変えて比べる目安に使ってください。"></p>
-    </section>
+
     <section>
       <h2><span class="step">4</span>ゲームで使う</h2>
       <p class="desc">動きをファイルに保存します。ゲームのコードから読み込むと、キャラが同じ動きをします。</p>
@@ -188,7 +225,7 @@ pre{background:#0d0f12;border:1px solid var(--line);border-radius:6px;padding:8p
       <div class="v" data-help="保存するファイル名です。.json は自動で付きます。キャラや動きごとに分かる名前にしておくと、ゲームで管理しやすくなります（例: killer_attack）。">ファイル名<input id="fName" type="text" value="motion"><span>.json</span></div>
       <div class="row"><button id="bPlayer" data-help="JSONをゲームの骨に当てはめて動かす、three.js 用のプレイヤー（dizz-mocap-player.js）を保存します。上の確認用の人形も同じものを使っています。">ゲーム用プレイヤー(.js)を保存</button></div>
       <details><summary>出力の座標と単位</summary>
-        <p>JSONはY軸が上、長さはメートルです。動画の検出記録はqualityに入り、missingは解析開始を0秒とした未検出区間です。0.35秒を超えて人物を見失った区間では、次の検出まで直前の姿勢を保ちます。</p>
+        <p>JSONはY軸が上、長さはメートルです。動画の検出記録はqualityに入り、missingは解析開始を0秒とした未検出区間です。0.35秒を超えて人物を見失った区間では、次の検出まで直前の姿勢を保ちます。非表示の部位は前後補間せず向きを固定し、撮影範囲と固定方針をquality.partialCaptureに保存します。</p>
         <p>BVHはY軸が上、長さはセンチメートルです。Blenderでメートル換算するには、BVHの読み込み時にScaleを0.01にします。腕や脚を軸方向にひねる角度は、単眼映像から一意には決まりません。</p>
       </details>
       <details>
@@ -203,7 +240,7 @@ pre{background:#0d0f12;border:1px solid var(--line);border-radius:6px;padding:8p
       <li><a href="https://web.dev/articles/requestvideoframecallback-rvfc" target="_blank" rel="noopener">映像フレームと時刻の同期</a></li>
       <li><a href="https://research.cs.wisc.edu/graphics/Courses/cs-838-1999/Jeff/BVH.html" target="_blank" rel="noopener">BVHの骨階層・座標・回転チャンネル</a></li>
     </ul></details>
-    <div id="hint"><b>ヒント</b><br><span id="hintTxt">各ボタンやスライダーにマウスを乗せる（スマホはタップ）と、ここに説明が出ます。</span></div>
+    <div id="hint"><b>ヒント</b><br><span id="hintTxt">各ボタンやスライダーにマウスを乗せると、ここに説明が出ます。</span></div>
   </aside>
 </div>
 
@@ -845,8 +882,15 @@ function toFrame(r) {
   if (!points || points.length !== 33 || !points.every(p => p && [p.x,p.y,p.z].every(Number.isFinite))) return null;
   const f = new Float32Array(99);
   points.forEach((p, i) => { f[i*3] = p.x; f[i*3+1] = -p.y; f[i*3+2] = -p.z; });
-  f.v = Float32Array.from(points, (p,i) => Math.min(1, Math.max(0, Number.isFinite(p.visibility) ? p.visibility : (r.poseLandmarks?.[i]?.visibility ?? 1))));
-  const L = r.poseLandmarks; f.asp = (vid.videoWidth / vid.videoHeight) || 1;
+  f.v = new Float32Array(33);
+  const L = r.poseLandmarks;
+  for (let i=0;i<33;i++) {
+    const q = L?.[i];
+    const scores = [points[i].visibility, points[i].presence, q?.visibility, q?.presence].filter(Number.isFinite);
+    f.v[i] = q && Number.isFinite(q.x) && Number.isFinite(q.y) && q.x>=0 && q.x<=1 && q.y>=0 && q.y<=1
+      ? Math.max(0, Math.min(1, ...(scores.length ? scores : [0]))) : 0;
+  }
+  f.asp = (vid.videoWidth / vid.videoHeight) || 1;
   f.img = L?.length === 33 && [11,12,23,24].every(i => Number.isFinite(L[i].x) && Number.isFinite(L[i].y)) ? [(L[23].x + L[24].x) / 2, (L[23].y + L[24].y) / 2, (L[11].x + L[12].x) / 2, (L[11].y + L[12].y) / 2] : null;
   if (L?.length === 33 && L.every(p => Number.isFinite(p.x) && Number.isFinite(p.y))) {
     f.screen = new Float32Array(66); L.forEach((p,i) => { f.screen[i*2]=p.x; f.screen[i*2+1]=p.y; });
@@ -856,6 +900,7 @@ function toFrame(r) {
 
 /* ---------- 録画 ---------- */
 let raw = [], recording = false, live = true, stream = null;
+let recordedArea = "auto";
 let cameraEpoch = 0, cameraTick = null, recordSamples = [], recordOrigin = null, countdown = false;
 function stopCamera() {
   cameraEpoch++;
@@ -865,6 +910,7 @@ function stopCamera() {
     cameraTick = null;
   }
   if (stream) stream.getTracks().forEach(track => track.stop());
+  $("captureArea").disabled = videoLoading;
   stream = null; recording = countdown = false; recordSamples = []; vid.srcObject = null;
   $("bStop").disabled = $("bRec").disabled = true; $("bRec").classList.remove("rec");
 }
@@ -915,6 +961,7 @@ async function useCam() {
 }
 async function startRec() {
   if (!stream || recording || countdown || videoLoading) return;
+  recordedArea = $("captureArea").value; $("captureArea").disabled = true;
   const epoch = cameraEpoch; countdown = true; $("bRec").disabled = true; $("bStop").disabled = false;
   for (let c=3; c>0; c--) {
     setStatus("録画まで " + c + " 秒"); await new Promise(r => setTimeout(r,1000));
@@ -928,7 +975,7 @@ function stopRec() {
   if (!recording) return;
   const recorded = recordSamples; stopCamera(); retireModels(); vid.style.display = "none";
   if (recorded.length < 2) { setStatus("人物を検出できませんでした"); return; }
-  raw = recorded; captureInfo = null; finishCapture();
+  raw = recorded; captureInfo = {captureArea:recordedArea, missing:[]}; finishCapture();
 }
 // iOS はメタデータだけで止まる場合があるため、無音再生でデコードを開始する。
 let videoLoading = false, videoUrl = null, job = null, captureInfo = null;
@@ -1166,10 +1213,11 @@ async function loadVideo(file) {
   if (!isVideoFile(file)) { videoInput.show("MOV・MP4などの動画ファイルを選んでください"); return; }
   if (!file.size) { videoInput.show("動画ファイルが空です。端末に保存済みの動画を選んでください"); return; }
   if (recording || countdown) { videoInput.show("録画を停止してから動画を選んでください"); return; }
+  const selectedArea = $("captureArea").value;
   jsonTicket++; videoLoading = true; job = new AbortController();
   $("bCancelVideo").hidden = false; requestWake();
   const wasPlaying = playing; playing = false; live = false;
-  const disabled = Array.from(document.querySelectorAll("#side button, #side input, #side select"))
+  const disabled = Array.from(document.querySelectorAll("#side button, #side input, #side select, #playbackDock button, #playbackDock input"))
     .filter(el => !["bVidResume","bCancelVideo","bPauseVideo"].includes(el.id)).map(el => [el, el.disabled]);
   disabled.forEach(([el]) => el.disabled = true);
   let captured;
@@ -1225,9 +1273,9 @@ async function loadVideo(file) {
         lastUpdate = now;
       }
     }
-    if (frames.length < 2) throw new Error("人物を検出できませんでした。全身が映る映像で試してください");
+    if (frames.length < 2) throw new Error("人物を検出できませんでした。選択した部位と付け根の関節が映る映像で試してください");
     if (gapStart !== null) missing.push([gapStart,duration]);
-    captured = {frames,total, info:{sourceStart:start, duration, sampleHz:hz, total, detected:frames.length, missing}};
+    captured = {frames,total, info:{sourceStart:start, duration, sampleHz:hz, total, detected:frames.length, missing, captureArea:selectedArea}};
   } catch (e) {
     console.error(e);
     videoInput.show(e.message || "動画の取り込みに失敗しました");
@@ -1258,23 +1306,181 @@ async function loadVideo(file) {
   }
 }
 let note = "";
-// 見えていない関節（visibility が低い）は推定値を信用せず、前後の見えている時刻から補う
-let qual = [];
-function fillLowVis() {
-  const n = raw.length; qual = raw.map(r => r.f.v.filter(v => v < 0.4).length / 33);
-  for (let p = 0; p < 33; p++) {
-    const good = []; for (let i = 0; i < n; i++) if (raw[i].f.v[p] >= 0.4) good.push(i);
-    if (!good.length || good.length === n) continue;
-    let next = 0;
-    for (let i = 0; i < n; i++) {
-      while (next < good.length && good[next] < i) next++;
-      if (raw[i].f.v[p] >= 0.4) continue;
-      const a = next ? good[next-1] : -1, b = next < good.length ? good[next] : -1;
-      const u = a < 0 || b < 0 || raw[b].t-raw[a].t > 0.35 ? 0 : (raw[i].t - raw[a].t) / ((raw[b].t - raw[a].t) || 1);
-      const firstAxis = raw[i].f.markerMask & markerBits.get(p) ? 2 : 0;
-      for (let k = firstAxis; k < 3; k++) { const A = raw[a < 0 ? b : a].f[p*3+k], B = raw[b < 0 ? a : b].f[p*3+k]; raw[i].f[p*3+k] = A + (B - A) * u; }
-    }
+// Partial capture: never feed invented coordinates into the finishing filters.
+let qual = [], freezeInfo = null;
+const CAPTURE_REST = new Float32Array([[0,.62,.08],[.03,.65,.07],[.05,.65,.07],[.07,.65,.06],[-.03,.65,.07],[-.05,.65,.07],[-.07,.65,.06],[.1,.63,0],[-.1,.63,0],[.025,.57,.07],[-.025,.57,.07],[.19,.5,0],[-.19,.5,0],[.2,.22,0],[-.2,.22,0],[.2,-.04,0],[-.2,-.04,0],[.21,-.12,0],[-.21,-.12,0],[.2,-.13,.02],[-.2,-.13,.02],[.18,-.1,.03],[-.18,-.1,.03],[.09,0,0],[-.09,0,0],[.09,-.42,0],[-.09,-.42,0],[.09,-.84,0],[-.09,-.84,0],[.09,-.88,-.04],[-.09,-.88,-.04],[.09,-.9,.1],[-.09,-.9,.1]].flat());
+const CAPTURE_ORDER = [23,24,11,12,0,1,2,3,4,5,6,7,8,9,10,13,14,15,16,17,18,19,20,21,22,25,26,27,28,29,30,31,32];
+// -1 is the hip origin; -2 is the shoulder midpoint. Process parents first.
+const CAPTURE_PARENT = [-2,0,0,0,0,0,0,0,0,0,0,23,24,11,12,13,14,15,16,15,16,15,16,-1,-1,23,24,25,26,27,28,27,28];
+function captureAllows(area, p) {
+  if (area === "upper") return p <= 22;
+  if (area === "lower") return p >= 23;
+  if (area === "leftArm") return p===11 || p===12 || [13,15,17,19,21].includes(p);
+  if (area === "rightArm") return p===11 || p===12 || [14,16,18,20,22].includes(p);
+  if (area === "head") return p <= 10;
+  return true;
+}
+// Feet are easily hallucinated: accept only a coherent ankle/heel/toe group.
+const CAPTURE_POLICY = {threshold:.6, microMeters:.01};
+const FOOT_POLICY = {threshold:.8, confirmSeconds:.12, deadbandDegrees:8, candidateDegrees:15};
+const FOOT_GROUPS = [[27,29,31],[28,30,32]];
+const TRANSITION_POLICY = {responseSeconds:.07, maxTurnDegreesPerSecond:360, maxLengthSpeed:.3, maxRootSpeed:3};
+function stabilizeFeet(samples, masks) {
+  const cosine = degrees => Math.cos(degrees*Math.PI/180);
+  const direction = (f,p,a) => {
+    const v = [0,1,2].map(k=>f[p*3+k]-f[a*3+k]), length = Math.hypot(...v);
+    return length > .015 ? v.map(x=>x/length) : null;
+  };
+  const similar = (a,b,degrees) => a.every((v,i)=>v && b[i] && v.reduce((sum,x,k)=>sum+x*b[i][k],0)>=cosine(degrees));
+  samples.forEach(({f})=>f.footSupported=new Uint8Array(2));
+  for (const [side,[ankle,heel,toe]] of FOOT_GROUPS.entries()) {
+    let held = null, candidate = null, since = 0, previous = -Infinity;
+    samples.forEach(({t,f},i)=>{
+      const good = [ankle,heel,toe].every(p=>masks[i][p] && (f.v?.[p] ?? 0)>=FOOT_POLICY.threshold);
+      const vectors = [direction(f,heel,ankle),direction(f,toe,ankle)];
+      // Keep following ankle translation, but hold the foot's relative shape.
+      masks[i][heel] = masks[i][toe] = 0;
+      if (!good || vectors.some(v=>!v)) { held=null; candidate=null; previous=t; return; }
+      f.footSupported[side] = Number(!!held);
+      if (t-previous>.35) candidate=null;
+      previous=t;
+      if (held && similar(vectors,held,FOOT_POLICY.deadbandDegrees)) {candidate=null;return;}
+      if (!candidate || !similar(vectors,candidate,FOOT_POLICY.candidateDegrees)) {
+        candidate=vectors;since=t;return;
+      }
+      if (t-since+1e-7<FOOT_POLICY.confirmSeconds) return;
+      masks[i][heel] = masks[i][toe] = 1;
+      held=vectors;candidate=null;f.footSupported[side]=1;
+    });
   }
+}
+// Shoulder/hip left-right axis defines forward on the ground plane.
+// If neither is observed, retain the last usable body heading.
+function bodyHeading(f, mask, previous=0) {
+  for (const [l,r] of [[23,24],[11,12]]) {
+    if (!mask[l] || !mask[r]) continue;
+    const x=f[l*3]-f[r*3], z=f[l*3+2]-f[r*3+2];
+    if (Math.hypot(x,z)>.06) return Math.atan2(-z,x);
+  }
+  return previous;
+}
+function naturalFootOffset(p,yaw) {
+  const a=CAPTURE_PARENT[p], x=CAPTURE_REST[p*3]-CAPTURE_REST[a*3], z=CAPTURE_REST[p*3+2]-CAPTURE_REST[a*3+2];
+  return [Math.cos(yaw)*x+Math.sin(yaw)*z, CAPTURE_REST[p*3+1]-CAPTURE_REST[a*3+1], -Math.sin(yaw)*x+Math.cos(yaw)*z];
+}
+function alignUnseenFeet(frames,masks,supported) {
+  let yaw=0;
+  frames.forEach((f,i)=>{
+    yaw=bodyHeading(f,masks[i],yaw); f.bodyYaw=yaw;
+    for(let p=29;p<33;p++) if (!supported[i][p%2===1?0:1]) {
+      const offset=naturalFootOffset(p,yaw), ankle=CAPTURE_PARENT[p];
+      for(let k=0;k<3;k++) f[p*3+k]=f[ankle*3+k]+offset[k];
+    }
+  });
+}
+// Spherical interpolation preserves segment lengths even through a 180° turn.
+function blendOffset(a,b,dt) {
+  const la=Math.hypot(...a), lb=Math.hypot(...b), alpha=1-Math.exp(-dt/TRANSITION_POLICY.responseSeconds);
+  if (la<1e-7 || lb<1e-7) {
+    const distance=Math.hypot(...a.map((v,k)=>b[k]-v)), w=Math.min(alpha,TRANSITION_POLICY.maxRootSpeed*dt/(distance||1));
+    return a.map((v,k)=>v+(b[k]-v)*w);
+  }
+  const u=a.map(x=>x/la), v=b.map(x=>x/lb), dot=Math.max(-1,Math.min(1,u.reduce((sum,x,k)=>sum+x*v[k],0)));
+  const angle=Math.acos(dot), step=Math.min(angle*alpha,TRANSITION_POLICY.maxTurnDegreesPerSecond*Math.PI/180*dt);
+  let dir=v;
+  if (angle>1e-6) {
+    let tangent=v.map((x,k)=>x-dot*u[k]), length=Math.hypot(...tangent);
+    if (length<1e-6) {
+      const axis=Math.abs(u[1])<.9?[0,1,0]:[1,0,0];
+      tangent=[u[1]*axis[2]-u[2]*axis[1],u[2]*axis[0]-u[0]*axis[2],u[0]*axis[1]-u[1]*axis[0]];
+      length=Math.hypot(...tangent);
+    }
+    dir=u.map((x,k)=>x*Math.cos(step)+tangent[k]/length*Math.sin(step));
+  }
+  const length=la+Math.max(-TRANSITION_POLICY.maxLengthSpeed*dt,Math.min(TRANSITION_POLICY.maxLengthSpeed*dt,(lb-la)*alpha));
+  return dir.map(x=>x*length);
+}
+function smoothPoseTransitions(frames,masks,supported,initialYaw=0) {
+  if (!frames.length) return;
+  const previous=Array.from({length:33},(_,p)=>[0,1,2].map(k=>frames[0][p*3+k]-captureAnchor(frames[0],p,k)));
+  let yaw=initialYaw;
+  frames.forEach((f,i)=>{
+    const observed=Float32Array.from(f);
+    for(const p of CAPTURE_ORDER) {
+      // Torso and ankles have already been processed when feet are reached.
+      if(p===29) yaw=bodyHeading(f,masks[i],yaw);
+      const fallback=p>=29 && !supported[i][p%2===1?0:1];
+      let target=fallback ? naturalFootOffset(p,yaw) : [0,1,2].map(k=>observed[p*3+k]-captureAnchor(observed,p,k));
+      if(i) target=p<29 && !masks[i][p] ? previous[p] : blendOffset(previous[p],target,1/FPS);
+      previous[p]=target;
+      for(let k=0;k<3;k++) f[p*3+k]=captureAnchor(f,p,k)+target[k];
+    }
+  });
+}
+function smoothRootTransitions(root) {
+  const alpha=1-Math.exp(-1/FPS/TRANSITION_POLICY.responseSeconds);
+  for(let i=1;i<root.length;i++) {
+    const a=root[i-1],b=root[i],distance=Math.hypot(...b.map((v,k)=>v-a[k]));
+    const w=Math.min(alpha,TRANSITION_POLICY.maxRootSpeed/FPS/(distance||1));
+    root[i]=a.map((v,k)=>v+(b[k]-v)*w);
+  }
+}
+function captureMask(f, area) {
+  const visible = Array.from({length:33}, (_,p) => captureAllows(area,p) && (f.v?.[p] ?? 0) >= CAPTURE_POLICY.threshold);
+  return Uint8Array.from(visible, (ok,p) => {
+    // Limbs and face features need both ends of their segment. Shoulders can
+    // still be captured when the hips are outside an upper-body crop.
+    const parent = CAPTURE_PARENT[p];
+    return ok && (p===0 || p===11 || p===12 || p===23 || p===24 || visible[parent]);
+  });
+}
+function captureAnchor(f, p, k) {
+  const parent = CAPTURE_PARENT[p];
+  return parent === -1 ? 0 : parent === -2 ? (f[33+k]+f[36+k])/2 : f[parent*3+k];
+}
+function freezeUntracked(frames, masks, seed = CAPTURE_REST) {
+  const offsets = Array.from({length:33}, (_,p) => [0,1,2].map(k => seed[p*3+k]-captureAnchor(seed,p,k)));
+  frames.forEach((f,i) => {
+    // Snapshot before changing parents; reliable directions come from the
+    // original observation, never from already repaired joint positions.
+    const observed = Float32Array.from(f);
+    for (const p of CAPTURE_ORDER) {
+      if (masks[i][p]) for (let k=0;k<3;k++) {
+        const independent = p===0 || p===11 || p===12 || p===23 || p===24;
+        offsets[p][k] = observed[p*3+k]-captureAnchor(independent ? f : observed,p,k);
+      }
+      for (let k=0;k<3;k++) f[p*3+k] = captureAnchor(f,p,k)+offsets[p][k];
+    }
+  });
+}
+// Compare against the last accepted value, so slow intentional motion
+// accumulates instead of disappearing under a frame-to-frame threshold.
+function microChanged(a,b) {
+  return Math.hypot(...a.map((v,k)=>v-b[k]))>CAPTURE_POLICY.microMeters;
+}
+function suppressMicroMotion(frames,masks) {
+  const held = Array.from({length:33}, (_,p)=>[0,1,2].map(k=>frames[0][p*3+k]-captureAnchor(frames[0],p,k)));
+  frames.forEach((f,i)=>{
+    const observed = Float32Array.from(f);
+    for (const p of CAPTURE_ORDER) {
+      if (!masks[i][p]) continue;
+      const independent = p===0 || p===11 || p===12 || p===23 || p===24;
+      const offset = [0,1,2].map(k=>observed[p*3+k]-captureAnchor(independent ? f : observed,p,k));
+      if (microChanged(offset,held[p])) held[p]=offset;
+      for (let k=0;k<3;k++) f[p*3+k]=captureAnchor(f,p,k)+held[p][k];
+    }
+  });
+}
+function fillLowVis() {
+  const area = captureInfo?.captureArea || $("captureArea").value || "auto";
+  const masks = raw.map(r => captureMask(r.f, area));
+  stabilizeFeet(raw, masks);
+  qual = masks.map(m => 1-m.reduce((a,b)=>a+b,0)/33);
+  raw.forEach((r,i) => r.f.tracked = masks[i]);
+  freezeUntracked(raw.map(r=>r.f), masks);
+  alignUnseenFeet(raw.map(r=>r.f),masks,raw.map(r=>r.f.footSupported));
+  freezeInfo = {area, policy:"hold-last-direction-or-rest", threshold:CAPTURE_POLICY.threshold, feet:{...FOOT_POLICY, missing:"body-heading"},
+    fixedJoints: masks[0].map((_,p)=>Number(masks.every(m=>!m[p]))).reduce((a,b)=>a+b,0)};
 }
 // 手足の長さを、全体の中央値にそろえる（向きはそのまま）
 const LOCK = [[12,11],[24,23],[25,23],[27,25],[29,27],[31,27],[26,24],[28,26],[30,28],[32,28],[13,11],[15,13],[14,12],[16,14],[17,15],[19,15],[21,15],[18,16],[20,16],[22,16]];
@@ -1292,6 +1498,10 @@ function fixSwaps() {
   for (let i = 1; i < raw.length; i++) {
     const a = raw[i-1].f, b = raw[i].f;
     PAIRS.forEach(([l, r]) => {
+      // Independent heel/toe swapping creates foot-direction reversals.
+      if (l>=29) return;
+      if (l===27 && [l,r].some(p=>(a.v?.[p] ?? 0)<FOOT_POLICY.threshold || (b.v?.[p] ?? 0)<FOOT_POLICY.threshold)) return;
+      if ([l,r].some(p => (a.v?.[p] ?? 0)<CAPTURE_POLICY.threshold || (b.v?.[p] ?? 0)<CAPTURE_POLICY.threshold || !captureAllows(captureInfo?.captureArea || $("captureArea").value,p))) return;
       if (b.markerMask & (markerBits.get(l) | markerBits.get(r))) return;
       const keep = d(b, l, a, l) + d(b, r, a, r), swp = d(b, l, a, r) + d(b, r, a, l);
       if (keep > 0.12 && swp < keep * 0.5) { for (let c = 0; c < 3; c++) { const x = b[l*3+c]; b[l*3+c] = b[r*3+c]; b[r*3+c] = x; } const v = b.v[l]; b.v[l] = b.v[r]; b.v[r] = v; cnt++; }
@@ -1306,7 +1516,7 @@ function medianFilter(fr) {
 const jit = fr => { let s = 0, c = 0; for (let i = 1; i < fr.length - 1; i++) for (let p = 11; p < 33; p++) { s += Math.hypot(fr[i+1][p*3] - 2 * fr[i][p*3] + fr[i-1][p*3], fr[i+1][p*3+1] - 2 * fr[i][p*3+1] + fr[i-1][p*3+1], fr[i+1][p*3+2] - 2 * fr[i][p*3+2] + fr[i-1][p*3+2]); c++; } return c ? s / c * 1000 : 0; };
 let jitTxt = "";
 function finishCapture() {
-  if (raw.length < 2) { setStatus("人物を検出できませんでした。全身が映る映像で試してください"); return; }
+  if (raw.length < 2) { setStatus("人物を検出できませんでした。選択した部位と付け根の関節が映る映像で試してください"); return; }
   const d = captureInfo?.duration ?? (raw.at(-1).t + 1/FPS);
   ["sStart", "sEnd"].forEach(id => { $(id).step = "any"; $(id).max = d; }); $("sStart").value = 0; $("sEnd").value = d;
   const sw = fixSwaps(); if (sw) note += "（左右の取り違え " + sw + " 回を修正）"; fillLowVis(); rebuild(); setNext("下の「動きを整える」で調整し、よければ「JSONを保存」"); setStatus("取り込み完了 " + d.toFixed(1) + "秒。仕上げを調整できます" + note); note = "";
@@ -1339,13 +1549,20 @@ function rebuild() {
   $("sStart").value = s; $("sEnd").value = e;
   $("oSmooth").textContent = a; $("oFov").textContent = $("sFov").value; drawQual(); $("oStart").textContent = (+s).toFixed(1); $("oEnd").textContent = (+e).toFixed(1);
   // 30fpsに再サンプリング
-  const n = Math.max(1, Math.ceil((e - s) * FPS - 1e-7)), fr = [], im = []; let k = 0;
+  const n = Math.max(1, Math.ceil((e - s) * FPS - 1e-7)), fr = [], im = [], masks = [], footSupport = []; let k = 0, initialYaw=0;
   for (let i = 0; i < n; i++) {
     const t = s + i / FPS; while (k < raw.length - 2 && raw[k + 1].t < t) k++;
     const A = raw[k], B = raw[k + 1], dt = B.t-A.t;
     const u = dt > 0.35 ? Number(t >= B.t) : Math.min(1, Math.max(0, (t - A.t) / (dt || 1)));
+    // Foot confirmations are events: keep them through the next input
+    // interval so a 12/24Hz observation is not lost on the 30Hz output grid.
+    masks.push(Uint8Array.from(A.f.tracked, (ok,p) => p>=29 ? (u>=1 ? B.f.tracked[p] : ok) : u<=0 ? ok : u>=1 ? B.f.tracked[p] : ok && B.f.tracked[p]));
+    if(i===0) initialYaw=(u>=1?B:A).f.bodyYaw ?? 0;
+    footSupport.push(Uint8Array.from(A.f.footSupported,(ok,side)=>u>=1?B.f.footSupported[side]:ok));
     const f = new Float32Array(99); for (let j = 0; j < 99; j++) f[j] = A.f[j] + (B.f[j] - A.f[j]) * u; fr.push(f); im.push(A.f.img && B.f.img ? A.f.img.map((v, q) => v + (B.f.img[q] - v) * u) : null);
   }
+  const constraintSeed = Float32Array.from(fr[0]);
+  freezeUntracked(fr, masks, constraintSeed);
   const jb = jit(fr); if ($("cMed").checked) medianFilter(fr);
   if ($("cLock").checked) lockBones(fr);
   // 前後2方向の指数平滑（遅れなし）
@@ -1356,25 +1573,36 @@ function rebuild() {
     for (let i = 1; i < n; i++) for (let q = 0; q < 33; q++) { const w0 = al(i, q); for (let c = 0; c < 3; c++) { const w = c === 2 ? Math.min(0.95, w0 * 1.4) : w0, j = q*3 + c; fr[i][j] = w * fr[i-1][j] + (1 - w) * fr[i][j]; } }
     for (let i = n - 2; i >= 0; i--) for (let q = 0; q < 33; q++) { const w0 = al(i, q); for (let c = 0; c < 3; c++) { const w = c === 2 ? Math.min(0.95, w0 * 1.4) : w0, j = q*3 + c; fr[i][j] = w * fr[i+1][j] + (1 - w) * fr[i][j]; } }
   }
+  if ($("cLoop").checked) { const N = Math.min(Math.floor(n / 3), 15); for (let q = 0; q < N; q++) { const w = (q + 1) / N, w2 = w * w * (3 - 2 * w), f = fr[n - N + q]; for (let j = 0; j < 99; j++) f[j] += (fr[0][j] - f[j]) * w2; } }
+  if ($("cMicro").checked) suppressMicroMotion(fr,masks);
+  // Reapply after smoothing and loop blending so hidden limbs cannot drift.
+  freezeUntracked(fr, masks, constraintSeed);
+  // Always soften reacquisition, deadband steps and fallback changes, even
+  // when the optional general smoothing slider is set to zero.
+  smoothPoseTransitions(fr,masks,footSupport,initialYaw);
   if ($("cMirror").checked) for (let i = 0; i < n; i++) { const o = new Float32Array(99); for (let p = 0; p < 33; p++) { const q = mirrorIdx(p); o[q*3] = -fr[i][p*3]; o[q*3+1] = fr[i][p*3+1]; o[q*3+2] = fr[i][p*3+2]; } fr[i] = o; }
   if ($("cGround").checked) { let m = 1e9; fr.forEach(f => { for (let p = 27; p < 33; p++) m = Math.min(m, f[p*3+1]); }); fr.forEach(f => { for (let p = 0; p < 33; p++) f[p*3+1] -= m; }); }
-  if ($("cLoop").checked) { const N = Math.min(Math.floor(n / 3), 15); for (let q = 0; q < N; q++) { const w = (q + 1) / N, w2 = w * w * (3 - 2 * w), f = fr[n - N + q]; for (let j = 0; j < 99; j++) f[j] += (fr[0][j] - f[j]) * w2; } }
+
   jitTxt = " / ぶれ " + jb.toFixed(1) + "→" + jit(fr).toFixed(1) + "mm";
   let root = null; // 画面上の腰の位置と画角から、カメラ座標の移動量を推定
-  if (im.every(x => x)) {
+  if (["auto","full"].includes(freezeInfo?.area) && raw.every(r=>[11,12,23,24].every(p=>r.f.tracked[p])) && im.every(x => x)) {
     const asp = raw[0].f.asp || 1, F = 0.5 / Math.tan(+$("sFov").value * Math.PI / 360), sg = $("cMirror").checked ? -1 : 1;
     const tw = fr.map(f => Math.hypot((f[33] + f[36] - f[69] - f[72]) / 2, (f[34] + f[37] - f[70] - f[73]) / 2, (f[35] + f[38] - f[71] - f[74]) / 2)).sort((x, y) => x - y)[n >> 1];
     root = im.map(m => { const Z = F * tw / (Math.hypot((m[2] - m[0]) * asp, m[3] - m[1]) || 1e-3); return [sg * (m[0] - 0.5) * asp * Z / F, (0.5 - m[1]) * Z / F, -Z]; });
     const w = Math.max(a, 0.7);
     for (let i = 1; i < n; i++) root[i] = root[i].map((v, q) => w * root[i-1][q] + (1 - w) * v);
     for (let i = n - 2; i >= 0; i--) root[i] = root[i].map((v, q) => w * root[i+1][q] + (1 - w) * v);
+    if ($("cMicro").checked) for (let i=1;i<n;i++) {
+      if (!microChanged(root[i],root[i-1])) root[i]=root[i-1].slice();
+    }
+    smoothRootTransitions(root);
     const r0 = root[0].slice(); root = root.map(r => r.map((v, q) => v - r0[q]));
   }
-  const quality = captureInfo && {...captureInfo, trimStart:s, trimEnd:e, marker:markerSummary(raw, raw.length)};
+  const quality = {...captureInfo, trimStart:s, trimEnd:e, marker:markerSummary(raw, raw.length), partialCapture:freezeInfo, lowSensitivity:{enabled:$("cMicro").checked, microMeters:CAPTURE_POLICY.microMeters}, transitions:{...TRANSITION_POLICY}};
   clip = {fps: FPS, frames: fr, root, quality}; setInfo(n, !!root);
   ["bPlay", "bSave", "bBvh", "sTime"].forEach(id => $(id).disabled = false); playing = true; T = 0;
 }
-const setInfo = (n, hasRoot, fps = clip.fps) => $("info").textContent = "長さ " + (n / fps).toFixed(1) + "秒 / " + n + "フレーム / " + fps + "fps / 保存サイズの目安 約" + Math.round(n * 0.97) + "KB" + (hasRoot ? " / 移動量あり" : "") + jitTxt;
+const setInfo = (n, hasRoot, fps = clip.fps) => $("info").textContent = "長さ " + (n / fps).toFixed(1) + "秒 / " + n + "フレーム / " + fps + "fps / 保存サイズの目安 約" + Math.round(n * 0.97) + "KB" + (hasRoot ? " / 移動量あり" : "") + (clip.quality?.partialCapture ? " / 非表示部位を固定" : "") + jitTxt;
 function rootAt(t) {
   if (!clip.root || !$("cRoot").checked) return [0, 0, 0];
   const n = clip.root.length, k = (t * clip.fps) % n, a = Math.floor(k), b = (a + 1) % n, u = k - a;
@@ -1576,7 +1804,7 @@ $("bLight").onclick = () => {
 $("bCam").onclick = useCam; $("bRec").onclick = startRec; $("bStop").onclick = stopRec;
 $("fJson").onchange = e => e.target.files[0] && loadJson(e.target.files[0]);
 ["sSmooth", "sStart", "sEnd", "sFov"].forEach(id => $(id).oninput = rebuild);
-["cGround", "cMirror", "cLoop", "cLock", "cKeep", "cMed","filterMode"].forEach(id => $(id).onchange = rebuild);
+["cGround", "cMirror", "cLoop", "cLock", "cKeep", "cMed","filterMode","cMicro"].forEach(id => $(id).onchange = rebuild);
 $("sSpeed").oninput = () => $("oSpeed").textContent = $("sSpeed").value;
 $("bPlay").onclick = () => playing = !playing;
 $("sTime").oninput = e => { playing = false; T = +e.target.value * clip.frames.length / clip.fps; };
@@ -1608,14 +1836,23 @@ function makeDemo() {
   }
   hideGuide(); setNext("下の「動きを整える」の設定を動かして、効き方を確かめる"); note = "（サンプルの歩き: 左手の見失い・足首の左右取り違え・単発の飛び値入り）"; finishCapture();
 }
-const PRE = {walk: {sSmooth: .5, cLoop: true, cKeep: true, cGround: true, cLock: true}, attack: {sSmooth: .3, cLoop: false, cKeep: true, cGround: true, cLock: true}, idle: {sSmooth: .7, cLoop: true, cKeep: true, cGround: true, cLock: true}};
+const PRE = {walk: {sSmooth: .65, cMicro:true, cLoop: true, cKeep: false, cGround: true, cLock: true}, attack: {sSmooth: .5, cMicro:true, cLoop: false, cKeep: true, cGround: true, cLock: true}, idle: {sSmooth: .8, cMicro:true, cLoop: true, cKeep: false, cGround: true, cLock: true}};
 document.querySelectorAll(".pre").forEach(b => b.onclick = () => {
   Object.entries(PRE[b.dataset.p]).forEach(([id, val]) => typeof val === "boolean" ? $(id).checked = val : $(id).value = val);
   rebuild(); saveSet(); setStatus("「" + b.textContent + "」の設定にしました");
 });
-const SET_IDS = ["sSmooth", "cGround", "cMirror", "cLoop", "cLock", "cKeep", "cRoot", "sFov", "sSpeed", "selModel", "fName", "cTta", "cMed","filterMode","sampleHz","inputSize","keepAwake","engine"], KEY = "dizz-mocap-settings";
+const SET_IDS = ["sSmooth", "cGround", "cMirror", "cLoop", "cLock", "cKeep", "cRoot", "sFov", "sSpeed", "selModel", "fName", "cTta", "cMed","filterMode","sampleHz","inputSize","keepAwake","engine","captureArea","cMicro"], KEY = "dizz-mocap-settings";
 function saveSet() { try { const o = {}; SET_IDS.forEach(id => o[id] = $(id).type === "checkbox" ? $(id).checked : $(id).value); localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) {} }
 try { const o = JSON.parse(localStorage.getItem(KEY) || "null"); if (o) { SET_IDS.forEach(id => { if (id in o) { if ($(id).type === "checkbox") $(id).checked = o[id]; else $(id).value = o[id]; } }); modelTouched = "selModel" in o && o.selModel !== "1"; $("oSmooth").textContent = $("sSmooth").value; $("oSpeed").textContent = $("sSpeed").value; $("oFov").textContent = $("sFov").value; } } catch (e) {}
+// Apply the new low-sensitivity defaults once to existing installations;
+// later user adjustments continue to persist normally.
+try {
+  if (localStorage.getItem("dizz-mocap-low-sensitivity-v1")!=="1") {
+    $("sSmooth").value=.7; $("oSmooth").textContent="0.7";
+    $("cKeep").checked=false; $("cMicro").checked=true;
+    saveSet(); localStorage.setItem("dizz-mocap-low-sensitivity-v1","1");
+  }
+} catch {}
 SET_IDS.forEach(id => $(id).addEventListener("change", saveSet)); SET_IDS.forEach(id => $(id).addEventListener("input", saveSet));
 $("bDemo").onclick = makeDemo;
 $("bPlayer").onclick = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([$("playerSrc").textContent.trim() + "\n"], {type: "text/javascript"})); a.download = "dizz-mocap-player.js"; a.click(); setStatus("dizz-mocap-player.js を保存しました"); };
