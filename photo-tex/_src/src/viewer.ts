@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { BaseMesh } from './model/mesh';
+import { PATCH_COLOR, type PatchMesh } from './patch/patch';
 import { BASE_COLOR } from './export/exportBase';
 
 export type ViewName = 'front' | 'threeQuarterLeft' | 'left' | 'back';
@@ -23,6 +24,8 @@ export class Viewer {
   private baseMesh: THREE.Mesh;
   private wire: THREE.LineSegments;
   private needsRender = true;
+  private patchGroup = new THREE.Group();
+  private patchMat = new THREE.MeshLambertMaterial({ color: PATCH_COLOR, side: THREE.DoubleSide });
 
   constructor(private canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
@@ -42,12 +45,24 @@ export class Viewer {
     this.camera.add(fill);
 
     const geo = new THREE.BufferGeometry();
-    this.baseMesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: BASE_COLOR }));
+    const baseMat = new THREE.MeshLambertMaterial({ color: BASE_COLOR });
+    // patches are separate meshes; where a visible patch dents inward the base would hide it, so the
+    // base is not drawn where the per-vertex "patchMask" attribute (inside a visible patch) is set
+    baseMat.onBeforeCompile = (sh) => {
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', '#include <common>\nattribute float patchMask;\nvarying float vPatchMask;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPatchMask = patchMask;');
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', '#include <common>\nvarying float vPatchMask;')
+        .replace('void main() {', 'void main() {\n  if (vPatchMask > 0.5) discard;');
+    };
+    this.baseMesh = new THREE.Mesh(geo, baseMat);
     this.baseMesh.name = 'base';
     this.scene.add(this.baseMesh);
     this.wire = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x0b1a40, transparent: true, opacity: 0.35 }));
     this.wire.visible = false;
     this.scene.add(this.wire);
+    this.scene.add(this.patchGroup);
 
     this.controls = new OrbitControls(this.camera, canvas);
     this.controls.target.copy(VIEW_TARGET);
@@ -102,12 +117,40 @@ export class Viewer {
     g.setAttribute('position', new THREE.BufferAttribute(mesh.positions, 3));
     g.setAttribute('normal', new THREE.BufferAttribute(mesh.normals, 3));
     g.setAttribute('uv', new THREE.BufferAttribute(mesh.uvs, 2));
+    g.setAttribute('patchMask', new THREE.BufferAttribute(new Float32Array(mesh.positions.length / 3), 1));
     g.setIndex(new THREE.BufferAttribute(mesh.indices, 1));
     g.computeBoundingSphere();
     this.baseMesh.geometry.dispose();
     this.baseMesh.geometry = g;
     this.wire.geometry.dispose();
     this.wire.geometry = new THREE.WireframeGeometry(g);
+    this.needsRender = true;
+  }
+
+  setPatches(list: { mesh: PatchMesh; visible: boolean; name: string }[]): void {
+    for (const c of [...this.patchGroup.children]) {
+      (c as THREE.Mesh).geometry.dispose();
+      this.patchGroup.remove(c);
+    }
+    for (const p of list) {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(p.mesh.positions, 3));
+      g.setAttribute('normal', new THREE.BufferAttribute(p.mesh.normals, 3));
+      g.setIndex(new THREE.BufferAttribute(p.mesh.indices, 1));
+      const m = new THREE.Mesh(g, this.patchMat);
+      m.name = p.name;
+      m.visible = p.visible;
+      this.patchGroup.add(m);
+    }
+    this.needsRender = true;
+  }
+
+  /** 1 where the base vertex lies inside a visible patch (base not drawn there) */
+  setBaseMask(mask: Float32Array): void {
+    const a = this.baseMesh.geometry.getAttribute('patchMask') as THREE.BufferAttribute | undefined;
+    if (!a || a.count !== mask.length) return;
+    (a.array as Float32Array).set(mask);
+    a.needsUpdate = true;
     this.needsRender = true;
   }
 

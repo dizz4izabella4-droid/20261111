@@ -21,6 +21,7 @@ const projectPath = resolve(process.cwd(), opt('project', join(root, 'projects/d
 const milestone = opt('milestone', 'M1');
 const presetOverride = opt('preset', null);
 const withUi = args.includes('--ui');
+const withCloseups = args.includes('--closeups');
 const size = Number(opt('size', '900'));
 const outDir = resolve(root, '..', 'screenshots', milestone);
 mkdirSync(outDir, { recursive: true });
@@ -79,6 +80,7 @@ try {
   await page.goto(url + '?shots=1');
   await page.waitForFunction(() => !!window.__bust, null, { timeout: 30000 });
   await page.evaluate((p) => window.__bust.loadProject(p), project);
+  await page.waitForTimeout(400); // debounced patch meshes
   const views = [
     ['front', '01_front'],
     ['threeQuarterLeft', '02_threequarter_front_left'],
@@ -90,18 +92,27 @@ try {
     await page.locator('#c').screenshot({ path: join(outDir, `${file}.png`) });
   }
   const info = await page.evaluate(() => window.__bust.info());
-  if (withUi) {
+  if (withCloseups) {
     // inspection close-ups: left nipple with the 4 mm minimum diameter, wireframe on
     await page.evaluate(() => window.__bust.closeup('LM_nipple_L', 0.045, true, 0.004));
     await page.locator('#c').screenshot({ path: join(outDir, '06_nipple4mm_wire_closeup.png') });
     await page.evaluate(() => window.__bust.closeup('LM_nipple_L', 0.045, false, 0.004));
     await page.locator('#c').screenshot({ path: join(outDir, '07_nipple4mm_closeup.png') });
     await page.evaluate((p) => window.__bust.loadProject(p), project);
-
+    await page.waitForTimeout(400);
+  }
+  if (withUi) {
     await page.setViewportSize({ width: 1400, height: 900 });
     await page.evaluate(() => document.body.classList.remove('shots'));
     await page.evaluate((v) => window.__bust.setView(v), 'threeQuarterLeft');
     await page.screenshot({ path: join(outDir, '05_ui.png') });
+    if (project.photos?.length) {
+      await page.evaluate(() => window.__bust.setMode('photo'));
+      await page.waitForTimeout(300);
+      await page.evaluate(() => window.__bust.drawPhoto());
+      await page.screenshot({ path: join(outDir, '08_photo_landmarks.png') });
+      await page.evaluate(() => window.__bust.setMode('3d'));
+    }
   }
   console.log(`saved to ${outDir}`);
   console.log(`preset=${project.preset ?? '(default)'} vertices=${info.vertices} triangles=${info.triangles}`);

@@ -105,7 +105,8 @@ export class BodyModel {
     const pu = torso.pointU(theta, y, sec);
     const n = torso.normalU(theta, y);
     const t = tab ?? new ArcTable(sec);
-    const sMid = t.sAt(theta);
+    const TAU = 2 * Math.PI;
+    const sMid = t.sAt(((theta % TAU) + TAU) % TAU); // θ may lie outside [0, 2π) on patch grids
     // radial displacement direction from the center behind the chest
     const O = this.center;
     let dx = pu[0] - O[0], dy = pu[1] - O[1], dz = pu[2] - O[2];

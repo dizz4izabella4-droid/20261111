@@ -5,6 +5,9 @@ import { exportBaseGlb } from './export/exportBase';
 import { Viewer, type ViewName } from './viewer';
 import { heading, paramRow, type ParamControl } from './ui/panel';
 import { parseProject, serializeProject, type Project, type ProjectJson } from './project';
+import { BodyModel } from './model/mesh';
+import { baseMaskForPatches, buildPatchMesh, type Patch } from './patch/patch';
+import { AnalysisPanel } from './ui/analysisPanel';
 
 function defaultPreset(): PresetName {
   const coarse = window.matchMedia('(pointer: coarse)').matches;
@@ -15,7 +18,7 @@ function defaultPreset(): PresetName {
 const shotsMode = new URLSearchParams(location.search).has('shots');
 if (shotsMode) document.body.classList.add('shots');
 
-const state: Project = { preset: defaultPreset(), bodyPreset: 'female', params: presetParams('female') };
+const state: Project = { preset: defaultPreset(), bodyPreset: 'female', params: presetParams('female'), patches: [] };
 const viewer = new Viewer(document.getElementById('c') as HTMLCanvasElement);
 let current: BaseMesh | null = null;
 
@@ -27,6 +30,19 @@ function rebuild(): void {
   warningsEl.hidden = w.length === 0;
   warningsEl.textContent = w.join(' ');
   updateStats();
+  schedulePatches();
+}
+
+// patches follow the template surface: rebuild their meshes after the template changes (debounced)
+let patchTimer = 0;
+function rebuildPatches(): void {
+  const model = new BodyModel(state.params);
+  viewer.setPatches(state.patches.map((p) => ({ mesh: buildPatchMesh(model, p), visible: p.visible, name: `patch_${p.id}` })));
+  if (current) viewer.setBaseMask(baseMaskForPatches(current, state.patches));
+}
+function schedulePatches(): void {
+  clearTimeout(patchTimer);
+  patchTimer = window.setTimeout(rebuildPatches, state.patches.length ? 150 : 0);
 }
 let pending = false;
 function scheduleRebuild(): void {
@@ -90,7 +106,7 @@ for (const [k, v] of Object.entries(BODY_PRESETS)) {
 bodySel.value = state.bodyPreset;
 bodySel.addEventListener('change', () => {
   const name = bodySel.value as BodyPresetName;
-  applyProject({ preset: state.preset, bodyPreset: name, params: presetParams(name) });
+  applyProject({ preset: state.preset, bodyPreset: name, params: presetParams(name), patches: state.patches });
 });
 bodyLine.appendChild(bodySel);
 panel.appendChild(bodyLine);
@@ -108,7 +124,27 @@ for (const d of BREAST_DEFS)
   controls['breast.' + d.key] = paramRow(panel, d, (state.params.breast as any)[d.key], (v) => {
     (state.params.breast as any)[d.key] = v;
     scheduleRebuild();
+    analysis?.onParamsChanged();
   });
+
+// ---------------- photo analysis ----------------
+const photoCanvas = document.getElementById('photo') as HTMLCanvasElement;
+function setMode(mode: '3d' | 'photo'): void {
+  photoCanvas.hidden = mode !== 'photo';
+  document.body.classList.toggle('photo-mode', mode === 'photo');
+  if (mode === 'photo') analysis.editor.fit();
+}
+const analysis = new AnalysisPanel(panel, photoCanvas, {
+  params: () => state.params,
+  preset: () => state.preset,
+  patches: () => state.patches,
+  setPatches: (ps: Patch[]) => {
+    state.patches = ps;
+    rebuildPatches();
+    analysis.renderPatches();
+  },
+  setMode,
+});
 
 heading(panel, '書き出し');
 const exportLine = document.createElement('div');
@@ -144,7 +180,11 @@ function applyProject(p: Project): void {
   presetSel.value = p.preset;
   for (const d of BODY_DEFS) controls['body.' + d.key].set((p.params.body as any)[d.key]);
   for (const d of BREAST_DEFS) controls['breast.' + d.key].set((p.params.breast as any)[d.key]);
+  state.patches = p.patches;
   rebuild();
+  rebuildPatches();
+  analysis.renderPatches();
+  analysis.onParamsChanged();
 }
 
 rebuild();
@@ -153,7 +193,9 @@ rebuild();
 declare global {
   interface Window {
     __bust?: {
-      loadProject(json: ProjectJson): void;
+      loadProject(json: ProjectJson): Promise<void>;
+      setMode(mode: '3d' | 'photo'): void;
+      drawPhoto(): void;
       setView(v: ViewName): Promise<void>;
       getProject(): ProjectJson;
       info(): { vertices: number; triangles: number; warnings: string[] };
@@ -162,7 +204,18 @@ declare global {
   }
 }
 window.__bust = {
-  loadProject: (json) => applyProject(parseProject(json, state.preset)),
+  loadProject: async (json) => {
+    applyProject(parseProject(json, state.preset));
+    const ph = json.photos?.[0];
+    if (ph) {
+      const img = new Image();
+      img.src = ph.src;
+      await img.decode();
+      await analysis.setPhoto(img, ph.name ?? ph.src.split('/').pop() ?? 'photo', ph.view, ph.landmarks);
+    }
+  },
+  setMode,
+  drawPhoto: () => analysis.editor.draw(),
   setView: async (v) => {
     viewer.setView(v);
     await viewer.renderNow();

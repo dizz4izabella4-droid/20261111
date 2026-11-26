@@ -44,3 +44,16 @@ button, input, select { font: inherit; }
 
 /* fixed-view screenshot mode */
 body.shots #panel, body.shots #viewButtons, body.shots #warnings { display: none !important; }
+
+#photo { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; background: #2a2e36; }
+#photo[hidden] { display: none; }
+body.photo-mode #viewButtons { display: none; }
+.lmlist { display: flex; flex-direction: column; gap: 2px; margin: 4px 0; }
+.lmlist .lm { display: grid; grid-template-columns: 20px 1fr auto; align-items: center; font-size: 12px; padding: 2px 4px; border-radius: 4px; cursor: pointer; }
+.lmlist .lm.sel { background: #fff3c4; }
+.lmlist .res { color: #555; font-variant-numeric: tabular-nums; }
+.lmlist .res.bad { color: #c62828; font-weight: bold; }
+.progress .bar { height: 8px; background: #e3e7ee; border-radius: 4px; overflow: hidden; }
+.progress .fill { height: 100%; width: 0; background: #3a6fd8; transition: width 0.2s; }
+details { margin: 6px 0; }
+details summary { cursor: pointer; font-size: 13px; }
