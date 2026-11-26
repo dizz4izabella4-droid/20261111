@@ -11,7 +11,12 @@ export interface Section {
   bb: number; // back depth from center (Z-)
   cz: number; // Z of the section center
   p: number; // superellipse exponent (2 = ellipse)
+  /** extra half width at the sides only (toward the shoulder joints), weighted by |sin θ|^LATERAL_POWER */
+  ext?: number;
 }
+
+/** how narrowly the side-only widening is concentrated around the sides (θ = ±π/2) */
+export const LATERAL_POWER = 6;
 
 /** neck stub above the neck base, up to the neck cut */
 export const NECK_STUB = 0.03;
@@ -23,7 +28,11 @@ function spow(t: number, e: number): number {
 /** unclamped section point at angle θ */
 export function sectionXZ(s: Section, theta: number): [number, number] {
   const e = 2 / s.p;
-  const x = s.a * spow(Math.sin(theta), e);
+  const sn = Math.sin(theta);
+  let x = s.a * spow(sn, e);
+  // widen only the sides (shoulder region): the front and back of the chest keep their shape,
+  // so the shoulder flare does not leave a fold across the chest (user feedback 2026-11-26)
+  if (s.ext) x += Math.sign(sn) * s.ext * Math.pow(Math.abs(sn), LATERAL_POWER);
   const zz = spow(-Math.cos(theta), e);
   const z = s.cz + (zz >= 0 ? s.bf : s.bb) * zz;
   return [x, z];
@@ -84,6 +93,7 @@ export class Torso {
   private ibb: Pchip;
   private icz: Pchip;
   private ip: Pchip;
+  private iext: Pchip;
 
   constructor(body: BodyParams, breast: BreastParams) {
     const H = body.torsoHeight;
@@ -131,6 +141,11 @@ export class Torso {
     const cd = body.chestDepth;
     const nbw = body.neckBaseWidth;
     const xs = this.xs;
+    /** section whose body half-width is `body` and whose sides reach `total` */
+    const side = (body: number, total: number, rest: Omit<Section, 'a' | 'ext'>): Section => {
+      const a = Math.min(body, total);
+      return { a, ext: Math.max(0, total - a), ...rest };
+    };
     const secs: Section[] = [
       // bottom and navel follow the ribcage (underbust / chest depth), not the waist, so that a
       // smaller waist circumference makes a narrower waist instead of a thinner lower torso.
@@ -139,10 +154,11 @@ export class Torso {
       { a: aU * 0.968, bf: cd * 0.964 * 0.52, bb: cd * 0.964 * 0.48, cz: 0, p: 2.4 }, // navel
       { a: aW, ...waistSec }, // waist
       { a: aU, ...ubSec }, // underbust
-      { a: aU * 1.1, bf: cd * 0.5, bb: cd * 0.5 * BACK_CHEST, cz: 0, p: 2.5 }, // bust (ribcage + lateral chest)
-      { a: xs - 0.008, bf: cd * 0.95 * 0.5, bb: cd * 0.95 * 0.5 * BACK_CHEST, cz: 0, p: 2.7 }, // armpit (just inside the cut plane)
-      { a: xs + 0.02, bf: cd * 0.72 * 0.47, bb: cd * 0.72 * 0.53, cz: -0.005, p: 2.8 }, // shoulder joint (cut face widest here)
-      { a: xs + 0.004, bf: cd * 0.55 * 0.45, bb: cd * 0.55 * 0.55, cz: -0.01, p: 2.5 }, // shoulder top
+      { a: aU * 1.1, bf: cd * 0.5, bb: cd * 0.5 * BACK_CHEST, cz: 0, p: 2.5, ext: 0 }, // bust (ribcage + lateral chest)
+      // armpit / shoulder: the body itself stays about chest-wide; only the sides reach out to the cut plane
+      side(aU * 1.13, xs - 0.03, { bf: cd * 0.95 * 0.5, bb: cd * 0.95 * 0.5 * BACK_CHEST, cz: 0, p: 2.7 }), // armpit (just inside the cut plane)
+      side(aU * 1.1, xs + 0.02, { bf: cd * 0.72 * 0.47, bb: cd * 0.72 * 0.53, cz: -0.005, p: 2.8 }), // shoulder joint (cut face widest here)
+      side(Math.max(nbw / 2 + 0.02, aU * 0.95), xs + 0.004, { bf: cd * 0.55 * 0.45, bb: cd * 0.55 * 0.55, cz: -0.01, p: 2.5 }), // shoulder top
       { a: nbw / 2, bf: nbw * 1.05 * 0.5, bb: nbw * 1.05 * 0.5, cz: -0.01, p: 2.1 }, // neck base
       { a: (nbw / 2) * 0.95, bf: nbw * 0.98 * 0.5, bb: nbw * 0.98 * 0.5, cz: -0.01, p: 2.0 }, // neck cut
     ];
@@ -153,11 +169,12 @@ export class Torso {
     this.ibb = new Pchip(ys, secs.map((s) => s.bb));
     this.icz = new Pchip(ys, secs.map((s) => s.cz));
     this.ip = new Pchip(ys, secs.map((s) => s.p));
+    this.iext = new Pchip(ys, secs.map((s) => s.ext ?? 0));
   }
 
   section(y: number): Section {
     const yy = clamp(y, 0, this.Ytop);
-    return { a: this.ia.eval(yy), bf: this.ibf.eval(yy), bb: this.ibb.eval(yy), cz: this.icz.eval(yy), p: this.ip.eval(yy) };
+    return { a: this.ia.eval(yy), bf: this.ibf.eval(yy), bb: this.ibb.eval(yy), cz: this.icz.eval(yy), p: this.ip.eval(yy), ext: Math.max(0, this.iext.eval(yy)) };
   }
 
   /** unclamped smooth surface point */
