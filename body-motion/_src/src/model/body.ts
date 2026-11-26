@@ -57,6 +57,7 @@ export interface BodyMesh {
   /** torso key heights in world coordinates (for tests and display) */
   keyY: Record<string, number>;
   crotchY: number;
+  footLength: number;
   warnings: string[];
 }
 
@@ -209,6 +210,7 @@ export function buildBody(p: BodyParams, preset: PresetName): BodyMesh {
     height,
     keyY,
     crotchY,
+    footLength: p.footLength,
     warnings: torso.warnings.slice(),
   };
 }

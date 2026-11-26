@@ -23,6 +23,7 @@ const presetOverride = opt('preset', null);
 const withUi = args.includes('--ui');
 const withCloseups = false;
 const withSkeleton = args.includes('--skeleton');
+const motionTimes = (opt('motion', '') || '').split(',').filter(Boolean).map(Number);
 const size = Number(opt('size', '900'));
 const outDir = resolve(root, '..', 'screenshots', milestone);
 mkdirSync(outDir, { recursive: true });
@@ -92,6 +93,17 @@ try {
   for (const [view, file] of views) {
     await page.evaluate((v) => window.__bust.setView(v), view);
     await page.locator('#c').screenshot({ path: join(outDir, `${file}.png`) });
+  }
+  if (motionTimes.length) {
+    // sample motion: front and 3/4 views at the given times (seconds)
+    await page.evaluate(() => window.__bust.loadDemoMotion());
+    for (const t of motionTimes) {
+      await page.evaluate((tt) => window.__bust.setTime(tt), t);
+      for (const [view, file] of [['front', 'front'], ['threeQuarterLeft', 'threequarter']]) {
+        await page.evaluate((v) => window.__bust.setView(v), view);
+        await page.locator('#c').screenshot({ path: join(outDir, `motion_t${t.toFixed(2)}_${file}.png`) });
+      }
+    }
   }
   const info = await page.evaluate(() => window.__bust.info());
   if (withCloseups) {

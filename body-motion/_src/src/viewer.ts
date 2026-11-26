@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { BodyMesh } from './model/body';
+import type { Pose } from './motion/retarget';
 
 export type ViewName = 'front' | 'threeQuarterLeft' | 'left' | 'back';
 
@@ -114,6 +115,7 @@ export class Viewer {
       bones[i].position.set(bi.head[0] - ph[0], bi.head[1] - ph[1], bi.head[2] - ph[2]);
       if (bi.parent >= 0) bones[bi.parent].add(bones[i]);
     });
+    this.restHips.copy(bones[0].position);
     const mesh = new THREE.SkinnedMesh(g, this.material);
     mesh.name = 'body';
     mesh.add(bones[0]);
@@ -126,6 +128,24 @@ export class Viewer {
     this.skelHelper.visible = this.showSkeleton;
     this.scene.add(this.skelHelper);
     this.material.wireframe = this.wire;
+    this.needsRender = true;
+  }
+
+  private restHips = new THREE.Vector3();
+
+  /** apply a pose (local bone rotations + hips position); bones are in BONE_NAMES order */
+  applyPose(p: Pose): void {
+    if (!this.bones.length) return;
+    this.bones.forEach((b, i) => b.quaternion.copy(p.local[i]));
+    this.bones[0].position.copy(p.hips);
+    this.needsRender = true;
+  }
+
+  /** back to the rest pose (standing) */
+  resetPose(): void {
+    if (!this.bones.length) return;
+    for (const b of this.bones) b.quaternion.identity();
+    this.bones[0].position.copy(this.restHips);
     this.needsRender = true;
   }
 

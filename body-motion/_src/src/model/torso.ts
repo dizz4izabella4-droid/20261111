@@ -124,8 +124,10 @@ export class Torso {
       underbust = armpit - 0.03;
       this.warnings.push('アンダーバストの高さが脇に近すぎるため、脇−3cmとして扱っています（胴の高さが小さすぎる可能性）。');
     }
-    let bust = clamp(body.centerHeight, underbust + 0.015, armpit - 0.015);
-    if (!(bust > underbust && bust < armpit)) bust = 0.5 * (underbust + armpit);
+    // ribcage ("bust") section halfway between the underbust and the armpit. It used to follow the
+    // breast height, which could put it 1.5 cm below the armpit section and leave a fold across the
+    // chest (seen once the body moved, 2026-11-26).
+    const bust = 0.5 * (underbust + armpit);
     this.keys = {
       crotch: 0, hip, navel, waist, underbust, bust, armpit, shoulderJoint, shoulderTop, neckBase: H, neckCut: H + NECK_STUB,
     };
