@@ -130,7 +130,7 @@ let controls: Record<string, ParamControl> = paramTree(
 heading(panel, '動き（「モーション」の JSON）');
 const motionNote = document.createElement('p');
 motionNote.className = 'note';
-motionNote.textContent = '作品「モーション」で保存した JSON（motion.json）を開くと、体が同じように動きます。手元に JSON がなければ「サンプルの動き」で試せます（歩いてから右手を振る）。';
+motionNote.textContent = '作品「モーション」で保存した JSON（motion.json）を開くと、体が同じように動きます。JSON ファイルを画面にドラッグしても開けます。手元に JSON がなければ「サンプルの動き」で試せます（歩いてから右手を振る）。';
 panel.appendChild(motionNote);
 const mLine1 = line('');
 const demoBtn = document.createElement('button');
@@ -236,6 +236,31 @@ function loadMotion(json: unknown, name: string): void {
     motionInfo.textContent = `読み込めませんでした：${e instanceof Error ? e.message : String(e)}`;
   }
 }
+
+// drag & drop a JSON file anywhere on the page
+window.addEventListener('dragover', (e) => {
+  if (e.dataTransfer?.types.includes('Files')) {
+    e.preventDefault();
+    document.body.classList.add('dropping');
+  }
+});
+window.addEventListener('dragleave', (e) => {
+  if (e.relatedTarget === null) document.body.classList.remove('dropping');
+});
+window.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  document.body.classList.remove('dropping');
+  const f = [...(e.dataTransfer?.files ?? [])].find((x) => /\.json$/i.test(x.name) || x.type === 'application/json');
+  if (!f) {
+    motionInfo.textContent = 'JSON ファイル（.json）をドラッグしてください。';
+    return;
+  }
+  try {
+    loadMotion(JSON.parse(await f.text()), f.name);
+  } catch (err) {
+    motionInfo.textContent = `読み込めませんでした：${err instanceof Error ? err.message : String(err)}`;
+  }
+});
 
 heading(panel, '書き出し');
 const exportLine = line('');
