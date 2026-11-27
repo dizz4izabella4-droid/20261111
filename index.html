@@ -201,7 +201,7 @@
     // しぼり込みボタンの件数は、検索・端末の条件を反映した数
     document.querySelectorAll('[data-n]').forEach(function (el) {
       var c = el.getAttribute('data-n');
-      el.textContent = collapse(base.filter(function (w) { return !c || w.category === c; }), c).length;
+      el.textContent = base.filter(function (w) { return !c || w.category === c; }).length;
     });
     grid.innerHTML = sorted(list).map(card).join('');
     $('empty').hidden = list.length > 0;
