@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>プロシージャルモデリング 形状自動生成</title>
+<!-- 制作: dizz が制作した作品です（Procedural Modeling 第1版） -->
+<style>
+:root{--bg:#f4f5f8;--panel:#fff;--ink:#1d2330;--sub:#667;--line:#d8dce6;--acc:#2f6bff;--accink:#fff;--view:#e9edf5;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10131a;--panel:#181d28;--ink:#e8ecf5;--sub:#9aa4b8;--line:#2a3142;--acc:#6b95ff;--accink:#0b1020;--view:#0c0f16}}
+:root[data-theme="dark"]{--bg:#10131a;--panel:#181d28;--ink:#e8ecf5;--sub:#9aa4b8;--line:#2a3142;--acc:#6b95ff;--accink:#0b1020;--view:#0c0f16}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;font-size:14px}
+#app{height:100%;display:grid;grid-template-columns:170px 1fr 260px;grid-template-rows:1fr auto}
+aside{background:var(--panel);border:0 solid var(--line);padding:12px;overflow:auto}
+#left{border-right-width:1px}#right{border-left-width:1px}
+h1{font-size:15px;margin:0 0 10px}
+h2{font-size:12px;color:var(--sub);margin:12px 0 6px;font-weight:600}
+button{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:8px;padding:7px 10px;cursor:pointer}
+button.on{background:var(--acc);color:var(--accink);border-color:var(--acc)}
+#tpl button{display:block;width:100%;text-align:left;margin-bottom:5px}
+#view{position:relative;background:var(--view);min-height:240px;touch-action:none}
+canvas{display:block;width:100%;height:100%}
+.row{margin-bottom:10px}.row label{display:flex;justify-content:space-between;font-size:12px;color:var(--sub)}
+input[type=range]{width:100%;accent-color:var(--acc)}
+.btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+#stats{grid-column:1/-1;background:var(--panel);border-top:1px solid var(--line);padding:6px 12px;font-size:12px;color:var(--sub);display:flex;gap:16px;flex-wrap:wrap}
+#warn{color:#d33;font-weight:600}
+textarea{width:100%;height:110px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;font:11px monospace}
+@media(max-width:760px){html,body{height:auto}#app{height:auto;min-height:100dvh;grid-template-columns:1fr;grid-template-rows:auto 48dvh auto auto}#left{order:1;border-right-width:0;border-bottom-width:1px;padding:8px 12px}#left h1,#left h2{display:none}#tpl{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}#tpl button{width:auto;white-space:nowrap;margin:0}#view{order:2;position:sticky;top:0;z-index:5;min-height:0}#stats{order:3;grid-column:1}#right{order:4;border-left-width:0;overflow:visible}button{min-height:40px}input[type=range]{height:32px}textarea{font-size:16px}.hint{display:none}}
+</style>
+</head>
+<body>
+<div id="app">
+ <aside id="left"><h1>形状自動生成</h1><h2>テンプレート</h2><div id="tpl"></div></aside>
+ <div id="view"><canvas id="cv"></canvas></div>
+ <aside id="right">
+  <h1 id="tname"></h1>
+  <div id="ctl"></div>
+  <div class="btns"><button id="dice">🎲 乱数化</button><button id="seedn">シード+1</button><button id="wire">ワイヤー</button><button id="reset">初期値</button><button id="undo">↶ 戻す</button><button id="redo">↷ 進む</button><button id="spin">自動回転</button></div>
+  <h2>モディファイア（上から順に適用）</h2><div class="btns"><select id="msel" style="font:inherit;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px"></select><button id="madd">追加</button></div><div id="mlist"></div>
+  <h2>表示</h2><div class="btns"><button id="bflat" class="on">ローポリ</button><button id="bmono">素体(グレー)</button><button id="bshad">影</button><button id="bgrid" class="on">グリッド</button><button id="blit">光:昼</button></div>
+  <div id="pbox" style="display:none"><h2>断面（点をドラッグ）</h2><div class="btns" id="ppre" style="margin:0 0 6px"></div><canvas id="pf" width="260" height="220" style="width:100%;height:auto;background:var(--bg);border:1px solid var(--line);border-radius:8px;touch-action:none"></canvas><div class="btns"><button id="padd">点を追加</button><button id="pdel">選択点を削除</button></div></div>
+  <div id="lbox" style="display:none"><h2>L-system ルール（1行1規則）</h2><div class="btns" id="lpre" style="margin:0 0 6px"></div><textarea id="lrule" spellcheck="false">axiom=A
+A=0.6:F![&+A][&-A]rA
+A=F![&+A][^-A]rA</textarea><div class="row" style="font-size:11px;color:var(--sub);margin-top:6px">記号: F前進 + - 左右 &amp; ^ 上下 rねじり !縮小 [ ]枝 A葉 B花 L平葉 '色相 &lt;&gt;太さ。同じ記号を複数行で書くと確率的に選ばれます（例 A=0.7:F[+A]）。無印は残り確率を均等配分。</div></div>
+  <h2>ギャラリー（保存して呼び出し）</h2><div class="btns"><button id="gsave">現在を保存</button></div><div class="btns" id="gal"></div>
+  <h2>設定JSON（コピー／貼り付けて読込）</h2>
+  <textarea id="json" spellcheck="false"></textarea>
+  <div class="btns"><button id="jshow">現在値を表示</button><button id="jload">読み込む</button><button id="objx">OBJ書き出し</button><button id="bmerge">結合:OFF</button></div>
+ </aside>
+ <div id="stats"><span id="sp">パーツ 0</span><span id="st">三角形 0</span><span id="sm">0 ms</span><span id="sz"></span><span id="warn"></span><span class="hint">ドラッグ：回転／ホイール・ピンチ：拡大</span></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* 制作: dizz — プロシージャルモデリング第1版
+   構成: テンプレート(params+gen) → Part[] → InstancedMesh。全生成器が同じ Part 形式を出力する。 */
+const COARSE=matchMedia("(pointer:coarse)").matches,MAXP=250000, PI=Math.PI;
+// ---- 乱数（シード固定で再現可能）----
+function rng(s){let a=(s*2654435761)>>>0||1;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+// ---- Part ----
+const D=new THREE.Object3D();
+function P(out,g,pos,rot,sc,c){D.position.set(pos[0],pos[1],pos[2]);D.rotation.set(rot[0],rot[1],rot[2]);D.scale.set(sc[0],sc[1],sc[2]);D.updateMatrix();out.push({g,m:D.matrix.clone(),c})}
+function Pq(out,g,pos,q,sc,c){D.position.copy(pos);D.quaternion.copy(q);D.scale.set(sc[0],sc[1],sc[2]);D.updateMatrix();out.push({g,m:D.matrix.clone(),c});D.quaternion.identity()}
+const GR=new THREE.Color(.75,.75,.78);
+const hsl=(h,s,l)=>new THREE.Color().setHSL(h,s,l);
+const Z=[0,0,0],O=[1,1,1];
+// ---- 配置オペレータ ----
+const Op={
+ array:(n,f)=>{for(let i=0;i<n;i++)f(i,n)},
+ radial:(n,r,f)=>{for(let i=0;i<n;i++){const a=i/n*PI*2;f(i,a,Math.cos(a)*r,Math.sin(a)*r)}},
+ scatter:(n,rad,R,f)=>{for(let i=0;i<n;i++){const a=R()*PI*2,d=Math.sqrt(R())*rad;f(i,Math.cos(a)*d,Math.sin(a)*d)}}
+};
+// ---- 追加技術: L-system(確率・パラメトリック) / 3Dタートル ----
+let LO={b:1,l:1,t:.82,r:.12,th:.08,lh:.26,fh:.92};
+function lsys(ax,rules,it,R){let s=ax;for(let i=0;i<it;i++){let n="";for(const ch of s){const r=rules[ch];if(!r){n+=ch;continue}const x=R();let acc=0,pk=r[r.length-1][1];for(const [p,str] of r){acc+=p;if(x<acc){pk=str;break}}n+=pk}s=n;if(s.length>800000)break}return s}
+function turtle(s,ang,ratio,o,R){const X=new THREE.Vector3(1,0,0),Y=new THREE.Vector3(0,1,0),Zv=new THREE.Vector3(0,0,1),A=ang*PI/180,st=[];
+ let pos=new THREE.Vector3(),q=new THREE.Quaternion(),l=1.6,rad=LO.r,dep=0,hu=0;const rot=(ax,a)=>q.multiply(new THREE.Quaternion().setFromAxisAngle(ax,a));
+ for(const ch of s){if(o.length>MAXP)break;
+  if(ch==="F"){const d=Y.clone().applyQuaternion(q);Pq(o,"cyl",pos.clone().addScaledVector(d,l/2),q,[rad*2,l,rad*2],hsl((LO.th+hu)%1,.4,.22+Math.min(dep,7)*.03));pos.addScaledVector(d,l)}
+  else if(ch==="+")rot(Zv,A);else if(ch==="-")rot(Zv,-A);else if(ch==="&")rot(X,A);else if(ch==="^")rot(X,-A);else if(ch==="r")rot(Y,2.4);
+  else if(ch==="!"){l*=ratio;rad*=LO.t}
+  else if(ch==="["){st.push([pos.clone(),q.clone(),l,rad,dep,hu]);dep++}
+  else if(ch==="]"){const t=st.pop();if(t){pos=t[0];q=t[1];l=t[2];rad=t[3];dep=t[4];hu=t[5]}}
+  else if(ch==="A"){Pq(o,"sph",pos,q,[l*.9*LO.l,l*.9*LO.l,l*.9*LO.l],hsl(LO.lh+R()*.1,.55,.4))}
+  else if(ch==="B"){Pq(o,"sph",pos,q,[l*1.2*LO.b,l*1.2*LO.b,l*1.2*LO.b],hsl(LO.fh+R()*.06,.8,.65))}
+  else if(ch==="L"){Pq(o,"box",pos.clone().addScaledVector(Y.clone().applyQuaternion(q),l*.4),q,[l*.9*LO.l,l*.8*LO.l,.04],hsl(LO.lh+.04+R()*.08,.6,.4))}
+  else if(ch==="'")hu+=.06;else if(ch==="<")rad*=1.3;else if(ch===">")rad*=.77}}
+// ---- テンプレート ----
+// params: key:[ラベル,最小,最大,初期,刻み]
+const T=[
+{n:"らせん階段",p:{steps:["段数",5,80,28,1],radius:["半径",.5,4,1.8,.1],rise:["段の高さ",.1,.6,.28,.01],twist:["ねじれ(度/段)",5,40,18,1]},
+ g(v,R,o){Op.array(v.steps,i=>{const a=i*v.twist*PI/180;P(o,"box",[Math.cos(a)*v.radius*.6,i*v.rise,Math.sin(a)*v.radius*.6],[0,-a,0],[v.radius*1.2,.12,.5],hsl(.08+i/v.steps*.1,.5,.55))});P(o,"cyl",[0,v.steps*v.rise/2,0],Z,[.3,v.steps*v.rise+.2,.3],hsl(.6,.1,.4))}},
+{n:"塔",p:{floors:["階数",3,60,18,1],width:["幅",1,6,3,.1],taper:["先細り",.85,1,.96,.005],twist:["ねじれ(度)",0,30,6,.5]},
+ g(v,R,o){let w=v.width;for(let i=0;i<v.floors;i++){P(o,"box",[0,i*1.05+.5,0],[0,i*v.twist*PI/180,0],[w,1,w],hsl(.58,.25,.45+(i%2)*.08));w*=v.taper}P(o,"cone",[0,v.floors*1.05+.9,0],Z,[w,1.8,w],hsl(.0,.6,.5))}},
+{n:"樹木",p:{depth:["再帰の深さ",2,9,6,1],angle:["枝の角度",10,60,28,1],ratio:["長さ比",.55,.85,.72,.01],fork:["分岐数",2,4,2,1]},
+ g(v,R,o){const up=new THREE.Vector3(0,1,0);
+  (function br(pos,q,len,rad,d){const dir=up.clone().applyQuaternion(q);const mid=pos.clone().addScaledVector(dir,len/2);
+   Pq(o,"cyl",mid,q,[rad*2,len,rad*2],hsl(.08,.45,.25+(v.depth-d)*.02));const end=pos.clone().addScaledVector(dir,len);
+   if(d<=0||o.length>MAXP){Pq(o,"sph",end,q,[len*1.2,len*1.2,len*1.2],hsl(.3+R()*.08,.55,.38));return}
+   for(let k=0;k<v.fork;k++){const ph=k/v.fork*PI*2+R()*.8,ax=new THREE.Vector3(Math.cos(ph),0,Math.sin(ph)).applyQuaternion(q);
+    const nq=q.clone().premultiply(new THREE.Quaternion().setFromAxisAngle(ax,v.angle*PI/180*(.7+R()*.6)));br(end,nq,len*v.ratio,rad*.7,d-1)}
+  })(new THREE.Vector3(0,0,0),new THREE.Quaternion(),2.2,.18,v.depth)}},
+{n:"柵",p:{count:["本数",3,60,16,1],gap:["間隔",.3,1.5,.6,.05],height:["高さ",.5,3,1.3,.05],jitter:["高さのばらつき",0,.6,.15,.01]},
+ g(v,R,o){const W=(v.count-1)*v.gap;Op.array(v.count,i=>{const h=v.height*(1+(R()-.5)*v.jitter*2);P(o,"box",[i*v.gap-W/2,h/2,0],Z,[.2,h,.12],hsl(.09,.4,.4));P(o,"cone",[i*v.gap-W/2,h+.1,0],[0,PI/4,0],[.2,.25,.2],hsl(.09,.4,.35))});
+  [.35,.75].forEach(f=>P(o,"box",[0,v.height*f,.1],Z,[W+.4,.1,.08],hsl(.08,.35,.3)))}},
+{n:"貝殻",p:{turns:["巻き数",2,8,4,.1],growth:["成長率",.05,.3,.16,.005],rise:["高さ",0,.6,.25,.01],density:["密度",16,60,34,1]},
+ g(v,R,o){const n=Math.floor(v.turns*v.density);for(let i=0;i<n;i++){const t=i/v.density,r=Math.exp(v.growth*t),a=t*PI*2;P(o,"sph",[Math.cos(a)*r,t*v.rise*r,Math.sin(a)*r],Z,[r*.8,r*.8,r*.8],hsl(.04+i/n*.08,.55,.6-i/n*.15))}}},
+{n:"花瓶",p:{rings:["段数",10,80,40,1],base:["基本半径",.4,1.5,.8,.01],amp:["ふくらみ",0,.8,.45,.01],freq:["波の数",.5,4,1.2,.05]},
+ g(v,R,o){const h=3/v.rings;for(let i=0;i<v.rings;i++){const y=i/v.rings,r=v.base+v.amp*Math.sin(y*PI*v.freq)*(1-y*.5);P(o,"cyl",[0,i*h+h/2,0],Z,[r*2,h*1.02,r*2],hsl(.55+y*.15,.5,.5))}}},
+{n:"街灯の並び",p:{count:["本数",2,30,10,1],gap:["間隔",1,6,3,.1],curve:["蛇行幅",0,4,1.5,.1],h:["高さ",1.5,5,3,.1]},
+ g(v,R,o){P(o,"box",[v.count*v.gap/2-v.gap/2,-.03,0],Z,[v.count*v.gap+1,.06,2.2+v.curve*1.2],hsl(.6,.05,.3));Op.array(v.count,i=>{const x=i*v.gap,z=Math.sin(i*.8)*v.curve;P(o,"cyl",[x,v.h/2,z],Z,[.12,v.h,.12],hsl(.6,.1,.25));P(o,"sph",[x,v.h+.1,z],Z,[.4,.4,.4],hsl(.13,.9,.7))})}},
+{n:"岩の散布",p:{count:["個数",5,400,80,1],area:["範囲",2,15,6,.5],size:["大きさ",.2,2,.7,.05],flat:["平たさ",.3,1,.6,.05]},
+ g(v,R,o){Op.scatter(v.count,v.area,R,(i,x,z)=>{const s=v.size*(.4+R()*1);P(o,"sph",[x,s*v.flat*.3,z],[R()*3,R()*3,R()*3],[s,s*v.flat,s*(.7+R()*.5)],hsl(.1,.05,.3+R()*.25))})}},
+{n:"簡易建物",p:{floors:["階数",1,20,8,1],cols:["窓の列",2,12,6,1],spacing:["窓の間隔",.5,1.5,.9,.05],lit:["点灯率",0,1,.5,.05]},
+ g(v,R,o){const w=v.cols*v.spacing+.6,H=v.floors*1.1;P(o,"box",[0,H/2,0],Z,[w,H,w],hsl(.08,.15,.45));
+  for(let f=0;f<v.floors;f++)for(let c=0;c<v.cols;c++)for(let s=0;s<4;s++){const u=(c-(v.cols-1)/2)*v.spacing,on=R()<v.lit,col=on?hsl(.14,.9,.65):hsl(.6,.3,.25),k=w/2+.01;
+   const pos=[[u,0,k],[u,0,-k],[k,0,u],[-k,0,u]][s];pos[1]=f*1.1+.6;P(o,"box",pos,Z,s<2?[.5,.55,.04]:[.04,.55,.5],col)}
+  P(o,"box",[0,H+.15,0],Z,[w+.2,.3,w+.2],hsl(.0,.0,.3))}},
+{n:"L-system(再帰成長)",p:{type:["型 1樹 2結晶 3傘",1,3,1,1],iter:["世代数",1,9,5,1],angle:["角度",10,70,30,1],ratio:["縮小率",.6,.95,.8,.01],irr:["不規則度(確率)",0,1,.3,.05]},
+ g(v,R,o){const i=v.irr,rs={1:{A:[[1-i,"F![&+A][&-A]rA"],[i,"F![&+A][^-A]rA"]]},2:{A:[[1,"F![+A][-A][&A][^A]"]]},3:{A:[[1-i,"F![&+A]rr[&+A]rr[&+A]"],[i,"F![&+A]rr[&+A]"]]}}[v.type];
+  LO={b:1,l:1,t:.82,r:.12,th:.08,lh:.26,fh:.92};turtle(lsys("A",rs,v.iter,R),v.angle,v.ratio,o,R)}},
+{n:"分割都市(Split)",p:{depth:["分割回数",1,9,6,1],gap:["すき間",.05,.6,.2,.01],hv:["高さの振れ幅",0,2,1,.05],size:["区画の大きさ",6,20,12,1]},
+ g(v,R,o){P(o,"box",[0,-.05,0],Z,[v.size+.4,.1,v.size+.4],hsl(.6,.05,.25));
+  const rec=(x,z,w,d,dep)=>{if(dep>=v.depth||(w<1.2&&d<1.2)||R()<.06){const h=.5+R()*R()*v.hv*8;P(o,"box",[x,h/2,z],Z,[Math.max(.1,w-v.gap),h,Math.max(.1,d-v.gap)],hsl(.58,.2,Math.min(.7,.3+h/14)));return}
+   const r=.3+R()*.4;if(w>=d){const a=w*r,b=w-a;rec(x-w/2+a/2,z,a,d,dep+1);rec(x+w/2-b/2,z,b,d,dep+1)}else{const a=d*r,b=d-a;rec(x,z-d/2+a/2,w,a,dep+1);rec(x,z+d/2-b/2,w,b,dep+1)}};
+  rec(0,0,v.size,v.size,0)}},
+{n:"結び目(Sweep)",p:{p:["p(巻き数)",1,7,3,1],q:["q(振動数)",1,9,2,1],thick:["太さ",.05,.5,.18,.01],seg:["分割数",40,400,160,10]},
+ g(v,R,o){const n=v.seg,pts=[],Y=new THREE.Vector3(0,1,0);for(let i=0;i<=n;i++){const t=i/n*PI*2,r=2+Math.cos(v.q*t);pts.push(new THREE.Vector3(r*Math.cos(v.p*t),3-Math.sin(v.q*t)*1.2,r*Math.sin(v.p*t)))}
+  for(let i=0;i<n;i++){const a=pts[i],b=pts[i+1],d=b.clone().sub(a),len=d.length(),c=hsl(i/n,.7,.55);Pq(o,"cyl",a.clone().add(b).multiplyScalar(.5),new THREE.Quaternion().setFromUnitVectors(Y,d.normalize()),[v.thick*2,len*1.05,v.thick*2],c);Pq(o,"sph",a,new THREE.Quaternion(),[v.thick*2,v.thick*2,v.thick*2],c)}}},
+{n:'メンガーのスポンジ',p:{depth:['再帰深さ',1,3,2,1],size:['大きさ',2,8,4,.5]},
+ g(v,R,o){const rec=(x,y,z,s,d)=>{if(!d){P(o,'box',[x,y,z],Z,[s*.98,s*.98,s*.98],hsl(.6+(x+z)*.03,.5,.35+y/v.size*.3));return}for(let a=-1;a<2;a++)for(let b=-1;b<2;b++)for(let c=-1;c<2;c++){if((a==0)+(b==0)+(c==0)>=2)continue;rec(x+a*s/3,y+b*s/3,z+c*s/3,s/3,d-1)}};rec(0,v.size/2,0,v.size,v.depth)}},
+{n:'DNA二重らせん',p:{n:['塩基対数',10,120,40,1],tw:['ねじれ(度/段)',5,40,20,1],r:['半径',.5,3,1.2,.05],rise:['上昇',.1,.6,.3,.01]},
+ g(v,R,o){const Y=new THREE.Vector3(0,1,0);for(let i=0;i<v.n;i++){const a=i*v.tw*PI/180,x=Math.cos(a)*v.r,z=Math.sin(a)*v.r,y=i*v.rise;P(o,'sph',[x,y,z],Z,[.4,.4,.4],hsl(.58,.7,.55));P(o,'sph',[-x,y,-z],Z,[.4,.4,.4],hsl(.95,.7,.6));Pq(o,'cyl',new THREE.Vector3(0,y,0),new THREE.Quaternion().setFromUnitVectors(Y,new THREE.Vector3(x,0,z).normalize()),[.1,v.r*2,.1],hsl(.12,.8,.6))}}},
+{n:'花(黄金角配置)',p:{n:['個数',50,800,300,10],c:['広がり',.05,.3,.12,.005],bowl:['くぼみ',0,.1,.02,.002],size:['粒の大きさ',.05,.4,.16,.01]},
+ g(v,R,o){for(let i=1;i<=v.n;i++){const a=i*2.39996,r=v.c*Math.sqrt(i)*3;P(o,'sph',[Math.cos(a)*r,r*r*v.bowl,Math.sin(a)*r],Z,[v.size,v.size*.6,v.size],hsl(.12-i/v.n*.1,.8,.5+i/v.n*.1))}}},
+{n:'波の地形',p:{n:['格子数',6,40,24,1],amp:['高さ',.2,4,1.5,.1],freq:['波長',.1,1.2,.5,.05],noise:['乱れ',0,1.5,.3,.05]},
+ g(v,R,o){for(let i=0;i<v.n;i++)for(let j=0;j<v.n;j++){const x=i-v.n/2,z=j-v.n/2,h=Math.max(.15,v.amp*(1+Math.sin(x*v.freq)*Math.cos(z*v.freq))/2+R()*v.noise);P(o,'box',[x,h/2,z],Z,[.95,h,.95],hsl(.55-h/6,.55,.45))}}},
+{n:'歯車',p:{teeth:['歯数',6,40,16,1],r:['半径',1,5,2.5,.1],th:['厚み',.2,2,.6,.05],tl:['歯の長さ',.1,1,.45,.05]},
+ g(v,R,o){P(o,'cyl',[0,v.th/2,0],Z,[v.r*2,v.th,v.r*2],hsl(.6,.1,.5));Op.radial(v.teeth,v.r+v.tl/2-.05,(i,a,x,z)=>P(o,'box',[x,v.th/2,z],[0,-a,0],[v.tl,v.th,PI*2*v.r/v.teeth*.5],hsl(.6,.1,.4)));P(o,'cyl',[0,v.th/2,0],Z,[.5,v.th*1.6,.5],hsl(.1,.5,.4))}},
+{n:'城壁',p:{n:['塔の数',3,14,7,1],r:['半径',3,12,6,.5],h:['壁の高さ',.8,4,2,.1],th:['塔の高さ',2,8,4,.2]},
+ g(v,R,o){const pts=[];Op.radial(v.n,v.r,(i,a,x,z)=>{pts.push([x,z]);P(o,'cyl',[x,v.th/2,z],Z,[1.3,v.th,1.3],hsl(.08,.1,.5));P(o,'cone',[x,v.th+.6,z],Z,[1.6,1.2,1.6],hsl(0,.55,.45))});
+  pts.forEach((p,i)=>{const q=pts[(i+1)%pts.length],dx=q[0]-p[0],dz=q[1]-p[1],L=Math.hypot(dx,dz),ry=-Math.atan2(dz,dx),m=Math.floor(L/.6);P(o,'box',[(p[0]+q[0])/2,v.h/2,(p[1]+q[1])/2],[0,ry,0],[L,v.h,.5],hsl(.08,.1,.42));Op.array(m,k=>{const t=(k+.5)/m;P(o,'box',[p[0]+dx*t,v.h+.15,p[1]+dz*t],[0,ry,0],[.3,.3,.5],hsl(.08,.1,.4))})});
+  P(o,'box',[0,1,0],Z,[1.6,2,1.6],hsl(.1,.2,.5))}},
+{n:'森',p:{count:['本数',5,300,70,1],area:['範囲',3,20,9,.5],h:['高さ',1,4,2.2,.1]},
+ g(v,R,o){Op.scatter(v.count,v.area,R,(i,x,z)=>{const s=v.h*(.6+R()*.8);P(o,'cyl',[x,s*.2,z],Z,[.1*s,s*.4,.1*s],hsl(.07,.4,.25));P(o,'cone',[x,s*.65,z],Z,[s*.55,s*.7,s*.55],hsl(.33+R()*.05,.5,.3));P(o,'cone',[x,s*.95,z],Z,[s*.4,s*.55,s*.4],hsl(.33+R()*.05,.5,.36))})}},
+{n:'ドーム(タイル)',p:{rings:['緯度分割',3,20,9,1],segs:['経度分割',6,40,20,1],r:['半径',2,8,4,.1]},
+ g(v,R,o){const Y=new THREE.Vector3(0,1,0);for(let i=0;i<v.rings;i++){const th=(i+.5)/v.rings*PI/2,n=Math.max(3,Math.round(v.segs*Math.sin(th)));for(let j=0;j<n;j++){const ph=j/n*PI*2+(i%2)*PI/n,nm=new THREE.Vector3(Math.sin(th)*Math.cos(ph),Math.cos(th),Math.sin(th)*Math.sin(ph));
+   Pq(o,'box',nm.clone().multiplyScalar(v.r),new THREE.Quaternion().setFromUnitVectors(Y,nm),[v.r*2*PI*Math.sin(th)/n*.95,.12,v.r*PI/2/v.rings*.95],hsl(.55+i/v.rings*.15,.5,.5))}}}},
+{n:"回転体(Lathe)",p:{h:["高さ",1,5,3,.1],bulge:["ふくらみ",0,1.5,.7,.05],neck:["首の細さ",.1,1,.35,.05],lip:["口の広がり",0,.5,.15,.01],seg:["周方向分割",6,48,24,1]},
+ g(v,R,o){const pts=[new THREE.Vector2(0,0)];for(let i=0;i<=40;i++){const t=i/40,r=v.neck+v.bulge*Math.sin(PI*Math.pow(t,.8))*(1-t*.3)+v.lip*Math.pow(Math.max(0,(t-.9)/.1),2);pts.push(new THREE.Vector2(Math.max(.02,r),t*v.h))}
+  GEO.lathe&&GEO.lathe.dispose();GEO.lathe=new THREE.LatheGeometry(pts,v.seg);P(o,"lathe",Z,Z,O,hsl(.55,.5,.55))}},
+{n:"L-system(自由記述)",p:{iter:["世代数",1,9,5,1],angle:["角度",10,70,30,1],ratio:["縮小率",.6,.95,.8,.01],bsz:["花の大きさ",.3,3,1,.1],lsz:["葉の大きさ",.3,3,1,.1],taper:["太さの減り",.6,.95,.82,.01],rad:["幹の太さ",.04,.3,.12,.01],th:["幹の色相",0,1,.08,.01],lh:["葉の色相",0,1,.26,.01],fh:["花の色相",0,1,.92,.01]},
+ g(v,R,o){let ax="A";LO={b:v.bsz,l:v.lsz,t:v.taper,r:v.rad,th:v.th,lh:v.lh,fh:v.fh};const rs={};for(const ln of $("lrule").value.split("\n")){const t=ln.trim();if(!t||t[0]==="#")continue;if(t.startsWith("axiom=")){ax=t.slice(6).trim()||"A";continue}const m=/^(\S)=(?:([\d.]+):)?(.*)$/.exec(t);if(!m)continue;(rs[m[1]]=rs[m[1]]||[]).push([m[2]===undefined?null:+m[2],m[3].trim()])}
+  for(const k in rs){const a=rs[k],used=a.reduce((s,x)=>s+(x[0]||0),0),nn=a.filter(x=>x[0]===null).length;a.forEach(x=>{if(x[0]===null)x[0]=Math.max(0,1-used)/nn})}
+  turtle(lsys(ax,rs,v.iter,R),v.angle,v.ratio,o,R)}},
+{n:"回転体(断面編集)",p:{h:["高さ",1,5,3,.1],sc:["太さ倍率",.5,3,1.5,.05],seg:["周方向分割",6,48,24,1]},
+ g(v,R,o){const pts=[new THREE.Vector2(0,0)];cr(PF).forEach(p=>pts.push(new THREE.Vector2(Math.max(.02,p[0]*v.sc),p[1]*v.h)));GEO.lathe&&GEO.lathe.dispose();GEO.lathe=new THREE.LatheGeometry(pts,v.seg);P(o,"lathe",Z,Z,O,hsl(.55,.5,.55))}},
+{n:"樽",p:{h:["高さ",.6,2.5,1.3,.05],r:["半径",.3,1,.5,.01],bulge:["ふくらみ",0,.5,.2,.01],rings:["段数",5,20,9,1]},
+ g(v,R,o){const hh=v.h/v.rings;for(let i=0;i<v.rings;i++){const y=(i+.5)/v.rings,r=v.r*(1+v.bulge*Math.sin(PI*y));P(o,"cyl",[0,i*hh+hh/2,0],Z,[r*2,hh*1.02,r*2],hsl(.08,.5,.35))}[.2,.8].forEach(y=>{const r=v.r*(1+v.bulge*Math.sin(PI*y))*1.04;P(o,"cyl",[0,y*v.h,0],Z,[r*2,.06,r*2],hsl(.6,.1,.3))})}},
+{n:"木箱",p:{w:["幅",.5,2,1,.05],h:["高さ",.4,2,.8,.05],d:["奥行",.5,2,.8,.05],t:["枠の厚さ",.04,.15,.08,.01]},
+ g(v,R,o){const t=v.t;bx(o,[0,v.h/2,0],[v.w-t,v.h-t,v.d-t],hsl(.09,.4,.35));for(const sx of[-1,1])for(const sz of[-1,1])bx(o,[sx*v.w/2,v.h/2,sz*v.d/2],[t,v.h,t],hsl(.09,.45,.28));[0,v.h].forEach(y=>{for(const s of[-1,1]){bx(o,[0,y,s*v.d/2],[v.w,t,t]);bx(o,[s*v.w/2,y,0],[t,t,v.d])}})}},
+{n:"柱",p:{h:["高さ",1,8,4,.1],r:["半径",.2,1,.4,.01],fl:["溝の数",0,24,12,1]},
+ g(v,R,o){const sh=v.h-.6;P(o,"cyl",[0,.15,0],Z,[v.r*2.8,.3,v.r*2.8],hsl(.1,.1,.6));P(o,"cyl",[0,.3+sh/2,0],Z,[v.r*2,sh,v.r*2],hsl(.1,.1,.7));Op.radial(v.fl,v.r,(i,a,x,z)=>P(o,"cyl",[x,.3+sh/2,z],Z,[.07,sh,.07],hsl(.1,.1,.62)));bx(o,[0,v.h-.15,0],[v.r*3,.3,v.r*3],hsl(.1,.1,.6))}},
+{n:"椅子",p:{w:["幅",.4,1,.6,.01],seat:["座面の高さ",.3,.7,.45,.01],back:["背もたれ",.3,1.2,.6,.01],leg:["足の太さ",.03,.1,.05,.01]},
+ g(v,R,o){const k=v.w/2-v.leg/2;bx(o,[0,v.seat,0],[v.w,.06,v.w]);for(const sx of[-1,1])for(const sz of[-1,1])bx(o,[sx*k,v.seat/2,sz*k],[v.leg,v.seat,v.leg]);for(const sx of[-1,1])bx(o,[sx*k,v.seat+v.back/2,-k],[v.leg,v.back,v.leg]);for(let i=0;i<3;i++)bx(o,[0,v.seat+v.back*(.3+.25*i),-k],[v.w-v.leg*2,.05,.03])}},
+{n:"テーブル",p:{L:["長さ",.8,3,1.6,.05],W:["幅",.5,1.5,.9,.05],H:["高さ",.5,1.2,.75,.01],t:["天板厚",.04,.12,.06,.01]},
+ g(v,R,o){bx(o,[0,v.H-v.t/2,0],[v.L,v.t,v.W]);for(const sx of[-1,1])for(const sz of[-1,1])bx(o,[sx*(v.L/2-.08),(v.H-v.t)/2,sz*(v.W/2-.08)],[.08,v.H-v.t,.08])}},
+{n:"扉",p:{w:["幅",.6,2,1,.05],h:["高さ",1.5,3,2.1,.05],th:["厚さ",.04,.2,.08,.01],panels:["パネル数",0,4,2,1]},
+ g(v,R,o){for(const s of[-1,1])bx(o,[s*(v.w/2+.05),v.h/2,0],[.1,v.h+.1,v.th+.04]);bx(o,[0,v.h+.05,0],[v.w+.2,.1,v.th+.04]);bx(o,[0,v.h/2,0],[v.w,v.h,v.th]);Op.array(v.panels,i=>bx(o,[0,(i+.5)/v.panels*v.h,v.th/2+.01],[v.w*.7,v.h/v.panels*.7,.02]));P(o,"sph",[v.w*.35,v.h*.5,v.th/2+.04],Z,[.08,.08,.08],hsl(.12,.6,.5))}},
+{n:"窓",p:{cols:["列",1,4,2,1],rows:["行",1,4,2,1],w:["幅",.6,2.5,1.2,.05],h:["高さ",.6,2.5,1.2,.05],t:["枠の太さ",.03,.1,.06,.01]},
+ g(v,R,o){for(const s of[-1,1])bx(o,[s*v.w/2,v.h/2,0],[v.t,v.h+v.t,v.t]);[0,v.h].forEach(y=>bx(o,[0,y,0],[v.w,v.t,v.t]));for(let i=1;i<v.cols;i++)bx(o,[-v.w/2+i*v.w/v.cols,v.h/2,0],[v.t*.6,v.h,v.t*.6]);for(let i=1;i<v.rows;i++)bx(o,[0,i*v.h/v.rows,0],[v.w,v.t*.6,v.t*.6])}},
+{n:"直線階段",p:{steps:["段数",3,30,10,1],w:["幅",.6,4,1.6,.1],rise:["踏高",.1,.4,.2,.01],run:["踏面",.2,.6,.3,.01]},
+ g(v,R,o){Op.array(v.steps,i=>bx(o,[0,(i+1)*v.rise/2,i*v.run+v.run/2],[v.w,(i+1)*v.rise,v.run]))}},
+{n:"屋根",p:{w:["幅",2,8,4,.1],d:["奥行",2,8,4,.1],pitch:["勾配(度)",15,60,35,1],t:["厚さ",.05,.3,.12,.01]},
+ g(v,R,o){const p=v.pitch*PI/180,hf=v.w/2,L=hf/Math.cos(p),y=hf/2*Math.tan(p);P(o,"box",[-hf/2,y,0],[0,0,p],[L,v.t,v.d],hsl(.02,.5,.35));P(o,"box",[hf/2,y,0],[0,0,-p],[L,v.t,v.d],hsl(.02,.5,.35))}},
+{n:"レンガ壁",p:{cols:["列",2,14,8,1],rows:["段",2,20,10,1],bw:["レンガ幅",.2,.6,.4,.01],bh:["レンガ高",.1,.3,.2,.01]},
+ g(v,R,o){for(let r=0;r<v.rows;r++)for(let c=0;c<v.cols;c++)bx(o,[c*v.bw-v.cols*v.bw/2+(r%2)*v.bw/2,r*v.bh+v.bh/2,0],[v.bw-.01,v.bh-.01,.2],hsl(.05,.4,.35+R()*.1))}},
+{n:"城壁(胸壁)",p:{len:["長さ",3,20,10,.5],h:["高さ",1,4,2.5,.1],mer:["歯の数",2,20,8,1]},
+ g(v,R,o){bx(o,[0,v.h/2,0],[v.len,v.h,.6]);Op.array(v.mer,i=>bx(o,[-v.len/2+(i+.5)*v.len/v.mer,v.h+.2,0],[v.len/v.mer*.55,.4,.6]))}},
+{n:"梯子",p:{rungs:["段数",3,20,8,1],w:["幅",.3,.8,.5,.01],gap:["段間隔",.2,.5,.3,.01]},
+ g(v,R,o){const H=v.rungs*v.gap;for(const s of[-1,1])bx(o,[s*v.w/2,H/2,0],[.05,H+.2,.05]);Op.array(v.rungs,i=>P(o,"cyl",[0,(i+.5)*v.gap,0],[0,0,PI/2],[.04,v.w,.04],hsl(.09,.4,.35)))}},
+{n:"井戸",p:{r:["半径",.5,2,1,.05],bricks:["レンガ数",8,24,14,1],h:["高さ",.4,1.5,.8,.05]},
+ g(v,R,o){Op.radial(v.bricks,v.r,(i,a,x,z)=>P(o,"box",[x,v.h/2,z],[0,-a-PI/2,0],[2*PI*v.r/v.bricks*.95,v.h,.25],hsl(.07,.1,.45)));for(const s of[-1,1])bx(o,[s*v.r*1.1,v.h+.9,0],[.1,1.8,.1]);P(o,"cyl",[0,v.h+1.7,0],[0,0,PI/2],[.1,v.r*2.4,.1],hsl(.09,.4,.3))}},
+{n:"薪組み",p:{n:["本数",3,12,6,1],rad:["円の半径",.3,1.5,.8,.05],len:["長さ",.6,2,1.2,.05],tilt:["傾き(度)",10,60,30,1],th:["太さ",.05,.2,.1,.01]},
+ g(v,R,o){const Yv=new THREE.Vector3(0,1,0),Zv=new THREE.Vector3(0,0,1);for(let i=0;i<v.n;i++){const a=i/v.n*PI*2,qy=new THREE.Quaternion().setFromAxisAngle(Yv,a),q=qy.clone().multiply(new THREE.Quaternion().setFromAxisAngle(Zv,v.tilt*PI/180)),ax=Yv.clone().applyQuaternion(q),b=new THREE.Vector3(v.rad,0,0).applyQuaternion(qy);Pq(o,"cyl",b.addScaledVector(ax,v.len/2),q,[v.th*2,v.len,v.th*2],hsl(.07,.5,.25))}}},
+{n:"ランタン",p:{h:["高さ",.3,1,.5,.01],w:["幅",.15,.4,.25,.01]},
+ g(v,R,o){bx(o,[0,.03,0],[v.w,.06,v.w]);for(const sx of[-1,1])for(const sz of[-1,1])bx(o,[sx*v.w/2,v.h/2,sz*v.w/2],[.03,v.h,.03]);P(o,"cone",[0,v.h+.1,0],[0,PI/4,0],[v.w*1.5,.2,v.w*1.5],hsl(.08,.1,.3));P(o,"sph",[0,v.h/2,0],Z,[v.w*.6,v.w*.6,v.w*.6],hsl(.13,.9,.7));P(o,"cyl",[0,v.h+.25,0],[0,0,PI/2],[.02,v.w,.02],hsl(.08,.1,.3))}},
+{n:"剣",p:{blade:["刃の長さ",.5,1.5,1,.05],width:["刃幅",.04,.15,.08,.01],guard:["つば幅",.15,.4,.25,.01]},
+ g(v,R,o){P(o,"cyl",[0,.1,0],Z,[.04,.2,.04],hsl(.07,.5,.25));P(o,"sph",[0,-.02,0],Z,[.07,.07,.07],hsl(.12,.6,.5));bx(o,[0,.22,0],[v.guard,.04,.05],hsl(.12,.6,.5));bx(o,[0,.24+v.blade/2,0],[v.width,v.blade,.015],hsl(.6,.05,.75));P(o,"cone",[0,.24+v.blade+.04,0],Z,[v.width*1.1,.1,.02],hsl(.6,.05,.75))}},
+{n:"盾",p:{r:["半径",.3,.8,.5,.01]},
+ g(v,R,o){const r=v.r;P(o,"cyl",[0,r,0],[PI/2,0,0],[r*2,.06,r*2],hsl(.6,.4,.4));P(o,"cyl",[0,r,-.015],[PI/2,0,0],[r*2.1,.03,r*2.1],hsl(.1,.1,.4));bx(o,[0,r,.04],[r*1.8,.06,.02],hsl(.12,.6,.5));bx(o,[0,r,.04],[.06,r*1.8,.02],hsl(.12,.6,.5));P(o,"sph",[0,r,.05],Z,[r*.5,r*.5,.2],hsl(.12,.6,.55))}},
+{n:"ベッド",p:{L:["長さ",1.5,2.5,2,.05],W:["幅",.8,1.6,1.1,.05],H:["足の高さ",.3,.7,.45,.01]},
+ g(v,R,o){for(const sx of[-1,1])for(const sz of[-1,1])bx(o,[sx*(v.W/2-.05),v.H/2,sz*(v.L/2-.05)],[.08,v.H,.08]);bx(o,[0,v.H+.05,0],[v.W,.1,v.L],hsl(.08,.4,.3));bx(o,[0,v.H+.2,0],[v.W-.1,.2,v.L-.1],hsl(.6,.1,.8));bx(o,[0,v.H+.4,-v.L/2],[v.W,.8,.08],hsl(.08,.4,.28));bx(o,[0,v.H+.34,-v.L/2+.3],[v.W*.6,.12,.3],hsl(.0,.0,.95))}},
+{n:'廃墟の建物',p:{W:['幅',4,12,8,1],D:['奥行',4,12,6,1],fl:['階数',1,5,3,1],fh:['階高',2.5,4,3,.1],wins:['窓の数/面',0,4,2,1],dr:['破損率',0,1,.3,.05],ero:['崩落',0,1,.45,.05],tilt:['欠け傾き(度)',0,30,12,1],rub:['瓦礫数',0,300,80,5],sc:['欠けの大きさ',1,8,3.5,.5],dir:['崩れる側 0全体 1:+X 2:-X 3:+Z 4:-Z',0,4,0,1]},
+ g(v,R,o){const bw=.5,bh=.25,H=v.fl*v.fh;
+  const wall=(len,cx,cz,rot)=>{const cols=Math.ceil(len/bw)+1,rows=Math.floor(H/bh);for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const lx=c*bw-len/2+(r%2)*bw/2;if(lx>len/2)continue;const y=r*bh+bh/2,yi=y%v.fh;let hole=false;for(let k=0;k<v.wins;k++){const wx=-len/2+(k+.5)*len/v.wins;if(Math.abs(lx-wx)<.55&&yi>.9&&yi<2.3)hole=true}if(hole)continue;P(o,'box',[cx+lx*Math.cos(rot),y,cz-lx*Math.sin(rot)],[0,rot,0],[bw-.02,bh-.02,.25],hsl(.04,.35,.36+R()*.1))}};
+  wall(v.W,0,-v.D/2,0);wall(v.W,0,v.D/2,0);wall(v.D,-v.W/2,0,PI/2);wall(v.D,v.W/2,0,PI/2);
+  for(let f=0;f<=v.fl;f++)for(let x=0;x<Math.ceil(v.W/2);x++)for(let z=0;z<Math.ceil(v.D/2);z++)bx(o,[-v.W/2+x*2+1,f*v.fh,-v.D/2+z*2+1],[1.96,.2,1.96],hsl(.1,.05,.45+R()*.08));
+  for(const s of[-1,1])bx(o,[s*v.W/4,H/2,0],[.4,H,.4],hsl(.1,.05,.4));
+  for(let i=0;i<5;i++)bx(o,[0,H+.1,-v.D/2+i*v.D/4],[v.W,.15,.2],hsl(.08,.4,.25));
+  dmg(o,{rate:v.dr,sc:v.sc,ero:v.ero,tilt:v.tilt,rub:v.rub,dir:v.dir},21)}},
+{n:'廃墟の壁',p:{len:['長さ',3,14,8,.5],h:['高さ',2,8,4,.25],bw:['レンガ幅',.3,.7,.5,.05],bh:['レンガ高',.15,.35,.25,.01],dr:['破損率',0,1,.3,.05],ero:['崩落',0,1,.4,.05],tilt:['欠け傾き(度)',0,30,10,1],rub:['瓦礫数',0,200,40,5],sc:['欠けの大きさ',1,8,3,.5],dir:['崩れる側 0全体 1:+X 2:-X 3:+Z 4:-Z',0,4,0,1]},
+ g(v,R,o){const cols=Math.ceil(v.len/v.bw)+1,rows=Math.floor(v.h/v.bh);for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const x=c*v.bw-v.len/2+(r%2)*v.bw/2;if(x>v.len/2)continue;bx(o,[x,r*v.bh+v.bh/2,0],[v.bw-.02,v.bh-.02,.3],hsl(.05,.35,.36+R()*.1))}dmg(o,{rate:v.dr,sc:v.sc,ero:v.ero,tilt:v.tilt,rub:v.rub,dir:v.dir},11)}},
+{n:'折れた柱列',p:{n:['本数',2,8,4,1],sp:['間隔',2,5,3,.1],h:['高さ',2,8,5,.1],r:['半径',.25,.7,.4,.01],drums:['段数',3,9,5,1],brk:['折れ具合',0,1,.6,.05]},
+ g(v,R,o){const dh=v.h/v.drums;for(let i=0;i<v.n;i++){const x=(i-(v.n-1)/2)*v.sp,hi=v.h*(1-v.brk*R()*.9);P(o,'cyl',[x,.1,0],Z,[v.r*3,.2,v.r*3],hsl(.1,.05,.5));
+  for(let j=0;j<v.drums;j++){if(j*dh<hi)P(o,'cyl',[x+(R()-.5)*.05,.2+j*dh+dh/2,(R()-.5)*.05],[(R()-.5)*.04,0,(R()-.5)*.04],[v.r*2,dh*.98,v.r*2],hsl(.1,.05,.6-R()*.1));else P(o,'cyl',[x+(R()-.5)*2.2,v.r,R()*1.6+.8],[0,R()*PI,PI/2],[v.r*2,dh*.98,v.r*2],hsl(.1,.05,.5))}}}},
+{n:'瓦礫山',p:{n:['個数',20,400,120,5],rad:['広がり',1,6,3,.1],hgt:['山の高さ',.3,3,1.2,.1],size:['破片の大きさ',.1,.6,.3,.01]},
+ g(v,R,o){Op.scatter(v.n,v.rad,R,(i,x,z)=>{const d=Math.hypot(x,z)/v.rad,y=Math.max(0,1-d*d)*v.hgt*(.6+R()*.4),s=v.size*(.4+R()*1.1),g=R()<.7?'box':(R()<.5?'cyl':'sph');P(o,g,[x,y+s*.3,z],[R()*3,R()*3,R()*3],[s*(.7+R()),s*(.5+R()*.7),s*(.7+R())],hsl(.08,.08+R()*.1,.28+R()*.2))});for(let k=0;k<Math.floor(v.n/25);k++)P(o,'cyl',[(R()-.5)*v.rad,v.hgt*.7,(R()-.5)*v.rad],[R()*.6,0,R()*.6],[.03,1.2,.03],hsl(.05,.5,.2))}},
+{n:'崩れたアーチ',p:{span:['幅',2,6,4,.1],h:['脚の高さ',1.5,4,2.5,.1],blocks:['石の数',8,24,14,1],brk:['欠落率',0,1,.4,.05],th:['厚み',.2,.6,.4,.01]},
+ g(v,R,o){const rr=v.span/2;for(const s of[-1,1])bx(o,[s*(rr+v.th*.1),v.h/2,0],[v.th*1.2,v.h,.6],hsl(.1,.05,.5));for(let i=0;i<v.blocks;i++){const a=(i+.5)/v.blocks*PI,ch=PI*rr/v.blocks*1.02;if(R()<v.brk&&i>1&&i<v.blocks-2){P(o,'box',[(R()-.5)*v.span*1.3,v.th*.3,R()*1.2+.5],[R()*3,R()*3,R()*3],[ch,v.th,.5],hsl(.1,.05,.45));continue}P(o,'box',[Math.cos(a)*rr,v.h+Math.sin(a)*rr,0],[0,0,a+PI/2],[ch,v.th,.5],hsl(.1,.05,.5+R()*.08))}}},
+{n:'崩れた階段',p:{steps:['段数',5,24,12,1],w:['幅',1,3,1.6,.1],rise:['蹴上',.15,.3,.2,.01],run:['踏面',.25,.4,.3,.01],brk:['崩れ具合',0,1,.4,.05]},
+ g(v,R,o){const cw=v.w/3,cut=Math.floor(v.steps*(1-v.brk*.7));for(let i=0;i<v.steps;i++)for(let k=0;k<3;k++){const ok=i<=cut&&R()>v.brk*.25,x=(k-1)*cw,h=(i+1)*v.rise;if(ok)P(o,'box',[x,h/2-R()*v.brk*.05,i*v.run+v.run/2],[(R()-.5)*v.brk*.15,0,(R()-.5)*v.brk*.15],[cw-.02,h,v.run],hsl(.1,.05,.45+R()*.1));else if(R()<.5)P(o,'box',[x+(R()-.5)*1.5,v.rise*.3,i*v.run+R()*1.5],[R()*3,R()*3,R()*3],[cw*.7,v.rise*.8,v.run*.7],hsl(.1,.05,.4))}}},
+{n:'崩れた屋根組',p:{span:['幅',4,10,6,.5],len:['奥行',3,10,6,.5],n:['骨組みの数',3,12,6,1],pitch:['勾配(度)',15,45,30,1],fall:['崩落率',0,1,.4,.05]},
+ g(v,R,o){const hf=v.span/2,p=v.pitch*PI/180,L=hf/Math.cos(p),ry=hf*Math.tan(p),col=()=>hsl(.08,.4,.22+R()*.08),sg=v.len/(v.n-1);
+  for(let i=0;i<v.n;i++){const z=-v.len/2+i*sg,f=R()<v.fall,dy=f?-R()*ry*.8:0,tx=f?(R()-.5)*1.2:0,dx=f?(R()-.5):0;P(o,'box',[-hf/2+dx,ry/2+dy,z],[tx,0,p],[L,.15,.12],col());P(o,'box',[hf/2+dx,ry/2+dy,z],[tx,0,-p],[L,.15,.12],col());if(!f)bx(o,[0,.1,z],[v.span,.12,.12],col())}
+  for(const s of[-1,1])for(const h of[.35,.7])for(let i=0;i<v.n-1;i++)if(R()>v.fall*.6)P(o,'box',[s*hf*(1-h),ry*h,-v.len/2+(i+.5)*sg],Z,[.1,.1,sg],col());
+  for(let i=0;i<v.n-1;i++)if(R()>v.fall*.5)bx(o,[0,ry,-v.len/2+(i+.5)*sg],[.12,.12,sg],col())}},
+{n:'ひび割れた床',p:{nx:['X枚数',2,12,6,1],nz:['Z枚数',2,12,6,1],size:['タイル幅',.5,2,1.2,.05],crack:['破損度',0,1,.35,.05]},
+ g(v,R,o){const s=v.size;for(let ix=0;ix<v.nx;ix++)for(let iz=0;iz<v.nz;iz++){const x=(ix-(v.nx-1)/2)*s,z=(iz-(v.nz-1)/2)*s,c=hsl(.1,.04,.4+R()*.15);if(R()<v.crack*.22)continue;const dy=-R()*v.crack*.12;
+  if(R()<v.crack*.5){for(const h of[-1,1])P(o,'box',[x+h*s*.25,.075+dy-R()*v.crack*.05,z],[(R()-.5)*v.crack*.5,0,(R()-.5)*v.crack*.5],[s*.48,.15,s-.04],c)}else P(o,'box',[x,.075+dy,z],[(R()-.5)*v.crack*.2,0,(R()-.5)*v.crack*.2],[s-.04,.15,s-.04],c)}
+  for(let i=0;i<Math.floor(v.crack*30);i++)P(o,'box',[(R()-.5)*v.nx*s,.04,(R()-.5)*v.nz*s],[R()*3,R()*3,R()*3],[.1+R()*.15,.06,.1+R()*.15],hsl(.1,.04,.3))}},
+{n:'錆びた配管',p:{segs:['区間数',2,8,4,1],len:['区間長',.5,3,1.5,.1],r:['半径',.05,.2,.1,.01],brk:['折れ',0,1,.4,.05]},
+ g(v,R,o){const Yv=new THREE.Vector3(0,1,0),ax=[new THREE.Vector3(1,0,0),new THREE.Vector3(0,1,0),new THREE.Vector3(0,0,1)];let pos=new THREE.Vector3(0,.2,0),last=-1;
+  for(let i=0;i<v.segs;i++){let d;if(i===v.segs-1&&R()<v.brk)d=(last>=0?ax[last].clone():ax[0].clone()).add(new THREE.Vector3(0,-1.2,0)).normalize();else{let k;do k=Math.floor(R()*3);while(k===last);last=k;d=ax[k].clone()}
+   const l=v.len*(.7+R()*.6),q=new THREE.Quaternion().setFromUnitVectors(Yv,d),col=hsl(.05,.6,.3+R()*.1),e=pos.clone().addScaledVector(d,l);Pq(o,'cyl',pos.clone().addScaledVector(d,l/2),q,[v.r*2,l,v.r*2],col);Pq(o,'cyl',e,q,[v.r*3,.05,v.r*3],col);P(o,'sph',[e.x,e.y,e.z],Z,[v.r*2.4,v.r*2.4,v.r*2.4],col);pos=e}}},
+{n:'廃墟の街区',p:{n:['建物数',2,8,4,1],street:['道幅',3,10,5,.5],dr:['破損率',0,1,.3,.05],ero:['崩落',0,1,.4,.05],extra:['小物の量',0,10,4,1],green:['緑の量',0,1,.5,.05]},
+ g(v,R,o){const span=(v.n-1)*3.5;for(let i=0;i<v.n&&o.length<MAXP;i++){const W=5+Math.floor(R()*5),D=4+Math.floor(R()*4),side=i%2?1:-1;sub('廃墟の建物',{W,D,fl:1+Math.floor(R()*3),dr:v.dr,ero:v.ero,dir:Math.floor(R()*5),wins:1+Math.floor(R()*3)},(i-(v.n-1)/2)*7,side*(v.street/2+D/2),0,100+i*17,o)}
+  const PR=[['瓦礫山',{n:80,rad:2}],['廃墟の壁',{len:5,h:3}],['折れた柱列',{n:2}],['崩れたアーチ',{}],['錆びた配管',{}],['崩れた階段',{}]];
+  for(let k=0;k<v.extra&&o.length<MAXP;k++){const [nm,ov]=PR[Math.floor(R()*PR.length)];sub(nm,ov,(R()-.5)*(span+6),(R()-.5)*v.street*.8,R()*PI,300+k*13,o)}if(v.green>0)veg(o,{vine:Math.floor(60*v.green*v.n),len:5,grass:Math.floor(300*v.green*v.n),moss:Math.floor(100*v.green*v.n)},77)}},
+{n:"橋",p:{spans:["径間数",1,10,4,1],span:["径間長",2,6,4,.1],arch:["アーチ高",.5,3,1.6,.1],seg:["アーチ分割",6,20,10,1]},
+ g(v,R,o){const L=v.spans*v.span;P(o,"box",[L/2,v.arch+.6,0],Z,[L+.4,.25,1.6],hsl(.08,.1,.55));
+  for(let s=0;s<=v.spans;s++)P(o,"box",[s*v.span,v.arch/2,0],Z,[.35,v.arch,1.3],hsl(.08,.1,.45));
+  for(let s=0;s<v.spans;s++)Op.array(v.seg,i=>{const a=(i+.5)/v.seg*PI,cx=(s+.5)*v.span,x=cx-Math.cos(a)*v.span/2,y=Math.sin(a)*v.arch;P(o,"box",[x,y,0],[0,0,Math.atan2(Math.cos(a)*v.arch,Math.sin(a)*v.span/2)],[v.span/v.seg*1.5,.22,1.3],hsl(.08,.12,.5))})}}
+];
+// ---- three.js ----
+const cv=document.getElementById("cv"),view=document.getElementById("view");
+const ren=new THREE.WebGLRenderer({canvas:cv,antialias:true});ren.setPixelRatio(Math.min(devicePixelRatio,2));ren.shadowMap.enabled=true;
+const scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(50,1,.1,500);
+const hemi=new THREE.HemisphereLight(0xffffff,0x556070,.85);scene.add(hemi);const sun=new THREE.DirectionalLight(0xffffff,.8);sun.position.set(5,10,6);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-15,right:15,top:15,bottom:-15,near:1,far:60});sun.shadow.bias=-.001;scene.add(sun);
+const gnd=new THREE.Mesh(new THREE.PlaneGeometry(80,80),new THREE.ShadowMaterial({opacity:.25}));gnd.rotation.x=-PI/2;gnd.position.y=.001;gnd.receiveShadow=true;scene.add(gnd);
+const grid=new THREE.GridHelper(40,40,0x7f8aa0,0x7f8aa0);grid.material.opacity=.25;grid.material.transparent=true;scene.add(grid);
+const root=new THREE.Group();scene.add(root);
+const GEO={box:new THREE.BoxGeometry(1,1,1),cyl:new THREE.CylinderGeometry(.5,.5,1,14),sph:new THREE.SphereGeometry(.5,14,10),cone:new THREE.ConeGeometry(.5,1,14)};
+const mat=new THREE.MeshLambertMaterial({color:0xffffff,flatShading:true,side:THREE.DoubleSide});
+let wire=false,flat=true,shad=true,lit=0,mono=false;
+// ---- 状態 ----
+let ti=0,V={},seed=1,hue=0,hist=[],hp=-1,spin=false,pend=false;
+const $=id=>document.getElementById(id);
+function defaults(){hue=0;V={g_twist:0,g_taper:0,g_noise:0,g_copies:1,g_scale:1};for(const k in T[ti].p)V[k]=T[ti].p[k][3]}
+function build(frame){
+ dirty=true;$("pbox").style.display=T[ti].n==="回転体(断面編集)"?"block":"none";if(T[ti].n==="回転体(断面編集)")drawPF();$("lbox").style.display=T[ti].n==="L-system(自由記述)"?"block":"none";const t0=performance.now(),o=[];T[ti].g(V,rng(seed),o);mods(o);post(o);
+ const over=o.length>MAXP;const parts=over?o.slice(0,MAXP):o;LAST=parts;
+ root.children.slice().forEach(c=>{root.remove(c);c.dispose&&c.dispose()});
+ const by={};parts.forEach(p=>(by[p.g]=by[p.g]||[]).push(p));
+ let tris=0;
+ for(const g in by){const a=by[g],im=new THREE.InstancedMesh(GEO[g],mat.clone(),a.length);im.material.wireframe=wire;im.material.flatShading=flat;im.castShadow=im.receiveShadow=shad;
+  a.forEach((p,i)=>{im.setMatrixAt(i,p.m);im.setColorAt(i,mono?GR:hue?p.c.clone().offsetHSL(hue,0,0):p.c)});im.instanceMatrix.needsUpdate=true;if(im.instanceColor)im.instanceColor.needsUpdate=true;root.add(im);
+  tris+=a.length*(GEO[g].index?GEO[g].index.count/3:GEO[g].attributes.position.count/3)}
+ $("sp").textContent="パーツ "+parts.length;$("st").textContent="三角形 "+Math.round(tris);$("sm").textContent=(performance.now()-t0).toFixed(1)+" ms";
+ const bb=new THREE.Box3(),vv=new THREE.Vector3();parts.forEach(p=>bb.expandByPoint(vv.setFromMatrixPosition(p.m)));if(parts.length){bb.getSize(vv);$("sz").textContent="概寸 "+vv.x.toFixed(1)+"×"+vv.y.toFixed(1)+"×"+vv.z.toFixed(1)}else $("sz").textContent="";
+ $("warn").textContent=over?"⚠ 上限("+MAXP+")超過：生成を打ち切りました":"";
+ if(frame&&parts.length){const b=new THREE.Box3();parts.forEach(p=>{const v=new THREE.Vector3().setFromMatrixPosition(p.m);b.expandByPoint(v)});
+  const c=b.getCenter(new THREE.Vector3()),s=Math.max(b.getSize(new THREE.Vector3()).length(),2);tgt.copy(c);dist=s*1.3}
+}
+function ui(){
+ $("tname").textContent=T[ti].n;const c=$("ctl");c.innerHTML="";
+ const add=(k,lab,mn,mx,st,val,fn)=>{const d=document.createElement("div");d.className="row";d.innerHTML=`<label><span>${lab}</span><b>${val}</b></label><input type=range min=${mn} max=${mx} step=${st} value=${val}>`;
+  const i=d.querySelector("input"),b=d.querySelector("b");i.oninput=()=>{b.textContent=i.value;fn(+i.value);sched()};i.onchange=()=>snap();c.appendChild(d)};
+ for(const k in T[ti].p){const q=T[ti].p[k];add(k,q[0],q[1],q[2],q[4],V[k],x=>V[k]=x)}
+ add("seed","シード",1,999,1,seed,x=>seed=x);add("hue","色相シフト",-.5,.5,.01,hue,x=>hue=x);add("g_twist","全体ねじり(度/高さ)",-60,60,1,V.g_twist||0,x=>V.g_twist=x);add("g_taper","全体先細り",0,.95,.05,V.g_taper||0,x=>V.g_taper=x);add("g_noise","全体ゆらぎ",0,1.5,.05,V.g_noise||0,x=>V.g_noise=x);add("g_copies","放射コピー数",1,12,1,V.g_copies||1,x=>V.g_copies=x);add("g_scale","全体の大きさ",.3,2,.05,V.g_scale||1,x=>V.g_scale=x);
+}
+function pick(i){ti=i;defaults();seed=1;[...$("tpl").children].forEach((b,j)=>b.classList.toggle("on",j===i));ui();build(true)}
+T.forEach((t,i)=>{const b=document.createElement("button");b.textContent=t.n;b.onclick=()=>pick(i);$("tpl").appendChild(b)});
+$("dice").onclick=()=>{const R=Math.random;for(const k in T[ti].p){const q=T[ti].p[k],st=q[4];V[k]=+(Math.round((q[1]+R()*(q[2]-q[1]))/st)*st).toFixed(4)}seed=1+Math.floor(R()*998);ui();build(false)};
+$("seedn").onclick=()=>{seed=seed%999+1;ui();build(false)};
+$("reset").onclick=()=>{defaults();seed=1;ui();build(true)};
+$("wire").onclick=e=>{dirty=true;wire=!wire;e.target.classList.toggle("on",wire);root.children.forEach(m=>m.material.wireframe=wire)};
+$("jshow").onclick=()=>$("json").value=JSON.stringify({template:T[ti].n,seed,params:V,rule:$("lrule").value,pf:PF,ms:MS});
+$("jload").onclick=()=>{try{const j=JSON.parse($("json").value),i=T.findIndex(t=>t.n===j.template);if(i<0)throw 0;ti=i;defaults();for(const k in T[i].p)if(typeof j.params[k]==="number")V[k]=Math.min(T[i].p[k][2],Math.max(T[i].p[k][1],j.params[k]));for(const k of ["g_twist","g_taper","g_noise","g_copies","g_scale"])if(typeof j.params[k]==="number")V[k]=j.params[k];seed=Math.min(999,Math.max(1,j.seed|0||1));if(typeof j.rule==="string")$("lrule").value=j.rule;if(Array.isArray(j.pf)&&j.pf.length>2)PF=j.pf.map(a=>[+a[0]||.3,+a[1]||0]);if(Array.isArray(j.ms)){MS=normMS(j.ms);mui()}[...$("tpl").children].forEach((b,x)=>b.classList.toggle("on",x===i));ui();build(true)}catch(e){$("warn").textContent="⚠ JSONを読み込めません"}};
+// ---- 後処理モディファイア(全テンプレ共通): ねじり/先細り/ゆらぎ/放射コピー/拡大 ----
+function post(o){const k=V.g_copies||1,tw=V.g_twist||0,tp=V.g_taper||0,nz=V.g_noise||0,sc=V.g_scale||1;if(!(k>1||tw||tp||nz||sc!=1))return;
+ let H=1;const pv=new THREE.Vector3(),Mt=new THREE.Matrix4();o.forEach(p=>{pv.setFromMatrixPosition(p.m);H=Math.max(H,pv.y)});
+ const R=rng(seed+777),res=[];
+ for(let c=0;c<k&&res.length<=MAXP;c++){const a=c/k*PI*2;for(const p of o){const m=p.m.clone();pv.setFromMatrixPosition(m);
+  if(tw)m.premultiply(Mt.makeRotationY(tw*pv.y*PI/180));
+  if(tp)m.premultiply(Mt.makeScale(Math.max(.05,1-tp*pv.y/H),1,Math.max(.05,1-tp*pv.y/H)));
+  if(nz)m.premultiply(Mt.makeTranslation((R()-.5)*nz,(R()-.5)*nz,(R()-.5)*nz));
+  if(sc!=1)m.premultiply(Mt.makeScale(sc,sc,sc));
+  if(c)m.premultiply(Mt.makeRotationY(a));
+  res.push({g:p.g,m,c:p.c});if(res.length>MAXP)break}}
+ o.length=0;res.forEach(x=>o.push(x))}
+// ---- 改善: 間引き再構築 / 履歴 / ギャラリー / 自動回転 ----
+function sched(){if(pend)return;pend=true;requestAnimationFrame(()=>{pend=false;build(false)})}
+function snap(){const s={ti,V:{...V},seed,hue,rule:$("lrule").value,pf:PF.map(a=>[...a]),ms:JSON.parse(JSON.stringify(MS))};if(hp>=0&&JSON.stringify(hist[hp])===JSON.stringify(s))return;hist=hist.slice(0,hp+1);hist.push(s);if(hist.length>60)hist.shift();hp=hist.length-1}
+function restore(s){ti=s.ti;V={...s.V};seed=s.seed;hue=s.hue||0;if(typeof s.rule==="string")$("lrule").value=s.rule;if(Array.isArray(s.pf))PF=s.pf.map(a=>[...a]);if(Array.isArray(s.ms)){MS=normMS(s.ms);mui()}[...$("tpl").children].forEach((b,j)=>b.classList.toggle("on",j===ti));ui();build(false)}
+const undo=()=>{if(hp>0)restore(hist[--hp])},redo=()=>{if(hp<hist.length-1)restore(hist[++hp])};
+$("undo").onclick=undo;$("redo").onclick=redo;
+addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){e.preventDefault();e.shiftKey?redo():undo()}});
+["dice","seedn","reset","jload"].forEach(id=>{const f=$(id).onclick;$(id).onclick=e=>{f(e);snap()}});
+const pick0=pick;pick=i=>{pick0(i);snap()};
+$("spin").onclick=e=>{spin=!spin;e.target.classList.toggle("on",spin)};
+let gal=[];try{gal=JSON.parse(localStorage.getItem("pm_gal")||"[]").filter(s=>s&&T[s.ti]&&s.V)}catch(e){}
+function galUi(){const g=$("gal");g.innerHTML="";gal.forEach(s=>{const b=document.createElement("button");b.textContent=T[s.ti].n+" #"+s.seed;b.onclick=()=>{restore(s);snap()};g.appendChild(b)})}
+$("gsave").onclick=()=>{gal.push({ti,V:{...V},seed,hue,rule:$("lrule").value,pf:PF.map(a=>[...a]),ms:JSON.parse(JSON.stringify(MS))});gal=gal.slice(-12);try{localStorage.setItem("pm_gal",JSON.stringify(gal))}catch(e){}galUi()};
+galUi();
+// ---- 断面エディタ(回転体) ----
+let PF=[[.35,0],[.6,.15],[.8,.4],[.5,.7],[.3,.85],[.45,1]],ps=-1;
+const pc=$("pf"),px=pc.getContext("2d"),PW=260,PH=220,RM=1.5;
+const toXY=p=>[20+p[0]/RM*(PW-40),PH-20-p[1]*(PH-40)];
+function cr(p){const o=[];for(let i=0;i<p.length-1;i++){const a=p[i-1]||p[i],b=p[i],c=p[i+1],d=p[i+2]||c;for(let k=0;k<8;k++){const t=k/8,t2=t*t,t3=t2*t;o.push([0,1].map(j=>.5*(2*b[j]+(-a[j]+c[j])*t+(2*a[j]-5*b[j]+4*c[j]-d[j])*t2+(-a[j]+3*b[j]-3*c[j]+d[j])*t3)))}}o.push(p[p.length-1]);return o}
+function drawPF(){const cs=getComputedStyle(document.documentElement),g=n=>cs.getPropertyValue(n);px.clearRect(0,0,PW,PH);px.lineWidth=1;px.strokeStyle=g("--line");px.beginPath();px.moveTo(20,10);px.lineTo(20,PH-20);px.lineTo(PW-10,PH-20);px.stroke();
+ px.strokeStyle=g("--ink");px.lineWidth=2;px.beginPath();cr(PF).forEach((p,i)=>{const q=toXY([Math.max(0,p[0]),p[1]]);i?px.lineTo(q[0],q[1]):px.moveTo(q[0],q[1])});px.stroke();
+ px.lineWidth=2;PF.forEach((p,i)=>{const q=toXY(p);px.fillStyle=i===ps?g("--acc"):g("--panel");px.strokeStyle=g("--acc");px.beginPath();px.arc(q[0],q[1],8,0,7);px.fill();px.stroke()})}
+const ptp=e=>{const r=pc.getBoundingClientRect();return[(e.clientX-r.left)/r.width*PW,(e.clientY-r.top)/r.height*PH]};
+pc.onpointerdown=e=>{pc.setPointerCapture(e.pointerId);const [x,y]=ptp(e);let best=-1,bd=26;PF.forEach((p,i)=>{const q=toXY(p),d=Math.hypot(q[0]-x,q[1]-y);if(d<bd){bd=d;best=i}});ps=best;drawPF()};
+pc.onpointermove=e=>{if(ps<0||!e.buttons)return;const [x,y]=ptp(e),n=PF.length,lo=ps>0?PF[ps-1][1]+.01:0,hi=ps<n-1?PF[ps+1][1]-.01:1;PF[ps]=[Math.min(RM,Math.max(.02,(x-20)/(PW-40)*RM)),Math.min(hi,Math.max(lo,(PH-20-y)/(PH-40)))];drawPF();sched()};
+pc.onpointerup=()=>snap();
+$("padd").onclick=()=>{let bi=0,bg=0;for(let i=0;i<PF.length-1;i++){const g=PF[i+1][1]-PF[i][1];if(g>bg){bg=g;bi=i}}const a=PF[bi],b=PF[bi+1];PF.splice(bi+1,0,[(a[0]+b[0])/2,(a[1]+b[1])/2]);ps=bi+1;drawPF();sched();snap()};
+$("pdel").onclick=()=>{if(ps>=0&&PF.length>3){PF.splice(ps,1);ps=-1;drawPF();sched();snap()}};
+const PP={"花瓶":[[.35,0],[.6,.15],[.8,.4],[.5,.7],[.3,.85],[.45,1]],"ワイングラス":[[.5,0],[.5,.03],[.08,.08],[.08,.4],[.6,.55],[.7,.8],[.6,1]],"コマ":[[.05,0],[.5,.15],[1,.4],[.6,.55],[.2,.7],[.15,1]],"ボウル":[[.1,0],[.5,.05],[.9,.3],[1.2,.7],[1.3,1]],"ひょうたん":[[.3,0],[.7,.12],[.8,.3],[.35,.5],[.3,.58],[.55,.75],[.6,.9],[.25,1]],"細長い壺":[[.3,0],[.45,.2],[.45,.6],[.25,.8],[.3,1]]};
+Object.keys(PP).forEach(k=>{const b=document.createElement("button");b.textContent=k;b.onclick=()=>{PF=PP[k].map(a=>[...a]);ps=-1;drawPF();sched();snap()};$("ppre").appendChild(b)});
+matchMedia("(prefers-color-scheme:dark)").addEventListener("change",()=>{if(T[ti].n==="回転体(断面編集)")drawPF()});
+$("bmono").onclick=e=>{mono=!mono;e.target.classList.toggle("on",mono);build(false)};
+$("bflat").onclick=e=>{flat=!flat;e.target.classList.toggle("on",flat);e.target.textContent=flat?"ローポリ":"滑らか";root.children.forEach(m=>{m.material.flatShading=flat;m.material.needsUpdate=true});dirty=true};
+$("bshad").onclick=e=>{shad=!shad;e.target.classList.toggle("on",shad);root.children.forEach(m=>{m.castShadow=m.receiveShadow=shad});gnd.visible=shad;dirty=true};
+$("bgrid").onclick=e=>{grid.visible=!grid.visible;e.target.classList.toggle("on",grid.visible);dirty=true};
+const LT=[["昼",0xffffff,.8,[5,10,6],0xffffff,0x556070,.85],["夕",0xffb070,1,[10,4,4],0xffd9b0,0x504050,.6],["夜",0x8aa4ff,.5,[-4,8,5],0x6070a0,0x202030,.45]];
+$("blit").onclick=e=>{lit=(lit+1)%3;const L=LT[lit];sun.color.set(L[1]);sun.intensity=L[2];sun.position.set(...L[3]);hemi.color.set(L[4]);hemi.groundColor.set(L[5]);hemi.intensity=L[6];e.target.textContent="光:"+L[0];dirty=true};
+$("bshad").classList.toggle("on",shad);gnd.visible=shad;
+// ---- モディファイアスタック(第2版の土台: Source→Modifier→Output) ----
+let MS=[];
+const MD={array:{n:"配列",p:[["個数",2,12,3,1],["X間隔",-6,6,2,.5],["Y間隔",-6,6,0,.5],["Z間隔",-6,6,0,.5]]},radial:{n:"放射",p:[["個数",2,16,6,1],["半径",0,8,3,.5]]},veg:{n:"植生(蔓・草・苔)",p:[["蔓の本数",0,300,40,5],["蔓の長さ",1,12,4,.5],["草の量",0,800,150,10],["苔",0,500,60,10]]},damage:{n:"破損(廃墟化)",p:[["破損率",0,1,.25,.05],["欠けの大きさ",1,8,3,.5],["崩落",0,1,.3,.05],["傾き(度)",0,30,10,1],["瓦礫数",0,200,40,5],["崩れる側 0全体 1:+X 2:-X 3:+Z 4:-Z",0,4,0,1]]},stack:{n:"段積み",p:[["段数",2,20,5,1],["段の高さ",.2,6,1,.1],["縮小率",.6,1.2,.9,.02],["ねじり(度)",-45,45,10,1]]},grid:{n:"グリッド",p:[["X個数",1,12,3,1],["Z個数",1,12,3,1],["X間隔",.5,8,3,.5],["Z間隔",.5,8,3,.5]]},mirror:{n:"ミラー",p:[["軸 1:X 2:Y 3:Z",1,3,1,1]]},scatter:{n:"散布",p:[["個数",2,60,12,1],["範囲",1,15,6,.5],["大きさのばらつき",0,.8,.3,.05]]}};
+function normMS(a){return a.filter(m=>m&&MD[m.t]&&Array.isArray(m.v)).map(m=>({t:m.t,v:MD[m.t].p.map((q,i)=>{const x=+m.v[i];return isFinite(x)?Math.min(q[2],Math.max(q[1],x)):q[3]})}))}
+// 植生: 蔓・苔・草を既存パーツに絡める
+ function veg(o,d,salt){const R=rng(seed+salt+DSALT),ps=new THREE.Vector3(),q=new THREE.Quaternion(),sc=new THREE.Vector3(),pts=[];let cx=0,cz=0;
+ for(const p of o){p.m.decompose(ps,q,sc);pts.push([ps.clone(),sc.clone()]);cx+=ps.x;cz+=ps.z}
+ if(!pts.length)return;cx/=pts.length;cz/=pts.length;
+ const gc=()=>hsl(.22+R()*.1,.5,.22+R()*.18),add=(g,pos,rot,s,c)=>{if(o.length<MAXP)P(o,g,pos,rot,s,c)};
+ const low=pts.filter(a=>a[0].y<1.5),high=pts.filter(a=>a[0].y>1.5);
+ for(let i=0;i<d.grass&&low.length;i++){const [p]=low[Math.floor(R()*low.length)],x=p.x+(R()-.5)*1.6,z=p.z+(R()-.5)*1.6;for(let k=0;k<3;k++){const h=.2+R()*.45;add('cone',[x+(R()-.5)*.15,h/2,z+(R()-.5)*.15],[(R()-.5)*.5,R()*3,(R()-.5)*.5],[.07,h,.07],gc())}}
+ for(let i=0;i<d.moss;i++){const [p,s]=pts[Math.floor(R()*pts.length)];add('box',[p.x,p.y+s.y/2+.012,p.z],[0,R()*3,0],[Math.min(s.x,1)*.9,.03,Math.min(s.z,1)*.9],hsl(.24+R()*.06,.45,.2+R()*.1))}
+ const src=high.length?high:pts,Yv=new THREE.Vector3(0,1,0);
+ for(let i=0;i<d.vine;i++){const [p,s]=src[Math.floor(R()*src.length)],dx=p.x-cx,dz=p.z-cz;let x=p.x,y=p.y+s.y/2,z=p.z;if(Math.abs(dx)>Math.abs(dz))x+=Math.sign(dx)*.2;else z+=Math.sign(dz)*.2;
+  const n=Math.floor(d.len/.3);for(let k=0;k<n&&y>.05;k++){const nx=x+(R()-.5)*.18,ny=Math.max(.02,y-.3*(.5+R())),nz=z+(R()-.5)*.18,dir=new THREE.Vector3(nx-x,ny-y,nz-z),l=dir.length()||.01;
+   if(o.length<MAXP)Pq(o,'cyl',new THREE.Vector3((x+nx)/2,(y+ny)/2,(z+nz)/2),new THREE.Quaternion().setFromUnitVectors(Yv,dir.normalize()),[.035,l,.035],hsl(.2,.4,.18));
+   if(R()<.8)add('box',[nx+(R()-.5)*.1,ny,nz+(R()-.5)*.1],[R()*3,R()*3,R()*3],[.14,.01,.1],gc());x=nx;y=ny;z=nz}}}
+let DSALT=0;
+function sub(name,ov,dx,dz,rot,salt,o){const t=T.find(x=>x.n===name),v={};for(const k in t.p)v[k]=t.p[k][3];Object.assign(v,ov);const tmp=[];DSALT=salt;t.g(v,rng(seed+salt),tmp);DSALT=0;const M=new THREE.Matrix4().makeRotationY(rot).setPosition(dx,0,dz);tmp.forEach(p=>{p.m.premultiply(M);o.push(p)})}
+function vn(x,y,z,s){const ix=Math.floor(x),iy=Math.floor(y),iz=Math.floor(z),fx=x-ix,fy=y-iy,fz=z-iz,h=(a,b,c)=>{const t=Math.sin(a*127.1+b*311.7+c*74.7+s*13.13)*43758.5453;return t-Math.floor(t)},sm=t=>t*t*(3-2*t),L=(a,b,t)=>a+(b-a)*t,ux=sm(fx),uy=sm(fy),uz=sm(fz);return L(L(L(h(ix,iy,iz),h(ix+1,iy,iz),ux),L(h(ix,iy+1,iz),h(ix+1,iy+1,iz),ux),uy),L(L(h(ix,iy,iz+1),h(ix+1,iy,iz+1),ux),L(h(ix,iy+1,iz+1),h(ix+1,iy+1,iz+1),ux),uy),uz)}
+// 破損(廃墟化): ノイズで欠けを塊にし、崩落高さ・縁の傾き・瓦礫・風化色で単調さを崩す
+function dmg(o,d,salt){salt+=DSALT;const R=rng(seed+salt),ps=new THREE.Vector3(),q=new THREE.Quaternion(),sc=new THREE.Vector3(),res=[],gone=[];let top=0,x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;o.forEach(p=>{const e=p.m.elements;top=Math.max(top,e[13]);x0=Math.min(x0,e[12]);x1=Math.max(x1,e[12]);z0=Math.min(z0,e[14]);z1=Math.max(z1,e[14])});
+ for(const p of o){p.m.decompose(ps,q,sc);const bt=d.dir===1?(ps.x-x0)/(x1-x0||1):d.dir===2?(x1-ps.x)/(x1-x0||1):d.dir===3?(ps.z-z0)/(z1-z0||1):d.dir===4?(z1-ps.z)/(z1-z0||1):1,bf=d.dir?bt*bt*1.6:1;const n=vn(ps.x/d.sc,ps.y/d.sc,ps.z/d.sc,salt),lim=top*(1-Math.min(1,d.ero*bf)*vn(ps.x/d.sc*.7,3,ps.z/d.sc*.7,salt+5)),thr=d.rate*.8*bf;
+  if(n<thr||ps.y>lim){gone.push([p,ps.clone(),sc.clone()]);continue}
+  const edge=n<thr+.12||ps.y>lim-.6,k=edge?d.tilt*PI/180:.012,pp=ps.clone();
+  q.premultiply(new THREE.Quaternion().setFromEuler(new THREE.Euler((R()-.5)*k*2,(R()-.5)*k,(R()-.5)*k*2)));
+  if(edge)pp.y-=R()*.08;
+  const c=p.c.clone();c.offsetHSL(0,-.12*(1-n),-.14*(1-n)*(edge?1.4:1)+(R()-.5)*.04);
+  res.push({g:p.g,m:new THREE.Matrix4().compose(pp,q.clone(),sc.clone()),c})}
+ const rn=Math.min(d.rub,gone.length*2);for(let i=0;i<rn&&res.length<MAXP&&gone.length;i++){const [p,pp,ss]=gone[Math.floor(R()*gone.length)],mx=Math.max(ss.x,ss.y,ss.z,.01),f=mx>.8?(.3+R()*.5)/mx:.35+R()*.5,a=R()*PI*2,dd=R()*1.6,s2=ss.clone().multiplyScalar(f);
+  res.push({g:p.g,m:new THREE.Matrix4().compose(new THREE.Vector3(pp.x+Math.cos(a)*dd,Math.min(pp.y,s2.y*.5+R()*.05),pp.z+Math.sin(a)*dd),new THREE.Quaternion().setFromEuler(new THREE.Euler(R()*3,R()*3,R()*3)),s2),c:p.c.clone().offsetHSL(0,-.1,-.2)})}
+ o.length=0;res.forEach(x=>o.push(x))}
+function mods(o){MS.forEach((m,mi)=>{const v=m.v;if(m.t==="veg"){veg(o,{vine:v[0],len:v[1],grass:v[2],moss:v[3]},mi+80);return}if(m.t==="damage"){dmg(o,{rate:v[0],sc:v[1],ero:v[2],tilt:v[3],rub:v[4],dir:Math.round(v[5]||0)},mi+50);return}const base=o.slice(),res=[],T4=new THREE.Matrix4(),Q=new THREE.Matrix4(),push=mat=>{for(const p of base){if(res.length>MAXP)return;res.push({g:p.g,m:p.m.clone().premultiply(mat),c:p.c})}};
+  if(m.t==="array"){for(let i=0;i<v[0];i++)push(T4.makeTranslation(v[1]*i,v[2]*i,v[3]*i))}
+  else if(m.t==="radial"){for(let i=0;i<v[0];i++)push(Q.makeRotationY(i/v[0]*PI*2).multiply(T4.makeTranslation(v[1],0,0)))}
+  else if(m.t==="stack"){const Yv=new THREE.Vector3(0,1,0);for(let i=0;i<v[0];i++){const s=Math.pow(v[2],i);push(Q.compose(new THREE.Vector3(0,v[1]*i,0),new THREE.Quaternion().setFromAxisAngle(Yv,i*v[3]*PI/180),new THREE.Vector3(s,s,s)))}}
+  else if(m.t==="grid"){for(let ix=0;ix<v[0];ix++)for(let iz=0;iz<v[1];iz++)push(T4.makeTranslation((ix-(v[0]-1)/2)*v[2],0,(iz-(v[1]-1)/2)*v[3]))}
+  else if(m.t==="mirror"){push(T4.identity());push(T4.makeScale(v[0]===1?-1:1,v[0]===2?-1:1,v[0]===3?-1:1))}
+  else if(m.t==="scatter"){const R=rng(seed+31+mi),Yv=new THREE.Vector3(0,1,0);push(T4.identity());for(let i=0;i<v[0];i++){const a=R()*PI*2,d=Math.sqrt(R())*v[1],s=1+(R()-.5)*2*v[2];push(Q.compose(new THREE.Vector3(Math.cos(a)*d,0,Math.sin(a)*d),new THREE.Quaternion().setFromAxisAngle(Yv,R()*PI*2),new THREE.Vector3(s,s,s)))}}
+  o.length=0;res.forEach(x=>o.push(x))})}
+function mui(){const L=$("mlist");L.innerHTML="";MS.forEach((m,i)=>{const d=document.createElement("div");d.className="row";d.style.cssText="border:1px solid var(--line);border-radius:8px;padding:6px";const h=document.createElement("div");h.style.cssText="display:flex;gap:4px;align-items:center;margin-bottom:4px";h.innerHTML="<b style='flex:1'>"+(i+1)+". "+MD[m.t].n+"</b>";
+  [["↑",-1],["↓",1],["✕",0]].forEach(([lab,dir])=>{const b=document.createElement("button");b.textContent=lab;b.style.padding="2px 8px";b.onclick=()=>{if(dir===0)MS.splice(i,1);else{const j=i+dir;if(j<0||j>=MS.length)return;[MS[i],MS[j]]=[MS[j],MS[i]]}mui();build(false);snap()};h.appendChild(b)});d.appendChild(h);
+  MD[m.t].p.forEach((q,j)=>{const r=document.createElement("div");r.innerHTML="<label><span>"+q[0]+"</span><b>"+m.v[j]+"</b></label><input type=range min="+q[1]+" max="+q[2]+" step="+q[4]+" value="+m.v[j]+">";const inp=r.querySelector("input"),bb=r.querySelector("b");inp.oninput=()=>{bb.textContent=inp.value;m.v[j]=+inp.value;sched()};inp.onchange=()=>snap();d.appendChild(r)});L.appendChild(d)})}
+Object.keys(MD).forEach(k=>{const op=document.createElement("option");op.value=k;op.textContent=MD[k].n;$("msel").appendChild(op)});
+$("madd").onclick=()=>{const k=$("msel").value;MS.push({t:k,v:MD[k].p.map(q=>q[3])});mui();build(false);snap()};
+mui();
+const bx=(o,p,s,c)=>P(o,"box",p,Z,s,c||hsl(.09,.4,.4));
+let merge=false;
+let LAST=[];
+$("bmerge").onclick=e=>{merge=!merge;e.target.textContent="結合:"+(merge?"ON":"OFF");e.target.classList.toggle("on",merge)};
+$("objx").onclick=()=>{const out=["# procedural modeling export (UV included, no textures)"];let vo=1,to=1,no=1,cnt=0;const v=new THREE.Vector3(),n=new THREE.Vector3(),nm=new THREE.Matrix3();
+ for(const p of LAST){if(cnt>=MAXP)break;cnt++;const g=GEO[p.g],pos=g.attributes.position,uv=g.attributes.uv,nor=g.attributes.normal,idx=g.index,flip=p.m.determinant()<0;nm.getNormalMatrix(p.m);if(!merge||cnt===1)out.push("o "+(merge?"procedural":p.g+"_"+cnt));
+  for(let i=0;i<pos.count;i++){v.fromBufferAttribute(pos,i).applyMatrix4(p.m);out.push("v "+v.x.toFixed(4)+" "+v.y.toFixed(4)+" "+v.z.toFixed(4))}
+  for(let i=0;i<uv.count;i++)out.push("vt "+uv.getX(i).toFixed(4)+" "+uv.getY(i).toFixed(4));
+  for(let i=0;i<nor.count;i++){n.fromBufferAttribute(nor,i).applyMatrix3(nm).normalize();out.push("vn "+n.x.toFixed(3)+" "+n.y.toFixed(3)+" "+n.z.toFixed(3))}
+  const f=(a,b,c)=>"f "+[a,b,c].map(i=>(vo+i)+"/"+(to+i)+"/"+(no+i)).join(" ");
+  const nt=idx?idx.count/3:pos.count/3;for(let t=0;t<nt;t++){const a=idx?idx.getX(t*3):t*3,b=idx?idx.getX(t*3+1):t*3+1,c=idx?idx.getX(t*3+2):t*3+2;out.push(flip?f(a,c,b):f(a,b,c))}
+  vo+=pos.count;to+=uv.count;no+=nor.count}
+ try{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([out.join("\n")],{type:"text/plain"}));a.download="procedural.obj";a.click();$("warn").textContent="OBJを書き出しました"+"。保存されない場合は、ファイル版のHTMLをブラウザで開いて使ってください"}catch(e){$("warn").textContent="⚠ OBJを保存できません"}};
+$("lrule").oninput=()=>sched();$("lrule").onchange=()=>snap();
+const LP={"樹":"axiom=A\nA=0.6:F![&+A][&-A]rA\nA=F![&+A][^-A]rA","花の樹":"axiom=A\nA=0.6:F![&+'A][&-A]rA\nA=0.25:F![&+L][&-B]rA\nA=B","虹の螺旋":"axiom=A\nA='F+&A'F+A"};
+Object.keys(LP).forEach(k=>{const b=document.createElement("button");b.textContent=k;b.onclick=()=>{$("lrule").value=LP[k];build(false);snap()};$("lpre").appendChild(b)});
+// ---- カメラ操作 ----
+let az=.8,el=.5,dist=10,lk="",dirty=true;const tgt=new THREE.Vector3(),ptr=new Map();let pd=0;
+view.addEventListener("pointerdown",e=>{view.setPointerCapture(e.pointerId);ptr.set(e.pointerId,[e.clientX,e.clientY]);pd=0});
+view.addEventListener("pointerup",e=>ptr.delete(e.pointerId));view.addEventListener("pointercancel",e=>ptr.delete(e.pointerId));
+view.addEventListener("pointermove",e=>{if(!ptr.has(e.pointerId))return;const p=ptr.get(e.pointerId);
+ if(ptr.size===1){az-=(e.clientX-p[0])*.008;el=Math.max(-1.4,Math.min(1.5,el+(e.clientY-p[1])*.008))}
+ ptr.set(e.pointerId,[e.clientX,e.clientY]);
+ if(ptr.size===2){const [a,b]=[...ptr.values()],d=Math.hypot(a[0]-b[0],a[1]-b[1]);if(pd)dist=Math.max(1,Math.min(150,dist*pd/d));pd=d}});
+view.addEventListener("wheel",e=>{e.preventDefault();dist=Math.max(1,Math.min(150,dist*(1+e.deltaY*.001)))},{passive:false});
+function size(){dirty=true;const w=view.clientWidth,h=view.clientHeight;ren.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();ren.setClearColor(getComputedStyle(view).backgroundColor)}
+new ResizeObserver(size).observe(view);matchMedia("(prefers-color-scheme:dark)").addEventListener("change",size);
+(function loop(){if(spin&&!ptr.size)az+=.004;cam.position.set(tgt.x+dist*Math.cos(el)*Math.sin(az),tgt.y+dist*Math.sin(el),tgt.z+dist*Math.cos(el)*Math.cos(az));cam.lookAt(tgt);const k=[az,el,dist,tgt.x,tgt.y,tgt.z].join();if(dirty||k!==lk){lk=k;dirty=false;ren.render(scene,cam)}requestAnimationFrame(loop)})();
+size();pick(0);
+</script>
+</body>
+</html>
