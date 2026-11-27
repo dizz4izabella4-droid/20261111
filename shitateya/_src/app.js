@@ -4,7 +4,7 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {parseBody} from './body.js';
 import {makeSkinner,buildMeshes,exportGLB,countTriangles,MATERIALS} from './mesh.js';
-import {PRESETS,COLOR_SETS,colorsOf,RANGES,sanitize} from './design.js';
+import {PRESETS,COLOR_SETS,colorsOf,RANGES,CHOICES,sanitize} from './design.js';
 import {plan,STEP_LABEL} from './garments.js';
 import {zipOne} from './zip.js';
 
@@ -71,7 +71,7 @@ let drawQueued=false;
 function queueDraw(){if(drawQueued)return;drawQueued=true;requestAnimationFrame(()=>{drawQueued=false;redraw();});}
 
 // ---------- 設定の画面 ----------
-const TABS=[['design','型・素体'],['top','上衣'],['sleeve','袖'],['skirt','スカート'],['tabard','前掛け'],['sash','帯'],['cape','マント'],['hood','フード'],['color','色・縁']];
+const TABS=[['design','型・素体'],['top','上衣'],['vest','胴着'],['sleeve','袖'],['bracer','腕当て'],['pants','ズボン'],['skirt','スカート'],['tabard','前掛け'],['sash','帯'],['shoes','靴'],['cape','マント'],['hood','フード'],['hat','帽子'],['color','色・縁']];
 const worn=id=>id==='sleeve'?design.sleeve.type!=='none':id==='hood'?design.cape.on&&design.hood.on:design[id]&&'on'in design[id]?design[id].on:true;
 function renderTabs(){
   $('tabs').replaceChildren(...TABS.map(([id,label])=>el('button',{type:'button',role:'tab','aria-selected':String(tab===id),class:worn(id)?'':'off',onclick:()=>{tab=id;renderTabs();renderSheet();$('sheet').scrollTop=0;}},label)));
@@ -86,7 +86,7 @@ function slider(group,key,label,format,step,disabled=false){
   input.onchange=commit;
   return el('div',{class:'field'+(disabled?' dim':'')},el('span',{},label),input,out);
 }
-function select(group,key,label,options){
+function select(group,key,label,options=CHOICES[group][key]){
   const s=el('select',{'aria-label':label},...options.map(([v,t])=>el('option',{value:v},t)));s.value=design[group][key];
   s.onchange=()=>{design[group][key]=s.value;renderSheet();commit();};
   return el('div',{class:'field'},el('span',{},label),s);
@@ -98,7 +98,7 @@ function check(group,key,label,cls='',disabled=false){
 }
 const note=t=>el('p',{class:'note'},t), heading=t=>el('h2',{},t), row=(...c)=>el('div',{class:'row'},...c);
 const button=(label,onclick,props={})=>el('button',{type:'button',onclick,...props},label);
-const COLOR_ROWS=[['top','上衣・袖',['地','縁','線']],['skirt','スカート',['地','縁','線']],['sash','帯',['地','縁']],['tabard','前掛け',['地','縁']],['cape','マント・フード',['地','縁','裏地']]];
+const COLOR_ROWS=[['top','上衣・袖',['地','縁','線']],['vest','胴着・腕当て',['地','縁']],['pants','ズボン',['地','縁','線']],['skirt','スカート',['地','縁','線']],['sash','帯',['地','縁']],['tabard','前掛け',['地','縁']],['shoes','靴',['地','底・縁']],['cape','マント・フード',['地','縁','裏地']],['hat','帽子',['地','縁','帯']]];
 
 const SHEETS={
   design(){
@@ -108,14 +108,24 @@ const SHEETS={
       heading('素体'),row(button('内蔵の女性素体',()=>useBuiltIn(),{'aria-pressed':String(bodyIsBuiltIn)}),button('素体GLBを開く',()=>$('open-body').click(),{'aria-pressed':String(!bodyIsBuiltIn)})),
       note('女性素体に合わせて調整しています。スペアボディの「傀儡用に書き出す（GLB）」で作った素体も開けますが、体型が大きく違うと服がずれることがあります。'+(body?`　今の素体：身長 ${(body.H*100).toFixed(1)} cm`:''))];
   },
-  top(){return[select('top','neck','襟の形',[['round','丸首'],['v','V字'],['wide','広く開ける'],['high','立ち襟']]),slider('top','depth','開きの深さ',cm,0.002),slider('top','ease','ゆとり',cm,0.0005),note('上衣は常に着ます。上衣を変えると、下の部品もすべて作り直します。')];},
-  sleeve(){const t=design.sleeve.type;return[select('sleeve','type','袖の形',[['bell','広がる袖'],['fit','細い袖'],['none','袖なし']]),
-    ...(t==='none'?[]:[slider('sleeve','length','長さ（腕に対して）',pct,0.01),slider('sleeve','cuff','袖口の周り',cm,0.01,t!=='bell'),slider('sleeve','drape','垂れ',cm,0.01,t!=='bell')]),t==='bell'?note('垂れは、長さが短いと小さくなります。'):null];},
-  skirt(){const on=design.skirt.on;return[check('skirt','on','スカートをはく','wear'),...(on?[slider('skirt','length','丈（腰から床）',pct,0.01),slider('skirt','hem','裾の周り',cm,0.05),slider('skirt','pleats','ひだの数',v=>v?v+' 本':'なし',1),note('丈が短いときは、裾の周りは丈に合う大きさまでで頭打ちになります。')]:[])];},
+  top(){return[select('top','neck','襟の形'),slider('top','depth','開きの深さ',cm,0.002),slider('top','ease','ゆとり',cm,0.0005),note('上衣は常に着ます。上衣を変えると、下の部品もすべて作り直します。')];},
+  vest(){const{on,type}=design.vest;return[check('vest','on','胴着を着ける','wear'),...(on?[select('vest','type','形'),slider('vest','size',type==='corset'?'高さ':'丈',pct,0.01)]:[])];},
+  sleeve(){const t=design.sleeve.type;return[select('sleeve','type','袖の形'),
+    ...(t==='none'?[]:[slider('sleeve','length','長さ（腕に対して）',pct,0.01),t==='fit'?null:slider('sleeve','cuff',t==='bell'?'袖口の周り':'ふくらみ',t==='bell'?cm:v=>pct((v-0.25)/0.95),0.01),t==='bell'?slider('sleeve','drape','垂れ',cm,0.01):null]),
+    t==='bell'?note('垂れは、長さが短いと小さくなります。'):t==='puff'?note('肩の近くがふくらみ、その先は腕に沿います。長さを短くすると、ふくらみだけになります。'):null];},
+  bracer(){const on=design.bracer.on;return[check('bracer','on','腕当てを着ける','wear'),...(on?[slider('bracer','length','長さ（肘から手首）',pct,0.01),note('広がる袖と一緒に着けると、袖の中に隠れます。')]:[])];},
+  pants(){const{on,type}=design.pants;return[check('pants','on','ズボンをはく','wear'),...(on?[select('pants','type','形'),slider('pants','length','丈',pct,0.01),type==='slim'?null:slider('pants','volume','ふくらみ',pct,0.01),design.skirt.on?note('スカートもはいているので、ズボンはその下になります。'):null]:[])];},
+  skirt(){const{on,shape}=design.skirt;return[check('skirt','on','スカートをはく','wear'),...(on?[select('skirt','shape','形'),select('skirt','edge','裾の形'),slider('skirt','length','丈（腰から床）',pct,0.01),slider('skirt','hem',shape==='straight'?'裾の広がり':'裾の周り',shape==='straight'?v=>pct((v-1.1)/3.4):cm,0.05),slider('skirt','pleats','ひだの数',v=>v?v+' 本':'なし',1),
+    note(shape==='open'?'前が開くので、ズボンと合わせると脚が隠れます。':shape==='tiered'?'段フリルは、ひだが 14 本より少なくなりません。':'丈が短いときは、裾の周りは丈に合う大きさまでで頭打ちになります。')]:[])];},
   tabard(){const on=design.tabard.on;return[check('tabard','on','前掛けを着ける','wear'),...(on?[slider('tabard','width','幅',cm,0.005),slider('tabard','length','腰から下の丈',pct,0.01),check('tabard','back','後ろにも垂らす')]:[])];},
   sash(){const on=design.sash.on;return[check('sash','on','帯を締める','wear'),...(on?[slider('sash','width','帯の幅',cm,0.002),slider('sash','tails','垂れ紐',v=>v?v+' 本':'なし',1),slider('sash','tail','垂れ紐の長さ',cm,0.01,!design.sash.tails)]:[])];},
-  cape(){const on=design.cape.on;return[check('cape','on','マントを羽織る','wear'),...(on?[slider('cape','length','丈',pct,0.01),slider('cape','width','裾の幅',cm,0.05),check('cape','clasp','胸の留め具と紐')]:[])];},
-  hood(){const cape=design.cape.on;return[check('hood','on','フードを付ける','wear',!cape),cape?null:note('フードはマントに付きます。先にマントを羽織ってください。'),...(cape&&design.hood.on?[slider('hood','depth','深さ',cm,0.01),note('下ろした状態のフードです。')]:[])];},
+  shoes(){const{on,type}=design.shoes;return[check('shoes','on','靴をはく','wear'),...(on?[select('shoes','type','形'),type==='boots'?slider('shoes','height','高さ（床から）',cm,0.01):null,type==='boots'&&design.pants.on?note('ズボンの裾はブーツの中に入れます。'):null]:[])];},
+  cape(){const on=design.cape.on;return[check('cape','on','マントを羽織る','wear'),...(on?[select('cape','edge','裾の形'),slider('cape','length','丈',pct,0.01),slider('cape','width','裾の幅',cm,0.05),check('cape','clasp','胸の留め具と紐'),note('丈を短くすると、肩掛けになります。')]:[])];},
+  hood(){const cape=design.cape.on;return[check('hood','on','フードを付ける','wear',!cape),cape?null:note('フードはマントに付きます。先にマントを羽織ってください。'),...(cape&&design.hood.on?[select('hood','pose','状態'),slider('hood','depth','深さ',cm,0.01),design.hood.pose==='up'&&design.hat.on&&design.hat.type!=='circlet'?note('フードをかぶっている間は、帽子は表示しません。'):null]:[])];},
+  hat(){const{on,type}=design.hat,hidden=design.cape.on&&design.hood.on&&design.hood.pose==='up'&&type!=='circlet';return[check('hat','on','頭の装いを着ける','wear'),...(on?[select('hat','type','形'),
+    type==='witch'||type==='brim'||type==='beret'?slider('hat','height',type==='beret'?'ふくらみ':'高さ',type==='beret'?v=>pct((v-0.08)/0.24):cm,0.01):null,
+    type==='witch'||type==='brim'?slider('hat','brim','つばの幅',cm,0.005):null,type==='veil'?slider('hat','length','ベールの丈',cm,0.01):null,
+    hidden?note('フードをかぶっているので、表示していません。フードを下ろすか外すと表示します。'):null]:[])];},
   color(){
     const pickers=COLOR_ROWS.map(([g,label,names])=>el('div',{class:'colors'},el('b',{},label),...names.map((n,i)=>{const c=el('input',{type:'color','aria-label':label+'の'+n});c.value=design.colors[g][i];c.oninput=()=>{design.colors[g][i]=c.value;queueDraw();};c.onchange=commit;return el('label',{},c,n);})));
     return[heading('配色'),swatches(),

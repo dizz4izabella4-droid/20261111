@@ -23,8 +23,9 @@ export function makeSkinner(body){
   const weightsOf=i=>{const w={};for(let c=0;c<4;c++){const v=body.W[i*4+c];if(v>0){const n=body.names[body.JN[i*4+c]];w[n]=(w[n]||0)+v;}}return w;};
   const lowW=(p,share)=>{const sl=smooth(-0.11*k,0.11*k,p[0]),sh=0.45*smooth(knee+0.075*k,knee-0.185*k,p[1]);return{hips:1-share,thigh_l:share*sl*(1-sh),thigh_r:share*(1-sl)*(1-sh),shin_l:share*sl*sh,shin_r:share*(1-sl)*sh};};
   const shoulders=(p,amount)=>{const sh=amount*smooth(S[0]*0.57,S[0]*0.95,Math.abs(p[0]));return{chest:1-sh,[p[0]>0?'upperarm_l':'upperarm_r']:sh};};
+  const leg={};for(const[s,sg]of[['l',1],['r',-1]])leg[s]=nearest(body,all.filter(i=>new RegExp('^(hips|spine|(thigh|shin|foot|toe)_'+s+')$').test(body.dom[i])&&body.P[i*3]*sg>=-0.006));
   const softAt=i=>body.soft.map(a=>a[i]);
-  return{J,k,waist,S,knee,torso,lower,arm,weightsOf,lowW,shoulders,softAt};
+  return{J,k,waist,S,knee,torso,lower,arm,leg,weightsOf,lowW,shoulders,softAt};
 }
 
 // 格子の途中の値（なめらかな曲線でつなぐ）
@@ -40,21 +41,33 @@ const inBand=(x,list)=>list.some(([a,b])=>x>a&&x<b);
 // 部品ごとの縁飾りの位置（0〜1 の割合）
 function bands(part,design){
   const w=design.trim.width,line=design.trim.line,L=part.length||1,main=[],stripe=[],cols=[],f=v=>clamp(v/L,0,0.45);
+  const edges=e=>main.push([0,e],[1-e,1]);
+  // 縁飾りの幅に関係なく付く色分け
+  if(part.kind==='shoes'&&part.foot)cols.push([0.33,0.67]); // 靴底
+  if(part.kind==='hat')stripe.push(part.band); // 帽子の帯
   if(w<0.002)return{main,stripe,cols};
   const hem=(width,margin,withLine)=>{const b=1-f(margin),a=b-f(width);main.push([a,b]);if(withLine&&line){const s=a-f(width*0.45);stripe.push([s-f(width*0.4),s]);}};
   switch(part.kind){
     case'top':main.push([0,f(w*0.45)]);break;
-    case'skirt':hem(w,w*0.5,true);break;
+    case'skirt':hem(w,w*0.5,true);
+      if(part.tiers)for(const t of part.tiers)main.push([t-f(w*0.45),t]);
+      if(part.open){const e=clamp(w*0.4/part.width,0,0.06);cols.push([0,e],[1-e,1]);}break;
     case'sleeve':hem(w*(part.fitted?0.7:1),w*0.3,!part.fitted);break;
-    case'sash':{const e=clamp(w*0.22/L,0,0.3);main.push([0,e],[1-e,1]);break;}
+    case'pants':main.push([0,f(w*0.5)]);hem(w*0.8,w*0.25,true);break;
+    case'shoes':if(!part.foot)main.push([0,f(w*0.65)]);break;
+    case'vest':if(part.open){hem(w*0.6,w*0.2,false);cols.push([0,0.035],[0.965,1]);}else edges(clamp(w*0.3/L,0,0.22));break;
+    case'bracer':edges(clamp(w*0.32/L,0,0.25));break;
+    case'hat':main.push([0.955,1]);break;
+    case'veil':hem(w*0.6,w*0.25,false);break;
+    case'sash':edges(clamp(w*0.22/L,0,0.3));break;
     case'tail':hem(w*0.9,w*0.5,false);break;
     case'tabard':{hem(w*0.7,w*0.3,false);const e=clamp(w*0.22/(design.tabard.width),0,0.2);cols.push([0,e],[1-e,1]);break;}
     case'cape':{hem(w,w*0.25,false);const e=clamp(w*0.45/part.width,0,0.1);cols.push([0,e],[1-e,1]);break;}
-    case'hood':main.push([clamp(1-w*0.7/L,0.5,1),clamp(1-w*0.18/L,0.6,1)]);break;
+    case'hood':if(part.up)main.push([0,clamp(w*0.55/L,0,0.2)]);else main.push([clamp(1-w*0.7/L,0.5,1),clamp(1-w*0.18/L,0.6,1)]);break;
   }
   return{main,stripe,cols};
 }
-const GROUP={top:'top',sleeve:'top',skirt:'skirt',sash:'sash',tail:'sash',tabard:'tabard',cape:'cape',hood:'cape',trim:'cape'};
+const GROUP={top:'top',sleeve:'top',skirt:'skirt',sash:'sash',tail:'sash',tabard:'tabard',cape:'cape',hood:'cape',trim:'cape',pants:'pants',shoes:'shoes',strap:'shoes',vest:'vest',bracer:'vest',hat:'hat',veil:'hat'};
 
 // cache を渡すと、色を変えるだけのときは形と重みを作り直さない
 export function buildMeshes(body,sk,parts,design,cache){
@@ -63,8 +76,8 @@ export function buildMeshes(body,sk,parts,design,cache){
   const top=byName.cloth_top;
   for(const part of parts){
     const kind=part.kind,src=part.pos,nvS=src.length,nuS=src[0].length,closed=part.closed,trim=kind==='trim';
-    const group=GROUP[kind],col=C[group],b=trim?{main:[],stripe:[],cols:[]}:bands(part,design);
-    const color=(t,u)=>{if(trim)return col[1];if(inBand(t,b.main)||inBand(u,b.cols))return col[1];if(inBand(t,b.stripe))return col[2];return col[0];};
+    const group=part.group||GROUP[kind],col=C[group],b=trim?{main:[],stripe:[],cols:[]}:bands(part,design);
+    const color=(t,u)=>{if(trim)return col[1];if(kind==='strap')return col[part.solid?1:0];if(inBand(t,b.main)||inBand(u,b.cols))return col[1];if(inBand(t,b.stripe))return col[2];return col[0];};
     const paint=g=>{const lining=g.lining,front=new Float32Array(g.uv.length*3),back=lining&&new Float32Array(g.uv.length*3);
       g.uv.forEach(([t,u],v)=>{const c=color(t,u);front.set(c,v*3);if(lining)back.set(c===col[1]?col[1]:col[2],v*3);});
       return{name:part.name,kind,prims:g.prims.map((p,n)=>({...p,color:n?back:front}))};};
@@ -79,7 +92,8 @@ export function buildMeshes(body,sk,parts,design,cache){
     const N=P.map(()=>[0,0,0]),I=[];
     for(let j=0;j+1<nv;j++)for(let i=0;i<(closed?nu:nu-1);i++){const a=j*nu+i,bb=(j+1)*nu+i,c=(j+1)*nu+(i+1)%nu,d=j*nu+(i+1)%nu;I.push(a,bb,c,a,c,d);}
     for(let t=0;t<I.length;t+=3){const[a,bb,c]=[I[t],I[t+1],I[t+2]],n=cross(sub(P[bb],P[a]),sub(P[c],P[a]));for(const v of[a,bb,c])N[v]=add(N[v],n);}
-    let side=0;for(let j=0;j<nv;j++){const cen=(kind==='sleeve'||trim)?mul(grid[j].reduce(add,[0,0,0]),1/nu):kind==='hood'?[0,S[1]-0.2*k,0.06*k]:null;
+    const ringed=trim||['sleeve','pants','shoes','strap','bracer'].includes(kind),headed=kind==='hat'||kind==='hood'&&part.up;
+    let side=0;for(let j=0;j<nv;j++){const cen=ringed?mul(grid[j].reduce(add,[0,0,0]),1/nu):headed?part.center:kind==='hood'||kind==='veil'?[0,S[1]-0.2*k,0.06*k]:null;
       for(let i=0;i<nu;i++){const p=grid[j][i];side+=kind==='tabard'?N[j*nu+i][2]*part.side:dot(N[j*nu+i],sub(p,cen||[0,p[1],0]));}}
     if(side<0){for(let t=0;t<I.length;t+=3)[I[t+1],I[t+2]]=[I[t+2],I[t+1]];for(let v=0;v<N.length;v++)N[v]=mul(N[v],-1);}
     const Nn=N.map(norm);
@@ -100,16 +114,25 @@ export function buildMeshes(body,sk,parts,design,cache){
         case'tail':return mix(hang[col0],sk.lowW(p,0.6*smooth(0.2,0.9,t)),smooth(0,0.3,t));
         case'tabard':{if(t<=upperRows)return sk.weightsOf(sk.torso(p));const q=(t-upperRows)/(1-upperRows);return mix(hang[col0],sk.lowW(p,0.7*smooth(0.08,0.6,q)),smooth(0,0.2,q));}
         case'sash':return sk.weightsOf(sk.torso(p));
-        case'sleeve':{const s_=part.side;if(part.fitted)return sk.weightsOf(sk.arm[s_](p));const s=t*part.Ls,fore=smooth(part.L1-0.07*k,part.L1+0.07*k,s),ch=0.45*(1-smooth(0,0.11*k,s));return{chest:ch,['upperarm_'+s_]:(1-fore)*(1-ch),['forearm_'+s_]:fore*(1-ch)};}
+        case'sleeve':{const s_=part.side;if(part.fitted)return sk.weightsOf(sk.arm[s_](p));const s=t*(part.type==='bishop'?part.length:part.Ls),fore=smooth(part.L1-0.07*k,part.L1+0.07*k,s),ch=0.45*(1-smooth(0,0.11*k,s));return{chest:ch,['upperarm_'+s_]:(1-fore)*(1-ch),['forearm_'+s_]:fore*(1-ch)};}
         case'cape':{const y=p[1],upper=sk.shoulders(p,0.3*(1-smooth(0.02,0.22,t))),mid=mix({spine:1},upper,smooth(waist,S[1]-0.07*k,y)),low=sk.lowW(p,0.35*smooth(J.hips[1],J.shin_l[1]*0.9,y));return mix(low,mid,smooth(waist-0.17*k,waist+0.03*k,y));}
-        case'hood':return{chest:1};
-        default:return sk.shoulders(p,0.25);
+        case'hood':{if(!part.up)return{chest:1};const h=smooth(J.neck[1]+0.01*k,J.neck[1]+0.1*k,p[1]);return{chest:1-h,head:h};}
+        case'hat':return{head:1};
+        case'veil':{const h=smooth(J.neck[1]-0.06*k,J.neck[1]+0.11*k,p[1]);return{chest:1-h,head:h};}
+        case'pants':{const s_=part.side;if(!part.loose)return sk.weightsOf(sk.leg[s_](p));
+          // 太いズボンは、股より上は体の近い所に合わせ、下は脚の骨になめらかに乗せる
+          const sh=smooth(sk.knee+0.09*k,sk.knee-0.09*k,p[1]),up=smooth(J.hips[1]-0.14*k,J.hips[1]+0.02*k,p[1]),low={hips:up,['thigh_'+s_]:(1-up)*(1-sh),['shin_'+s_]:(1-up)*sh},near=smooth(J.hips[1]-0.07*k,J.hips[1]+0.03*k,p[1]);
+          return near>0?mix(low,sk.weightsOf(sk.leg[s_](p)),near):low;}
+        case'shoes':case'strap':return sk.weightsOf(sk.leg[part.side](p));
+        case'vest':{const w0=sk.weightsOf(sk.torso(p));return p[1]<waist-0.01*k?mix(w0,sk.lowW(p,0.7),smooth(waist-0.01*k,waist-0.14*k,p[1])):w0;}
+        case'bracer':return sk.weightsOf(sk.arm[part.side](p));
+        default:return part.rig==='head'?{head:1}:part.rig==='torso'?sk.weightsOf(sk.torso(p)):sk.shoulders(p,0.25);
       }
     };
-    const maxDist=t=>{switch(kind){case'skirt':return 0.14*smooth(0.12,1,t);case'tail':return 0.1*smooth(0.05,1,t);case'sleeve':return part.fitted?0:0.09*smooth(0.35,1,t);case'cape':return 0.25*smooth(0.1,1,t);case'hood':return 0.03*t;case'tabard':return 0.1*smooth(upperRows,1,t);default:return 0;}};
-    const hasSoft=body.soft&&(kind==='top'||kind==='sash'||kind==='skirt'||kind==='tail'||kind==='tabard'||(kind==='sleeve'&&part.fitted));
+    const maxDist=t=>{switch(kind){case'skirt':return 0.14*smooth(0.12,1,t);case'tail':return 0.1*smooth(0.05,1,t);case'sleeve':return part.fitted?0:part.type==='bishop'?0.045*Math.sin(Math.PI*t):0.09*smooth(0.35,1,t);case'pants':return part.loose?0.05*Math.sin(Math.PI*smooth(0.25,1,t)*0.8):0;case'veil':return 0.14*smooth(part.pinned,1,t);case'vest':return part.open?0.04*smooth(0.7,1,t):0;case'cape':return 0.25*smooth(0.1,1,t);case'hood':return 0.03*t;case'tabard':return 0.1*smooth(upperRows,1,t);default:return 0;}};
+    const hasSoft=body.soft&&(['top','sash','skirt','tail','tabard','vest','bracer'].includes(kind)||(kind==='sleeve'&&part.fitted)||(kind==='pants'&&!part.loose));
     const softness=(p,t)=>{const f=kind==='skirt'||kind==='tail'?1-smooth(0.08,0.35,t):kind==='tabard'?1-smooth(upperRows,upperRows+0.2,t):1;if(f<=0)return[0,0,0];
-      const[a,m,d]=sk.softAt((kind==='sleeve'?sk.arm[part.side]:sk.lower)(p));return[a*f,m*f,d];};
+      const[a,m,d]=sk.softAt((kind==='sleeve'||kind==='bracer'?sk.arm[part.side]:kind==='pants'?sk.leg[part.side]:sk.lower)(p));return[a*f,m*f,d];};
 
     const n=P.length,uv=[],W=[],MD=[],So=[];
     tj.forEach((t,j)=>ti.forEach((u,i)=>{const p=grid[j][i];uv.push([t,u]);W.push(weight(p,t,u));MD.push(maxDist(t));if(hasSoft)So.push(softness(p,t));}));
