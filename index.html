@@ -120,6 +120,7 @@
     c.updateBadge = undefined; c.newBadge = undefined; c.isNew = false; c.isUpdated = false; c.gallery = true;
     c.first = rep.first; c.last = members.map(function (m) { return m.last || ''; }).sort().slice(-1)[0] || null;
     c.history = rep.history; c.dateState = rep.dateState; c.order = Math.min.apply(null, members.map(function (m) { return m.order; }));
+    c.appCount = all.filter(function (w) { return w.group === id; }).length;
     c._h = '';
     return c;
   }
@@ -139,7 +140,7 @@
 
   function card(w) {
     var dv = IZ.deviceText(w), cat = IZ.CATS[w.category], lab = w.category === 'lab', tool = w.category === 'tool';
-    var badges = '';
+    var badges = w.appCount ? '<span class="b">' + w.appCount + 'アプリ</span>' : '';
     if (typeof w.updateBadge === 'string') badges += '<span class="b upd">' + IZ.esc(w.updateBadge) + '</span>';
     else if (w.isNew && w.newBadge !== false) badges += '<span class="b new">NEW</span>';
     else if (w.isUpdated && w.updateBadge !== false) badges += '<span class="b upd">更新</span>';
@@ -207,7 +208,8 @@
     var other = base.length - list.length;
     $('showAll').hidden = !(list.length === 0 && state.cat && other > 0);
     $('emptyMsg').textContent = (list.length === 0 && state.cat && other > 0) ? IZ.CATS[state.cat].ja + 'には見つかりませんでした。ほかの種類に ' + other + ' 件あります。' : '条件に合う作品が見つかりませんでした。';
-    var label = (state.cat ? IZ.CATS[state.cat].ja + 'の作品' : '作品') + ' ' + list.length + '件';
+    var workCount = base.filter(function (w) { return !state.cat || w.category === state.cat; }).length;
+    var label = (state.cat ? IZ.CATS[state.cat].ja + 'の作品' : '作品') + ' ' + workCount + '件';
     var nf = list.filter(function (w) { return IZ.favs.has(w.id); }).length;
     if (nf) label += '　♥ お気に入り ' + nf + '件を先頭に';
     if (state.q) label += '（「' + state.q + '」で検索）';
@@ -246,7 +248,7 @@
     repo = d.repo;
     all = d.works.filter(function (w) { return w.gallery; });
     all.forEach(function (w) { w._h = hay(w); });
-    $('total').textContent = 'ぜんぶで ' + all.length + ' 作品';
+    $('total').textContent = 'ぜんぶで ' + all.length + ' 作品（各分類の中の作品を含む）';
     render();
   }).catch(function (err) {
     grid.innerHTML = '';
