@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>モンスタースミス | 敵キャラ3D生成 → GLB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#17142b;--panel:#211d3d;--line:#383160;--ink:#ece9f8;--sub:#a8a2cc;--acc:#f2c14e;--acc-ink:#2a2005}
+@media (prefers-color-scheme:light){:root{--bg:#f1eefb;--panel:#fff;--line:#d6d0ef;--ink:#1d1838;--sub:#5f5a86;--acc:#c98a00;--acc-ink:#fff}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.6 "Zen Kaku Gothic New",system-ui,sans-serif;display:grid;grid-template-columns:320px 1fr;min-height:100%}
+aside{background:var(--panel);border-right:1px solid var(--line);padding:20px;overflow-y:auto;max-height:100vh}
+h1{font-size:22px;font-weight:900;margin:0 0 2px}
+.lead{color:var(--sub);margin:0 0 18px;font-size:13px}
+fieldset{border:0;padding:0;margin:0 0 16px}
+legend{font-weight:700;padding:0;margin-bottom:6px}
+label{display:grid;grid-template-columns:5.5em 1fr 3em;align-items:center;gap:8px;margin:4px 0;color:var(--sub);font-size:13px}
+output{text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--acc)}
+select,input[type=number]{width:100%;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit}
+.row{display:flex;gap:8px}
+button{font:inherit;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:6px;padding:7px 12px;cursor:pointer}
+button:hover{border-color:var(--acc)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+button.primary{background:var(--acc);color:var(--acc-ink);border-color:var(--acc);font-weight:700;flex:1}
+.anims{display:flex;flex-wrap:wrap;gap:6px}
+.anims button[aria-pressed=true]{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+dl{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin:0;font-size:13px}
+dt{color:var(--sub)}dd{margin:0;font-variant-numeric:tabular-nums}
+.tech{margin:0 0 16px;border-top:1px solid var(--line);padding-top:10px}
+.tech summary{cursor:pointer;font-weight:700;margin-bottom:6px}
+.tech summary:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.tech dl{grid-template-columns:7em 1fr}
+main{position:relative;min-height:100vh}
+#view{position:absolute;inset:0}
+#view canvas{display:block}
+#msg{position:absolute;left:16px;bottom:12px;color:var(--sub);font-size:12px;pointer-events:none}
+@media (max-width:760px){body{grid-template-columns:1fr;grid-template-rows:55vh auto}main{order:-1;min-height:55vh}aside{max-height:none;border-right:0;border-top:1px solid var(--line)}}
+</style>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+</head>
+<body>
+<aside>
+  <h1>モンスタースミス</h1>
+  <p class="lead">敵キャラを作って、動き付きの GLB で書き出します。</p>
+
+  <fieldset>
+    <legend>種類</legend>
+    <label>タイプ<select id="genre"></select><span></span></label>
+    <label>強さ<select id="tier"></select><span></span></label>
+    <label>シード<input type="number" id="seed" min="1" max="999999"><span></span></label>
+    <div class="row"><button id="rand" style="flex:1">ランダムに作る</button></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>体つき</legend>
+    <label>全長<input type="range" id="length" min="0.6" max="4.5" step="0.05"><output></output></label>
+    <label>太さ<input type="range" id="thick" min="0.12" max="0.8" step="0.01"><output></output></label>
+    <label>脚の長さ<input type="range" id="legLen" min="0.3" max="1.6" step="0.05"><output></output></label>
+    <label>尻尾<input type="range" id="tail" min="0" max="4" step="0.05"><output></output></label>
+    <label>脚の数<select id="legs"><option>2</option><option>4</option><option>6</option></select><span></span></label>
+    <label>色相<input type="range" id="hue" min="0" max="1" step="0.01"><output></output></label>
+    <label>鮮やかさ<input type="range" id="sat" min="0" max="1" step="0.01"><output></output></label>
+    <label>模様<select id="pattern"><option value="none">なし</option><option value="stripe">縞</option><option value="spots">斑点</option></select><span></span></label>
+    <label>ポリゴン<select id="detail"><option value="low">低（軽量）</option><option value="mid">中</option><option value="high">高（滑らか）</option></select><span></span></label>
+    <label>翼<select id="wings"><option value="0">なし</option><option value="1">あり</option></select><span></span></label>
+    <label>目<input type="range" id="eyes" min="0" max="6" step="1"><output></output></label>
+    <label>角<input type="range" id="horns" min="0" max="6" step="1"><output></output></label>
+    <label>トゲ<input type="range" id="spikes" min="0" max="8" step="1"><output></output></label>
+  </fieldset>
+
+  <fieldset>
+    <legend>動きを確認</legend>
+    <div class="anims" id="anims"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>視点</legend>
+    <div class="anims" id="views"></div>
+    <label style="grid-template-columns:auto 1fr;margin-top:8px"><input type="checkbox" id="keepLook"><span>並べ表示・まとめ出しで色と模様を引き継ぐ</span></label>
+    <div class="row" style="margin-top:8px"><button id="gallery" style="flex:1" title="現在の設定から、シードを順に変えた5体を並べます。クリックで選択">並べて見比べる（5体）</button></div>
+    <label style="grid-template-columns:auto 1fr;margin-top:8px"><input type="checkbox" id="demo"><span>巡回デモ（足が滑らない速度で歩く）</span></label>
+    <label style="grid-template-columns:auto 1fr;margin-top:8px"><input type="checkbox" id="spin"><span>自動で回転</span></label>
+  </fieldset>
+
+  <fieldset>
+    <legend>ステータス</legend>
+    <label>属性<select id="st_element"></select><span></span></label>
+    <label>弱点<select id="st_weak"></select><span></span></label>
+    <label>HP<input type="number" id="st_hp" min="1" max="99999"><span></span></label>
+    <label>攻撃<input type="number" id="st_atk" min="0" max="9999"><span></span></label>
+    <label>防御<input type="number" id="st_def" min="0" max="9999"><span></span></label>
+    <label>速度<input type="number" id="st_speed" min="0.1" max="10" step="0.1"><span></span></label>
+    <dl id="stats" style="margin-top:6px"></dl>
+  </fieldset>
+
+  <details class="tech">
+    <summary>使用技術</summary>
+    <dl>
+      <dt>描画</dt><dd>Three.js r160（WebGL）</dd>
+      <dt>骨格・スキン</dt><dd>Skeleton / SkinnedMesh（1メッシュ・1スケルトン）</dd>
+      <dt>体の生成</dt><dd>背骨カーブ＋半径プロファイルのチューブ、円錐・球のパーツ結合</dd>
+      <dt>乱数</dt><dd>mulberry32（同じシードで同じ結果）</dd>
+      <dt>アニメ</dt><dd>手続き生成 → キーフレームに焼き込み（AnimationClip）</dd>
+      <dt>書き出し</dt><dd>GLTFExporter（GLB / extras にステータス）</dd>
+      <dt>操作</dt><dd>OrbitControls（視点プリセット・自動回転）</dd>
+      <dt>翼</dt><dd>2関節（付け根＋先端）の膜メッシュ＋しなる羽ばたき</dd>
+      <dt>構成</dt><dd>ES Modules + importmap（ビルド不要）</dd>
+      <dt>移動速度</dt><dd>歩き・走りの足が滑らない速度を算出し GLB に記録</dd>
+      <dt>LOD</dt><dd>ポリゴン数 低/中/高（半径分割・リング数・パーツ分割）</dd>
+      <dt>まとめ出力</dt><dd>自前 ZIP（無圧縮）＋ manifest.json</dd>
+      <dt>比較表示</dt><dd>複数体の同時生成・同時再生、床面レイキャストで選択</dd>
+      <dt>公開</dt><dd>GitHub Pages（静的サイト）</dd>
+    </dl>
+  </details>
+
+  <div class="row">
+    <button class="primary" id="glb">GLB を書き出す</button>
+    <button id="json">JSON</button>
+  </div>
+  <div class="row" style="margin-top:8px"><button id="batch" style="flex:1" title="現在のタイプと強さで、シードを順に増やした個体を ZIP にまとめます">まとめて ZIP</button><select id="count" style="width:5.5em" aria-label="体数"><option>5</option><option selected>10</option><option>20</option><option>50</option></select></div>
+  <div class="row" style="margin-top:8px"><button id="load" style="flex:1" title="保存した JSON を読み込んで再現します">JSON を読み込む</button><input type="file" id="file" accept="application/json,.json" hidden></div>
+</aside>
+<main><div id="view"></div><div id="msg">ドラッグで回転 / ホイールで拡大</div></main>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import { makeZip } from './zip.js';
+import { ELEMENTS, GENRES, CLIPS, makeSpec, buildMonster, buildClips } from './monster-core.js';
+
+const $ = (id) => document.getElementById(id);
+const view = $('view');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+view.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x14112a);
+const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+camera.position.set(4.5, 2.6, 5.5);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0.9, 0); controls.enableDamping = true;
+scene.add(new THREE.HemisphereLight(0xcfd0ff, 0x2a2140, 1.1));
+const sun = new THREE.DirectionalLight(0xfff1d0, 2.2);
+sun.position.set(3, 6, 4); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
+Object.assign(sun.shadow.camera, { left: -5, right: 5, top: 5, bottom: -5 });
+scene.add(sun);
+const floor = new THREE.Mesh(new THREE.CircleGeometry(6, 48), new THREE.MeshStandardMaterial({ color: 0x2c2650, roughness: 1 }));
+floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+scene.add(new THREE.GridHelper(12, 12, 0x4a4380, 0x3a3366));
+
+function resize() {
+  const w = view.clientWidth, h = view.clientHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+  renderer.domElement.style.width = w + 'px'; renderer.domElement.style.height = h + 'px';
+}
+new ResizeObserver(resize).observe(view); resize();
+
+// ---- 状態 ----
+let spec, built, clips, mixer, current = 'Idle', actions = {};
+const clock = new THREE.Clock();
+const genreSel = $('genre'), tierSel = $('tier');
+for (const [k, g] of Object.entries(GENRES)) genreSel.add(new Option(g.label, k));
+for (let t = 1; t <= 5; t++) tierSel.add(new Option(['序盤', '中盤', '終盤', '強敵', 'ボス'][t - 1] + ` (${t})`, t));
+
+for (const id of ['st_element', 'st_weak']) for (const e of ELEMENTS) $(id).add(new Option(e, e));
+const sliders = ['length', 'thick', 'legLen', 'tail', 'hue', 'sat', 'eyes', 'horns', 'spikes'];
+
+function disposeBuilt() {
+  if (!built) return;
+  scene.remove(built.group);
+  built.mesh.geometry.dispose(); built.mesh.material.dispose();
+  mixer && mixer.stopAllAction();
+}
+function rebuild() {
+  exitGallery(null);
+  disposeBuilt();
+  built = buildMonster(spec);
+  built.mesh.castShadow = true;
+  scene.add(built.group);
+  clips = buildClips(built);
+  mixer = new THREE.AnimationMixer(built.group);
+  actions = {};
+  for (const c of clips) {
+    const a = mixer.clipAction(c);
+    if (!c.userData.loop) { a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; }
+    actions[c.name] = a;
+  }
+  play(current);
+  controls.target.set(0, built.bodyY, 0);
+  syncUI();
+  if (!rebuild.framed) { rebuild.framed = true; setView('iso'); }
+}
+function play(name) {
+  current = name;
+  if (gal) galPlay(name);
+  for (const a of Object.values(actions)) a.stop();
+  actions[name].reset().play();
+  for (const b of $('anims').children) b.setAttribute('aria-pressed', b.dataset.n === name);
+}
+function syncUI() {
+  for (const id of sliders) { $(id).value = spec[id]; $(id).nextElementSibling.textContent = Number(spec[id]).toFixed(id === 'eyes' || id === 'horns' || id === 'spikes' ? 0 : 2); }
+  $('legs').value = spec.legs; $('wings').value = spec.wings; $('detail').value = spec.detail || 'mid'; $('pattern').value = spec.stripe ? 'stripe' : spec.spots ? 'spots' : 'none'; $('seed').value = spec.seed; genreSel.value = spec.genre; tierSel.value = spec.tier;
+  const s = spec.stats;
+  $('st_element').value = s.element; $('st_weak').value = s.weakness;
+  for (const k of ['hp', 'atk', 'def', 'speed']) $('st_' + k).value = s[k];
+  $('stats').innerHTML = `<dt>サイズ</dt><dd>${built.bounds.size.map((v) => v.toFixed(1)).join(' × ')} m</dd><dt>三角形</dt><dd>${built.bounds.tris.toLocaleString()}</dd>`;
+  history.replaceState(null, '', `#s=${spec.seed}&g=${spec.genre}&t=${spec.tier}`);
+}
+function look() { return spec ? { detail: spec.detail, ...($('keepLook').checked ? { hue: spec.hue, sat: spec.sat, stripe: spec.stripe, spots: spec.spots } : {}) } : {}; }
+function fresh(seed = spec.seed, genre = genreSel.value, tier = +tierSel.value, over = {}) {
+  spec = makeSpec(seed, genre, tier, over);
+  if (current === 'Die') current = 'Idle'; // 新しい個体は倒れた姿勢で始めない
+  rebuild(); refit();
+}
+
+// ---- 視点 ----
+function setView(name) {
+  const [sx, sy, sz] = built.bounds.size, d = Math.max(sx, sy, sz) * 1.9 + 1.2, h = built.bodyY;
+  const P = { front: [0, h, d], side: [d, h, 0], top: [0, d * 1.25, 0.001], iso: [d * 0.8, h + d * 0.4, d * 0.9] }[name];
+  camera.position.set(...P); controls.target.set(0, h, 0); controls.update();
+}
+for (const [k, label] of [['iso', '斜め'], ['front', '正面'], ['side', '側面'], ['top', '真上']]) {
+  const b = document.createElement('button'); b.textContent = label; b.onclick = () => setView(k); $('views').appendChild(b);
+}
+// ---- ギャラリー（5体を並べて比較・クリックで選択）----
+let gal = null;
+function galPlay(name) {
+  gal.forEach((g) => { g.mixer.stopAllAction(); g.actions[name].reset().play(); });
+}
+function enterGallery() {
+  if (demo) { $('demo').checked = false; $('demo').onchange(); }
+  built.group.visible = false;
+  gal = [];
+  for (let i = 0; i < 5; i++) {
+    const sp = makeSpec(spec.seed + i, spec.genre, spec.tier, look()), mm = buildMonster(sp), cl = buildClips(mm), mx = new THREE.AnimationMixer(mm.group);
+    mm.mesh.castShadow = true;
+    const actions = {};
+    for (const c of cl) { const a = mx.clipAction(c); if (!c.userData.loop) { a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; } actions[c.name] = a; }
+    scene.add(mm.group); gal.push({ mm, mixer: mx, actions, w: Math.max(mm.bounds.size[0], mm.bounds.size[2]) });
+  }
+  let x = 0; const gap = 0.5, total = gal.reduce((a, g) => a + g.w + gap, -gap);
+  gal.forEach((g) => { g.mm.group.position.x = x + g.w / 2 - total / 2; x += g.w + gap; });
+  galPlay(current);
+  const h = Math.max(...gal.map((g) => g.mm.bodyY));
+  camera.position.set(0, h + total * 0.2 + 1, total * 1.2 + 3); controls.target.set(0, h * 0.8, 0); controls.update();
+  $('gallery').textContent = '並べて見るを閉じる'; $('msg').textContent = 'モンスターをクリックで選択（シード ' + spec.seed + '〜' + (spec.seed + 4) + '）';
+}
+function exitGallery(pick) {
+  if (!gal) return;
+  gal.forEach((g) => { scene.remove(g.mm.group); g.mm.mesh.geometry.dispose(); g.mm.mesh.material.dispose(); g.mixer.stopAllAction(); });
+  gal = null; built && (built.group.visible = true);
+  $('gallery').textContent = '並べて見比べる（5体）'; $('msg').textContent = 'ドラッグで回転 / ホイールで拡大';
+  if (pick !== null) fresh(spec.seed + pick, spec.genre, spec.tier, look());
+}
+$('gallery').onclick = () => (gal ? exitGallery(null) : enterGallery());
+let down = null;
+renderer.domElement.addEventListener('pointerdown', (e) => { down = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (!gal || !down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
+  const r = renderer.domElement.getBoundingClientRect(), ray = new THREE.Raycaster();
+  ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
+  const hit = ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), new THREE.Vector3());
+  if (!hit) return;
+  let best = 0; gal.forEach((g, i) => { if (Math.abs(g.mm.group.position.x - hit.x) < Math.abs(gal[best].mm.group.position.x - hit.x)) best = i; });
+  exitGallery(best);
+});
+
+// ---- 巡回デモ ----
+let demo = false, phi = 0;
+const demoR = () => 2 + Math.max(...built.bounds.size) * 0.5;
+$('demo').onchange = () => {
+  demo = $('demo').checked;
+  if (demo) {
+    if (gal) exitGallery(null);
+    if (current !== 'Walk' && current !== 'Run') play('Walk');
+    const R = demoR(); camera.position.set(R * 1.6, R * 1.3 + 2, R * 1.6); controls.target.set(0, 0.8, 0); controls.update();
+  } else { built.group.position.set(0, 0, 0); built.group.rotation.y = 0; setView('iso'); }
+};
+$('spin').onchange = () => { controls.autoRotate = $('spin').checked; controls.autoRotateSpeed = 2.5; };
+
+// 新しい個体の大きさに合わせて、今の視点の向きのまま距離だけ調整する
+function refit() {
+  const [sx, sy, sz] = built.bounds.size, tgt = new THREE.Vector3(0, built.bodyY, 0);
+  const dir = camera.position.clone().sub(controls.target); if (dir.lengthSq() < 1e-6) dir.set(1, 0.5, 1);
+  camera.position.copy(tgt).add(dir.normalize().multiplyScalar(Math.max(sx, sy, sz) * 2.4 + 2.2));
+  controls.target.copy(tgt); controls.update();
+}
+
+// ---- イベント ----
+for (const c of CLIPS) {
+  const b = document.createElement('button'); b.textContent = { Idle: '待機', Walk: '歩く', Run: '走る', Attack: '攻撃', Hit: '被弾', Die: 'やられ', Roar: '咆哮' }[c];
+  b.dataset.n = c; b.onclick = () => play(c); $('anims').appendChild(b);
+}
+$('rand').onclick = () => fresh(1 + Math.floor(Math.random() * 999999));
+$('seed').onchange = () => fresh(Math.max(1, Math.floor(+$('seed').value || 1)));
+genreSel.onchange = tierSel.onchange = () => fresh();
+for (const id of sliders) $(id).oninput = () => { spec[id] = +$(id).value; rebuild(); };
+$('pattern').onchange = () => { spec.stripe = $('pattern').value === 'stripe'; spec.spots = $('pattern').value === 'spots'; rebuild(); };
+// ステータスの手動調整（GLB の extras と JSON に反映）
+function pushStats() { built.group.userData.stats = spec.stats; built.group.userData.spec = JSON.parse(JSON.stringify(spec)); }
+for (const k of ['hp', 'atk', 'def', 'speed']) $('st_' + k).onchange = () => {
+  const v = +$('st_' + k).value; if (!Number.isFinite(v)) return syncUI();
+  spec.stats[k] = k === 'speed' ? Math.max(0.1, v) : Math.max(0, Math.round(v)); pushStats(); syncUI();
+};
+$('st_weak').onchange = () => { spec.stats.weakness = $('st_weak').value; pushStats(); };
+$('st_element').onchange = () => { spec.stats.element = $('st_element').value; rebuild(); }; // 目の色が属性で変わるので作り直す
+$('detail').onchange = () => { spec.detail = $('detail').value; rebuild(); };
+$('wings').onchange = () => { spec.wings = +$('wings').value; rebuild(); };
+$('legs').onchange = () => { spec.legs = +$('legs').value; rebuild(); };
+setInterval(() => { // 一回再生のクリップが終わったら待機に戻す（やられだけは残す）
+  if (!actions[current] || current === 'Die' || current === 'Idle' || current === 'Walk' || current === 'Run') return;
+  if (!actions[current].isRunning()) play('Idle');
+}, 200);
+
+function download(blob, name) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+$('glb').onclick = () => {
+  $('msg').textContent = '書き出し中…';
+  mixer.stopAllAction(); built.skeleton.pose(); built.group.updateMatrixWorld(true); // バインドポーズで出力
+  new GLTFExporter().parse(built.group, (buf) => {
+    download(new Blob([buf], { type: 'model/gltf-binary' }), `monster_${spec.genre}_${spec.seed}.glb`);
+    $('msg').textContent = 'GLB を書き出しました（クリップ: ' + CLIPS.join(' / ') + '）';
+    play(current);
+  }, (e) => { $('msg').textContent = '書き出しに失敗: ' + e.message; play(current); }, { binary: true, animations: clips });
+};
+$('json').onclick = () => download(new Blob([JSON.stringify(spec, null, 2)], { type: 'application/json' }), `monster_${spec.genre}_${spec.seed}.json`);
+
+$('batch').onclick = async () => {
+  const btn = $('batch'); btn.disabled = true;
+  try {
+    const files = [], manifest = [], enc = new TextEncoder();
+    const count = +$('count').value;
+    for (let i = 0; i < count; i++) {
+      $('msg').textContent = `まとめて書き出し中… ${i + 1}/${count}`;
+      const sp = makeSpec(spec.seed + i, spec.genre, spec.tier, look()), mm = buildMonster(sp), cl = buildClips(mm);
+      const buf = await new GLTFExporter().parseAsync(mm.group, { binary: true, animations: cl });
+      const file = `monster_${sp.genre}_${sp.seed}.glb`;
+      files.push({ name: file, data: new Uint8Array(buf) });
+      manifest.push({ file, genre: sp.genre, seed: sp.seed, stats: sp.stats, bounds: mm.bounds, locomotion: mm.group.userData.locomotion, clips: CLIPS });
+      mm.mesh.geometry.dispose(); mm.mesh.material.dispose();
+      await new Promise((r) => setTimeout(r)); // 画面を固めない
+    }
+    files.push({ name: 'manifest.json', data: enc.encode(JSON.stringify(manifest, null, 2)) });
+    download(makeZip(files), `monsters_${spec.genre}_t${spec.tier}_${spec.seed}.zip`);
+    $('msg').textContent = `${count}体を ZIP（GLB×${count} + manifest.json）で書き出しました`;
+  } catch (e) { $('msg').textContent = '書き出しに失敗: ' + e.message; }
+  btn.disabled = false;
+};
+
+// JSON 読み込み（保存した仕様をそのまま再現）
+$('load').onclick = () => $('file').click();
+$('file').onchange = async () => {
+  const f = $('file').files[0]; $('file').value = ''; if (!f) return;
+  try {
+    const o = JSON.parse(await f.text());
+    if (!GENRES[o.genre] || !(o.seed > 0)) throw new Error('モンスターの JSON ではありません');
+    const base = makeSpec(Math.floor(o.seed), o.genre, [1, 2, 3, 4, 5].includes(o.tier) ? o.tier : 1);
+    for (const k of Object.keys(base)) if (k !== 'stats' && o[k] !== undefined && typeof o[k] === typeof base[k]) base[k] = o[k];
+    if (o.stats) for (const k of Object.keys(base.stats)) if (typeof o.stats[k] === typeof base.stats[k]) base.stats[k] = o.stats[k];
+    spec = base; rebuild(); refit(); $('msg').textContent = `${f.name} を読み込みました`;
+  } catch (e) { $('msg').textContent = '読み込みに失敗: ' + e.message; }
+};
+
+// ---- 起動 ----
+const h = new URLSearchParams(location.hash.slice(1));
+genreSel.value = GENRES[h.get('g')] ? h.get('g') : 'beast';
+tierSel.value = [1, 2, 3, 4, 5].includes(+h.get('t')) ? h.get('t') : 1;
+fresh(+h.get('s') > 0 ? Math.floor(+h.get('s')) : 1 + Math.floor(Math.random() * 999999));
+renderer.setAnimationLoop(() => { const dt = clock.getDelta(); mixer.update(dt);
+  if (demo && !gal) { const R = demoR(), v = (built.group.userData.locomotion || {})[current] || 0; phi += (v / R) * dt; built.group.position.set(R * Math.sin(phi), 0, R * Math.cos(phi)); built.group.rotation.y = phi + Math.PI / 2; } gal && gal.forEach((g) => g.mixer.update(dt)); controls.update(); renderer.render(scene, camera); });
+</script>
+</body>
+</html>
