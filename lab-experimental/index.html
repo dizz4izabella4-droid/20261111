@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>実験的作品 | izのおもちゃ箱</title>
+<meta name="description" content="ブラウザで遊べるゲーム・実用アプリ・実験作品。">
+<link rel="stylesheet" href="../common/site.css">
+</head>
+<body>
+<header class="site">
+  <div class="site-in">
+    <a class="brand" href="../">izのおもちゃ箱</a>
+    <nav class="tabs" aria-label="サイト">
+      <a href="../" aria-current="page">おもちゃ箱</a>
+      <a href="../brain/">BRAIN</a>
+      <a href="../archive/">ARCHIVE</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="lead">
+    <h1>実験的作品</h1><a href="../?cat=lab">実験へ戻る</a>
+    <p id="total"></p>
+  </div>
+
+  <div class="tools">
+    <div class="chips" role="group" aria-label="種類でしぼる" id="cats">
+      <button class="chip" type="button" data-cat="game" aria-pressed="true" style="--c:var(--game)"><span class="dot" aria-hidden="true"></span>ゲーム <span class="n" data-n="game"></span></button>
+      <button class="chip" type="button" data-cat="tool" aria-pressed="false" style="--c:var(--tool)"><span class="dot" aria-hidden="true"></span>実用 <span class="n" data-n="tool"></span></button>
+      <button class="chip" type="button" data-cat="lab" aria-pressed="false" style="--c:var(--lab)"><span class="dot" aria-hidden="true"></span>実験 <span class="n" data-n="lab"></span></button>
+      <button class="chip" type="button" data-cat="" aria-pressed="false">すべて <span class="n" data-n=""></span></button>
+    </div>
+    <div class="row">
+      <div class="seg" role="group" aria-label="端末でしぼる" id="dev">
+        <button type="button" data-dev="" aria-pressed="true">どれでも</button>
+        <button type="button" data-dev="mobile" aria-pressed="false">スマホで</button>
+        <button type="button" data-dev="pc" aria-pressed="false">PCで</button>
+      </div>
+      <label class="sort"><span class="lbl">並び順</span>
+        <select id="sort">
+          <option value="new">新しい順</option>
+          <option value="upd">更新が新しい順</option>
+          <option value="old">古い順</option>
+          <option value="name">名前順</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <p class="count" id="count" aria-live="polite"></p>
+  <ul class="grid" id="grid"></ul>
+  <div class="empty" id="empty" hidden>
+    <p id="emptyMsg">条件に合う作品が見つかりませんでした。</p>
+    <button type="button" id="showAll" hidden>すべての種類で見る</button>
+    <button type="button" id="reset">条件をもとに戻す</button>
+  </div>
+  <a class="sister" href="https://iz3ico.github.io/app/" target="_blank" rel="noopener noreferrer">
+    <span class="sister-ico" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="11" y="6" width="26" height="36" rx="3"/><path d="M11 42h26M31 26h.01"/></svg></span>
+    <span class="sister-body"><span class="en" lang="en">SISTER SITE · OTHER WORLD</span><span class="sister-t">あそびば</span><span class="sum">もうひとつの入り口。別のサイトで開きます</span></span>
+    <span class="sister-go" aria-hidden="true">↗</span>
+  </a>
+  <noscript><p class="notice">作品一覧の表示には JavaScript が必要です。</p></noscript>
+</main>
+
+<footer class="foot">
+  <div class="foot-in">
+    <span class="soon">映画館（準備中）</span>
+    <a href="../staff/" data-root-href="staff/">スタッフ</a>
+  </div>
+</footer>
+
+<script src="../common/site.js"></script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var grid = $('grid'), sortSel = $('sort');
+  var DEFAULT_CAT = 'lab'; // 最初に見せるのはゲームだけ
+  var state = { cat: DEFAULT_CAT, dev: '', q: '', sort: 'new' };
+  var all = [], repo = '';
+
+  // URL（?cat=game&q=…&sort=…）から状態を戻す。旧「部屋」からの転送にも使う
+  var sp = new URLSearchParams(location.search);
+  if (IZ.CATS[sp.get('cat')]) state.cat = sp.get('cat');
+  else if (sp.get('cat') === 'all') state.cat = '';
+  if (/^(mobile|pc)$/.test(sp.get('dev') || '')) state.dev = sp.get('dev');
+  if (/^(new|upd|old|name)$/.test(sp.get('sort') || '')) state.sort = sp.get('sort');
+  else { try { var s = localStorage.getItem('izSite.sort'); if (/^(new|upd|old|name)$/.test(s || '')) state.sort = s; } catch (e) {} }
+
+  function norm(s) {
+    // 全角英数→半角、カタカナ→ひらがな、小文字化、空白除去（「ｲｶﾛｽ」「いかろす」「icarus」どれでも当たるように）
+    return String(s || '').normalize('NFKC').toLowerCase()
+      .replace(/[ァ-ヶ]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0x60); })
+      .replace(/[\s・〜~\-_.、。]/g, '');
+  }
+  function hay(w) { return norm([w.title, w.titleEn, w.summary, w.id, IZ.CATS[w.category].ja].join(' ')); }
+
+  function hl(text) {
+    var t = IZ.esc(text);
+    if (!state.q) return t;
+    var needle = state.q.trim();
+    if (!needle) return t;
+    var i = text.toLowerCase().indexOf(needle.toLowerCase());
+    if (i < 0) return t;
+    return IZ.esc(text.slice(0, i)) + '<mark>' + IZ.esc(text.slice(i, i + needle.length)) + '</mark>' + IZ.esc(text.slice(i + needle.length));
+  }
+
+  // 台帳の group が同じ作品は、一覧では1枚のカードにまとめ、そのページへリンクする
+  var GROUPS = { 'puzzles-existing': { title: '既存パズル', summary: '', path: 'puzzles-existing/' }, 'lab-3d': { title: '３D制作', summary: '', path: 'lab-3d/' }, 'lab-investigation': { title: '捜査', summary: '', path: 'lab-investigation/' }, 'lab-experimental': { title: '実験的作品', summary: '', path: 'lab-experimental/' } };
+  function groupCard(id, g, members) {
+    var rep = members.slice().sort(function (a, b) { return (b.first || '') < (a.first || '') ? -1 : 1; })[0];
+    var devs = [];
+    members.forEach(function (m) { m.devices.forEach(function (d) { if (devs.indexOf(d) < 0) devs.push(d); }); });
+    var c = Object.assign({}, members[0]);
+    c.id = 'group:' + id; c.title = g.title; c.titleEn = ''; c.summary = g.summary; c.url = IZ.ROOT + g.path; c.path = g.path;
+    c.devices = devs; c.sticker = ''; c.statusNote = ''; c.version = ''; c.status = 'stable'; c.icon = 'star';
+    c.updateBadge = undefined; c.newBadge = undefined; c.isNew = false; c.isUpdated = false; c.gallery = true;
+    c.first = rep.first; c.last = members.map(function (m) { return m.last || ''; }).sort().slice(-1)[0] || null;
+    c.history = rep.history; c.dateState = rep.dateState; c.order = Math.min.apply(null, members.map(function (m) { return m.order; }));
+    c._h = '';
+    return c;
+  }
+  function collapse(list) { return list;
+
+    var out = [], seen = {};
+    list.forEach(function (w) {
+      var g = w.group && GROUPS[w.group];
+      if (!g) { out.push(w); return; }
+      if (seen[w.group]) return;
+      seen[w.group] = true;
+      out.push(groupCard(w.group, g, list.filter(function (x) { return x.group === w.group; })));
+    });
+    return out;
+  }
+
+  function card(w) {
+    var dv = IZ.deviceText(w), cat = IZ.CATS[w.category], lab = w.category === 'lab', tool = w.category === 'tool';
+    var badges = '';
+    if (typeof w.updateBadge === 'string') badges += '<span class="b upd">' + IZ.esc(w.updateBadge) + '</span>';
+    else if (w.isNew && w.newBadge !== false) badges += '<span class="b new">NEW</span>';
+    else if (w.isUpdated && w.updateBadge !== false) badges += '<span class="b upd">更新</span>';
+    if (lab) {
+      // 実験：未完・端末のバッジは出さず、バージョンを表示
+      var st = IZ.STATUS[w.status];
+      if (st && w.status !== 'wip') badges += '<span class="b ' + st.cls + '">' + st.ja + '</span>';
+      if (w.statusNote) badges += '<span class="b ' + (w.status === 'paused' ? 'stop' : 'st') + '">' + IZ.esc(w.statusNote) + '</span>';
+      if (w.version) badges += '<span class="b">' + IZ.esc(w.version) + '</span>';
+    } else {
+      badges += IZ.statusBadges(w) + (dv && !tool ? '<span class="b">' + dv + '</span>' : '');
+    }
+    var dates = '<span class="dt">' + (lab ? '実験開始' : '公開') + ' ' + IZ.dateLabel(w, 'first') + '</span> <span class="dt">' + (lab ? '最終更新' : '更新') + ' <b>' + IZ.dateLabel(w, 'last') + '</b></span>';
+    var liked = IZ.favs.has(w.id), half = w.category === 'lab';   // 実験中の作品は半分の大きさ・説明なし
+    return '<li class="wrap' + (half ? ' half' : '') + '">' + (w.sticker ? '<span class="sticker">' + IZ.esc(w.sticker) + '</span>' : '') + '<a class="card ' + cat.cls + '" href="' + IZ.esc(w.url) + '">' +
+      '<span class="ico">' + IZ.icon(w.icon) + '</span>' +
+      '<span class="cbody">' +
+        (!lab && !tool && w.titleEn && w.titleEn !== w.title ? '<span class="en" lang="en">' + hl(w.titleEn) + '</span>' : '') +
+        '<span class="title">' + hl(w.title) + '</span>' +
+        (w.summary && !half ? '<span class="sum">' + hl(w.summary) + '</span>' : '') +
+        '<span class="badges">' + badges + '</span>' +
+        '<span class="dates">' + dates + '</span>' +
+      '</span><span class="go" aria-hidden="true">›</span></a>' +
+      '<button type="button" class="like' + (liked ? ' on' : '') + '" data-id="' + IZ.esc(w.id) + '" aria-pressed="' + liked + '" aria-label="' + IZ.esc(w.title) + 'をお気に入りにする" title="お気に入り"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-9.2-9.4C1.7 7.9 3.6 5 6.7 5c1.9 0 3.5 1 5.3 3 1.8-2 3.4-3 5.3-3 3.1 0 5 2.9 3.9 6.1C19.5 15.9 12 20.5 12 20.5z"/></svg></button></li>';
+  }
+
+  function cmpDate(a, b, key, desc) {
+    // 日付が無い（未集計・要確認）ものは最後に回す。同じ日なら台帳の順
+    var x = a[key], y = b[key];
+    if (x && !y) return -1; if (!x && y) return 1;
+    if (x && y && x !== y) return desc ? (x < y ? 1 : -1) : (x < y ? -1 : 1);
+    var tx = a.history && a.history[key] ? a.history[key].time : '', ty = b.history && b.history[key] ? b.history[key].time : '';
+    if (tx !== ty) return desc ? (tx < ty ? 1 : -1) : (tx < ty ? -1 : 1);
+    return a.order - b.order;
+  }
+  function sorted(list) {
+    var s = state.sort, fav = IZ.favs.all();
+    return list.slice().sort(function (a, b) {
+      var fa = fav.indexOf(a.id) >= 0, fb = fav.indexOf(b.id) >= 0;
+      if (fa !== fb) return fa ? -1 : 1; // お気に入りは、どの並び順でも先頭
+      if (s === 'name') return a.title.localeCompare(b.title, 'ja');
+      if (s === 'upd') return cmpDate(a, b, 'last', true);
+      if (s === 'old') return cmpDate(a, b, 'first', false);
+      return cmpDate(a, b, 'first', true);
+    });
+  }
+
+  function devOK(w) {
+    if (!state.dev) return true;
+    if (!w.devices.length) return true; // 端末の指定がない作品は隠さない
+    return w.devices.indexOf(state.dev) >= 0;
+  }
+
+  function render() {
+    var nq = norm(state.q);
+    var base = all.filter(function (w) { return devOK(w) && (!nq || w._h.indexOf(nq) >= 0); });
+    var list = collapse(base.filter(function (w) { return !state.cat || w.category === state.cat; }));
+    // しぼり込みボタンの件数は、検索・端末の条件を反映した数
+    document.querySelectorAll('[data-n]').forEach(function (el) {
+      var c = el.getAttribute('data-n');
+      el.textContent = collapse(base.filter(function (w) { return !c || w.category === c; })).length;
+    });
+    grid.innerHTML = sorted(list).map(card).join('');
+    $('empty').hidden = list.length > 0;
+    var other = base.length - list.length;
+    $('showAll').hidden = !(list.length === 0 && state.cat && other > 0);
+    $('emptyMsg').textContent = (list.length === 0 && state.cat && other > 0) ? IZ.CATS[state.cat].ja + 'には見つかりませんでした。ほかの種類に ' + other + ' 件あります。' : '条件に合う作品が見つかりませんでした。';
+    var label = (state.cat ? IZ.CATS[state.cat].ja + 'の作品' : '作品') + ' ' + list.length + '件';
+    var nf = list.filter(function (w) { return IZ.favs.has(w.id); }).length;
+    if (nf) label += '　♥ お気に入り ' + nf + '件を先頭に';
+    if (state.q) label += '（「' + state.q + '」で検索）';
+    $('count').textContent = label;
+    document.querySelectorAll('#cats .chip').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-cat') === state.cat)); });
+    document.querySelectorAll('#dev button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-dev') === state.dev)); });
+    sortSel.value = state.sort;
+    var u = new URLSearchParams();
+    if (state.cat !== DEFAULT_CAT) u.set('cat', state.cat || 'all');
+    if (state.dev) u.set('dev', state.dev);
+    if (state.q) u.set('q', state.q);
+    if (sp.get('sort') || state.sort !== 'new') u.set('sort', state.sort);
+    var qs = u.toString();
+    try { history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '')); } catch (e) {}
+  }
+
+  grid.addEventListener('click', function (e) {
+    var b = e.target.closest('.like'); if (!b) return;
+    var on = IZ.favs.toggle(b.getAttribute('data-id')); // 押した直後は並び替えない（指の下でカードが動かないように）。次に表示し直したとき先頭へ
+    b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
+    b.classList.remove('pop'); void b.offsetWidth; if (on) b.classList.add('pop');
+  });
+  document.getElementById('cats').addEventListener('click', function (e) {
+    var b = e.target.closest('.chip'); if (!b) return;
+    state.cat = b.getAttribute('data-cat'); render();
+  });
+  document.getElementById('dev').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    state.dev = b.getAttribute('data-dev'); render();
+  });
+  sortSel.addEventListener('change', function () { state.sort = sortSel.value; try { localStorage.setItem('izSite.sort', state.sort); } catch (e) {} render(); });
+  $('showAll').addEventListener('click', function () { state.cat = ''; render(); });
+  $('reset').addEventListener('click', function () { state.cat = DEFAULT_CAT; state.dev = ''; state.q = ''; render(); });
+
+  IZ.load().then(function (d) {
+    repo = d.repo;
+    all = d.works.filter(function (w) { return w.gallery && w.group === 'lab-experimental'; });
+    all.forEach(function (w) { w._h = hay(w); });
+    $('total').textContent = 'ぜんぶで ' + all.length + ' 作品';
+    render();
+  }).catch(function (err) {
+    grid.innerHTML = '';
+    $('count').innerHTML = err && err.message === 'file' ? IZ.fileNotice : '<span class="notice">作品台帳を読み込めませんでした。時間をおいて再読み込みしてください。</span>';
+  });
+})();
+</script>
+</body>
+</html>
