@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>傀儡</title>
+  </head>
+  <body>
+    <div id="app">
+      <div id="viewport"><canvas id="c"></canvas>
+        <div id="viewButtons" class="overlay">
+          <button data-view="front">正面</button>
+          <button data-view="threeQuarterLeft">斜め（左前）</button>
+          <button data-view="left">左側面</button>
+          <button data-view="back">背面</button>
+        </div>
+        <div id="warnings" class="overlay" hidden></div>
+      </div>
+      <aside id="panel"></aside>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
