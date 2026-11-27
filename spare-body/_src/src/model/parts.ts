@@ -28,9 +28,10 @@ export interface TubeProfile {
 /**
  * Tube from `a` to `b` with an elliptic cross-section (aspect = width along `side` / width across),
  * radius from the circumference profile, and rounded (half-ellipsoid) caps past both joints.
+ * `caps` scales the axial depth of each cap without moving the joints or changing the tube radius.
  * Closed and watertight; outward normals.
  */
-export function tube(a: V3, b: V3, side: V3, profile: TubeProfile[], aspect: number, segments: number, bodyRings = 16, capRings = 6): PartMesh {
+export function tube(a: V3, b: V3, side: V3, profile: TubeProfile[], aspect: number, segments: number, bodyRings = 16, capRings = 6, caps: { start?: number; end?: number } = {}): PartMesh {
   const axis = norm(sub(b, a));
   const len = Math.hypot(...sub(b, a));
   // orthonormal frame: u (side, made perpendicular to the axis), v = axis × u
@@ -41,21 +42,23 @@ export function tube(a: V3, b: V3, side: V3, profile: TubeProfile[], aspect: num
   const ru = (r: number) => r * Math.sqrt(aspect);
   const rv = (r: number) => r / Math.sqrt(aspect);
   // rings: start cap (pole excluded), body, end cap (pole excluded)
-  type Ring = { c: V3; r: number; k: number; dn: number }; // center, radius, cross-section scale, axial normal component
+  type Ring = { c: V3; r: number; k: number; dn: number; depth: number }; // center, radius, cross-section scale, axial normal, cap depth scale
   const rings: Ring[] = [];
   const r0 = ip.eval(0);
   const r1 = ip.eval(1);
+  const startDepth = Math.max(0.05, caps.start ?? 1);
+  const endDepth = Math.max(0.05, caps.end ?? 1);
   for (let i = capRings - 1; i >= 1; i--) {
     const phi = (i / capRings) * (Math.PI / 2);
-    rings.push({ c: add(a, mul(axis, -r0 * Math.sin(phi))), r: r0, k: Math.cos(phi), dn: -Math.sin(phi) });
+    rings.push({ c: add(a, mul(axis, -r0 * startDepth * Math.sin(phi))), r: r0, k: Math.cos(phi), dn: -Math.sin(phi), depth: startDepth });
   }
   for (let i = 0; i <= bodyRings; i++) {
     const t = i / bodyRings;
-    rings.push({ c: add(a, mul(axis, t * len)), r: ip.eval(t), k: 1, dn: 0 });
+    rings.push({ c: add(a, mul(axis, t * len)), r: ip.eval(t), k: 1, dn: 0, depth: 1 });
   }
   for (let i = 1; i < capRings; i++) {
     const phi = (i / capRings) * (Math.PI / 2);
-    rings.push({ c: add(b, mul(axis, r1 * Math.sin(phi))), r: r1, k: Math.cos(phi), dn: Math.sin(phi) });
+    rings.push({ c: add(b, mul(axis, r1 * endDepth * Math.sin(phi))), r: r1, k: Math.cos(phi), dn: Math.sin(phi), depth: endDepth });
   }
   const P: number[] = [];
   const N: number[] = [];
@@ -65,16 +68,16 @@ export function tube(a: V3, b: V3, side: V3, profile: TubeProfile[], aspect: num
       const cu = Math.cos(w), sv = Math.sin(w);
       const p = add(g.c, add(mul(u, ru(g.r) * g.k * cu), mul(v, rv(g.r) * g.k * sv)));
       P.push(...p);
-      // ellipse normal in the cross-section plane, tilted by the cap
-      const nIn = norm(add(mul(u, cu / ru(1)), mul(v, sv / rv(1))));
-      N.push(...norm(add(mul(nIn, Math.sqrt(Math.max(0, 1 - g.dn * g.dn))), mul(axis, g.dn))));
+      // Ellipsoid gradient: shallower caps need a larger axial normal component.
+      const nIn = add(mul(u, g.k * cu / ru(1)), mul(v, g.k * sv / rv(1)));
+      N.push(...norm(add(nIn, mul(axis, g.dn / g.depth))));
     }
   }
   const poleA = P.length / 3;
-  P.push(...add(a, mul(axis, -r0)));
+  P.push(...add(a, mul(axis, -r0 * startDepth)));
   N.push(...mul(axis, -1));
   const poleB = P.length / 3;
-  P.push(...add(b, mul(axis, r1)));
+  P.push(...add(b, mul(axis, r1 * endDepth)));
   N.push(...axis);
   const I: number[] = [];
   const R = rings.length;

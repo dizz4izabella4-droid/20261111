@@ -21,13 +21,17 @@ button, input, select { font: inherit; }
 .btn.primary:hover { background: #2f60c4; }
 #warnings { left: 8px; bottom: 8px; right: 8px; background: #fff6df; border: 1px solid #e2b64a; border-radius: 6px; padding: 6px 10px; font-size: 12px; }
 
-#panel { width: 380px; overflow-y: auto; background: #fff; border-left: 1px solid #ccd2dd; padding: 10px 12px 40px; font-size: 13px; }
+#panel { width: 460px; max-width: 48vw; flex-shrink: 0; overflow-y: auto; background: #fff; border-left: 1px solid #ccd2dd; padding: 10px 12px 40px; font-size: 13px; }
 #panel h2 { font-size: 14px; margin: 14px 0 6px; padding-bottom: 3px; border-bottom: 2px solid #3a6fd8; }
 #panel h1 { font-size: 15px; margin: 2px 0 8px; }
-#panel .row { display: grid; grid-template-columns: 1fr 74px 30px 28px; align-items: center; column-gap: 6px; margin: 6px 0 2px; }
+#panel .row { display: grid; grid-template-columns: minmax(0, 1fr) 74px 30px 28px; align-items: center; column-gap: 6px; margin: 6px 0 2px; }
 #panel .row label { grid-column: 1 / 5; font-size: 12px; color: #39404f; }
 #panel .row label small { color: #7a8294; margin-left: 4px; }
-#panel .row input[type=range] { width: 100%; }
+#panel .row input[type=range] { grid-column: 1 / -1; grid-row: 2; width: 100%; min-width: 0; margin: 5px 0 7px; }
+#panel .row input[type=number] { grid-column: 2; grid-row: 3; }
+#panel .row .unit { grid-column: 3; grid-row: 3; }
+#panel .row .reset { grid-column: 4; grid-row: 3; }
+#skinTextureRepeat { display: block; width: 100%; }
 #panel .row input[type=number] { width: 74px; padding: 2px 4px; text-align: right; }
 #panel .row .unit { font-size: 12px; color: #555; }
 #panel .row .reset { border: 1px solid #c4cad6; background: #f7f8fa; border-radius: 4px; padding: 0; height: 24px; cursor: pointer; font-size: 13px; }
@@ -38,7 +42,7 @@ button, input, select { font: inherit; }
 @media (max-width: 760px), (pointer: coarse) and (max-width: 1000px) {
   #app { flex-direction: column; }
   #viewport { flex: none; height: 52dvh; }
-  #panel { width: auto; flex: 1; border-left: none; border-top: 1px solid #ccd2dd; }
+  #panel { width: auto; max-width: none; flex: 1; border-left: none; border-top: 1px solid #ccd2dd; }
   #panel .row input[type=range] { height: 28px; }
 }
 
@@ -67,3 +71,22 @@ details.g2 > summary { font-size: 13px; cursor: pointer; color: #2c58b0; padding
 .g2label { font-size: 13px; color: #2c58b0; margin: 4px 0 0 6px; }
 #heightInfo { font-size: 13px; margin: 4px 0; }
 body.dropping #viewport { outline: 4px dashed #3a6fd8; outline-offset: -8px; }
+
+.workflow-tabs { display: flex; gap: 4px; margin: 14px 0 10px; padding: 4px; background: #edf1f8; border-radius: 8px; }
+.workflow-tabs button { flex: 1; border: 0; border-radius: 5px; padding: 7px; color: #596477; background: transparent; cursor: pointer; }
+.workflow-tabs button[aria-selected=true] { background: #fff; color: #244e9f; font-weight: bold; box-shadow: 0 1px 4px #182a481a; }
+.soft-intro { margin: 12px 0 8px; }
+.soft-intro strong { font-size: 15px; }
+.soft-intro p { font-size: 12px; color: #626e80; line-height: 1.7; margin: 5px 0; }
+.soft-presets { display: flex; gap: 5px; flex-wrap: wrap; }
+.soft-presets .btn { font-size: 12px; padding: 5px 9px; }
+.soft-summary { background: #edf6f5; color: #23625a; padding: 9px; border-radius: 6px; font-size: 11px; margin: 10px 0; font-variant-numeric: tabular-nums; }
+.soft-actions .btn:disabled { opacity: 0.45; cursor: default; }
+#softnessLegend { left: 16px; bottom: 18px; width: 230px; padding: 12px 14px; border: 1px solid #ffffffb3; border-radius: 10px; background: #fffffff0; color: #39404f; font-size: 12px; box-shadow: 0 3px 18px #22324a12; }
+#softnessLegend strong { display: block; margin-bottom: 8px; }
+.soft-scale { height: 8px; border-radius: 4px; background: linear-gradient(90deg, rgb(31,71,199), rgb(13,184,168), rgb(250,189,41), rgb(235,51,31)); }
+.soft-scale-labels { display: flex; justify-content: space-between; font-size: 11px; margin-top: 6px; }
+body.shots #softnessLegend { display: none; }
+
+.face-crop { display: block; width: min(100%, 240px); height: auto; margin: 8px auto; border: 2px solid #526fbd; background: #e4e7ef; border-radius: 5px; cursor: grab; touch-action: none; }
+.face-crop:active { cursor: grabbing; }

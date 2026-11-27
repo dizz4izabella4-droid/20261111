@@ -6,7 +6,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { parseClip, sampleJoints, J, JOINT_NAMES } from '../src/motion/clip';
 import { rigFromScene, resetRig, type Rig } from '../src/motion/rig';
 import { applyPose, computePose } from '../src/motion/retarget';
-import { demoClip } from '../src/motion/demo';
+import { demoClip, pryClip, thrustClip, sampleClips, randomSample } from '../src/motion/demo';
 
 const results: Record<string, unknown> = {};
 afterAll(() => {
@@ -51,8 +51,14 @@ const SAMPLES = ['male', 'female'].map((n) => [n, `public/samples/spare_body_${n
 
 describe('reading files', () => {
   it('motion JSON: accepts the sample and rejects broken files', () => {
-    const c = parseClip(JSON.parse(readFileSync('public/samples/sample_motion_walk_wave.json', 'utf8')));
-    expect(c.frames.length).toBe(180);
+    for (const file of ['sample_motion_dash.json', 'sample_motion_pry.json', 'sample_motion_thrust.json']) {
+      const c = parseClip(JSON.parse(readFileSync(`public/samples/${file}`, 'utf8')));
+      expect(c.frames.length).toBe(180);
+    }
+    for (const style of ['flamenco', 'samba', 'hiphop']) {
+      const c = parseClip(JSON.parse(readFileSync(`public/samples/sample_motion_${style}.json`, 'utf8')));
+      expect(c.frames.length).toBe(120);
+    }
     expect(() => parseClip({ format: 'other' })).toThrow();
     expect(() => parseClip({ format: 'dizz-mocap-v1', fps: 30, frames: [[1, 2, 3]] })).toThrow();
     expect(() => parseClip({ format: 'dizz-mocap-v1', fps: 0, frames: [new Array(99).fill(0)] })).toThrow();
@@ -79,9 +85,10 @@ describe('retargeting onto the loaded GLB', () => {
       results[`restIdentity/${name}_maxMoveMm`] = max * 1000;
       expect(max).toBeLessThan(1e-5);
     });
-    it(`${name}: every frame of the sample points the bones like the capture`, async () => {
+    for (const [kind, generate] of Object.entries(sampleClips))
+    it(`${name}/${kind}: every frame of the sample points the bones like the capture`, async () => {
       const rig = await loadRig(file);
-      const c = parseClip(demoClip());
+      const c = parseClip(generate());
       let maxLimb = 0, maxTorso = 0;
       const t0 = performance.now();
       for (let f = 0; f < c.frames.length; f++) {
@@ -105,7 +112,7 @@ describe('retargeting onto the loaded GLB', () => {
         );
       }
       const ms = (performance.now() - t0) / c.frames.length;
-      results[`sample/${name}`] = { maxLimbErrorDeg: maxLimb, maxTorsoErrorDeg: maxTorso, msPerFrame: ms };
+      results[`sample/${name}/${kind}`] = { maxLimbErrorDeg: maxLimb, maxTorsoErrorDeg: maxTorso, msPerFrame: ms };
       expect(maxLimb).toBeLessThan(0.5);
       expect(maxTorso).toBeLessThan(0.5);
       resetRig(rig);
@@ -114,4 +121,17 @@ describe('retargeting onto the loaded GLB', () => {
       expect(back).toBeLessThan(1e-9); // 立ち姿に戻す
     });
   }
+});
+
+
+describe('random samples', () => {
+  it('selects from the three motions for the chosen body', () => {
+    for (const [family, kinds] of [['male', ['mechanical dash', 'elevator pry', 'mantis downward thrust']], ['female', ['flamenco', 'samba', 'hiphop']]] as const) {
+      for (const [i, kind] of kinds.entries()) {
+        const clip = randomSample(family, () => (i + 0.5) / 3);
+        expect(clip.creator).toContain(kind);
+        expect(clip.frames.length).toBe(family === 'female' ? 120 : 180);
+      }
+    }
+  });
 });

@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
 export type ViewName = 'front' | 'threeQuarterLeft' | 'left' | 'back';
+export type BackgroundName = 'white' | 'black';
 
 /** fixed views for screenshots: same target and distance for every view */
 export const VIEW_TARGET = new THREE.Vector3(0, 0.95, 0);
@@ -21,6 +23,8 @@ export class Viewer {
   private body: THREE.Object3D | null = null;
   private skelHelper: THREE.SkeletonHelper | null = null;
   private showSkeleton = false;
+  private reflection: THREE.WebGLRenderTarget | null = null;
+  private grids: THREE.GridHelper[] = [];
   private needsRender = true;
   /** called every animation frame before rendering (motion playback); return true if something changed */
   onFrame: ((dt: number) => boolean) | null = null;
@@ -29,7 +33,6 @@ export class Viewer {
   constructor(private canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.scene.background = new THREE.Color(0xd9dde5);
     this.camera = new THREE.PerspectiveCamera(30, 1, 0.01, 50);
     this.scene.add(this.camera);
     this.scene.add(new THREE.HemisphereLight(0xffffff, 0x8890a0, 1.1));
@@ -41,7 +44,16 @@ export class Viewer {
     const fill = new THREE.DirectionalLight(0xffffff, 0.5);
     fill.position.set(0.8, -0.2, 0.6);
     this.camera.add(fill);
-    this.scene.add(new THREE.GridHelper(4, 40, 0x9aa3b5, 0xc3c9d4));
+    const floor = new THREE.GridHelper(4, 40, 0xffffff, 0x888888);
+    const back = new THREE.GridHelper(4, 40, 0xffffff, 0x888888);
+    back.rotation.x = Math.PI / 2;
+    back.position.set(0, 2, -2);
+    const side = new THREE.GridHelper(4, 40, 0xffffff, 0x888888);
+    side.rotation.z = Math.PI / 2;
+    side.position.set(-2, 2, 0);
+    this.grids = [floor, back, side];
+    this.scene.add(...this.grids);
+    this.setBackground('white');
     this.controls = new OrbitControls(this.camera, canvas);
     this.controls.target.copy(VIEW_TARGET);
     this.controls.minDistance = 0.2;
@@ -73,6 +85,16 @@ export class Viewer {
     this.needsRender = true;
   }
 
+  setBackground(background: BackgroundName): void {
+    this.scene.background = new THREE.Color(background === 'black' ? 0x000000 : 0xffffff);
+    for (const grid of this.grids) {
+      for (const material of Array.isArray(grid.material) ? grid.material : [grid.material]) {
+        material.color.setHex(background === 'black' ? 0x515963 : 0xa1a8b2);
+      }
+    }
+    this.needsRender = true;
+  }
+
   setView(name: ViewName): void {
     const d = VIEW_DIRS[name];
     this.camera.position.set(VIEW_TARGET.x + d[0] * VIEW_DISTANCE, VIEW_TARGET.y + d[1] * VIEW_DISTANCE, VIEW_TARGET.z + d[2] * VIEW_DISTANCE);
@@ -88,7 +110,26 @@ export class Viewer {
     if (this.skelHelper) this.scene.remove(this.skelHelper);
     this.body = scene;
     scene.traverse((o) => {
-      if ((o as THREE.Mesh).isMesh) o.frustumCulled = false;
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      mesh.frustumCulled = false;
+      for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+        if (!(material instanceof THREE.MeshStandardMaterial) || material.metalness <= 0 || material.envMap) continue;
+        if (!this.reflection) {
+          // Build and prefilter a local studio room once; reuse it for all metallic bodies.
+          const room = new RoomEnvironment();
+          const pmrem = new THREE.PMREMGenerator(this.renderer);
+          try {
+            this.reflection = pmrem.fromScene(room, 0.04);
+          } finally {
+            room.dispose();
+            pmrem.dispose();
+          }
+        }
+        material.envMap = this.reflection.texture;
+        material.envMapIntensity = 0.85;
+        material.needsUpdate = true;
+      }
     });
     this.scene.add(scene);
     this.skelHelper = new THREE.SkeletonHelper(scene);

@@ -122,6 +122,15 @@ export class BodyModel {
     }
     const x = torso.clampX(pu[0], y);
     const pos: [number, number, number] = [x + h * dx, y + h * dy, pu[2] + h * dz];
+    const rx = Math.max(.0025, (this.params.navelWidth ?? .012) / 2);
+    const ry = Math.max(.003, (this.params.navelLength ?? .018) / 2);
+    const radius = Math.hypot((pu[0] - (this.params.navelOffsetX ?? 0)) / rx, (y - this.params.navelHeight) / ry);
+    const depth = this.params.navelDepth ?? .003;
+    if (radius < 1.2 && n[2] > .25 && depth > 0) {
+      const pit = depth * Math.exp(-3 * radius * radius) * (1 - smoothstep(.75, 1.2, radius));
+      const rim = (this.params.navelRim ?? .0004) * Math.min(1, depth / .001) * Math.exp(-(((radius - .8) / .18) ** 2)) * smoothstep(.15, .5, radius);
+      pos[2] += (rim - pit) * smoothstep(.25, .8, n[2]);
+    }
     return { pos, h, comps, normal: n, dir: [dx, dy, dz] as [number, number, number], sMid, xU: pu[0] };
   }
 }
@@ -165,7 +174,9 @@ export function buildBaseMesh(params: BodyParams, preset: PresetName): BaseMesh 
     Math.PI,
     [
       { mu: left.thetaB, sigma: sigThB, weight: GRID_FRACTIONS.theta.breast },
+      { mu: .15, sigma: .35, weight: .06 },
       { mu: left.thetaN, sigma: sigThN, weight: GRID_FRACTIONS.theta.nipple },
+      { mu: Math.max(0, Math.PI - Math.abs(params.navelOffsetX ?? 0) / Math.max(.05, torso.section(params.navelHeight).a)), sigma: Math.max(.015, (params.navelWidth ?? .012) / .25), weight: .08 },
     ],
     M / 2,
   );
@@ -180,6 +191,7 @@ export function buildBaseMesh(params: BodyParams, preset: PresetName): BaseMesh 
     [
       { mu: left.yc, sigma: left.H2 / 2, weight: GRID_FRACTIONS.y.breast },
       { mu: left.yN, sigma: left.nippleBand, weight: GRID_FRACTIONS.y.nipple },
+      { mu: params.navelHeight, sigma: Math.max(.003, (params.navelLength ?? .018) * .4), weight: .08 },
     ],
     N - 1,
     [torso.keys.hip, torso.keys.waist, torso.keys.underbust],

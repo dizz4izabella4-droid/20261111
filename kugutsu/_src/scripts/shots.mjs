@@ -96,7 +96,7 @@ try {
   }
   if (motionTimes.length) {
     // sample motion: front and 3/4 views at the given times (seconds)
-    await page.evaluate(() => window.__bust.loadDemoMotion());
+    await page.evaluate((kind) => window.__bust.loadDemoMotion(kind), opt('sample', 'dash'));
     for (const t of motionTimes) {
       await page.evaluate((tt) => window.__bust.setTime(tt), t);
       for (const [view, file] of [['front', 'front'], ['threeQuarterLeft', 'threequarter']]) {

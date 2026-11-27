@@ -2,6 +2,7 @@ import { UNIT_LABEL, UNIT_SCALE, UNIT_STEP, type ParamDef } from '../model/param
 
 export interface ParamControl {
   set(value: number): void;
+  setDefault?(value: number): void;
 }
 
 function round(v: number, step: number): number {
@@ -29,12 +30,14 @@ export function paramRow(parent: HTMLElement, def: ParamDef, value: number, onCh
   range.min = String(def.min * scale);
   range.max = String(def.max * scale);
   range.step = String(step);
+  let center = def.rangeCenter;
+  if (center != null) { range.min = '0'; range.max = '100'; range.step = '1'; }
   range.setAttribute('aria-label', def.label);
   const num = document.createElement('input');
   num.type = 'number';
   num.id = id;
-  num.min = range.min;
-  num.max = range.max;
+  num.min = String(def.min * scale);
+  num.max = String(def.max * scale);
   num.step = String(step);
   const unit = document.createElement('span');
   unit.className = 'unit';
@@ -42,7 +45,13 @@ export function paramRow(parent: HTMLElement, def: ParamDef, value: number, onCh
   const reset = document.createElement('button');
   reset.className = 'reset';
   reset.type = 'button';
-  reset.title = `初期値（${round(def.def * scale, step)}${UNIT_LABEL[def.unit]}）に戻す`;
+  let resetValue = def.def;
+  const setDefault = (v: number) => {
+    resetValue = v;
+    if (def.rangeCenter != null) center = v;
+    reset.title = `初期値（${round(v * scale, step)}${UNIT_LABEL[def.unit]}）に戻す`;
+  };
+  setDefault(def.def);
   reset.setAttribute('aria-label', `${def.label}を初期値に戻す`);
   reset.textContent = '↺';
   row.append(label, range, num, unit, reset);
@@ -50,7 +59,10 @@ export function paramRow(parent: HTMLElement, def: ParamDef, value: number, onCh
 
   const show = (internal: number) => {
     const d = round(internal * scale, step);
-    range.value = String(d);
+    range.value = String(center == null ? d : internal === center ? 50 : internal < center
+      ? 50 * (internal - def.min) / Math.max(1e-9, center - def.min)
+      : 50 + 50 * (internal - center) / Math.max(1e-9, def.max - center));
+    range.setAttribute('aria-valuetext', String(d));
     num.value = String(d);
   };
   const commit = (display: number) => {
@@ -60,14 +72,18 @@ export function paramRow(parent: HTMLElement, def: ParamDef, value: number, onCh
     show(internal);
     onChange(internal);
   };
-  range.addEventListener('input', () => commit(Number(range.value)));
+  range.addEventListener('input', () => {
+    const t = Number(range.value);
+    commit(center == null ? t : (t <= 50 ? def.min + (center - def.min) * t / 50 : center + (def.max - center) * (t - 50) / 50) * scale);
+  });
   num.addEventListener('change', () => commit(Number(num.value)));
   num.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') commit(Number(num.value));
   });
-  reset.addEventListener('click', () => commit(def.def * scale));
+  reset.addEventListener('click', () => commit(resetValue * scale));
   show(value);
   return {
+    setDefault,
     set(v: number) {
       value = v;
       show(v);
@@ -105,7 +121,7 @@ export function paramTree(
       if (g.sections.length > 1) {
         const ds = document.createElement('details');
         ds.className = 'g2';
-        ds.open = true;
+        ds.open = false;
         const ss = document.createElement('summary');
         ss.textContent = s.label;
         ds.appendChild(ss);
@@ -117,7 +133,7 @@ export function paramTree(
         h.textContent = s.label;
         dg.appendChild(h);
       }
-      for (const d of s.params) controls[d.key] = paramRow(host, d, values[d.key], (v) => onChange(d.key, v));
+      for (const d of s.params) controls[d.key] = paramRow(host, { ...d, def: values[d.key] }, values[d.key], (v) => onChange(d.key, v));
     }
     parent.appendChild(dg);
   }

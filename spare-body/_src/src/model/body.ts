@@ -1,16 +1,25 @@
 // Full body: torso (with breasts) from the photo-tex model, limb tubes, neck, and placeholder boxes
-// for the head, hands and feet. Rest pose: standing, arms opened by `armAngle`.
+// for the head and feet (hands become detailed connected surfaces in the seam pass). Rest pose: standing, arms opened by `armAngle`.
 // World coordinates: meters, +Y up, +Z front, +X = the body's left; floor at y = 0, centered between the feet.
 //
 // Skeleton (names follow the "モーション" capture: upperarm / forearm / thigh / shin / foot, spine, shoulders):
 //   hips ─ spine ─ chest ─ neck ─ head
 //                   ├ upperarm_l ─ forearm_l ─ hand_l   (and _r)
 //   hips ─ thigh_l ─ shin_l ─ foot_l ─ toe_l             (and _r; toe = end joint without vertices)
-// Each part is bound rigidly to one bone, except the torso, which blends hips → spine → chest.
+// Build separate reference parts first; the default seam pass replaces them with a connected
+// surface and continuous weights. `seamCorrection = 0` retains the reference parts for comparison.
 import type { BodyParams, PresetName } from './params';
 import { PRESETS } from './params';
 import { buildBaseMesh, BodyModel } from './mesh';
 import { box, norm, tube, type PartMesh, type V3 } from './parts';
+import { connectBody, type SeamReport } from './seams';
+import { FINGER_BONES, HAND_JOINTS, HAND_PARENTS, handLayout } from './handRig';
+import { Vector3 } from 'three';
+import { shapeGlutes } from './glutes';
+import { doubleCurves } from './doubleCurves';
+import { shapeBackMuscles } from './backMuscles';
+import { shapeBoneLandmarks } from './boneLandmarks';
+import { shapeCrotchClearance } from './crotchClearance';
 
 /** hip joint (femoral head) height above the crotch */
 export const HIP_JOINT_ABOVE_CROTCH = 0.07;
@@ -21,10 +30,12 @@ export const BONE_NAMES = [
   'thigh_l', 'shin_l', 'foot_l', 'thigh_r', 'shin_r', 'foot_r',
   // end joints (no vertices): the tip of each foot, so a program reading the skeleton knows which way the feet point
   'toe_l', 'toe_r',
+  ...FINGER_BONES.map((n) => `${n}_l` as const),
+  ...FINGER_BONES.map((n) => `${n}_r` as const),
 ] as const;
 export type BoneName = (typeof BONE_NAMES)[number];
 
-const PARENT: Record<BoneName, BoneName | null> = {
+const PARENT: Record<string, BoneName | null> = {
   hips: null, spine: 'hips', chest: 'spine', neck: 'chest', head: 'neck',
   upperarm_l: 'chest', forearm_l: 'upperarm_l', hand_l: 'forearm_l',
   upperarm_r: 'chest', forearm_r: 'upperarm_r', hand_r: 'forearm_r',
@@ -32,6 +43,9 @@ const PARENT: Record<BoneName, BoneName | null> = {
   thigh_r: 'hips', shin_r: 'thigh_r', foot_r: 'shin_r',
   toe_l: 'foot_l', toe_r: 'foot_r',
 };
+for (const side of ['l', 'r'] as const) for (let i = 1; i < HAND_JOINTS.length; i++) {
+  PARENT[`${HAND_JOINTS[i]}_${side}`] = HAND_PARENTS[i] === 0 ? `hand_${side}` : `${HAND_JOINTS[Number(HAND_PARENTS[i])]}_${side}` as BoneName;
+}
 
 export interface BoneInfo {
   name: BoneName;
@@ -62,6 +76,8 @@ export interface BodyMesh {
   crotchY: number;
   footLength: number;
   warnings: string[];
+  seams?: SeamReport;
+  gluteShape?: { hipY: number; hipZ: number; height: number; width: number };
 }
 
 const idx = (n: BoneName) => BONE_NAMES.indexOf(n);
@@ -83,27 +99,35 @@ export function buildBody(p: BodyParams, preset: PresetName): BodyMesh {
 
   // ---------------- joints (rest pose) ----------------
   const head: Record<BoneName, V3> = {} as Record<BoneName, V3>;
-  head.hips = [0, hipJointY, 0];
-  head.spine = [0, Y(k.waist), centerZ(k.waist)];
-  head.chest = [0, Y(k.underbust), centerZ(k.underbust)];
+  head.hips = [0, hipJointY + (p.pelvisRootLift ?? 0), -(p.pelvisBack ?? 0)];
+  head.spine = [0, Y(k.waist), centerZ(k.waist) + (p.lumbarForward ?? 0)];
+  const chestJointY = Math.min(k.shoulderJoint - 0.025, k.underbust + (p.chestJointLift ?? 0));
+  head.chest = [0, Y(chestJointY), centerZ(chestJointY) - (p.chestBack ?? 0)];
   const neckZ = centerZ(k.neckBase);
   head.neck = [0, Y(k.neckBase), neckZ];
   head.head = [0, Y(k.neckBase) + p.neckLength, neckZ];
   const a = (p.armAngle * Math.PI) / 180;
   for (const s of [1, -1] as const) {
     const sd = s > 0 ? 'l' : 'r';
-    const sh: V3 = [s * torso.xs, Y(k.shoulderJoint), centerZ(k.shoulderJoint)];
+    const sh: V3 = [s * torso.xs, Y(k.shoulderJoint), centerZ(k.shoulderJoint) + (p.shoulderForward ?? 0)];
     const dir: V3 = [s * Math.sin(a), -Math.cos(a), 0];
     const el: V3 = [sh[0] + dir[0] * p.upperArmLength, sh[1] + dir[1] * p.upperArmLength, sh[2]];
     const wr: V3 = [el[0] + dir[0] * p.forearmLength, el[1] + dir[1] * p.forearmLength, el[2]];
     head[`upperarm_${sd}` as BoneName] = sh;
     head[`forearm_${sd}` as BoneName] = el;
     head[`hand_${sd}` as BoneName] = wr;
-    const hj: V3 = [(s * p.hipJointSpacing) / 2, hipJointY, 0];
+    const layout = handLayout(new Vector3(...head.hand_l), new Vector3(Math.sin(a), -Math.cos(a), 0), p);
+    // Always derive the right hand by reflection, including thumb placement.
+    for (let i = 1; i < HAND_JOINTS.length; i++) {
+      const point = layout.points[i];
+      head[`${HAND_JOINTS[i]}_${sd}` as BoneName] = [s * point.x, point.y, point.z];
+    }
+    const hj: V3 = [(s * p.hipJointSpacing) / 2, hipJointY, p.hipJointForward ?? 0];
+    const lowerX = s * Math.max(0.035, p.hipJointSpacing / 2 - (p.kneeInset ?? 0));
     head[`thigh_${sd}` as BoneName] = hj;
-    head[`shin_${sd}` as BoneName] = [hj[0], hipJointY - p.thighLength, 0];
-    head[`foot_${sd}` as BoneName] = [hj[0], p.ankleHeight, 0];
-    head[`toe_${sd}` as BoneName] = [hj[0], 0, 0.75 * p.footLength]; // front end of the foot box, on the floor
+    head[`shin_${sd}` as BoneName] = [lowerX, hipJointY - p.thighLength, p.kneeForward ?? 0];
+    head[`foot_${sd}` as BoneName] = [lowerX, p.ankleHeight, 0];
+    head[`toe_${sd}` as BoneName] = [lowerX, 0, 0.75 * p.footLength]; // front end of the foot box, on the floor
   }
   const bones: BoneInfo[] = BONE_NAMES.map((n) => ({ name: n, parent: PARENT[n] ? idx(PARENT[n]!) : -1, head: head[n] }));
 
@@ -160,7 +184,7 @@ export function buildBody(p: BodyParams, preset: PresetName): BodyMesh {
     rigid('neck'),
   );
   // head: placeholder box sitting on the neck
-  const hc: V3 = [0, head.head[1] + p.headHeight / 2, neckZ + 0.01];
+  const hc: V3 = [0, head.head[1] + p.headHeight / 2, neckZ];
   addPart('head', box(hc, [1, 0, 0], [0, 1, 0], [0, 0, 1], p.headWidth / 2, p.headHeight / 2, p.headDepth / 2), rigid('head'));
 
   for (const s of [1, -1] as const) {
@@ -170,7 +194,9 @@ export function buildBody(p: BodyParams, preset: PresetName): BodyMesh {
     // arms: wider front-to-back than side-to-side is not needed for a first version; slight flattening
     addPart(
       `upperarm_${sd}`,
-      tube(sh, el, [0, 0, 1], [{ t: 0, circ: p.upperArmCirc * 0.98 }, { t: 0.35, circ: p.upperArmCirc }, { t: 1, circ: p.elbowCirc }], 1.08, segs),
+      // A full hemisphere here pokes above the torso like a separate ball.
+      // Flatten only the shoulder cap; preserve the joint, arm length and circumference.
+      tube(sh, el, [0, 0, 1], [{ t: 0, circ: p.upperArmCirc * 0.98 }, { t: 0.35, circ: p.upperArmCirc }, { t: 1, circ: p.elbowCirc }], 1.08, segs, 16, 6, { start: 0.35 }),
       rigid(`upperarm_${sd}` as BoneName),
     );
     addPart(
@@ -203,7 +229,7 @@ export function buildBody(p: BodyParams, preset: PresetName): BodyMesh {
   for (let i = 1; i < P.length; i += 3) height = Math.max(height, P[i]);
   const keyY: Record<string, number> = {};
   for (const [kk, v] of Object.entries(k)) keyY[kk] = Y(v);
-  return {
+  const body: BodyMesh = {
     positions: Float32Array.from(P),
     normals: Float32Array.from(N),
     indices: Uint32Array.from(I),
@@ -217,4 +243,11 @@ export function buildBody(p: BodyParams, preset: PresetName): BodyMesh {
     footLength: p.footLength,
     warnings: torso.warnings.slice(),
   };
+  if ((p.seamCorrection ?? 80) <= 0) return body;
+  try {
+    return doubleCurves(shapeCrotchClearance(shapeBoneLandmarks(shapeBackMuscles(shapeGlutes(connectBody(body, tm, p, preset), p), p), p), p), p);
+  } catch (error) {
+    body.warnings.push(`つなぎ目を安全につなげなかったため、補正前の形を表示しています：${error instanceof Error ? error.message : String(error)}`);
+    return body;
+  }
 }

@@ -104,25 +104,31 @@ export class Torso {
     this.xs = body.shoulderWidth / 2;
 
     // --- key heights, forced into a strictly increasing order ---
-    const shoulderTop = H - 0.03;
-    const shoulderJoint = H - 0.065;
-    const armpit = H - 0.11;
-    const hip = clamp(body.hipHeight, 0.02, body.navelHeight - 0.01);
+    const drop = body.shoulderDrop ?? 0.065;
+    const shoulderTop = H - Math.max(0.02, drop - 0.035);
+    const shoulderJoint = H - drop;
+    const armpit = H - drop - 0.045;
+    const navel = clamp(body.navelHeight, 0.04, armpit - 0.07);
+    if (navel !== body.navelHeight) this.warnings.push('へその高さが肩に近すぎるため、胴に収まる高さに調整しています。');
+    const hip = clamp(body.hipHeight, 0.02, navel - 0.01);
     if (hip !== body.hipHeight) this.warnings.push('ヒップの高さがへそに近すぎるため、へそ−1cmとして扱っています。');
-    const navel = body.navelHeight;
     let waist = body.waistHeight;
     if (waist < navel + 0.01) {
       waist = navel + 0.01;
       this.warnings.push('ウエストの高さがへそに近すぎるため、へそ＋1cmとして扱っています。');
+    }
+    if (waist > armpit - 0.045) {
+      waist = armpit - 0.045;
+      this.warnings.push('ウエストが肩に近すぎるため、脇より低い位置に調整しています。');
     }
     let underbust = body.underbustHeight;
     if (underbust < waist + 0.02) {
       underbust = waist + 0.02;
       this.warnings.push('アンダーバストの高さがウエストに近すぎるため、ウエスト＋2cmとして扱っています。');
     }
-    if (underbust > armpit - 0.03) {
-      underbust = armpit - 0.03;
-      this.warnings.push('アンダーバストの高さが脇に近すぎるため、脇−3cmとして扱っています（胴の高さが小さすぎる可能性）。');
+    if (underbust > armpit - 0.025) {
+      underbust = armpit - 0.025;
+      this.warnings.push('アンダーバストの高さが脇に近すぎるため、脇−2.5cmとして扱っています（胴の高さが小さすぎる可能性）。');
     }
     // ribcage ("bust") section halfway between the underbust and the armpit. It used to follow the
     // breast height, which could put it 1.5 cm below the armpit section and leave a fold across the
@@ -146,10 +152,15 @@ export class Torso {
     const aU = solveHalfWidth(body.underbustCirc, ubSec);
     const cd = body.chestDepth;
     const nbw = body.neckBaseWidth;
+    const neckCenterZ = -0.01 - (body.neckBack ?? 0);
     const dH = 0.25 * body.hipCirc; // hip depth (front 45%, back 55%: buttocks)
-    const hipSec: Omit<Section, 'a'> = { bf: dH * 0.45, bb: dH * 0.55, cz: 0, p: 2.4 };
+    const backRatio = (body.hipBackRatio ?? 55) / 100;
+    const hipSec: Omit<Section, 'a'> = { bf: dH * (1 - backRatio), bb: dH * backRatio, cz: 0, p: 2.4 };
     const aH = solveHalfWidth(body.hipCirc, hipSec);
     const xs = this.xs;
+    // The top of the shoulder sits inside the joint, then slopes into the deltoid.
+    // Extending it all the way to the cut plane leaves a shelf above the upper arm.
+    const shoulderTopInset = Math.min(0.025, body.upperArmCirc / (4 * Math.PI));
     /** section whose body half-width is `body` and whose sides reach `total` */
     const side = (body: number, total: number, rest: Omit<Section, 'a' | 'ext'>): Section => {
       const a = Math.min(body, total);
@@ -158,8 +169,8 @@ export class Torso {
     const secs: Section[] = [
       // pelvis: crotch (where the legs attach) and the widest part of the hips
       // the torso closes in between the thighs (rounded bottom) instead of ending in a wide flat cut
-      { a: aH * 0.5, bf: dH * 0.45 * 0.5, bb: dH * 0.55 * 0.55, cz: 0, p: 2.2 }, // crotch
-      { a: aH * 0.86, bf: dH * 0.45 * 0.85, bb: dH * 0.55 * 0.92, cz: 0, p: 2.3 }, // lower pelvis
+      { a: aH * 0.5, bf: hipSec.bf * 0.5, bb: hipSec.bb * 0.55, cz: 0, p: 2.2 }, // crotch
+      { a: aH * 0.86, bf: hipSec.bf * 0.85, bb: hipSec.bb * 0.92, cz: 0, p: 2.3 }, // lower pelvis
       { a: aH, ...hipSec }, // hip (circumference = hipCirc)
       // navel: between the hips and the waist
       { a: 0.5 * (aH + aW), bf: 0.5 * (hipSec.bf + waistSec.bf) * 1.02, bb: 0.5 * (hipSec.bb + waistSec.bb), cz: 0, p: 2.35 }, // navel
@@ -169,15 +180,19 @@ export class Torso {
       // armpit / shoulder: the body itself stays about chest-wide; only the sides reach out to the cut plane
       side(aU * 1.13, xs - 0.03, { bf: cd * 0.95 * 0.5, bb: cd * 0.95 * 0.5 * BACK_CHEST, cz: 0, p: 2.7 }), // armpit (just inside the cut plane)
       side(aU * 1.1, xs + 0.02, { bf: cd * 0.72 * 0.47, bb: cd * 0.72 * 0.53, cz: -0.005, p: 2.8 }), // shoulder joint (cut face widest here)
-      side(Math.max(nbw / 2 + 0.02, aU * 0.95), xs + 0.004, { bf: cd * 0.55 * 0.45, bb: cd * 0.55 * 0.55, cz: -0.01, p: 2.5 }), // shoulder top
-      { a: nbw / 2, bf: nbw * 1.05 * 0.5, bb: nbw * 1.05 * 0.5, cz: -0.01, p: 2.1 }, // neck base
-      { a: (nbw / 2) * 0.95, bf: nbw * 0.98 * 0.5, bb: nbw * 0.98 * 0.5, cz: -0.01, p: 2.0 }, // neck cut
+      side(Math.max(nbw / 2 + 0.02, aU * 0.95), xs - shoulderTopInset, { bf: cd * 0.55 * 0.45, bb: cd * 0.55 * 0.55, cz: -0.01, p: 2.5 }), // shoulder top
+      { a: nbw / 2, bf: nbw * 1.05 * 0.5, bb: nbw * 1.05 * 0.5, cz: neckCenterZ, p: 2.1 }, // neck base
+      { a: (nbw / 2) * 0.95, bf: nbw * 0.98 * 0.5, bb: nbw * 0.98 * 0.5, cz: neckCenterZ, p: 2.0 }, // neck cut
     ];
     this.keySections = secs;
     const pelvisLow = Math.min(0.035, 0.6 * hip);
     const ys = [0, pelvisLow, hip, navel, waist, underbust, bust, armpit, shoulderJoint, shoulderTop, H, H + NECK_STUB];
     this.ia = new Pchip(ys, secs.map((s) => s.a));
-    this.ibf = new Pchip(ys, secs.map((s) => s.bf));
+    // Front abdominal depth has its own height anchors. Moving the buttock
+    // profile must not drag the abdomen's spline and create a forward bulge.
+    const frontHip = clamp(body.abdomenBaseHeight ?? hip, 0.02, navel - 0.01);
+    const frontYs = [0, Math.min(0.035, 0.6 * frontHip), frontHip, navel, waist, underbust, bust, armpit, shoulderJoint, shoulderTop, H, H + NECK_STUB];
+    this.ibf = new Pchip(frontYs, secs.map((s) => s.bf));
     this.ibb = new Pchip(ys, secs.map((s) => s.bb));
     this.icz = new Pchip(ys, secs.map((s) => s.cz));
     this.ip = new Pchip(ys, secs.map((s) => s.p));

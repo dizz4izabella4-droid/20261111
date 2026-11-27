@@ -38,6 +38,7 @@ export interface BreastFrame {
   gammaB: number;
   /** inframammary fold: no breast deformation below this height (= underbust height) */
   yFold: number;
+  lateralVolume: number; rootBlend: number;
 }
 
 /**
@@ -76,7 +77,9 @@ export function makeBreastFrames(torso: Torso, br: BreastParams): BreastFrame[] 
   const W2 = br.baseWidth / 2;
   const H2 = br.baseHeight / 2;
   const up = fullnessShape(br.upperFullness, br.size / 100);
-  const low = fullnessShape(br.lowerFullness, br.size / 100);
+  // Lower half follows an elliptical bowl, approaching a hemisphere as the
+  // roundness controls rise. High values must not produce a flat plateau.
+  const lowerExponent = clamp(0.9 - 0.004 * br.lowerFullness - 0.0025 * (br.breastLowerCurve ?? 0), 0.5, 1.05);
   const alpha = (br.outwardAngle * Math.PI) / 180;
   for (const sigma of [-1, 1] as const) {
     // base center B: front surface point with |x| = spacing/2 at height yc
@@ -108,11 +111,13 @@ export function makeBreastFrames(torso: Torso, br: BreastParams): BreastFrame[] 
     const Ra = br.areolaDiameter / 2;
     out.push({
       sigma, yc, sB, thetaB, W2, H2, cS, cT, nS, nT, thetaN, yN, P,
-      kUp: up.k, mUp: up.m, kLow: low.k, mLow: low.m,
+      kUp: up.k, mUp: up.m * Math.exp((br.breastUpperSlope ?? 0) / 100),
+      kLow: 2, mLow: lowerExponent,
+      lateralVolume: (br.breastLateralVolume ?? 0) / 100, rootBlend: (br.breastRootBlend ?? 0) / 100,
       Ra, aProj: br.areolaProjection, Rn, nProj: br.nippleProjection,
       nippleBand: 0.0035 + 0.3 * Rn + 0.08 * Ra,
       gammaB,
-      yFold: torso.keys.underbust,
+      yFold: Math.min(torso.keys.underbust, yc - H2),
     });
   }
   return out;
@@ -143,10 +148,18 @@ export function domeProfile(f: BreastFrame, s: number, t: number): number {
   const cc = cx * cx + cy * cy - 1; // < 0 (apex inside)
   const tau = -b + Math.sqrt(b * b - cc);
   const r = Math.min(1, L / tau);
-  const w = 0.5 + 0.5 * uy; // 1 = upward, 0 = downward
-  const k = f.kLow + (f.kUp - f.kLow) * w;
-  const m = f.mLow + (f.mUp - f.mLow) * w;
-  return Math.pow(1 - Math.pow(r, k), m);
+  // A dome projects outward from the chest plane. Blend the upper/lower
+  // curvature by height, not by ray angle, to avoid a bowl rim or a folded lip.
+  const w = smoothstep(-0.35, 0.35, (t - f.cT) / f.H2);
+  const upperExponent = clamp(0.5 + (f.mUp - 1.1) * 0.45, 0.55, 1.4);
+  const m = f.mLow + (upperExponent - f.mLow) * w;
+  const epsilon = 0.06;
+  const dome = (Math.pow(Math.max(0, 1 - r * r) + epsilon * epsilon, m) - Math.pow(epsilon * epsilon, m))
+    / (Math.pow(1 + epsilon * epsilon, m) - Math.pow(epsilon * epsilon, m));
+  const lateral = 1 + f.lateralVolume * smoothstep(0, 0.85, qx) * Math.sin(Math.PI * r) ** 2;
+  const root = 1 - f.rootBlend * 0.6 * r ** 4;
+  return Math.max(0, dome) * lateral * root;
+
 }
 
 /**

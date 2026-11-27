@@ -40,11 +40,11 @@ const presets: PresetName[] = ['light', 'standard', 'high'];
 const cases: [string, BodyParams][] = [['female', presetParams('female')], ['male', presetParams('male')]];
 for (let s = 1; s <= 4; s++) cases.push([`random${s}`, randomParams(s * 313)]);
 
-describe('every part is a closed (watertight) surface', () => {
+describe('unjoined reference: every part is a closed (watertight) surface', () => {
   for (const preset of presets)
     for (const [name, params] of cases)
       it(`${preset} / ${name}`, () => {
-        const b = buildBody(params, preset);
+        const b = buildBody({ ...params, seamCorrection: 0 }, preset);
         const bad: string[] = [];
         for (const part of b.parts) {
           const w = watertight(partOf(b, part.name));
@@ -100,6 +100,17 @@ describe('torso circumferences (±1%)', () => {
 });
 
 describe('symmetry and skin', () => {
+  it('shoulder caps stay below the torso shoulder top with arms relaxed', () => {
+    for (const sex of ['female', 'male'] as const) for (const angle of [0, 18, 30]) {
+      const b = buildBody({ ...presetParams(sex), armAngle: angle, seamCorrection: 0 }, 'standard');
+      for (const side of ['l', 'r']) {
+        const part = b.parts.find((p) => p.name === `upperarm_${side}`)!;
+        let top = -Infinity;
+        for (const v of b.indices.subarray(part.start, part.start + part.count)) top = Math.max(top, b.positions[v * 3 + 1]);
+        expect(top, `${sex}/${angle}/${side}`).toBeLessThanOrEqual(b.keyY.shoulderTop + 1e-6);
+      }
+    }
+  });
   it('left and right mirror each other (X = 0)', () => {
     const b = buildBody(presetParams('female'), 'standard');
     for (const n of BONE_NAMES) {

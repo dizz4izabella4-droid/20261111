@@ -130,7 +130,18 @@ export function writeGlb(parts: GlbMeshPart[], empties: GlbEmpty[], generator = 
   return out;
 }
 
+export interface FaceDecal {
+  positions: Float32Array;
+  normals: Float32Array;
+  uvs: Float32Array;
+  indices: Uint32Array;
+  joints: Uint16Array;
+  weights: Float32Array;
+  png: Uint8Array;
+}
+
 export interface SkinnedPart {
+  faceDecal?: FaceDecal;
   name: string;
   positions: Float32Array; // bind pose (world)
   normals: Float32Array;
@@ -139,6 +150,8 @@ export interface SkinnedPart {
   weights: Float32Array; // 4 per vertex
   color: number;
   materialName: string;
+  /** Custom SCALAR vertex attributes, e.g. _SOFTNESS. */
+  scalars?: Record<string, Float32Array>;
 }
 
 export interface SkinBone {
@@ -190,6 +203,34 @@ export function writeSkinnedGlb(part: SkinnedPart, bones: SkinBone[], extras: Re
     ibm.set([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -b.head[0], -b.head[1], -b.head[2], 1], i * 16);
   });
   accessors.push({ bufferView: addView(ibm), componentType: 5126, count: bones.length, type: 'MAT4' });
+  const attributes: Record<string, number> = { POSITION: 0, NORMAL: 1, JOINTS_0: 2, WEIGHTS_0: 3 };
+  for (const [name, values] of Object.entries(part.scalars ?? {})) {
+    if (!/^_[A-Z0-9_]+$/.test(name) || values.length !== n || !values.every(Number.isFinite)) {
+      throw new Error(`不正な頂点属性：${name}`);
+    }
+    accessors.push({ bufferView: addView(values, 34962), componentType: 5126, count: n, type: 'SCALAR' });
+    attributes[name] = accessors.length - 1;
+  }
+  const primitives: object[] = [{ attributes, indices: 4, material: 0, mode: 4 }];
+  let faceImageView: number | undefined;
+  if (part.faceDecal) {
+    const f = part.faceDecal, attrs: Record<string, number> = {};
+    for (const [name, array, type, componentType] of [
+      ['POSITION', f.positions, 'VEC3', 5126], ['NORMAL', f.normals, 'VEC3', 5126],
+      ['TEXCOORD_0', f.uvs, 'VEC2', 5126], ['JOINTS_0', f.joints, 'VEC4', 5123], ['WEIGHTS_0', f.weights, 'VEC4', 5126],
+    ] as const) {
+      const size = type === 'VEC2' ? 2 : type === 'VEC3' ? 3 : 4;
+      const bounds = name === 'POSITION' ? {
+        min: [0, 1, 2].map((k) => Math.min(...Array.from(array).filter((_, i) => i % 3 === k))),
+        max: [0, 1, 2].map((k) => Math.max(...Array.from(array).filter((_, i) => i % 3 === k))),
+      } : {};
+      accessors.push({ bufferView: addView(array, 34962), componentType, count: array.length / size, type, ...bounds });
+      attrs[name] = accessors.length - 1;
+    }
+    accessors.push({ bufferView: addView(f.indices, 34963), componentType: 5125, count: f.indices.length, type: 'SCALAR' });
+    primitives.push({ attributes: attrs, indices: accessors.length - 1, material: 1, mode: 4 });
+    faceImageView = addView(f.png);
+  }
   const c = hexToLinear(part.color);
   // nodes: 0 = mesh, 1.. = bones
   const nodes: object[] = [{ name: part.name, mesh: 0, skin: 0 }];
@@ -205,8 +246,10 @@ export function writeSkinnedGlb(part: SkinnedPart, bones: SkinBone[], extras: Re
     scene: 0,
     scenes: [{ name: 'body', nodes: [0, rootJoint], extras }],
     nodes,
-    meshes: [{ name: part.name, primitives: [{ attributes: { POSITION: 0, NORMAL: 1, JOINTS_0: 2, WEIGHTS_0: 3 }, indices: 4, material: 0, mode: 4 }] }],
-    materials: [{ name: part.materialName, pbrMetallicRoughness: { baseColorFactor: [c[0], c[1], c[2], 1], metallicFactor: 0, roughnessFactor: 1 } }],
+    meshes: [{ name: part.name, primitives }],
+    materials: [{ name: part.materialName, pbrMetallicRoughness: { baseColorFactor: [c[0], c[1], c[2], 1], metallicFactor: 0, roughnessFactor: 1 } },
+      ...(part.faceDecal ? [{ name: 'face_photo', pbrMetallicRoughness: { baseColorFactor: [1, 1, 1, 1], baseColorTexture: { index: 0 }, metallicFactor: 0, roughnessFactor: 1 }, extensions: { KHR_materials_unlit: {} } }] : [])],
+    ...(part.faceDecal ? { images: [{ bufferView: faceImageView, mimeType: 'image/png' }], samplers: [{ magFilter: 9729, minFilter: 9729, wrapS: 33071, wrapT: 33071 }], textures: [{ source: 0, sampler: 0 }], extensionsUsed: ['KHR_materials_unlit'] } : {}),
     skins: [{ name: 'skeleton', joints: bones.map((_, i) => i + 1), inverseBindMatrices: 5, skeleton: rootJoint }],
     accessors,
     bufferViews,

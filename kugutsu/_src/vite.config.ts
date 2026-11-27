@@ -4,6 +4,8 @@ import { defineConfig } from 'vite';
 // existing GitHub Pages site of this repository serves it at /photo-tex/.
 export default defineConfig({
   base: './',
+  // The shared integration helpers live above _src; use this app's Three.js instance.
+  resolve: { dedupe: ['three'] },
   build: {
     outDir: '..',
     emptyOutDir: false,
