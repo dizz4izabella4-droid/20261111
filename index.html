@@ -109,7 +109,7 @@
   }
 
   // 台帳の group が同じ作品は、一覧では1枚のカードにまとめ、そのページへリンクする
-  var GROUPS = { 'puzzles-existing': { title: '既存パズル', summary: '', path: 'puzzles-existing/' } };
+  var GROUPS = { 'puzzles-existing': { title: '既存パズル', summary: '', path: 'puzzles-existing/' }, 'lab-3d': { title: '３D制作', summary: '', path: 'lab-3d/' }, 'lab-investigation': { title: '捜査', summary: '', path: 'lab-investigation/' }, 'lab-experimental': { title: '実験的作品', summary: '', path: 'lab-experimental/' } };
   function groupCard(id, g, members) {
     var rep = members.slice().sort(function (a, b) { return (b.first || '') < (a.first || '') ? -1 : 1; })[0];
     var devs = [];
