@@ -9,6 +9,10 @@ const C = { ivory: lin('#d9ccb0'), gold: lin('#c29a45'), wine: lin('#7d2136'), g
 // body vertices usable for the fitted top
 const pool = []; for (let i = 0; i < BP.length/3; i++) { let m = 0; for (let k = 1; k < 4; k++) if (BW[i*4+k] > BW[i*4+m]) m = k; const n = names[BJ[i*4+m]]; if (/^(hips|spine|chest|neck|upperarm)/.test(n) && BP[i*3+1] > 0.9) pool.push(i); }
 const nearW = p => { let b = 1e9, bi = 0; for (const i of pool) { const d = (BP[i*3]-p[0])**2 + (BP[i*3+1]-p[1])**2 + (BP[i*3+2]-p[2])**2; if (d < b) { b = d; bi = i; } } const w = {}; for (let k = 0; k < 4; k++) if (BW[bi*4+k] > 0) w[names[BJ[bi*4+k]]] = (w[names[BJ[bi*4+k]]] || 0) + BW[bi*4+k]; return w; };
+// the body wobbles up to about 1 cm around the waist, so clothes that hug it carry the same softness values
+const SOFT = ['_SOFTNESS', '_MAX_OFFSET', '_DAMPING'].map(k => accessor(g, prim.attributes[k]));
+const nearSoft = p => { let b = 1e9, bi = 0; for (const i of pool.concat(low)) { const d = (BP[i*3]-p[0])**2 + (BP[i*3+1]-p[1])**2 + (BP[i*3+2]-p[2])**2; if (d < b) { b = d; bi = i; } } return SOFT.map(a => a[bi]); };
+const low = []; for (let i = 0; i < BP.length/3; i++) if (BP[i*3+1] > 0.5 && BP[i*3+1] <= 0.9 && Math.abs(BP[i*3]) < 0.17) low.push(i);
 const mix = (a, b, t) => { const o = {}; for (const k in a) o[k] = (o[k] || 0) + a[k]*(1-t); for (const k in b) o[k] = (o[k] || 0) + b[k]*t; return o; };
 const bod = parts.find(p => p.kind === 'bodice');
 let bw = bod.pos.map(r => r.map(nearW));
@@ -29,10 +33,11 @@ const push = (arr, type, ct, target, minmax) => { const pad = (4 - off%4)%4; if 
   if (minmax) { a.min = [0,1,2].map(k => { let m = Infinity; for (let i = k; i < arr.length; i += 3) m = Math.min(m, arr[i]); return m; }); a.max = [0,1,2].map(k => { let m = -Infinity; for (let i = k; i < arr.length; i += 3) m = Math.max(m, arr[i]); return m; }); }
   g.js.accessors.push(a); return g.js.accessors.length-1; };
 let totalTri = 0, totalVert = 0; const report = [];
-function emit(name, prims) { const out = []; let nt = 0, nv = 0; for (const p of prims) { const n = p.P.length, P = new Float32Array(n*3), N = new Float32Array(n*3), Co = new Float32Array(n*3), Jn = new Uint16Array(n*4), W = new Float32Array(n*4), MD = new Float32Array(n);
+function emit(name, prims) { const out = []; let nt = 0, nv = 0; for (const p of prims) { const n = p.P.length, P = new Float32Array(n*3), N = new Float32Array(n*3), Co = new Float32Array(n*3), Jn = new Uint16Array(n*4), W = new Float32Array(n*4), MD = new Float32Array(n), So = p.S && [0,1,2].map(() => new Float32Array(n));
+    if (So) p.S.forEach((v, i) => v.forEach((x, k) => So[k][i] = x));
     p.P.forEach((q, i) => { P.set(q, i*3); N.set(p.N[i], i*3); Co.set(p.C[i], i*3); MD[i] = p.MD[i];
       const e = Object.entries(p.W[i]).filter(e => e[1] > 1e-4).sort((a, b) => b[1]-a[1]).slice(0, 4), s = e.reduce((t, x) => t + x[1], 0); e.forEach(([k, v], c) => { Jn[i*4+c] = JI(k); W[i*4+c] = v/s; }); });
-    out.push({ attributes: { POSITION: push(P,'VEC3',5126,34962,true), NORMAL: push(N,'VEC3',5126,34962), COLOR_0: push(Co,'VEC3',5126,34962), JOINTS_0: push(Jn,'VEC4',5123,34962), WEIGHTS_0: push(W,'VEC4',5126,34962), _MAX_DISTANCE: push(MD,'SCALAR',5126,34962) }, indices: push(Uint16Array.from(p.I),'SCALAR',5123,34963), material: base + p.mat });
+    out.push({ attributes: { POSITION: push(P,'VEC3',5126,34962,true), NORMAL: push(N,'VEC3',5126,34962), COLOR_0: push(Co,'VEC3',5126,34962), JOINTS_0: push(Jn,'VEC4',5123,34962), WEIGHTS_0: push(W,'VEC4',5126,34962), _MAX_DISTANCE: push(MD,'SCALAR',5126,34962), ...(So ? { _SOFTNESS: push(So[0],'SCALAR',5126,34962), _MAX_OFFSET: push(So[1],'SCALAR',5126,34962), _DAMPING: push(So[2],'SCALAR',5126,34962) } : {}) }, indices: push(Uint16Array.from(p.I),'SCALAR',5123,34963), material: base + p.mat });
     nt += p.I.length/3; nv += n; }
   g.js.meshes.push({ name, primitives: out }); g.js.nodes.push({ name, mesh: g.js.meshes.length-1, skin: 0 }); g.js.scenes[0].nodes.push(g.js.nodes.length-1); totalTri += nt; totalVert += nv; report.push([name, nv, nt]); }
 for (const part of parts) {
@@ -60,7 +65,8 @@ for (const part of parts) {
   if (s < 0) { for (let t = 0; t < I.length; t += 3) [I[t+1], I[t+2]] = [I[t+2], I[t+1]]; for (let v = 0; v < N.length; v++) N[v] = mul(N[v], -1); }
   const Nn = N.map(norm), Co = [], W = [], MD = [];
   tj.forEach((t, j) => ti.forEach((u, i) => { Co.push(color(t, u)); const jr = Math.round(t*(nvS-1)), ir = closed ? Math.round(u*nuS) % nuS : Math.round(u*(nuS-1)); W.push(k === 'bodice' ? bw[jr][ir] : wfn(grid[j][i], t, u, jr, ir)); MD.push(md(t)); }));
-  const prims = [{ P, N: Nn, C: Co, W, MD, I, mat }];
+  let S = null; if (/^(bodice|skirt|sash|tail)$/.test(k)) S = tj.flatMap((t, j) => ti.map((u, i) => { const f = k === 'skirt' || k === 'tail' ? 1 - smooth(0.08, 0.35, t) : 1, [a, m, d] = nearSoft(grid[j][i]); return [a*f, m*f, d]; }));
+  const prims = [{ P, N: Nn, C: Co, W, MD, I, mat, S }];
   if (lining) { const I2 = []; for (let t = 0; t < I.length; t += 3) I2.push(I[t], I[t+2], I[t+1]); prims.push({ P: P.map((p, i) => sub(p, mul(Nn[i], 0.0022))), N: Nn.map(n => mul(n, -1)), C: tj.flatMap(t => ti.map(u => { const c = color(t, u); return c === C.gold ? C.gold : lining; })), W, MD, I: I2, mat }); }
   emit(part.name.replace(/tail(\d+)/, 'tail_$1'), prims);
 }
