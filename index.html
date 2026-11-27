@@ -124,6 +124,7 @@
     return c;
   }
   function collapse(list) {
+    if (!state.cat) return list; // 「すべて」では各グループの作品を同じ階層に展開
     var out = [], seen = {};
     list.forEach(function (w) {
       var g = w.group && GROUPS[w.group];
