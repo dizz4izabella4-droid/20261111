@@ -123,8 +123,9 @@
     c._h = '';
     return c;
   }
-  function collapse(list) {
-    if (!state.cat) return list; // 「すべて」では各グループの作品を同じ階層に展開
+  function collapse(list, category) {
+    if (category === undefined) category = state.cat;
+    if (!category) return list; // 「すべて」では各グループの作品を同じ階層に展開
     var out = [], seen = {};
     list.forEach(function (w) {
       var g = w.group && GROUPS[w.group];
@@ -199,7 +200,7 @@
     // しぼり込みボタンの件数は、検索・端末の条件を反映した数
     document.querySelectorAll('[data-n]').forEach(function (el) {
       var c = el.getAttribute('data-n');
-      el.textContent = collapse(base.filter(function (w) { return !c || w.category === c; })).length;
+      el.textContent = collapse(base.filter(function (w) { return !c || w.category === c; }), c).length;
     });
     grid.innerHTML = sorted(list).map(card).join('');
     $('empty').hidden = list.length > 0;
