@@ -80,7 +80,7 @@
   var grid = $('grid'), sortSel = $('sort');
   var DEFAULT_CAT = 'lab'; // 最初に見せるのはゲームだけ
   var state = { cat: DEFAULT_CAT, dev: '', q: '', sort: 'new' };
-  var all = [], repo = '';
+  var all = [], catalog = [], repo = '';
 
   // URL（?cat=game&q=…&sort=…）から状態を戻す。旧「部屋」からの転送にも使う
   var sp = new URLSearchParams(location.search);
@@ -199,7 +199,7 @@
     // しぼり込みボタンの件数は、検索・端末の条件を反映した数
     document.querySelectorAll('[data-n]').forEach(function (el) {
       var c = el.getAttribute('data-n');
-      el.textContent = collapse(base.filter(function (w) { return !c || w.category === c; })).length;
+      el.textContent = catalog.filter(function (w) { return (!c || w.category === c) && devOK(w) && (!nq || hay(w).indexOf(nq) >= 0); }).length;
     });
     grid.innerHTML = sorted(list).map(card).join('');
     $('empty').hidden = list.length > 0;
@@ -231,7 +231,8 @@
   });
   document.getElementById('cats').addEventListener('click', function (e) {
     var b = e.target.closest('.chip'); if (!b) return;
-    state.cat = b.getAttribute('data-cat'); render();
+    var category = b.getAttribute('data-cat');
+    location.href = IZ.ROOT + '?cat=' + encodeURIComponent(category || 'all');
   });
   document.getElementById('dev').addEventListener('click', function (e) {
     var b = e.target.closest('button'); if (!b) return;
@@ -243,6 +244,7 @@
 
   IZ.load().then(function (d) {
     repo = d.repo;
+    catalog = d.works.filter(function (w) { return w.gallery; });
     all = d.works.filter(function (w) { return w.gallery && w.group === 'lab-experimental'; });
     all.forEach(function (w) { w._h = hay(w); });
     $('total').textContent = 'ぜんぶで ' + all.length + ' 作品';
