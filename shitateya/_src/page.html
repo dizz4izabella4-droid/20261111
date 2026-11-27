@@ -1,0 +1,20 @@
+<div id="app">
+  <main id="viewport">
+    <div class="overlay" id="views"></div>
+    <div class="overlay" id="looks"></div>
+    <div id="progress" role="status" hidden><span></span><div class="bar"><i></i></div></div>
+  </main>
+  <aside id="panel">
+    <header><h1>仕立て屋</h1><span>素体に合わせて衣装を作る</span></header>
+    <div id="tabs" role="tablist" aria-label="部品"></div>
+    <div id="sheet"></div>
+    <div id="actions">
+      <div id="status" role="status">読み込んでいます…</div>
+      <button type="button" id="undo" disabled>元に戻す</button>
+      <button type="button" id="finish" disabled>仕上げる</button>
+      <button type="button" id="export" class="primary" disabled>GLB書き出し<span class="wide">（傀儡用）</span></button>
+    </div>
+  </aside>
+</div>
+<input type="file" id="open-design" accept=".json,application/json" hidden>
+<input type="file" id="open-body" accept=".glb,model/gltf-binary" hidden>
