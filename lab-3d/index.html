@@ -57,6 +57,7 @@
     <button type="button" id="showAll" hidden>すべての種類で見る</button>
     <button type="button" id="reset">条件をもとに戻す</button>
   </div>
+  <div class="flows">
   <section class="flow" aria-labelledby="flow-h">
     <h2 id="flow-h">キャラクター制作の流れ</h2>
     <pre class="mermaid">flowchart TD
@@ -110,6 +111,52 @@
 </pre>
     <noscript><p class="notice">制作の流れの図には JavaScript が必要です。</p></noscript>
   </section>
+  <section class="flow" aria-labelledby="flow2-h">
+    <h2 id="flow2-h">動作制作の流れ</h2>
+    <pre class="mermaid">flowchart TD
+    START([動作制作開始])
+
+    subgraph S1["第１段階｜モーション取り込み"]
+        direction LR
+        subgraph BODY["身体全体"]
+            VIDEO1["動画を撮影"]
+            MOTION["身体全体の動きを取り込む&lt;br/&gt;（モーション）"]
+            VIDEO1 --&gt; MOTION
+        end
+
+        subgraph FINGER["指の細かい動き"]
+            VIDEO2["動画を撮影"]
+            FINGER_MOTION["指の細かい動きを取り込む&lt;br/&gt;（指モーション）"]
+            VIDEO2 --&gt; FINGER_MOTION
+        end
+    end
+
+    subgraph S2["第２段階｜キャラクターに動きを与える"]
+        direction TB
+        LOAD["アッセンブルした&lt;br/&gt;キャラクターを読み込む"]
+        PUPPET["動きを与える&lt;br/&gt;（傀儡）"]
+        LOAD --&gt; PUPPET
+    end
+
+    FINISH([動くキャラクター完成！])
+
+    START --&gt; VIDEO1
+    START --&gt; VIDEO2
+    MOTION --&gt; PUPPET
+    FINGER_MOTION --&gt; PUPPET
+    PUPPET --&gt; FINISH
+
+    classDef capture fill:#dcecff,stroke:#3976b8,color:#17395d,stroke-width:2px
+    classDef app fill:#e7dcff,stroke:#8054bd,color:#39245c,stroke-width:2px
+    classDef finish fill:#fff1b8,stroke:#c69b24,color:#59440c,stroke-width:3px
+
+    class VIDEO1,VIDEO2 capture
+    class MOTION,FINGER_MOTION,LOAD,PUPPET app
+    class FINISH finish
+</pre>
+    <noscript><p class="notice">動作制作の流れの図には JavaScript が必要です。</p></noscript>
+  </section>
+  </div>
   <script type="module">
     import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
     mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'default',
