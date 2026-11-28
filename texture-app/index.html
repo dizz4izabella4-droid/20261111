@@ -74,18 +74,18 @@ input[type=color]{width:38px;height:32px;padding:0;border:1px solid var(--line);
     <label><input id="chk" type="checkbox"> チェッカー表示</label></div>
   </div>
  </div></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/controls/OrbitControls.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/loaders/GLTFLoader.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/loaders/OBJLoader.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/loaders/MTLLoader.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fflate/0.8.2/umd/index.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/loaders/FBXLoader.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/loaders/ColladaLoader.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/loaders/STLLoader.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/loaders/PLYLoader.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/exporters/GLTFExporter.js"></script>
+<script src="vendor/three.min.js"></script>
+<script src="vendor/OrbitControls.js"></script>
+<script src="vendor/GLTFLoader.js"></script>
+<script src="vendor/OBJLoader.js"></script>
+<script src="vendor/MTLLoader.js"></script>
+<script src="vendor/fflate.min.js"></script>
+<script src="vendor/FBXLoader.js"></script>
+<script src="vendor/ColladaLoader.js"></script>
+<script src="vendor/STLLoader.js"></script>
+<script src="vendor/jszip.min.js"></script>
+<script src="vendor/PLYLoader.js"></script>
+<script src="vendor/GLTFExporter.js"></script>
 <script>
 const $=id=>document.getElementById(id); let TS=1024;
 const view=$('view'), renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});
@@ -108,14 +108,17 @@ function warn(t){const e=$('warn');e.textContent=t||'';e.style.display=t?'block'
 
 // ---- モデル読込 ----
 function setModel(obj,gltf){
+  const meshes=[]; obj.traverse(m=>{if(m.isMesh&&m.geometry.attributes.position?.count)meshes.push(m)});
+  if(!meshes.length)throw new Error('表示できるメッシュがありません');
+  const previousGltf=isGltf; isGltf=gltf;
+  try{meshes.forEach((m,i)=>prep(m,i))}catch(e){isGltf=previousGltf;throw e}
   scene.remove(root); root=new THREE.Group(); root.add(obj); scene.add(root); isGltf=gltf;
   const b=new THREE.Box3().setFromObject(obj), s=b.getSize(new THREE.Vector3()), c=b.getCenter(new THREE.Vector3());
   const k=2/Math.max(s.x,s.y,s.z||1,1e-6); obj.scale.multiplyScalar(k);
   b.setFromObject(obj); b.getCenter(c); obj.position.sub(c); obj.position.y+= (b.max.y-b.min.y)/2;
   grid.position.y=0; ctl.target.set(0,(b.max.y-b.min.y)/2,0); cam.position.set(0,1.2,3.6);
   $('chk').checked=false; $('hint').style.display='none';
-  parts=[]; obj.traverse(m=>{if(m.isMesh)parts.push(m)});
-  parts.forEach((m,i)=>prep(m,i));
+  parts=meshes;
   $('part').innerHTML=parts.map((m,i)=>`<option value="${i}">${m.name||'パーツ'+(i+1)}${m.userData.auto?'（簡易展開）':''}</option>`).join('');
   select(0);
 }
@@ -192,13 +195,13 @@ $('part').onchange=e=>select(+e.target.value);
 
 const imgExt=/\.(png|jpe?g|webp|gif|bmp|svg)$/i, base=n=>n.split(/[\\/]/).pop();
 const loaders={
- glb:(u,cb,mg)=>new THREE.GLTFLoader(mg).load(u,g=>cb(g.scene,true)),
- gltf:(u,cb,mg)=>new THREE.GLTFLoader(mg).load(u,g=>cb(g.scene,true)),
- obj:(u,cb,mg,mats)=>{const l=new THREE.OBJLoader(mg);if(mats)l.setMaterials(mats);l.load(u,o=>cb(o,false))},
- fbx:(u,cb,mg)=>new THREE.FBXLoader(mg).load(u,o=>cb(o,false)),
- dae:(u,cb,mg)=>new THREE.ColladaLoader(mg).load(u,c=>cb(c.scene,false)),
- stl:(u,cb)=>new THREE.STLLoader().load(u,g=>{g.computeVertexNormals();cb(new THREE.Mesh(g),false)}),
- ply:(u,cb)=>new THREE.PLYLoader().load(u,g=>{g.computeVertexNormals();cb(new THREE.Mesh(g),false)})
+ glb:(u,cb,mg,mats,fail)=>new THREE.GLTFLoader(mg).load(u,g=>cb(g.scene,true),undefined,fail),
+ gltf:(u,cb,mg,mats,fail)=>new THREE.GLTFLoader(mg).load(u,g=>cb(g.scene,true),undefined,fail),
+ obj:(u,cb,mg,mats,fail)=>{const l=new THREE.OBJLoader(mg);if(mats)l.setMaterials(mats);l.load(u,o=>cb(o,false),undefined,fail)},
+ fbx:(u,cb,mg,mats,fail)=>new THREE.FBXLoader(mg).load(u,o=>{cb(o,false)},undefined,fail),
+ dae:(u,cb,mg,mats,fail)=>new THREE.ColladaLoader(mg).load(u,c=>{cb(c.scene,false)},undefined,fail),
+ stl:(u,cb,mg,mats,fail)=>new THREE.STLLoader(mg).load(u,g=>{g.computeVertexNormals();cb(new THREE.Mesh(g),false)},undefined,fail),
+ ply:(u,cb,mg,mats,fail)=>new THREE.PLYLoader(mg).load(u,g=>{g.computeVertexNormals();cb(new THREE.Mesh(g),false)},undefined,fail)
 };
 const extOf=f=>f.name.split('.').pop().toLowerCase();
 async function expand(files){
@@ -207,23 +210,35 @@ async function expand(files){
     if(extOf(f)==='zip'){
       try{const z=await JSZip.loadAsync(f);
         for(const e of Object.values(z.files)){if(e.dir||/__MACOSX/.test(e.name))continue;out.push(new File([await e.async('blob')],base(e.name)))}
-      }catch(err){warn('ZIPを開けませんでした: '+f.name)}
+      }catch(err){throw new Error('ZIPを開けませんでした: '+f.name)}
     }else out.push(f);
   }
   return out;
 }
 async function loadFiles(list){
+ try{
   warn(''); const files=await expand([...list]), urls={};
   files.forEach(f=>urls[f.name.toLowerCase()]=URL.createObjectURL(f));
-  const mg=new THREE.LoadingManager();
-  mg.setURLModifier(u=>{if(/^(blob|data):/.test(u))return u;const k=decodeURIComponent(base(u.split('?')[0])).toLowerCase();return urls[k]||u});
+  const mg=new THREE.LoadingManager(), missing=[];
+  mg.onError=u=>missing.push(base(u));
+  // GLTFLoader resolves sidecar BIN/images relative to blob:null/ (or blob:https://…/).
+  // Only real object URLs may bypass lookup; derived blob paths still need resolving.
+  const objectUrls=new Set(Object.values(urls));
+  mg.setURLModifier(u=>{if(objectUrls.has(u)||/^data:/.test(u))return u;const k=decodeURIComponent(base(u.split('?')[0])).toLowerCase();return urls[k]||u});
   const model=files.find(f=>loaders[extOf(f)]), mtl=files.find(f=>extOf(f)==='mtl');
   files.filter(f=>f.type.startsWith('image/')||imgExt.test(f.name)).forEach(addImage);
   const bad=files.filter(f=>f!==model&&f!==mtl&&!imgExt.test(f.name)&&!f.type.startsWith('image/')&&!/\.(bin)$/i.test(f.name));
   if(!model){if(!bad.length&&!files.some(f=>f.type.startsWith('image/')||imgExt.test(f.name)))warn('モデルファイルが見つかりません（GLB/GLTF/OBJ/FBX/DAE/STL/PLY またはそれを含むZIP）');if(bad.length)warn('未対応の形式です: '+bad[0].name+'（対応: GLB/GLTF/OBJ(+MTL)/FBX/DAE/STL/PLY/ZIP と画像）');return}
   let mats=null;
   if(mtl&&extOf(model)==='obj'){try{mats=new THREE.MTLLoader(mg).parse(await mtl.text(),'');mats.preload()}catch(e){mats=null}}
-  loaders[extOf(model)](urls[model.name.toLowerCase()],(o,g)=>setModel(o,g),mg,mats);
+  warn(model.name+' を読み込み中…');
+  await new Promise((ok,fail)=>{
+    loaders[extOf(model)](urls[model.name.toLowerCase()],(o,g)=>{
+      try{setModel(o,g);ok()}catch(e){fail(e)}
+    },mg,mats,fail);
+  });
+  if(missing.length)warn('付属ファイルを読み込めませんでした。モデルと付属の画像・BINを一緒に選ぶか、ZIPで開いてください');
+ }catch(err){console.error(err);warn('モデルを読み込めませんでした: '+(err.message||'ファイルが壊れているか、付属ファイルが不足しています。画像・BINも一緒に選ぶか、ZIPで開いてください'))}
 }
 $('fModel').onchange=e=>{loadFiles(e.target.files);e.target.value=''};
 $('fImg').onchange=e=>{loadFiles(e.target.files);e.target.value=''};
