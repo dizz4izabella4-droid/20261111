@@ -1250,7 +1250,7 @@
       } catch (e) {}
     });
   }
-  function playSlash() {
+  function playSlash(layer) {
     if (!soundEnabled) return true;
     initAudio();
     loadSlash();
@@ -1262,18 +1262,19 @@
     slashLast = idx;
     const t = audioCtx.currentTime;
     // 連続ヒットで音が団子にならないよう、直前の斬撃音は短く絞る
-    if (slashNow) { try { slashNow.g.gain.cancelScheduledValues(t); slashNow.g.gain.setValueAtTime(slashNow.g.gain.value, t); slashNow.g.gain.linearRampToValueAtTime(0, t + 0.06); slashNow.s.stop(t + 0.07); } catch (e) {} }
+    if (!layer && slashNow) { try { slashNow.g.gain.cancelScheduledValues(t); slashNow.g.gain.setValueAtTime(slashNow.g.gain.value, t); slashNow.g.gain.linearRampToValueAtTime(0, t + 0.06); slashNow.s.stop(t + 0.07); } catch (e) {} }
     const src = audioCtx.createBufferSource(), g = audioCtx.createGain();
     src.buffer = slashBufs[idx];
-    src.playbackRate.value = 0.64 + Math.random() * 0.08;   // 低く重く（従来は約1.0）
+    src.playbackRate.value = layer ? 0.78 + Math.random() * 0.4 : 0.64 + Math.random() * 0.08;   // 低く重く（従来は約1.0）。重ね鳴らしは少しばらつかせる
     const shelf = audioCtx.createBiquadFilter();             // 低域を持ち上げて、軽さを消す
     shelf.type = 'lowshelf'; shelf.frequency.value = 260; shelf.gain.value = 8;
-    g.gain.value = 0.65;
+    g.gain.value = layer ? 0.4 : 0.65;
+    if (layer) { g.gain.setValueAtTime(0.4, t); g.gain.linearRampToValueAtTime(0, t + 0.3); }   // 重ねる分は短く切って、団子にならないように
     const dark = audioCtx.createBiquadFilter();               // 高域を削って、鋭さ・明るさを消す
     dark.type = 'lowpass'; dark.frequency.value = 3000;
     src.connect(shelf); shelf.connect(dark); dark.connect(g); g.connect(audioCtx.destination);
     src.start(t);
-    slashNow = { s: src, g: g };
+    if (layer) { try { src.stop(t + 0.32); } catch (e) {} } else slashNow = { s: src, g: g };
     return true;
   }
 
@@ -1297,6 +1298,17 @@
     gun: (combo = 1) => {
       playNoise(0.28, 0.4, 1100);
       playTone(90 + combo * 30, 'square', 0.22, 0.24, 35, 700, 10);
+    },
+    // 群れ演出：倒した数だけ斬撃（銃撃）を素早く重ねる「ズバババ」。神速は従来の音のまま（ここは通らない）
+    swarmBurst: (n, flying, gap) => {
+      const cnt = Math.min(n, 10), step = n > cnt ? n / cnt : 1;
+      for (let j = 0; j < cnt; j++) {
+        setTimeout(() => {
+          if (flying) { playNoise(0.1, 0.22, 1300); playTone(120 + Math.random() * 70, 'square', 0.09, 0.14, 45, 800, 8); }
+          else { if (!playSlash(true)) { playNoise(0.12, 0.2, 1600); playTone(240 + Math.random() * 120, 'sawtooth', 0.12, 0.12, 60, 900, 10); } playNoise(0.06, 0.1, 2200); }
+          if (j === 0 || j === cnt - 1) playTone(72, 'sawtooth', 0.16, 0.1, 36, 500);   // 最初と最後に低い打撃
+        }, Math.round(j * step * gap));
+      }
     },
     hit: () => {
       playNoise(0.4, 0.3, 800);
@@ -2411,6 +2423,16 @@
     const totalDmg = isCritical ? Math.max(dmgPerHit * hits, state.enemy.hp) : dmgPerHit * hits;
     state.enemy.hp -= totalDmg;
 
+    // 群れ（見た目だけ）：正解ごとに、残りHPの割合に合わせて減らす。神速は手前の1列。戦闘が終われば残り全部
+    const swarmAlive = swarm ? swarm.alive.length : 0;
+    let swarmKills = 0;
+    if (isCritical) swarmKills = Math.min(5, swarmAlive);
+    else if (state.enemy.hp <= 0) swarmKills = swarmAlive;
+    else {
+      const keep = Math.max(1, Math.ceil(SWARM_N * state.enemy.hp / state.enemy.maxHp));
+      swarmKills = Math.min(Math.max(1, swarmAlive - keep), Math.max(0, swarmAlive - 1));
+    }
+
     // ダメージ数字（1ヒットずつ。神速は最後の1発が残りを持っていく）
     const per = Array(hits).fill(dmgPerHit);
     if (isCritical) per[hits - 1] += Math.max(0, totalDmg - dmgPerHit * hits);
@@ -2421,8 +2443,10 @@
     // 連続エフェクト＆SE
     for (let i = 0; i < hits; i++) {
       setTimeout(() => {
-        if (state.enemy && state.enemy.isFlying) SFX.gun(i + 1);
-        else SFX.sword(i + 1);
+        if (isCritical || !swarm) {                       // 神速は従来どおりの音（録音の斬撃＋クリティカル音）
+          if (state.enemy && state.enemy.isFlying) SFX.gun(i + 1);
+          else SFX.sword(i + 1);
+        }
         state.effects.push({ type: state.enemy && state.enemy.isFlying ? 'gun' : 'sword', progress: 0 });
         if (hits === 3) triggerShake();
       }, i * 130);
@@ -2439,7 +2463,8 @@
     if (isCritical) say('crit', 0.85);
     else if (state.enemy.hp > 0) say(hits === 2 ? 'fast' : 'ok', hits === 2 ? 0.5 : 0.35);
 
-    swarmKill(isCritical ? 5 : hits, isCritical);
+    if (!isCritical && swarm) SFX.swarmBurst(Math.max(1, swarmKills), state.enemy.isFlying, swarmGap(swarmKills, false));
+    swarmKill(swarmKills, isCritical);
     updateUI();
 
     if (state.enemy.hp <= 0) {
@@ -3182,12 +3207,13 @@
     }
     swarm = { shape, alive, dying: [] };
   }
+  function swarmGap(n, isRow) { return isRow ? 45 : Math.max(24, Math.min(70, 650 / Math.max(1, n))); }   // 倒れる間隔（ms）。音と同じ値を使う
   function swarmKill(n, isRow) {
     if (!swarm) return;
     n = Math.min(n, swarm.alive.length);
     for (let i = 0; i < n; i++) {
       const m = swarm.alive.shift();
-      m.dieT = 0; m.dieWait = i * (isRow ? 45 : 110); m.dir = (i % 2 ? 1 : -1) * (0.6 + Math.random() * 0.6);
+      m.dieT = 0; m.dieWait = i * swarmGap(n, isRow); m.dir = (i % 2 ? 1 : -1) * (0.6 + Math.random() * 0.6);
       swarm.dying.push(m);
     }
   }
