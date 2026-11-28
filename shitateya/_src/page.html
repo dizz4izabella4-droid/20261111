@@ -1,0 +1,24 @@
+<div id="app">
+  <main id="viewport">
+    <div class="overlay" id="views"></div>
+    <div class="overlay" id="looks"></div>
+    <div id="progress" role="status" hidden><span></span><div class="bar"><i></i></div></div>
+  </main>
+  <aside id="panel">
+    <header><h1>仕立て屋</h1><span>素体に合わせて衣装を作る</span></header>
+    <div id="tabs" role="tablist" aria-label="部品"></div>
+    <div id="sheet"></div>
+    <div id="actions">
+      <div id="status" role="status">読み込んでいます…</div>
+      <div id="output">
+        <label>書き出す内容<select id="out-body"><option value="body">身体と衣装（傀儡用）</option><option value="cloth">衣装だけ（アッセンブル！用）</option></select></label>
+        <label class="check"><input type="checkbox" id="out-extra"><span>靴・帽子を含める</span></label>
+      </div>
+      <button type="button" id="undo" disabled>元に戻す</button>
+      <button type="button" id="finish" disabled>仕上げる</button>
+      <button type="button" id="export" class="primary" disabled>GLB書き出し<span class="wide">（身体つき）</span></button>
+    </div>
+  </aside>
+</div>
+<input type="file" id="open-design" accept=".json,application/json" hidden>
+<input type="file" id="open-body" accept=".glb,model/gltf-binary" hidden>
