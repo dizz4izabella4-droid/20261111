@@ -74,6 +74,7 @@ summary::before{content:'▸ ';color:var(--sub)}details[open]>summary::before{co
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
 <script>
 const $=id=>document.getElementById(id), TAU=Math.PI*2, H=[.9,1.05,1];
 const sm=(a,b,x)=>{x=Math.min(1,Math.max(0,(x-a)/(b-a)));return x*x*(3-2*x)};
@@ -141,20 +142,26 @@ const hairMat=new THREE.ShaderMaterial({side:THREE.DoubleSide,
 
 /* ---------- procedural strand generator ---------- */
 /* ===== 髪パーツ構造 v2：パーツ単位の生成・差分更新・キャッシュ ===== */
-const PIDS=['base','bangs','side_left','side_right','back','nape','tie','ponytail','flyaways'];
-const PNAME={base:'頭部ベース',bangs:'前髪',side_left:'左サイド',side_right:'右サイド',back:'後頭部',nape:'うなじ',tie:'結び目',ponytail:'ポニーテール',flyaways:'アホ毛・ほつれ'};
-const PPAR={base:null,bangs:'base',side_left:'base',side_right:'base',back:'base',nape:'base',tie:'base',ponytail:'tie',flyaways:'base'};
-const PRESETS={auto:null,straight:[[0,0,1],[0,0,1],[0,0,1],[0,0,1]],in:[[-.01,0,1],[-.03,0,1],[-.07,0,.95],[-.13,0,.9]],out:[[.02,0,1],[.05,0,1],[.1,0,1],[.17,0,1]],wave:[[.04,.02,1],[0,-.03,1],[-.04,.03,1],[0,-.02,1]],bulge:[[.03,0,1.3],[.07,0,1.7],[.05,0,1.4],[0,0,1]]};
-const PRESET_JA={auto:'自動（標準）',straight:'直線',in:'内巻き',out:'外巻き',wave:'ウェーブ',bulge:'膨らみ',custom:'カスタム（制御点）'};
+const PIDS=['base','bangs','side_left','side_right','back','back_upper','back_lower','nape','tie','ponytail','flyaways'];
+const PNAME={base:'頭部ベース',bangs:'前髪',side_left:'左サイド',side_right:'右サイド',back:'後頭部',nape:'うなじ',back_upper:'後頭部（上）',back_lower:'後頭部（下）',tie:'結び目',ponytail:'ポニーテール',flyaways:'アホ毛・ほつれ'};
+const PPAR={base:null,bangs:'base',side_left:'base',side_right:'base',back:'base',nape:'base',back_upper:'base',back_lower:'base',tie:'base',ponytail:'tie',flyaways:'base'};
+const PRESETS={auto:null,straight:[[0,0,1],[0,0,1],[0,0,1],[0,0,1]],in:[[-.01,0,1],[-.03,0,1],[-.07,0,.95],[-.13,0,.9]],out:[[.02,0,1],[.05,0,1],[.1,0,1],[.17,0,1]],wave:[[.04,.02,1],[0,-.03,1],[-.04,.03,1],[0,-.02,1]],bulge:[[.03,0,1.3],[.07,0,1.7],[.05,0,1.4],[0,0,1]],inward:[[-.01,0,1],[-.04,0,1],[-.11,0,.95],[-.24,0,.85]],rounded_inward:[[.03,0,1],[.05,0,1],[-.03,0,.95],[-.2,0,.85]]};
+const PRESET_JA={auto:'自動（標準）',straight:'直線',in:'内巻き',out:'外巻き',wave:'ウェーブ',bulge:'膨らみ',inward:'内巻き（毛先）',rounded_inward:'丸み＋内巻き',custom:'カスタム（制御点）'};
 const SHAPED=['bangs','side_left','side_right','ponytail'];
 const SC=['q','vol','tie','tph','tw','nd','nw'];
-const DEPS={base:SC,back:SC,nape:[...SC,'ndn'],bangs:['q','bl','bd','bp','bs'],side_left:['q','sl','sd'],side_right:['q','sl','sd'],ponytail:['q','len','tie','tph','tilt','tw','wave'],flyaways:['q','fly','vol','tie','tph']};
+const DEPS={base:SC,back:SC,nape:[...SC,'ndn'],back_upper:SC,back_lower:SC,bangs:['q','bl','bd','bp','bs'],side_left:['q','sl','sd'],side_right:['q','sl','sd'],ponytail:['q','len','tie','tph','tilt','tw','wave'],flyaways:['q','fly','vol','tie','tph']};
 const GIDS=['q','len','tie','tph','tilt','tw','wave','vol','fly','nd','nw','ndn','bl','bd','bp','bs','sl','sd','w','g','col'];
-let TABV=0,curPart='ponytail';
-const newPart=id=>({enabled:true,preset:'auto',cp:[[0,0,1],[0,0,1],[0,0,1],[0,0,1]],len:1,dens:1,thick:1,vol:1,wave:id==='ponytail'?1:0,rotY:0,pos:[0,0,0]});
+let TABV=0,curPart='ponytail',applying=false;
+const SCALP=['base','back','nape','back_upper','back_lower'];
+const HDEF={L:2.6,front:0,curl:0,lean:.1,drift:.22,exit:1.75,layer:.1};
+const ROOTS={base:{dMin:0,dMax:2,thMin:0,thMax:9},back:{dMin:2,dMax:4,thMin:0,thMax:1.55},nape:{dMin:0,dMax:4,thMin:1.5501,thMax:9},back_upper:{dMin:2,dMax:4,thMin:0,thMax:1.2},back_lower:{dMin:.9,dMax:4,thMin:1.2001,thMax:1.55}};
+const inReg=(R,th,d)=>th>=R.thMin&&th<=R.thMax&&d>=R.dMin&&d<=R.dMax;
+const newPart=id=>({enabled:!['back_upper','back_lower'].includes(id),mode:'tie',hang:{...HDEF},roots:null,preset:'auto',cp:[[0,0,1],[0,0,1],[0,0,1],[0,0,1]],len:1,dens:1,thick:1,vol:1,wave:id==='ponytail'?1:0,rotY:0,pos:[0,0,0]});
 const clampN=(v,a,b,d)=>{v=+v;return Number.isFinite(v)?Math.min(b,Math.max(a,v)):d};
+function fixHang(h){h=h&&typeof h==='object'?h:{};return{L:clampN(h.L,.3,6,HDEF.L),front:clampN(h.front,-1,1.5,0),curl:clampN(h.curl,0,120,0),lean:clampN(h.lean,-.5,1,HDEF.lean),drift:clampN(h.drift,-.5,1.5,HDEF.drift),exit:clampN(h.exit,1.3,2.2,HDEF.exit),layer:clampN(h.layer,0,.5,HDEF.layer)}}
+function fixRoots(r){if(!r||typeof r!=='object')return null;return{dMin:clampN(r.dMin,0,4,0),dMax:clampN(r.dMax,0,4,4),thMin:clampN(r.thMin,0,9,0),thMax:clampN(r.thMax,0,9,9)}}
 function fixPart(p,id){const d=newPart(id);p=p&&typeof p==='object'?p:{};
- return{enabled:p.enabled!==false,preset:PRESET_JA[p.preset]?p.preset:'auto',
+ return{enabled:p.enabled===undefined?d.enabled:p.enabled!==false,mode:p.mode==='hang'?'hang':'tie',hang:fixHang(p.hang),roots:fixRoots(p.roots),preset:PRESET_JA[p.preset]?p.preset:'auto',
   cp:Array.isArray(p.cp)&&p.cp.length===4&&p.cp.every(a=>Array.isArray(a)&&a.length===3)?p.cp.map(a=>[clampN(a[0],-1,1,0),clampN(a[1],-1,1,0),clampN(a[2],.2,3,1)]):d.cp,
   len:clampN(p.len,.05,3,1),dens:clampN(p.dens,0,3,1),thick:clampN(p.thick,.2,4,1),vol:clampN(p.vol,0,3,1),wave:clampN(p.wave,0,3,d.wave),
   rotY:clampN(p.rotY,-Math.PI,Math.PI,0),pos:Array.isArray(p.pos)&&p.pos.length===3?p.pos.map(v=>clampN(v,-2,2,0)):[0,0,0]}}
@@ -162,9 +169,8 @@ const CFG={version:2,parts:Object.fromEntries(PIDS.map(id=>[id,newPart(id)]))};
 const PM={};
 const PP=(th,ph,rad)=>{const s=surf(dirA(th,ph));return[s[0]*rad,s[1]*rad,s[2]*rad]};
 const dFront=ph=>Math.abs(((ph-Math.PI/2+3*Math.PI)%TAU)-Math.PI);
-const regionOf=(th,d)=>th>1.55?'nape':d>=2?'back':'base';
-function areaR(name,nd,nw){let a=0;const NP=120,NT=60,tm=Math.max(1.55,nd);
- for(let i=0;i<NP;i++){const d=dFront((i+.5)/NP*TAU),lim=limF(d,nd,nw);for(let j=0;j<NT;j++){const th=(j+.5)/NT*tm;if(th<=lim&&regionOf(th,d)===name)a+=Math.sin(th)*(tm/NT)*(TAU/NP)}}return a}
+function areaR(R,nd,nw){let a=0;const NP=120,NT=60,tm=Math.max(1.55,nd);
+ for(let i=0;i<NP;i++){const d=dFront((i+.5)/NP*TAU),lim=limF(d,nd,nw);for(let j=0;j<NT;j++){const th=(j+.5)/NT*tm;if(th<=lim&&inReg(R,th,d))a+=Math.sin(th)*(tm/NT)*(TAU/NP)}}return a}
 /* 制御点（5点：u=0,.25,.5,.75,1）→ Catmull-Rom。戻り値 [outward, across, widthMul] */
 function profile(p){const cp=p.preset==='custom'?p.cp:PRESETS[p.preset];if(!cp)return null;const P=[[0,0,1],...cp];
  return u=>{const t=Math.min(.9999,Math.max(0,u))*4,i=t|0,f=t-i,g=k=>P[Math.max(0,Math.min(4,k))],r=[0,0,0];
@@ -183,20 +189,33 @@ function makeGeo(T,M,gen,wmul){T=Math.min(T,40000);if(T<1)return null;
    if(i<M-1){const b=(s*M+i)*2,t=(s*(M-1)+i)*6;idx[t]=b;idx[t+1]=b+1;idx[t+2]=b+2;idx[t+3]=b+1;idx[t+4]=b+3;idx[t+5]=b+2}}}
  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));g.setAttribute('tang',new THREE.BufferAttribute(tg,3));
  g.setAttribute('side',new THREE.BufferAttribute(sd,1));g.setAttribute('info',new THREE.BufferAttribute(inf,3));g.setIndex(new THREE.BufferAttribute(idx,1));
- g.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,-1.5,0),7);return g}
+ g.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,-1.5,0),7);g.userData={T,M};return g}
 function ctx(){const g=id=>+$(id).value,tieA=g('tie'),tph=g('tph'),td=dirA(tieA,1.5*Math.PI+tph),hl=Math.hypot(td[0],td[2])||1;
  return{S0:g('q'),L:g('len'),td,tp:surf(td).map(v=>v*1.06),band:g('tw'),tilt:g('tilt')+.5*Math.max(0,1-tieA/1.35),hx:td[0]/hl,hz:td[2]/hl,
   vol:g('vol'),wav:g('wave'),fly:g('fly'),nd:g('nd'),nw:g('nw'),ndn:g('ndn'),bl:g('bl'),bd:g('bd'),bp:g('bp'),bs:g('bs'),sl:g('sl'),sd:g('sd')}}
 /* --- 生成器（頭部ベース／後頭部／うなじ：根元→結び目へ頭皮沿い）--- */
-function genScalp(name,X,p){const Ab=areaR('base',1.55,1)+areaR('back',1.55,1),T=Math.round(X.S0/Ab*areaR(name,X.nd,X.nw)*p.dens*(name==='nape'?X.ndn:1));
- if(T<1)return null;const PA=24,r=rng(seed+PIDS.indexOf(name)*101),thMax=Math.max(1.55,X.nd),qE=Math.min(1,p.len),vol=X.vol*p.vol,td=X.td;
+function genScalp(name,X,p){const R=Object.assign({},ROOTS[name],p.roots||{}),Ab=areaR(ROOTS.base,1.55,1)+areaR(ROOTS.back,1.55,1),T=Math.round(X.S0/Ab*areaR(R,X.nd,X.nw)*p.dens*(name==='nape'?X.ndn:1));
+ if(T<1)return null;if(p.mode==='hang')return genHang(name,X,p,R,T);const PA=24,r=rng(seed+PIDS.indexOf(name)*101),thMax=Math.max(1.55,X.nd),qE=Math.min(1,p.len),vol=X.vol*p.vol,td=X.td;
  return makeGeo(T,PA+1,(s,pts)=>{let th,ph,d,n=0;
-  do{ph=r()*TAU;th=Math.acos(1-r()*(1-Math.cos(thMax)));d=dFront(ph)}while((th>limF(d,X.nd,X.nw)||regionOf(th,d)!==name)&&++n<300);
+  do{ph=r()*TAU;th=Math.acos(1-r()*(1-Math.cos(thMax)));d=dFront(ph)}while((th>limF(d,X.nd,X.nw)||!inReg(R,th,d))&&++n<300);
   const d0=dirA(th,ph),[ox,oz,mag]=clump(r,X.band),rnd=r();
   for(let i=0;i<=PA;i++){const q=i/PA*qE;let x=d0[0]+(td[0]-d0[0])*q,y=d0[1]+(td[1]-d0[1])*q,z=d0[2]+(td[2]-d0[2])*q;const m=Math.hypot(x,y,z)||1;x/=m;y/=m;z/=m;
    const sf=surf([x,y,z]),rad=1.012+.048*q*q+(.03+.045*vol)*Math.sin(Math.PI*q),c=q*q*q;
    pts[i*3]=sf[0]*rad+ox*c;pts[i*3+1]=sf[1]*rad;pts[i*3+2]=sf[2]*rad+oz*c}
   return[.4+.6*mag,rnd]},p.thick)}
+/* --- 垂らす髪（ストレート／内巻き／ボブ／ハーフアップ下部）：同じ生成器をパラメータで作り分け --- */
+function bodyOut(p){const t=torso,cx=t.position.x,cy=t.position.y,cz=t.position.z,dx=p[0]-cx,dy=p[1]-cy,dz=p[2]-cz,k=Math.hypot(dx/t.scale.x,dy/t.scale.y,dz/t.scale.z);
+ return k<1.04&&k>1e-4?[cx+dx/k*1.04,cy+dy/k*1.04,cz+dz/k*1.04]:p}
+function genHang(name,X,p,R,T){const h=p.hang,PA=18,PT=34,M=PA+1+PT,r=rng(seed+PIDS.indexOf(name)*101),thMax=Math.max(1.55,X.nd),vol=X.vol*p.vol,turn=h.curl*Math.PI/180,Lh=h.L*p.len,wv=X.wav*p.wave;
+ return makeGeo(T,M,(s,pts,wp)=>{let th,ph,dd,n=0;
+  do{ph=r()*TAU;th=Math.acos(1-r()*(1-Math.cos(thMax)));dd=((ph-Math.PI/2+3*Math.PI)%TAU)-Math.PI}while((th>limF(Math.abs(dd),X.nd,X.nw)||!inReg(R,th,Math.abs(dd)))&&++n<300);
+  const[ox]=clump(r,.1),rnd=r(),sg=dd>=0?1:-1,phE=Math.abs(dd)<1.25?Math.PI/2+sg*(1.25+.12*rnd):ph,thE=Math.max(h.exit+.06*rnd,th+.05),lay=h.layer*vol*(1-Math.min(1,th/1.6))+.02*rnd;
+  for(let i=0;i<=PA;i++){const q=i/PA,sf=surf(dirA(th+(thE-th)*q,ph+(phE-ph)*q)),rad=1.012+(1.04+lay-1.012)*q*q+(.03+.045*vol)*.5*Math.sin(Math.PI*q);pts[i*3]=sf[0]*rad;pts[i*3+1]=sf[1]*rad;pts[i*3+2]=sf[2]*rad}
+  const ex=pts[PA*3],ey=pts[PA*3+1],ez=pts[PA*3+2],hl=Math.hypot(ex,ez)||1,hx=ex/hl,hz=ez/hl,wF=1-dFront(phE)/Math.PI;
+  const hem=-(Lh+h.front*(wF-.5))-.3*rnd*rnd,Ls=Math.max(.3,ey-hem),ds=Ls/PT;let x=ex,y=ey,z=ez;
+  for(let j=1;j<=PT;j++){const u=j/PT,a=h.lean-h.drift*u-turn*sm(.78,1,u);x+=hx*Math.sin(a)*ds;z+=hz*Math.sin(a)*ds;y-=Math.cos(a)*ds;
+   const lat=ox*.5*sm(0,.25,u)+wv*.04*Math.sin(u*Ls*2+rnd*6)*sm(0,.3,u),b=bodyOut([x-hz*lat,y,z+hx*lat]),k=(PA+j)*3;pts[k]=b[0];pts[k+1]=b[1];pts[k+2]=b[2]}
+  return[.5+.4*(1-th/1.8)+.1*rnd,rnd]},p.thick)}
 /* --- ポニーテール（結び目から先）--- */
 function genPony(X,p){const T=Math.round(X.S0*1.2*p.dens);if(T<1)return null;const PT=40,r=rng(seed+777),prof=profile(p),L=X.L*p.len,wv=X.wav*p.wave,{tp,hx,hz,tilt}=X;
  return makeGeo(T,PT+1,(s,pts,wp)=>{const[ox,oz,mag]=clump(r,X.band),rnd=r(),Ls=L*(1-.2*r()*r()),A=.05*wv*(.6+.8*r()),p2=5*ox/X.band+r()*.7;
@@ -221,7 +240,7 @@ function genSide(side,X,p){const T=Math.round(X.S0*.05*X.sd*p.dens);if(T<1)retur
   const bp=PP(th1,ph1,1.07);
   for(let j=1;j<=TN;j++){const u=j/TN,k=SN+j-1;let a=[bp[0]+jx*(.4+u)+side*.03*Math.sin(Math.PI*u*.9)+p.wave*.04*u*Math.sin(u*Ls*3+lock),bp[1]-Ls*u,bp[2]+.05*u+jz*(.4+u)+.015*Math.sin(u*9+lock)];
    if(prof){const o=prof(u);a[0]+=side*o[0]*Ls;a[2]+=o[1]*Ls;wp[k]=o[2]}
-   a=keepOut(a);pts[k*3]=a[0];pts[k*3+1]=a[1];pts[k*3+2]=a[2]}
+   a=bodyOut(keepOut(a));pts[k*3]=a[0];pts[k*3+1]=a[1];pts[k*3+2]=a[2]}
   return[.85,rnd]},p.thick)}
 /* --- アホ毛・ほつれ（独立した細い毛）--- */
 function genFly(X,p){const T=Math.round(X.S0*.015*X.fly*p.dens);if(T<1)return null;const M=14,r=rng(seed+555);
@@ -231,7 +250,7 @@ function genFly(X,p){const T=Math.round(X.S0*.015*X.fly*p.dens);if(T<1)return nu
    const sf=surf([x,y,z]),rad=1.012+.048*q*q+(.03+.045*X.vol)*Math.sin(Math.PI*q)+.025+lift*u*u,wob=cu*u*Math.sin(u*5+ph2);
    pts[j*3]=sf[0]*rad-z*wob;pts[j*3+1]=sf[1]*rad;pts[j*3+2]=sf[2]*rad+x*wob;wp[j]=.7*(1-.7*u)}
   return[1,r()]},p.thick)}
-const GEN={base:(X,p)=>genScalp('base',X,p),back:(X,p)=>genScalp('back',X,p),nape:(X,p)=>genScalp('nape',X,p),bangs:genBangs,
+const GEN={base:(X,p)=>genScalp('base',X,p),back:(X,p)=>genScalp('back',X,p),nape:(X,p)=>genScalp('nape',X,p),back_upper:(X,p)=>genScalp('back_upper',X,p),back_lower:(X,p)=>genScalp('back_lower',X,p),bangs:genBangs,
  side_left:(X,p)=>genSide(1,X,p),side_right:(X,p)=>genSide(-1,X,p),ponytail:genPony,flyaways:genFly};
 const PIV=(id,X)=>id==='ponytail'||id==='tie'?X.tp:id==='bangs'?surf(dirA(.45,Math.PI/2)):id==='side_left'?surf(dirA(1,Math.PI/2+1)):id==='side_right'?surf(dirA(1,Math.PI/2-1)):[0,0,0];
 function applyXf(id,X){const pm=PM[id],p=CFG.parts[id];if(!pm||!pm.mesh)return;const pv=new THREE.Vector3(...PIV(id,X)),q=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),p.rotY);
@@ -245,20 +264,20 @@ function updateParts(){const t0=performance.now(),X=ctx(),done=[];let tris=0,str
  for(const id of PIDS){const p=CFG.parts[id]=fixPart(CFG.parts[id],id);if(id==='tie'){applyTie(X,p);continue}
   let pm=PM[id];
   if(!p.enabled){if(pm&&pm.mesh){scene.remove(pm.mesh);pm.mesh.geometry.dispose()}PM[id]=null;continue}
-  const{rotY,pos,...rest}=p,key=JSON.stringify([rest,DEPS[id].map(k=>$(k).value),seed,TABV]);
+  const{rotY,pos,...rest}=p,key=JSON.stringify([rest,(p.mode==='hang'?DEPS[id].filter(k=>!['tie','tph','tw'].includes(k)):DEPS[id]).map(k=>$(k).value),seed,TABV]);
   if(!pm||pm.key!==key){try{const geo=GEN[id](X,p);let mesh=pm&&pm.mesh;
     if(!geo){if(mesh){scene.remove(mesh);mesh.geometry.dispose()}PM[id]={mesh:null,key,tris:0}}
     else{if(mesh){mesh.geometry.dispose();mesh.geometry=geo}else{mesh=new THREE.Mesh(geo,hairMat);mesh.frustumCulled=false;scene.add(mesh)}
      PM[id]={mesh,key,tris:geo.index.count/3,n:geo.attributes.position.count/2}}
     done.push(PNAME[id])}catch(e){console.error(id,e)}}
   applyXf(id,X);if(PM[id]){tris+=PM[id].tris;strands+=PM[id].n||0}}
- $('stat').textContent=`${PIDS.filter(i=>PM[i]&&PM[i].mesh).length}パーツ ／ 約 ${(tris/1e6).toFixed(2)}M ポリゴン ／ 再生成: ${done.length?done.join('・'):'なし'} ／ ${Math.round(performance.now()-t0)} ms`}
+ if(BAKE.on)refreshBake();$('stat').textContent=`${PIDS.filter(i=>PM[i]&&PM[i].mesh).length}パーツ ／ 約 ${(tris/1e6).toFixed(2)}M ポリゴン ／ 再生成: ${done.length?done.join('・'):'なし'} ／ ${Math.round(performance.now()-t0)} ms`}
 function build(){try{updateParts()}catch(e){console.error(e);$('stat').textContent='生成エラー（直前の形状を維持）'}}
 /* --- 設定の保存・読込（旧形式＝全体設定のみのJSONも変換して読込）--- */
-function exportCfg(){return JSON.stringify({version:2,seed,globals:Object.fromEntries(GIDS.map(k=>[k,$(k).value])),parts:CFG.parts},null,1)}
-function importCfg(t){try{const o=JSON.parse(t),G=o.globals||o;GIDS.forEach(k=>{if(G[k]!==undefined&&$(k)){$(k).value=G[k];$(k).dispatchEvent(new Event('input'))}});
+function exportCfg(){return JSON.stringify({version:2,style:CFG.style,seed,globals:Object.fromEntries(GIDS.map(k=>[k,$(k).value])),parts:CFG.parts},null,1)}
+function importCfg(t){try{applying=true;const o=JSON.parse(t),G=o.globals||o;GIDS.forEach(k=>{if(G[k]!==undefined&&$(k)){$(k).value=G[k];$(k).dispatchEvent(new Event('input'))}});
  if(o.seed!==undefined)seed=+o.seed|0;const src=o.parts&&typeof o.parts==='object'?o.parts:{};
- CFG.parts=Object.fromEntries(PIDS.map(id=>[id,fixPart(Object.assign(newPart(id),src[id]||{}),id)]));renderParts();applyColor();rebuild()}catch(e){$('stat').textContent='設定の読込に失敗（形式を確認してください）'}}
+ CFG.parts=Object.fromEntries(PIDS.map(id=>[id,fixPart(Object.assign(newPart(id),src[id]||{}),id)]));CFG.style=typeof o.style==='string'&&(STYLES[o.style]||o.style==='custom')?o.style:'custom';renderParts();applyColor();syncStyleUI();rebuild();applying=false}catch(e){applying=false;$('stat').textContent='設定の読込に失敗（形式を確認してください）'}}
 /* --- パーツ別UI --- */
 const partsUI=document.createElement('div');partsUI.id='partsUI';document.body.appendChild(partsUI);
 function renderParts(){const R=partsUI;R.innerHTML='';const p=CFG.parts[curPart],mk=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e};
@@ -272,7 +291,12 @@ function renderParts(){const R=partsUI;R.innerHTML='';const p=CFG.parts[curPart]
    ps.onchange=()=>{p.preset=ps.value;if(PRESETS[ps.value])p.cp=PRESETS[ps.value].map(a=>a.slice());rebuild();renderParts()};R.append(lb,ps);
    if(p.preset==='custom'){const t=mk('div','sub');t.textContent='制御点（長さ方向 25%/50%/75%/100%）：外向き・横・太さ';R.appendChild(t);
     p.cp.forEach((c,ri)=>{const rw=mk('div','row');rw.style.marginTop='3px';rw.append(`${(ri+1)*25}%`);c.forEach((v,ci)=>{const n=mk('input');n.type='number';n.step='0.01';n.value=v;n.style.cssText='width:62px;font:inherit;color:inherit;background:transparent;border:1px solid var(--line);border-radius:6px;padding:2px 4px';n.onchange=()=>{c[ci]=+n.value;rebuild()};rw.appendChild(n)});R.appendChild(rw)})}}
-  sl(['base','back','nape'].includes(curPart)?'長さ（根元→結び目の到達率）':'長さ',()=>p.len,v=>p.len=v,.05,3,.05,true);
+  if(SCALP.includes(curPart)){const ml=mk('label');ml.textContent='毛流れ';const ms=mk('select');[['tie','結び目へ収束'],['hang','下へ垂らす']].forEach(([v,t])=>{const o=mk('option');o.value=v;o.textContent=t;ms.appendChild(o)});ms.value=p.mode;ms.onchange=()=>{p.mode=ms.value;rebuild();renderParts()};R.append(ml,ms);
+  const RR=Object.assign({},ROOTS[curPart],p.roots||{}),setR=(k,v)=>{p.roots=Object.assign({},ROOTS[curPart],p.roots||{});p.roots[k]=v};
+  sl('根元の範囲：上端（頭頂=0）',()=>Math.min(RR.thMin,2.4),v=>setR('thMin',v),0,2.4,.02,true);sl('根元の範囲：下端',()=>Math.min(RR.thMax,2.4),v=>setR('thMax',v),0,2.4,.02,true);
+  if(p.mode==='hang'){const h=p.hang;sl('裾の高さ（頭中心から下）',()=>h.L,v=>h.L=v,.3,6,.05,true);sl('前下がり',()=>h.front,v=>h.front=v,-1,1.5,.02,true);sl('毛先の内巻き（度）',()=>h.curl,v=>h.curl=v,0,120,1,true,0);
+   sl('外ふくらみ',()=>h.lean,v=>h.lean=v,-.5,1,.02,true);sl('内寄せ（背中側へ）',()=>h.drift,v=>h.drift=v,-.5,1.5,.02,true);sl('髪の厚み',()=>h.layer,v=>h.layer=v,0,.5,.01,true);sl('落下位置（生え際）',()=>h.exit,v=>h.exit=v,1.3,2.2,.02,true)}}
+  sl(SCALP.includes(curPart)&&p.mode!=='hang'?'長さ（根元→結び目の到達率）':'長さ（倍率）',()=>p.len,v=>p.len=v,.05,3,.05,true);
   sl('密度',()=>p.dens,v=>p.dens=v,0,3,.05,true);sl('太さ',()=>p.thick,v=>p.thick=v,.2,4,.05,true);sl('ボリューム',()=>p.vol,v=>p.vol=v,0,3,.05,true);sl('ウェーブ',()=>p.wave,v=>p.wave=v,0,3,.05,true);
  }else{sl('結び目の太さ',()=>p.thick,v=>p.thick=v,.2,4,.05,false);sl('結び目の大きさ',()=>p.vol,v=>p.vol=v,.3,3,.05,false)}
  sl('方向（回転）',()=>p.rotY,v=>p.rotY=v,-3.14,3.14,.02,false);
@@ -281,8 +305,105 @@ function renderParts(){const R=partsUI;R.innerHTML='';const p=CFG.parts[curPart]
  if(curPart.startsWith('side'))b1.appendChild(bt);R.appendChild(b1);
  const ta=mk('textarea');ta.style.cssText='width:100%;height:70px;margin-top:8px;font:11px monospace;color:inherit;background:transparent;border:1px solid var(--line);border-radius:8px';ta.placeholder='設定JSON';
  const b2=mk('div','row'),be=mk('button'),bi=mk('button');be.textContent='設定を出力';bi.textContent='設定を読込';be.onclick=()=>{ta.value=exportCfg()};bi.onclick=()=>importCfg(ta.value);b2.append(be,bi);R.append(b2,ta)}
+/* ===== 焼き込みGLB書き出し（メートル単位・顔GLBと同じ原点／パーツ別メッシュ名／頂点カラー）===== */
+const HXF={C:[0,.165,.003],s:10,top:[0,.297,0],name:'(未読込：標準の頭)'};
+const MESHNAME={base:'hair_base',bangs:'hair_bangs',side_left:'hair_side_left',side_right:'hair_side_right',back:'hair_back',back_upper:'hair_back_upper',back_lower:'hair_back_lower',nape:'hair_nape',ponytail:'hair_ponytail',flyaways:'hair_flyaways'};
+const BAKE={on:false,group:null,tris:0,budget:100000};
+/* 帯の幅・向きを頂点へ焼き込む：向きは「頭の軸から外向き」を基準にする */
+function bakeParts(budget){const uW=hairMat.uniforms.uW.value,cB=hairMat.uniforms.uCol.value,cT=hairMat.uniforms.uTip.value,{C,s}=HXF;
+ const ids=PIDS.filter(id=>PM[id]&&PM[id].mesh&&PM[id].mesh.geometry.userData.M),total=ids.reduce((a,id)=>a+PM[id].tris,0)||1,res=[];let tris=0;
+ for(const id of ids){const pm=PM[id],g=pm.mesh.geometry,{T,M}=g.userData,P=g.attributes.position.array,TG=g.attributes.tang.array,SD=g.attributes.side.array,IN=g.attributes.info.array;
+  const segs=Math.min(M-1,12),keepN=Math.min(T,Math.max(20,Math.floor(budget*pm.tris/total/(segs*2)))),wf=Math.min(12,Math.pow(T/keepN,.6)),NP=segs+1;
+  const pos=new Float32Array(keepN*NP*6),nor=new Float32Array(keepN*NP*6),uv=new Float32Array(keepN*NP*4),col=new Float32Array(keepN*NP*6),idx=new Uint32Array(keepN*segs*6);
+  const q=pm.mesh.quaternion,mp=pm.mesh.position,tmp=new THREE.Vector3(),clr=new THREE.Color();
+  for(let k=0;k<keepN;k++){const st=Math.min(T-1,Math.floor(k*T/keepN));
+   for(let j=0;j<NP;j++){const i=Math.round(j*(M-1)/segs),v=(st*M+i)*2,o=v*3;
+    tmp.set(P[o],P[o+1],P[o+2]).applyQuaternion(q).add(mp);const cx=tmp.x,cy=tmp.y,cz=tmp.z;
+    const t=new THREE.Vector3(TG[o],TG[o+1],TG[o+2]).applyQuaternion(q),ay=Math.max(-1,Math.min(.6,cy)),out=new THREE.Vector3(cx,cy-ay,cz);
+    if(out.lengthSq()<1e-8)out.set(0,0,1);out.normalize();
+    const b=new THREE.Vector3().crossVectors(t,out);if(b.lengthSq()<1e-6)b.set(1,0,0);b.normalize();
+    const nrm=out.clone().addScaledVector(t,-out.dot(t)).normalize(),tt=IN[o],hw=uW*Math.abs(SD[v])*(1-.8*sm(.62,1,tt))*(.75+.5*IN[o+2])*wf;
+    const base=cB.clone().multiplyScalar(.8+.4*((IN[o+2]*13.7)%1)).lerp(cB.clone().multiplyScalar(.5),1-sm(0,.3,tt));base.lerp(cT,.55*sm(.7,1,tt));
+    clr.copy(base).multiplyScalar((.3+.7*IN[o+1])*(.6+.4*sm(0,.35,tt)));clr.r=Math.min(1,clr.r);clr.g=Math.min(1,clr.g);clr.b=Math.min(1,clr.b);
+    for(let sd=0;sd<2;sd++){const w=(sd?1:-1)*hw,vi=(k*NP+j)*2+sd,a=vi*3;
+     pos[a]=(cx+b.x*w)/s+C[0];pos[a+1]=(cy+b.y*w)/s+C[1];pos[a+2]=(cz+b.z*w)/s+C[2];nor[a]=nrm.x;nor[a+1]=nrm.y;nor[a+2]=nrm.z;col[a]=clr.r;col[a+1]=clr.g;col[a+2]=clr.b;uv[vi*2]=sd;uv[vi*2+1]=j/segs}
+    if(j<segs){const a=(k*NP+j)*2,t6=(k*segs+j)*6;idx[t6]=a;idx[t6+1]=a+1;idx[t6+2]=a+2;idx[t6+3]=a+1;idx[t6+4]=a+3;idx[t6+5]=a+2}}}
+  const bg=new THREE.BufferGeometry();bg.setAttribute('position',new THREE.BufferAttribute(pos,3));bg.setAttribute('normal',new THREE.BufferAttribute(nor,3));
+  bg.setAttribute('uv',new THREE.BufferAttribute(uv,2));bg.setAttribute('color',new THREE.BufferAttribute(col,3));bg.setIndex(new THREE.BufferAttribute(idx,1));
+  res.push({name:MESHNAME[id],geo:bg});tris+=keepN*segs*2}
+ if(CFG.parts.tie.enabled&&tieBand.visible!==false){tieBand.updateMatrix();const tg=tieBand.geometry.clone();tg.applyMatrix4(tieBand.matrix);const p=tg.attributes.position;
+  for(let i=0;i<p.count;i++)p.setXYZ(i,p.getX(i)/s+C[0],p.getY(i)/s+C[1],p.getZ(i)/s+C[2]);tg.deleteAttribute('uv');res.push({name:'hair_tie',geo:tg,tie:true});tris+=tg.index?tg.index.count/3:p.count/3}
+ return{parts:res,tris}}
+function bakedGroup(budget){const{parts,tris}=bakeParts(budget),G=new THREE.Group();G.name='Hair';
+ const mat=new THREE.MeshStandardMaterial({name:'hair',vertexColors:true,roughness:.42,metalness:0,side:THREE.DoubleSide}),tmat=new THREE.MeshStandardMaterial({name:'hair_tie',color:0x2a2a33,roughness:.5});
+ parts.forEach(p=>{const m=new THREE.Mesh(p.geo,p.tie?tmat:mat);m.name=p.name;G.add(m)});
+ G.userData={schemaVersion:1,partType:'hair',coordinateSystem:{up:'Y',forward:'Z',unit:'meter'},anchors:{headRoot:[HXF.C[0],HXF.C[1],HXF.C[2]],neckBase:null,neckTop:null,hairRoot:HXF.top,garmentRoot:null},rig:{skeletonType:null,boneMapping:{}},source:{application:'Hair Studio',version:'2',headModel:HXF.name},hairstyle:CFG.style,triangles:tris};
+ return{G,tris}}
+function refreshBake(){if(BAKE.group){scene.remove(BAKE.group);BAKE.group.traverse(o=>{if(o.geometry)o.geometry.dispose()});BAKE.group=null}
+ for(const id of PIDS)if(PM[id]&&PM[id].mesh)PM[id].mesh.visible=!BAKE.on;
+ if(BAKE.on){const{G,tris}=bakedGroup(BAKE.budget);BAKE.group=G;BAKE.tris=tris;scene.add(G);if($('bakeInfo'))$('bakeInfo').textContent=`焼き込み後：約 ${tris.toLocaleString()} 三角形`}}
+/* --- 無圧縮zip（GLBは downloads の許可拡張子に無いため zip に入れて渡す）--- */
+const CRCT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+const crc32=u=>{let c=~0;for(let i=0;i<u.length;i++)c=CRCT[(c^u[i])&255]^(c>>>8);return~c>>>0};
+function makeZip(files){const enc=new TextEncoder(),chunks=[],cen=[];let off=0;
+ for(const[name,data]of files){const nb=enc.encode(name),crc=crc32(data),h=new DataView(new ArrayBuffer(30));
+  h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);h.setUint32(14,crc,true);h.setUint32(18,data.length,true);h.setUint32(22,data.length,true);h.setUint16(26,nb.length,true);
+  chunks.push(new Uint8Array(h.buffer),nb,data);
+  const c=new DataView(new ArrayBuffer(46));c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x0800,true);c.setUint32(16,crc,true);c.setUint32(20,data.length,true);c.setUint32(24,data.length,true);c.setUint16(28,nb.length,true);c.setUint32(42,off,true);
+  cen.push(new Uint8Array(c.buffer),nb);off+=30+nb.length+data.length}
+ const csz=cen.reduce((a,b)=>a+b.length,0),e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,csz,true);e.setUint32(16,off,true);
+ return new Blob([...chunks,...cen,new Uint8Array(e.buffer)],{type:'application/zip'})}
+async function exportHairGLB(){const st=$('bakeInfo');try{
+  const dl=await claude.use('downloads');if(!dl){st.textContent='この表示では保存できません（ページを claude.ai で開いてください）';return}
+  if(typeof THREE.GLTFExporter!=='function'){st.textContent='GLB出力ライブラリを読み込めませんでした';return}
+  st.textContent='焼き込み中…';await new Promise(r=>setTimeout(r,30));
+  const{G,tris}=bakedGroup(BAKE.budget),buf=await new Promise((ok,ng)=>new THREE.GLTFExporter().parse(G,ok,{binary:true,onlyVisible:false,includeCustomExtensions:false}));
+  G.traverse(o=>{if(o.geometry)o.geometry.dispose()});
+  const zip=makeZip([['hair.glb',new Uint8Array(buf)],['hair-settings.json',new TextEncoder().encode(exportCfg())]]);
+  st.textContent=`出力：${tris.toLocaleString()} 三角形／GLB ${(buf.byteLength/1e6).toFixed(1)}MB`;
+  await dl.save({filename:'hair-studio-export.zip',data:zip})}
+ catch(e){st.textContent=e&&e.code==='declined'?'保存をキャンセルしました':'書き出しに失敗：'+((e&&e.message)||e)}}
+const exportUI=document.createElement('div');exportUI.id='exportUI';document.body.appendChild(exportUI);
+(function(){const mk=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e};
+ const lb=mk('label');lb.textContent='ポリゴン予算（出力）';const se=mk('select');[[50000,'5万三角形（軽量）'],[100000,'10万三角形（標準）'],[200000,'20万三角形（高め）']].forEach(([v,t])=>{const o=mk('option');o.value=v;o.textContent=t;se.appendChild(o)});se.value=100000;
+ se.onchange=()=>{BAKE.budget=+se.value;if(BAKE.on)refreshBake()};
+ const r1=mk('div','row'),cb=mk('input');cb.type='checkbox';cb.onchange=()=>{BAKE.on=cb.checked;refreshBake()};r1.append(cb,'焼き込み後の見た目でプレビュー');
+ const info=mk('div','sub');info.id='bakeInfo';info.textContent='GLBは頭部モデルと同じ原点・メートル単位で出力します';
+ const r2=mk('div','row'),bt=mk('button');bt.textContent='焼き込みGLBを書き出す（zip）';bt.onclick=exportHairGLB;r2.appendChild(bt);
+ exportUI.append(lb,se,r1,r2,info)})();
+
 let xt=0;
-renderParts();
+/* ===== 髪型プリセット（共通生成器へのパラメータ束）。前髪は変更しない ===== */
+const HD=o=>({...HDEF,...o}),FLY={flyaways:{dens:.6}};
+const OFF={tie:{enabled:false},ponytail:{enabled:false},back_upper:{enabled:false},back_lower:{enabled:false}};
+const STYLES={
+ default:{name:'初期（ロング後ろ結い）',g:{tie:1.35,tph:0,tilt:.18,tw:.15,len:3.4,wave:.8,vol:1},parts:{}},
+ long_straight_black:{name:'黒髪ストレートロング',color:'#151515',g:{wave:0,vol:.95},parts:{...OFF,...FLY,
+  base:{mode:'hang',hang:HD({L:3.7,lean:.08,drift:.2})},back:{mode:'hang',hang:HD({L:3.95,lean:.08,drift:.22})},nape:{mode:'hang',hang:HD({L:3.95,exit:1.9,lean:.06,drift:.2})},
+  side_left:{len:1.7,preset:'straight'},side_right:{len:1.7,preset:'straight'}}},
+ medium_inward:{name:'内巻きミディアム',g:{wave:.2,vol:1.05},parts:{...OFF,...FLY,
+  base:{mode:'hang',hang:HD({L:1.85,lean:.14,drift:.32,curl:50})},back:{mode:'hang',hang:HD({L:1.95,lean:.14,drift:.34,curl:52})},nape:{mode:'hang',hang:HD({L:1.7,exit:1.9,lean:.12,drift:.3,curl:45})},
+  side_left:{len:1.15,preset:'inward'},side_right:{len:1.15,preset:'inward'}}},
+ natural_bob:{name:'ナチュラルボブ',g:{wave:.15,vol:1.15},parts:{...OFF,...FLY,
+  base:{mode:'hang',vol:1.1,hang:HD({L:1.15,front:.5,lean:.32,drift:.85,curl:38,layer:.14})},back:{mode:'hang',vol:1.15,hang:HD({L:1.15,front:.5,lean:.34,drift:.9,curl:40,layer:.16})},
+  nape:{mode:'hang',hang:HD({L:1.0,exit:2,lean:.2,drift:.5,curl:30})},side_left:{len:.75,preset:'rounded_inward'},side_right:{len:.75,preset:'rounded_inward'}}},
+ long_half_up:{name:'ロングハーフアップ',g:{tie:1,tph:0,tilt:.06,tw:.11,len:3,wave:.3,vol:1.05},parts:{...FLY,back:{enabled:false},
+  base:{mode:'tie',roots:{dMin:0,dMax:2,thMin:0,thMax:1.2}},back_upper:{enabled:true,mode:'tie'},
+  back_lower:{enabled:true,mode:'hang',hang:HD({L:3.7,lean:.08,drift:.25})},nape:{mode:'hang',hang:HD({L:3.7,exit:1.9,lean:.06,drift:.22})},
+  side_left:{len:.6,preset:'straight'},side_right:{len:.6,preset:'straight'}}}};
+CFG.style='default';
+function applyStyle(id){const st=STYLES[id];if(!st)return;applying=true;
+ try{PIDS.forEach(pid=>{if(pid!=='bangs')CFG.parts[pid]=fixPart(Object.assign(newPart(pid),(st.parts||{})[pid]||{}),pid)});
+  Object.entries(st.g||{}).forEach(([k,v])=>{const e=$(k);e.value=v;e.dispatchEvent(new Event('input'))});
+  if(st.color){$('col').value=st.color;applyColor()}CFG.style=id;CFG.base=id;syncStyleUI();renderParts();rebuild()}
+ catch(e){console.error(e)}applying=false}
+function syncStyleUI(){const s=$('style');if(!s)return;const c=s.querySelector('option[value=custom]');c.textContent='カスタム'+(CFG.base&&STYLES[CFG.base]?'（'+STYLES[CFG.base].name+'から変更）':'');s.value=CFG.style}
+function initStyleUI(){const row=document.createElement('div'),lb=document.createElement('label'),s=document.createElement('select');s.id='style';lb.textContent='髪型プリセット';
+ Object.keys(STYLES).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=STYLES[k].name;s.appendChild(o)});
+ const c=document.createElement('option');c.value='custom';c.textContent='カスタム';c.hidden=true;s.appendChild(c);s.onchange=()=>{if(s.value!=='custom')applyStyle(s.value)};
+ const b=document.createElement('button');b.textContent='初期値に戻す';b.style.marginTop='6px';b.onclick=()=>applyStyle(CFG.base||'default');
+ row.append(lb,s,b);document.querySelector('#panel .sub').after(row);syncStyleUI()}
+renderParts();initStyleUI();
 
 /* ---------- うなじ（後頭部〜首元）---------- */
 const limF=(d,nd,nw)=>1+.55*sm(.2,1.6,d)+Math.max(0,nd-1.55)*sm(Math.PI-nw,Math.PI-nw*.35,d);
@@ -311,7 +432,7 @@ function buildTab(pos,C,s){const T=new Float32Array(TNT*TNP);
 function loadHead(buf){new THREE.GLTFLoader().parse(buf,'',g=>{
  try{const root=g.scene;let head=null;root.traverse(o=>{if(o.isMesh&&(!head||o.name==='Head'))head=o});
   head.geometry.computeBoundingBox();const bb=head.geometry.boundingBox,h=bb.max.y-bb.min.y,s=2.97/h,C=[0,bb.min.y+.556*h,bb.min.z+.46*(bb.max.z-bb.min.z)];
-  TAB=buildTab(head.geometry.attributes.position,C,s);TABV++;
+  TAB=buildTab(head.geometry.attributes.position,C,s);TABV++;HXF.C=C;HXF.s=s;HXF.top=[0,bb.max.y,0];HXF.name=head.name||'head';
   if(headGrp)scene.remove(headGrp);headGrp=root;root.scale.setScalar(s);root.position.set(-C[0]*s,-C[1]*s,-C[2]*s);
   root.traverse(o=>{if(o.isMesh&&o.material){const m=o.material;if(m.map){m.map.encoding=THREE.LinearEncoding;m.map.needsUpdate=true}m.metalness=0;m.roughness=.65;m.needsUpdate=true}});
   scene.add(root);MAN.forEach(o=>{if(o!==capA&&o!==capB&&o!==torso)o.visible=false});
@@ -322,7 +443,7 @@ function applyColor(){const c=new THREE.Color($('col').value);hairMat.uniforms.u
  hairMat.uniforms.uTip.value.copy(c).multiplyScalar(1.25).lerp(new THREE.Color(1,.95,.85),.12);capMat.color.copy(c).multiplyScalar(.3)}
 
 /* ---------- UI ---------- */
-let tm;const rebuild=()=>{clearTimeout(tm);$('stat').textContent='生成中…';tm=setTimeout(build,60)};
+let tm;const rebuild=()=>{if(!applying&&CFG.style&&CFG.style!=='custom'){CFG.style='custom';syncStyleUI()}clearTimeout(tm);$('stat').textContent='生成中…';tm=setTimeout(build,60)};
 const fmt={tph:v=>(+v).toFixed(2),tw:v=>(+v).toFixed(3),tilt:v=>(+v).toFixed(2),nd:v=>(+v).toFixed(2),nw:v=>(+v).toFixed(2),ndn:v=>(+v).toFixed(2),bp:v=>(+v).toFixed(2),bs:v=>(+v).toFixed(2),bl:v=>(+v).toFixed(2),bd:v=>(+v).toFixed(2),sl:v=>(+v).toFixed(2),sd:v=>(+v).toFixed(2),len:v=>(+v).toFixed(2),tie:v=>(+v).toFixed(2),vol:v=>(+v).toFixed(2),wave:v=>(+v).toFixed(2),fly:v=>(+v).toFixed(2),w:v=>(+v).toFixed(4),g:v=>v};
 for(const id of ['len','tie','vol','wave','fly','bl','bd','sl','sd','tw','tilt','tph','nd','nw','ndn','bp','bs']){$(id).oninput=()=>{$('v_'+id).textContent=fmt[id]($(id).value);rebuild()};$('v_'+id).textContent=fmt[id]($(id).value)}
 $('w').oninput=e=>{hairMat.uniforms.uW.value=+e.target.value;$('v_w').textContent=fmt.w(e.target.value)};
@@ -351,13 +472,15 @@ const TREE=[
  ['髪パーツ',[['個別設定',[['対象パーツ',['#parts']]]]]],
  ['表示',[
   ['視点',[['カメラ',['view']]]],
-  ['生成・モデル',[['操作',['rs']],['頭部モデル',['glb']]]]]]
+  ['生成・モデル',[['操作',['rs']],['頭部モデル',['glb']]]],
+  ['書き出し',[['焼き込みGLB',['#export']]]]]]
 ];
 function organizeUI(){
  const stat=$('stat');
  $('panel').querySelectorAll('.sub[style]').forEach(e=>e.remove());
  const nodesOf=id=>{
   if(id==='#parts')return[$('partsUI')];
+  if(id==='#export')return[$('exportUI')];
   if(id==='view')return[document.querySelector('[data-v]').closest('.row')];
   const el=$(id);
   if(el.tagName==='SELECT'||el.type==='range')return[el.previousElementSibling,el];
