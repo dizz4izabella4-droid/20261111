@@ -1,24 +1,43 @@
-<div id="app">
+<div id="app" data-sheet="half">
+  <header id="bar">
+    <div id="brand"><h1>仕立て屋</h1><span class="sub pc-only">素体に合わせて衣装を作る</span><span id="doc-name" class="pc-only"></span></div>
+    <div id="bar-tools">
+      <button type="button" id="open" class="pc-only" title="型を開く（Ctrl+O）">型を開く</button>
+      <button type="button" id="save" class="pc-only" title="型を保存（Ctrl+S）">型を保存</button>
+      <button type="button" id="undo" disabled title="元に戻す（Ctrl+Z）" aria-label="元に戻す"><span class="pc-only">元に戻す</span><span class="phone-only" aria-hidden="true">↶</span></button>
+      <button type="button" id="redo" disabled title="やり直す（Ctrl+Y）" aria-label="やり直す"><span class="pc-only">やり直す</span><span class="phone-only" aria-hidden="true">↷</span></button>
+      <button type="button" id="open-export" class="primary phone-only" aria-haspopup="dialog">書き出し</button>
+    </div>
+  </header>
+  <nav id="tabs" role="tablist" aria-label="部品"></nav>
   <main id="viewport">
     <div class="overlay" id="views"></div>
     <div class="overlay" id="looks"></div>
-    <div id="progress" role="status" hidden><span></span><div class="bar"><i></i></div></div>
+    <button type="button" id="looks-toggle" class="phone-only" aria-expanded="false" aria-controls="looks">表示</button>
+    <div id="progress" role="status" hidden><span></span><div class="bar"><i></i></div><button type="button" id="retry" hidden>もう一度作る</button></div>
   </main>
   <aside id="panel">
-    <header><h1>仕立て屋</h1><span>素体に合わせて衣装を作る</span></header>
-    <div id="tabs" role="tablist" aria-label="部品"></div>
+    <button type="button" id="grip" class="phone-only" aria-label="設定欄の高さを変える"><i></i></button>
+    <h2 id="sheet-name" class="pc-only"></h2>
     <div id="sheet"></div>
+    <div id="status" role="status">読み込んでいます…</div>
     <div id="actions">
-      <div id="status" role="status">読み込んでいます…</div>
       <div id="output">
         <label>書き出す内容<select id="out-body"><option value="body">身体と衣装（傀儡用）</option><option value="cloth">衣装だけ（アッセンブル！用）</option></select></label>
         <label class="check"><input type="checkbox" id="out-extra"><span>靴・帽子を含める</span></label>
       </div>
-      <button type="button" id="undo" disabled>元に戻す</button>
       <button type="button" id="finish" disabled>仕上げる</button>
       <button type="button" id="export" class="primary" disabled>GLB書き出し<span class="wide">（身体つき）</span></button>
     </div>
   </aside>
+</div>
+<div id="drawer" hidden>
+  <div id="drawer-back"></div>
+  <div id="drawer-box" role="dialog" aria-modal="true" aria-label="書き出し">
+    <div class="drawer-head"><b>書き出し</b><button type="button" id="drawer-close">閉じる</button></div>
+    <div id="drawer-body"></div>
+    <p class="note">「仕上げる」は細かい網目で作り直します。「GLB書き出し」は、仕上げてから保存します。</p>
+  </div>
 </div>
 <input type="file" id="open-design" accept=".json,application/json" hidden>
 <input type="file" id="open-body" accept=".glb,model/gltf-binary" hidden>

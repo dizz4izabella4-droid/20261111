@@ -6,55 +6,109 @@ import {parseBody} from './body.js';
 import {makeSkinner,buildMeshes,exportGLB,countTriangles,MATERIALS} from './mesh.js';
 import {PRESETS,COLOR_SETS,colorsOf,RANGES,CHOICES,sanitize} from './design.js';
 import {plan,STEP_LABEL} from './garments.js';
+import {createEngine} from './engine.js';
 import {zipOne} from './zip.js';
 
 const $=id=>document.getElementById(id);
 const el=(tag,props={},...kids)=>{const e=document.createElement(tag);for(const[k,v]of Object.entries(props)){if(k==='class')e.className=v;else if(k.startsWith('on'))e[k]=v;else if(k in e&&typeof v!=='string')e[k]=v;else e.setAttribute(k,v);}e.append(...kids.filter(c=>c!=null));return e;};
 const copy=o=>JSON.parse(JSON.stringify(o));
-const STORE='shitateya.design.v1',STORE_OUT='shitateya.export.v1';
+const STORE='shitateya.design.v1',STORE_OUT='shitateya.export.v1',STORE_UI='shitateya.ui.v1';
 const load=()=>{try{const s=localStorage.getItem(STORE);return s?sanitize(JSON.parse(s)):null;}catch{return null;}};
 const store=()=>{try{localStorage.setItem(STORE,JSON.stringify(design));}catch{}};
 
-let design=load()||PRESETS[0](),history=[],committed=copy(design),tab='design';
+let design=load()||PRESETS[0](),history=[],future=[],committed=copy(design),tab='design';
+// 画面の種類。ふだんは画面の大きさと操作方法で自動に選ぶ
+const phoneQuery=matchMedia('(max-width:760px),(max-height:520px) and (pointer:coarse),(orientation:portrait) and (max-width:900px)');
+const touch=matchMedia('(pointer:coarse)').matches;
+let uiChoice='auto',phone=false;
+try{const s=localStorage.getItem(STORE_UI);if(s==='phone'||s==='pc')uiChoice=s;}catch{}
 // 書き出しの内容。型ではなく、この端末の設定として覚える
 const output={withBody:true,shoesHat:true};
 try{const s=JSON.parse(localStorage.getItem(STORE_OUT)||'{}');for(const k in output)if(typeof s[k]==='boolean')output[k]=s[k];}catch{}
 const storeOutput=()=>{try{localStorage.setItem(STORE_OUT,JSON.stringify(output));}catch{}};
 let bodyName='内蔵の女性素体';
 let body=null,skinner=null,bodyIsBuiltIn=true,parts=null,shown=null,meshes=[],meshCache=new WeakMap();
-let worker=null,job=0,running=null,wantExport=false,lastFile=null;
+let engine=null,bodyBytes=null,job=0,running=null,wantExport=false,lastFile=null;
 
 function status(text,warn=false){$('status').textContent=text;$('status').classList.toggle('warn',warn);}
 const shapeKey=d=>plan(d).map(s=>s.id+JSON.stringify(s.key)).join(';');
 const isCurrent=q=>shown&&shown.shape===shapeKey(design)&&(!q||shown.quality===q);
 
-// ---------- 裏の計算 ----------
-const workerSource=()=>$('worker-src').textContent;
-function startWorker(){
-  if(worker)worker.terminate();
-  worker=new Worker(URL.createObjectURL(new Blob([workerSource()],{type:'text/javascript'})));
-  worker.onmessage=e=>{const m=e.data;if(m.job!==job||!running)return;
-    if(m.type==='progress'){showProgress(m.value,m.step);return;}
-    if(m.type==='error'){running=null;wantExport=false;hideProgress();status('服を作れませんでした：'+m.message,true);refreshActions();return;}
-    const{shape}=running;running=null;hideProgress();parts=m.parts;meshCache=new WeakMap();shown={shape,quality:m.quality};
-    redraw();refreshActions();
-    if(wantExport&&isCurrent('fine')){wantExport=false;saveGLB();}};
-  worker.onerror=e=>{running=null;wantExport=false;hideProgress();status('計算の準備に失敗しました：'+(e.message||'原因不明'),true);refreshActions();};
+// ---------- 服の計算 ----------
+// ふだんは裏（Worker）で計算する。裏が起動しない・止まる・返事がないときは、画面側で同じ計算をする
+const READY_LIMIT=12000,QUIET_NOTE=12000,SILENT_LIMIT=40000;
+let localOnly=false,progress={value:0,step:null},started=0,heard=0,ticked=0,beat=0,failedQuality='draft';
+function workerEngine(){
+  let w;
+  try{w=new Worker(URL.createObjectURL(new Blob([$('worker-src').textContent],{type:'text/javascript'})));}catch{return null;}
+  let ready=false;
+  const me={local:false,send:m=>w.postMessage(m),stop(){clearTimeout(timer);w.onmessage=w.onerror=null;w.terminate();}};
+  const timer=setTimeout(()=>{if(engine===me&&!ready)fallBack();},READY_LIMIT);
+  w.onmessage=e=>{ready=true;clearTimeout(timer);if(e.data.type!=='ready')receive(e.data);};
+  w.onerror=e=>{e.preventDefault();if(engine===me)fallBack();};
+  return me;
+}
+function localEngine(){
+  localOnly=true;let alive=true;
+  const handle=createEngine(m=>setTimeout(()=>{if(alive)receive(m);},0));
+  // 少し待ってから始め、進み具合の表示が先に描かれるようにする
+  return{local:true,send:m=>setTimeout(()=>{if(alive)handle(m);},30),stop(){alive=false;handle({type:'cancel',job:-1});}};
+}
+function startEngine(){
+  engine?.stop();
+  engine=(!localOnly&&workerEngine())||localEngine();
+  engine.send({type:'body',bytes:bodyBytes});
+}
+function fallBack(){
+  localOnly=true;startEngine();
+  if(running){const{quality}=running;running=null;run(quality);}
+}
+function receive(m){
+  if(m.job!==job||!running)return;
+  heard=Date.now();
+  if(m.type==='progress'){progress={value:m.value,step:m.step};paintProgress();return;}
+  if(m.type==='error'){fail('服を作れませんでした：'+m.message);return;}
+  const{shape}=running;running=null;hideProgress();parts=m.parts;meshCache=new WeakMap();shown={shape,quality:m.quality};
+  redraw();refreshActions();
+  if(wantExport&&isCurrent('fine')){wantExport=false;saveGLB();}
+}
+function watch(){ // 1 秒ごと。経過時間を表示し、返事がないままなら画面側の計算に切り替える
+  const now=Date.now();
+  if(document.hidden||now-ticked>4000)heard=now; // 画面を閉じていた時間は数えない
+  ticked=now;
+  if(!running){clearInterval(beat);beat=0;return;}
+  if(!engine.local&&now-heard>SILENT_LIMIT){fallBack();return;}
+  paintProgress();
 }
 function run(quality){
   if(!body)return;
   const shape=shapeKey(design);
   if(running&&running.shape===shape&&running.quality===quality)return;
-  job++;running={shape,quality};showProgress(0,null);refreshActions();
-  worker.postMessage({type:'run',job,design,quality});
+  job++;running={shape,quality};progress={value:0,step:null};started=heard=ticked=Date.now();
+  if(!beat)beat=setInterval(watch,1000);
+  paintProgress();refreshActions();
+  engine.send({type:'run',job,design:copy(design),quality,light:phone||touch});
 }
-function showProgress(v,step){const p=$('progress');p.hidden=false;p.querySelector('span').textContent=(running&&running.quality==='fine'?'仕上げ中':'下書き作成中')+'：'+(step?STEP_LABEL[step]:'素体を測っています');p.querySelector('i').style.width=Math.round(v*100)+'%';}
-function hideProgress(){$('progress').hidden=true;}
+function paintProgress(){
+  if(!running)return;
+  const p=$('progress'),now=Date.now(),secs=Math.floor((now-started)/1000);
+  p.hidden=false;p.classList.remove('failed');$('retry').hidden=true;
+  p.querySelector('span').textContent=(running.quality==='fine'?'仕上げ中':'下書き作成中')+'：'+(progress.step?STEP_LABEL[progress.step]:'素体を測っています')+' '+Math.round(progress.value*100)+'%'+(secs>=5?`（${secs}秒）`:'')+(!engine.local&&now-heard>QUIET_NOTE?'　返事を待っています':'');
+  p.querySelector('i').style.width=Math.round(progress.value*100)+'%';
+}
+function hideProgress(){const p=$('progress');p.hidden=true;p.classList.remove('failed');$('retry').hidden=true;}
+function fail(message){
+  failedQuality=running?running.quality:'draft';running=null;wantExport=false;
+  const p=$('progress');p.hidden=false;p.classList.add('failed');p.querySelector('span').textContent=message;$('retry').hidden=false;
+  refreshActions();status(message,true);
+}
+$('retry').onclick=()=>{startEngine();run(failedQuality);};
 function refreshActions(){
   $('finish').disabled=!body||!!(running&&running.quality==='fine')||isCurrent('fine');
   $('export').disabled=!body||wantExport;
   $('undo').disabled=!history.length;
-  if(running){status(wantExport?'書き出し用に仕上げています。終わると保存します。':running.quality==='fine'?'仕上げています。細かい網目で計算するので、少し時間がかかります。':'下書きを作っています。');return;}
+  $('redo').disabled=!future.length;
+  if(running){status((wantExport?'書き出し用に仕上げています。終わると保存します。':running.quality==='fine'?'仕上げています。細かい網目で計算するので、少し時間がかかります。':'下書きを作っています。')+(engine.local?'（この環境では、計算中は画面の動きが重くなります）':''));return;}
   if(!shown||!meshes.length)return;
   status(`${shown.quality==='fine'?'仕上げ表示':'下書き表示'}　服 ${countTriangles(meshes).toLocaleString('ja-JP')} 三角形`);
 }
@@ -62,25 +116,51 @@ function refreshActions(){
 // ---------- 設定の変更 ----------
 function commit(){ // つまみを離したときなど、変更を確定する
   if(JSON.stringify(design)===JSON.stringify(committed))return;
-  history.push(committed);if(history.length>60)history.shift();committed=copy(design);store();
+  history.push(committed);if(history.length>60)history.shift();future=[];committed=copy(design);store();
   sync();renderTabs();
 }
 function sync(){ // 形が変わっていたら作り直す
   const shape=shapeKey(design);
-  if(running&&running.shape!==shape){wantExport=false;if(isCurrent()){worker.postMessage({type:'cancel',job:++job});running=null;hideProgress();}else run('draft');}
+  if(running&&running.shape!==shape){wantExport=false;if(isCurrent()){engine.send({type:'cancel',job:++job});running=null;hideProgress();}else run('draft');}
   else if(!running&&!isCurrent()){wantExport=false;run('draft');}
   refreshActions();
 }
 function replaceDesign(next){design=sanitize(next);renderSheet();redraw();commit();}
+function travel(from,to){ // 元に戻す・やり直す
+  if(!from.length)return;to.push(committed);design=from.pop();committed=copy(design);store();renderTabs();renderSheet();redraw();sync();
+}
+const undo=()=>travel(history,future),redo=()=>travel(future,history);
 let drawQueued=false;
 function queueDraw(){if(drawQueued)return;drawQueued=true;requestAnimationFrame(()=>{drawQueued=false;redraw();});}
 
 // ---------- 設定の画面 ----------
 const TABS=[['design','型・素体'],['top','上衣'],['vest','胴着'],['sleeve','袖'],['bracer','腕当て'],['glove','手袋'],['pants','ズボン'],['skirt','スカート'],['tabard','前掛け'],['sash','帯'],['shoes','靴'],['cape','マント'],['hood','フード'],['hat','帽子'],['color','色・縁']];
 const worn=id=>id==='sleeve'?design.sleeve.type!=='none':id==='hood'?design.cape.on&&design.hood.on:design[id]&&'on'in design[id]?design[id].on:true;
+const wearable=id=>!['design','top','color'].includes(id);
+let lastSleeve='bell';
+function setWorn(id,on){ // PC の部品一覧から、着る・脱ぐを切り替える
+  if(id==='sleeve'){if(!on&&design.sleeve.type!=='none')lastSleeve=design.sleeve.type;design.sleeve.type=on?lastSleeve:'none';}
+  else design[id].on=on;
+  tab=id;renderSheet();commit();renderTabs();
+}
+function pickTab(id){
+  if(phone){const open=$('app').dataset.sheet!=='closed';
+    if(tab===id&&open){setSheet('closed');return;}
+    if(!open)setSheet('half');}
+  tab=id;renderTabs();renderSheet();$('sheet').scrollTop=0;
+}
 function renderTabs(){
-  $('tabs').replaceChildren(...TABS.map(([id,label])=>el('button',{type:'button',role:'tab','aria-selected':String(tab===id),class:worn(id)?'':'off',onclick:()=>{tab=id;renderTabs();renderSheet();$('sheet').scrollTop=0;}},label)));
+  const held=document.activeElement?.closest('#tabs')?document.activeElement.getAttribute('data-id'):null,heldBox=document.activeElement?.type==='checkbox';
+  $('tabs').replaceChildren(...TABS.map(([id,label])=>{
+    const b=el('button',{type:'button',role:'tab','aria-selected':String(tab===id),class:worn(id)?'':'off','data-id':id,onclick:()=>pickTab(id)},label);
+    if(phone)return b;
+    if(!wearable(id))return el('div',{class:'part'},el('span'),b);
+    const c=el('input',{type:'checkbox','aria-label':label+'を着ける',title:'着る・脱ぐ','data-id':id,disabled:id==='hood'&&!design.cape.on});c.checked=worn(id);c.onchange=()=>setWorn(id,c.checked);
+    return el('div',{class:'part'},c,b);
+  }));
+  if(held)$('tabs').querySelector(`${heldBox?'input':'button'}[data-id="${held}"]`)?.focus({preventScroll:true});
   $('tabs').querySelector('[aria-selected="true"]')?.scrollIntoView({block:'nearest',inline:'nearest'});
+  $('sheet-name').textContent=TABS.find(t=>t[0]===tab)[1];$('doc-name').textContent=design.name;
 }
 const k=()=>body?body.H/1.533:1;
 const cm=v=>(v*k()*100).toFixed(v<0.02?1:0)+' cm', pct=v=>Math.round(v*100)+' %';
@@ -89,11 +169,18 @@ function slider(group,key,label,format,step,disabled=false){
   const input=el('input',{type:'range',min:String(min),max:String(max),step:String(step),'aria-label':label,disabled});input.value=design[group][key];
   input.oninput=()=>{design[group][key]=+input.value;out.textContent=format(+input.value);if(group==='trim')queueDraw();};
   input.onchange=commit;
-  return el('div',{class:'field'+(disabled?' dim':'')},el('span',{},label),input,out);
+  const dim=disabled?' dim':'';
+  if(!phone)return el('div',{class:'field'+dim},el('span',{},label),input,out);
+  // スマホは指で細かく合わせにくいので、1 段ずつ動かすボタンを付ける
+  const nudge=d=>{input.value=Math.min(max,Math.max(min,+input.value+d*step));input.oninput();commit();};
+  return el('div',{class:'field slide'+dim},el('span',{},label),out,el('div',{class:'nudge'},button('−',()=>nudge(-1),{'aria-label':label+'を減らす',disabled}),input,button('＋',()=>nudge(1),{'aria-label':label+'を増やす',disabled})));
 }
 function select(group,key,label,options=CHOICES[group][key]){
+  const pick=v=>{design[group][key]=v;renderSheet();commit();};
+  // スマホは選択肢を並べて、1 回のタップで選べるようにする
+  if(phone)return el('div',{class:'field choices',role:'group','aria-label':label},el('span',{},label),el('div',{class:'choice-row'},...options.map(([v,t])=>button(t,()=>pick(v),{'aria-pressed':String(design[group][key]===v)}))));
   const s=el('select',{'aria-label':label},...options.map(([v,t])=>el('option',{value:v},t)));s.value=design[group][key];
-  s.onchange=()=>{design[group][key]=s.value;renderSheet();commit();};
+  s.onchange=()=>pick(s.value);
   return el('div',{class:'field'},el('span',{},label),s);
 }
 function check(group,key,label,cls='',disabled=false){
@@ -111,7 +198,9 @@ const SHEETS={
     return[heading('見本の型'),row(...PRESETS.map(p=>{const d=p();return button(d.name,()=>replaceDesign(d));})),note('見本を選ぶと今の設定が置き換わります。「元に戻す」で戻せます。'),
       heading('この型'),row(name),row(button('型を保存',saveDesign),button('型を開く',()=>$('open-design').click())),note('型（部品・寸法・色の設定）は、このブラウザにも自動で残ります。別の端末へ移すときは保存してください。'),
       heading('素体'),row(button('内蔵の女性素体',()=>useBuiltIn(),{'aria-pressed':String(bodyIsBuiltIn)}),button('素体GLBを開く',()=>$('open-body').click(),{'aria-pressed':String(!bodyIsBuiltIn)})),
-      note('女性素体に合わせて調整しています。スペアボディの「傀儡用に書き出す（GLB）」で作った素体も開けますが、体型が大きく違うと服がずれることがあります。'+(body?`　今の素体：身長 ${(body.H*100).toFixed(1)} cm`:''))];
+      note('女性素体に合わせて調整しています。スペアボディの「傀儡用に書き出す（GLB）」で作った素体も開けますが、体型が大きく違うと服がずれることがあります。'+(body?`　今の素体：身長 ${(body.H*100).toFixed(1)} cm`:'')),
+      heading('画面'),row(...[['auto','自動'],['phone','スマホ用'],['pc','PC用']].map(([v,t])=>button(t,()=>chooseUI(v),{'aria-pressed':String(uiChoice===v)}))),
+      note(phone?'指1本で回し、2本で拡大・移動します。下の取っ手を上下に動かすと、設定欄の高さが変わります。':'ドラッグで回し、ホイールで拡大、右ドラッグで移動します。Ctrl+Z 元に戻す・Ctrl+Y やり直す・Ctrl+S 型を保存・Ctrl+O 型を開く・数字キー 1〜4 向き・5 上半身。')];
   },
   top(){return[select('top','neck','襟の形'),slider('top','depth','開きの深さ',cm,0.002),slider('top','ease','ゆとり',cm,0.0005),note('上衣は常に着ます。上衣を変えると、下の部品もすべて作り直します。')];},
   vest(){const{on,type}=design.vest;return[check('vest','on','胴着を着ける','wear'),...(on?[select('vest','type','形'),slider('vest','size',type==='corset'?'高さ':'丈',pct,0.01)]:[])];},
@@ -159,13 +248,20 @@ try{
   for(const[name,m]of Object.entries(MATERIALS))materials[name]=new THREE.MeshStandardMaterial({vertexColors:true,metalness:m.metallic,roughness:m.roughness,side:m.doubleSided?THREE.DoubleSide:THREE.FrontSide});
 }catch(err){renderer=null;stage.append(el('p',{class:'note',style:'position:absolute;inset:60px 16px auto'},'この環境では3D表示ができません。書き出しは使えます。'));}
 
-let view={az:25,zoom:'全身'};
+let view={az:25,zoom:'全身'},placed=false;
 function aim(){
   if(!renderer)return;const H=body?body.H:1.53,upper=view.zoom==='上半身',t=Math.tan(13*Math.PI/180);
-  const small=stage.clientHeight<520,half=upper?0.27*H*(small?1.2:1):H*(small?0.66:0.6),wide=upper?0.25*H:0.46*H,dist=Math.max(half/t,wide/(t*camera.aspect)),target=upper?0.73*H:0.49*H,r=view.az*Math.PI/180;
-  camera.position.set(Math.sin(r)*dist,target+dist*0.06,Math.cos(r)*dist);controls.target.set(0,target,0);controls.update();
+  const small=stage.clientHeight<520,wide=upper?0.25*H:0.46*H,r=view.az*Math.PI/180;
+  let half=upper?0.27*H*(small?1.2:1):H*(small?0.66:0.6),target=upper?0.73*H:0.49*H;
+  if(phone){ // 上に並ぶ向きのボタンの下に、頭（帽子）から足まで収める
+    const h=stage.clientHeight,top=52,[low,high]=upper?[0.56,1.1]:[-0.05,1.13],each=(high-low)*H/Math.max(60,h-top);
+    half=h/2*each;target=high*H-(h/2-top)*each;}
+  const dist=Math.max(half/t,wide/(t*camera.aspect));
+  camera.position.set(Math.sin(r)*dist,target+dist*(phone?0.03:0.06),Math.cos(r)*dist);controls.target.set(0,target,0);controls.update();placed=true;
 }
-if(renderer){new ResizeObserver(()=>{const w=stage.clientWidth,h=stage.clientHeight;if(!w||!h)return;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();aim();}).observe(stage);}
+if(renderer){new ResizeObserver(()=>{const w=stage.clientWidth,h=stage.clientHeight;if(!w||!h)return;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();
+  if(placed)view.az=Math.atan2(camera.position.x-controls.target.x,camera.position.z-controls.target.z)*180/Math.PI; // 欄の高さを変えても向きは保つ
+  aim();}).observe(stage);}
 
 async function showBodyModel(bytes){
   if(!renderer)return;
@@ -201,7 +297,8 @@ function applyPose(now){
 }
 if(renderer){
   const views=[['正面',0],['斜め',35],['横',90],['後ろ',180]];
-  $('views').append(...views.map(([t,a])=>button(t,()=>{view.az=a;aim();})),button('上半身',e=>{view.zoom=view.zoom==='全身'?'上半身':'全身';e.currentTarget.setAttribute('aria-pressed',String(view.zoom==='上半身'));aim();},{'aria-pressed':'false'}));
+  $('views').append(...views.map(([t,a],n)=>button(t,()=>{view.az=a;aim();},{title:t+'（'+(n+1)+'）'})),button('上半身',e=>{view.zoom=view.zoom==='全身'?'上半身':'全身';e.currentTarget.setAttribute('aria-pressed',String(view.zoom==='上半身'));aim();},{'aria-pressed':'false',title:'上半身（5）'}));
+  renderer.domElement.addEventListener('pointerdown',()=>showLooks(false));
   const poses=el('select',{'aria-label':'ポーズ'},...['立ち姿','歩く','腕を上げる','ひねる'].map(t=>el('option',{value:t},t)));poses.onchange=()=>{pose=poses.value;poseStart=performance.now();};
   const toggle=(label,get,set)=>button(label,e=>{set(!get());e.currentTarget.setAttribute('aria-pressed',String(get()));},{'aria-pressed':String(get())});
   $('looks').append(poses,toggle('素体',()=>showBody,v=>{showBody=v;bodyScene?.traverse(o=>{if(o.userData.isBody)o.visible=v;});}),
@@ -213,8 +310,8 @@ if(renderer){
 const builtInBytes=()=>{const s=atob($('body-b64').textContent.trim()),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u;};
 async function useBody(bytes,builtIn,name='内蔵の女性素体'){
   const next=parseBody(bytes); // 合わない素体はここで止まる
-  body=next;skinner=makeSkinner(body);bodyIsBuiltIn=builtIn;bodyName=name;parts=null;shown=null;meshes=[];meshCache=new WeakMap();running=null;wantExport=false;
-  startWorker();worker.postMessage({type:'body',bytes});
+  body=next;skinner=makeSkinner(body);bodyIsBuiltIn=builtIn;bodyName=name;bodyBytes=bytes;parts=null;shown=null;meshes=[];meshCache=new WeakMap();running=null;wantExport=false;hideProgress();
+  startEngine();
   clothGroup=[];await showBodyModel(bytes);aim();renderSheet();run('draft');
 }
 const useBuiltIn=()=>{if(!bodyIsBuiltIn)useBody(builtInBytes(),true).catch(e=>status(e.message,true));};
@@ -243,15 +340,56 @@ async function saveGLB(){
   refreshActions();
   if(ok)status(inClaude?`保存しました：${lastFile}（展開すると GLB が入っています）`:`保存しました：${lastFile}`);
 }
-$('export').onclick=()=>{if(isCurrent('fine')&&!running){saveGLB();return;}wantExport=true;run('fine');refreshActions();};
-$('finish').onclick=()=>run('fine');
+$('export').onclick=()=>{closeDrawer();if(isCurrent('fine')&&!running){saveGLB();return;}wantExport=true;run('fine');refreshActions();};
+$('finish').onclick=()=>{closeDrawer();run('fine');};
 function showOutput(){
   $('out-body').value=output.withBody?'body':'cloth';$('out-extra').checked=output.shoesHat;
   $('export').querySelector('.wide').textContent=output.withBody?'（身体つき）':'（衣装だけ）';
 }
 $('out-body').onchange=e=>{output.withBody=e.target.value==='body';storeOutput();showOutput();};
 $('out-extra').onchange=e=>{output.shoesHat=e.target.checked;storeOutput();};
-$('undo').onclick=()=>{const prev=history.pop();if(!prev)return;design=prev;committed=copy(prev);store();renderTabs();renderSheet();redraw();sync();};
+$('undo').onclick=undo;$('redo').onclick=redo;
+$('save').onclick=saveDesign;$('open').onclick=()=>$('open-design').click();
 
-renderTabs();renderSheet();showOutput();
+// ---------- スマホ用・PC用の画面 ----------
+function openDrawer(){$('drawer').hidden=false;$('drawer-close').focus();}
+function closeDrawer(){$('drawer').hidden=true;}
+$('open-export').onclick=openDrawer;$('drawer-close').onclick=$('drawer-back').onclick=closeDrawer;
+function showLooks(on){$('viewport').classList.toggle('looks-open',on);$('looks-toggle').setAttribute('aria-expanded',String(on));}
+$('looks-toggle').onclick=()=>showLooks(!$('viewport').classList.contains('looks-open'));
+function setSheet(state){$('app').dataset.sheet=state;$('panel').style.height='';}
+{ // 取っ手：上下に引くと高さが変わり、タップすると 閉じる→半分→大きく の順に切り替わる
+  const grip=$('grip'),panel=$('panel'),cycle=()=>setSheet({closed:'half',half:'tall',tall:'closed'}[$('app').dataset.sheet]);
+  let from=null;
+  grip.onpointerdown=e=>{from={y:e.clientY,h:panel.offsetHeight,moved:false};try{grip.setPointerCapture(e.pointerId);}catch{}};
+  grip.onpointermove=e=>{if(!from)return;const d=from.y-e.clientY;if(Math.abs(d)>6)from.moved=true;
+    if(from.moved){if($('app').dataset.sheet==='closed')$('app').dataset.sheet='half';panel.style.height=Math.max(grip.offsetHeight,Math.min(innerHeight*0.7,from.h+d))+'px';}};
+  grip.onpointerup=()=>{if(!from)return;const{moved}=from;from=null;if(!moved){cycle();return;}const r=panel.offsetHeight/innerHeight;setSheet(r<0.2?'closed':r<0.5?'half':'tall');};
+  grip.onpointercancel=()=>{from=null;setSheet($('app').dataset.sheet);};
+  grip.onclick=e=>{if(e.detail===0)cycle();}; // キーボードで押したとき
+}
+function applyUI(){
+  phone=uiChoice==='auto'?phoneQuery.matches:uiChoice==='phone';
+  document.documentElement.dataset.ui=phone?'phone':'pc';
+  // 状態の表示と書き出しの欄は、画面の種類に合わせて置き場所を変える
+  if(phone){$('brand').append($('status'));$('drawer-body').append($('actions'));}
+  else{$('panel').append($('status'),$('actions'));closeDrawer();showLooks(false);}
+  $('panel').style.height='';
+  renderer?.setPixelRatio(Math.min(devicePixelRatio,phone?1.75:2));
+  renderTabs();renderSheet();aim();
+}
+function chooseUI(v){uiChoice=v;try{localStorage.setItem(STORE_UI,v);}catch{}applyUI();}
+phoneQuery.addEventListener('change',()=>{if(document.activeElement?.type!=='text')applyUI();}); // 文字入力中は切り替えない
+addEventListener('keydown',e=>{
+  if(e.key==='Escape'){closeDrawer();showLooks(false);return;}
+  const typing=e.target.matches?.('input[type=text],textarea'),mod=e.ctrlKey||e.metaKey,key=e.key.toLowerCase();
+  if(mod&&key==='s'){e.preventDefault();saveDesign();}
+  else if(mod&&key==='o'){e.preventDefault();$('open-design').click();}
+  else if(typing)return;
+  else if(mod&&key==='z'){e.preventDefault();e.shiftKey?redo():undo();}
+  else if(mod&&key==='y'){e.preventDefault();redo();}
+  else if(!mod&&!e.altKey&&!e.target.matches?.('select')&&'12345'.includes(key)&&key.length===1)$('views').children[+key-1]?.click();
+});
+
+showOutput();applyUI();
 useBody(builtInBytes(),true).catch(e=>status('始められませんでした：'+e.message,true));

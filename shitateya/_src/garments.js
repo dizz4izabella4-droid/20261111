@@ -9,11 +9,20 @@ export const QUALITY={
 };
 export const STEP_LABEL={top:'上衣',pants:'ズボン',shoes:'靴',skirt:'スカート',vest:'胴着',tabard:'前掛け',sash:'帯',bracer:'腕当て',sleeve:'袖',cape:'マント',hood:'フード',hat:'帽子',glove:'手袋',layers:'重ね着の調整'};
 
-export function makeContext(body,quality){
+function emptyField(body,Q){
+  const k=body.H/1.533,half=Math.max(0.75*k,body.xmax+0.3);
+  return new Field([-half,-0.04,-0.88*k],[half,body.H+0.07,0.62*k],Q.cell,Math.max(0.036,Q.cell*5));
+}
+// 素体の測定を小分けにする版。step(0〜1) で進み具合を知らせ、そのたびに一息入れる
+export async function makeContextAsync(body,quality,step){
+  const field=emptyField(body,QUALITY[quality]),T=body.tris,parts=24;
+  for(let n=0;n<parts;n++){await step(n/(parts+2));field.splat(T.slice(Math.floor(T.length*n/parts),Math.floor(T.length*(n+1)/parts)),0);}
+  await step(parts/(parts+2));field.signSolid(T);await step((parts+1)/(parts+2));
+  return makeContext(body,quality,field);
+}
+export function makeContext(body,quality,measured){
   const Q=QUALITY[quality],J=body.J,k=body.H/1.533;
-  const half=Math.max(0.75*k,body.xmax+0.3);
-  const field=new Field([-half,-0.04,-0.88*k],[half,body.H+0.07,0.62*k],Q.cell,Math.max(0.036,Q.cell*5));
-  field.addSolid(body.tris);
+  let field=measured;if(!field){field=emptyField(body,Q);field.addSolid(body.tris);}
   const bodyOnly=field.clone();
   const waist=J.spine[1]-0.007*k, neckY=J.neck[1], S=J.upperarm_l, z0=J.neck[2];
   const march=(o,d,ease,max=0.35)=>{let r=0.01;while(r<max&&bodyOnly.at(o[0]+d[0]*r,o[1]+d[1]*r,o[2]+d[2]*r)<ease)r+=0.0015;return r;};

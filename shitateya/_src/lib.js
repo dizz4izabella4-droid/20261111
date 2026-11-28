@@ -45,10 +45,13 @@ export class Field{
   copyFrom(f){this.d.set(f.d);return this;}
   clone(){const f=Object.create(Field.prototype);Object.assign(f,this);f.d=this.d.slice();return f;}
   splat(tris,thick){const{min,h,n,d}=this,reach=this.band;for(const[a,b,c]of tris){
+    // 面の向き。面までの高さが今の値より遠い升は、三角形との距離を計算しなくてよい（結果は同じで速くなる）
+    const m=cross(sub(b,a),sub(c,a)),ml=len(m),mx=ml>1e-12?m[0]/ml:0,my=ml>1e-12?m[1]/ml:0,mz=ml>1e-12?m[2]/ml:0;
     const lo=[0,1,2].map(k=>Math.max(0,Math.floor((Math.min(a[k],b[k],c[k])-reach-min[k])/h))),hi=[0,1,2].map(k=>Math.min(n[k]-1,Math.ceil((Math.max(a[k],b[k],c[k])+reach-min[k])/h)));
-    for(let z=lo[2];z<=hi[2];z++)for(let y=lo[1];y<=hi[1];y++)for(let x=lo[0];x<=hi[0];x++){const i=(z*n[1]+y)*n[0]+x,cur=d[i]+thick;if(cur<=0)continue;const q=triDist2(min[0]+x*h,min[1]+y*h,min[2]+z*h,a,b,c);if(q<cur*cur)d[i]=Math.sqrt(q)-thick;}}}
-  addSolid(tris){ // 閉じたメッシュ。内外は z 方向の交差回数で決める
-    this.splat(tris,0);const{min,h,n,d}=this,cols=new Map();
+    for(let z=lo[2];z<=hi[2];z++)for(let y=lo[1];y<=hi[1];y++)for(let x=lo[0];x<=hi[0];x++){const i=(z*n[1]+y)*n[0]+x,cur=d[i]+thick;if(cur<=0)continue;const px=min[0]+x*h,py=min[1]+y*h,pz=min[2]+z*h,off=(px-a[0])*mx+(py-a[1])*my+(pz-a[2])*mz;if(off*off>cur*cur*1.000001)continue;const q=triDist2(px,py,pz,a,b,c);if(q<cur*cur)d[i]=Math.sqrt(q)-thick;}}}
+  addSolid(tris){this.splat(tris,0);this.signSolid(tris);} // 閉じたメッシュ
+  signSolid(tris){ // 内側を負にする。内外は z 方向の交差回数で決める
+    const{min,h,n,d}=this,cols=new Map();
     for(const[a,b,c]of tris){const x0=Math.ceil((Math.min(a[0],b[0],c[0])-min[0])/h),x1=Math.floor((Math.max(a[0],b[0],c[0])-min[0])/h),y0=Math.ceil((Math.min(a[1],b[1],c[1])-min[1])/h),y1=Math.floor((Math.max(a[1],b[1],c[1])-min[1])/h);
       for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const px=min[0]+x*h+1.3e-6,py=min[1]+y*h+2.7e-6,den=(b[1]-c[1])*(a[0]-c[0])+(c[0]-b[0])*(a[1]-c[1]);if(Math.abs(den)<1e-14)continue;
         const u=((b[1]-c[1])*(px-c[0])+(c[0]-b[0])*(py-c[1]))/den,v=((c[1]-a[1])*(px-c[0])+(a[0]-c[0])*(py-c[1]))/den,w=1-u-v;if(u<0||v<0||w<0)continue;const k=y*n[0]+x;let l=cols.get(k);if(!l)cols.set(k,l=[]);l.push(u*a[2]+v*b[2]+w*c[2]);}}
