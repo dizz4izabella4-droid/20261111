@@ -1776,6 +1776,7 @@
     state.paused = false;
     clearTimeout(walkTimer);
     state.enemy = null;
+    swarm = null;
     state.effects = [];
     fxReset();
 
@@ -2145,6 +2146,7 @@
       shape: base.shape
     };
 
+    swarmStart(base.shape);
     addLog(`${state.enemy.name} が現れた！`);
     if (!say('enemy', 0.5)) say('start', 0.6);
     beginBattle();
@@ -2437,9 +2439,11 @@
     if (isCritical) say('crit', 0.85);
     else if (state.enemy.hp > 0) say(hits === 2 ? 'fast' : 'ok', hits === 2 ? 0.5 : 0.35);
 
+    swarmKill(isCritical ? 5 : hits, isCritical);
     updateUI();
 
     if (state.enemy.hp <= 0) {
+      swarmFinish();
       winBattle();
     } else {
       generateProblem();
@@ -3159,6 +3163,74 @@
     c.stroke();
   }
 
+  // === 群れ演出（見た目だけ）：敵は20体で奥から押し寄せる。数値・判定・必要な計算数は従来の敵1体のまま ===
+  // 通常の正解＝手前の1〜2体、迅速＝2体、神速＝手前の1列（5体）。戦闘が終わったら、残りは連鎖して崩れる。
+  const SWARM_N = 20;
+  const SWARM_ROWS = [ { y: 10, s: 0.78, dx: 74 }, { y: -10, s: 0.64, dx: 58 }, { y: -26, s: 0.52, dx: 46 }, { y: -40, s: 0.42, dx: 36 } ];
+  const SWARM_COLS = [0, -1, 1, -2, 2];
+  let swarm = null;
+  function swarmSlot(i) {
+    if (i === 0) return { x: 0, y: 0, s: 1 };            // 先頭＝従来の敵と同じ位置・大きさ
+    const row = SWARM_ROWS[Math.min(SWARM_ROWS.length - 1, Math.floor(i / 5))];
+    return { x: SWARM_COLS[i % 5] * row.dx, y: row.y, s: row.s };
+  }
+  function swarmStart(shape) {
+    const alive = [];
+    for (let i = 0; i < SWARM_N; i++) {
+      const t = swarmSlot(i);
+      alive.push({ x: t.x * 0.25, y: -64, s: 0.04, wait: Math.random() * 850, ph: Math.random() * 3000, jx: (Math.random() - 0.5) * 8 });
+    }
+    swarm = { shape, alive, dying: [] };
+  }
+  function swarmKill(n, isRow) {
+    if (!swarm) return;
+    n = Math.min(n, swarm.alive.length);
+    for (let i = 0; i < n; i++) {
+      const m = swarm.alive.shift();
+      m.dieT = 0; m.dieWait = i * (isRow ? 45 : 110); m.dir = (i % 2 ? 1 : -1) * (0.6 + Math.random() * 0.6);
+      swarm.dying.push(m);
+    }
+  }
+  function swarmFinish() {                                  // 戦闘終了：残りが連鎖して崩れる
+    if (!swarm) return;
+    const n = swarm.alive.length;
+    for (let i = 0; i < n; i++) {
+      const m = swarm.alive.shift();
+      m.dieT = 0; m.dieWait = 140 + i * Math.min(60, 700 / Math.max(1, n)); m.dir = (i % 2 ? 1 : -1) * (0.5 + Math.random() * 0.7);
+      swarm.dying.push(m);
+    }
+  }
+  function drawSwarm(dt, ecx, ecy, col) {
+    if (!swarm) return;
+    const k = 1 - Math.exp(-dt * 0.005);
+    const drawOne = (m, c, extra) => {
+      ctx.save();
+      ctx.translate(ecx + m.x + m.jx * 0, ecy + m.y);
+      if (extra) extra();
+      ctx.scale(m.s, m.s);
+      drawEnemy(0, 0, swarm.shape, c, m.ph);
+      ctx.restore();
+    };
+    for (let i = swarm.alive.length - 1; i >= 0; i--) {      // 奥から手前へ
+      const m = swarm.alive[i], t = swarmSlot(i);
+      if (m.wait > 0) { m.wait -= dt; continue; }
+      m.x += (t.x + (i ? m.jx : 0) - m.x) * k; m.y += (t.y - m.y) * k; m.s += (t.s - m.s) * k;
+      drawOne(m, col);
+    }
+    for (let i = swarm.dying.length - 1; i >= 0; i--) {
+      const m = swarm.dying[i];
+      if (m.dieWait > 0) { m.dieWait -= dt; drawOne(m, col); continue; }
+      m.dieT += dt;
+      const p = Math.min(1, m.dieT / 380);
+      if (p >= 1) { swarm.dying.splice(i, 1); continue; }
+      ctx.save();
+      ctx.globalAlpha = 1 - p;
+      drawOne(m, p < 0.3 ? '#ffffff' : col, () => { ctx.translate(m.dir * 70 * p, -34 * p + 40 * p * p); ctx.rotate(m.dir * p * 1.2); });
+      ctx.restore();
+    }
+    if (!swarm.alive.length && !swarm.dying.length) swarm = null;
+  }
+
   function drawViewport(dt) {
     const w = canvas.width;
     const h = canvas.height;
@@ -3224,7 +3296,8 @@
       ctx.translate(ecx, ecy);
       ctx.scale(enemyApproach, enemyApproach);
       ctx.translate(-ecx, -ecy);
-      drawEnemy(ecx, ecy, state.enemy.shape, mainCol);
+      if (swarm) drawSwarm(dt, ecx, ecy, mainCol);
+      else drawEnemy(ecx, ecy, state.enemy.shape, mainCol);
       ctx.restore();
       if (state.guard) drawGuardPrompt(w, h);
     } else if (state.mode === 'DEATH' || (state.mode === 'GAMEOVER' && state.deathAt)) {
@@ -3232,6 +3305,10 @@
       drawReaper(w / 2, h / 2 + 8, performance.now() - state.deathAt);
     } else {
       enemyApproach = 1;
+      if (swarm) {                       // 勝利後に崩れる残りだけ描く。それ以外では群れを消す
+        if (state.mode === 'EXPLORE') { swarm.alive.length = 0; drawSwarm(dt, w / 2, h / 2 + 12, mainCol); }
+        else swarm = null;
+      }
     }
 
     // 3. 攻撃エフェクト（剣撃／銃撃）
@@ -3312,8 +3389,8 @@
   }
 
   // かわいい敵：線画＋うすい面。大きな目・ほっぺ・笑顔（スライム／コウモリ／小鳥／子犬／ちびドラゴン）
-  function drawEnemy(cx, cy, shape, col) {
-    const t = performance.now();
+  function drawEnemy(cx, cy, shape, col, ph) {
+    const t = performance.now() + (ph || 0);
     ctx.save();
     ctx.strokeStyle = col;
     ctx.lineWidth = 2.4;
