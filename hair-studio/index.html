@@ -34,6 +34,24 @@ summary::before{content:'▸ ';color:var(--sub)}details[open]>summary::before{co
 .gt{font-size:11px;color:var(--acc);margin-top:8px;letter-spacing:.04em}
 #stat{margin-top:10px;font-size:11px;color:var(--sub);font-variant-numeric:tabular-nums}
 @media (max-width:640px){#panel{top:auto;bottom:calc(8px + env(safe-area-inset-bottom,0px));left:8px;right:8px;width:auto;max-height:42%}}
+:root{--pb:#fff}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--pb:#1c212c}}:root[data-theme="dark"]{--pb:#1c212c}
+#panel{padding:0 14px 12px;width:340px;overscroll-behavior:contain;z-index:4}
+.hd{position:sticky;top:0;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:12px;height:46px;margin:0 -14px;padding:0 14px;background:var(--pb);border-radius:14px 14px 0 0}
+.hd h1{margin:0}#ptg{font-size:12px;padding:4px 10px;white-space:nowrap}
+#panel>.tabs{gap:4px}#panel>.tabs button{flex:1 1 auto;white-space:nowrap;padding:8px 4px;font-size:12px}
+#panel>.tabs{position:sticky;top:46px;z-index:3;margin:0 -14px 4px;padding:4px 14px 8px;background:var(--pb);flex-wrap:wrap;border-bottom:1px solid var(--line)}
+#panel>#stat{padding:8px 0 calc(8px + env(safe-area-inset-bottom,0px))}
+#panel.shut{width:auto;overflow:hidden;padding-bottom:0}#panel.shut>:not(.hd){display:none}#panel.shut .hd{border-radius:14px}
+#vbar{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:12px;z-index:4;display:flex;gap:6px;padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;backdrop-filter:blur(10px)}#vbar button{padding:4px 10px;font-size:12px}
+@media (max-width:640px){
+ #panel{left:0;right:0;top:auto;bottom:0;width:auto;max-height:none;height:42vh;height:42dvh;border-radius:16px 16px 0 0;border-bottom:0}
+ #panel.tall{height:86vh;height:86dvh}#panel.shut{height:auto}
+ .hd{height:50px;border-radius:16px 16px 0 0}.hd::before{content:'';position:absolute;left:50%;top:6px;width:36px;height:4px;margin-left:-18px;border-radius:2px;background:var(--line)}
+ #panel.shut .hd{border-radius:16px 16px 0 0;padding-bottom:calc(0px + env(safe-area-inset-bottom,0px));height:calc(50px + env(safe-area-inset-bottom,0px))}
+ #panel>.tabs{top:50px}#panel>.sub{display:none}
+ button,select{min-height:38px}#ptg{min-height:34px}input[type=range]{height:32px}select,input,textarea{font-size:16px}
+ summary{padding:10px 0}label{font-size:13px}.row button{flex:1 1 auto}
+ #vbar{top:calc(8px + env(safe-area-inset-top,0px));right:8px;left:8px;gap:4px;padding:5px;justify-content:space-between}#vbar button{min-height:34px;padding:4px 8px;font-size:11px;flex:1 1 auto}}
 </style>
 </head>
 <body>
@@ -90,7 +108,7 @@ const camera=new THREE.PerspectiveCamera(32,1,.1,60);
 const ctl=new THREE.OrbitControls(camera,renderer.domElement);
 ctl.enableDamping=true;ctl.autoRotate=true;ctl.autoRotateSpeed=1.2;ctl.target.set(0,-1.3,-.2);
 const VIEWS={back:[2.6,-.2,-8.5],side:[9,-.6,0],front:[0,-.4,9]};
-function setView(k){camera.position.set(...VIEWS[k]);ctl.update()}
+function setView(k){const v=new THREE.Vector3(...VIEWS[k]).sub(ctl.target).normalize().multiplyScalar(window.fitDist?fitDist():8.9);camera.position.copy(ctl.target).add(v);ctl.update()}
 setView('back');
 function themeBg(){scene.background=new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()||'#14171f')}
 themeBg();matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>setTimeout(themeBg,0));
@@ -117,28 +135,77 @@ const torso=add(new THREE.SphereGeometry(1,96,64),new THREE.MeshStandardMaterial
 const tieBand=new THREE.Mesh(new THREE.TorusGeometry(1,.03,24,64),new THREE.MeshStandardMaterial({color:0x2a2a33,roughness:.5}));scene.add(tieBand);
 
 /* ---------- hair shader (camera-facing ribbons + Kajiya-Kay) ---------- */
-const hairMat=new THREE.ShaderMaterial({side:THREE.DoubleSide,
- uniforms:{uW:{value:.005},uCol:{value:new THREE.Color()},uTip:{value:new THREE.Color()},uGloss:{value:90},uL1:{value:new THREE.Vector3(3,4,5)},uL2:{value:new THREE.Vector3(-4,2,-3)}},
- vertexShader:`attribute vec3 tang;attribute float side;attribute vec3 info;uniform float uW;
- varying vec3 vT,vV,vI;
+const hairMat=new THREE.ShaderMaterial({side:THREE.DoubleSide,alphaToCoverage:true,
+ uniforms:{uW:{value:.005},uCol:{value:new THREE.Color()},uTip:{value:new THREE.Color()},uGloss:{value:90},uL1:{value:new THREE.Vector3(3,4,5)},uL2:{value:new THREE.Vector3(-4,2,-3)},uRes:{value:new THREE.Vector2(1,1)},uQ:{value:new THREE.Vector2(0,0)},uToon:{value:0}},
+ vertexShader:`attribute vec3 tang;attribute float side;attribute vec3 info;uniform float uW;uniform vec2 uRes,uQ;
+ varying vec3 vT,vV,vI,vP;varying float vA,vC;
  void main(){vec4 wp=modelMatrix*vec4(position,1.);vec3 T=normalize(mat3(modelMatrix)*tang);
  vec3 V=normalize(cameraPosition-wp.xyz);vec3 R=normalize(cross(T,V));
  float tp=1.-.8*smoothstep(.62,1.,info.x);
- wp.xyz+=R*side*uW*tp*(.75+.5*info.z);vT=T;vV=V;vI=info;
+ float hw=uW*tp*(.75+.5*info.z)*abs(side);
+ vec4 c0=projectionMatrix*viewMatrix*wp,c1=projectionMatrix*viewMatrix*vec4(wp.xyz+R*hw,1.);
+ float px=length((c1.xy/c1.w-c0.xy/c0.w)*uRes*.5),k=1.;
+ if(uQ.x>.5&&px<.7)k=min(.7/max(px,1e-4),8.);
+ wp.xyz+=R*sign(side)*hw*k;vT=T;vV=V;vI=info;vA=sign(side);vC=1./k;vP=wp.xyz;
  gl_Position=projectionMatrix*viewMatrix*wp;}`,
- fragmentShader:`precision highp float;varying vec3 vT,vV,vI;uniform vec3 uCol,uTip,uL1,uL2;uniform float uGloss;
+ fragmentShader:`precision highp float;varying vec3 vT,vV,vI,vP;varying float vA,vC;uniform vec3 uCol,uTip,uL1,uL2;uniform float uGloss,uToon;uniform vec2 uQ;
  float kk(vec3 a,vec3 b){float d=dot(a,b);return sqrt(max(0.,1.-d*d));}
+ float gs(float x,float b){return exp(-x*x/(2.*b*b));}
+ vec3 mar(vec3 T,vec3 L,vec3 V,vec3 b,float r){
+  float sl=dot(T,L),sv=dot(T,V),th=.5*(asin(clamp(sl,-1.,1.))+asin(clamp(sv,-1.,1.)));
+  float bR=clamp(1.2*inversesqrt(uGloss),.05,.4)*(.85+.3*r),sh=.07;
+  vec3 lp=L-T*sl,vp=V-T*sv;float c=dot(lp,vp)*inversesqrt(max(dot(lp,lp)*dot(vp,vp),1e-6));
+  vec3 st=pow(b/max(max(b.r,b.g),max(b.b,.01)),vec3(2.));
+  float R=gs(th+sh,bR)*sqrt(max(0.,.5+.5*c));
+  float TT=gs(th-sh*.5,bR*.5)*pow(max(0.,.5-.5*c),5.);
+  float TRT=gs(th-sh*1.5,bR*2.)*pow(max(0.,.5+.5*c),1.5)*.6;
+  return vec3(.55)*R+st*(.8*TT+.45*TRT);}
  void main(){vec3 T=normalize(vT),V=normalize(vV);vec3 N=normalize(V-T*dot(V,T));float r=vI.z;
  vec3 b=uCol*(.8+.4*fract(r*13.7));b=mix(b*.5,b,smoothstep(0.,.3,vI.x));b=mix(b,uTip,.55*smoothstep(.7,1.,vI.x));
  float ao=mix(.3,1.,vI.y)*(.6+.4*smoothstep(0.,.35,vI.x));
- vec3 col=b*.2*ao;
+ if(uToon>.5){vec3 Lk=normalize(uL1),Lr=normalize(uL2);
+  vec3 Cn=normalize(vP),Pn=normalize(mix(Cn,normalize(vec3(vP.x,.1,vP.z)),smoothstep(-.3,-1.7,vP.y)));
+  vec3 Ns=normalize(Pn+N*.3);float nl=dot(Ns,Lk);
+  vec3 base=uCol*1.25*(.97+.06*fract(r*13.7));base=mix(base*.8,base,smoothstep(0.,.25,vI.x));base=mix(base,uTip,.3*smoothstep(.75,1.,vI.x));
+  vec3 c=mix(base*vec3(.34,.33,.55),base*vec3(.6,.58,.82),smoothstep(-.45,-.38,nl));
+  c=mix(c,base,smoothstep(.02,.08,nl));c=mix(c,base*vec3(1.12,1.08,1.04)+.02,smoothstep(.5,.56,nl)*.8);
+  c*=.7+.3*smoothstep(.15,.5,vI.y);
+  vec3 Hh=normalize(Lk+V);float e=mix(.8,.965,clamp((uGloss-10.)/190.,0.,1.)),sp=kk(T,Hh);
+  float ring=smoothstep(e,e+.012,sp)*smoothstep(-.05,.2,nl);
+  c=mix(c,mix(uTip*1.4,vec3(1.),.65),ring*.9);
+  float rim=smoothstep(.55,.85,1.-abs(dot(Ns,V)))*smoothstep(-.2,.3,dot(Ns,Lr));
+  c+=base*vec3(.8,1.,1.5)*rim*.5;
+  gl_FragColor=vec4(min(c,vec3(1.)),1.);return;}
+ bool hq=uQ.y>.5;vec3 col=b*(hq?.1:.2)*ao;
  vec3 L=normalize(uL1),Hh=normalize(L+V);
  col+=b*kk(T,L)*max(0.,.5+.5*dot(N,L))*ao*vec3(1.,.97,.93);
- vec3 T1=normalize(T+N*(.1+.1*(r-.5)));vec3 T2=normalize(T-N*.18);
- float vis=smoothstep(-.2,.3,dot(N,L));
- col+=vec3(1.)*pow(kk(T1,Hh),uGloss)*vis*.55*ao+uTip*pow(kk(T2,Hh),uGloss*.35)*vis*.4*ao;
- vec3 L2=normalize(uL2);col+=b*kk(T,L2)*.5*ao+pow(kk(T,normalize(L2+V)),uGloss*.6)*.25*ao;
- gl_FragColor=vec4(pow(col,vec3(.85)),1.);}`});
+ float vis=smoothstep(-.2,.3,dot(N,L));vec3 L2=normalize(uL2);
+ col+=b*kk(T,L2)*.5*ao;
+ if(hq){col+=pow(b,vec3(.8))*.2*(.4+.6*max(0.,.5+.5*dot(N,L)))*ao;col+=mar(T,L,V,b,r)*vis*ao+mar(T,L2,V,b,r)*.45*ao;}
+ else{vec3 T1=normalize(T+N*(.1+.1*(r-.5)));vec3 T2=normalize(T-N*.18);
+  col+=vec3(1.)*pow(kk(T1,Hh),uGloss)*vis*.55*ao+uTip*pow(kk(T2,Hh),uGloss*.35)*vis*.4*ao;
+  col+=pow(kk(T,normalize(L2+V)),uGloss*.6)*.25*ao;}
+ float al=1.;
+ gl_FragColor=vec4(pow(col,vec3(.85)),al);}`});
+/* ---------- アニメ調：輪郭線（拡幅した暗色リボンを背後に描く）／顔・体のセル塗り ---------- */
+const outMat=new THREE.ShaderMaterial({side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:4,polygonOffsetUnits:4,
+ uniforms:{uW:hairMat.uniforms.uW,uRes:hairMat.uniforms.uRes,uQ:hairMat.uniforms.uQ,uOW:{value:2.4},uOC:{value:new THREE.Color(.04,.03,.06)}},
+ vertexShader:hairMat.vertexShader.replace('uniform float uW;','uniform float uW,uOW;').replace('float hw=uW*','float hw=uOW*uW*'),
+ fragmentShader:'uniform vec3 uOC;void main(){gl_FragColor=vec4(uOC,1.);}'});
+const GM=new THREE.DataTexture(new Uint8Array([60,150,255]),3,1,THREE.LuminanceFormat);GM.minFilter=GM.magFilter=THREE.NearestFilter;GM.needsUpdate=true;
+const OUTM=new Map();
+function syncOutline(){const on=!!window.TOONON&&window.TOONOL!==false;
+ for(const id of PIDS){const pm=PM[id];let o=OUTM.get(id);
+  if(!on||!pm||!pm.mesh||!pm.mesh.visible){if(o)o.visible=false;continue}
+  if(!o){o=new THREE.Mesh(pm.mesh.geometry,outMat);o.frustumCulled=false;scene.add(o);OUTM.set(id,o)}
+  if(o.geometry!==pm.mesh.geometry)o.geometry=pm.mesh.geometry;
+  o.position.copy(pm.mesh.position);o.quaternion.copy(pm.mesh.quaternion);o.visible=true}}
+function applyToonMats(){const on=!!window.TOONON;
+ const sw=o=>{if(!o.isMesh||o===capA||o===capB||o===capC||o===tieBand)return;const m=o.material;
+  if(on&&!o.userData.orig&&m&&m.isMeshStandardMaterial){o.userData.orig=m;o.material=new THREE.MeshToonMaterial({color:m.color.clone(),map:m.map||null,gradientMap:GM,side:m.side,transparent:m.transparent,opacity:m.opacity,alphaTest:m.alphaTest,skinning:!!m.skinning})}
+  else if(!on&&o.userData.orig){o.material=o.userData.orig;o.userData.orig=null}};
+ MAN.forEach(sw);if(headGrp)headGrp.traverse(sw)}
+
 
 /* ---------- procedural strand generator ---------- */
 /* ===== 髪パーツ構造 v2：パーツ単位の生成・差分更新・キャッシュ ===== */
@@ -197,7 +264,7 @@ function ctx(){const g=id=>+$(id).value,tieA=g('tie'),tph=g('tph'),td=dirA(tieA,
 function genScalp(name,X,p){const R=Object.assign({},ROOTS[name],p.roots||{}),Ab=areaR(ROOTS.base,1.55,1)+areaR(ROOTS.back,1.55,1),T=Math.round(X.S0/Ab*areaR(R,X.nd,X.nw)*p.dens*(name==='nape'?X.ndn:1));
  if(T<1)return null;if(p.mode==='hang')return genHang(name,X,p,R,T);const PA=24,r=rng(seed+PIDS.indexOf(name)*101),thMax=Math.max(1.55,X.nd),qE=Math.min(1,p.len),vol=X.vol*p.vol,td=X.td;
  return makeGeo(T,PA+1,(s,pts)=>{let th,ph,d,n=0;
-  do{ph=r()*TAU;th=Math.acos(1-r()*(1-Math.cos(thMax)));d=dFront(ph)}while((th>limF(d,X.nd,X.nw)||!inReg(R,th,d))&&++n<300);
+  do{ph=r()*TAU;th=Math.acos(1-r()*(1-Math.cos(thMax)));d=dFront(ph)}while((!hairOK(r,th,ph,d,X)||!inReg(R,th,d))&&++n<300);
   const d0=dirA(th,ph),[ox,oz,mag]=clump(r,X.band),rnd=r();
   for(let i=0;i<=PA;i++){const q=i/PA*qE;let x=d0[0]+(td[0]-d0[0])*q,y=d0[1]+(td[1]-d0[1])*q,z=d0[2]+(td[2]-d0[2])*q;const m=Math.hypot(x,y,z)||1;x/=m;y/=m;z/=m;
    const sf=surf([x,y,z]),rad=1.012+.048*q*q+(.03+.045*vol)*Math.sin(Math.PI*q),c=q*q*q;
@@ -208,7 +275,7 @@ function bodyOut(p){const t=torso,cx=t.position.x,cy=t.position.y,cz=t.position.
  return k<1.04&&k>1e-4?[cx+dx/k*1.04,cy+dy/k*1.04,cz+dz/k*1.04]:p}
 function genHang(name,X,p,R,T){const h=p.hang,PA=18,PT=34,M=PA+1+PT,r=rng(seed+PIDS.indexOf(name)*101),thMax=Math.max(1.55,X.nd),vol=X.vol*p.vol,turn=h.curl*Math.PI/180,Lh=h.L*p.len,wv=X.wav*p.wave;
  return makeGeo(T,M,(s,pts,wp)=>{let th,ph,dd,n=0;
-  do{ph=r()*TAU;th=Math.acos(1-r()*(1-Math.cos(thMax)));dd=((ph-Math.PI/2+3*Math.PI)%TAU)-Math.PI}while((th>limF(Math.abs(dd),X.nd,X.nw)||!inReg(R,th,Math.abs(dd)))&&++n<300);
+  do{ph=r()*TAU;th=Math.acos(1-r()*(1-Math.cos(thMax)));dd=((ph-Math.PI/2+3*Math.PI)%TAU)-Math.PI}while((!hairOK(r,th,ph,Math.abs(dd),X)||!inReg(R,th,Math.abs(dd)))&&++n<300);
   const[ox]=clump(r,.1),rnd=r(),sg=dd>=0?1:-1,phE=Math.abs(dd)<1.25?Math.PI/2+sg*(1.25+.12*rnd):ph,thE=Math.max(h.exit+.06*rnd,th+.05),lay=h.layer*vol*(1-Math.min(1,th/1.6))+.02*rnd;
   for(let i=0;i<=PA;i++){const q=i/PA,sf=surf(dirA(th+(thE-th)*q,ph+(phE-ph)*q)),rad=1.012+(1.04+lay-1.012)*q*q+(.03+.045*vol)*.5*Math.sin(Math.PI*q);pts[i*3]=sf[0]*rad;pts[i*3+1]=sf[1]*rad;pts[i*3+2]=sf[2]*rad}
   const ex=pts[PA*3],ey=pts[PA*3+1],ez=pts[PA*3+2],hl=Math.hypot(ex,ez)||1,hx=ex/hl,hz=ez/hl,wF=1-dFront(phE)/Math.PI;
@@ -250,6 +317,8 @@ function genFly(X,p){const T=Math.round(X.S0*.015*X.fly*p.dens);if(T<1)return nu
    const sf=surf([x,y,z]),rad=1.012+.048*q*q+(.03+.045*X.vol)*Math.sin(Math.PI*q)+.025+lift*u*u,wob=cu*u*Math.sin(u*5+ph2);
    pts[j*3]=sf[0]*rad-z*wob;pts[j*3+1]=sf[1]*rad;pts[j*3+2]=sf[2]*rad+x*wob;wp[j]=.7*(1-.7*u)}
   return[1,r()]},p.thick)}
+/* 生え際のなじませ：境界を不規則にゆらし、縁に向かって毛根の密度を段階的に下げる */
+function hairOK(r,th,ph,d,X){const w=sm(1,2,d),lim=limF(d,X.nd,X.nw)+.05*w*(Math.sin(ph*23+1.3)+.6*Math.sin(ph*47+.4)),fe=.03+.16*w,e=lim-th;return e>=0&&(e>=fe||r()<sm(0,fe,e))}
 const GEN={base:(X,p)=>genScalp('base',X,p),back:(X,p)=>genScalp('back',X,p),nape:(X,p)=>genScalp('nape',X,p),back_upper:(X,p)=>genScalp('back_upper',X,p),back_lower:(X,p)=>genScalp('back_lower',X,p),bangs:genBangs,
  side_left:(X,p)=>genSide(1,X,p),side_right:(X,p)=>genSide(-1,X,p),ponytail:genPony,flyaways:genFly};
 const PIV=(id,X)=>id==='ponytail'||id==='tie'?X.tp:id==='bangs'?surf(dirA(.45,Math.PI/2)):id==='side_left'?surf(dirA(1,Math.PI/2+1)):id==='side_right'?surf(dirA(1,Math.PI/2-1)):[0,0,0];
@@ -353,23 +422,25 @@ function makeZip(files){const enc=new TextEncoder(),chunks=[],cen=[];let off=0;
   cen.push(new Uint8Array(c.buffer),nb);off+=30+nb.length+data.length}
  const csz=cen.reduce((a,b)=>a+b.length,0),e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,csz,true);e.setUint32(16,off,true);
  return new Blob([...chunks,...cen,new Uint8Array(e.buffer)],{type:'application/zip'})}
-async function exportHairGLB(){const st=$('bakeInfo');try{
-  const dl=await claude.use('downloads');if(!dl){st.textContent='この表示では保存できません（ページを claude.ai で開いてください）';return}
-  if(typeof THREE.GLTFExporter!=='function'){st.textContent='GLB出力ライブラリを読み込めませんでした';return}
-  st.textContent='焼き込み中…';await new Promise(r=>setTimeout(r,30));
-  const{G,tris}=bakedGroup(BAKE.budget),buf=await new Promise((ok,ng)=>new THREE.GLTFExporter().parse(G,ok,{binary:true,onlyVisible:false,includeCustomExtensions:false}));
-  G.traverse(o=>{if(o.geometry)o.geometry.dispose()});
-  const zip=makeZip([['hair.glb',new Uint8Array(buf)],['hair-settings.json',new TextEncoder().encode(exportCfg())]]);
-  st.textContent=`出力：${tris.toLocaleString()} 三角形／GLB ${(buf.byteLength/1e6).toFixed(1)}MB`;
-  await dl.save({filename:'hair-studio-export.zip',data:zip})}
- catch(e){st.textContent=e&&e.code==='declined'?'保存をキャンセルしました':'書き出しに失敗：'+((e&&e.message)||e)}}
+async function exportHairGLB(kind){kind=typeof kind==='string'?kind:'all';const st=$('bakeInfo');try{
+  const files=[];
+  if(kind!=='json'){if(typeof THREE.GLTFExporter!=='function'){st.textContent='GLB出力ライブラリを読み込めませんでした';return}
+   st.textContent='焼き込み中…';await new Promise(r=>setTimeout(r,30));
+   const{G,tris}=bakedGroup(BAKE.budget),buf=await new Promise((ok,ng)=>new THREE.GLTFExporter().parse(G,ok,{binary:true,onlyVisible:false,includeCustomExtensions:false}));
+   G.traverse(o=>{if(o.geometry)o.geometry.dispose()});files.push(['hair.glb',new Uint8Array(buf)]);
+   st.textContent=`出力：${tris.toLocaleString()} 三角形／GLB ${(buf.byteLength/1e6).toFixed(1)}MB（髪のみ・頭や体は含みません）`}
+  if(kind!=='glb'){files.push(['hair-settings.json',new TextEncoder().encode(exportCfg())]);if(kind==='json')st.textContent='設定JSONを出力しました'}
+  let dl=null;try{dl=typeof claude!=='undefined'&&claude.use?await claude.use('downloads'):null}catch(e){dl=null}
+  if(dl){await dl.save({filename:'hair-studio-export.zip',data:makeZip(files)})}
+  else{for(const[n,d]of files){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([d],{type:n.endsWith('.glb')?'model/gltf-binary':'application/json'}));a.download=n;document.body.appendChild(a);a.click();a.remove();await new Promise(r=>setTimeout(r,300))}}
+ }catch(e){st.textContent=e&&e.code==='declined'?'保存をキャンセルしました':'書き出しに失敗：'+((e&&e.message)||e)}}
 const exportUI=document.createElement('div');exportUI.id='exportUI';document.body.appendChild(exportUI);
 (function(){const mk=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e};
  const lb=mk('label');lb.textContent='ポリゴン予算（出力）';const se=mk('select');[[50000,'5万三角形（軽量）'],[100000,'10万三角形（標準）'],[200000,'20万三角形（高め）']].forEach(([v,t])=>{const o=mk('option');o.value=v;o.textContent=t;se.appendChild(o)});se.value=100000;
  se.onchange=()=>{BAKE.budget=+se.value;if(BAKE.on)refreshBake()};
  const r1=mk('div','row'),cb=mk('input');cb.type='checkbox';cb.onchange=()=>{BAKE.on=cb.checked;refreshBake()};r1.append(cb,'焼き込み後の見た目でプレビュー');
- const info=mk('div','sub');info.id='bakeInfo';info.textContent='GLBは頭部モデルと同じ原点・メートル単位で出力します';
- const r2=mk('div','row'),bt=mk('button');bt.textContent='焼き込みGLBを書き出す（zip）';bt.onclick=exportHairGLB;r2.appendChild(bt);
+ const info=mk('div','sub');info.id='bakeInfo';info.textContent='髪だけを出力します（頭・体は含みません）。GLBは頭部モデルと同じ原点・メートル単位。claude.ai上ではzip、ブラウザで直接開いた場合は個別ファイルで保存します';
+ const r2=mk('div','row'),bt=mk('button');bt.textContent='髪データを書き出す（GLB＋設定）';bt.onclick=()=>exportHairGLB('all');const b2=mk('button');b2.textContent='GLBのみ';b2.onclick=()=>exportHairGLB('glb');const b3=mk('button');b3.textContent='設定JSONのみ';b3.onclick=()=>exportHairGLB('json');r2.append(bt,b2,b3);
  exportUI.append(lb,se,r1,r2,info)})();
 
 let xt=0;
@@ -402,7 +473,7 @@ function initStyleUI(){const row=document.createElement('div'),lb=document.creat
  Object.keys(STYLES).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=STYLES[k].name;s.appendChild(o)});
  const c=document.createElement('option');c.value='custom';c.textContent='カスタム';c.hidden=true;s.appendChild(c);s.onchange=()=>{if(s.value!=='custom')applyStyle(s.value)};
  const b=document.createElement('button');b.textContent='初期値に戻す';b.style.marginTop='6px';b.onclick=()=>applyStyle(CFG.base||'default');
- row.append(lb,s,b);document.querySelector('#panel .sub').after(row);syncStyleUI()}
+ const rr=document.createElement('div');rr.className='row';rr.style.cssText='gap:6px;align-items:center';s.style.flex='1';b.style.marginTop='0';b.textContent='初期化';b.title='初期値に戻す';b.style.flex='0 0 auto';rr.append(s,b);row.append(lb,rr);document.querySelector('#panel .sub').after(row);syncStyleUI()}
 renderParts();initStyleUI();
 
 /* ---------- うなじ（後頭部〜首元）---------- */
@@ -410,7 +481,7 @@ const limF=(d,nd,nw)=>1+.55*sm(.2,1.6,d)+Math.max(0,nd-1.55)*sm(Math.PI-nw,Math.
 function areaLim(nd,nw){let a=0;for(let i=0;i<180;i++){const ph=(i+.5)/180*TAU,d=Math.abs(((ph-Math.PI/2+3*Math.PI)%TAU)-Math.PI);a+=1-Math.cos(limF(d,nd,nw))}return a}
 let capC=null;
 function updateNapeCap(nd,nw){if(capC){scene.remove(capC);capC.geometry.dispose()}
- capC=new THREE.Mesh(new THREE.SphereGeometry(1.004,96,48,1.5*Math.PI-nw,2*nw,1.45,Math.max(.1,nd-1.45+.02)),capMat);if(TAB)fitGeo(capC.geometry);else capC.scale.set(...H);scene.add(capC)}
+ capC=new THREE.Mesh(new THREE.SphereGeometry(1.004,96,48,1.5*Math.PI-nw,2*nw,1.45,Math.max(.1,nd-1.45-.1)),capMat);if(TAB)fitGeo(capC.geometry);else capC.scale.set(...H);scene.add(capC)}
 /* ---------- アップロードされた頭部メッシュへのフィット ---------- */
 let TAB=null,headGrp=null;const TNT=64,TNP=128;
 function surf(d){if(!TAB)return[d[0]*H[0],d[1]*H[1],d[2]*H[2]];
@@ -429,18 +500,19 @@ function buildTab(pos,C,s){const T=new Float32Array(TNT*TNP);
   for(const [da,db] of [[-1,0],[1,0],[0,-1],[0,1]]){const aa=a+da;if(aa<0||aa>=TNT)continue;const v=T[aa*TNP+(b+db+TNP)%TNP];if(v>0){sum+=v;n++}}if(n)T[k]=sum/n}if(!miss)break}
  const O=T.slice();for(let a=0;a<TNT;a++)for(let b=0;b<TNP;b++)T[a*TNP+b]=.25*O[a*TNP+(b+TNP-1)%TNP]+.5*O[a*TNP+b]+.25*O[a*TNP+(b+1)%TNP];
  return T}
+function faceMsg(t){const e=document.getElementById('faceInfo');if(e)e.textContent=t}
 function loadHead(buf){new THREE.GLTFLoader().parse(buf,'',g=>{
- try{const root=g.scene;let head=null;root.traverse(o=>{if(o.isMesh&&(!head||o.name==='Head'))head=o});
+ try{const root=g.scene;let head=null;const ms=[];root.traverse(o=>{if(o.isMesh)ms.push(o)});const vc=o=>o.geometry.attributes.position.count;head=ms.find(o=>o.name==='Head')||ms.filter(o=>/head|face|skull|顔|頭/i.test(o.name)).sort((a,b)=>vc(b)-vc(a))[0]||ms.sort((a,b)=>vc(b)-vc(a))[0];
   head.geometry.computeBoundingBox();const bb=head.geometry.boundingBox,h=bb.max.y-bb.min.y,s=2.97/h,C=[0,bb.min.y+.556*h,bb.min.z+.46*(bb.max.z-bb.min.z)];
-  TAB=buildTab(head.geometry.attributes.position,C,s);TABV++;HXF.C=C;HXF.s=s;HXF.top=[0,bb.max.y,0];HXF.name=head.name||'head';
+  TAB=buildTab(head.geometry.attributes.position,C,s);TABV++;HXF.C=C;HXF.s=s;HXF.top=[0,bb.max.y,0];HXF.name=head.name||'head';faceMsg('読込済：'+HXF.name+'（メッシュ'+ms.length+'個）');
   if(headGrp)scene.remove(headGrp);headGrp=root;root.scale.setScalar(s);root.position.set(-C[0]*s,-C[1]*s,-C[2]*s);
   root.traverse(o=>{if(o.isMesh&&o.material){const m=o.material;if(m.map){m.map.encoding=THREE.LinearEncoding;m.map.needsUpdate=true}m.metalness=0;m.roughness=.65;m.needsUpdate=true}});
-  scene.add(root);MAN.forEach(o=>{if(o!==capA&&o!==capB&&o!==torso)o.visible=false});
+  scene.add(root);applyToonMats();MAN.forEach(o=>{if(o!==capA&&o!==capB&&o!==torso)o.visible=false});
   for(const c of [capA,capB]){c.scale.set(1,1,1);fitGeo(c.geometry)}
   torso.position.y=(bb.min.y-C[1])*s-.7;
- }catch(e){TAB=null;console.error(e)}build()},e=>{console.error(e);build()})}
+ }catch(e){TAB=null;console.error(e);faceMsg('読込に失敗：顔のメッシュを見つけられませんでした')}build()},e=>{console.error(e);faceMsg('読込に失敗：GLBを開けませんでした');build()})}
 function applyColor(){const c=new THREE.Color($('col').value);hairMat.uniforms.uCol.value.copy(c);
- hairMat.uniforms.uTip.value.copy(c).multiplyScalar(1.25).lerp(new THREE.Color(1,.95,.85),.12);capMat.color.copy(c).multiplyScalar(.3)}
+ hairMat.uniforms.uTip.value.copy(c).multiplyScalar(1.25).lerp(new THREE.Color(1,.95,.85),.12);capMat.color.copy(c).multiplyScalar(window.TOONON?.55:.3);outMat.uniforms.uOC.value.copy(c).multiplyScalar(.2)}
 
 /* ---------- UI ---------- */
 let tm;const rebuild=()=>{if(!applying&&CFG.style&&CFG.style!=='custom'){CFG.style='custom';syncStyleUI()}clearTimeout(tm);$('stat').textContent='生成中…';tm=setTimeout(build,60)};
@@ -454,7 +526,7 @@ document.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{$('col').value=b
 document.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{ctl.autoRotate=false;$('ar').textContent='自動回転 OFF';setView(b.dataset.v)});
 $('rs').onclick=()=>{seed=(Math.random()*1e6)|0;rebuild()};
 $('ar').onclick=()=>{ctl.autoRotate=!ctl.autoRotate;$('ar').textContent='自動回転 '+(ctl.autoRotate?'ON':'OFF')};
-function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);renderer.getDrawingBufferSize(hairMat.uniforms.uRes.value);camera.aspect=w/h;camera.updateProjectionMatrix();window.layoutView&&layoutView()}
 addEventListener('resize',resize);resize();applyColor();
 $('glb').onchange=e=>{const f=e.target.files[0];if(f)f.arrayBuffer().then(loadHead)};
 /* ---------- 大・中・小分類のパネル構成 ---------- */
@@ -467,12 +539,13 @@ const TREE=[
   ['前髪',[['長さ・量',['bl','bd']],['分け目・流れ',['bp','bs']]]],
   ['耳前',[['長さ・量',['sl','sd']]]]]],
  ['質感・色',[
+  ['表現スタイル',[['描画スタイル',['#sty']]]],
   ['毛質',[['太さ・艾',['w','g']],['密度',['q']]]],
-  ['髪色',[['カラー',['col']]]]]],
+  ['髪色',[['カラー',['col']]]],['高画質（試験）',[['品質オプション',['#hq']]]]]],
  ['髪パーツ',[['個別設定',[['対象パーツ',['#parts']]]]]],
  ['表示',[
   ['視点',[['カメラ',['view']]]],
-  ['生成・モデル',[['操作',['rs']],['頭部モデル',['glb']]]],
+  ['顔モデル',[['取り込み',['#face']]]],['生成・モデル',[['操作',['rs']]]],
   ['書き出し',[['焼き込みGLB',['#export']]]]]]
 ];
 function organizeUI(){
@@ -481,6 +554,9 @@ function organizeUI(){
  const nodesOf=id=>{
   if(id==='#parts')return[$('partsUI')];
   if(id==='#export')return[$('exportUI')];
+   if(id==='#hq')return[$('hqUI')];
+   if(id==='#sty')return[$('styUI')];
+   if(id==='#face')return[$('faceUI')];
   if(id==='view')return[document.querySelector('[data-v]').closest('.row')];
   const el=$(id);
   if(el.tagName==='SELECT'||el.type==='range')return[el.previousElementSibling,el];
@@ -500,9 +576,49 @@ function organizeUI(){
   b.onclick=()=>{bar.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));holder.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===tab))};
   if(ti===0)b.click()});
 }
+
+(function(){const mk=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e},R=mk('div');R.id='styUI';
+ const lb=mk('label');lb.textContent='描画スタイル';const se=mk('select');[['real','リアル（ストランド＋髪専用ライティング）'],['anime','アニメ調（セル塗り＋天使の輪＋輪郭線）']].forEach(([v,t])=>{const o=mk('option');o.value=v;o.textContent=t;se.appendChild(o)});
+ const r1=mk('div','row'),cb=mk('input');cb.type='checkbox';cb.checked=true;cb.onchange=()=>{window.TOONOL=cb.checked};r1.append(cb,'輪郭線（アニメ調のみ）');
+ const l2=mk('label'),b2=mk('b'),sl=mk('input');l2.append('輪郭線の太さ',b2);sl.type='range';sl.min=1;sl.max=5;sl.step=.1;sl.value=2.4;b2.textContent='2.4';sl.oninput=()=>{outMat.uniforms.uOW.value=+sl.value;b2.textContent=(+sl.value).toFixed(1)};
+ const n=mk('div','sub');n.textContent='アニメ調では「艶」で天使の輪の太さ、髪色で影色が決まります。顔・体もセル塗りに切り替わります（リアルに戻せます）';
+ se.onchange=()=>{const t=se.value==='anime';window.TOONON=t;hairMat.uniforms.uToon.value=t?1:0;applyColor();applyToonMats()};
+ R.append(lb,se,r1,l2,sl,n);document.body.appendChild(R)})();
+(function(){const mk=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e},R=mk('div');R.id='faceUI';
+ const row=$('glb').closest('.row');row.firstChild.textContent='顔モデル（GLB）';R.appendChild(row);
+ const inf=mk('div','sub');inf.id='faceInfo';inf.textContent=HXF.name;R.appendChild(inf);
+ const hint=mk('div','sub');hint.textContent='この画面にGLBをドロップしても読み込めます';R.appendChild(hint);
+ const rr=mk('div','row'),b=mk('button');b.textContent='埋め込みの顔に戻す';
+ b.onclick=()=>{const e=$('headdata');if(e&&e.textContent.trim()){const s=atob(e.textContent.trim()),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);loadHead(u.buffer)}else faceMsg('埋め込みの顔はありません')};rr.appendChild(b);R.appendChild(rr);document.body.appendChild(R);
+ ['dragover','drop'].forEach(t=>addEventListener(t,ev=>{ev.preventDefault();if(t==='drop'){const f=ev.dataTransfer.files[0];if(f&&/\.glb$/i.test(f.name)){faceMsg('読込中…');f.arrayBuffer().then(loadHead)}else faceMsg('.glb ファイルをドロップしてください')}}))})();
+(function(){const mk=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e},R=mk('div');R.id='hqUI';
+ const opt=(txt,fn)=>{const r=mk('div','row'),cb=mk('input');cb.type='checkbox';cb.checked=false;cb.onchange=()=>fn(cb.checked);r.append(cb,txt);R.appendChild(r)};
+ opt('輪郭のなめらか化（細い毛の最低幅を確保・不透明のまま）',v=>hairMat.uniforms.uQ.value.x=v?1:0);
+ opt('髪専用ライティング（Marschner風3ローブ＋多重散乱近似）',v=>hairMat.uniforms.uQ.value.y=v?1:0);
+ const lb=mk('label');lb.textContent='描画解像度';const se=mk('select');[[0,'標準'],[2,'高（2倍）'],[3,'最高（3倍・重い）']].forEach(([v,t])=>{const o=mk('option');o.value=v;o.textContent=t;se.appendChild(o)});
+ se.onchange=()=>{const v=+se.value;renderer.setPixelRatio(v||Math.min(devicePixelRatio,2));resize()};R.append(lb,se);
+ const n=mk('div','sub');n.textContent='チェックを外すと従来表示と見比べられます';R.appendChild(n);document.body.appendChild(R)})();
 organizeUI();
+/* ===== PC/スマホ共通レイアウト：ヘッダ固定・開閉・視点バー・モデルの中央寄せ ===== */
+(function(){const P=$('panel'),mob=()=>matchMedia('(max-width:640px)').matches,mk=t=>document.createElement(t);
+ const hd=mk('div');hd.className='hd';P.prepend(hd);hd.appendChild(P.querySelector('h1'));
+ const tg=mk('button');tg.id='ptg';hd.appendChild(tg);let tall=false,shut=false;
+ const TF=Math.tan(16*Math.PI/180);let zoomed=false;const cvs=$('cv');cvs.addEventListener('wheel',()=>{zoomed=true},{passive:true});cvs.addEventListener('touchstart',e=>{if(e.touches.length>1)zoomed=true},{passive:true});
+ ctl.maxDistance=Math.max(ctl.maxDistance||0,40);const _sv=window.setView;window.setView=k=>{zoomed=false;_sv(k)};
+ window.fitDist=()=>{const W=innerWidth,H=innerHeight,r=P.getBoundingClientRect();let aw=W,ah=H;if(!shut){if(mob())ah=Math.max(300,r.top-60);else aw=Math.max(240,W-r.right)}
+  const nH=mob()?5.6:6.8,nW=4.6;return Math.max(nH*H/(2*TF*ah),nW*H/(2*TF*aw))};
+ function refit(){if(zoomed)return;const dir=camera.position.clone().sub(ctl.target).normalize();camera.position.copy(ctl.target).addScaledVector(dir,fitDist());ctl.update()}
+ function layout(){const W=innerWidth,H=innerHeight,r=P.getBoundingClientRect();let x=0,y=0;if(!shut){if(mob())y=Math.max(0,H-r.top-60)/2;else x=-r.right/2}
+  if(x||y)camera.setViewOffset(W,H,x,y,W,H);else camera.clearViewOffset();refit()}
+ function apply(){P.classList.toggle('tall',tall&&!shut&&mob());P.classList.toggle('shut',shut);
+  tg.textContent=mob()?(shut?'開く ▲':tall?'閉じる ▼':'広げる ▲'):(shut?'▶ 開く':'◀ 閉じる');layout()}
+ tg.onclick=()=>{if(mob()){if(shut){shut=false;tall=false}else if(!tall)tall=true;else{tall=false;shut=true}}else shut=!shut;apply()};
+ const vb=mk('div');vb.id='vbar';
+ [['背面','back'],['側面','side'],['正面','front']].forEach(([t,v])=>{const b=mk('button');b.textContent=t;b.onclick=()=>{document.querySelector('[data-v="'+v+'"]').click();ar.textContent=$('ar').textContent};vb.appendChild(b)});
+ const ar=mk('button');ar.textContent=$('ar').textContent;ar.onclick=()=>{$('ar').click();ar.textContent=$('ar').textContent};vb.appendChild(ar);const ex=mk('button');ex.textContent='髪を書き出し';ex.onclick=async()=>{ex.disabled=true;await exportHairGLB('all');ex.disabled=false;const t=mk('div');t.textContent=$('bakeInfo').textContent;t.style.cssText='position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:90vw;padding:10px 16px;border-radius:12px;background:var(--pb);border:1px solid var(--line);font-size:13px;z-index:9;box-shadow:0 4px 18px rgba(0,0,0,.2)';document.body.appendChild(t);setTimeout(()=>t.remove(),4500)};vb.appendChild(ex);document.body.appendChild(vb);
+ window.layoutView=layout;addEventListener('resize',apply);apply()})();
 {const e=$('headdata');if(e&&e.textContent.trim()){const s=atob(e.textContent.trim()),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);loadHead(u.buffer)}else setTimeout(build,30)}
-(function loop(){requestAnimationFrame(loop);ctl.update();renderer.render(scene,camera)})();
+(function loop(){requestAnimationFrame(loop);ctl.update();syncOutline();renderer.render(scene,camera)})();
 </script>
 </body>
 </html>
